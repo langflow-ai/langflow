@@ -1,17 +1,30 @@
 from fastapi import HTTPException
+from langflow_services.task.exceptions import (
+    WorkflowExecutionError,
+    WorkflowResourceError,
+    WorkflowServiceUnavailableError,
+)
 from lfx.services.database.models.flow import Flow
 from pydantic import BaseModel
 
 from langflow.api.utils import get_suggestion_message
 from langflow.services.database.models.flow.utils import get_outdated_components
 
+__all__ = [
+    "APIException",
+    "ExceptionBody",
+    "InvalidChatInputError",
+    "WorkflowExecutionError",
+    "WorkflowQueueFullError",
+    "WorkflowResourceError",
+    "WorkflowServiceUnavailableError",
+    "WorkflowTimeoutError",
+    "WorkflowValidationError",
+]
+
 
 class InvalidChatInputError(Exception):
     pass
-
-
-class WorkflowExecutionError(Exception):
-    """Base exception for workflow execution errors."""
 
 
 class WorkflowTimeoutError(WorkflowExecutionError):
@@ -24,14 +37,6 @@ class WorkflowValidationError(WorkflowExecutionError):
 
 class WorkflowQueueFullError(WorkflowExecutionError):
     """Raised when the background task queue is full."""
-
-
-class WorkflowResourceError(WorkflowExecutionError):
-    """Raised when the server is out of memory or other resources."""
-
-
-class WorkflowServiceUnavailableError(WorkflowExecutionError):
-    """Raised when the task queue service is unavailable (e.g., broker down)."""
 
 
 # create a pidantic documentation for this class

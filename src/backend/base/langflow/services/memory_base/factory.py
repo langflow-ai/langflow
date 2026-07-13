@@ -1,14 +1,13 @@
-"""Factory for creating MemoryBaseService instances."""
+"""Compatibility re-export from the standalone ``langflow_services`` package.
 
-from langflow.services.factory import ServiceFactory
-from langflow.services.memory_base.service import MemoryBaseService
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
+from __future__ import annotations
 
-class MemoryBaseServiceFactory(ServiceFactory):
-    """Factory for creating MemoryBaseService instances."""
+import sys
 
-    def __init__(self):
-        super().__init__(MemoryBaseService)
+from langflow_services.memory_base import factory as _impl
 
-    def create(self):
-        return MemoryBaseService()
+sys.modules[__name__] = _impl

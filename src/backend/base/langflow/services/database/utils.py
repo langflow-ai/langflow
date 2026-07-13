@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -118,14 +117,5 @@ def parse_uuid(value: UUID | str, *, field_name: str = "value") -> UUID:
     raise TypeError(msg)
 
 
-@dataclass
-class Result:
-    name: str
-    type: str
-    success: bool
-
-
-@dataclass
-class TableResults:
-    table_name: str
-    results: list[Result]
+# Result/TableResults live with DatabaseService after the services extraction.
+from langflow_services.database.service import Result, TableResults  # noqa: E402,F401

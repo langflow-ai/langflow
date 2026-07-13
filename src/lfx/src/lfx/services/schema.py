@@ -6,6 +6,13 @@ from enum import Enum
 
 
 class ServiceType(str, Enum):
+    """Canonical service types for the LFX plugin layer.
+
+    Concrete implementations in the standalone ``langflow_services`` package register
+    against these values. Host-only services such as jobs and memory_base are
+    included so a single enum is the source of truth.
+    """
+
     AUTH_SERVICE = "auth_service"
     AUTHORIZATION_SERVICE = "authorization_service"
     DATABASE_SERVICE = "database_service"
@@ -28,3 +35,5 @@ class ServiceType(str, Enum):
     TELEMETRY_WRITER_SERVICE = "telemetry_writer_service"
     EXTENSION_EVENTS_SERVICE = "extension_events_service"
     EXECUTOR_SERVICE = "executor_service"
+    JOB_SERVICE = "jobs_service"
+    MEMORY_BASE_SERVICE = "memory_base_service"

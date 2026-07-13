@@ -1,26 +1,13 @@
-"""Input validation helpers for trace query parameters.
+"""Compatibility re-export from the standalone ``langflow_services`` package.
 
-Validates and sanitizes user-supplied inputs at the API boundary before
-they are passed to the repository layer.
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
 """
 
 from __future__ import annotations
 
+import sys
 
-def sanitize_query_string(value: str | None, max_len: int = 50) -> str | None:
-    """Sanitize a user-supplied query string for safe use in database queries.
+from langflow_services.tracing import validation as _impl
 
-    Strips non-printable characters and truncates to ``max_len`` characters.
-    Rejects by default: only printable ASCII (0x20-0x7E) is accepted.
-
-    Args:
-        value: Raw query string from the request.
-        max_len: Maximum allowed length after stripping.
-
-    Returns:
-        Sanitized string, or ``None`` if the input was ``None`` or empty.
-    """
-    if value is None:
-        return None
-    cleaned = "".join(ch for ch in value if " " <= ch <= "~").strip()
-    return cleaned[:max_len] if cleaned else None
+sys.modules[__name__] = _impl

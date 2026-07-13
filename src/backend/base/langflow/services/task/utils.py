@@ -1,23 +1,13 @@
-from typing import TYPE_CHECKING
+"""Compatibility re-export from the standalone ``langflow_services`` package.
 
-if TYPE_CHECKING:
-    import contextlib
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
-    with contextlib.suppress(ImportError):
-        from celery import Celery
+from __future__ import annotations
 
+import sys
 
-def get_celery_worker_status(app: "Celery"):
-    i = app.control.inspect()
-    availability = app.control.ping()
-    stats = i.stats()
-    registered_tasks = i.registered()
-    active_tasks = i.active()
-    scheduled_tasks = i.scheduled()
-    return {
-        "availability": availability,
-        "stats": stats,
-        "registered_tasks": registered_tasks,
-        "active_tasks": active_tasks,
-        "scheduled_tasks": scheduled_tasks,
-    }
+from langflow_services.task import utils as _impl
+
+sys.modules[__name__] = _impl

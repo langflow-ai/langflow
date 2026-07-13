@@ -1,19 +1,13 @@
-from abc import ABC, abstractmethod
-from collections.abc import Callable
-from typing import Any
+"""Compatibility re-export from the standalone ``langflow_services`` package.
 
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
-class TaskBackend(ABC):
-    name: str
+from __future__ import annotations
 
-    @abstractmethod
-    def launch_task(self, task_func: Callable[..., Any], *args: Any, **kwargs: Any):
-        pass
+import sys
 
-    @abstractmethod
-    def get_task(self, task_id: str) -> Any:
-        pass
+from langflow_services.task.backends import base as _impl
 
-    @abstractmethod
-    def revoke_task(self, task_id: str) -> Any:
-        pass
+sys.modules[__name__] = _impl

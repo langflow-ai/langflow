@@ -143,8 +143,8 @@ jobs:
           name: dist-nightly-lfx
           path: src/lfx/dist
 
-  build-nightly-base:
-    name: Build Langflow Nightly Base
+  build-nightly-services:
+    name: Build Langflow Services Nightly
     needs: [build-nightly-lfx]
     if: ${{ always() && (needs.build-nightly-lfx.result == 'success' || inputs.build_lfx == false) }}
     runs-on: ubuntu-latest
@@ -153,7 +153,6 @@ jobs:
         shell: bash
     outputs:
       version: ${{ steps.verify.outputs.version }}
-      skipped: ${{ steps.verify.outputs.skipped }}
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v6
@@ -182,9 +181,91 @@ jobs:
         if: inputs.build_lfx
         run: |
           echo "Installing LFX from built wheel to test the actual distribution package..."
-          # While workspace resolution installs from source, we want to test the exact
-          # wheel that will be published to PyPI to catch any packaging issues
           uv pip install --force-reinstall --no-deps lfx-dist/*.whl
+
+      - name: Verify Nightly Name and Version
+        id: verify
+        run: |
+          # langflow-services versions with langflow / lfx (root axis). On nightlies
+          # release_tag and base_tag are identical (shared .devN), so either works;
+          # prefer nightly_tag_release to match the stable 1.x axis.
+          name=$(uv tree --package langflow-services | head -n 1 | awk '{print $1}')
+          version=$(uv tree --package langflow-services | head -n 1 | awk '{print $2}')
+          name_without_extras=$(echo $name | sed 's/\[.*\]//')
+          if [ "$name_without_extras" != "langflow-services" ]; then
+            echo "Name $name_without_extras does not match langflow-services. Exiting the workflow."
+            exit 1
+          fi
+          if [ "$version" != "${{ inputs.nightly_tag_release }}" ]; then
+            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_release }}. Exiting the workflow."
+            exit 1
+          fi
+          version=$(echo $version | sed 's/^v//')
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Build Langflow Services for distribution
+        run: |
+          cd src/langflow-services
+          rm -rf dist/
+          uv build --wheel --out-dir dist
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist-nightly-services
+          path: src/langflow-services/dist
+
+  build-nightly-base:
+    name: Build Langflow Nightly Base
+    needs: [build-nightly-lfx, build-nightly-services]
+    if: ${{ always() && needs.build-nightly-services.result == 'success' && (needs.build-nightly-lfx.result == 'success' || inputs.build_lfx == false) }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      version: ${{ steps.verify.outputs.version }}
+      skipped: ${{ steps.verify.outputs.skipped }}
+    steps:
+      - name: Check out the code at a specific ref
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.nightly_tag_release }}
+          persist-credentials: true
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: Download LFX artifact
+        if: inputs.build_lfx
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-nightly-lfx
+          path: lfx-dist
+
+      - name: Download services artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-nightly-services
+          path: services-dist
+
+      - name: Install the project
+        run: uv sync
+
+      - name: Force reinstall LFX and services from built wheels
+        run: |
+          # While workspace resolution installs from source, we want to test the exact
+          # wheels that will be published to PyPI to catch any packaging issues
+          if [ "${{ inputs.build_lfx }}" == "true" ]; then
+            echo "Installing LFX from built wheel..."
+            uv pip install --force-reinstall --no-deps lfx-dist/*.whl
+          fi
+          echo "Installing langflow-services from built wheel..."
+          uv pip install --force-reinstall --no-deps services-dist/*.whl
 
       - name: Verify Nightly Name and Version
         id: verify
@@ -223,7 +304,11 @@ jobs:
           mv dist/*.whl src/backend/base/dist/
           # Install with [complete] extra to test all optional dependencies
           WHEEL_FILE=$(ls src/backend/base/dist/*.whl)
-          uv pip install "${WHEEL_FILE}[complete]"
+          FIND_LINKS="--find-links ./services-dist"
+          if [ -d "./lfx-dist" ]; then
+            FIND_LINKS="$FIND_LINKS --find-links ./lfx-dist"
+          fi
+          uv pip install $FIND_LINKS --prerelease=allow "${WHEEL_FILE}[complete]"
           uv run python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
@@ -278,6 +363,12 @@ jobs:
           name: dist-nightly-lfx
           path: lfx-dist
 
+      - name: Download services artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-nightly-services
+          path: services-dist
+
       - name: Download base artifact
         uses: actions/download-artifact@v7
         with:
@@ -295,6 +386,8 @@ jobs:
             echo "Installing LFX from built wheel..."
             uv pip install --force-reinstall --no-deps lfx-dist/*.whl
           fi
+          echo "Installing langflow-services from built wheel..."
+          uv pip install --force-reinstall --no-deps services-dist/*.whl
           echo "Installing langflow-base from built wheel..."
           uv pip install --force-reinstall --no-deps base-dist/*.whl
 
@@ -388,12 +481,13 @@ jobs:
 
   test-cross-platform:
     name: Test Cross-Platform Installation
-    needs: [build-nightly-lfx, build-nightly-base, build-nightly-main]
+    needs: [build-nightly-lfx, build-nightly-services, build-nightly-base, build-nightly-main]
     uses: ./.github/workflows/cross-platform-test.yml
     with:
       base-artifact-name: "dist-nightly-base"
       main-artifact-name: "dist-nightly-main"
       lfx-artifact-name: "dist-nightly-lfx"
+      services-artifact-name: "dist-nightly-services"
       sdk-artifact-name: "dist-nightly-sdk"
       bundles-artifact-name: "dist-nightly-bundles"
       pre_release: true
@@ -454,10 +548,63 @@ jobs:
         run: |
           make sdk_publish
 
+  publish-nightly-services:
+    name: Publish Langflow Services Nightly to PyPI
+    needs: [build-nightly-services, test-cross-platform, publish-nightly-lfx]
+    if: ${{ always() && needs.build-nightly-services.result == 'success' && needs.test-cross-platform.result == 'success' && (needs.publish-nightly-lfx.result == 'success' || inputs.build_lfx == false) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.nightly_tag_release }}
+          persist-credentials: true
+      - name: Download services artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-nightly-services
+          path: src/langflow-services/dist
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: "3.13"
+      - name: Publish services to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          pypi_publish_max_attempts=5
+          pypi_publish_delay_seconds=30
+          for wheel in src/langflow-services/dist/*.whl; do
+            attempt=1
+            while true; do
+              if err=$(uv publish "$wheel" 2>&1); then
+                echo "$err"
+                break
+              fi
+              echo "$err"
+              if echo "$err" | grep -qiE 'already exists|file already exists|HTTP 400|duplicate'; then
+                echo "Skipping $wheel: already published."
+                break
+              fi
+              if echo "$err" | grep -qiE 'HTTP 429|429 Too Many Requests|Too many new projects created'; then
+                if [ "$attempt" -lt "$pypi_publish_max_attempts" ]; then
+                  echo "PyPI rate limited $wheel; sleeping ${pypi_publish_delay_seconds}s before retry $((attempt + 1))/${pypi_publish_max_attempts}."
+                  sleep "$pypi_publish_delay_seconds"
+                  attempt=$((attempt + 1))
+                  continue
+                fi
+              fi
+              echo "Publish failed for $wheel"
+              exit 1
+            done
+          done
+
   publish-nightly-base:
     name: Publish Langflow Base Nightly to PyPI
-    needs: [build-nightly-base, test-cross-platform, publish-nightly-lfx]
-    if: ${{ always() && needs.build-nightly-base.result == 'success' && needs.test-cross-platform.result == 'success' && (needs.publish-nightly-lfx.result == 'success' || inputs.build_lfx == false) }}
+    needs: [build-nightly-base, test-cross-platform, publish-nightly-lfx, publish-nightly-services]
+    if: ${{ always() && needs.build-nightly-base.result == 'success' && needs.test-cross-platform.result == 'success' && (needs.publish-nightly-lfx.result == 'success' || inputs.build_lfx == false) && needs.publish-nightly-services.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

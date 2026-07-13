@@ -28,12 +28,19 @@ class TestDatabaseServiceWindowsPostgres:
         mock_service.settings.alembic_log_file = "alembic.log"
         return mock_service
 
+    @pytest.fixture
+    def alembic_paths(self, tmp_path):
+        return {
+            "script_location": tmp_path / "alembic",
+            "alembic_cfg_path": tmp_path / "alembic.ini",
+        }
+
     @patch("platform.system")
     @patch.dict(os.environ, {"LANGFLOW_DATABASE_URL": "postgresql://user:pass@localhost/db"}, clear=True)
     @patch("langflow.services.database.service.create_async_engine")
     @patch("langflow.services.database.service.configure_windows_postgres_event_loop")
     def test_windows_postgresql_configures_event_loop(
-        self, mock_configure, mock_create_engine, mock_platform, mock_settings_service
+        self, mock_configure, mock_create_engine, mock_platform, mock_settings_service, alembic_paths
     ):
         """Test that Windows + PostgreSQL configures the event loop correctly."""
         mock_platform.return_value = "Windows"
@@ -41,20 +48,22 @@ class TestDatabaseServiceWindowsPostgres:
         mock_create_engine.return_value = MagicMock()
         mock_configure.return_value = True
 
-        _ = DatabaseService(mock_settings_service)
+        _ = DatabaseService(mock_settings_service, **alembic_paths)
         mock_configure.assert_called_once_with(source="database_service")
 
     @patch("platform.system")
     @patch.dict(os.environ, {}, clear=True)
     @patch("langflow.services.database.service.create_async_engine")
-    def test_linux_postgresql_no_event_loop_change(self, mock_create_engine, mock_platform, mock_settings_service):
+    def test_linux_postgresql_no_event_loop_change(
+        self, mock_create_engine, mock_platform, mock_settings_service, alembic_paths
+    ):
         """Test that Linux + PostgreSQL doesn't change event loop."""
         mock_platform.return_value = "Linux"
         mock_settings_service.settings.database_url = "postgresql://user:pass@localhost/db"
         mock_create_engine.return_value = MagicMock()
 
         original_policy = asyncio.get_event_loop_policy()
-        _ = DatabaseService(mock_settings_service)
+        _ = DatabaseService(mock_settings_service, **alembic_paths)
 
         # Policy should remain unchanged
         assert asyncio.get_event_loop_policy() is original_policy
@@ -62,14 +71,16 @@ class TestDatabaseServiceWindowsPostgres:
     @patch("platform.system")
     @patch.dict(os.environ, {}, clear=True)
     @patch("langflow.services.database.service.create_async_engine")
-    def test_macos_postgresql_no_event_loop_change(self, mock_create_engine, mock_platform, mock_settings_service):
+    def test_macos_postgresql_no_event_loop_change(
+        self, mock_create_engine, mock_platform, mock_settings_service, alembic_paths
+    ):
         """Test that macOS + PostgreSQL doesn't change event loop."""
         mock_platform.return_value = "Darwin"
         mock_settings_service.settings.database_url = "postgresql://user:pass@localhost/db"
         mock_create_engine.return_value = MagicMock()
 
         original_policy = asyncio.get_event_loop_policy()
-        _ = DatabaseService(mock_settings_service)
+        _ = DatabaseService(mock_settings_service, **alembic_paths)
 
         # Policy should remain unchanged
         assert asyncio.get_event_loop_policy() is original_policy
@@ -79,7 +90,7 @@ class TestDatabaseServiceWindowsPostgres:
     @patch("langflow.services.database.service.create_async_engine")
     @patch("langflow.services.database.service.configure_windows_postgres_event_loop")
     def test_windows_sqlite_no_event_loop_change(
-        self, mock_configure, mock_create_engine, mock_platform, mock_settings_service
+        self, mock_configure, mock_create_engine, mock_platform, mock_settings_service, alembic_paths
     ):
         """Test that Windows + SQLite doesn't change event loop."""
         mock_platform.return_value = "Windows"
@@ -87,10 +98,10 @@ class TestDatabaseServiceWindowsPostgres:
         mock_create_engine.return_value = MagicMock()
         mock_configure.return_value = False
 
-        _ = DatabaseService(mock_settings_service)
+        _ = DatabaseService(mock_settings_service, **alembic_paths)
         mock_configure.assert_called_once_with(source="database_service")
 
-    def test_database_url_sanitization(self, mock_settings_service):
+    def test_database_url_sanitization(self, mock_settings_service, alembic_paths):
         """Test that database URLs are properly sanitized."""
         test_cases = [
             ("sqlite:///test.db", "sqlite+aiosqlite:///test.db"),
@@ -103,11 +114,11 @@ class TestDatabaseServiceWindowsPostgres:
 
             for input_url, expected_url in test_cases:
                 mock_settings_service.settings.database_url = input_url
-                service = DatabaseService(mock_settings_service)
+                service = DatabaseService(mock_settings_service, **alembic_paths)
                 assert service.database_url == expected_url
 
     @patch("platform.system")
-    def test_docker_environment_compatibility(self, mock_platform, mock_settings_service):
+    def test_docker_environment_compatibility(self, mock_platform, mock_settings_service, alembic_paths):
         """Test that Docker environments work correctly."""
         mock_platform.return_value = "Linux"
         os.environ["DOCKER_CONTAINER"] = "true"
@@ -117,11 +128,11 @@ class TestDatabaseServiceWindowsPostgres:
             mock_create_engine.return_value = MagicMock()
 
             # Should not raise any errors
-            service = DatabaseService(mock_settings_service)
+            service = DatabaseService(mock_settings_service, **alembic_paths)
             assert service.database_url == "postgresql+psycopg://postgres:5432/langflow"
 
     @pytest.mark.asyncio
-    async def test_async_operations_work_after_configuration(self, mock_settings_service):
+    async def test_async_operations_work_after_configuration(self, mock_settings_service, alembic_paths):
         """Test that async operations work correctly after event loop configuration."""
         mock_settings_service.settings.database_url = "sqlite:///test.db"
 
@@ -129,7 +140,7 @@ class TestDatabaseServiceWindowsPostgres:
             mock_engine = MagicMock()
             mock_create_engine.return_value = mock_engine
 
-            service = DatabaseService(mock_settings_service)
+            service = DatabaseService(mock_settings_service, **alembic_paths)
 
             # Test that async session maker is properly configured
             assert service.async_session_maker is not None

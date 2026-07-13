@@ -1,11 +1,13 @@
-from langflow.services.chat.service import ChatService
-from langflow.services.factory import ServiceFactory
+"""Compatibility re-export from the standalone ``langflow_services`` package.
 
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
-class ChatServiceFactory(ServiceFactory):
-    def __init__(self) -> None:
-        super().__init__(ChatService)
+from __future__ import annotations
 
-    def create(self):
-        # Here you would have logic to create and configure a ChatService
-        return ChatService()
+import sys
+
+from langflow_services.chat import factory as _impl
+
+sys.modules[__name__] = _impl

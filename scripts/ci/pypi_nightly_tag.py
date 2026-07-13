@@ -3,16 +3,18 @@
 
 The nightly is published as canonical `.devN` pre-releases (e.g. `langflow==X.Y.Z.devN`), NOT
 separate `*-nightly` distributions, so the dev counter is computed against the canonical
-`langflow` / `langflow-base` PyPI histories (their `.devN` pre-releases; stable finals never
-contribute). See `src/bundles/NIGHTLY.md`.
+`langflow` / `langflow-base` / `langflow-services` PyPI histories (their `.devN` pre-releases;
+stable finals never contribute). See `src/bundles/NIGHTLY.md`.
 
 `langflow` (the nightly pre-release) pins an EXACT dependency on `langflow-base[complete]==X.Y.Z.devN`.
 For the latest published nightly `langflow` to be installable, the base version it pins must
-exist on PyPI. The two packages are therefore versioned in lockstep: they share a single dev
-number so that, in a single nightly run (publish order base -> main, gated), main's `devN` pin
-always references the base `devN` built and published in the same run.
+exist on PyPI. Nightlies therefore remap `langflow-base` onto the root `1.x` axis and share a
+single `.devN` with `langflow` and `langflow-services` so that, in a single nightly run
+(publish order services -> base -> main, gated), main's `devN` pin always references the base
+`devN` built and published in the same run. Stable releases keep base on `0.x` while services
+stays on `1.x` with langflow/lfx.
 
-The shared dev number is `max(dev across BOTH packages' PyPI histories) + 1`, restricted to
+The shared dev number is `max(dev across those packages' PyPI histories) + 1`, restricted to
 releases whose base_version matches the root pyproject. Both "main" and "base" build types
 return the identical tag; the "both" mode emits it twice so the workflow can read the release
 and base tags from a single invocation (one PyPI snapshot) and avoid any cross-call drift.
@@ -26,12 +28,16 @@ import requests
 from packaging.version import Version
 
 # Count dev releases against the CANONICAL projects (not `*-nightly`), since the nightly is
-# published as canonical `.devN` pre-releases of `langflow` / `langflow-base`.
+# published as canonical `.devN` pre-releases of `langflow` / `langflow-base` /
+# `langflow-services`.
 PYPI_LANGFLOW_URL = "https://pypi.org/pypi/langflow/json"
 PYPI_LANGFLOW_BASE_URL = "https://pypi.org/pypi/langflow-base/json"
+PYPI_LANGFLOW_SERVICES_URL = "https://pypi.org/pypi/langflow-services/json"
 
-# main and base MUST share one dev number, so the shared number is derived from both packages.
-PYPI_CANONICAL_URLS = (PYPI_LANGFLOW_URL, PYPI_LANGFLOW_BASE_URL)
+# main/base/services share one nightly `.devN` index. Nightlies remap
+# langflow-base onto the root (1.x) axis for publish lockstep; stable releases
+# keep base on 0.x while services stays on 1.x with langflow/lfx.
+PYPI_CANONICAL_URLS = (PYPI_LANGFLOW_URL, PYPI_LANGFLOW_BASE_URL, PYPI_LANGFLOW_SERVICES_URL)
 
 ARGUMENT_NUMBER = 2
 VALID_BUILD_TYPES = ("main", "base", "both")

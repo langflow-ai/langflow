@@ -1,20 +1,13 @@
+"""Compatibility re-export from the standalone ``langflow_services`` package.
+
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
+
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import sys
 
-from typing_extensions import override
+from langflow_services.flow_events import factory as _impl
 
-from langflow.services.factory import ServiceFactory
-from langflow.services.flow_events.service import FlowEventsService
-
-if TYPE_CHECKING:
-    from lfx.services.settings.service import SettingsService
-
-
-class FlowEventsServiceFactory(ServiceFactory):
-    def __init__(self) -> None:
-        super().__init__(FlowEventsService)
-
-    @override
-    def create(self, settings_service: SettingsService):
-        return FlowEventsService(cache_dir=settings_service.settings.cache_dir)
+sys.modules[__name__] = _impl

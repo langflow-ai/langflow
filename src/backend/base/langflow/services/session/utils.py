@@ -1,18 +1,13 @@
-import hashlib
-import random
-import string
+"""Compatibility re-export from the standalone ``langflow_services`` package.
 
-from langflow.services.cache.utils import filter_json
-from langflow.services.database.models.base import orjson_dumps
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
+from __future__ import annotations
 
-def session_id_generator(size=6):
-    return "".join(random.SystemRandom().choices(string.ascii_uppercase + string.digits, k=size))
+import sys
 
+from langflow_services.session import utils as _impl
 
-def compute_dict_hash(graph_data):
-    graph_data = filter_json(graph_data)
-
-    cleaned_graph_json = orjson_dumps(graph_data, sort_keys=True)
-
-    return hashlib.sha256(cleaned_graph_json.encode("utf-8")).hexdigest()
+sys.modules[__name__] = _impl

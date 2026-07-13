@@ -1,29 +1,13 @@
-from typing import Any
+"""Compatibility re-export from the standalone ``langflow_services`` package.
 
-from lfx.schema.data import Data
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
+from __future__ import annotations
 
-def convert_to_langchain_type(value):
-    from langflow.schema.message import Message
+import sys
 
-    if isinstance(value, dict):
-        value = {key: convert_to_langchain_type(val) for key, val in value.items()}
-    elif isinstance(value, list):
-        value = [convert_to_langchain_type(v) for v in value]
-    elif isinstance(value, Message):
-        if "prompt" in value:
-            value = value.load_lc_prompt()
-        elif value.sender:
-            value = value.to_lc_message()
-        else:
-            value = value.to_lc_document()
-    elif isinstance(value, Data):
-        value = value.to_lc_document() if "text" in value.data else value.data
-    return value
+from langflow_services.tracing import utils as _impl
 
-
-def convert_to_langchain_types(io_dict: dict[str, Any]):
-    converted = {}
-    for key, value in io_dict.items():
-        converted[key] = convert_to_langchain_type(value)
-    return converted
+sys.modules[__name__] = _impl

@@ -48,8 +48,13 @@ def _make_service(
     settings.alembic_log_to_stdout = alembic_log_to_stdout
     settings.config_dir = config_dir
 
+    config_root = Path(config_dir)
     with patch("langflow.services.database.service.create_async_engine", return_value=MagicMock()):
-        return DatabaseService(mock_settings_service)
+        return DatabaseService(
+            mock_settings_service,
+            script_location=config_root / "alembic",
+            alembic_cfg_path=config_root / "alembic.ini",
+        )
 
 
 # ---------------------------------------------------------------------------

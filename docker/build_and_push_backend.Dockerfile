@@ -29,6 +29,7 @@ RUN microdnf install -y tar xz \
 
 # Copy only backend source (excludes frontend)
 COPY ./src/backend ./src/backend
+COPY ./src/langflow-services ./src/langflow-services
 COPY ./src/lfx ./src/lfx
 COPY ./src/sdk ./src/sdk
 
@@ -51,6 +52,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install \
         ./src/sdk \
         ./src/lfx \
+        ./src/langflow-services \
         "./src/backend/base[complete,postgresql]"
 
 ################################

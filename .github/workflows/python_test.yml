@@ -186,6 +186,26 @@ jobs:
             src/lfx/htmlcov/
           retention-days: 30
 
+  isolated-services-wheel:
+    name: Isolated services wheel - Python ${{ matrix.python-version }}
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+    strategy:
+      matrix:
+        python-version: ${{ fromJson(inputs.python-versions || '["3.12"]') }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ matrix.python-version }}
+          prune-cache: false
+      - name: Prove services wheel imports without langflow-base
+        run: make check_services_isolated_wheel
+
   test-cli:
     name: Test CLI - Python ${{ matrix.python-version }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}

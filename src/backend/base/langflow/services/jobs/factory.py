@@ -1,22 +1,13 @@
-"""Factory for creating JobService instances."""
+"""Compatibility re-export from the standalone ``langflow_services`` package.
 
-from langflow.services.factory import ServiceFactory
-from langflow.services.jobs.service import JobService
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
+from __future__ import annotations
 
-class JobServiceFactory(ServiceFactory):
-    """Factory for creating JobService instances."""
+import sys
 
-    def __init__(self):
-        super().__init__(JobService)
-        self._instance = None
+from langflow_services.jobs import factory as _impl
 
-    def create(self):
-        """Create a JobService instance.
-
-        Returns:
-            JobService instance
-        """
-        if self._instance is None:
-            self._instance = JobService()
-        return self._instance
+sys.modules[__name__] = _impl

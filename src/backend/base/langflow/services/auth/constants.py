@@ -1,13 +1,13 @@
-"""Auth-related constants shared by service and utils (avoids circular imports)."""
+"""Compatibility re-export from the standalone ``langflow_services`` package.
 
-AUTO_LOGIN_WARNING = "In v2.0, LANGFLOW_SKIP_AUTH_AUTO_LOGIN will be removed. Please update your authentication method."
-AUTO_LOGIN_ERROR = (
-    "Since v1.5, LANGFLOW_AUTO_LOGIN requires a valid API key. "
-    "Set LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true to skip this check. "
-    "Please update your authentication method."
-)
-AUTO_LOGIN_SESSION_WARNING = (
-    "LANGFLOW_AUTO_LOGIN is enabled: /auto_login is issuing a superuser session "
-    "without credentials. Disable AUTO_LOGIN and create a real superuser for any "
-    "non-local or shared deployment."
-)
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
+
+from __future__ import annotations
+
+import sys
+
+from langflow_services.auth import constants as _impl
+
+sys.modules[__name__] = _impl

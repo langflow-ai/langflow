@@ -50,16 +50,19 @@ A single canonical `lfx` then exists, so the stable bundles resolve cleanly — 
 - **Stop renaming the core.** `update_lfx_version.py`, `update_pyproject_combined.py`,
   `update_sdk_version.py` no longer rename to `*-nightly`; they only set the `.devN` version and
   re-pin inter-package deps to **exact canonical dev versions** (`langflow-base[complete]==<dev>`,
-  `lfx==<dev>`, `langflow-sdk==<dev>` — via `update_uv_dependency.py` / `update_lf_base_dependency.py`).
+  `langflow-services[all]==<dev>`, `lfx==<dev>`, `langflow-sdk==<dev>` —
+  via `update_uv_dependency.py` / `update_lf_base_dependency.py`). Stable releases keep
+  `langflow-services` on the `1.x` axis with `langflow`/`lfx` while `langflow-base` stays on
+  `0.x`; nightlies remap base onto the root axis so all three share one `.devN` tag.
   The exact dev pins also enable pre-release resolution down the tree, so the bundles' `lfx>=…`
   range latches onto the dev `lfx`.
 - **Drop the bundle nightly track.** `update_lfx_dep_in_bundles()` and `rename_bundles_for_nightly()`
   are deleted; bundles keep their stable names + `lfx>=1.10.0,<2.0.0` pins.
 - **Version math.** `pypi_nightly_tag.py` / `lfx_nightly_tag.py` / `sdk_nightly_tag.py` count `.devN`
-  against the **canonical** PyPI histories (`langflow` / `langflow-base` / `lfx` / `langflow-sdk`),
-  not the `*-nightly` projects. The base version is still read from the pyproject of the latest
-  `release-*` branch the nightly builds from (see `nightly_build.yml`'s `resolve-release-branch`),
-  so it tracks the release cadence automatically.
+  against the **canonical** PyPI histories (`langflow` / `langflow-base` / `langflow-services` /
+  `lfx` / `langflow-sdk`), not the `*-nightly` projects. The base version is still read from the
+  pyproject of the latest `release-*` branch the nightly builds from (see `nightly_build.yml`'s
+  `resolve-release-branch`), so it tracks the release cadence automatically.
 - **Publish workflow.** `release_nightly.yml` publishes canonical pre-releases; the bundle build
   step, the `dist-nightly-bundles` artifact, the `publish-nightly-bundles` job, and its gate in
   `publish-nightly-main` are removed. Verify steps now expect canonical names; the main wheel glob

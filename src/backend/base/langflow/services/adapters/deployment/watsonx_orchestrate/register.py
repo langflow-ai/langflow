@@ -1,18 +1,13 @@
-"""Register the Watsonx Orchestrate deployment adapter.
+"""Compatibility re-export from the standalone ``langflow_services`` package.
 
-Importing this module requires the optional IBM SDK dependencies because
-the service module loads them.
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
 """
 
-from lfx.services.adapters.registry import register_adapter
-from lfx.services.adapters.schema import AdapterType
+from __future__ import annotations
 
-from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
-    WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
-)
-from langflow.services.adapters.deployment.watsonx_orchestrate.service import WatsonxOrchestrateDeploymentService
+import sys
 
-register_adapter(
-    AdapterType.DEPLOYMENT,
-    WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
-)(WatsonxOrchestrateDeploymentService)
+from langflow_services.adapters.deployment.watsonx_orchestrate import register as _impl
+
+sys.modules[__name__] = _impl

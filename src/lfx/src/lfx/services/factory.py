@@ -1,19 +1,29 @@
 """Base service factory classes for lfx package."""
 
-from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from lfx.services.base import Service
 
 
-class ServiceFactory(ABC):
-    """Base service factory class."""
+class ServiceFactory:
+    """Base service factory class.
 
-    def __init__(self):
-        self.service_class = None
-        self.dependencies = []
+    Concrete factories may add dependency inference and other construction
+    logic on top of this contract.
+    """
 
-    @abstractmethod
-    def create(self, **kwargs) -> "Service":
-        """Create a service instance."""
+    def __init__(self, service_class: type["Service"] | None = None) -> None:
+        self.service_class = service_class
+        self.dependencies: list = []
+
+    def create(self, *args, **kwargs) -> "Service":
+        """Create a service instance.
+
+        Subclasses typically override this. The default implementation
+        instantiates ``service_class`` when one was provided.
+        """
+        if self.service_class is None:
+            msg = "service_class is required"
+            raise ValueError(msg)
+        return self.service_class(*args, **kwargs)

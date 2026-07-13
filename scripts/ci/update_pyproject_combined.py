@@ -3,7 +3,11 @@
 import sys
 from pathlib import Path
 
-from update_lf_base_dependency import update_lfx_dep_in_base
+from update_lf_base_dependency import (
+    update_langflow_services_dep_in_base,
+    update_lfx_dep_in_base,
+    update_lfx_dep_in_services,
+)
 from update_pyproject_version import update_pyproject_version
 from update_uv_dependency import update_uv_dep as update_version_uv_dep
 
@@ -15,9 +19,14 @@ sys.path.append(str(current_dir))
 def main():
     """Universal update script that handles both base and main updates in a single run.
 
-    The packages keep their CANONICAL names (``langflow``, ``langflow-base``) -- they are NOT
-    renamed to ``*-nightly``. This script only sets the nightly ``.devN`` versions and re-pins the
-    inter-package dependencies to exact canonical dev versions. See ``src/bundles/NIGHTLY.md``.
+    The packages keep their CANONICAL names (``langflow``, ``langflow-base``,
+    ``langflow-services``) -- they are NOT renamed to ``*-nightly``. This script only
+    sets the nightly ``.devN`` versions and re-pins the inter-package dependencies to
+    exact canonical dev versions. See ``src/bundles/NIGHTLY.md``.
+
+    ``langflow-services`` versions with ``main_tag`` (1.x axis, same as langflow/lfx).
+    ``langflow-base`` versions with ``base_tag`` (nightlies remap base onto the root
+    axis so ``base_tag == main_tag``; stable releases keep base on 0.x).
 
     Usage:
     update_pyproject_combined.py main <main_tag> <base_tag> <lfx_tag>
@@ -46,10 +55,18 @@ def main():
 
     # First handle base package updates (canonical name kept).
     update_pyproject_version("src/backend/base/pyproject.toml", base_tag)
+    # langflow-services versions with langflow / lfx (main_tag on the 1.x axis).
+    update_pyproject_version("src/langflow-services/pyproject.toml", main_tag)
 
-    # Update LFX dependency in langflow-base (exact canonical dev pin).
+    # Update LFX dependency in langflow-base and langflow-services (exact canonical dev pin).
     lfx_version = lfx_tag.lstrip("v")
     update_lfx_dep_in_base("src/backend/base/pyproject.toml", lfx_version)
+    update_lfx_dep_in_services("src/langflow-services/pyproject.toml", lfx_version)
+    # Pin services from the root/main tag (1.x), not the remapped base tag (0.x).
+    update_langflow_services_dep_in_base(
+        "src/backend/base/pyproject.toml",
+        main_tag.lstrip("v"),
+    )
 
     # Then handle main package updates (canonical name kept).
     update_pyproject_version("pyproject.toml", main_tag)

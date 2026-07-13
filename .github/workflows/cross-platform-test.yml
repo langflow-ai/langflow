@@ -22,6 +22,10 @@ on:
         description: "Name of the LFX package artifact"
         required: false
         type: string
+      services-artifact-name:
+        description: "Name of the langflow-services package artifact"
+        required: false
+        type: string
       sdk-artifact-name:
         description: "Name of the langflow-sdk package artifact"
         required: false
@@ -45,6 +49,7 @@ jobs:
       base-artifact-name: ${{ steps.set-names.outputs.base-artifact-name }}
       main-artifact-name: ${{ steps.set-names.outputs.main-artifact-name }}
       lfx-artifact-name: ${{ steps.set-names.outputs.lfx-artifact-name }}
+      services-artifact-name: ${{ steps.set-names.outputs.services-artifact-name }}
       sdk-artifact-name: ${{ steps.set-names.outputs.sdk-artifact-name }}
       bundles-artifact-name: ${{ steps.set-names.outputs.bundles-artifact-name }}
     steps:
@@ -62,13 +67,6 @@ jobs:
         run: make install_frontendci
       - name: Build frontend
         run: make build_frontend
-      - name: Build base package
-        run: make build_langflow_base args="--wheel"
-      - name: Move base package to correct directory
-        run: |
-          # Base package builds to dist/ but should be in src/backend/base/dist/
-          mkdir -p src/backend/base/dist
-          mv dist/langflow_base*.whl src/backend/base/dist/
       - name: Build LFX package
         run: |
           cd src/lfx
@@ -77,6 +75,17 @@ jobs:
         run: |
           cd src/sdk
           uv build --wheel --out-dir dist
+      - name: Build services package
+        run: |
+          cd src/langflow-services
+          uv build --wheel --out-dir dist
+      - name: Build base package
+        run: make build_langflow_base args="--wheel"
+      - name: Move base package to correct directory
+        run: |
+          # Base package builds to dist/ but should be in src/backend/base/dist/
+          mkdir -p src/backend/base/dist
+          mv dist/langflow_base*.whl src/backend/base/dist/
       - name: Build main package
         run: make build_langflow args="--wheel"
       - name: Build bundle wheels
@@ -108,6 +117,11 @@ jobs:
         with:
           name: adhoc-dist-sdk
           path: src/sdk/dist
+      - name: Upload services artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: adhoc-dist-services
+          path: src/langflow-services/dist
       - name: Upload base artifact
         uses: actions/upload-artifact@v6
         with:
@@ -130,6 +144,7 @@ jobs:
           echo "base-artifact-name=adhoc-dist-base" >> $GITHUB_OUTPUT
           echo "main-artifact-name=adhoc-dist-main" >> $GITHUB_OUTPUT
           echo "lfx-artifact-name=adhoc-dist-lfx" >> $GITHUB_OUTPUT
+          echo "services-artifact-name=adhoc-dist-services" >> $GITHUB_OUTPUT
           echo "sdk-artifact-name=adhoc-dist-sdk" >> $GITHUB_OUTPUT
           if [ "${{ steps.build-bundles.outputs.bundles-found }}" = "1" ]; then
             echo "bundles-artifact-name=adhoc-dist-bundles" >> $GITHUB_OUTPUT
@@ -249,6 +264,13 @@ jobs:
           name: ${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name || 'adhoc-dist-lfx' }}
           path: ./lfx-dist
 
+      - name: Download services package artifact
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.services-artifact-name != '' || needs.build-if-needed.outputs.services-artifact-name != '')
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.services-artifact-name || needs.build-if-needed.outputs.services-artifact-name || 'adhoc-dist-services' }}
+          path: ./services-dist
+
       - name: Download base package artifact
         if: steps.install-method.outputs.method == 'wheel'
         uses: actions/download-artifact@v7
@@ -289,7 +311,7 @@ jobs:
 
           refresh_find_links() {
             FIND_LINKS=()
-            for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+            for wheel_dir in ./sdk-dist ./lfx-dist ./services-dist ./base-dist ./bundles-dist; do
               if [ -d "$wheel_dir" ]; then
                 FIND_LINKS+=(--find-links "$wheel_dir")
               fi
@@ -545,6 +567,13 @@ jobs:
           name: ${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name || 'adhoc-dist-lfx' }}
           path: ./lfx-dist
 
+      - name: Download services package artifact
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.services-artifact-name != '' || needs.build-if-needed.outputs.services-artifact-name != '')
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.services-artifact-name || needs.build-if-needed.outputs.services-artifact-name || 'adhoc-dist-services' }}
+          path: ./services-dist
+
       - name: Download base package artifact
         if: steps.install-method.outputs.method == 'wheel'
         uses: actions/download-artifact@v7
@@ -585,7 +614,7 @@ jobs:
 
           refresh_find_links() {
             FIND_LINKS=()
-            for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+            for wheel_dir in ./sdk-dist ./lfx-dist ./services-dist ./base-dist ./bundles-dist; do
               if [ -d "$wheel_dir" ]; then
                 FIND_LINKS+=(--find-links "$wheel_dir")
               fi
@@ -642,7 +671,7 @@ jobs:
           # the matching rc/dev wheel is not published yet, and fails with
           # "No solution found when resolving dependencies".
           FIND_LINKS=()
-          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+          for wheel_dir in ./sdk-dist ./lfx-dist ./services-dist ./base-dist ./bundles-dist; do
             if [ -d "$wheel_dir" ]; then
               FIND_LINKS+=(--find-links "$wheel_dir")
             fi
@@ -694,6 +723,12 @@ jobs:
                   LOCAL_WHEELS+=("$LFX_WHEEL")
                 fi
               fi
+              if [ -d ./services-dist ]; then
+                SERVICES_WHEEL=$(find ./services-dist -name "*.whl" -type f | head -1)
+                if [ -n "$SERVICES_WHEEL" ]; then
+                  LOCAL_WHEELS+=("$SERVICES_WHEEL")
+                fi
+              fi
               INSTALL_WHEELS=("${LOCAL_WHEELS[@]}" "$BASE_WHEEL")
             fi
             uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/Scripts/python.exe "${INSTALL_WHEELS[@]}"
@@ -710,7 +745,7 @@ jobs:
           # the matching rc/dev wheel is not published yet, and fails with
           # "No solution found when resolving dependencies".
           FIND_LINKS=()
-          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+          for wheel_dir in ./sdk-dist ./lfx-dist ./services-dist ./base-dist ./bundles-dist; do
             if [ -d "$wheel_dir" ]; then
               FIND_LINKS+=(--find-links "$wheel_dir")
             fi
@@ -760,6 +795,12 @@ jobs:
                 LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
                 if [ -n "$LFX_WHEEL" ]; then
                   LOCAL_WHEELS+=("$LFX_WHEEL")
+                fi
+              fi
+              if [ -d ./services-dist ]; then
+                SERVICES_WHEEL=$(find ./services-dist -name "*.whl" -type f | head -1)
+                if [ -n "$SERVICES_WHEEL" ]; then
+                  LOCAL_WHEELS+=("$SERVICES_WHEEL")
                 fi
               fi
               INSTALL_WHEELS=("${LOCAL_WHEELS[@]}" "$BASE_WHEEL")

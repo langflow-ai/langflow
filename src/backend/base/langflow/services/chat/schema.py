@@ -1,10 +1,13 @@
-import asyncio
-from typing import Any, Protocol
+"""Compatibility re-export from the standalone ``langflow_services`` package.
 
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
-class GetCache(Protocol):
-    async def __call__(self, key: str, lock: asyncio.Lock | None = None) -> Any: ...
+from __future__ import annotations
 
+import sys
 
-class SetCache(Protocol):
-    async def __call__(self, key: str, data: Any, lock: asyncio.Lock | None = None) -> bool: ...
+from langflow_services.chat import schema as _impl
+
+sys.modules[__name__] = _impl

@@ -85,3 +85,56 @@ def test_pattern_skips_unrelated_packages(pyproject: Path) -> None:
     # ...but `lfx-bundles` / `lfxthing` keep their own floors untouched.
     assert re.search(r'"lfx-bundles~=1\.11\.0"', result)
     assert re.search(r'"lfxthing~=1\.11\.0"', result)
+
+
+def test_pins_langflow_services_in_base(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "pyproject.toml"
+    path.write_text(
+        '[project]\ndependencies = [\n    "langflow-services~=1.11.0",\n]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mod, "BASE_DIR", tmp_path)
+    mod.update_langflow_services_dep_in_base(path.name, "1.11.0.dev3")
+    result = path.read_text(encoding="utf-8")
+    assert '"langflow-services==1.11.0.dev3"' in result
+    assert "~=" not in result
+
+
+def test_pins_langflow_services_preserves_extras(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "pyproject.toml"
+    path.write_text(
+        '[project]\ndependencies = [\n    "langflow-services[all]~=1.11.0",\n]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mod, "BASE_DIR", tmp_path)
+    mod.update_langflow_services_dep_in_base(path.name, "1.11.0.dev3")
+    result = path.read_text(encoding="utf-8")
+    assert '"langflow-services[all]==1.11.0.dev3"' in result
+    assert "~=" not in result
+
+
+def test_services_pin_uses_root_axis_not_base(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stable/nightly services pins are 1.x; they must not inherit base's 0.x remap."""
+    path = tmp_path / "pyproject.toml"
+    path.write_text(
+        '[project]\ndependencies = [\n    "langflow-services~=1.11.0",\n]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mod, "BASE_DIR", tmp_path)
+    mod.update_langflow_services_dep_in_base(path.name, "1.11.0.dev26")
+    result = path.read_text(encoding="utf-8")
+    assert '"langflow-services==1.11.0.dev26"' in result
+    assert "0.11.0" not in result
+
+
+def test_pins_lfx_in_services(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "pyproject.toml"
+    path.write_text(
+        '[project]\ndependencies = [\n    "lfx~=1.11.0",\n]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mod, "BASE_DIR", tmp_path)
+    mod.update_lfx_dep_in_services(path.name, "1.11.0.dev26")
+    result = path.read_text(encoding="utf-8")
+    assert '"lfx==1.11.0.dev26"' in result
+    assert "~=" not in result

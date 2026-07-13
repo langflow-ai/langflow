@@ -1,16 +1,13 @@
-"""Domain exceptions for the jobs service."""
+"""Compatibility re-export from the standalone ``langflow_services`` package.
+
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
 from __future__ import annotations
 
+import sys
 
-class JobError(RuntimeError):
-    """Base exception for job-domain errors."""
+from langflow_services.jobs import exceptions as _impl
 
-
-class DuplicateJobError(JobError):
-    """Raised by create_job() when a non-retryable job with the same dedupe_key already exists.
-
-    (QUEUED, IN_PROGRESS, or COMPLETED).
-    FAILED and CANCELLED are retryable and do not trigger this error.
-    Extends RuntimeError so existing except RuntimeError callers keep working.
-    """
+sys.modules[__name__] = _impl

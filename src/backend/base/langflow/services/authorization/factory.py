@@ -1,32 +1,13 @@
-"""Authorization service factory."""
+"""Compatibility re-export from the standalone ``langflow_services`` package.
+
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import sys
 
-from langflow.services.factory import ServiceFactory
-from langflow.services.schema import ServiceType
+from langflow_services.authorization import factory as _impl
 
-if TYPE_CHECKING:
-    from lfx.services.authorization.base import BaseAuthorizationService
-    from lfx.services.settings.service import SettingsService
-
-    from langflow.services.authorization.service import LangflowAuthorizationService
-
-
-class AuthorizationServiceFactory(ServiceFactory):
-    """Factory that creates the Langflow authorization service."""
-
-    name = ServiceType.AUTHORIZATION_SERVICE.value
-
-    service_class: type[LangflowAuthorizationService]
-
-    def __init__(self) -> None:
-        """Bind the factory to the LangflowAuthorizationService implementation."""
-        from langflow.services.authorization.service import LangflowAuthorizationService
-
-        super().__init__(LangflowAuthorizationService)
-
-    def create(self, settings_service: SettingsService) -> BaseAuthorizationService:
-        """Build a LangflowAuthorizationService using the injected settings service."""
-        return self.service_class(settings_service)
+sys.modules[__name__] = _impl

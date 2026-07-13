@@ -22,6 +22,7 @@ import pypi_nightly_tag as nt
 
 MAIN_URL = nt.PYPI_LANGFLOW_URL
 BASE_URL = nt.PYPI_LANGFLOW_BASE_URL
+SERVICES_URL = nt.PYPI_LANGFLOW_SERVICES_URL
 
 
 class _FakeResponse:
@@ -59,9 +60,13 @@ def _build_response(spec):
     return _FakeResponse(releases=spec)
 
 
-def _run(main=None, base=None, *, base_version="1.10.0", build_type="both"):
-    """Compute a tag with mocked PyPI responses for the main and base nightly packages."""
-    responses = {MAIN_URL: _build_response(main), BASE_URL: _build_response(base)}
+def _run(main=None, base=None, services=None, *, base_version="1.10.0", build_type="both"):
+    """Compute a tag with mocked PyPI responses for the lockstep nightly packages."""
+    responses = {
+        MAIN_URL: _build_response(main),
+        BASE_URL: _build_response(base),
+        SERVICES_URL: _build_response(services if services is not None else base),
+    }
 
     def fake_get(url, timeout=10):  # noqa: ARG001
         return responses[url]
@@ -94,8 +99,20 @@ def test_aligned_histories_increment_by_one():
 # --- edge cases -------------------------------------------------------------------------------
 
 
+def test_services_history_advances_shared_counter():
+    # Services on the 1.x axis still contributes to the shared .devN index.
+    assert (
+        _run(
+            ["1.10.0.dev10"],
+            ["1.10.0.dev10"],
+            services=["1.10.0.dev20"],
+        )
+        == "v1.10.0.dev21"
+    )
+
+
 def test_first_ever_nightly_both_404():
-    assert _run(404, 404) == "v1.10.0.dev0"
+    assert _run(404, 404, 404) == "v1.10.0.dev0"
 
 
 def test_first_ever_nightly_both_absent():
