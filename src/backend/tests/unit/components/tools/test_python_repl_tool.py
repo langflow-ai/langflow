@@ -5,6 +5,33 @@ from lfx.components.utilities.python_repl_core import PythonREPLComponent
 
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
+DYNAMIC_FORMAT_TRAVERSAL_CODE = """
+parts = ["__loader__", "find_spec", "__globals__"]
+field = "{0." + parts[0] + "." + parts[1] + "." + parts[2] + "[sys].modules[os].environ}"
+print("canary_present=" + str("PVR0800453_CANARY" in field.format(math)))
+"""
+
+# Sibling formatter sinks: the same __globals__ traversal lives in a *string* argument
+# (invisible to the AST attribute check) when fed through string.Formatter primitives or
+# operator.attrgetter. Each leaks os.environ unless the validator rejects the call.
+FORMATTER_VFORMAT_TRAVERSAL_CODE = """
+f = lambda: 0
+leaked = string.Formatter().vformat("{0.__globals__[os].environ[PVR0800453_CANARY]}", (f,), {})
+print("leaked=" + str(leaked))
+"""
+
+FORMATTER_GET_FIELD_TRAVERSAL_CODE = """
+f = lambda: 0
+obj, _ = string.Formatter().get_field("0.__globals__[os].environ[PVR0800453_CANARY]", (f,), {})
+print("leaked=" + str(obj))
+"""
+
+ATTRGETTER_TRAVERSAL_CODE = """
+f = lambda: 0
+leaked = operator.attrgetter("__globals__")(f)["os"].environ["PVR0800453_CANARY"]
+print("leaked=" + str(leaked))
+"""
+
 
 class TestPythonREPLComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
@@ -109,10 +136,60 @@ class TestPythonREPLComponentSecurity:
         assert "error" in data
         assert "not allowed" in data["error"]
 
+    def test_dynamic_format_string_traversal_is_blocked(self, monkeypatch):
+        """Dynamically-built str.format() fields cannot bypass the AST validator."""
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        data = self._run(DYNAMIC_FORMAT_TRAVERSAL_CODE)
+        assert "error" in data
+        assert "not allowed" in data["error"]
+        assert "SHOULD_NOT_LEAK" not in str(data)
+
+    def test_formatter_vformat_traversal_is_blocked(self, monkeypatch):
+        """string.Formatter().vformat carries the dunder chain in a string arg; blocked."""
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        data = self._run(FORMATTER_VFORMAT_TRAVERSAL_CODE, global_imports="math,string")
+        assert "error" in data
+        assert "not allowed" in data["error"]
+        assert "SHOULD_NOT_LEAK" not in str(data)
+
+    def test_formatter_get_field_traversal_is_blocked(self, monkeypatch):
+        """string.Formatter().get_field traverses a dotted string path; blocked."""
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        data = self._run(FORMATTER_GET_FIELD_TRAVERSAL_CODE, global_imports="math,string")
+        assert "error" in data
+        assert "not allowed" in data["error"]
+        assert "SHOULD_NOT_LEAK" not in str(data)
+
+    def test_attrgetter_traversal_is_blocked(self, monkeypatch):
+        """operator.attrgetter('__globals__') reaches os.environ via a string arg; blocked."""
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        data = self._run(ATTRGETTER_TRAVERSAL_CODE, global_imports="math,operator")
+        assert "error" in data
+        assert "not allowed" in data["error"]
+        assert "SHOULD_NOT_LEAK" not in str(data)
+
     def test_default_global_imports_excludes_pandas(self):
         """The default allow-list is minimal (no pandas) to avoid bundling a deserialization sink."""
         template = PythonREPLComponent().to_frontend_node()["data"]["node"]["template"]
         assert template["global_imports"]["value"] == "math"
+
+    def test_execution_refused_when_custom_components_disabled(self, monkeypatch):
+        """GHSA-8qpj-27x8-pwpq: run_python_repl must consult the gate, not just exec.
+
+        Locks in the wiring: a refactor dropping ensure_code_execution_enabled() from
+        run_python_repl would make this fail, independent of the gate's own unit tests.
+        """
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False)),
+        )
+        data = PythonREPLComponent(global_imports="math", python_code="print('SHOULD_NOT_RUN')").run_python_repl().data
+        assert "error" in data
+        assert "allow_custom_components" in data["error"]
+        # The code must never have executed.
+        assert "SHOULD_NOT_RUN" not in str(data)
 
 
 class TestPythonREPLToolComponentSecurity:
@@ -138,6 +215,12 @@ class TestPythonREPLToolComponentSecurity:
         with pytest.raises(ToolException, match="not allowed"):
             self._func()("().__class__.__bases__[0].__subclasses__()")
 
+    def test_tool_blocks_dynamic_format_string_traversal(self, monkeypatch):
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        with pytest.raises(ToolException, match="not allowed") as exc_info:
+            self._func()(DYNAMIC_FORMAT_TRAVERSAL_CODE)
+        assert "SHOULD_NOT_LEAK" not in str(exc_info.value)
+
     def test_tool_blocks_import_builtin(self):
         """__import__ is a bare name; PythonREPL surfaces the NameError as a string."""
         result = self._func()('__import__("subprocess").check_output(["echo", "PWNED"])')
@@ -150,3 +233,18 @@ class TestPythonREPLToolComponentSecurity:
         func("leaked = 12345")
         result = func("print(leaked)")
         assert "NameError" in result
+
+    def test_execution_refused_when_custom_components_disabled(self, monkeypatch):
+        """GHSA-8qpj-27x8-pwpq: run_python_code must consult the gate, not just exec.
+
+        Locks in the wiring: a refactor dropping ensure_code_execution_enabled() from
+        run_python_code would make this fail, independent of the gate's own unit tests.
+        """
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False)),
+        )
+        with pytest.raises(ToolException, match="allow_custom_components"):
+            self._func()("print('SHOULD_NOT_RUN')")

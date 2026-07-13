@@ -14,11 +14,19 @@ import httpx
 from lfx.custom import Component
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput
 from lfx.schema.message import Message
-from lfx.utils.ssrf_protection import SSRFProtectionError, validate_and_resolve_url
-from lfx.utils.ssrf_transport import create_ssrf_protected_client
+from lfx.utils.ssrf_protection import (
+    SSRFProtectionError,
+    is_host_allowed,
+    is_ip_blocked,
+    resolve_hostname,
+    validate_and_resolve_url,
+)
+from lfx.utils.ssrf_transport import SSRFProtectedTransport
 
 DEFAULT_TIMEOUT = 60.0
-# Cap aggregated reply size so a chatty/streaming agent can't make us buffer unbounded text.
+# Cap the aggregated reply STRING (not the buffered HTTP body: the a2a-sdk reads the whole
+# non-streaming response into memory before this loop runs). Bounding the body itself needs a
+# read-layer byte cap; tracked as a follow-up.
 MAX_A2A_RESPONSE_CHARS = 100_000
 
 
@@ -26,6 +34,37 @@ def _origin(url: httpx.URL | str) -> tuple[str | None, str | None, int | None]:
     """Return the (scheme, host, port) origin of ``url`` (default ports normalized to None)."""
     parsed = url if isinstance(url, httpx.URL) else httpx.URL(url)
     return (parsed.scheme, parsed.host, parsed.port)
+
+
+def _pin_host(url: httpx.URL | str) -> str:
+    """The host httpcore actually connects to: the IDNA/punycode ``raw_host``, not unicode ``.host``.
+
+    httpx connects using ``raw_host`` (e.g. ``xn--exmple-cua.com``), not the unicode ``.host``
+    (``exämple.com``). The DNS-pin key must be this exact representation, or for an IDN host the
+    pin is stored under a key the transport never reads and is silently bypassed (rebind for IDN
+    hosts). Mirrors ``webhook_pin_host`` in the a2a backend utils.
+    """
+    parsed = url if isinstance(url, httpx.URL) else httpx.URL(url)
+    return parsed.raw_host.decode("ascii")
+
+
+def _ssrf_floor_ips(url: httpx.URL | str) -> list[str]:
+    """Toggle-independent SSRF floor for a card-declared (caller-controlled) off-origin target.
+
+    ``validate_and_resolve_url`` returns ``[]`` with NO enforcement when the global SSRF toggle
+    is off, but a remote agent card can point the off-origin RPC ``url`` at an internal/metadata
+    IP (confused deputy). Resolve the host and reject any blocked IP even with the toggle off,
+    unless the host/IP is explicitly allowlisted. Mirrors ``validate_webhook_url``'s hard floor
+    for the equally caller-controlled webhook target. Returns the resolved IPs so the caller can
+    DNS-pin them.
+    """
+    host = _pin_host(url)
+    ips = resolve_hostname(host)
+    blocked = [ip for ip in ips if is_ip_blocked(ip) and not is_host_allowed(host, ip)]
+    if blocked:
+        msg = f"off-origin A2A target {host} resolves to a blocked address: {', '.join(blocked)}"
+        raise SSRFProtectionError(msg)
+    return ips
 
 
 def build_a2a_client(
@@ -37,42 +76,94 @@ def build_a2a_client(
 ) -> httpx.AsyncClient:
     """Build the httpx client used for all A2A calls, anchored to the ``agent_url`` origin.
 
-    ``create_ssrf_protected_client`` only DNS-pins the ``agent_url`` host, so same-origin
-    targets (the card GET and a same-origin ``message/send`` POST) are validated up front by
-    ``send_to_agent`` and pinned to ``validated_ips``. A spec-compliant agent card may
-    legitimately advertise its RPC ``url`` on a *different* origin; the transport does NOT pin
-    that host (it falls through to normal DNS with no SSRF check), and the configured
-    ``x-api-key`` must never reach it.
+    The client always uses the DNS-pinning transport over a single, mutable ``pinned_ips`` map.
+    The map is seeded with the ``agent_url`` host (validated up front by ``send_to_agent``), so
+    same-origin targets (the card GET and a same-origin ``message/send`` POST) carry the
+    ``x-api-key`` and connect to the pinned IPs. An allowlisted agent host resolves to no IPs
+    (trusted by config) and is simply left unpinned, matching the SSRF util.
 
-    The per-request hook handles those off-origin hops: it strips the ``x-api-key`` header so
-    the key only ever reaches the configured agent, and it SSRF-validates the target (resolve
-    + reject internal/metadata IPs) before the connection opens, covering the unpinned host the
-    transport doesn't. Same-origin requests are already validated and pinned, so they keep the
-    key and skip the redundant re-resolution. Redirects stay disabled so a 3xx can't smuggle the
+    A spec-compliant agent card may legitimately advertise its RPC ``url`` on a *different*
+    origin. The per-request hook handles those off-origin hops: it strips the ``x-api-key`` so
+    the key only ever reaches the configured agent, then SSRF-validates the target (resolve +
+    reject internal/metadata IPs) AND pins the validated IPs into the shared map before the
+    connection opens. Pinning is the fix for a DNS-rebind window: without it the hook validates
+    a public answer but httpx then does a fresh, unpinned lookup that could rebind to an internal
+    IP. Writing the validated IPs into the map the transport reads at connect time makes the
+    connection use exactly what was cleared, with no second resolution. Same-origin requests are
+    already validated and pinned, so they keep the key and skip the redundant re-resolution.
+    Because the off-origin target is card-controlled, a toggle-independent floor
+    (:func:`_ssrf_floor_ips`) still rejects non-allowlisted internal IPs even when the global SSRF
+    toggle is off, matching the webhook path. Redirects stay disabled so a 3xx can't smuggle the
     key or connection to an unvalidated host.
     """
     agent_origin = _origin(agent_url)
+    agent_pin_host = _pin_host(agent_url)
+    # Shared, mutable host -> validated-IPs map read by the transport's network backend at
+    # connect time. Keys are the punycode ``raw_host`` the transport connects with, so IDN hosts
+    # match. The hook adds each off-origin host before its connection opens; the a2a client issues
+    # its hops sequentially, so there is no concurrent write to this dict.
+    pinned_ips: dict[str, list[str]] = {}
+    if validated_ips and agent_pin_host:
+        pinned_ips[agent_pin_host] = list(validated_ips)
 
     async def _guard_request(request: httpx.Request) -> None:
         if _origin(request.url) == agent_origin:
             return
         # Off-origin hop: never leak the configured api key to a card-declared foreign host.
         request.headers.pop("x-api-key", None)
-        # The transport doesn't pin this host, so SSRF-validate it here (resolves the hostname
-        # and raises SSRFProtectionError if any resolved IP is blocked) before the connection
-        # opens. to_thread keeps the blocking DNS resolution off the event loop.
-        await asyncio.to_thread(validate_and_resolve_url, str(request.url))
+        # SSRF-validate the target (raises SSRFProtectionError if any resolved IP is blocked),
+        # then pin the validated IPs so httpx connects to exactly what we cleared instead of a
+        # fresh lookup a rebind could poison. to_thread keeps the blocking DNS off the event loop.
+        _validated_url, off_origin_ips = await asyncio.to_thread(validate_and_resolve_url, str(request.url))
+        if not off_origin_ips:
+            # Framework returned no pins: the host is allowlisted OR the global SSRF toggle is
+            # off. This target came from the remote card (not the flow author), so apply a
+            # toggle-independent floor that still rejects non-allowlisted internal IPs.
+            off_origin_ips = await asyncio.to_thread(_ssrf_floor_ips, request.url)
+        pin_host = _pin_host(request.url)
+        if pin_host and off_origin_ips:
+            pinned_ips[pin_host] = off_origin_ips
 
-    client_kwargs = {
-        "timeout": timeout,
-        "headers": {"x-api-key": api_key} if api_key else None,
-        "follow_redirects": False,
-        "event_hooks": {"request": [_guard_request]},
-    }
-    hostname = httpx.URL(agent_url).host
-    if validated_ips and hostname:
-        return create_ssrf_protected_client(hostname=hostname, validated_ips=validated_ips, **client_kwargs)
-    return httpx.AsyncClient(**client_kwargs)
+    return httpx.AsyncClient(
+        transport=SSRFProtectedTransport(pinned_ips=pinned_ips),
+        timeout=timeout,
+        headers={"x-api-key": api_key} if api_key else None,
+        follow_redirects=False,
+        event_hooks={"request": [_guard_request]},
+    )
+
+
+async def _reply_or_raise(responses) -> str:
+    """Join the text parts of an A2A send-message response stream into the reply.
+
+    Surfaces a non-successful remote task instead of passing its status text off as a reply: a task
+    that ended failed/rejected/canceled (or was returned still non-terminal by a server that ignored
+    the blocking send) is not a successful answer. A message-only reply carries no task state.
+    """
+    from a2a.helpers.proto_helpers import get_text_parts
+    from a2a.types import a2a_pb2 as pb
+
+    texts: list[str] = []
+    total_chars = 0
+    final_state: int | None = None
+    async for response in responses:
+        before = len(texts)
+        if response.HasField("task"):
+            final_state = response.task.status.state
+            for artifact in response.task.artifacts:
+                texts.extend(get_text_parts(artifact.parts))
+            if not texts and response.task.status.HasField("message"):
+                texts.extend(get_text_parts(response.task.status.message.parts))
+        elif response.HasField("message"):
+            texts.extend(get_text_parts(response.message.parts))
+        total_chars += sum(len(text) for text in texts[before:])
+        if total_chars >= MAX_A2A_RESPONSE_CHARS:
+            break
+    reply = "\n".join(text for text in texts if text)[:MAX_A2A_RESPONSE_CHARS]
+    if final_state is not None and final_state != pb.TaskState.TASK_STATE_COMPLETED:
+        msg = f"Remote A2A agent task did not complete ({pb.TaskState.Name(final_state)}): {reply or 'no detail'}"
+        raise ValueError(msg)
+    return reply
 
 
 async def call_a2a_agent(
@@ -92,7 +183,7 @@ async def call_a2a_agent(
     """
     from a2a.client.client import ClientConfig
     from a2a.client.client_factory import create_client
-    from a2a.helpers.proto_helpers import get_text_parts, new_text_part
+    from a2a.helpers.proto_helpers import new_text_part
     from a2a.types import a2a_pb2 as pb
 
     client = await create_client(
@@ -110,21 +201,7 @@ async def call_a2a_agent(
             parts=[new_text_part(message)],
         )
     )
-    texts: list[str] = []
-    total_chars = 0
-    async for response in client.send_message(request):
-        before = len(texts)
-        if response.HasField("task"):
-            for artifact in response.task.artifacts:
-                texts.extend(get_text_parts(artifact.parts))
-            if not texts and response.task.status.HasField("message"):
-                texts.extend(get_text_parts(response.task.status.message.parts))
-        elif response.HasField("message"):
-            texts.extend(get_text_parts(response.message.parts))
-        total_chars += sum(len(text) for text in texts[before:])
-        if total_chars >= MAX_A2A_RESPONSE_CHARS:
-            break
-    return "\n".join(text for text in texts if text)[:MAX_A2A_RESPONSE_CHARS]
+    return await _reply_or_raise(client.send_message(request))
 
 
 class A2AAgentComponent(Component):

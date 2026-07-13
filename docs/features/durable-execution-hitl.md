@@ -115,6 +115,18 @@ The pause probe is a no-op unless a component requests it, so normal flows are b
 - **Then** built vertices are restored, not re-executed (no LLM re-billing, no re-fired tools)
 - **And** branches killed before the pause stay dead
 
+### Scenario: HITL inside a nested flow is rejected
+- **Given** a flow whose Run Flow / Sub Flow / flow-as-tool target contains a connected Human Input node (or an approval-gated agent tool)
+- **When** the nested flow is executed
+- **Then** the run fails with a clear error ("cannot run as a nested flow… move the approval to the parent flow") instead of silently not pausing
+- **And** a target flow with an unwired Human Input (no downstream consumer) still runs — it is skipped at runtime, not blocking
+
+### Scenario: Two HITL nodes in sequence
+- **Given** a flow with two HumanInput nodes where the first gates the path to the second
+- **When** the first is approved, the second pauses, and the second is then approved
+- **Then** the run finalizes once — no loop back to the first node
+- **And** only the chosen branch of each node runs (the first node's non-chosen branches stay dead across the second pause's resume, not just within the build that answered them)
+
 ### Scenario: Single-flight resume
 - **Given** two resume requests for the same `SUSPENDED` job
 - **When** both arrive
@@ -171,7 +183,7 @@ Claim the job with an atomic `SUSPENDED → IN_PROGRESS` transition (`claim_susp
 Re-executing completed vertices on resume would re-bill LLMs, re-fire tools, and could revive dead branches.
 
 #### Decision
-Restore built vertices from the checkpoint; only re-run the paused vertex's **non-input predecessors** (`_rerun_non_input_predecessors`) needed to complete the gated step. Inputs (e.g. Chat Input) are not re-executed.
+Restore built vertices from the checkpoint; re-run only the paused vertex's **non-input predecessors whose dropped output an unbuilt consumer will actually read** (`_rerun_non_input_predecessors` / `_unbuild_needed_dropped_producers`). A producer behind a still-built, round-tripped consumer is left alone — re-running it is wasted work and, for a side-effecting node (an Agent re-bills its LLM and re-emits its message), surfaces as duplicate outputs on every later resume. Inputs (e.g. Chat Input) are never re-executed.
 
 #### Consequences
 - **Benefits**: no double billing, no duplicate side effects, deterministic continuation.
@@ -255,7 +267,18 @@ Drain the queue **inline** after cancelling the worker (`service.py::_stop`), an
 - `TraceDetailView.tsx`: renders the backend gate span; `backendHasGate` dedup prevents a duplicate synthetic node; `executedOutputSpans` bridges Chat Output from live `flowPool` only during the resume window (deduped by name).
 - `hitlStore.ts`: in-memory only (`pending` slot); `localStorage`/`persist` removed.
 
-### 6.6 Component map (quick index)
+### 6.6 lfx serve durable mode (LE-1695)
+
+Bare `lfx serve` gains the same background + HITL contract without a database, backed by the single-node SQLite substrate:
+
+- **Substrate** (`lfx/services/durable/`): `SqliteDurableJobStore` (job rows, gap-free per-job event log, control signals, atomic `claim_suspended_for_resume`) and `SqliteCheckpointStore` (the existing `CheckpointStore` ABC on the same DB file). Stdlib SQLite, WAL, async via `asyncio.to_thread`; one crash-safe file per deployment.
+- **Host** (`lfx/cli/serve_durable.py`): `DurableServeWorkflowHost` extends `ServeWorkflowHost` with `supports_background = True`; `submit_background` creates the job row and spawns the runner; `get_job_status` rebuilds a completed run's `WorkflowExecutionResponse` from stored `output_events`; `stop_job` records a durable STOP signal and cancels the local task.
+- **Runner** (`_drive`): runs `graph.process()` with checkpointing attached; `GraphPausedException` → job `SUSPENDED` + pending request persisted in job metadata; completion → terminal `ComponentOutput`s persisted as the job result; failure → `FAILED` with the error recorded.
+- **Resume**: `POST /api/v2/workflows/{job_id}/resume` (same request/response contract as the backend, incl. 404/409 semantics and the 422 `INVALID_DECISION` guard against actions outside `allowed_decisions`) claims single-flight, restores from the checkpoint — in-process or after a restart — re-applies the caller identity, injects the decision, un-builds the gated vertex plus its opaque-dropped producers, and re-drives. Agent pause blobs persist in the same SQLite file via `set_default_checkpoint_store`, so tool-approval interrupts also survive a restart. `GET /api/v2/workflows/{job_id}/pending` exposes the pending request.
+- **Opt-in**: `LFX_SERVE_DURABLE_DB=<path>`. Unset → serve stays stateless and `mode: background` keeps its 422; workers in multi-worker mode inherit the env var and share the DB file (a stop cancels the run only in the worker executing it).
+- **Proof**: `src/lfx/tests/unit/cli/test_serve_durable.py` — background echo completes with the sync-shaped response; a HITL flow suspends, exposes its pending request, resumes only the approved branch, and resumes to completion on a fresh app instance over the same DB file (restart equivalence).
+
+### 6.7 Component map (quick index)
 
 | Concern | Where | Key symbols |
 |---------|-------|-------------|
@@ -263,6 +286,7 @@ Drain the queue **inline** after cancelling the worker (`service.py::_stop`), an
 | Build seam + resume rebuild | `api/build.py` | `build_resumed_graph_and_get_order`, `_rerun_non_input_predecessors` |
 | Run-id pinning | `api/utils/flow_utils.py` | `build_graph_from_data` |
 | Durable job + single-flight | `services/background_execution/{runner,service}.py` | `JobStatus.SUSPENDED`, `claim_suspended_for_resume` |
+| lfx serve durable substrate | `lfx/services/durable/`, `lfx/cli/serve_durable.py` | `SqliteDurableJobStore`, `SqliteCheckpointStore`, `DurableServeWorkflowHost` |
 | Tracing | `services/tracing/{native,service}.py` | `record_event_span`, `_finalize_pending_spans`, `_stop` drain |
 | Trace UI | `TraceComponent/TraceDetailView.tsx` | `backendHasGate`, `executedOutputSpans` |
 | Live HITL slot | `stores/hitlStore.ts` | `pending` (in-memory) |
@@ -281,7 +305,7 @@ Drain the queue **inline** after cancelling the worker (`service.py::_stop`), an
 
 - **Default-off**: no component requests a pause → no checkpointing, no extra spans, no status churn. Safe to ship.
 - **Schema**: the `checkpoint` and `span`/`trace` tables back the durability + observability; no destructive migrations are part of this feature.
-- **Run modes**: works under the durable background path (`POST /api/v2/workflows`, `mode: background`) with resume via `POST /api/v2/workflows/{job_id}/resume`.
+- **Run modes**: works under the durable background path (`POST /api/v2/workflows`, `mode: background`) with resume via `POST /api/v2/workflows/{job_id}/resume`. On bare `lfx serve`, the same contract is opt-in via `LFX_SERVE_DURABLE_DB=<path>` (SQLite substrate, no database service); unset keeps serve stateless.
 - **Rollback**: reverting the trace-continuity change restores the prior behavior (Chat Output/gate absent from resumed backend traces) but does not affect pause/resume correctness; reverting the pause/resume layer disables HITL entirely (flows run straight through).
 
 ---

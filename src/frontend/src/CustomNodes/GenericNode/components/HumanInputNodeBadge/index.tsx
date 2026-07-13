@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import HumanInputCard from "@/components/core/chatComponents/HumanInputCard";
 import {
   Popover,
   PopoverAnchor,
-  PopoverContent,
+  PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { useHitlStore } from "@/stores/hitlStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
@@ -16,6 +17,7 @@ import { cn } from "@/utils/utils";
  * canvas. Only the node whose id matches the pending request renders anything.
  */
 export default function HumanInputNodeBadge({ nodeId }: { nodeId: string }) {
+  const { t } = useTranslation();
   const pending = useHitlStore((state) =>
     state.pending?.nodeId === nodeId ? state.pending : null,
   );
@@ -38,8 +40,8 @@ export default function HumanInputNodeBadge({ nodeId }: { nodeId: string }) {
           type="button"
           data-testid="human-input-node-badge"
           onClick={() => setOpen(true)}
-          title="Awaiting input"
-          aria-label="Awaiting input"
+          title={t("humanInput.awaitingInput")}
+          aria-label={t("humanInput.awaitingInput")}
           className={cn(
             "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
             "border-2 border-accent-indigo-foreground text-accent-indigo-foreground",
@@ -51,14 +53,16 @@ export default function HumanInputNodeBadge({ nodeId }: { nodeId: string }) {
           </span>
         </button>
       </PopoverAnchor>
-      <PopoverContent
+      {/* Non-portaled so the card lives inside the node subtree and inherits the canvas
+          transform — a body portal repositions late on zoom and visibly lags the node. */}
+      <PopoverContentWithoutPortal
         side="bottom"
         align="start"
         className="w-96 overflow-hidden rounded-xl border-0 p-0 shadow-md"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <HumanInputCard content={pending.content} />
-      </PopoverContent>
+      </PopoverContentWithoutPortal>
     </Popover>
   );
 }

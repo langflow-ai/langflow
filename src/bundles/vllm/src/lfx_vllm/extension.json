@@ -1,0 +1,80 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-vllm",
+  "version": "0.1.0",
+  "name": "vLLM",
+  "description": "vLLM as a first-class Langflow model provider, packaged as a standalone Extension Bundle.",
+  "lfx": {
+    "compat": ["1"]
+  },
+  "providers": [
+    {
+      "name": "vLLM",
+      "metadata": {
+        "icon": "vLLM",
+        "max_tokens_field_name": "max_tokens",
+        "variables": [
+          {
+            "variable_name": "vLLM API Base URL",
+            "variable_key": "VLLM_API_BASE",
+            "required": true,
+            "is_secret": false,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "base_url",
+            "component_metadata": {
+              "mapping_field": "vllm_base_url",
+              "required": false,
+              "advanced": true,
+              "info": "Falls back to the VLLM_API_BASE environment variable"
+            }
+          },
+          {
+            "variable_name": "vLLM API Key",
+            "variable_key": "VLLM_API_KEY",
+            "required": false,
+            "is_secret": true,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "api_key",
+            "component_metadata": {
+              "mapping_field": "api_key",
+              "required": false,
+              "advanced": true,
+              "info": "Falls back to the VLLM_API_KEY environment variable (optional for local servers)"
+            }
+          }
+        ],
+        "api_docs_url": "https://docs.vllm.ai/",
+        "mapping": {
+          "model_class": "ChatOpenAI",
+          "model_param": "model"
+        }
+      },
+      "model_class": {
+        "module": "langchain_openai",
+        "attr": "ChatOpenAI"
+      },
+      "embedding": {
+        "class_name": "OpenAIEmbeddings",
+        "module": "langchain_openai",
+        "attr": "OpenAIEmbeddings",
+        "param_mapping_key": "vLLM",
+        "param_mapping": {
+          "model": "model",
+          "api_base": "base_url",
+          "dimensions": "dimensions",
+          "chunk_size": "chunk_size",
+          "request_timeout": "timeout",
+          "max_retries": "max_retries",
+          "show_progress_bar": "show_progress_bar",
+          "model_kwargs": "model_kwargs"
+        }
+      },
+      "api_key_required": false,
+      "live": true,
+      "live_discovery": "lfx_vllm.discovery:fetch_live_vllm_models",
+      "validator": "lfx_vllm.discovery:validate_vllm_credentials"
+    }
+  ]
+}

@@ -60,6 +60,7 @@ jest.mock(
   () => ({ updateMessage: (...args: unknown[]) => updateMessageMock(...args) }),
 );
 
+import { queryClient } from "@/contexts";
 import { consumeBackgroundEvents } from "@/controllers/API/agui/run-flow-bridge";
 
 function sseStream(frames: string[]): ReadableStream<Uint8Array> {
@@ -93,6 +94,7 @@ describe("consumeBackgroundEvents", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     storeMessages = [];
+    queryClient.clear();
   });
 
   it("injects the card and parks awaiting-input when the run suspends", async () => {
@@ -156,7 +158,21 @@ describe("consumeBackgroundEvents", () => {
     expect(setAwaitingInput).toHaveBeenLastCalledWith(true);
   });
 
-  it("does not re-inject the card on a post-resume reattach (skipCardInjection)", async () => {
+  it("does not re-inject an already-answered pause replayed on a reattach", async () => {
+    // The user already answered this pause: its card carries submitted_action in the cache.
+    queryClient.setQueryData(
+      ["useGetMessagesQuery", "s1"],
+      [
+        {
+          id: "human-input-HI:job-3",
+          content_blocks: [
+            {
+              contents: [{ type: "human_input", submitted_action: "approve" }],
+            },
+          ],
+        },
+      ],
+    );
     const humanInput = JSON.stringify({
       type: "CUSTOM",
       name: "langflow.human_input_required",
@@ -184,10 +200,64 @@ describe("consumeBackgroundEvents", () => {
       { skipCardInjection: true },
     );
 
-    // The replayed pause must NOT re-add the card; the run finishes normally.
+    // The replayed, already-answered pause must NOT re-add the card; the run finishes normally.
     expect(addMessage).not.toHaveBeenCalled();
     expect(updateMessageMock).not.toHaveBeenCalled();
     expect(setAwaitingInput).toHaveBeenLastCalledWith(false);
+  });
+
+  it("injects a genuinely-new second pause on a post-resume reattach", async () => {
+    // Two sequential HumanInput nodes: the reattach replays the answered first pause AND the
+    // genuinely-new second pause. The second card must surface even with skipCardInjection.
+    queryClient.setQueryData(
+      ["useGetMessagesQuery", "s1"],
+      [
+        {
+          id: "human-input-HI1:job-4",
+          content_blocks: [
+            {
+              contents: [{ type: "human_input", submitted_action: "approve" }],
+            },
+          ],
+        },
+      ],
+    );
+    const replayedAnswered = JSON.stringify({
+      type: "CUSTOM",
+      name: "langflow.human_input_required",
+      value: { request_id: "HI1:job-4", kind: "node_input", options: [] },
+    });
+    const secondPause = JSON.stringify({
+      type: "CUSTOM",
+      name: "langflow.human_input_required",
+      value: {
+        request_id: "HI2:job-4",
+        kind: "node_input",
+        prompt: "Approve again?",
+        options: [{ action_id: "approve", label: "Approve" }],
+        allowed_decisions: ["approve"],
+      },
+    });
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      body: sseStream([
+        JSON.stringify({ type: "RUN_STARTED", runId: "job-4" }),
+        replayedAnswered,
+        secondPause,
+      ]),
+    }) as unknown as typeof fetch;
+
+    await consumeBackgroundEvents(
+      "job-4",
+      { flowId: "f1", threadId: "s1" },
+      undefined,
+      { skipCardInjection: true },
+    );
+
+    // Only the second (unanswered) pause injects its card; the first replay is skipped.
+    expect(addMessage).toHaveBeenCalledTimes(1);
+    expect(addMessage.mock.calls[0][0].id).toBe("human-input-HI2:job-4");
+    expect(setAwaitingInput).toHaveBeenLastCalledWith(true);
   });
 
   it("clears awaiting-input when a resumed run reaches RUN_FINISHED", async () => {

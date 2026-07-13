@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { openFlowCard } from "../../utils/flow/open-flow-card";
 
 test(
   "user should be able to manually save a flow when the auto_save is off",
@@ -65,11 +66,7 @@ test(
       console.error("Warning text not visible, skipping dialog confirmation");
     }
 
-    const newFlowDiv = await page
-      .getByTestId("flow-name-div")
-      .filter({ hasText: "New Flow" })
-      .first();
-    await newFlowDiv.click();
+    await openFlowCard(page, "New Flow");
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 5000,
@@ -113,11 +110,7 @@ test(
 
     await page.getByText("Save And Exit", { exact: true }).click();
 
-    const newFlow = await page
-      .getByTestId("flow-name-div")
-      .filter({ hasText: "New Flow" })
-      .first();
-    await newFlow.click();
+    await openFlowCard(page, "New Flow");
 
     await page.waitForSelector("text=loading", {
       state: "hidden",
@@ -165,11 +158,7 @@ test(
       await page.getByText("Save And Exit", { exact: true }).last().click();
     }
 
-    const newFlow2 = await page
-      .getByTestId("flow-name-div")
-      .filter({ hasText: "New Flow" })
-      .first();
-    await newFlow2.click();
+    await openFlowCard(page, "New Flow");
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 5000,

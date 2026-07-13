@@ -1,4 +1,3 @@
-export { postAssistStream } from "./use-post-assist-stream";
 export type {
   AgenticAssistRequest,
   AgenticCancelledEvent,
@@ -15,3 +14,4 @@ export type {
   AgenticTokenEvent,
   FlowAction,
 } from "./types";
+export { postAssistStream } from "./use-post-assist-stream";

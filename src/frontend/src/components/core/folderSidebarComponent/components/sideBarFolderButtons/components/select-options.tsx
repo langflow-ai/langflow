@@ -8,6 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select-custom";
+import { usePermissions } from "@/contexts/permissionsContext";
 import type { FolderType } from "@/pages/MainPage/entities";
 import { cn } from "@/utils/utils";
 import { handleSelectChange } from "../helpers/handle-select-change";
@@ -27,6 +28,10 @@ export const SelectOptions = ({
   checkPathName: (folderId: string) => boolean;
 }) => {
   const { t } = useTranslation();
+  const { can } = usePermissions();
+  const canRename = can(item.id, "write");
+  const canDownload = can(item.id, "read");
+  const canDelete = can(item.id, "delete");
   return (
     <div>
       <Select
@@ -47,16 +52,17 @@ export const SelectOptions = ({
           styleClasses="z-50"
         >
           <SelectTrigger
-            className="w-fit"
+            className="h-6 w-6 min-h-[24px] min-w-[24px]"
             id={`options-trigger-${item.name}`}
             data-testid={
               "more-options-button" + `_${convertTestName(item?.name ?? "")}`
             }
+            aria-label={t("folder.optionsFor", { name: item.name })}
           >
             <IconComponent
               name={"MoreHorizontal"}
               className={cn(
-                `w-4 stroke-[1.5] px-0 text-muted-foreground group-hover/menu-button:block group-hover/menu-button:text-foreground`,
+                `w-4 stroke-[1.5] px-0 text-muted-foreground group-hover/menu-button:block group-hover/menu-button:text-foreground group-focus-within/menu-button:block group-focus-within/menu-button:text-foreground`,
                 checkPathName(item.id!) ? "block" : "hidden",
               )}
             />
@@ -68,6 +74,7 @@ export const SelectOptions = ({
             value="rename"
             data-testid="btn-rename-project"
             className="text-xs"
+            disabled={!canRename}
           >
             <FolderSelectItem name={t("folder.rename")} iconName="SquarePen" />
           </SelectItem>
@@ -75,6 +82,7 @@ export const SelectOptions = ({
             value="download"
             data-testid="btn-download-project"
             className="text-xs"
+            disabled={!canDownload}
           >
             <FolderSelectItem name={t("folder.download")} iconName="Download" />
           </SelectItem>
@@ -82,6 +90,7 @@ export const SelectOptions = ({
             value="delete"
             data-testid="btn-delete-project"
             className="text-xs"
+            disabled={!canDelete}
           >
             <FolderSelectItem name={t("folder.delete")} iconName="Trash2" />
           </SelectItem>

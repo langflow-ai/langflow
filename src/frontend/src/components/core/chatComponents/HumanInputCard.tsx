@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
@@ -21,9 +22,6 @@ export interface HumanInputDecision {
   action_id: string;
   values: Record<string, string>;
 }
-
-const WAITING_FALLBACK_TEXT =
-  "The flow has paused and is waiting for your decision before continuing.";
 
 // Map an action to its Figma style: Approve is the filled primary, Reject is the
 // red outline; everything else stays a neutral outline.
@@ -52,6 +50,7 @@ export default function HumanInputCard({
   onSubmit?: (decision: HumanInputDecision) => void;
   submitted?: boolean;
 }) {
+  const { t } = useTranslation();
   const [values, setValues] = useState<Record<string, string>>({});
   const [localChosen, setLocalChosen] = useState<string | null>(null);
   const fields = content.schema ?? content.fields ?? [];
@@ -67,7 +66,7 @@ export default function HumanInputCard({
   const resumeRun = (decision: HumanInputDecision) => {
     const jobId = content.job_id;
     if (!jobId) {
-      setErrorData({ title: "Cannot resume: missing job id" });
+      setErrorData({ title: t("humanInput.cannotResumeMissingJobId") });
       setLocalChosen(null);
       return;
     }
@@ -107,7 +106,10 @@ export default function HumanInputCard({
             ?.status;
           if (status === 409) return;
           setLocalChosen(null);
-          setErrorData({ title: "Resume failed", list: [err.message] });
+          setErrorData({
+            title: t("humanInput.resumeFailed"),
+            list: [err.message],
+          });
         },
       },
     );
@@ -129,7 +131,7 @@ export default function HumanInputCard({
     >
       <div className="flex items-center gap-2 border-b border-accent-indigo-foreground/20 bg-accent-indigo-foreground/5 px-4 py-3 text-base font-semibold text-accent-indigo-foreground">
         <ForwardedIconComponent name="CirclePause" className="h-5 w-5" />
-        <span>Waiting for input</span>
+        <span>{t("humanInput.waitingForInput")}</span>
       </div>
 
       <div className="flex flex-col gap-3 px-4 py-3">
@@ -137,7 +139,7 @@ export default function HumanInputCard({
           {content.prompt ? (
             <Markdown remarkPlugins={[remarkGfm]}>{content.prompt}</Markdown>
           ) : (
-            <p>{WAITING_FALLBACK_TEXT}</p>
+            <p>{t("humanInput.waitingFallback")}</p>
           )}
         </div>
 

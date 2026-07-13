@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StickToBottom, useStickToBottom } from "use-stick-to-bottom";
 import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-header";
@@ -14,6 +15,7 @@ import { ChatInput } from "../../chat-view/chat-input";
 import useDragAndDrop from "../../chat-view/chat-input/hooks/use-drag-and-drop";
 import { Messages } from "../../chat-view/chat-messages";
 import { useChatHistory } from "../../chat-view/chat-messages/hooks/use-chat-history";
+import { shouldForceScrollOnNewMessage } from "../../chat-view/utils/should-force-scroll";
 import { useSessionManager } from "../../hooks/use-session-manager";
 
 type FlowPageSlidingContainerContentProps = {
@@ -25,20 +27,29 @@ export function FlowPageSlidingContainerContent({
   isFullscreen,
   setIsFullscreen,
 }: FlowPageSlidingContainerContentProps) {
+  const { t } = useTranslation();
   const currentFlowId = useGetFlowId();
-  const { setOpen, setWidth } = useSimpleSidebar();
-  const inputs = useFlowStore((state) => state.inputs);
-  const nodes = useFlowStore((state) => state.nodes);
+  const { open, setOpen, setWidth } = useSimpleSidebar();
+  // Select primitives, not arrays: setNodes recreates nodes/inputs on every
+  // node-drag frame, and array subscriptions re-render the whole panel.
+  const hasChatInput = useFlowStore((state) =>
+    state.inputs.some((input) => input.type === "ChatInput"),
+  );
+  const chatInputValue = useFlowStore((state) => {
+    const chatInput = state.inputs.find((input) => input.type === "ChatInput");
+    if (!chatInput) return null;
+    const node = state.nodes.find((n) => n.id === chatInput.id);
+    if (!node) return null;
+    return node.data?.node?.template?.["input_value"]?.value ?? "";
+  });
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
 
   const {
     activeSessionId,
     sessions,
-    fetchedSessions,
     createSession,
     deleteSession,
-    deleteSessionLocalOnly,
     bulkDeleteSessions,
     renameSession,
     selectSession,
@@ -49,39 +60,42 @@ export function FlowPageSlidingContainerContent({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [files, setFiles] = useState<FilePreviewType[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const { sendMessage } = useSendMessage({ sessionId: activeSessionId });
-  const inputTypes = inputs.map((obj) => obj.type);
-  const noInput = !inputTypes.includes("ChatInput");
+  const noInput = !hasChatInput;
 
-  const chatHistory = useChatHistory(activeSessionId ?? currentFlowId ?? null);
+  const { chatHistory } = useChatHistory(
+    activeSessionId ?? currentFlowId ?? null,
+  );
 
   useEffect(() => {
-    const chatInput = inputs.find((input) => input.type === "ChatInput");
-    const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
-
-    if (chatHistory.length === 0 && !isBuilding && chatInputNode) {
-      setChatValueStore(
-        chatInputNode.data.node.template["input_value"].value ?? "",
-      );
+    if (chatHistory.length === 0 && !isBuilding && chatInputValue !== null) {
+      setChatValueStore(chatInputValue);
     }
-  }, [chatHistory.length, isBuilding, inputs, nodes, setChatValueStore]);
+  }, [chatHistory.length, isBuilding, chatInputValue, setChatValueStore]);
 
   const stickyInstance = useStickToBottom({
     resize: "instant",
     initial: "instant",
   });
 
-  const prevChatLenRef = useRef(chatHistory.length);
+  // Scroll down only when a new message is appended (last-message id change);
+  // prepending older history also grows the length and must not scroll.
+  const prevLastMsgIdRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (chatHistory.length > prevChatLenRef.current) {
-      const lastMsg = chatHistory[chatHistory.length - 1];
-      if (lastMsg?.isSend) {
-        window.dispatchEvent(new Event("langflow-scroll-to-bottom"));
-        stickyInstance.scrollToBottom("smooth");
-      }
+    const lastMsg = chatHistory[chatHistory.length - 1];
+    const lastId = lastMsg?.id;
+    if (
+      lastId &&
+      prevLastMsgIdRef.current !== undefined &&
+      lastId !== prevLastMsgIdRef.current &&
+      shouldForceScrollOnNewMessage(lastMsg)
+    ) {
+      window.dispatchEvent(new Event("langflow-scroll-to-bottom"));
+      stickyInstance.scrollToBottom("smooth");
     }
-    prevChatLenRef.current = chatHistory.length;
+    prevLastMsgIdRef.current = lastId;
   }, [chatHistory, stickyInstance]);
 
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
@@ -110,6 +124,17 @@ export function FlowPageSlidingContainerContent({
     setSidebarOpen(isFullscreen);
   }, [isFullscreen]);
 
+  useEffect(() => {
+    if (!open) return;
+    const raf = requestAnimationFrame(() => {
+      const chatInput = panelRef.current?.querySelector<HTMLTextAreaElement>(
+        '[data-testid="input-chat-playground"]',
+      );
+      (chatInput ?? panelRef.current)?.focus();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [open]);
+
   const handleExitFullscreen = () => {
     setIsFullscreen(false);
     setOpen(true);
@@ -131,6 +156,10 @@ export function FlowPageSlidingContainerContent({
 
   return (
     <div
+      ref={panelRef}
+      tabIndex={-1}
+      role="region"
+      aria-label={t("misc.playground")}
       className="h-full w-full muted shadow-lg flex flex-col relative z-[50] @container/chat-panel"
       onDragOver={dragOver}
       onDragEnter={dragEnter}
@@ -198,6 +227,7 @@ export function FlowPageSlidingContainerContent({
               >
                 <ChatInput
                   noInput={noInput}
+                  playgroundPage={true}
                   files={files}
                   setFiles={setFiles}
                   isDragging={isDragging}

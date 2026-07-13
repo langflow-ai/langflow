@@ -8,13 +8,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
@@ -26,73 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
-
-// Decisions an agent can offer when a tool action pauses (empty selection = no approval).
-// Scoped to Approve/Reject for now (no Edit/Respond).
-const APPROVAL_ACTIONS: { id: string; label: string }[] = [
-  { id: "approve", label: "Approve" },
-  { id: "reject", label: "Reject" },
-];
-
-function ApprovalActionsCell({
-  selected,
-  onChange,
-}: {
-  selected: string[];
-  onChange: (next: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  // Keep edits local while the popover is open so toggling a box doesn't re-render
-  // the grid row (which would remount this cell and close the popover). Persist on close.
-  const [local, setLocal] = useState<string[]>(selected);
-  useEffect(() => {
-    if (!open) setLocal(selected);
-  }, [selected, open]);
-
-  const toggle = (id: string) =>
-    setLocal((current) =>
-      current.includes(id) ? current.filter((a) => a !== id) : [...current, id],
-    );
-
-  const handleOpenChange = (next: boolean) => {
-    setOpen(next);
-    if (!next) onChange(local);
-  };
-
-  const summary =
-    local.length === 0
-      ? "Off"
-      : APPROVAL_ACTIONS.filter((a) => local.includes(a.id))
-          .map((a) => a.label)
-          .join(", ");
-
-  return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          data-testid="approval-actions-trigger"
-          className="flex h-7 w-full items-center truncate rounded-md border border-border px-2 text-xs text-muted-foreground hover:bg-muted"
-        >
-          <span className="truncate">{summary}</span>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-44 p-1">
-        {APPROVAL_ACTIONS.map((action) => (
-          <button
-            key={action.id}
-            type="button"
-            onClick={() => toggle(action.id)}
-            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-          >
-            <Checkbox checked={local.includes(action.id)} />
-            <span>{action.label}</span>
-          </button>
-        ))}
-      </PopoverContent>
-    </Popover>
-  );
-}
+import { RequiresApprovalToggle } from "./RequiresApprovalToggle";
 
 export default function ToolsTable({
   rows,
@@ -314,7 +242,7 @@ export default function ToolsTable({
     },
     {
       field: "approval_actions",
-      headerName: t("toolsModal.columnApproval", "HITL"),
+      headerName: t("toolsModal.columnApproval", "Requires approval"),
       width: 150,
       flex: 0,
       resizable: false,
@@ -326,7 +254,7 @@ export default function ToolsTable({
         >;
       }) => (
         <div data-hitl-cell className="flex h-full items-center">
-          <ApprovalActionsCell
+          <RequiresApprovalToggle
             selected={params.data?.approval_actions ?? []}
             onChange={(next) => handleApprovalChange(params.data, next)}
           />

@@ -10,6 +10,8 @@ on:
       - "src/lfx/src/lfx/components/**"
       - "src/bundles/**"
       - "src/backend/base/langflow/api/**.py"
+      - "scripts/ci/check_components_frozen.py"
+      - "scripts/ci/frozen_component_dirs.txt"
       - ".github/workflows/extension-migration-checks.yml"
 
 jobs:
@@ -84,3 +86,34 @@ jobs:
 
       - name: Run check_router_trust.py
         run: python scripts/migrate/check_router_trust.py
+
+  freeze-components:
+    name: Freeze lfx/components
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # Stdlib-only gate; no uv sync needed.  After the bundle metapackage
+      # split, new providers go to lfx-bundles, not src/lfx/src/lfx/components/.
+      - name: Forbid new top-level directories under lfx/components (post-freeze)
+        run: python3 scripts/ci/check_components_frozen.py
+
+  env-writes:
+    name: No process-global os.environ writes in components
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # Stdlib-only gate; no uv sync needed.  Mirrors the pre-commit
+      # `component-env-writes` hook so the credential-bleed guard is enforced
+      # in CI even when a contributor skips local hooks (git commit -n, web UI).
+      - name: Forbid component writes to process-global os.environ
+        run: python3 scripts/lint/check_component_env_writes.py

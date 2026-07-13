@@ -715,6 +715,36 @@ class Graph:
 
         return build_checkpoint(self)
 
+    def _persist_resolved_branch_exclusions(self) -> None:
+        """Promote already-answered HumanInput decisions into the persistent exclusion channel.
+
+        A HumanInput stops its non-chosen branches with ``self.stop()`` (transient INACTIVE: reset
+        per build and never checkpointed). When a later HumanInput pauses, the earlier node's dead
+        branches would revive on resume and run — surfacing extra outputs and a re-paused first node.
+        Move each resolved decision into ``conditionally_excluded_vertices`` (the same durable channel
+        ConditionalRouter uses) so the dead branches stay dead across the resume. Derived from graph
+        edges plus the recorded decision, so it also covers saved flows whose frozen component code
+        predates any in-component exclusion call.
+        """
+        decisions = getattr(self, "human_input_decisions", {}) or {}
+        if not decisions:
+            return
+        for vertex in self.vertices:
+            if (getattr(vertex, "data", None) or {}).get("type") != "HumanInput":
+                continue
+            decision = decisions.get(f"{vertex.id}:{self.run_id}")
+            if not decision:
+                continue
+            chosen = decision.get("action_id")
+            branch_outputs = {
+                edge.source_handle.name
+                for edge in self.edges
+                if edge.source_id == vertex.id and edge.source_handle.name.startswith("branch_")
+            }
+            non_chosen = sorted(branch_outputs - {f"branch_{chosen}"})
+            if non_chosen:
+                self.exclude_branches_conditionally(vertex.id, non_chosen)
+
     async def _check_for_pause_signal(self) -> None:
         if self.pause_probe is None or self.job_id is None:
             return
@@ -734,6 +764,7 @@ class Graph:
         await self._check_for_pause_signal()
         if not (self.checkpointing_enabled and self.pause_requested):
             return
+        self._persist_resolved_branch_exclusions()
         checkpoint = self.build_checkpoint()
         store = self.checkpoint_store
         if store is None:
@@ -959,25 +990,34 @@ class Graph:
         fallback_to_env_vars: bool = False,
         event_manager: EventManager | None = None,
     ) -> list[RunOutputs]:
-        """Runs the graph with the given inputs.
+        """Runs the graph with the given inputs via the configured executor."""
+        from lfx.execution import get_default_coordinator
 
-        Args:
-            inputs (list[Dict[str, str]]): The input values for the graph.
-            inputs_components (Optional[list[list[str]]], optional): Components to run for the inputs. Defaults to None.
-            types (Optional[list[Optional[InputType]]], optional): The types of the inputs. Defaults to None.
-            outputs (Optional[list[str]], optional): The outputs to retrieve from the graph. Defaults to None.
-            session_id (Optional[str], optional): The session ID for the graph. Defaults to None.
-            stream (bool, optional): Whether to stream the results or not. Defaults to False.
-            fallback_to_env_vars (bool, optional): Whether to fallback to environment variables. Defaults to False.
-            event_manager (EventManager | None): The event manager for the graph.
+        return await get_default_coordinator().run_to_completion(
+            self,
+            inputs=inputs,
+            inputs_components=inputs_components,
+            types=types,
+            outputs=outputs,
+            session_id=session_id,
+            stream=stream,
+            fallback_to_env_vars=fallback_to_env_vars,
+            event_manager=event_manager,
+            _use_arun_legacy=True,
+        )
 
-        Returns:
-            List[RunOutputs]: The outputs of the graph.
-        """
-        # inputs is {"message": "Hello, world!"}
-        # we need to go through self.inputs and update the self.raw_params
-        # of the vertices that are inputs
-        # if the value is a list, we need to run multiple times
+    async def _arun_legacy(
+        self,
+        inputs: list[dict[str, str]],
+        *,
+        inputs_components: list[list[str]] | None = None,
+        types: list[InputType | None] | None = None,
+        outputs: list[str] | None = None,
+        session_id: str | None = None,
+        stream: bool = False,
+        fallback_to_env_vars: bool = False,
+        event_manager: EventManager | None = None,
+    ) -> list[RunOutputs]:
         vertex_outputs = []
         if not isinstance(inputs, list):
             inputs = [inputs]
@@ -1067,13 +1107,52 @@ class Graph:
         if state == VertexStates.INACTIVE:
             self.run_manager.remove_from_predecessors(vertex_id)
 
+    def _get_output_names(self, vertex_id: str) -> set[str]:
+        return {
+            edge.source_handle.name
+            for edge in self.edges
+            if edge.source_id == vertex_id and getattr(edge.source_handle, "name", None)
+        }
+
+    def _collect_branch_vertices(self, vertex_id: str, output_names: set[str] | None = None) -> set[str]:
+        visited: set[str] = {vertex_id}
+
+        def walk(current_id: str, *, is_source: bool = False) -> None:
+            for edge in self.edges:
+                if edge.source_id != current_id:
+                    continue
+                if is_source and output_names is not None and edge.source_handle.name not in output_names:
+                    continue
+                child_id = edge.target_id
+                if child_id in visited:
+                    continue
+                visited.add(child_id)
+                walk(child_id)
+
+        walk(vertex_id, is_source=True)
+        visited.discard(vertex_id)
+        return visited
+
+    def _get_vertices_reachable_from_other_outputs(self, vertex_id: str, output_names: set[str]) -> set[str]:
+        other_output_names = self._get_output_names(vertex_id) - output_names
+        if not other_output_names:
+            return set()
+        return self._collect_branch_vertices(vertex_id, other_output_names)
+
     def _mark_branch(
-        self, vertex_id: str, state: str, visited: set | None = None, output_name: str | None = None
+        self,
+        vertex_id: str,
+        state: str,
+        visited: set | None = None,
+        output_name: str | None = None,
+        protected_vertices: set[str] | None = None,
     ) -> set:
         """Marks a branch of the graph."""
         if visited is None:
             visited = set()
         else:
+            if state == VertexStates.INACTIVE and vertex_id in (protected_vertices or set()):
+                return visited
             self.mark_vertex(vertex_id, state)
         if vertex_id in visited:
             return visited
@@ -1086,11 +1165,21 @@ class Graph:
                 edge = self.get_edge(vertex_id, child_id)
                 if edge and edge.source_handle.name != output_name:
                     continue
-            self._mark_branch(child_id, state, visited)
+            self._mark_branch(child_id, state, visited, protected_vertices=protected_vertices)
         return visited
 
     def mark_branch(self, vertex_id: str, state: str, output_name: str | None = None) -> None:
-        visited = self._mark_branch(vertex_id=vertex_id, state=state, output_name=output_name)
+        protected_vertices = (
+            self._get_vertices_reachable_from_other_outputs(vertex_id, {output_name})
+            if state == VertexStates.INACTIVE and output_name
+            else None
+        )
+        visited = self._mark_branch(
+            vertex_id=vertex_id,
+            state=state,
+            output_name=output_name,
+            protected_vertices=protected_vertices,
+        )
         new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
         new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
         if vertex_id in self.cycle_vertices:
@@ -1103,6 +1192,19 @@ class Graph:
             run_predecessors=new_predecessor_map,
             vertices_to_run=self.vertices_to_run,
         )
+
+    def _replace_conditional_exclusions(self, vertex_id: str, excluded: set[str]) -> None:
+        """Replace ``vertex_id``'s conditional exclusions with ``excluded``.
+
+        Any vertices this source previously excluded are cleared first so the routing
+        decision can be re-evaluated (e.g. on later cycle iterations where the condition
+        may change) before the new set is applied and recorded against the source.
+        """
+        if vertex_id in self.conditional_exclusion_sources:
+            self.conditionally_excluded_vertices -= self.conditional_exclusion_sources.pop(vertex_id)
+        self.conditionally_excluded_vertices.update(excluded)
+        if excluded:
+            self.conditional_exclusion_sources[vertex_id] = excluded
 
     def exclude_branch_conditionally(self, vertex_id: str, output_name: str | None = None) -> None:
         """Marks a branch as conditionally excluded (for conditional routing).
@@ -1117,45 +1219,44 @@ class Graph:
 
         Args:
             vertex_id: The source vertex making the exclusion decision
-            output_name: The output name to follow when excluding downstream vertices
+            output_name: The output name to follow when excluding downstream vertices. A falsy
+                value (``None`` or an empty string) excludes the entire downstream branch
+                (every output), matching the historical behavior.
         """
-        # Clear any previous exclusions from this source vertex
-        if vertex_id in self.conditional_exclusion_sources:
-            previous_exclusions = self.conditional_exclusion_sources[vertex_id]
-            self.conditionally_excluded_vertices -= previous_exclusions
-            del self.conditional_exclusion_sources[vertex_id]
-
-        # Now exclude the new branch
-        visited: set[str] = set()
-        excluded: set[str] = set()
-        self._exclude_branch_conditionally(vertex_id, visited, excluded, output_name, skip_first=True)
-
-        # Track which vertices this source excluded
-        if excluded:
-            self.conditional_exclusion_sources[vertex_id] = excluded
-
-    def _exclude_branch_conditionally(
-        self, vertex_id: str, visited: set, excluded: set, output_name: str | None = None, *, skip_first: bool = False
-    ) -> None:
-        """Recursively excludes vertices in a branch for conditional routing."""
-        if vertex_id in visited:
+        if output_name:
+            # A single named output is the multi-branch case with one branch; delegating
+            # keeps the "keep shared downstream nodes reachable from a sibling output" logic
+            # (e.g. a merge node fed by both branches of an If-Else) in one place.
+            self.exclude_branches_conditionally(vertex_id, [output_name])
             return
-        visited.add(vertex_id)
 
-        # Don't exclude the first vertex (the router itself)
-        if not skip_first:
-            self.conditionally_excluded_vertices.add(vertex_id)
-            excluded.add(vertex_id)
+        # Whole-branch exclusion (no output filter): exclude every descendant.
+        self._replace_conditional_exclusions(vertex_id, self._collect_branch_vertices(vertex_id))
 
-        for child_id in self.parent_child_map[vertex_id]:
-            # If we're at the router (skip_first=True) and have an output_name,
-            # only follow edges from that specific output
-            if skip_first and output_name:
-                edge = self.get_edge(vertex_id, child_id)
-                if edge and edge.source_handle.name != output_name:
-                    continue
-            # After the first level, exclude all descendants
-            self._exclude_branch_conditionally(child_id, visited, excluded, output_name=None, skip_first=False)
+    def exclude_branches_conditionally(self, vertex_id: str, output_names: list[str]) -> None:
+        """Conditionally exclude several output branches of a single source vertex at once.
+
+        Behaves like :meth:`exclude_branch_conditionally` but accumulates the branches of
+        every output in ``output_names`` under one source key, so excluding one branch does
+        not clear its siblings. This is required by multi-way routers (e.g. Smart Router)
+        that keep a single matched output and must persistently exclude all the others.
+
+        Like the single-branch variant, any previous exclusions from this source vertex are
+        cleared first so the decision can be re-evaluated (e.g. on later cycle iterations).
+
+        Args:
+            vertex_id: The source vertex making the exclusion decision.
+            output_names: The output names whose downstream branches should be excluded.
+        """
+        # Exclude each requested branch, then keep shared descendants that are still
+        # reachable from a non-excluded output (for example, a merge node downstream
+        # of both a selected and an unselected branch).
+        output_names_set = set(output_names)
+        excluded: set[str] = set()
+        for output_name in output_names:
+            excluded.update(self._collect_branch_vertices(vertex_id, {output_name}))
+        excluded -= self._get_vertices_reachable_from_other_outputs(vertex_id, output_names_set)
+        self._replace_conditional_exclusions(vertex_id, excluded)
 
     def get_edge(self, source_id: str, target_id: str) -> CycleEdge | None:
         """Returns the edge between two vertices."""
@@ -2392,6 +2493,23 @@ class Graph:
         """
         return [vertex.id for vertex in self.vertices if not self.successor_map.get(vertex.id, [])]
 
+    def _orphaned_tool_vertex_ids(self) -> set[str]:
+        """Tool-mode components with no consumer, excluded from scheduling.
+
+        A tool-mode component's only output is the synthetic ``component_as_tool`` Tool, meaningful
+        only when wired into a consumer (an Agent). With no successor it is a leftover — typically a
+        tool left behind after its Agent was deleted — and building it standalone runs its underlying
+        logic with no inputs (e.g. a URL fetch with no URL), raising a ComponentBuildError that fails
+        the whole run. Skipping it keeps the rest of the flow runnable.
+        """
+        orphaned: set[str] = set()
+        for vertex in self.vertices:
+            data = getattr(vertex, "data", None)
+            node = data.get("node") if isinstance(data, dict) else None
+            if isinstance(node, dict) and node.get("tool_mode") and not self.successor_map.get(vertex.id):
+                orphaned.add(vertex.id)
+        return orphaned
+
     def sort_vertices(
         self,
         stop_component_id: str | None = None,
@@ -2414,6 +2532,13 @@ class Graph:
             get_vertex_successors=self.get_vertex_successors_ids,
             is_cyclic=self.is_cyclic,
         )
+
+        orphaned_tools = self._orphaned_tool_vertex_ids()
+        if orphaned_tools:
+            first_layer = [vertex_id for vertex_id in first_layer if vertex_id not in orphaned_tools]
+            remaining_layers = [
+                [vertex_id for vertex_id in layer if vertex_id not in orphaned_tools] for layer in remaining_layers
+            ]
 
         self.increment_run_count()
         self._sorted_vertices_layers = [first_layer, *remaining_layers]
