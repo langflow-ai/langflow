@@ -1151,9 +1151,14 @@ class KBIngestionHelper:
         # value to ``None`` lets ``get_embeddings`` resolve the user's
         # configured base URL (falling back to localhost only when nothing is
         # configured). See https://github.com/langflow-ai/langflow/issues/13883.
+        #
+        # Same for ``api_base``: MessageTextInput defaults to ``""``, and an
+        # empty override used to wipe Azure AI Foundry's configured endpoint
+        # (openai_api_base='') during KB ingestion.
         embedding_model = EmbeddingModelComponent(
             model=[selected_option],
             ollama_base_url=None,
+            api_base=None,
             _user_id=current_user.id,
         )
         return embedding_model.build_embeddings()

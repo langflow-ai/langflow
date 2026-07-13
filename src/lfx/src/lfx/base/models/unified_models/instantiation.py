@@ -547,7 +547,12 @@ def _compose_embedding_kwargs(
 
     embedding_class = unified_models_module.get_embedding_class(embedding_class_name)
 
+    # Empty MessageTextInput defaults ("" ) must not count as an explicit override —
+    # otherwise they wipe provider endpoints (e.g. Azure AI Foundry) in the
+    # optional-params pass below and OpenAIEmbeddings ends up with openai_api_base=''.
     api_base_value = _to_str(api_base) if provider == selected_provider else None
+    if isinstance(api_base_value, str) and not api_base_value.strip():
+        api_base_value = None
     if provider == "OpenAI" and not api_base_value:
         api_base_value = _to_str(os.environ.get("OPENAI_EMBEDDINGS_API_BASE")) or _to_str(
             os.environ.get("OPENAI_API_BASE")
@@ -640,10 +645,34 @@ def _compose_embedding_kwargs(
         )
         kwargs[param_mapping["base_url"]] = base_url_value
 
+    # Bundle-contributed provider: apply its declared connection variables
+    # (e.g. an OpenAI-compatible base_url) generically from its metadata. Runs
+    # before the optional-params loop so an explicit api_base still wins.
+    if is_registered(provider):
+        _apply_registered_provider_connection(provider, user_id, kwargs)
+
+    for param_name, param_value in optional_params.items():
+        if param_value is None:
+            continue
+        # Blank component api_base must not clobber a provider-resolved base URL.
+        if param_name == "api_base" and isinstance(param_value, str) and not param_value.strip():
+            continue
+        if (
+            param_name == "request_timeout"
+            and provider == "Google Generative AI"
+            and isinstance(param_value, (int, float))
+        ):
+            kwargs[param_mapping[param_name]] = {"timeout": param_value}
+        elif param_name in param_mapping:
+            kwargs[param_mapping[param_name]] = param_value
+
+    # Foundry endpoint is required for OpenAIEmbeddings(base_url=...). Apply
+    # after optional params so an empty component api_base cannot wipe it
+    # (KB ingestion builds EmbeddingModelComponent with api_base="").
     if provider == "Azure AI Foundry" and "api_base" in param_mapping:
         foundry_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
         endpoint_value = (
-            (api_base_value if use_component_overrides else None)
+            api_base_value
             or _to_str(foundry_vars.get("AZURE_AI_FOUNDRY_ENDPOINT"))
             or _to_str(_env_if_allowed("AZURE_AI_FOUNDRY_ENDPOINT"))
         )
@@ -656,23 +685,6 @@ def _compose_embedding_kwargs(
                 raise ValueError(msg)
             return None
         kwargs[param_mapping["api_base"]] = endpoint_value
-
-    # Bundle-contributed provider: apply its declared connection variables
-    # (e.g. an OpenAI-compatible base_url) generically from its metadata. Runs
-    # before the optional-params loop so an explicit api_base still wins.
-    if is_registered(provider):
-        _apply_registered_provider_connection(provider, user_id, kwargs)
-
-    for param_name, param_value in optional_params.items():
-        if param_value is not None and param_name in param_mapping:
-            if (
-                param_name == "request_timeout"
-                and provider == "Google Generative AI"
-                and isinstance(param_value, (int, float))
-            ):
-                kwargs[param_mapping[param_name]] = {"timeout": param_value}
-            else:
-                kwargs[param_mapping[param_name]] = param_value
 
     return embedding_class, kwargs
 
