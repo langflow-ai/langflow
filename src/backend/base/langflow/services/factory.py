@@ -76,13 +76,23 @@ def import_all_services_into_a_dict():
         try:
             service_name = ServiceType(service_type).value.replace("_service", "")
 
-            # Special handling for mcp_composer which is now in lfx module
-            if service_name == "mcp_composer":
-                module_name = f"lfx.services.{service_name}.service"
-            else:
-                module_name = f"langflow.services.{service_name}.service"
+            # Some services are hosted in lfx rather than langflow (e.g. memory,
+            # mcp_composer). Prefer langflow's module when it exists (an override),
+            # otherwise fall back to the lfx module. A service whose ``.service``
+            # module exists in neither is simply skipped.
+            module = None
+            for module_name in (
+                f"langflow.services.{service_name}.service",
+                f"lfx.services.{service_name}.service",
+            ):
+                try:
+                    module = importlib.import_module(module_name)
+                    break
+                except ModuleNotFoundError:
+                    continue
+            if module is None:
+                continue
 
-            module = importlib.import_module(module_name)
             services.update(
                 {
                     name: obj

@@ -216,6 +216,69 @@ async def _build_serve_registry(
     return registry, temp_file_to_cleanup
 
 
+def _ensure_lfx_schema_migrated_or_exit() -> None:
+    """Explicit-migration boot policy for ``lfx serve``.
+
+    lfx does not migrate implicitly on serve. When a real (persistent) Tier 1
+    database is wired, verify its schema is at head and refuse to start
+    otherwise, pointing the operator at ``lfx db upgrade``. No-op for the bare
+    ephemeral path (NoopDatabaseService / use_noop_database), so ``lfx serve`` of
+    a stateless flow is unaffected.
+
+    The check is synchronous and fork-safe: it never instantiates the async
+    engine, only the class (to read its migration-stream identity) plus a
+    short-lived sync connection.
+    """
+    from lfx.services.database.service import (
+        NoopDatabaseService,
+        check_schema_at_head_sync,
+    )
+    from lfx.services.deps import get_settings_service
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    settings = getattr(get_settings_service(), "settings", None)
+    if settings is None or getattr(settings, "use_noop_database", False):
+        return
+
+    manager = get_service_manager()
+    # wiring_manifest() triggers plugin discovery (loads lfx.toml) without
+    # instantiating anything.
+    manifest = manager.wiring_manifest()
+    entry = manifest.get(ServiceType.DATABASE_SERVICE)
+    if entry is None or entry.impl_class == NoopDatabaseService.__name__:
+        return  # bare/ephemeral serving -- nothing to migrate
+
+    db_cls = manager._resolve_class(ServiceType.DATABASE_SERVICE)  # noqa: SLF001
+    if db_cls is None or not hasattr(db_cls, "default_script_location"):
+        return
+
+    database_url = getattr(settings, "database_url", None)
+    if not database_url:
+        return
+
+    try:
+        at_head, current, head = check_schema_at_head_sync(
+            database_url,
+            script_location=db_cls.default_script_location(),
+            version_table=getattr(db_cls, "alembic_version_table", "lfx_alembic_version"),
+        )
+    except Exception as exc:
+        # A check failure (DB unreachable, bad URL) must not be silently treated
+        # as "fine to serve" -- serving would fail anyway. Surface and stop.
+        typer.echo(f"Error: could not verify database schema before serving: {exc}", err=True)
+        raise typer.Exit(1) from exc
+
+    if not at_head:
+        typer.echo(
+            f"Error: database schema is not at head (current={current!r}, head={head!r}). "
+            "lfx does not migrate automatically on serve. Run 'lfx db upgrade' against "
+            "LANGFLOW_DATABASE_URL (or an init container / job) before starting the server.",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+
 def serve_command(
     script_paths: list[str] | None = typer.Argument(
         default=None,
@@ -398,6 +461,10 @@ def serve_command(
             source_display = ", ".join(Path(p).name for p in script_paths)
     else:
         source_display = "none (upload flows via POST /flows/upload/)"
+
+    # Explicit-migration boot policy: refuse to serve against an unmigrated
+    # persistent database (no-op for the bare ephemeral path).
+    _ensure_lfx_schema_migrated_or_exit()
 
     temp_file_to_cleanup: str | None = None
     try:

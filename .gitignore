@@ -192,6 +192,10 @@ instance/
 # Scrapy stuff:
 .scrapy
 
+# AI Scratch work
+/scratch
+scratch/
+
 # Sphinx documentation
 docs/_build/
 

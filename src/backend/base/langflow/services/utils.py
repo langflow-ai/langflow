@@ -566,6 +566,7 @@ def register_all_service_factories() -> None:
     service_manager = get_service_manager()
     from lfx.services.executor import factory as executor_factory
     from lfx.services.mcp_composer import factory as mcp_composer_factory
+    from lfx.services.memory.database import DatabaseMemoryService
     from lfx.services.settings import factory as settings_factory
 
     from langflow.services.auth import factory as auth_factory
@@ -596,6 +597,11 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(session_factory.SessionServiceFactory())
     service_manager.register_factory(storage_factory.StorageServiceFactory())
     service_manager.register_factory(variable_factory.VariableServiceFactory())
+    # Memory (Tier 2) converges on the lfx implementation: langflow selects the
+    # lfx DatabaseMemoryService rather than subclassing. Registered as a service
+    # class (not a factory) so the manager injects its Tier 1 database_service
+    # dependency (Option B). This takes precedence over lfx's InMemory default.
+    service_manager.register_service_class(ServiceType.MEMORY_SERVICE, DatabaseMemoryService, override=True)
     service_manager.register_factory(telemetry_factory.TelemetryServiceFactory())
     service_manager.register_factory(tracing_factory.TracingServiceFactory())
     service_manager.register_factory(transaction_factory.TransactionServiceFactory())

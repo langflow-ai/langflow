@@ -5,6 +5,7 @@ from importlib.metadata import version as _pkg_version
 import typer
 
 from lfx.cli._authoring_commands import register as _register_authoring
+from lfx.cli._db_commands import register as _register_db
 from lfx.cli._extension_commands import register as _register_extension
 from lfx.cli._prewarm_commands import register as _register_prewarm
 from lfx.cli._remote_commands import register as _register_remote
@@ -48,6 +49,7 @@ _register_upgrade(app)
 _register_extension(app)
 _register_running(app)
 _register_remote(app)
+_register_db(app)
 
 
 def main():

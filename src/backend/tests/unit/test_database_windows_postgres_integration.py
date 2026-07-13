@@ -2,6 +2,11 @@
 
 Tests that the database service properly handles event loop configuration
 across different platforms and database types.
+
+The engine/session core moved into ``lfx.services.database.service`` (langflow's
+``DatabaseService`` is now a thin subclass), so the engine and Windows-helper
+symbols are patched on the lfx module -- that is the namespace the inherited
+``__init__`` actually resolves them from.
 """
 
 import asyncio
@@ -30,8 +35,8 @@ class TestDatabaseServiceWindowsPostgres:
 
     @patch("platform.system")
     @patch.dict(os.environ, {"LANGFLOW_DATABASE_URL": "postgresql://user:pass@localhost/db"}, clear=True)
-    @patch("langflow.services.database.service.create_async_engine")
-    @patch("langflow.services.database.service.configure_windows_postgres_event_loop")
+    @patch("lfx.services.database.service.create_async_engine")
+    @patch("lfx.services.database.service.configure_windows_postgres_event_loop")
     def test_windows_postgresql_configures_event_loop(
         self, mock_configure, mock_create_engine, mock_platform, mock_settings_service
     ):
@@ -46,7 +51,7 @@ class TestDatabaseServiceWindowsPostgres:
 
     @patch("platform.system")
     @patch.dict(os.environ, {}, clear=True)
-    @patch("langflow.services.database.service.create_async_engine")
+    @patch("lfx.services.database.service.create_async_engine")
     def test_linux_postgresql_no_event_loop_change(self, mock_create_engine, mock_platform, mock_settings_service):
         """Test that Linux + PostgreSQL doesn't change event loop."""
         mock_platform.return_value = "Linux"
@@ -61,7 +66,7 @@ class TestDatabaseServiceWindowsPostgres:
 
     @patch("platform.system")
     @patch.dict(os.environ, {}, clear=True)
-    @patch("langflow.services.database.service.create_async_engine")
+    @patch("lfx.services.database.service.create_async_engine")
     def test_macos_postgresql_no_event_loop_change(self, mock_create_engine, mock_platform, mock_settings_service):
         """Test that macOS + PostgreSQL doesn't change event loop."""
         mock_platform.return_value = "Darwin"
@@ -76,8 +81,8 @@ class TestDatabaseServiceWindowsPostgres:
 
     @patch("platform.system")
     @patch.dict(os.environ, {}, clear=True)
-    @patch("langflow.services.database.service.create_async_engine")
-    @patch("langflow.services.database.service.configure_windows_postgres_event_loop")
+    @patch("lfx.services.database.service.create_async_engine")
+    @patch("lfx.services.database.service.configure_windows_postgres_event_loop")
     def test_windows_sqlite_no_event_loop_change(
         self, mock_configure, mock_create_engine, mock_platform, mock_settings_service
     ):
@@ -98,7 +103,7 @@ class TestDatabaseServiceWindowsPostgres:
             ("postgres://user:pass@localhost/db", "postgresql+psycopg://user:pass@localhost/db"),
         ]
 
-        with patch("langflow.services.database.service.create_async_engine") as mock_create_engine:
+        with patch("lfx.services.database.service.create_async_engine") as mock_create_engine:
             mock_create_engine.return_value = MagicMock()
 
             for input_url, expected_url in test_cases:
@@ -113,7 +118,7 @@ class TestDatabaseServiceWindowsPostgres:
         os.environ["DOCKER_CONTAINER"] = "true"
         mock_settings_service.settings.database_url = "postgresql://postgres:5432/langflow"
 
-        with patch("langflow.services.database.service.create_async_engine") as mock_create_engine:
+        with patch("lfx.services.database.service.create_async_engine") as mock_create_engine:
             mock_create_engine.return_value = MagicMock()
 
             # Should not raise any errors
@@ -125,7 +130,7 @@ class TestDatabaseServiceWindowsPostgres:
         """Test that async operations work correctly after event loop configuration."""
         mock_settings_service.settings.database_url = "sqlite:///test.db"
 
-        with patch("langflow.services.database.service.create_async_engine") as mock_create_engine:
+        with patch("lfx.services.database.service.create_async_engine") as mock_create_engine:
             mock_engine = MagicMock()
             mock_create_engine.return_value = mock_engine
 

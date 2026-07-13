@@ -54,6 +54,16 @@ dependencies = [
     # schema for rows produced during graph execution (message / transaction /
     # vertex_build); langflow re-exports them and keeps the alembic migrations.
     "sqlmodel~=0.0.37",
+    # lfx owns its own alembic migration stream (lfx.services.database.migrations)
+    # so bare ``lfx serve`` can provision its execution-history schema in
+    # production without langflow present. See PLUGGABLE_SERVICES.md
+    # (two-stream migration model). Runtime dep because ``lfx db upgrade`` and the
+    # DatabaseService migration runner need it, not just tests.
+    "alembic>=1.13.0,<2.0.0",
+    # Engine-creation retry in the Tier 1 DatabaseService. Already present
+    # transitively via langchain; declared here so the extracted service does not
+    # rely on a transitive import.
+    "tenacity>=8.0.0,<10.0.0",
     "ag-ui-protocol>=0.1.10",
     "langflow-sdk>=0.3.0",
     "markitdown>=0.1.4,<2.0.0",
@@ -122,6 +132,8 @@ markers = [
 
 [dependency-groups]
 dev = [
+    "aiosqlite>=0.20.0",
+    "greenlet>=3.0.0",
     "asgi-lifespan>=2.1.0",
     "blockbuster>=1.5.25",
     "coverage>=7.9.2",

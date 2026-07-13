@@ -10,13 +10,16 @@ Supports multiple discovery mechanisms:
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import importlib
 import inspect
+import json
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.capabilities import Capability, ServiceWiringError, Tier, WiringManifestEntry
 from lfx.services.config_discovery import (
     get_nested_section,
     get_preferred_config_source,
@@ -52,6 +55,9 @@ class ServiceManager:
         self.keyed_lock = KeyedMemoryLockManager()
         self.factory_registered = False
         self._plugins_discovered = False
+        # Active resolution chain, used to detect dependency cycles during
+        # recursive service creation (A -> B -> A).
+        self._resolving_stack: list[ServiceType] = []
 
         # Always register settings service
         from lfx.services.settings.factory import SettingsServiceFactory
@@ -100,6 +106,13 @@ class ServiceManager:
             logger.warning(msg)
             raise ValueError(msg)
 
+        # Reject classes that don't implement the declared port for this service
+        # type. Applies to every discovery source (decorator, config, entry
+        # point), so an unrelated class reusing a service key cannot silently
+        # replace a built-in service.
+        if not self._validate_port(service_type, service_class):
+            return
+
         if service_type in self.service_classes and not override:
             logger.warning(f"Service {service_type.value} already registered. Use override=True to replace it.")
             return
@@ -129,34 +142,49 @@ class ServiceManager:
         """Create a new service given its name, handling dependencies."""
         logger.debug(f"Create service {service_name}")
 
-        # Settings service is special - always use factory, never from plugins
-        if service_name == ServiceType.SETTINGS_SERVICE:
+        # Cycle guard: if we are already resolving this service further up the
+        # recursion, its dependency graph loops back on itself.
+        if service_name in self._resolving_stack:
+            chain = " -> ".join(s.value for s in [*self._resolving_stack, service_name])
+            msg = f"Dependency cycle detected: {chain}"
+            raise ServiceWiringError(msg)
+
+        self._resolving_stack.append(service_name)
+        try:
+            # Settings service is special - always use factory, never from plugins
+            if service_name == ServiceType.SETTINGS_SERVICE:
+                self._create_service_from_factory(service_name, default)
+                return
+
+            # Try plugin discovery first (if not already done)
+            if not self._plugins_discovered:
+                # Get config_dir from settings service if available
+                config_dir = None
+                if ServiceType.SETTINGS_SERVICE in self.services:
+                    settings_service = self.services[ServiceType.SETTINGS_SERVICE]
+                    if hasattr(settings_service, "settings") and settings_service.settings.config_dir:
+                        config_dir = Path(settings_service.settings.config_dir)
+
+                self.discover_plugins(config_dir)
+
+            # Check if we have a direct service class registration (new system)
+            if service_name in self.service_classes:
+                self._create_service_from_class(service_name)
+                return
+
+            # Fall back to factory-based creation (old system)
             self._create_service_from_factory(service_name, default)
-            return
-
-        # Try plugin discovery first (if not already done)
-        if not self._plugins_discovered:
-            # Get config_dir from settings service if available
-            config_dir = None
-            if ServiceType.SETTINGS_SERVICE in self.services:
-                settings_service = self.services[ServiceType.SETTINGS_SERVICE]
-                if hasattr(settings_service, "settings") and settings_service.settings.config_dir:
-                    config_dir = Path(settings_service.settings.config_dir)
-
-            self.discover_plugins(config_dir)
-
-        # Check if we have a direct service class registration (new system)
-        if service_name in self.service_classes:
-            self._create_service_from_class(service_name)
-            return
-
-        # Fall back to factory-based creation (old system)
-        self._create_service_from_factory(service_name, default)
+        finally:
+            self._resolving_stack.pop()
 
     def _create_service_from_class(self, service_name: ServiceType) -> None:
         """Create a service from a registered service class (new plugin system)."""
         service_class = self.service_classes[service_name]
         logger.debug(f"Creating service from class: {service_name.value} -> {service_class.__name__}")
+
+        # Validate + pre-create declared `requires` dependencies (capabilities +
+        # tier layering enforced here, before instantiation).
+        self._resolve_requirements(service_name, service_class)
 
         # Inspect __init__ to determine dependencies
         init_signature = inspect.signature(service_class.__init__)
@@ -204,6 +232,194 @@ class ServiceManager:
         except Exception as exc:
             logger.exception(f"Failed to create service {service_name.value}: {exc}")
             raise
+
+    # ------------------------------------------------------------------
+    # Wiring: ports, capabilities, tiers, and boot-time validation
+    # ------------------------------------------------------------------
+
+    def _validate_port(self, service_type: ServiceType, service_class: type) -> bool:
+        """Return True if ``service_class`` implements the declared port for ``service_type``.
+
+        Services without a declared port (not in ``SERVICE_PORTS``) are not
+        validated and always pass. A class that fails is logged and rejected
+        (not registered).
+        """
+        from lfx.services.ports import get_expected_port
+
+        expected = get_expected_port(service_type)
+        if expected is None:
+            return True
+        if isinstance(service_class, type) and issubclass(service_class, expected):
+            return True
+        logger.warning(
+            f"Service class {service_class!r} registered for {service_type.value} is not a subclass of "
+            f"{expected.__name__}; skipping registration to avoid replacing the built-in service with an "
+            f"incompatible implementation."
+        )
+        return False
+
+    def _resolve_class(self, service_type: ServiceType) -> type | None:
+        """Return the class that *would* be created for ``service_type``, without instantiating.
+
+        Prefers a directly-registered service class (new system), then a
+        factory's ``service_class`` (old system). Returns ``None`` if nothing is
+        registered for the type. Used by wiring validation and the manifest so
+        the whole graph can be reasoned about before any service is built.
+        """
+        if service_type in self.service_classes:
+            return self.service_classes[service_type]
+        factory = self.factories.get(service_type)
+        if factory is not None:
+            return getattr(factory, "service_class", None)
+        return None
+
+    def _resolve_requirements(self, service_name: ServiceType, service_class: type) -> None:
+        """Validate declared ``requires`` and pre-create the dependencies.
+
+        Raises ``ServiceWiringError`` if a dependency is unregistered, fails a
+        capability requirement, or violates the tier layering invariant
+        (Tier 1 must not depend on Tier 2). Dependencies that pass validation are
+        created in topological order so they exist when the dependent's
+        ``__init__`` runs.
+        """
+        requires = getattr(service_class, "requires", ())
+        if not requires:
+            return
+
+        service_tier = getattr(service_class, "tier", None)
+        for req in requires:
+            dep_type = req.service
+            dep_class = self._resolve_class(dep_type)
+            if dep_class is None:
+                msg = (
+                    f"{service_name.value} requires {dep_type.value}, but no implementation is registered. "
+                    f"Register a {dep_type.value} implementation (config, decorator, or entry point)."
+                )
+                raise ServiceWiringError(msg)
+
+            # Tier layering: a Tier 1 (infrastructure) service must not depend on
+            # a Tier 2 (composed) service.
+            dep_tier = getattr(dep_class, "tier", None)
+            if service_tier == Tier.INFRASTRUCTURE and dep_tier == Tier.COMPOSED:
+                msg = (
+                    f"Layering violation: Tier 1 service {service_name.value} declares a dependency on "
+                    f"Tier 2 service {dep_type.value}. Infrastructure services may only depend on settings "
+                    f"or other infrastructure services."
+                )
+                raise ServiceWiringError(msg)
+
+            # Capability enforcement: the resolved implementation must provide
+            # every capability the dependent requires of it.
+            dep_caps = self._capabilities_of(dep_class)
+            missing = set(req.capabilities) - dep_caps
+            if missing:
+                have = ", ".join(sorted(c.value for c in dep_caps)) or "none"
+                need = ", ".join(sorted(c.value for c in missing))
+                msg = (
+                    f"{service_name.value} requires {dep_type.value} to provide capabilities [{need}], but the "
+                    f"resolved implementation {dep_class.__name__} provides [{have}]."
+                )
+                raise ServiceWiringError(msg)
+
+            # Create the dependency (topological order) if not present yet.
+            if dep_type not in self.services:
+                self._create_service(dep_type)
+
+    @staticmethod
+    def _capabilities_of(service_class: type | None) -> set[Capability]:
+        """Read a class's declared capabilities defensively (non-Service classes allowed)."""
+        return set(getattr(service_class, "capabilities", frozenset()))
+
+    def wiring_manifest(self, *, discover: bool = True) -> dict[ServiceType, WiringManifestEntry]:
+        """Resolve every registered service type to its implementation, without instantiating.
+
+        Returns a mapping of ``ServiceType`` -> ``WiringManifestEntry`` describing
+        the chosen implementation, its package, tier, and capabilities. Types with
+        no registered implementation are omitted. Useful for a ``/health/services``
+        endpoint or to eyeball what is actually wired.
+        """
+        if discover and not self._plugins_discovered:
+            self.discover_plugins()
+
+        manifest: dict[ServiceType, WiringManifestEntry] = {}
+        for service_type in ServiceType:
+            impl = self._resolve_class(service_type)
+            if impl is None:
+                continue
+            tier = getattr(impl, "tier", None)
+            manifest[service_type] = WiringManifestEntry(
+                service_type=service_type.value,
+                impl_class=impl.__name__,
+                package=(impl.__module__ or "").split(".")[0],
+                tier=int(tier) if tier is not None else 0,
+                capabilities=frozenset(self._capabilities_of(impl)),
+            )
+        return manifest
+
+    def validate_wiring(self, *, discover: bool = True) -> dict[ServiceType, WiringManifestEntry]:
+        """Eagerly validate the whole service graph at boot; return the manifest.
+
+        Walks every registered service's ``requires`` edges and enforces
+        dependency presence, capability requirements, and the tier layering
+        invariant — *without* instantiating any service. Raises
+        ``ServiceWiringError`` on the first violation so a misconfigured
+        deployment fails before accepting traffic rather than mid-request.
+        """
+        if discover and not self._plugins_discovered:
+            self.discover_plugins()
+
+        manifest = self.wiring_manifest(discover=False)
+        for service_type in list(self.service_classes) + list(self.factories):
+            # Normalize factory string keys / enum keys to ServiceType.
+            try:
+                st = service_type if isinstance(service_type, ServiceType) else ServiceType(service_type)
+            except ValueError:
+                continue
+            impl = self._resolve_class(st)
+            if impl is None:
+                continue
+            self._validate_requirements_static(st, impl)
+        return manifest
+
+    def _validate_requirements_static(self, service_name: ServiceType, service_class: type) -> None:
+        """Validation-only variant of ``_resolve_requirements`` (creates nothing)."""
+        requires = getattr(service_class, "requires", ())
+        service_tier = getattr(service_class, "tier", None)
+        for req in requires:
+            dep_class = self._resolve_class(req.service)
+            if dep_class is None:
+                msg = f"{service_name.value} requires {req.service.value}, but no implementation is registered."
+                raise ServiceWiringError(msg)
+            dep_tier = getattr(dep_class, "tier", None)
+            if service_tier == Tier.INFRASTRUCTURE and dep_tier == Tier.COMPOSED:
+                msg = (
+                    f"Layering violation: Tier 1 service {service_name.value} declares a dependency on "
+                    f"Tier 2 service {req.service.value}."
+                )
+                raise ServiceWiringError(msg)
+            missing = set(req.capabilities) - self._capabilities_of(dep_class)
+            if missing:
+                have = ", ".join(sorted(c.value for c in self._capabilities_of(dep_class))) or "none"
+                need = ", ".join(sorted(c.value for c in missing))
+                msg = (
+                    f"{service_name.value} requires {req.service.value} to provide capabilities [{need}], but the "
+                    f"resolved implementation {dep_class.__name__} provides [{have}]."
+                )
+                raise ServiceWiringError(msg)
+
+    def wiring_fingerprint(self, *, discover: bool = True) -> str:
+        """Stable hash of the wiring's *capabilities* (not implementation classes).
+
+        Two deployments whose services advertise the same per-type capability
+        sets produce the same fingerprint even if the concrete classes differ
+        (e.g. langflow's memory class vs a cloud plugin's, both persistent). This
+        is what makes a builder-vs-production divergence check fire on behavioral
+        difference, not on the unavoidable fact that different packages own the
+        classes. ``impl_class`` / ``package`` are deliberately excluded.
+        """
+        manifest = self.wiring_manifest(discover=discover)
+        payload = sorted((st.value, sorted(c.value for c in entry.capabilities)) for st, entry in manifest.items())
+        return hashlib.sha256(json.dumps(payload, separators=(",", ":")).encode()).hexdigest()
 
     def _resolve_service_type_from_annotation(self, annotation) -> ServiceType | None:
         """Resolve a ServiceType from a type annotation.
@@ -409,35 +625,15 @@ class ServiceManager:
             )
             return
 
-        # Map of service_type → expected base class. Used to reject malformed
-        # entry-point plugins before they take over an authorization-critical
-        # service. Without this check an arbitrary class from an unrelated
-        # PyPI package that happened to register the same entry-point name
-        # would silently replace the OSS implementation.
-        expected_bases: dict[ServiceType, type] = {}
-        try:
-            from lfx.services.authorization.base import BaseAuthorizationService
-
-            expected_bases[ServiceType.AUTHORIZATION_SERVICE] = BaseAuthorizationService
-        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
-            logger.debug(f"BaseAuthorizationService unavailable; entry-point validation skipped: {exc}")
-
         for ep in eps:
             try:
                 service_class = ep.load()
-                # Entry point name should match ServiceType enum value
+                # Entry point name should match ServiceType enum value.
                 service_type = ServiceType(ep.name)
-                expected_base = expected_bases.get(service_type)
-                if expected_base is not None and not (
-                    isinstance(service_class, type) and issubclass(service_class, expected_base)
-                ):
-                    logger.warning(
-                        f"Entry point {ep.name} resolved to {service_class!r}, "
-                        f"which is not a subclass of {expected_base.__name__}. "
-                        f"Skipping registration to avoid silently replacing the "
-                        f"built-in service with an incompatible plugin."
-                    )
-                    continue
+                # Port validation (must subclass the declared port) is enforced
+                # centrally in register_service_class for every discovery source,
+                # so an unrelated class reusing this entry-point name cannot
+                # silently replace a built-in service.
                 self.register_service_class(service_type, service_class, override=False)
                 logger.debug(f"Loaded service from entry point: {ep.name}")
             except (ValueError, AttributeError) as exc:

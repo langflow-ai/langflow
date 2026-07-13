@@ -1,0 +1,63 @@
+# Knative Service stub for the lfx serve gateway.
+#
+# Ties the hydration together:
+#   * the ConfigMap's lfx.toml is mounted at /config (= LANGFLOW_CONFIG_DIR), so
+#     the service manager discovers the Tier 1/Tier 2 wiring at boot;
+#   * the Secret supplies LANGFLOW_DATABASE_URL;
+#   * an initContainer runs `lfx db upgrade` BEFORE the serve container starts.
+#
+# The initContainer is deliberate: lfx uses an explicit-migration policy (it does
+# NOT migrate implicitly on serve). Provisioning the schema in an init step keeps
+# migrations off the request path and out of a scale-to-zero cold start, and the
+# Postgres advisory lock makes concurrent replicas safe. (Alternatively run
+# `lfx db upgrade` as a one-shot Job in your release pipeline and drop the
+# initContainer.)
+#
+# Scope note: this is the gateway role. A dedicated worker pool (executing queued
+# payloads) is a separate Service with the same image and a different command,
+# added once the Tier 1 queue service lands.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: lfx-serve
+  labels:
+    app: lfx
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"   # scale to zero when idle
+        autoscaling.knative.dev/maxScale: "10"
+    spec:
+      initContainers:
+        - name: lfx-db-upgrade
+          image: ghcr.io/langflow-ai/lfx:latest   # replace with the -prod (driver-baked) tag
+          command: ["lfx", "db", "upgrade"]
+          envFrom:
+            - secretRef:
+                name: lfx-secrets
+          env:
+            - name: LANGFLOW_ALEMBIC_LOG_TO_STDOUT
+              value: "true"
+      containers:
+        - name: lfx-serve
+          image: ghcr.io/langflow-ai/lfx:latest   # replace with the -prod (driver-baked) tag
+          args: ["serve", "/flows"]               # serve the mounted flow(s)
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: lfx-config
+            - secretRef:
+                name: lfx-secrets
+          volumeMounts:
+            - name: lfx-config
+              mountPath: /config
+              readOnly: true
+      volumes:
+        - name: lfx-config
+          configMap:
+            name: lfx-config
+            items:
+              - key: lfx.toml
+                path: lfx.toml
