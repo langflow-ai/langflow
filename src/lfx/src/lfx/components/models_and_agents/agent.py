@@ -50,7 +50,6 @@ from lfx.inputs.inputs import BoolInput, DropdownInput, ModelInput, StrInput
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput
 from lfx.log.logger import logger
 from lfx.memory import delete_message
-from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
@@ -684,7 +683,12 @@ class AgentComponent(ToolCallingAgentComponent):
             sender=MESSAGE_SENDER_AI,
             sender_name=sender_name,
             properties={"icon": "Bot", "state": "partial"},
-            content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+            # `text=""` sentinel so MessageTable's no_content check accepts
+            # an in-flight agent message whose content_blocks haven't been
+            # populated yet. Mirrors ChatInput's convention.
+            text="",
+            # Flat chronological event log; see lfx.base.agents.events.
+            content_blocks=[],
             session_id=session_id or uuid.uuid4(),
         )
 

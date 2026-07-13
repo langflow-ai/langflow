@@ -270,7 +270,7 @@ export default function UpdateAllComponents() {
             variants={CONTAINER_VARIANTS}
             transition={{ duration: 0.2, ease: "easeOut" }}
             className={cn(
-              "flex items-start justify-between gap-6 rounded-lg border bg-background px-4 py-3 text-sm shadow-md",
+              "flex items-center justify-between gap-6 rounded-lg border bg-background px-4 py-3 text-sm shadow-md",
               (showDismissedWarning ||
                 !allowCustomComponents ||
                 updatableComponents.some(
@@ -333,14 +333,14 @@ export default function UpdateAllComponents() {
                 </Button>
               )}
             </div>
-            <UpdateComponentModal
-              isMultiple={true}
-              open={isOpen}
-              setOpen={setIsOpen}
-              onUpdateNode={(ids) => handleUpdateAllComponents(true, ids)}
-              components={updatableComponents}
-            />
           </motion.div>
+          <UpdateComponentModal
+            isMultiple={true}
+            open={isOpen}
+            setOpen={setIsOpen}
+            onUpdateNode={(ids) => handleUpdateAllComponents(true, ids)}
+            components={updatableComponents}
+          />
         </div>
       )}
     </AnimatePresence>
