@@ -8,7 +8,10 @@ jest.mock("@/controllers/API/queries/variables", () => ({
   useGetGlobalVariables: () => mockUseGetGlobalVariables(),
 }));
 
-jest.mock("@/components/core/globalVariableDeleteConfirmation", () => () => null);
+jest.mock(
+  "@/components/core/globalVariableDeleteConfirmation",
+  () => () => null,
+);
 
 jest.mock(
   "@/components/core/GlobalVariableModal/GlobalVariableModal",

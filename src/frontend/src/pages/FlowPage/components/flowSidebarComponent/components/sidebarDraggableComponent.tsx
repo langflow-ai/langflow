@@ -221,7 +221,8 @@ export const SidebarDraggableComponent = forwardRef(
                     name="GripVertical"
                     className="h-4 w-4 shrink-0 text-muted-foreground group-hover/draggable:text-primary"
                   />
-                  <SelectTrigger variant="plain"
+                  <SelectTrigger
+                    variant="plain"
                     tabIndex={-1}
                     aria-label={t("folder.options")}
                   ></SelectTrigger>
@@ -246,7 +247,8 @@ export const SidebarDraggableComponent = forwardRef(
                       </div>{" "}
                     </SelectItem>
                     {(!official || onDelete) && (
-                      <SelectItem variant="plain"
+                      <SelectItem
+                        variant="plain"
                         value={"delete"}
                         data-testid="draggable-component-menu-delete"
                       >

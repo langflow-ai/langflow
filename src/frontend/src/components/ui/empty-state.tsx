@@ -1,16 +1,17 @@
 import * as React from "react";
 import { cn } from "../../utils/utils";
 
-const Empty = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      data-slot="empty"
-      className={cn("flex flex-col items-center justify-center", className)}
-      {...props}
-    />
-  ),
-);
+const Empty = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    data-slot="empty"
+    className={cn("flex flex-col items-center justify-center", className)}
+    {...props}
+  />
+));
 Empty.displayName = "Empty";
 
 const EmptyHeader = React.forwardRef<

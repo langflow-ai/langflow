@@ -203,7 +203,8 @@ export default function SessionSelector({
             side="right"
             content={t("chat.options")}
           >
-            <SelectTrigger variant="plain"
+            <SelectTrigger
+              variant="plain"
               onClick={(e) => {
                 e.stopPropagation();
               }}
@@ -219,8 +220,13 @@ export default function SessionSelector({
               <IconComponent name="MoreHorizontal" className="h-4 w-4" />
             </SelectTrigger>
           </ShadTooltip>
-          <SelectContent side="right" align="start" className="min-w-[11.5rem] p-0">
-            <SelectItem variant="plain"
+          <SelectContent
+            side="right"
+            align="start"
+            className="min-w-[11.5rem] p-0"
+          >
+            <SelectItem
+              variant="plain"
               value="rename"
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >
@@ -229,7 +235,8 @@ export default function SessionSelector({
                 Rename
               </div>
             </SelectItem>
-            <SelectItem variant="plain"
+            <SelectItem
+              variant="plain"
               value="messageLogs"
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >
@@ -240,7 +247,8 @@ export default function SessionSelector({
                 </div>
               </div>
             </SelectItem>
-            <SelectItem variant="plain"
+            <SelectItem
+              variant="plain"
               value="delete"
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >

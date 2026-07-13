@@ -4,7 +4,9 @@ const DEFAULT_RESET_DELAY_MS = 1000;
 
 export const useCopyToClipboard = ({
   resetDelay = DEFAULT_RESET_DELAY_MS,
-}: { resetDelay?: number } = {}) => {
+}: {
+  resetDelay?: number;
+} = {}) => {
   const [isCopied, setIsCopied] = useState(false);
 
   const copy = useCallback(

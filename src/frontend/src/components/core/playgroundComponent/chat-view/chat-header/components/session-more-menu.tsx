@@ -100,7 +100,8 @@ export function SessionMoreMenu({
           side={tooltipSide}
           content={tooltipContent}
         >
-          <SelectTrigger variant="plain"
+          <SelectTrigger
+            variant="plain"
             className={cn(
               "h-8 w-8 border-none bg-transparent p-2 rounded transition-colors text-muted-foreground hover:bg-accent hover:text-foreground focus:ring-0",
               !isVisible && "invisible group-hover:visible",
@@ -128,7 +129,8 @@ export function SessionMoreMenu({
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
           {showRename && (
-            <SelectItem variant="plain"
+            <SelectItem
+              variant="plain"
               value="rename"
               className="session-more-menu-item"
               data-testid="rename-session-option"
@@ -143,7 +145,8 @@ export function SessionMoreMenu({
             </SelectItem>
           )}
           {showMessageLogs && (
-            <SelectItem variant="plain"
+            <SelectItem
+              variant="plain"
               value="messageLogs"
               className="session-more-menu-item"
               data-testid="message-logs-option"
@@ -158,7 +161,8 @@ export function SessionMoreMenu({
             </SelectItem>
           )}
           {showClearChat && (
-            <SelectItem variant="plain"
+            <SelectItem
+              variant="plain"
               value="clearChat"
               className="session-more-menu-item"
               data-testid="clear-chat-option"
@@ -170,7 +174,8 @@ export function SessionMoreMenu({
             </SelectItem>
           )}
           {showDelete && (
-            <SelectItem variant="plain"
+            <SelectItem
+              variant="plain"
               value="delete"
               className="session-more-menu-item"
               data-testid="delete-session-option"

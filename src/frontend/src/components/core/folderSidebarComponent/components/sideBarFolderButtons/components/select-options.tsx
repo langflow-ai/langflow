@@ -51,7 +51,8 @@ export const SelectOptions = ({
           side="right"
           styleClasses="z-50"
         >
-          <SelectTrigger variant="plain"
+          <SelectTrigger
+            variant="plain"
             className="h-6 w-6 min-h-[24px] min-w-[24px]"
             id={`options-trigger-${item.name}`}
             data-testid={
@@ -74,7 +75,8 @@ export const SelectOptions = ({
           position="popper"
           className="min-w-[11.5rem]"
         >
-          <SelectItem variant="plain"
+          <SelectItem
+            variant="plain"
             id="rename-button"
             value="rename"
             data-testid="btn-rename-project"
@@ -83,7 +85,8 @@ export const SelectOptions = ({
           >
             <FolderSelectItem name={t("folder.rename")} iconName="SquarePen" />
           </SelectItem>
-          <SelectItem variant="plain"
+          <SelectItem
+            variant="plain"
             value="download"
             data-testid="btn-download-project"
             className="text-xs"
@@ -91,7 +94,8 @@ export const SelectOptions = ({
           >
             <FolderSelectItem name={t("folder.download")} iconName="Download" />
           </SelectItem>
-          <SelectItem variant="plain"
+          <SelectItem
+            variant="plain"
             value="delete"
             data-testid="btn-delete-project"
             className="text-xs"

@@ -632,7 +632,8 @@ const NodeToolbarComponent = memo(
               onOpenChange={handleOpenChange}
               open={dropdownOpen}
             >
-              <SelectTrigger variant="plain"
+              <SelectTrigger
+                variant="plain"
                 className="w-62"
                 aria-label={t("nodeToolbar.showMore")}
               >
@@ -709,7 +710,8 @@ const NodeToolbarComponent = memo(
                   </SelectItem>
                 )}
                 {hasStore && (
-                  <SelectItem variant="plain"
+                  <SelectItem
+                    variant="plain"
                     value={"Share"}
                     disabled={!hasApiKey || !validApiKey}
                   >
@@ -725,7 +727,8 @@ const NodeToolbarComponent = memo(
                   </SelectItem>
                 )}
 
-                <SelectItem variant="plain"
+                <SelectItem
+                  variant="plain"
                   value={"documentation"}
                   disabled={data.node?.documentation === ""}
                 >
@@ -740,7 +743,8 @@ const NodeToolbarComponent = memo(
                 </SelectItem>
 
                 {(isMinimal || !showNode) && (
-                  <SelectItem variant="plain"
+                  <SelectItem
+                    variant="plain"
                     value={"show"}
                     data-testid={`${
                       showNode ? "minimize" : "expand"
@@ -773,7 +777,8 @@ const NodeToolbarComponent = memo(
                   </SelectItem>
                 )}
                 {hasToolMode && !inspectionPanelVisible && (
-                  <SelectItem variant="plain"
+                  <SelectItem
+                    variant="plain"
                     value="freezeAll"
                     data-testid="freeze-all-button-modal"
                   >
@@ -801,7 +806,8 @@ const NodeToolbarComponent = memo(
                     dataTestId="download-button-modal"
                   />
                 </SelectItem>
-                <SelectItem variant="plain"
+                <SelectItem
+                  variant="plain"
                   value={"delete"}
                   className="focus:bg-destructive/[.20]"
                 >
