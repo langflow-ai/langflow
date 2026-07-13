@@ -2533,7 +2533,9 @@ class Graph:
             is_cyclic=self.is_cyclic,
         )
 
-        orphaned_tools = self._orphaned_tool_vertex_ids()
+        # A run that explicitly targets the tool-mode node (the node's play button sets
+        # stop/start to it) is the user inspecting its toolset output — never skip that one.
+        orphaned_tools = self._orphaned_tool_vertex_ids() - {stop_component_id, start_component_id}
         if orphaned_tools:
             first_layer = [vertex_id for vertex_id in first_layer if vertex_id not in orphaned_tools]
             remaining_layers = [
