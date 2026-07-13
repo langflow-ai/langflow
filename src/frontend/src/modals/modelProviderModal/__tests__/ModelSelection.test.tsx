@@ -57,8 +57,18 @@ describe("ModelSelection", () => {
     isEnabledModel: true,
   };
 
+  const { useGetEnabledModels } = jest.requireMock(
+    "@/controllers/API/queries/models/use-get-enabled-models",
+  ) as {
+    useGetEnabledModels: jest.Mock;
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    useGetEnabledModels.mockReturnValue({
+      data: mockEnabledModels,
+      isLoading: false,
+    });
   });
 
   describe("Rendering", () => {
@@ -279,6 +289,67 @@ describe("ModelSelection", () => {
       );
       expect(
         screen.queryByTestId("model-search-input"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Azure AI Foundry custom deployments", () => {
+    const foundryModels: Model[] = [
+      { model_name: "gpt-4o", metadata: { model_type: "llm", icon: "Azure" } },
+    ];
+
+    beforeEach(() => {
+      useGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: {
+            "Azure AI Foundry": {
+              "gpt-4o": true,
+              "gpt-5-mini": true,
+            },
+          },
+        },
+        isLoading: false,
+      });
+    });
+
+    it("shows a hint and lets users add a typed deployment name", async () => {
+      const user = userEvent.setup();
+      const onModelToggle = jest.fn();
+      render(
+        <ModelSelection
+          {...defaultProps}
+          providerName="Azure AI Foundry"
+          availableModels={foundryModels}
+          onModelToggle={onModelToggle}
+        />,
+      );
+
+      expect(screen.getByTestId("custom-deployment-hint")).toBeInTheDocument();
+      expect(screen.getByText("gpt-5-mini")).toBeInTheDocument();
+
+      const input = screen.getByTestId("model-search-input");
+      await user.clear(input);
+      await user.type(input, "team-chat");
+
+      const addButton = screen.getByTestId("add-custom-deployment-button");
+      expect(addButton).toHaveTextContent('Add deployment "team-chat"');
+      await user.click(addButton);
+      expect(onModelToggle).toHaveBeenCalledWith("team-chat", true);
+    });
+
+    it("does not offer add when the typed name already exists", async () => {
+      const user = userEvent.setup();
+      render(
+        <ModelSelection
+          {...defaultProps}
+          providerName="Azure AI Foundry"
+          availableModels={foundryModels}
+        />,
+      );
+
+      await user.type(screen.getByTestId("model-search-input"), "gpt-4o");
+      expect(
+        screen.queryByTestId("add-custom-deployment-button"),
       ).not.toBeInTheDocument();
     });
   });

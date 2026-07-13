@@ -281,7 +281,8 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                 "variable_key": "AZURE_AI_FOUNDRY_ENDPOINT",
                 "description": (
                     "OpenAI-compatible endpoint from the Foundry portal (Get endpoint). "
-                    "Example: https://<resource>.services.ai.azure.com/openai/v1"
+                    "Example: https://<resource>.services.ai.azure.com/openai/v1. "
+                    "Enable models using your portal deployment names (not catalog model IDs)."
                 ),
                 "required": True,
                 "is_secret": False,

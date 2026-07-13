@@ -9,6 +9,7 @@ import pytest
 from langflow.api.v1.models import (
     ModelStatusUpdate,
     _build_model_default_flags,
+    _inject_custom_enabled_models,
     _update_model_sets,
     build_model_providers_by_name,
     normalize_model_status_entries,
@@ -52,6 +53,28 @@ def test_model_defaults_and_updates_are_provider_qualified():
 
     assert disabled_models == {"Azure AI Foundry::gpt-4o-mini"}
     assert explicitly_enabled_models == {"OpenAI::gpt-4o-mini"}
+
+
+def test_inject_custom_enabled_models_appends_missing_deployments():
+    provider_models = [
+        {
+            "provider": "Azure AI Foundry",
+            "models": [{"model_name": "gpt-4o", "metadata": {"default": True}}],
+            "num_models": 1,
+        }
+    ]
+
+    _inject_custom_enabled_models(
+        provider_models,
+        {"Azure AI Foundry::gpt-5-mini", "Azure AI Foundry::gpt-4o", "OpenAI::ignored"},
+    )
+
+    names = [model["model_name"] for model in provider_models[0]["models"]]
+    assert names == ["gpt-4o", "gpt-5-mini"]
+    assert provider_models[0]["num_models"] == 2
+    custom = provider_models[0]["models"][1]
+    assert custom["metadata"]["model_type"] == "llm"
+    assert custom["metadata"]["tool_calling"] is True
 
 
 async def test_provider_cleanup_migrates_legacy_entries_before_removing_target_provider():

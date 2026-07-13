@@ -489,19 +489,11 @@ AZURE_AI_FOUNDRY_REQUEST_TIMEOUT = AZURE_AI_FOUNDRY_FETCH_TIMEOUT
 
 
 def request_azure_ai_foundry_model_entries(endpoint: str, api_key: str) -> list[dict]:
-    """Request model entries from a Foundry OpenAI-compatible endpoint.
+    """Probe Foundry's OpenAI-compatible ``/models`` catalog for credential checks.
 
-    Args:
-        endpoint: Configured Foundry OpenAI-compatible endpoint.
-        api_key: Foundry resource API key.
-
-    Returns:
-        Raw model entries from the response's ``data`` field.
-
-    Raises:
-        requests.RequestException: If the endpoint cannot be reached or returns an HTTP error.
-        TypeError: If the endpoint returns a malformed payload.
-        ValueError: If the endpoint returns invalid JSON.
+    This returns the regional **model catalog**, not the user's deployments.
+    Prefer it only for connectivity/auth validation. Deployment names for
+    inference must come from the portal (or free-text enablement in Settings).
     """
     response = requests.get(
         f"{endpoint.rstrip('/')}/models",
@@ -570,71 +562,25 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
 
 
 def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
-    """Fetch deployment IDs from the configured Foundry OpenAI-compatible endpoint.
+    """Return live Azure AI Foundry deployments for the unified picker.
 
-    Foundry's ``model`` parameter is the user-defined deployment name, which can
-    differ from the underlying catalog model. Querying ``/models`` lets those
-    deployment IDs appear in the unified picker. This provider is conditional
-    live: any missing credential, request failure, empty result, or malformed
-    payload returns ``[]`` so callers retain the bundled seed catalog.
+    Foundry's OpenAI-compatible ``model`` parameter must be the **deployment
+    name** chosen in the portal (for example ``gpt-5-mini``), not a catalog
+    model id. ``GET …/openai/v1/models`` returns the regional model catalog
+    (hundreds of versioned ids such as ``gpt-5-mini-2025-08-07``) and those
+    ids are not callable as deployments — using them as the picker list caused
+    404s at inference time.
+
+    Listing real deployments requires the Foundry project / Azure management
+    APIs (Entra ID), which are outside the endpoint + API-key credentials
+    users configure here. This conditional-live hook therefore returns ``[]``
+    so callers keep the seed catalog, and users add their portal deployment
+    names via free-text enablement in Model Providers.
     """
-    from lfx.base.models.azure_ai_foundry_constants import AZURE_AI_FOUNDRY_MODELS_DETAILED
-
-    if model_type != "llm":
-        return []
-
-    endpoint = get_provider_variable_value(user_id, "AZURE_AI_FOUNDRY_ENDPOINT")
-    api_key = get_provider_variable_value(user_id, "AZURE_AI_FOUNDRY_API_KEY")
-    if not endpoint or not api_key:
-        return []
-
-    try:
-        # Why: Foundry's OpenAI-compatible surface accepts API keys via the
-        # ``api-key`` header (Microsoft Foundry REST / Azure OpenAI docs).
-        # ``Authorization: Bearer`` is for Entra ID tokens, not resource keys.
-        # allow_redirects=False keeps the api-key header from following an
-        # off-origin redirect (SSRF/header-smuggling posture; host allowlisting
-        # remains a shared follow-up with other OpenAI-compatible fetchers).
-        raw_models = request_azure_ai_foundry_model_entries(endpoint, api_key)
-    except (requests.RequestException, TypeError, ValueError) as exc:
-        status_code = getattr(getattr(exc, "response", None), "status_code", None)
-        logger.warning("Could not fetch Azure AI Foundry deployments (status=%s): %s", status_code, exc)
-        return []
-
-    known_by_name = {model["name"]: model for model in AZURE_AI_FOUNDRY_MODELS_DETAILED}
-    by_id: dict[str, int] = {}
-    for raw_model in raw_models:
-        if not isinstance(raw_model, dict):
-            continue
-        model_id = raw_model.get("id")
-        if not isinstance(model_id, str) or not (model_id := model_id.strip()):
-            continue
-        created_raw = raw_model.get("created")
-        try:
-            created = int(created_raw) if created_raw is not None else 0
-        except (TypeError, ValueError):
-            created = 0
-        by_id.setdefault(model_id, max(created, 0))
-
-    if not by_id:
-        return []
-
-    sorted_ids = sorted(by_id)
-    seed_ids = known_by_name.keys() & by_id.keys()
-    default_ids = seed_ids or set(sorted_ids[:MIN_DEFAULT_MODELS])
-
-    return [
-        create_model_metadata(
-            provider="Azure AI Foundry",
-            name=model_id,
-            icon="Azure",
-            tool_calling=known_by_name.get(model_id, {}).get("tool_calling", True),
-            reasoning=known_by_name.get(model_id, {}).get("reasoning", False),
-            default=model_id in default_ids,
-            created=by_id[model_id],
-        )
-        for model_id in sorted_ids
-    ]
+    # Credentials are still required for validation/inference; discovery does
+    # not call the catalog ``/models`` endpoint (see docstring).
+    _ = (user_id, model_type)
+    return []
 
 
 def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:

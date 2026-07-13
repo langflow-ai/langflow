@@ -2,12 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
 import { cn } from "@/utils/utils";
+
+/** Providers where the callable model id is a user-chosen deployment name. */
+const CUSTOM_DEPLOYMENT_PROVIDERS = new Set(["Azure AI Foundry"]);
 
 export interface ModelProviderSelectionProps {
   availableModels: Model[];
@@ -189,29 +193,74 @@ const ModelSelection = ({
     return enabledModelsData.enabled_models[providerName]?.[modelName] ?? false;
   };
 
-  const trimmedModelQuery = modelQuery.trim().toLowerCase();
+  const supportsCustomDeployments =
+    !!providerName && CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName);
+
+  // Merge free-text deployments the user already enabled but that are not yet
+  // in the static/live catalog (e.g. Azure AI Foundry portal names). Prefer the
+  // catalog row when both exist.
+  const modelsWithCustomDeployments = useMemo(() => {
+    if (!supportsCustomDeployments || !providerName) {
+      return availableModels;
+    }
+    const enabledForProvider =
+      enabledModelsData?.enabled_models?.[providerName] ?? {};
+    const knownNames = new Set(
+      availableModels.map((model) => model.model_name),
+    );
+    const customModels: Model[] = Object.entries(enabledForProvider)
+      .filter(([name, enabled]) => enabled && !knownNames.has(name))
+      .map(([name]) => ({
+        model_name: name,
+        metadata: {
+          model_type: "llm",
+          icon: "Azure",
+          tool_calling: true,
+        },
+      }));
+    return customModels.length > 0
+      ? [...availableModels, ...customModels]
+      : availableModels;
+  }, [
+    availableModels,
+    enabledModelsData?.enabled_models,
+    providerName,
+    supportsCustomDeployments,
+  ]);
+
+  const trimmedModelQuery = modelQuery.trim();
+  const trimmedModelQueryLower = trimmedModelQuery.toLowerCase();
 
   const matchesModelQuery = (model: Model): boolean =>
-    trimmedModelQuery.length === 0 ||
-    model.model_name.toLowerCase().includes(trimmedModelQuery);
+    trimmedModelQueryLower.length === 0 ||
+    model.model_name.toLowerCase().includes(trimmedModelQueryLower);
 
   const llmModels = useMemo(
     () =>
-      availableModels.filter(
+      modelsWithCustomDeployments.filter(
         (model) =>
           model.metadata?.model_type === "llm" && matchesModelQuery(model),
       ),
-    [availableModels, trimmedModelQuery],
+    [modelsWithCustomDeployments, trimmedModelQueryLower],
   );
   const embeddingModels = useMemo(
     () =>
-      availableModels.filter(
+      modelsWithCustomDeployments.filter(
         (model) =>
           model.metadata?.model_type === "embeddings" &&
           matchesModelQuery(model),
       ),
-    [availableModels, trimmedModelQuery],
+    [modelsWithCustomDeployments, trimmedModelQueryLower],
   );
+
+  const hasExactModelMatch = modelsWithCustomDeployments.some(
+    (model) => model.model_name.toLowerCase() === trimmedModelQueryLower,
+  );
+  const canAddCustomDeployment =
+    supportsCustomDeployments &&
+    !!isEnabledModel &&
+    trimmedModelQuery.length > 0 &&
+    !hasExactModelMatch;
 
   const partitionDeprecated = (models: Model[]): [Model[], Model[]] => {
     const active: Model[] = [];
@@ -289,43 +338,89 @@ const ModelSelection = ({
   };
 
   const isOllama = providerName?.toLowerCase() === "ollama";
-  // Use the unfiltered availableModels for the empty-state check so an
+  // Use the unfiltered list for the empty-state check so an
   // ollama-no-models warning still fires when the search field happens to be
   // populated.
-  const llmAvailableCount = availableModels.filter(
+  const llmAvailableCount = modelsWithCustomDeployments.filter(
     (m) => m.metadata?.model_type === "llm",
   ).length;
-  const embeddingAvailableCount = availableModels.filter(
+  const embeddingAvailableCount = modelsWithCustomDeployments.filter(
     (m) => m.metadata?.model_type === "embeddings",
   ).length;
   const noModelsAvailable =
     (modelType === "llm" && llmAvailableCount === 0) ||
     (modelType === "embeddings" && embeddingAvailableCount === 0) ||
-    (modelType === "all" && availableModels.length === 0);
+    (modelType === "all" && modelsWithCustomDeployments.length === 0);
 
   const noModelsMatchQuery =
     !noModelsAvailable &&
-    trimmedModelQuery.length > 0 &&
+    trimmedModelQueryLower.length > 0 &&
     llmModels.length === 0 &&
     embeddingModels.length === 0;
 
+  const showSearchInput =
+    supportsCustomDeployments ||
+    (!noModelsAvailable && modelsWithCustomDeployments.length > 0);
+
   return (
     <div data-testid="model-provider-selection" className="flex flex-col gap-6">
-      {!noModelsAvailable && availableModels.length > 0 && (
+      {supportsCustomDeployments ? (
+        <p
+          className="text-xs text-muted-foreground leading-relaxed"
+          data-testid="custom-deployment-hint"
+        >
+          {t("modelProviders.customDeploymentHint", {
+            defaultValue:
+              "Use your Azure AI Foundry deployment names from the portal (not catalog model IDs). Search or type a name to add one.",
+          })}
+        </p>
+      ) : null}
+      {showSearchInput && (
         <Input
           icon="Search"
           value={modelQuery}
           onChange={(event) => setModelQuery(event.target.value)}
-          placeholder={t("modelProviders.searchModels", {
-            defaultValue: "Search models…",
-          })}
-          aria-label={t("modelProviders.searchModels", {
-            defaultValue: "Search models…",
-          })}
+          placeholder={
+            supportsCustomDeployments
+              ? t("modelProviders.searchOrAddDeployment", {
+                  defaultValue: "Search or add a deployment name…",
+                })
+              : t("modelProviders.searchModels", {
+                  defaultValue: "Search models…",
+                })
+          }
+          aria-label={
+            supportsCustomDeployments
+              ? t("modelProviders.searchOrAddDeployment", {
+                  defaultValue: "Search or add a deployment name…",
+                })
+              : t("modelProviders.searchModels", {
+                  defaultValue: "Search models…",
+                })
+          }
           data-testid="model-search-input"
         />
       )}
-      {noModelsMatchQuery ? (
+      {canAddCustomDeployment ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full justify-start"
+          data-testid="add-custom-deployment-button"
+          onClick={() => {
+            onModelToggle(trimmedModelQuery, true);
+            setModelQuery("");
+          }}
+        >
+          <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
+          {t("modelProviders.addDeployment", {
+            name: trimmedModelQuery,
+            defaultValue: 'Add deployment "{{name}}"',
+          })}
+        </Button>
+      ) : null}
+      {noModelsMatchQuery && !canAddCustomDeployment ? (
         <div
           className="text-muted-foreground px-1 py-2 text-sm"
           data-testid="model-search-empty"
