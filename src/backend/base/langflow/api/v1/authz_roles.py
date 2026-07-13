@@ -8,6 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 from lfx.log.logger import logger
+from lfx.utils.util_strings import escape_like_pattern
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
@@ -83,7 +84,7 @@ async def list_roles(
     if is_system is not None:
         stmt = stmt.where(AuthzRole.is_system == is_system)
     if name:
-        stmt = stmt.where(AuthzRole.name.ilike(f"%{name}%"))
+        stmt = stmt.where(AuthzRole.name.ilike(f"%{escape_like_pattern(name)}%", escape="\\"))
     stmt = stmt.order_by(AuthzRole.name, AuthzRole.id).offset(offset).limit(limit)
     rows = (await session.exec(stmt)).all()
     return [RoleRead.model_validate(row) for row in rows]

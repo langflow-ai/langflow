@@ -8,6 +8,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import FileInput, MessageTextInput, MultilineInput, Output
 from lfx.schema.data import Data
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.file_path_security import enforce_local_file_access
 
 
 class JSONToDataComponent(Component):
@@ -59,7 +60,8 @@ class JSONToDataComponent(Component):
                     self.status = "The provided file must be a JSON file."
                 else:
                     # Resolve to absolute path and read from local filesystem
-                    resolved_path = self.resolve_path(file_path)
+                    # (confined to the storage dir in restricted multi-tenant mode).
+                    resolved_path = enforce_local_file_access(self.resolve_path(file_path))
                     json_data = Path(resolved_path).read_text(encoding="utf-8")
 
             elif self.json_path:
@@ -68,8 +70,13 @@ class JSONToDataComponent(Component):
                 if not file_path.lower().endswith(".json"):
                     self.status = "The provided path must be to a JSON file."
                 else:
+
+                    def _resolve_local_path(p: str) -> str:
+                        # Confine the resolved path to the storage dir in restricted mode.
+                        return str(enforce_local_file_access(self.resolve_path(p)))
+
                     json_data = run_until_complete(
-                        read_file_text(file_path, encoding="utf-8", resolve_path=self.resolve_path)
+                        read_file_text(file_path, encoding="utf-8", resolve_path=_resolve_local_path)
                     )
 
             else:

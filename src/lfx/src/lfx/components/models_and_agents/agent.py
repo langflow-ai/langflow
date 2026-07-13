@@ -20,7 +20,7 @@ from lfx.components.models_and_agents.agent_helpers.placeholder_corrective_middl
 from lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware import (
     SingleToolCallMiddleware,
 )
-from lfx.components.models_and_agents.memory import MemoryComponent, aget_agent_chat_history
+from lfx.components.models_and_agents.memory import MemoryComponent, _safe_graph_user_id, aget_agent_chat_history
 
 if TYPE_CHECKING:
     from langchain_core.tools import Tool
@@ -810,6 +810,7 @@ class AgentComponent(ToolCallingAgentComponent):
             flow_id=getattr(self.graph, "flow_id", None),
             context_id=self.context_id,
             n_messages=self.n_messages,
+            user_id=_safe_graph_user_id(self),
         )
         return [
             message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)

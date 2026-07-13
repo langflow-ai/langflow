@@ -380,6 +380,51 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, DataFrame)
         assert "No RSS URL provided" in result.iloc[0]["summary"]
 
+    def test_perform_rss_read_blocks_ssrf(self, monkeypatch):
+        """Security: RSS mode must not fetch internal/metadata URLs when SSRF protection is on.
+
+        The query is treated as a raw URL in RSS mode; a tenant could point it at the cloud
+        metadata endpoint. With SSRF protection enabled the request must be blocked before any
+        network call.
+        """
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        component = WebSearchComponent()
+        component.query = "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
+        component.timeout = 5
+
+        with patch("lfx.components.data_source.web_search.requests.get") as mock_get:
+            result = component.perform_rss_read()
+
+        mock_get.assert_not_called()
+        assert isinstance(result, DataFrame)
+        assert "SSRF Protection" in result.iloc[0]["summary"]
+
+    def test_perform_web_search_blocks_ssrf_on_result_links(self, monkeypatch):
+        """Security: result links resolving to internal IPs are not fetched when SSRF is on."""
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        component = WebSearchComponent()
+        component.query = "test query"
+        component.timeout = 5
+
+        mock_response = Mock()
+        mock_response.text = (
+            '<html><div class="result">'
+            '<a class="result__a" href="?uddg=http%3A%2F%2F169.254.169.254%2Flatest%2Fmeta-data%2F">Title</a>'
+            '<a class="result__snippet">snippet</a>'
+            "</div></html>"
+        )
+        mock_response.headers = {"content-type": "text/html"}
+        mock_response.raise_for_status.return_value = None
+
+        with patch("lfx.components.data_source.web_search.requests.get") as mock_get:
+            mock_get.return_value = mock_response
+            result = component.perform_web_search()
+
+        # Only the search-engine request fired; the internal result link was never fetched.
+        assert mock_get.call_count == 1
+        assert isinstance(result, DataFrame)
+        assert "Blocked by SSRF protection" in result.iloc[0]["content"]
+
     @patch.object(WebSearchComponent, "perform_web_search")
     def test_perform_search_web_mode(self, mock_web_search):
         """Test perform_search routes to web search in Web mode."""

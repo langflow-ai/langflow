@@ -340,8 +340,12 @@ class TestUpdateBuildConfigRefresh:
             "update_tool_list",
             new=AsyncMock(side_effect=ValueError("Connection refused")),
         ):
+            # is_refresh forces a fresh connection attempt (per this class's contract) so the
+            # error surfaces deterministically. Without it, the cold-cache fast path preserves
+            # the saved ("stale") options and never calls update_tool_list, which made this test
+            # depend on shared-cache state left by a sibling test (order-dependent under xdist).
             build_config = await component.update_build_config(
-                self._build_config(),
+                self._build_config(is_refresh=True),
                 {"name": "srv", "config": {"command": "uvx test"}},
                 "mcp_server",
             )

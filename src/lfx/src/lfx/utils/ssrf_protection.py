@@ -20,11 +20,13 @@ Configuration:
 
 import functools
 import ipaddress
+import re
 import socket
 from urllib.parse import urlparse
 
 from lfx.logging import logger
 from lfx.services.deps import get_settings_service
+from lfx.utils.file_path_security import is_local_file_access_restricted
 
 
 class SSRFProtectionError(ValueError):
@@ -363,10 +365,8 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = False) -> None:
         raise ValueError(msg) from e
 
     try:
-        # Validate scheme
+        # Validate scheme (raises SSRFProtectionError for any non-http/https scheme)
         _validate_url_scheme(parsed.scheme)
-        if parsed.scheme not in ("http", "https"):
-            return
 
         # Validate hostname exists
         hostname = _validate_hostname_exists(parsed.hostname)
@@ -393,6 +393,273 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = False) -> None:
             )
             return
         raise
+
+
+def is_connector_ssrf_validation_enabled() -> bool:
+    """Whether SSRF validation is enabled for tenant-controlled CONNECTOR host/URL components.
+
+    Separate gate from the global ``ssrf_protection_enabled``. Defaults to True so connector
+    components (vector stores, SQL DBs, Glean/AstraDB-CQL tools, model-provider discovery) follow
+    the same internal-host policy unless an operator explicitly disables it.
+    """
+    import os
+
+    env_value = os.getenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED")
+    if env_value is not None:
+        return env_value.lower() in ("true", "1", "yes", "on")
+    try:
+        return bool(get_settings_service().settings.connector_ssrf_validation_enabled)
+    except Exception:  # noqa: BLE001 - settings may be unavailable; default to enabled
+        logger.warning(
+            "Could not read connector_ssrf_validation_enabled setting; treating connector SSRF "
+            "validation as ENABLED (fail-closed to default). Connector URLs will be validated."
+        )
+        return True
+
+
+def is_connector_loopback_allowed() -> bool:
+    """Whether a literal loopback host is allowed for CONNECTOR / model-provider URLs.
+
+    Connector and model-provider components routinely target a *local* service — Ollama and
+    LM Studio default to ``http://localhost:11434`` / ``http://localhost:1234`` and local vector
+    stores bind to loopback — so loopback is allowed by default (True). Cloud-metadata and
+    RFC1918 ranges are blocked regardless. A multi-tenant deployer, where a tenant pointing a
+    connector at the *server's* loopback is an SSRF vector, sets this to False to block loopback
+    too. Defaults to True (lenient single-tenant default) if settings are unavailable.
+    """
+    import os
+
+    env_value = os.getenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK")
+    if env_value is not None:
+        return env_value.lower() in ("true", "1", "yes", "on")
+    try:
+        return bool(get_settings_service().settings.connector_ssrf_allow_loopback)
+    except Exception:  # noqa: BLE001 - settings may be unavailable; default to allowed (single-tenant default)
+        return True
+
+
+def _is_loopback_host(hostname: str) -> bool:
+    """True if ``hostname`` is a literal loopback reference (``localhost`` or a loopback IP).
+
+    Only literal forms are matched (``localhost``, ``127.0.0.0/8``, ``::1``). A hostname that
+    merely *resolves* to loopback is intentionally NOT matched, so it still flows through the full
+    SSRF check — defeating a DNS-rebinding trick that points a public-looking host at loopback.
+    """
+    if hostname.lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(hostname).is_loopback
+    except ValueError:
+        return False
+
+
+def validate_connector_url_for_ssrf(url: str) -> None:
+    """SSRF-validate a tenant-controlled connector URL unless connector validation is disabled.
+
+    Defers to :func:`validate_url_for_ssrf`, which still respects ``ssrf_protection_enabled`` and
+    the allowlist, for the actual host policy. Operators can set
+    ``connector_ssrf_validation_enabled=false`` to preserve legacy localhost/private-network
+    connector behavior.
+
+    DNS-rebinding residual: unlike the API Request component (which uses
+    :func:`validate_and_resolve_url` to pin the validated IP), connectors hand the URL to a
+    third-party client (chromadb, pymilvus, qdrant-client, SQLAlchemy, the ollama client, ...)
+    that re-resolves DNS at connect time and exposes no hook to dial a pre-resolved IP without
+    breaking TLS SNI / cert validation. So this guard is validate-then-connect and a
+    TOCTOU/DNS-rebinding attacker with a fast-flipping record could still slip an internal IP
+    past it. The high-value targets (cloud metadata, RFC1918 literals) are literal IPs with no
+    DNS to rebind and are blocked identically here.
+
+    Raises:
+        SSRFProtectionError: If connector validation is enabled and the host is blocked, or the
+            URL is not an http(s) URL with a host (the only shape this guard can validate).
+    """
+    if not is_connector_ssrf_validation_enabled():
+        return
+    # The shared validator only understands http/https URLs that carry a host. Connector fields
+    # are sometimes a bare "host:port" (e.g. Milvus) or a non-HTTP scheme, which urlparse maps to
+    # a missing/garbage scheme -- without this, that would surface as a confusing
+    # "Invalid URL scheme ''". Only raise when host validation would actually run (global SSRF
+    # protection on); otherwise stay a no-op exactly as before.
+    if is_ssrf_protection_enabled():
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https") or not parsed.hostname:
+            msg = (
+                f"Connector URL must be an http(s) URL with a host for SSRF validation; got {url!r}. "
+                "Use an explicit scheme (e.g. 'http://host:port'); to reach an internal host, also add "
+                "it to LANGFLOW_SSRF_ALLOWED_HOSTS (allowlisting alone does not permit a scheme-less host)."
+            )
+            raise SSRFProtectionError(msg)
+        # Connectors commonly target a local service (Ollama / LM Studio default to localhost,
+        # local vector stores bind to loopback). Allow a literal loopback host by default; a
+        # multi-tenant deployer sets connector_ssrf_allow_loopback=false to block it too. Only a
+        # literal loopback reference is exempted — a hostname that resolves to loopback still goes
+        # through the full check below, so DNS-rebinding cannot abuse this.
+        if is_connector_loopback_allowed() and _is_loopback_host(parsed.hostname):
+            return
+    validate_url_for_ssrf(url)
+
+
+# SQLAlchemy dialects that read/write the local filesystem instead of connecting over the
+# network. A multi-tenant deployer must never let a tenant-supplied DB URL open these
+# (e.g. sqlite:////etc/passwd, or ATTACH to read/write arbitrary server files).
+_LOCAL_FILE_DB_DIALECTS = frozenset({"sqlite", "duckdb", "access", "shell"})
+
+
+def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = True) -> None:
+    """Validate a SQLAlchemy database URL against SSRF and local-file access.
+
+    Unlike :func:`validate_url_for_ssrf` (which only guards http/https and returns early for
+    other schemes), this guards arbitrary DB URIs on two axes, each with its own toggle:
+
+    * Network dialects (postgresql, mysql, ...) must resolve to a host that is not an
+      internal/blocked IP — guarded by SSRF protection (``LANGFLOW_SSRF_PROTECTION_ENABLED``,
+      default on), so a tenant cannot reach the control-plane DB or other internal services.
+    * Local-file-backed dialects (sqlite, duckdb, ...) read/write the server filesystem and
+      are blocked only when ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is on (default off), so
+      single-tenant sqlite usage keeps working while multi-tenant deployments can disable it.
+
+    Args:
+        url: The SQLAlchemy database URL to validate.
+        validate_network_host: When False, the network-host SSRF check is skipped (the local-file
+            dialect restriction still applies). Used by the connector-gated wrapper so the
+            host SSRF check is opt-in.
+
+    Raises:
+        SSRFProtectionError: If the URL targets a blocked IP, or a local-file dialect while
+            local file access is restricted.
+        ValueError: If the URL is malformed.
+    """
+    ssrf_on = is_ssrf_protection_enabled() and validate_network_host
+    file_restricted = is_local_file_access_restricted()
+    if not ssrf_on and not file_restricted:
+        return
+
+    try:
+        parsed = urlparse(url)
+    except Exception as e:
+        msg = f"Invalid database URL format: {e}"
+        raise ValueError(msg) from e
+
+    # SQLAlchemy schemes look like "postgresql+psycopg2"; reduce to the dialect.
+    dialect = (parsed.scheme or "").lower().split("+", 1)[0]
+    if dialect in _LOCAL_FILE_DB_DIALECTS:
+        if file_restricted:
+            msg = (
+                f"Database dialect '{dialect}' accesses the local filesystem and is not permitted "
+                "(LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true). Use a network database (e.g. postgresql, mysql)."
+            )
+            raise SSRFProtectionError(msg)
+        # Not restricted: local-file DBs are allowed (single-tenant default).
+        return
+
+    # Network dialect: host SSRF validation only applies when SSRF protection is enabled.
+    if not ssrf_on:
+        return
+
+    hostname = parsed.hostname
+    if not hostname:
+        # A network dialect with no host cannot be validated -> fail closed.
+        msg = "Database URL must contain a network host."
+        raise SSRFProtectionError(msg)
+
+    # Reuse the same allowlist + blocked-range checks as HTTP SSRF validation.
+    if _validate_direct_ip_address(hostname):
+        return
+    _validate_hostname_resolution(hostname)
+
+
+def validate_connector_database_url_for_ssrf(url: str) -> None:
+    """DB-URL validation for connector components (e.g. the SQL Database components).
+
+    The network-host SSRF check follows ``connector_ssrf_validation_enabled`` (default on). The
+    local-file dialect restriction still honors ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` regardless,
+    since that is a separate control.
+
+    Raises:
+        SSRFProtectionError: If connector validation is on and the host is blocked, or a local-file
+            dialect is used while local file access is restricted.
+        ValueError: If the URL is malformed.
+    """
+    validate_database_url_for_ssrf(url, validate_network_host=is_connector_ssrf_validation_enabled())
+
+
+# Git remote-helper transport syntax (``ext::``, ``fd::``, bare ``::address``). The ``ext``
+# helper runs an arbitrary shell command, so this whole syntax is treated as hostile.
+_GIT_REMOTE_HELPER_RE = re.compile(r"^[A-Za-z0-9+.\-]*::")
+
+# Real network transports git understands. Anything else (file, ext, fd, ...) is rejected.
+_ALLOWED_GIT_SCHEMES = frozenset({"http", "https", "git", "ssh", "git+ssh", "git+http", "git+https"})
+
+
+def validate_git_repository_url(url: str) -> None:
+    """Validate a Git repository URL before it is handed to ``git clone``.
+
+    ``git``/GitPython accept far more than network URLs, and the repository URL is fully
+    tenant-controlled in a multi-tenant deployment:
+
+    * ``ext::sh -c '<cmd>'`` (and any ``<helper>::`` remote-helper transport) executes an
+      arbitrary command on the server => RCE.
+    * a leading ``-`` is parsed by git as an option => argument injection.
+    * ``file://`` and bare local paths clone a repository off the server filesystem =>
+      arbitrary local file disclosure.
+
+    The first two are always blocked (no legitimate use, direct RCE/injection). Local-file
+    clones are blocked when SSRF protection (default on) or local-file restriction is enabled,
+    so single-tenant local-repo workflows keep working only when both are off. Network
+    transports have their host validated against the SSRF blocked ranges.
+
+    Raises:
+        SSRFProtectionError: If the URL uses a dangerous transport or targets a blocked host.
+        ValueError: If the URL is empty or malformed.
+    """
+    if not isinstance(url, str) or not url.strip():
+        msg = "Git repository URL must be a non-empty string."
+        raise ValueError(msg)
+    url = url.strip()
+
+    # Always-blocked: remote-helper transports (RCE) and git option injection. These are
+    # rejected regardless of SSRF/file-access toggles because they have no legitimate use.
+    if url.startswith("-"):
+        msg = "Git repository URL may not start with '-' (git option injection)."
+        raise SSRFProtectionError(msg)
+    if _GIT_REMOTE_HELPER_RE.match(url):
+        msg = "Git remote-helper transports (e.g. 'ext::', 'fd::') are not permitted."
+        raise SSRFProtectionError(msg)
+
+    parsed = urlparse(url)
+    scheme = (parsed.scheme or "").lower()
+
+    # Scheme allowlist is ALWAYS enforced (independent of the SSRF/file toggles): non-network
+    # schemes such as ``ext://`` invoke the git-remote-<scheme> helper (RCE) and ``gopher://``
+    # etc. are dangerous transports, not a network-policy choice. ``file`` is handled just below.
+    if scheme and scheme != "file" and scheme not in _ALLOWED_GIT_SCHEMES:
+        msg = f"Git URL scheme '{scheme}' is not permitted."
+        raise SSRFProtectionError(msg)
+
+    # Local-filesystem clones (file:// or a bare path) read arbitrary server files.
+    pre_colon = url.split(":", 1)[0]
+    is_local_path = scheme == "file" or (scheme == "" and ("/" in pre_colon or url.startswith(("/", ".", "~"))))
+    if is_local_path:
+        if is_ssrf_protection_enabled() or is_local_file_access_restricted():
+            msg = "Cloning local-filesystem Git repositories is not permitted."
+            raise SSRFProtectionError(msg)
+        return
+
+    # Network transports: host SSRF validation only applies when SSRF protection is enabled.
+    if not is_ssrf_protection_enabled():
+        return
+
+    # scp-like syntax (git@host:path) has no scheme; the host is before the first ':'.
+    hostname = (url.split("@", 1)[-1].split(":", 1)[0] or None) if scheme == "" else parsed.hostname
+
+    if not hostname:
+        msg = "Git repository URL must contain a network host."
+        raise SSRFProtectionError(msg)
+
+    if _validate_direct_ip_address(hostname):
+        return
+    _validate_hostname_resolution(hostname)
 
 
 def validate_and_resolve_url(url: str) -> tuple[str, list[str]]:
@@ -424,7 +691,7 @@ def validate_and_resolve_url(url: str) -> tuple[str, list[str]]:
           Returns empty list if:
           - SSRF protection is disabled
           - Host is in the allowlist (e.g., localhost for Ollama)
-          - URL scheme is not http/https
+          (a non-http/https scheme raises SSRFProtectionError rather than returning)
 
     Raises:
         SSRFProtectionError: If URL is blocked by SSRF protection
@@ -461,12 +728,9 @@ def validate_and_resolve_url(url: str) -> tuple[str, list[str]]:
 
     try:
         # ============================================================================
-        # Step 3: Validate URL scheme (only http/https allowed)
+        # Step 3: Validate URL scheme (raises SSRFProtectionError for any non-http/https scheme)
         # ============================================================================
         _validate_url_scheme(parsed.scheme)
-        if parsed.scheme not in ("http", "https"):
-            # Non-HTTP schemes (ftp, file, etc.) are not subject to SSRF protection
-            return url, []
 
         # ============================================================================
         # Step 4: Extract and validate hostname
