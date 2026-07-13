@@ -109,6 +109,11 @@ class ToolApprovalMixin:
         interrupt_id = getattr(first, "id", None) or getattr(first, "interrupt_id", None)
         return (value if isinstance(value, dict) else None), (str(interrupt_id) if interrupt_id else None)
 
+    async def _read_pending_interrupt_value(self, agent, config: dict[str, Any]) -> dict[str, Any] | None:
+        """Value-only variant kept for agent code frozen in saved flows (pre-nonce)."""
+        value, _ = await self._read_pending_interrupt(agent, config)
+        return value
+
     def _pending_interrupt_getter(self, agent, config: dict[str, Any]):
         """Closure that reports the agent's pending tool-approval request, or None.
 
@@ -136,6 +141,10 @@ class ToolApprovalMixin:
         Nonce-keyed decisions must match the pending interrupt exactly; the bare
         ``component:thread`` key is only honored for checkpoints written before the
         nonce existed, so an earlier approval's answer can never satisfy a later pause.
+
+        Callers with no ``interrupt_id`` (saved flows freeze pre-nonce agent code)
+        get the lone nonce-keyed decision for this thread — never a guess between
+        several, so a stale answer still cannot satisfy a later pause.
         """
         decisions = getattr(self.graph, "human_input_decisions", None)
         if not isinstance(decisions, dict):
@@ -144,7 +153,12 @@ class ToolApprovalMixin:
             nonce_match = decisions.get(f"{self._id}:{thread_id}:{interrupt_id}")
             if nonce_match is not None:
                 return nonce_match
-        return decisions.get(f"{self._id}:{thread_id}")
+        bare_match = decisions.get(f"{self._id}:{thread_id}")
+        if bare_match is not None or interrupt_id:
+            return bare_match
+        prefix = f"{self._id}:{thread_id}:"
+        nonced = [value for key, value in decisions.items() if str(key).startswith(prefix)]
+        return nonced[0] if len(nonced) == 1 else None
 
     @staticmethod
     def _to_langgraph_decision(decision: dict[str, Any], action_request: dict[str, Any]) -> dict[str, Any]:

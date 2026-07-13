@@ -46,6 +46,56 @@ def test_legacy_two_part_decision_still_resumes_old_checkpoints():
     assert agent._injected_agent_decision("run-1", "int-A") == decision
 
 
+def test_legacy_caller_without_interrupt_id_matches_single_nonced_decision():
+    """Saved flows freeze pre-nonce agent code that calls ``_injected_agent_decision(thread)``.
+
+    The engine keys the injected decision by nonce (``component:thread:interrupt``);
+    the lone nonced decision must still resolve or the resumed agent re-invokes the
+    LLM on the interrupted thread and the provider rejects the dangling tool_call.
+    """
+    decision = {"action_id": "approve"}
+    agent = _Agent({"Agent-x:run-1:int-A": decision})
+    assert agent._injected_agent_decision("run-1") == decision
+
+
+def test_legacy_caller_without_interrupt_id_stays_none_when_ambiguous():
+    agent = _Agent(
+        {
+            "Agent-x:run-1:int-A": {"action_id": "approve"},
+            "Agent-x:run-1:int-B": {"action_id": "reject"},
+        }
+    )
+    assert agent._injected_agent_decision("run-1") is None
+
+
+def test_legacy_caller_without_interrupt_id_ignores_other_threads():
+    agent = _Agent({"Agent-x:run-2:int-A": {"action_id": "approve"}})
+    assert agent._injected_agent_decision("run-1") is None
+
+
+async def test_legacy_read_pending_interrupt_value_helper_still_exists():
+    """Frozen agent code still calls the value-only helper.
+
+    The rename to ``_read_pending_interrupt`` must keep a value-only shim or
+    resumed saved flows crash with AttributeError right after the decision resolves.
+    """
+
+    class _Interrupt:
+        value = {"action_requests": [{"name": "tool"}]}
+        id = "int-A"
+
+    class _Snapshot:
+        interrupts = [_Interrupt()]
+        tasks = []
+
+    class _StubAgent:
+        async def aget_state(self, _config):
+            return _Snapshot()
+
+    value = await _Agent()._read_pending_interrupt_value(_StubAgent(), {"configurable": {}})
+    assert value == {"action_requests": [{"name": "tool"}]}
+
+
 def test_has_candidate_decision_matches_any_nonce_but_not_other_threads():
     agent = _Agent({"Agent-x:run-1:int-A": {"action_id": "approve"}})
     assert agent._has_candidate_decision("run-1")
