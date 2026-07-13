@@ -85,6 +85,7 @@ def get_llm(
     watsonx_url=None,
     watsonx_project_id=None,
     ollama_base_url=None,
+    overrides: dict[str, Any] | None = None,
 ) -> Any:
     # Resolve helpers via package namespace so tests patching
     # lfx.base.models.unified_models.<name> keep working.
@@ -365,6 +366,14 @@ def get_llm(
         # Bundle-contributed provider: apply its declared connection variables
         # (base_url, attribution headers, etc.) generically from its metadata.
         _apply_registered_provider_connection(provider, user_id, kwargs)
+
+    # Apply overrides discovered from a prior failed call to this model (cache)
+    # plus any the caller passed for this attempt (error-driven remediation).
+    from lfx.base.models.model_remediation import cached_overrides
+
+    kwargs.update(cached_overrides(provider, model_name))
+    if overrides:
+        kwargs.update(overrides)
 
     try:
         return model_class(**kwargs)

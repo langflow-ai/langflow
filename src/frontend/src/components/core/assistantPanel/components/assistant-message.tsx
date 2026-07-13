@@ -8,6 +8,7 @@ import type { AssistantMessage } from "../assistant-panel.types";
 import { getRandomThinkingMessage } from "../helpers/messages";
 import { AssistantBuildTasks } from "./assistant-build-tasks";
 import { AssistantMessageBody } from "./assistant-message-body";
+import { AssistantModelNotice } from "./assistant-model-notice";
 import { FileContentModal } from "./file-content-modal";
 
 interface AssistantMessageItemProps {
@@ -192,6 +193,12 @@ export function AssistantMessageItem({
                 subtle
               />
             )}
+            {!isUser &&
+              message.status === "complete" &&
+              message.notices &&
+              message.notices.length > 0 && (
+                <AssistantModelNotice notices={message.notices} />
+              )}
           </div>
           {!isUser && message.buildTasks && message.buildTasks.length > 0 && (
             <AssistantBuildTasks tasks={message.buildTasks} />

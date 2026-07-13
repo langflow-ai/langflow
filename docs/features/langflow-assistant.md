@@ -1249,6 +1249,12 @@ Add an **inner** `while swap_requested:` loop inside the streaming attempt:
 - The named "exhausted" message gives the user an actionable next step (request access OR switch provider)
 - Auth / rate-limit / network failures keep their existing semantics
 
+#### Which model is the default (`ASSISTANT_PREFERRED_MODELS`)
+
+The default is **curated per provider**, not derived from the catalog. The catalog's own default is "first entry in the provider's list" — it sorts by `created`, which is `0` for every model, so the order is simply however the list was written. First is not best: Google's first entry is `gemini-2.5-flash`, a small SKU the composer flags with *"may underperform on agent tasks"* — so the out-of-the-box default arrived pre-warned.
+
+`ASSISTANT_PREFERRED_MODELS` (in `agentic/services/provider_service.py`) declares an ordered preference per provider; `get_default_model` picks the first name the provider actually offers, constrained to installed models for live providers (Ollama/WatsonX/OpenRouter). Providers not listed — and names that no longer exist — fall back to the catalog default. A guard test mirrors the frontend's `classifyModelStrength` and fails if any provider's default ever regresses to a weak model.
+
 **Trade-offs:**
 - Multiple LLM calls when the first models fail (cost is bounded by the candidate list length — same provider only)
 - The marker denylist is a heuristic; new wording variants for "model unavailable" must be added explicitly

@@ -11,6 +11,7 @@ from time import perf_counter
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
+from lfx.base.models.model_remediation import find_remediation, remember
 from lfx.graph.flow_builder.flow import flow_to_spec_summary
 from lfx.log.logger import logger
 from lfx.mcp.flow_builder_tools import (
@@ -26,6 +27,7 @@ from lfx.mcp.tool_cache import reset_tool_cache
 from langflow.agentic.helpers.code_extraction import extract_component_code, extract_flow_json
 from langflow.agentic.helpers.code_security import scan_code_security
 from langflow.agentic.helpers.error_handling import (
+    build_recovered_notice,
     extract_friendly_error,
     format_models_exhausted_message,
     is_model_unavailable_error,
@@ -522,6 +524,7 @@ async def execute_flow_with_validation_streaming(
     api_key_var: str | None = None,
     is_disconnected: Callable[[], Coroutine[Any, Any, bool]] | None = None,
     apply_edits_immediately: bool = False,
+    iterations_limit: int | None = None,
 ) -> AsyncGenerator[str, None]:
     """Execute flow with validation, yielding SSE progress and token events.
 
@@ -546,6 +549,12 @@ async def execute_flow_with_validation_streaming(
     # sees the actual cost even on partial / fallback outcomes.
     request_started_at = perf_counter()
     total_usage: dict[str, int] = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+    # Non-fatal model errors this turn recovered from (swap or remediation). Attached to
+    # the terminal ``complete`` event so a silent background fix is visible, not invisible.
+    recovered_notices: list[dict[str, str]] = []
+    # The step budget rides to load_and_prepare_flow inside global_variables.
+    if iterations_limit is not None:
+        global_variables = {**global_variables, "ITERATIONS_LIMIT": str(iterations_limit)}
 
     def _accumulate(tokens: dict[str, int] | None, *, phase: str | None = None) -> None:
         if not tokens:
@@ -580,6 +589,10 @@ async def execute_flow_with_validation_streaming(
             "usage": dict(total_usage),
             "duration_seconds": round(perf_counter() - request_started_at, 3),
         }
+        # Surface non-fatal model errors the turn recovered from, so a silent
+        # fallback/remediation shows as an (i) instead of looking like nothing happened.
+        if recovered_notices:
+            payload["notices"] = recovered_notices
         return format_complete_event(payload)
 
     # Layer 1: Input sanitization (before any LLM call)
@@ -813,6 +826,7 @@ async def execute_flow_with_validation_streaming(
         # `model_not_found`. Seeded with the resolver's default so the
         # fallback walks PAST it instead of re-attempting.
         tried_models: set[str] = set()
+        applied_remediations: set[str] = set()
         if model_name:
             tried_models.add(model_name)
 
@@ -972,13 +986,39 @@ async def execute_flow_with_validation_streaming(
                         yield format_cancelled_event()
                         return
                     except FlowExecutionError as e:
+                        # Error-driven remediation runs FIRST: the model itself is fine, it
+                        # just needs different instantiation params (e.g. gpt-5.6 rejects
+                        # function tools + reasoning_effort on /v1/chat/completions and must
+                        # use the Responses API). Cache the override and re-run — get_llm
+                        # pre-applies it, so the fix reaches the Agent embedded in the flow.
+                        remediation = find_remediation(
+                            e.original_error_message, provider, already_applied=applied_remediations
+                        )
+                        if remediation is not None:
+                            applied_remediations.add(remediation.name)
+                            remember(provider, model_name, remediation.overrides)
+                            logger.info(
+                                "assistant.model_remediation applied=%s provider=%s model=%s",
+                                remediation.name,
+                                provider,
+                                model_name,
+                            )
+                            recovered_notices.append(
+                                build_recovered_notice(
+                                    "model_remediation",
+                                    failed_model=model_name,
+                                    raw_error=e.original_error_message,
+                                    used_model=model_name,
+                                )
+                            )
+                            swap_requested = True
                         # Bug 1 [P1] — model fallback: only attempted when the
                         # underlying error is a `model_not_found`-class
                         # signal AND the request carries a provider so the
                         # candidate list can be looked up. Auth / rate-limit /
                         # network errors fall through to the existing
                         # friendly-error path unchanged.
-                        if is_model_unavailable_error(e.original_error_message) and provider:
+                        elif is_model_unavailable_error(e.original_error_message) and provider:
                             candidates = get_provider_model_candidates(provider, user_id=user_id)
                             next_model = next((m for m in candidates if m not in tried_models), None)
                             if next_model:
@@ -988,6 +1028,14 @@ async def execute_flow_with_validation_streaming(
                                     next_model,
                                     provider,
                                     sorted(tried_models),
+                                )
+                                recovered_notices.append(
+                                    build_recovered_notice(
+                                        "model_fallback",
+                                        failed_model=model_name,
+                                        raw_error=e.original_error_message,
+                                        used_model=next_model,
+                                    )
                                 )
                                 tried_models.add(next_model)
                                 model_name = next_model

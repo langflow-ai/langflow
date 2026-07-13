@@ -11,6 +11,7 @@ import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/us
 import { BASE_URL_API } from "@/customization/config-constants";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { APIClassType } from "@/types/api";
@@ -577,6 +578,9 @@ export function useAssistantChat(): UseAssistantChatReturn {
                   typeof event.data.duration_seconds === "number"
                     ? event.data.duration_seconds * 1000
                     : undefined,
+                // Silent model failures the turn recovered from — shown as an (i)
+                // so a background swap/retry is never invisible to the user.
+                notices: event.data.notices,
               }));
               setCurrentStep(null);
               setIsProcessing(false);
@@ -773,6 +777,10 @@ export function useAssistantChat(): UseAssistantChatReturn {
       updateMessage(messageId, () => ({
         flowProposalStatus: "applied" as const,
       }));
+
+      // Applying is the reveal moment: minimize the panel so the canvas the user
+      // just accepted is visible immediately instead of sitting behind the panel.
+      useAssistantManagerStore.getState().setAssistantSidebarOpen(false);
 
       // Revert to ``pending`` after the success badge has been on screen
       // long enough to register — lets the user re-apply the same proposal
