@@ -4,12 +4,9 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   type AvailableDBProviderId,
   DB_PROVIDER_OPTIONS,
-  type DBProviderConfigField,
   type DBProviderId,
   type DBProviderTextField,
   getActiveDBProvider,
-  getGlobalVariableValue,
-  parseBooleanGlobalVariable,
   toAPIBackendType,
 } from "@/constants/dbProviderConstants";
 import { useTestDBProviderConnection } from "@/controllers/API/queries/knowledge-bases/use-test-kb-connection";
@@ -18,6 +15,7 @@ import { cn } from "@/utils/utils";
 import { ProviderConfigurationPanel } from "./components/ProviderConfigurationPanel";
 import { ProviderListItem } from "./components/ProviderListItem";
 import { buildBackendConfigPayload } from "./helpers/build-backend-config-payload";
+import { useDBProviderFields } from "./hooks/useDBProviderFields";
 import { useDBProviderVariables } from "./hooks/useDBProviderVariables";
 
 type ApiError = {
@@ -34,12 +32,8 @@ const getErrorDetail = (error: unknown) =>
 
 export default function DBProvidersPage() {
   const { t } = useTranslation();
-  const {
-    globalVariables,
-    isPending,
-    setVariable,
-    activateProvider,
-  } = useDBProviderVariables();
+  const { globalVariables, isPending, setVariable, activateProvider } =
+    useDBProviderVariables();
   const [selectedProviderId, setSelectedProviderId] = useState<DBProviderId>(
     getActiveDBProvider(globalVariables),
   );
@@ -74,63 +68,8 @@ export default function DBProvidersPage() {
       (provider) => provider.id === selectedProviderId,
     ) ?? DB_PROVIDER_OPTIONS[0];
 
-  const getFieldValue = (field: DBProviderConfigField): string => {
-    if (field.variableKey in variableValues) {
-      return variableValues[field.variableKey];
-    }
-    if (field.kind === "boolean") {
-      const stored = parseBooleanGlobalVariable(
-        globalVariables,
-        field.variableKey,
-        field.defaultValue,
-      );
-      return stored ? "true" : "false";
-    }
-    return (
-      getGlobalVariableValue(globalVariables, field.variableKey) ??
-      field.defaultValue ??
-      ""
-    );
-  };
-
-  const hasConfiguredValue = (variableKey: string) =>
-    globalVariables.some((variable) => variable.name === variableKey);
-
-  // True when every required field already has a saved variable so the
-  // provider can be activated / tested without the user re-entering anything.
-  // Secret fields are checked by existence (API responses mask the value);
-  // non-secret fields are checked by stored value.
-  const isHydrated = selectedProvider.configFields
-    .filter(
-      (field): field is DBProviderTextField =>
-        field.kind !== "boolean" && field.required,
-    )
-    .every((field) =>
-      field.isSecret
-        ? hasConfiguredValue(field.variableKey)
-        : Boolean(
-            getGlobalVariableValue(globalVariables, field.variableKey)?.trim(),
-          ),
-    );
-
-  // Boolean fields always have a defined value (toggle is never blank),
-  // so they don't gate the save button — only required text fields do.
-  // Secret fields satisfy the check when the user has typed a new value OR
-  // the variable already exists (API response masks saved secrets).
-  const canSave = selectedProvider.configFields
-    .filter(
-      (field): field is DBProviderTextField =>
-        field.kind !== "boolean" && field.required,
-    )
-    .every((field) => {
-      if (field.isSecret) {
-        return (
-          Boolean(variableValues[field.variableKey]?.trim()) ||
-          hasConfiguredValue(field.variableKey)
-        );
-      }
-      return Boolean(getFieldValue(field).trim());
-    });
+  const { getFieldValue, hasConfiguredValue, isHydrated, canSave } =
+    useDBProviderFields({ selectedProvider, globalVariables, variableValues });
 
   // Returns ``true`` if the save fully succeeded so callers (the Test
   // Connection button) can chain a follow-up step. Errors are surfaced
