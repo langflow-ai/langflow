@@ -8,12 +8,14 @@ import type { InputProps } from "../../../types/components";
 import { cn } from "../../../utils/utils";
 import { Input } from "../../ui/input";
 import { Textarea } from "../../ui/textarea";
+import GenerateDescriptionButton from "../generateDescriptionButton";
 
 export const EditFlowSettings: React.FC<
   InputProps & {
     submitForm?: () => void;
     locked?: boolean;
     setLocked?: (v: boolean) => void;
+    flowId?: string;
   }
 > = ({
   name,
@@ -27,10 +29,12 @@ export const EditFlowSettings: React.FC<
   submitForm,
   locked = false,
   setLocked,
+  flowId,
 }: InputProps & {
   submitForm?: () => void;
   locked?: boolean;
   setLocked?: (v: boolean) => void;
+  flowId?: string;
 }): JSX.Element => {
   const { t } = useTranslation();
   const [isMaxLength, setIsMaxLength] = useState(false);
@@ -157,6 +161,16 @@ export const EditFlowSettings: React.FC<
             <span className="edit-flow-span">
               {t("flow.characterLimitReached")}
             </span>
+          )}
+          {setDescription && flowId && (
+            <GenerateDescriptionButton
+              flowId={flowId}
+              currentDescription={description ?? undefined}
+              onGenerated={(value) =>
+                setDescription(value.slice(0, descriptionMaxLength))
+              }
+              disabled={locked}
+            />
           )}
         </div>
         {setDescription ? (

@@ -7,6 +7,8 @@
   "crash.restartButton": "Restart Langflow",
   "crash.reportButton": "Report on GitHub",
   "errors.generic": "Something went wrong, please try again",
+  "descriptionGenerator.generate": "Generate with AI",
+  "descriptionGenerator.error": "Couldn't generate a description",
   "errors.missedFields": "Oops! Looks like you missed something",
   "errors.missingInfo": "Oops! Looks like you missed some required information:",
   "errors.incompleteLoop": "The flow has an incomplete loop. Check your connections and try again.",

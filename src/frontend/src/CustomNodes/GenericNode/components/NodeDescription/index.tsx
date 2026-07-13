@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import { Textarea } from "@/components/ui/textarea";
+import GenerateDescriptionButton from "@/components/core/generateDescriptionButton";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { handleKeyDown } from "@/utils/reactflowUtils";
@@ -40,6 +41,7 @@ export default function NodeDescription({
   );
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const setNode = useFlowStore((state) => state.setNode);
+  const flowId = useFlowStore((state) => state.currentFlow?.id);
   const overflowRef = useRef<HTMLDivElement>(null);
   const [hasScroll, sethasScroll] = useState(false);
 
@@ -159,6 +161,19 @@ export default function NodeDescription({
     >
       {editNameDescription ? (
         <>
+          {!stickyNote && flowId && (
+            <div className="mb-1 flex justify-end">
+              <GenerateDescriptionButton
+                flowId={flowId}
+                componentId={nodeId}
+                currentDescription={nodeDescription}
+                onGenerated={(value) => {
+                  setHasChangedNodeDescription?.(true);
+                  setNodeDescription(value.slice(0, charLimit ?? value.length));
+                }}
+              />
+            </div>
+          )}
           <Textarea
             maxLength={charLimit}
             className={cn(

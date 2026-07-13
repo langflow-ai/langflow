@@ -604,6 +604,8 @@
   "errors.flowsVariableUndefined": "变量 Flows 未定义",
   "errors.function": "您的函数中存在错误",
   "errors.generic": "出现错误，请重试",
+  "descriptionGenerator.generate": "使用 AI 生成",
+  "descriptionGenerator.error": "无法生成描述",
   "errors.getComponents": "获取组件时出错。",
   "errors.imports": "您的导入语句中存在错误",
   "errors.incompleteLoop": "该流程存在未闭合的环路。 请检查连接，然后重试。",

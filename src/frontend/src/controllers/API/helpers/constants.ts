@@ -43,6 +43,7 @@ export const URLs = {
   DEPLOYMENT_PROVIDER_ACCOUNTS: `deployments/providers`,
   AGENTIC_ASSIST: `agentic/assist`,
   AGENTIC_ASSIST_STREAM: `agentic/assist/stream`,
+  AGENTIC_GENERATE_DESCRIPTION: `agentic/generate-description`,
   AGENTIC_CHECK_CONFIG: `agentic/check-config`,
   AGENTIC_FILES: `agentic/files`,
   EXTENSIONS: `extensions`,

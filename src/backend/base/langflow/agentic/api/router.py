@@ -4,6 +4,7 @@ This module provides the HTTP endpoints for the Langflow Assistant.
 All business logic is delegated to service modules.
 """
 
+import json
 import uuid
 from dataclasses import dataclass
 from uuid import UUID
@@ -19,7 +20,7 @@ from lfx.base.models.unified_models import (
 from lfx.log.logger import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from langflow.agentic.api.schemas import AssistantRequest
+from langflow.agentic.api.schemas import AssistantRequest, DescriptionGenerationRequest
 from langflow.agentic.services.assistant_service import (
     execute_flow_with_validation,
     execute_flow_with_validation_streaming,
@@ -154,6 +155,47 @@ async def _validate_flow_access(flow_id: str | None, user_id: UUID, session: Asy
         raise HTTPException(status_code=404, detail="Flow not found.")
 
 
+async def _build_description_input(request: DescriptionGenerationRequest, user_id: UUID, session: AsyncSession) -> str:
+    """Attach authoritative workflow or component JSON to a description request."""
+    from langflow.services.database.models.flow import Flow
+
+    try:
+        flow_uuid = UUID(request.flow_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid flow_id: not a valid UUID.") from exc
+
+    flow = await session.get(Flow, flow_uuid)
+    if flow is None or (flow.user_id is not None and flow.user_id != user_id):
+        raise HTTPException(status_code=404, detail="Flow not found.")
+
+    context: object = flow.data or {}
+    context_type = "workflow"
+    if request.component_id:
+        nodes = (flow.data or {}).get("nodes", [])
+        context = next(
+            (
+                node
+                for node in nodes
+                if node.get("id") == request.component_id or node.get("data", {}).get("id") == request.component_id
+            ),
+            None,
+        )
+        if context is None:
+            raise HTTPException(status_code=404, detail="Component not found in flow.")
+        context_type = "component"
+
+    instruction = (
+        f"Rewrite this existing description: {request.current_description}"
+        if request.current_description
+        else "Generate a concise description."
+    )
+    return (
+        f"{instruction}\n\nOutput language locale: {request.language}. "
+        "The description MUST be written in this language.\n\n"
+        f"Context type: {context_type}\nContext JSON:\n{json.dumps(context, ensure_ascii=False)}"
+    )
+
+
 @router.post("/execute/{flow_name}")
 async def execute_named_flow(
     flow_name: str,
@@ -180,6 +222,33 @@ async def execute_named_flow(
         input_value=request.input_value,
         global_variables=global_vars,
         verbose=True,
+        user_id=str(current_user.id),
+        session_id=ctx.session_id,
+        provider=ctx.provider,
+        model_name=ctx.model_name,
+        api_key_var=ctx.api_key_name,
+    )
+
+
+@router.post("/generate-description")
+async def generate_description(
+    request: DescriptionGenerationRequest,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+) -> dict:
+    """Generate a description from the authoritative workflow or component JSON."""
+    assistant_request = AssistantRequest(
+        flow_id=request.flow_id,
+        input_value="Generate a description.",
+        provider=request.provider,
+        model_name=request.model_name,
+    )
+    ctx = await _resolve_assistant_context(assistant_request, current_user.id, session)
+    input_value = await _build_description_input(request, current_user.id, session)
+    return await execute_flow_file(
+        flow_filename="system_message_gen.py",
+        input_value=input_value,
+        global_variables=ctx.global_vars,
         user_id=str(current_user.id),
         session_id=ctx.session_id,
         provider=ctx.provider,
