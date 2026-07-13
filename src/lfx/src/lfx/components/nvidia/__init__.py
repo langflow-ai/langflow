@@ -14,8 +14,7 @@ try:
 except ModuleNotFoundError as exc:
     if exc.name is not None and (exc.name == "lfx_bundles" or exc.name.startswith("lfx_bundles.")):
         msg = (
-            "The 'nvidia' components moved to the 'lfx-bundles' distribution. "
-            "Install it with: pip install lfx-bundles."
+            "The 'nvidia' components moved to the 'lfx-bundles' distribution. Install it with: pip install lfx-bundles."
         )
         raise ModuleNotFoundError(msg, name="lfx_bundles") from exc
     raise
