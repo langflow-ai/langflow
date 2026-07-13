@@ -1,4 +1,4 @@
-"""Static boundary checks for the standalone ``services`` package."""
+"""Static boundary checks for the standalone ``langflow_services`` package."""
 
 from __future__ import annotations
 
@@ -14,11 +14,11 @@ if sys.version_info >= (3, 11):
 else:
     import tomli as tomllib
 
-SERVICES_ROOT = Path(__file__).resolve().parents[4] / "langflow-services" / "src" / "services"
+SERVICES_ROOT = Path(__file__).resolve().parents[4] / "langflow-services" / "src" / "langflow_services"
 SERVICES_PYPROJECT = SERVICES_ROOT.parent.parent / "pyproject.toml"
 
 # Selectable backends / providers are flat extras (bundles-style), not
-# ``services/<name>/`` package directories. Use <service>-<backend> only when
+# ``langflow_services/<name>/`` package directories. Use <service>-<backend> only when
 # the backend needs distinct third-party deps.
 _BACKEND_EXTRAS = frozenset(
     {
@@ -75,14 +75,14 @@ _EXTRAS = _PYPROJECT["project"]["optional-dependencies"]
 _SERVICE_EXTRAS = frozenset(name for name in _EXTRAS if name not in _BACKEND_EXTRAS | _META_EXTRAS)
 _SERVICE_EXTRA_PACKAGES = frozenset(name.replace("-", "_") for name in _SERVICE_EXTRAS)
 
-# Must stay aligned with ``services.factory._LFX_OWNED``.
+# Must stay aligned with ``langflow_services.factory._LFX_OWNED``.
 _LFX_OWNED = frozenset({"mcp_composer", "executor", "extension_events", "settings"})
 _ALLOWED_ROOT_MODULES = frozenset({"__init__.py", "bootstrap.py", "deps.py", "factory.py", "providers.py"})
 _ALLOWED_NON_SERVICE_DIRS = frozenset({"adapters", "__pycache__"})
 
 
 def _service_package_name(service_type: ServiceType) -> str:
-    """Map a ServiceType to its ``services.<name>`` package directory."""
+    """Map a ServiceType to its ``langflow_services.<name>`` package directory."""
     return service_type.value.replace("_service", "")
 
 
@@ -107,12 +107,30 @@ def _imported_modules(path: Path) -> set[str]:
                 modules.add(alias.name)
         elif isinstance(node, ast.ImportFrom) and node.module:
             modules.add(node.module)
+        elif isinstance(node, ast.Call):
+            modules.update(_dynamic_import_targets(node))
     return modules
+
+
+def _dynamic_import_targets(node: ast.Call) -> set[str]:
+    """Return module names passed to importlib / __import__ dynamic loaders."""
+    func = node.func
+    is_dynamic = False
+    if (isinstance(func, ast.Name) and func.id == "__import__") or (
+        isinstance(func, ast.Attribute) and func.attr in {"import_module", "find_spec", "__import__"}
+    ):
+        is_dynamic = True
+    if not is_dynamic or not node.args:
+        return set()
+    arg = node.args[0]
+    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+        return {arg.value}
+    return set()
 
 
 @pytest.mark.parametrize("path", _iter_service_source_files())
 def test_services_package_has_no_langflow_imports(path: Path) -> None:
-    """Runtime modules under ``services`` must never import ``langflow``."""
+    """Runtime modules under ``langflow_services`` must never import ``langflow``."""
     violations = [
         module for module in _imported_modules(path) if module == "langflow" or module.startswith("langflow.")
     ]
@@ -121,12 +139,12 @@ def test_services_package_has_no_langflow_imports(path: Path) -> None:
 
 @pytest.mark.parametrize("package_name", _langflow_owned_service_packages())
 def test_each_langflow_owned_service_has_subpackage(package_name: str) -> None:
-    """Every Langflow-owned ServiceType lives under ``services/<name>/``."""
+    """Every Langflow-owned ServiceType lives under ``langflow_services/<name>/``."""
     package_dir = SERVICES_ROOT / package_name
-    assert package_dir.is_dir(), f"missing service subpackage: services.{package_name}"
-    assert (package_dir / "__init__.py").is_file(), f"services.{package_name} missing __init__.py"
-    assert (package_dir / "service.py").is_file(), f"services.{package_name} missing service.py"
-    assert (package_dir / "factory.py").is_file(), f"services.{package_name} missing factory.py"
+    assert package_dir.is_dir(), f"missing service subpackage: langflow_services.{package_name}"
+    assert (package_dir / "__init__.py").is_file(), f"langflow_services.{package_name} missing __init__.py"
+    assert (package_dir / "service.py").is_file(), f"langflow_services.{package_name} missing service.py"
+    assert (package_dir / "factory.py").is_file(), f"langflow_services.{package_name} missing factory.py"
 
 
 def test_pyproject_has_one_extra_per_langflow_owned_service() -> None:
@@ -185,7 +203,7 @@ def test_all_extra_aggregates_service_and_backend_extras() -> None:
 def test_service_package_entry_point_exposes_bootstrap_registrar() -> None:
     """Advertise this service-package root using the LFX entry-point group."""
     entry_points = _PYPROJECT["project"]["entry-points"]["lfx.service-packages"]
-    assert entry_points == {"langflow-services": "services.bootstrap:register_all_service_factories"}
+    assert entry_points == {"langflow-services": "langflow_services.bootstrap:register_all_service_factories"}
 
 
 def test_jobs_service_maps_to_jobs_package() -> None:
@@ -196,7 +214,7 @@ def test_jobs_service_maps_to_jobs_package() -> None:
 
 
 def test_root_modules_are_shared_infrastructure_only() -> None:
-    """Concrete implementations must not live as top-level ``services/*.py`` files."""
+    """Concrete implementations must not live as top-level ``langflow_services/*.py`` files."""
     root_modules = sorted(path.name for path in SERVICES_ROOT.glob("*.py"))
     unexpected = [name for name in root_modules if name not in _ALLOWED_ROOT_MODULES]
     assert not unexpected, f"unexpected root modules (move into a service subpackage): {unexpected}"
@@ -207,17 +225,17 @@ def test_top_level_dirs_are_service_packages_or_allowed_exceptions() -> None:
     top_level_dirs = {path.name for path in SERVICES_ROOT.iterdir() if path.is_dir()}
     expected_packages = frozenset(_langflow_owned_service_packages())
     unexpected = sorted(top_level_dirs - expected_packages - _ALLOWED_NON_SERVICE_DIRS)
-    assert not unexpected, f"unexpected top-level dirs under services/: {unexpected}"
+    assert not unexpected, f"unexpected top-level dirs under langflow_services/: {unexpected}"
 
 
 def test_lfx_owned_services_are_not_extracted() -> None:
     """LFX-owned ServiceTypes must not have concrete packages in this distribution."""
     for name in sorted(_LFX_OWNED):
-        assert not (SERVICES_ROOT / name).exists(), f"LFX-owned service incorrectly extracted: services.{name}"
+        assert not (SERVICES_ROOT / name).exists(), f"LFX-owned service incorrectly extracted: langflow_services.{name}"
 
 
 def test_factory_lfx_owned_set_matches_boundary_allowlist() -> None:
     """Keep the layout test and factory inference ownership sets in sync."""
-    import services.factory as services_factory
+    import langflow_services.factory as services_factory
 
     assert frozenset(services_factory._LFX_OWNED) == _LFX_OWNED

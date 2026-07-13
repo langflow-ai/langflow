@@ -11,7 +11,7 @@ import pytest
 
 
 def test_session_orjson_dumps_indent_parity() -> None:
-    from services.session.utils import orjson_dumps
+    from langflow_services.session.utils import orjson_dumps
 
     payload = {"b": 2, "a": 1}
     indented = orjson_dumps(payload, sort_keys=True, indent_2=True)
@@ -23,9 +23,9 @@ def test_session_orjson_dumps_indent_parity() -> None:
 
 
 def test_services_deps_propagates_factory_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    from langflow_services import deps
     from lfx.services.manager import get_service_manager
     from lfx.services.schema import ServiceType
-    from services import deps
 
     manager = get_service_manager()
 
@@ -52,9 +52,9 @@ def test_exception_pickle_roundtrip_preserves_langflow_module() -> None:
 def test_orm_identity_across_import_paths() -> None:
     from langflow.services.database.models.flow import Flow as HostFlow
     from langflow.services.database.models.user import User as HostUser
+    from langflow_services.database import models as services_models
     from lfx.services.database.models.flow import Flow as LfxFlow
     from lfx.services.database.models.user import User as LfxUser
-    from services.database import models as services_models
 
     assert HostFlow is LfxFlow
     assert HostUser is LfxUser
@@ -63,7 +63,7 @@ def test_orm_identity_across_import_paths() -> None:
 
 
 def test_all_concrete_factory_shims_preserve_identity() -> None:
-    services_root = Path(__file__).resolve().parents[4] / "langflow-services" / "src" / "services"
+    services_root = Path(__file__).resolve().parents[4] / "langflow-services" / "src" / "langflow_services"
     factory_modules = sorted(
         path.parent.relative_to(services_root).as_posix().replace("/", ".")
         for path in services_root.rglob("factory.py")
@@ -72,7 +72,7 @@ def test_all_concrete_factory_shims_preserve_identity() -> None:
     assert factory_modules
 
     for relative in factory_modules:
-        services_path = f"services.{relative}.factory"
+        services_path = f"langflow_services.{relative}.factory"
         langflow_path = f"langflow.services.{relative}.factory"
         svc = importlib.import_module(services_path)
         host = importlib.import_module(langflow_path)
@@ -83,8 +83,8 @@ def test_all_concrete_factory_shims_preserve_identity() -> None:
 
 
 def test_get_auth_service_uses_auth_factory_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    from services import deps
-    from services.auth.factory import AuthServiceFactory
+    from langflow_services import deps
+    from langflow_services.auth.factory import AuthServiceFactory
 
     captured: dict[str, object] = {}
 

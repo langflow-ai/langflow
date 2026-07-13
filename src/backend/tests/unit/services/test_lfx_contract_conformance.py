@@ -6,10 +6,10 @@ import pytest
 from langflow.services.base import Service as LangflowService
 from langflow.services.factory import ServiceFactory as LangflowServiceFactory
 from langflow.services.schema import ServiceType as LangflowServiceType
+from langflow_services.factory import ServiceFactory as PackageServiceFactory
 from lfx.services.base import Service as LfxService
 from lfx.services.factory import ServiceFactory as LfxServiceFactory
 from lfx.services.schema import ServiceType as LfxServiceType
-from services.factory import ServiceFactory as PackageServiceFactory
 
 
 def test_service_base_identity() -> None:
@@ -28,7 +28,7 @@ def test_concrete_factory_subclasses_lfx_factory() -> None:
 
 
 def test_state_service_is_lfx_service_subclass() -> None:
-    from services.state.service import InMemoryStateService
+    from langflow_services.state.service import InMemoryStateService
 
     assert issubclass(InMemoryStateService, LfxService)
 
@@ -36,10 +36,10 @@ def test_state_service_is_lfx_service_subclass() -> None:
 @pytest.mark.parametrize(
     ("services_path", "langflow_path"),
     [
-        ("services.state.factory", "langflow.services.state.factory"),
-        ("services.auth.factory", "langflow.services.auth.factory"),
-        ("services.database.factory", "langflow.services.database.factory"),
-        ("services.cache.factory", "langflow.services.cache.factory"),
+        ("langflow_services.state.factory", "langflow.services.state.factory"),
+        ("langflow_services.auth.factory", "langflow.services.auth.factory"),
+        ("langflow_services.database.factory", "langflow.services.database.factory"),
+        ("langflow_services.cache.factory", "langflow.services.cache.factory"),
     ],
 )
 def test_factory_shim_identity(services_path: str, langflow_path: str) -> None:

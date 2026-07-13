@@ -8,7 +8,7 @@ from enum import Enum
 class ServiceType(str, Enum):
     """Canonical service types for the LFX plugin layer.
 
-    Concrete implementations in the standalone ``services`` package register
+    Concrete implementations in the standalone ``langflow_services`` package register
     against these values. Host-only services such as jobs and memory_base are
     included so a single enum is the source of truth.
     """

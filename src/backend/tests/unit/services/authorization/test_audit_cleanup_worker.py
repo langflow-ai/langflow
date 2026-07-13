@@ -224,7 +224,7 @@ async def test_worker_prunes_old_rows_on_schedule(audit_engine, monkeypatch):
     monkeypatch.setattr(audit_cleanup, "get_settings_service", lambda: _svc(enabled=True, retention=90))
 
     from langflow.services.utils import clean_authz_audit_log as host_clean
-    from services.providers import register_hook
+    from langflow_services.providers import register_hook
 
     register_hook("clean_authz_audit_log", host_clean)
 

@@ -118,4 +118,4 @@ def parse_uuid(value: UUID | str, *, field_name: str = "value") -> UUID:
 
 
 # Result/TableResults live with DatabaseService after the services extraction.
-from services.database.service import Result, TableResults  # noqa: E402,F401
+from langflow_services.database.service import Result, TableResults  # noqa: E402,F401

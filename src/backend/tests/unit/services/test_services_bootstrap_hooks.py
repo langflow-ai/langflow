@@ -11,10 +11,10 @@ from lfx.services.schema import ServiceType
 
 @pytest.fixture(autouse=True)
 def _reset_service_manager_and_providers():
-    from services.auth import service as auth_service
-    from services.database import factory as database_factory
-    from services.memory_base import kb_hooks
-    from services.providers import _CRUD, _HOOKS
+    from langflow_services.auth import service as auth_service
+    from langflow_services.database import factory as database_factory
+    from langflow_services.memory_base import kb_hooks
+    from langflow_services.providers import _CRUD, _HOOKS
 
     manager = get_service_manager()
     manager.services.clear()
@@ -68,28 +68,24 @@ def _reset_service_manager_and_providers():
 
 
 def test_services_bootstrap_without_host_hooks_fails_database_factory() -> None:
-    from services.bootstrap import register_all_service_factories
-    from services.database.factory import DatabaseServiceFactory
-    from services.providers import get_crud
+    from langflow_services.bootstrap import register_all_service_factories
+    from langflow_services.database.factory import DatabaseServiceFactory
+    from langflow_services.providers import get_crud
 
-    # Clear any previously registered provider by setting a failing one, then
-    # rely on importlib fallback only when langflow.alembic is available.
     register_all_service_factories()
     factory = DatabaseServiceFactory()
     settings = get_service_manager().get(ServiceType.SETTINGS_SERVICE)
-    # With langflow installed, fallback resolves alembic paths. Assert factory
-    # still constructs successfully in the workspace, and CRUD is absent until
-    # host hooks run.
+
     with pytest.raises(RuntimeError, match="CRUD provider"):
         get_crud("user")
 
-    service = factory.create(settings)
-    assert service.script_location.name == "alembic"
+    with pytest.raises(RuntimeError, match="Alembic path provider is not registered"):
+        factory.create(settings)
 
 
 def test_langflow_register_all_service_factories_registers_host_hooks() -> None:
     from langflow.services.utils import register_all_service_factories
-    from services.providers import get_crud, get_version_info, require_hook
+    from langflow_services.providers import get_crud, get_version_info, require_hook
 
     register_all_service_factories()
 
@@ -124,7 +120,7 @@ def test_audit_cleanup_module_exposes_clean_authz_audit_log() -> None:
 
 
 def test_missing_version_hook_raises() -> None:
-    from services.providers import get_version_info
+    from langflow_services.providers import get_version_info
 
     with pytest.raises(RuntimeError, match="get_version_info"):
         get_version_info()

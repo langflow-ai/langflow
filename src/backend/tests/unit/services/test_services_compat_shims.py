@@ -1,4 +1,4 @@
-"""Compatibility shims for the extracted ``services`` package."""
+"""Compatibility shims for the extracted ``langflow_services`` package."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-SERVICES_ROOT = Path(__file__).resolve().parents[4] / "langflow-services" / "src" / "services"
+SERVICES_ROOT = Path(__file__).resolve().parents[4] / "langflow-services" / "src" / "langflow_services"
 LANGFLOW_SERVICES_ROOT = Path(__file__).resolve().parents[3] / "base" / "langflow" / "services"
 
 
@@ -41,7 +41,7 @@ def _package_shim_modules() -> list[str]:
 
 @pytest.mark.parametrize("langflow_path", _leaf_shim_modules())
 def test_leaf_shim_aliases_services_module(langflow_path: str) -> None:
-    services_path = "services." + langflow_path.removeprefix("langflow.services.")
+    services_path = "langflow_services." + langflow_path.removeprefix("langflow.services.")
     host = importlib.import_module(langflow_path)
     pkg = importlib.import_module(services_path)
     assert host is pkg
@@ -50,7 +50,7 @@ def test_leaf_shim_aliases_services_module(langflow_path: str) -> None:
 
 @pytest.mark.parametrize("langflow_path", _package_shim_modules())
 def test_package_shim_exports_match_services_package(langflow_path: str) -> None:
-    services_path = "services." + langflow_path.removeprefix("langflow.services.")
+    services_path = "langflow_services." + langflow_path.removeprefix("langflow.services.")
     host = importlib.import_module(langflow_path)
     pkg = importlib.import_module(services_path)
 
@@ -67,7 +67,7 @@ def test_watsonx_lazy_package_export_via_langflow_path() -> None:
     mod = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate")
     assert "WatsonxOrchestrateDeploymentService" in mod.__all__
     cls = mod.WatsonxOrchestrateDeploymentService
-    from services.adapters.deployment.watsonx_orchestrate.service import (
+    from langflow_services.adapters.deployment.watsonx_orchestrate.service import (
         WatsonxOrchestrateDeploymentService,
     )
 
@@ -86,6 +86,7 @@ def test_services_package_root_exists() -> None:
 
 
 def test_no_static_langflow_imports_in_services_package() -> None:
+    dynamic_loaders = frozenset({"import_module", "find_spec", "__import__"})
     violations: list[str] = []
     for path in SERVICES_ROOT.rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -102,4 +103,16 @@ def test_no_static_langflow_imports_in_services_package() -> None:
                 and (node.module == "langflow" or node.module.startswith("langflow."))
             ):
                 violations.append(f"{path}:{node.module}")
+            elif isinstance(node, ast.Call) and node.args:
+                func = node.func
+                is_dynamic = (isinstance(func, ast.Name) and func.id == "__import__") or (
+                    isinstance(func, ast.Attribute) and func.attr in dynamic_loaders
+                )
+                if not is_dynamic:
+                    continue
+                arg = node.args[0]
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                    target = arg.value
+                    if target == "langflow" or target.startswith("langflow."):
+                        violations.append(f"{path}:{target}")
     assert not violations

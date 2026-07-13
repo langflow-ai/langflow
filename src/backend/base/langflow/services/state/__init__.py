@@ -1,8 +1,8 @@
-"""Compatibility re-export from the standalone ``services`` package."""
+"""Compatibility re-export from the standalone ``langflow_services`` package."""
 
 from __future__ import annotations
 
-import services.state as _impl
+import langflow_services.state as _impl
 
 globals().update({k: v for k, v in vars(_impl).items() if not k.startswith("__")})
 if hasattr(_impl, "__all__"):

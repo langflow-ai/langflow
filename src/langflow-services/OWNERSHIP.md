@@ -1,11 +1,11 @@
 # langflow-services ownership
 
-This distribution ships the standalone Python package `services`.
+This distribution ships the standalone Python package `langflow_services`.
 
 ## Dependency direction
-`langflow-base` -> `langflow-services` (`services`) -> `lfx`
+`langflow-base` -> `langflow-services` (`langflow_services`) -> `lfx`
 
-Runtime modules under `src/langflow-services/src/services` MUST NOT import
+Runtime modules under `src/langflow-services/src/langflow_services` MUST NOT import
 `langflow.*`. Public `langflow.services.*` paths are thin one-way re-exports
 owned by `langflow-base`.
 
@@ -14,7 +14,7 @@ owned by `langflow-base`.
 Every Langflow-owned concrete `ServiceType` lives in its own subpackage:
 
 ```
-services/<service_name>/
+langflow_services/<service_name>/
   __init__.py
   service.py      # primary Service implementation(s)
   factory.py      # ServiceFactory for this type
@@ -31,7 +31,7 @@ pattern:
 
 - `[project.optional-dependencies]` exposes a **service-shell** extra per
   service subpackage when useful as an ownership marker (`job-queue` →
-  `services/job_queue`, etc.). Empty shells mean the default path needs no
+  `langflow_services/job_queue`, etc.). Empty shells mean the default path needs no
   extra third-party deps.
 - Use **`<service>-<backend>`** extras only when a service has distinct
   selectable backends with different deps (do not invent them across the board):
@@ -40,7 +40,7 @@ pattern:
   - `storage-s3`, `cache-redis`, `job-queue-redis`, `task-celery`,
     `variable-kubernetes`
 - Deployment adapters are **not** generic “adapters-*” extras. Nested source
-  `services/adapters/deployment/watsonx_orchestrate` maps to the flat extra
+  `langflow_services/adapters/deployment/watsonx_orchestrate` maps to the flat extra
   `deployment-watsonx-orchestrate` (PEP 508 cannot express
   `[adapters][deployment][…]` nesting).
 - `langflow-services[production]` covers every Langflow-owned service: production
@@ -53,7 +53,7 @@ pattern:
   backend/provider (including `tracing-all`). `production` is a separate
   convenience aggregate and is not nested under `all`.
 - The `lfx.service-packages` entry-point group advertises
-  `services.bootstrap:register_all_service_factories`.
+  `langflow_services.bootstrap:register_all_service_factories`.
 - `langflow-base` depends on `langflow-services[database-sqlite,memory-base]` by
   default and re-exports backend extras (`[postgresql]`, `[redis]`,
   `[aioboto3]`, `[production]`, tracing, `[ibm-watsonx-clients]` →
@@ -72,7 +72,7 @@ promote them to top-level packages or separate distributions:
 - `memory_base` Chroma stack → service extra `memory-base`
 - `adapters/deployment/watsonx_orchestrate/` → `deployment-watsonx-orchestrate`
 
-### Allowed at `services/` root (shared infrastructure only)
+### Allowed at `langflow_services/` root (shared infrastructure only)
 - `__init__.py`
 - `bootstrap.py` — factory / adapter registration
 - `deps.py` — internal getters used by concrete services
@@ -85,7 +85,7 @@ promote them to top-level packages or separate distributions:
 - **Non-service adapters**: `adapters/` (deployment plugin registry; not a
   `ServiceType`)
 
-Do **not** add new top-level `services/*.py` modules for implementations, and
+Do **not** add new top-level `langflow_services/*.py` modules for implementations, and
 do **not** split one `ServiceType` across multiple top-level packages.
 
 ## Owned by LFX
@@ -93,15 +93,15 @@ do **not** split one `ServiceType` across multiple top-level packages.
 - settings / executor / extension_events / mcp_composer
 - canonical ORM models in `lfx.services.database.models`
 
-## Owned by this package (`services.*`)
+## Owned by this package (`langflow_services.*`)
 Concrete `Service` implementations, concrete factories, provider backends,
-implementation-owned helpers, and registration bootstrap (`services.bootstrap`).
+implementation-owned helpers, and registration bootstrap (`langflow_services.bootstrap`).
 
 Host seams are injected via:
-- `services.providers.register_crud` / `register_hook`
-- `services.auth.service.set_jit_user_defaults_hook` / `set_get_user_by_flow_id_hook`
-- `services.database.factory.set_alembic_path_provider`
-- `services.memory_base.kb_hooks.set_kb_helpers`
+- `langflow_services.providers.register_crud` / `register_hook`
+- `langflow_services.auth.service.set_jit_user_defaults_hook` / `set_get_user_by_flow_id_hook`
+- `langflow_services.database.factory.set_alembic_path_provider`
+- `langflow_services.memory_base.kb_hooks.set_kb_helpers`
 
 These hooks are registered by `langflow.services.utils.register_all_service_factories()`
 before factories are created. Callers that construct services without that bootstrap

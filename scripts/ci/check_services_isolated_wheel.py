@@ -2,7 +2,7 @@
 """Prove ``langflow-services`` installs and imports without ``langflow-base``.
 
 Builds wheels for ``lfx``, ``langflow-sdk``, and ``langflow-services``, installs
-them into a temporary venv, recursively imports ``services.*``, and asserts
+them into a temporary venv, recursively imports ``langflow_services.*``, and asserts
 ``langflow`` never appears in ``sys.modules``.
 
 Only expected optional third-party ``ModuleNotFoundError``s are allowed.
@@ -66,14 +66,14 @@ def _probe_source() -> str:
         import sys
         from pathlib import Path
 
-        import services
+        import langflow_services
 
         ALLOWED_OPTIONAL_MODULE_PREFIXES = {ALLOWED_OPTIONAL_MODULE_PREFIXES!r}
 
-        pkg_root = Path(services.__file__).resolve().parent
+        pkg_root = Path(langflow_services.__file__).resolve().parent
         failed = []
         unexpected = []
-        for module in pkgutil.walk_packages([str(pkg_root)], prefix="services."):
+        for module in pkgutil.walk_packages([str(pkg_root)], prefix="langflow_services."):
             try:
                 importlib.import_module(module.name)
             except ModuleNotFoundError as exc:

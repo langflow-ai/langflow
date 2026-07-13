@@ -105,7 +105,7 @@ api:
 
 database:
   - "src/backend/base/langflow/services/database/**"
-  - "src/langflow-services/src/services/database/**"
+  - "src/langflow-services/src/langflow_services/database/**"
   - "src/backend/base/langflow/alembic/**"
   - "src/frontend/src/controllers/**"
   - "src/frontend/tests/core/features/**"

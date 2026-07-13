@@ -384,22 +384,22 @@ external = ["RUF027"]
 "src/backend/base/langflow/services/cache/*" = [
     "S301",  # Pickle usage is intentional for caching
 ]
-"src/langflow-services/src/services/cache/*" = [
+"src/langflow-services/src/langflow_services/cache/*" = [
     "S301",  # Pickle usage is intentional for caching
 ]
 "src/backend/base/langflow/services/tracing/*" = [
     "SLF001",  # Third-party library private member access (langwatch, opik)
 ]
-"src/langflow-services/src/services/tracing/*" = [
+"src/langflow-services/src/langflow_services/tracing/*" = [
     "SLF001",  # Third-party library private member access (langwatch, opik)
 ]
-"src/langflow-services/src/services/auth/service.py" = [
+"src/langflow-services/src/langflow_services/auth/service.py" = [
     "PLW0603",  # Host hook registration intentionally mutates module globals
 ]
-"src/langflow-services/src/services/database/factory.py" = [
+"src/langflow-services/src/langflow_services/database/factory.py" = [
     "PLW0603",  # Host alembic path provider registration
 ]
-"src/langflow-services/src/services/memory_base/kb_hooks.py" = [
+"src/langflow-services/src/langflow_services/memory_base/kb_hooks.py" = [
     "PLW0603",  # Host KB helper registration
 ]
 "scripts/ci/check_services_isolated_wheel.py" = [

@@ -627,13 +627,13 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
 
 
 def _register_host_service_hooks() -> None:
-    """Wire host-owned callbacks into the standalone ``services`` package."""
+    """Wire host-owned callbacks into the standalone ``langflow_services`` package."""
     from pathlib import Path
 
-    from services.auth.service import set_get_user_by_flow_id_hook, set_jit_user_defaults_hook
-    from services.database.factory import set_alembic_path_provider
-    from services.memory_base.kb_hooks import set_kb_helpers
-    from services.providers import register_crud, register_hook
+    from langflow_services.auth.service import set_get_user_by_flow_id_hook, set_jit_user_defaults_hook
+    from langflow_services.database.factory import set_alembic_path_provider
+    from langflow_services.memory_base.kb_hooks import set_kb_helpers
+    from langflow_services.providers import register_crud, register_hook
 
     # CRUD providers (stay in langflow-base)
     from langflow.services.database.models.api_key import crud as api_key_crud
@@ -723,7 +723,7 @@ def register_all_service_factories() -> None:
 
 def register_builtin_adapters() -> None:
     """Import built-in adapter registration modules."""
-    from services.bootstrap import register_builtin_adapters as _register
+    from langflow_services.bootstrap import register_builtin_adapters as _register
 
     _register()
 
