@@ -1,8 +1,14 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { PermissionsProvider } from "@/contexts/permissionsContext";
 import { useDeleteDeployment } from "@/controllers/API/queries/deployments/use-delete-deployment";
 import { useDeleteWithConfirmation } from "../hooks/use-delete-with-confirmation";
 import { useTestDeploymentModal } from "../hooks/use-test-deployment-modal";
-import { type Deployment, type ProviderAccount } from "../types";
+import {
+  type Deployment,
+  getDeploymentDisplayName,
+  type ProviderAccount,
+} from "../types";
 import DeploymentDetailsModal from "./deployment-details-modal/deployment-details-modal";
 import DeploymentStepperModal from "./deployment-stepper-modal";
 import DeploymentsEmptyState from "./deployments-empty-state";
@@ -30,6 +36,7 @@ export default function DeploymentsContent({
   stepperOpen,
   setStepperOpen,
 }: DeploymentsContentProps) {
+  const { t } = useTranslation();
   const testModal = useTestDeploymentModal();
 
   const { mutate: deleteDeployment } = useDeleteDeployment();
@@ -37,7 +44,11 @@ export default function DeploymentsContent({
   const deploymentDelete = useDeleteWithConfirmation<
     Deployment,
     { deployment_id: string }
-  >(deleteDeployment, buildDeploymentDeleteParams, "Error deleting deployment");
+  >(
+    deleteDeployment,
+    buildDeploymentDeleteParams,
+    t("deployments.errorDeletingDeployment"),
+  );
 
   const [editingDeployment, setEditingDeployment] = useState<Deployment | null>(
     null,
@@ -52,18 +63,25 @@ export default function DeploymentsContent({
     if (deployments.length === 0)
       return <DeploymentsEmptyState onAction={() => setStepperOpen(true)} />;
     return (
-      <DeploymentsTable
-        deployments={deployments}
-        providerMap={providerMap}
-        deletingId={deploymentDelete.deletingId}
-        onTestDeployment={testModal.handleTestDeployment}
-        onViewDetails={(deployment) => setDetailsDeployment(deployment)}
-        onUpdateDeployment={(deployment) => {
-          setEditingDeployment(deployment);
-          setStepperOpen(true);
-        }}
-        onDeleteDeployment={deploymentDelete.requestDelete}
-      />
+      <PermissionsProvider
+        resourceType="deployment"
+        resourceIds={deployments
+          .map((deployment) => deployment.id)
+          .filter(Boolean)}
+      >
+        <DeploymentsTable
+          deployments={deployments}
+          providerMap={providerMap}
+          deletingId={deploymentDelete.deletingId}
+          onTestDeployment={testModal.handleTestDeployment}
+          onViewDetails={(deployment) => setDetailsDeployment(deployment)}
+          onUpdateDeployment={(deployment) => {
+            setEditingDeployment(deployment);
+            setStepperOpen(true);
+          }}
+          onDeleteDeployment={deploymentDelete.requestDelete}
+        />
+      </PermissionsProvider>
     );
   })();
 
@@ -101,7 +119,7 @@ export default function DeploymentsContent({
         deployment={detailsDeployment}
         providerName={
           detailsDeployment
-            ? (providerMap[detailsDeployment.provider_id ?? ""] ?? "—")
+            ? (providerMap[detailsDeployment.provider_id] ?? "—")
             : ""
         }
       />
@@ -109,7 +127,9 @@ export default function DeploymentsContent({
       <TypeToConfirmDeleteDialog
         open={!!deploymentDelete.target}
         onOpenChange={deploymentDelete.setModalOpen}
-        deploymentName={deploymentDelete.target?.name ?? ""}
+        deploymentName={
+          getDeploymentDisplayName(deploymentDelete.target) || "—"
+        }
         onConfirm={deploymentDelete.confirmDelete}
       />
     </>

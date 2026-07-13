@@ -171,6 +171,10 @@ export const lazyIconsMapping = {
     import("@/icons/ElasticsearchStore").then((mod) => ({
       default: mod.ElasticsearchIcon,
     })),
+  EmpirioLabs: () =>
+    import("@/icons/EmpirioLabs").then((mod) => ({
+      default: mod.EmpirioLabsIcon,
+    })),
   Evernote: () =>
     import("@/icons/Evernote").then((mod) => ({ default: mod.EvernoteIcon })),
   Exa: () => import("@/icons/Exa").then((mod) => ({ default: mod.ExaIcon })),
@@ -260,10 +264,6 @@ export const lazyIconsMapping = {
     import("@/icons/GradientSparkles").then((mod) => ({
       default: mod.GradientUngroup,
     })),
-  GradientSave: () =>
-    import("@/icons/GradientSparkles").then((mod) => ({
-      default: mod.GradientSave,
-    })),
   GridHorizontal: () =>
     import("@/icons/GridHorizontal").then((mod) => ({
       default: mod.GridHorizontalIcon,
@@ -285,6 +285,10 @@ export const lazyIconsMapping = {
   IBM: () =>
     import("@/icons/IBM").then((mod) => ({
       default: mod.IBMIcon,
+    })),
+  DB2: () =>
+    import("@/icons/IBM").then((mod) => ({
+      default: mod.DB2Icon,
     })),
   WatsonxAI: () =>
     import("@/icons/IBM").then((mod) => ({
@@ -351,6 +355,8 @@ export const lazyIconsMapping = {
   Neon: () => import("@/icons/Neon").then((mod) => ({ default: mod.NeonIcon })),
   Newsapi: () =>
     import("@/icons/Newsapi").then((mod) => ({ default: mod.NewsapiIcon })),
+  NextPlaid: () =>
+    import("@/icons/NextPlaid").then((mod) => ({ default: mod.NextPlaidIcon })),
   NotDiamond: () =>
     import("@/icons/NotDiamond").then((mod) => ({
       default: mod.NotDiamondIcon,
@@ -375,6 +381,8 @@ export const lazyIconsMapping = {
     })),
   OpenSearch: () =>
     import("@/icons/OpenSearch").then((mod) => ({ default: mod.OpenSearch })),
+  Oracle: () =>
+    import("@/icons/Oracle").then((mod) => ({ default: mod.OracleIcon })),
   Perplexity: () =>
     import("@/icons/Perplexity").then((mod) => ({
       default: mod.PerplexityIcon,
@@ -483,6 +491,7 @@ export const lazyIconsMapping = {
     import("@/icons/Upstash").then((mod) => ({ default: mod.UpstashSvgIcon })),
   Vectara: () =>
     import("@/icons/VectaraIcon").then((mod) => ({ default: mod.VectaraIcon })),
+  vLLM: () => import("@/icons/vLLM").then((mod) => ({ default: mod.VllmIcon })),
   VectorStores: () =>
     import("@/icons/vectorstores").then((mod) => ({
       default: mod.VectorStoresIcon,

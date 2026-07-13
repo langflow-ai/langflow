@@ -1,6 +1,9 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { openFlowCard } from "../../utils/flow/open-flow-card";
 import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -9,13 +12,7 @@ test(
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     await page.waitForTimeout(5000);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
     await page.waitForSelector(
       '[data-testid="add-component-button-lf-starter_project"]',
@@ -169,7 +166,7 @@ test(
     await page.waitForTimeout(500);
 
     await page
-      .getByText("Delete", { exact: true })
+      .getByText(TEXTS.delete, { exact: true })
       .first()
       .click({ timeout: 3000 });
 
@@ -198,12 +195,7 @@ test(
   "user must be able to add and delete MCP server from sidebar",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
 
     await page.waitForTimeout(500);
@@ -335,12 +327,7 @@ test(
   "STDIO MCP server fields should persist after saving and editing",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
     await page.waitForSelector(
       '[data-testid="add-component-button-lf-starter_project"]',
@@ -464,7 +451,7 @@ test(
       .click({ timeout: 3000 });
 
     await page
-      .getByText("Delete", { exact: true })
+      .getByText(TEXTS.delete, { exact: true })
       .first()
       .click({ timeout: 3000 });
 
@@ -485,12 +472,7 @@ test(
   "HTTP/SSE MCP server fields should persist after saving and editing",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
     await page.waitForSelector(
       '[data-testid="add-component-button-lf-starter_project"]',
@@ -653,7 +635,7 @@ test(
       .click({ timeout: 10000 });
 
     await page
-      .getByText("Delete", { exact: true })
+      .getByText(TEXTS.delete, { exact: true })
       .first()
       .click({ timeout: 10000 });
 
@@ -675,13 +657,7 @@ test(
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     await page.waitForTimeout(5000);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
     await page.waitForSelector(
       '[data-testid="add-component-button-lf-starter_project"]',
@@ -696,7 +672,6 @@ test(
     await page.getByTestId("fit_view").click();
 
     await zoomOut(page, 3);
-    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await openAddMcpServerModal(page);
 
@@ -842,7 +817,7 @@ test(
       .filter({ hasText: "New Flow" })
       .first();
     await newFlowDiv.waitFor({ state: "visible", timeout: 10000 });
-    await newFlowDiv.click();
+    await openFlowCard(page, "New Flow");
 
     // Wait for the MCP Tools component to be visible on canvas
     await page.waitForSelector('text="MCP Tools"', {
@@ -898,7 +873,7 @@ test(
       .click({ timeout: 10000 });
 
     await page
-      .getByText("Delete", { exact: true })
+      .getByText(TEXTS.delete, { exact: true })
       .first()
       .click({ timeout: 10000 });
 
@@ -952,7 +927,7 @@ test(
       .filter({ hasText: "New Flow" })
       .first();
     await newFlowDiv2.waitFor({ state: "visible", timeout: 10000 });
-    await newFlowDiv2.click();
+    await openFlowCard(page, "New Flow");
 
     // Wait for the MCP Tools component to be visible on canvas
     await page.waitForSelector('text="MCP Tools"', {
@@ -996,12 +971,7 @@ test(
   async ({ page }) => {
     // Start the MCP server with proper health checking
     const server = "https://mcp.deepwiki.com/mcp";
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
     await page.waitForSelector(
       '[data-testid="add-component-button-lf-starter_project"]',

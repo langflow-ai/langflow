@@ -21,6 +21,11 @@ from lfx.utils.async_helpers import run_until_complete
 
 logger = logging.getLogger(__name__)
 
+# Max bytes to feed to chardet for encoding detection.
+# Scanning the first 100 KB is sufficient for reliable detection
+# and avoids O(n) overhead on large files (e.g. 800s for 1.5 GB).
+_CHARDET_SAMPLE_BYTES = 102400
+
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
 TEXT_FILE_TYPES = [
@@ -105,7 +110,7 @@ def retrieve_file_paths(
     types: list[str] = TEXT_FILE_TYPES,
 ) -> list[str]:
     path = format_directory_path(path)
-    path_obj = Path(path)
+    path_obj = Path(path).resolve()
     if not path_obj.exists() or not path_obj.is_dir():
         msg = f"Path {path} must exist and be a directory."
         raise ValueError(msg)
@@ -116,8 +121,10 @@ def retrieve_file_paths(
     def is_not_hidden(p: Path) -> bool:
         return not is_hidden(p) or load_hidden
 
+    def is_within_directory(p: Path) -> bool:
+        return p.resolve().is_relative_to(path_obj)
+
     def walk_level(directory: Path, max_depth: int):
-        directory = directory.resolve()
         prefix_length = len(directory.parts)
         for p in directory.rglob("*" if recursive else "[!.]*"):
             if len(p.parts) - prefix_length <= max_depth:
@@ -125,7 +132,7 @@ def retrieve_file_paths(
 
     glob = "**/*" if recursive else "*"
     paths = walk_level(path_obj, depth) if depth else path_obj.glob(glob)
-    return [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
+    return [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p) and is_within_directory(p)]
 
 
 def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
@@ -153,7 +160,7 @@ def _detect_encoding_with_fallbacks(raw_data: bytes) -> list[str]:
     Returns a list of encodings to try in order, ending with latin-1
     which always succeeds as it maps all 256 byte values.
     """
-    result = chardet.detect(raw_data)
+    result = chardet.detect(raw_data[:_CHARDET_SAMPLE_BYTES])
     detected_encoding = result.get("encoding") if result else None
 
     if detected_encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:

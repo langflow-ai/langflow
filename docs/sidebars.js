@@ -81,7 +81,7 @@ module.exports = {
         {
           type: "doc",
           id: "Flows/langflow-assistant",
-          label: "Build components with Langflow Assistant"
+          label: "Build flows and components with Langflow Assistant"
         },
       ],
     },
@@ -115,8 +115,16 @@ module.exports = {
       label: "Develop",
       className: "sidebar-category-with-icon sidebar-icon-code",
       items: [
-        "Develop/api-keys-and-authentication",
-        "Develop/jwt-authentication",
+        {
+          type: "category",
+          label: "Authentication and authorization",
+          items: [
+            "Develop/authentication-overview",
+            "Develop/api-keys-and-authentication",
+            "Develop/external-authentication",
+            "Develop/authorization",
+          ],
+        },
         "Develop/install-custom-dependencies",
         "Develop/configuration-global-variables",
         "Develop/environment-variables",
@@ -146,6 +154,7 @@ module.exports = {
               label: "Database guide for enterprise administrators"
             },
             "Develop/knowledge",
+            "Develop/memory-bases",
           ],
         },
         {
@@ -153,12 +162,14 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
+            "Develop/observability-grafana-loki",
             "Develop/traces",
             {
               type: "category",
               label: "Monitoring",
               items: [
                 "Develop/integrations-arize",
+                "Develop/observability-grafana-loki",
                 "Develop/integrations-langfuse",
                 "Develop/integrations-langsmith",
                 "Develop/integrations-langwatch",
@@ -206,6 +217,11 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-nginx-ssl",
           label: "Deploy Langflow with Nginx and SSL"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-wxo",
+          label: "Deploy flows on watsonx Orchestrate"
         },
         {
           type: "category",
@@ -266,11 +282,6 @@ module.exports = {
             },
             {
               type: "doc",
-              id: "Deployment/deployment-wxo",
-              label: "IBM watsonx Orchestrate"
-            },
-            {
-              type: "doc",
               id: "Deployment/deployment-railway",
               label: "Railway"
             },
@@ -283,6 +294,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-multi-worker",
+          label: "Deploy Langflow with multiple workers",
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-block-custom-components",
           label: "Block custom components",
         },
@@ -290,6 +306,48 @@ module.exports = {
           type: "doc",
           id: "Deployment/security",
           label: "Security",
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "LFX",
+      className: "sidebar-category-with-icon sidebar-icon-terminal",
+      items: [
+        {
+          type: "doc",
+          id: "Lfx/lfx-overview",
+          label: "About LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-install",
+          label: "Install LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-run",
+          label: "Run flows with LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-serve",
+          label: "Serve flows with LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-mcp",
+          label: "Build flows with the LFX MCP server"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-devops-sdk",
+          label: "Flow DevOps Toolkit SDK"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-compatibility",
+          label: "LFX and Langflow version compatibility"
         },
       ],
     },
@@ -313,7 +371,6 @@ module.exports = {
               label: "Input / Output",
               items: [
                 "Components/chat-input-and-output",
-                "Components/text-input-and-output",
                 "Components/webhook",
               ]
             },
@@ -321,11 +378,13 @@ module.exports = {
               type: "category",
               label: "Processing",
               items: [
+                "Components/operations",
                 "Components/data-operations",
                 "Components/dataframe-operations",
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
+                "Components/text-operations",
                 "Components/type-convert",
               ]
             },
@@ -343,8 +402,9 @@ module.exports = {
               type: "category",
               label: "Files and Knowledge",
               items: [
-                "Components/directory",
+                "Components/file-system",
                 "Components/knowledge-base",
+                "Components/memory-base",
                 "Components/read-file",
                 "Components/write-file",
               ]
@@ -416,6 +476,7 @@ module.exports = {
             "Components/bundles-cassandra",
             "Components/bundles-chroma",
             "Components/bundles-cleanlab",
+            "Components/bundles-codeagents",
             "Components/bundles-clickhouse",
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
@@ -428,8 +489,11 @@ module.exports = {
             "Components/bundles-docling",
             "Components/bundles-duckduckgo",
             "Components/bundles-elastic",
+            "Components/bundles-empiriolabs",
             "Components/bundles-exa",
             "Components/bundles-faiss",
+            "Components/bundles-files-ingestion",
+            "Components/bundles-firecrawl",
             "Components/bundles-glean",
             "Components/bundles-google",
             "Components/bundles-groq",
@@ -444,12 +508,14 @@ module.exports = {
             "Components/bundles-milvus",
             "Components/bundles-mistralai",
             "Components/bundles-mongodb",
+            "Components/bundles-nextplaid",
             "Components/bundles-notion",
             "Components/bundles-novita",
             "Components/bundles-nvidia",
             "Components/bundles-ollama",
             "Components/bundles-openai",
             "Components/bundles-openrouter",
+            "Components/bundles-oracle",
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",
             "Components/bundles-pinecone",
@@ -466,6 +532,17 @@ module.exports = {
             "Components/bundles-weaviate",
             "Components/bundles-wikipedia",
             "Components/bundles-xai",
+          ],
+        },
+        {
+          type: "category",
+          label: "Extensions",
+          items: [
+            "Lfx/extensions-overview",
+            "Lfx/extensions-bundle-list",
+            "Lfx/extensions-quickstart",
+            "Lfx/extensions-manifest",
+            "Lfx/extensions-errors",
           ],
         },
         "Components/components-custom-components",
@@ -488,11 +565,6 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "API-Reference/flow-devops-sdk",
-          label: "Flow DevOps Toolkit SDK",
-        },
-        {
-          type: "doc",
           id: "API-Reference/api-flows-run",
           label: "Flow trigger endpoints",
         },
@@ -500,6 +572,7 @@ module.exports = {
           type: "category",
           label: "Developer API (Beta)",
           items: [
+            "API-Reference/workflow-api-quickstart",
             "API-Reference/workflows-api",
             {
               type: "link",
@@ -550,6 +623,11 @@ module.exports = {
           type: "doc",
           id: "Support/troubleshooting",
           label: "Troubleshoot",
+        },
+        {
+          type: "doc",
+          id: "Support/macos-support-matrix",
+          label: "macOS support",
         },
         {
           type: "doc",

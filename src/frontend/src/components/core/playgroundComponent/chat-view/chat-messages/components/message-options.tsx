@@ -1,4 +1,5 @@
 import { type ButtonHTMLAttributes, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ export function EditMessageButton({
   evaluation?: boolean | null;
   isAudioMessage?: boolean;
 }) {
+  const { t } = useTranslation();
   const [isCopied, setIsCopied] = useState(false);
 
   const handleCopy = () => {
@@ -34,13 +36,18 @@ export function EditMessageButton({
   return (
     <div className="flex items-center rounded-md border border-border bg-background">
       {!isAudioMessage && onEdit && (
-        <ShadTooltip styleClasses="z-50" content="Edit message" side="top">
+        <ShadTooltip
+          styleClasses="z-50"
+          content={t("chat.editMessage")}
+          side="top"
+        >
           <div className="p-1">
             <Button
               variant="ghost"
               size="icon"
               onClick={onEdit}
               className="h-8 w-8"
+              aria-label={t("chat.editMessage")}
             >
               <IconComponent name="Pen" className="h-4 w-4" />
             </Button>
@@ -50,7 +57,7 @@ export function EditMessageButton({
 
       <ShadTooltip
         styleClasses="z-50"
-        content={isCopied ? "Copied!" : "Copy message"}
+        content={isCopied ? t("chat.copied") : t("chat.copyMessage")}
         side="top"
       >
         <div className="p-1">
@@ -59,6 +66,7 @@ export function EditMessageButton({
             size="icon"
             onClick={handleCopy}
             className="h-8 w-8"
+            aria-label={isCopied ? t("chat.copied") : t("chat.copyMessage")}
           >
             <IconComponent
               name={isCopied ? "Check" : "Copy"}
@@ -70,7 +78,11 @@ export function EditMessageButton({
 
       {isBotMessage && (
         <div className="flex">
-          <ShadTooltip styleClasses="z-50" content="Helpful" side="top">
+          <ShadTooltip
+            styleClasses="z-50"
+            content={t("chat.helpful")}
+            side="top"
+          >
             <div className="p-1">
               <Button
                 variant="ghost"
@@ -78,6 +90,8 @@ export function EditMessageButton({
                 onClick={() => handleEvaluate(true)}
                 className="h-8 w-8"
                 data-testid="helpful-button"
+                aria-label={t("chat.helpful")}
+                aria-pressed={evaluation === true}
               >
                 <IconComponent
                   name={evaluation === true ? "ThumbUpIconCustom" : "ThumbsUp"}
@@ -87,7 +101,11 @@ export function EditMessageButton({
             </div>
           </ShadTooltip>
 
-          <ShadTooltip styleClasses="z-50" content="Not helpful" side="top">
+          <ShadTooltip
+            styleClasses="z-50"
+            content={t("chat.notHelpful")}
+            side="top"
+          >
             <div className="p-1">
               <Button
                 variant="ghost"
@@ -95,6 +113,8 @@ export function EditMessageButton({
                 onClick={() => handleEvaluate(false)}
                 className="h-8 w-8"
                 data-testid="not-helpful-button"
+                aria-label={t("chat.notHelpful")}
+                aria-pressed={evaluation === false}
               >
                 <IconComponent
                   name={

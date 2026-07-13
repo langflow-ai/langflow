@@ -17,6 +17,7 @@ qdrant_storage
 .vscode/settings.json
 .chroma
 .ruff_cache
+opendsstar_cache
 
 # PyCharm
 .idea/
@@ -194,6 +195,9 @@ instance/
 # Sphinx documentation
 docs/_build/
 
+# IBM Equal Access accessibility scan results
+docs/a11y-results/
+
 # PyBuilder
 target/
 
@@ -296,3 +300,4 @@ tmp_toolguard/
 
 #whitesource
 whitesource/
+/.codex

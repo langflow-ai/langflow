@@ -57,7 +57,7 @@ const ModelTrigger = ({
         onClick={onOpenManageProviders}
       >
         <ForwardedIconComponent
-          name="Brain"
+          name="BrainCircuit"
           className="h-4 w-4 flex-shrink-0 text-muted-foreground"
         />
         <div className="text-[13px] text-muted-foreground">
@@ -82,7 +82,7 @@ const ModelTrigger = ({
           data-testid={id}
           className={cn(
             "dropdown-component-false-outline py-2",
-            "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
+            "focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
           )}
         >
           <span

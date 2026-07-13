@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { useDarkStore } from "@/stores/darkStore";
 import { formatNumber } from "@/utils/utils";
 
 export const LangflowCounts = () => {
+  const { t } = useTranslation();
   const stars: number | undefined = useDarkStore((state) => state.stars);
   const discordCount: number = useDarkStore((state) => state.discordCount);
 
@@ -16,7 +18,7 @@ export const LangflowCounts = () => {
   return (
     <div className="flex items-center gap-3">
       <ShadTooltip
-        content="Go to GitHub repo"
+        content={t("header.goToGithub")}
         side="bottom"
         styleClasses="z-10"
       >
@@ -25,10 +27,11 @@ export const LangflowCounts = () => {
           onClick={() => window.open(GITHUB_URL, "_blank")}
           className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground"
         >
+          <span className="sr-only">{t("header.goToGithub")}</span>
           <div className="relative items-center rounded-md px-2 py-1 flex">
-            <FaGithub className="h-4 w-4" />
+            <FaGithub aria-hidden="true" className="h-4 w-4" />
             <Case condition={Boolean(formattedStars) && formattedStars !== "0"}>
-              <span className="text-xs font-semibold pl-2">
+              <span className="text-xs font-semibold pl-2" aria-hidden="true">
                 {formattedStars}
               </span>
             </Case>
@@ -37,7 +40,7 @@ export const LangflowCounts = () => {
       </ShadTooltip>
 
       <ShadTooltip
-        content="Go to Discord server"
+        content={t("header.goToDiscord")}
         side="bottom"
         styleClasses="z-10"
       >
@@ -46,14 +49,15 @@ export const LangflowCounts = () => {
           onClick={() => window.open(DISCORD_URL, "_blank")}
           className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground"
         >
+          <span className="sr-only">{t("header.goToDiscord")}</span>
           <div className="relative items-center rounded-md px-2 py-1 flex">
-            <FaDiscord className="h-4 w-4" />
+            <FaDiscord aria-hidden="true" className="h-4 w-4" />
             <Case
               condition={
                 Boolean(formattedDiscordCount) && formattedDiscordCount !== "0"
               }
             >
-              <span className="text-xs font-semibold pl-2">
+              <span className="text-xs font-semibold pl-2" aria-hidden="true">
                 {formattedDiscordCount}
               </span>
             </Case>

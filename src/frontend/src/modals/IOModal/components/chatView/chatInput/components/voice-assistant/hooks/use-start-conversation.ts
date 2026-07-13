@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { getLocalStorage } from "@/utils/local-storage-util";
 
 export const useStartConversation = (
@@ -33,7 +34,7 @@ export const useStartConversation = (
     wsRef.current = new WebSocket(url);
 
     wsRef.current.onopen = () => {
-      setStatus("Connected");
+      setStatus(i18n.t("voiceAssistant.connected"));
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(
           JSON.stringify({
@@ -75,12 +76,12 @@ export const useStartConversation = (
 
     wsRef.current.onerror = (error) => {
       console.error("WebSocket Error:", error);
-      setStatus("Connection error");
+      setStatus(i18n.t("voiceAssistant.connectionError"));
       stopRecording();
     };
   } catch (error) {
     console.error("Failed to create WebSocket:", error);
-    setStatus("Connection failed");
+    setStatus(i18n.t("voiceAssistant.connectionFailed"));
     stopRecording();
   }
 };

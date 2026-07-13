@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { GRADIENT_CLASS_DISABLED } from "@/constants/constants";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import useAlertStore from "@/stores/alertStore";
@@ -61,6 +62,7 @@ export default function CopyFieldAreaComponent({
   id = "",
   showParameter = true,
 }: InputProps<string, TextAreaComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -90,13 +92,13 @@ export default function CopyFieldAreaComponent({
     handleOnNewValue({ value: e.target.value });
   };
 
-  const handleCopy = (event?: React.MouseEvent<HTMLDivElement>) => {
+  const handleCopy = (event?: React.MouseEvent<HTMLButtonElement>) => {
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
     navigator.clipboard.writeText(valueToRender);
 
     setSuccessData({
-      title: "Endpoint URL copied",
+      title: t("success.endpointUrlCopied"),
     });
 
     event?.stopPropagation();
@@ -122,7 +124,11 @@ export default function CopyFieldAreaComponent({
           aria-hidden="true"
         />
       )}
-      <div onClick={handleCopy}>
+      <button
+        type="button"
+        onClick={handleCopy}
+        aria-label={isCopied ? "Copied" : "Copy"}
+      >
         <IconComponent
           dataTestId={`btn_copy_${id?.toLowerCase()}${
             editNode ? "_advanced" : ""
@@ -137,7 +143,7 @@ export default function CopyFieldAreaComponent({
             "bg-muted text-foreground",
           )}
         />
-      </div>
+      </button>
     </>
   );
 

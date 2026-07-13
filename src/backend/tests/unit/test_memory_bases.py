@@ -95,6 +95,188 @@ def _make_message(
 # ------------------------------------------------------------------ #
 
 
+class TestInferEmbeddingProvider:
+    """Provider inference regression tests.
+
+    The returned provider name must be a canonical key registered in
+    ``EMBEDDING_PROVIDER_CLASS_MAPPING`` so the result can be round-tripped
+    through ``KBIngestionHelper.build_embeddings`` without translation.
+    """
+
+    @pytest.mark.parametrize(
+        ("model", "expected"),
+        [
+            # Google Generative AI — the original bug: gemini-embedding was
+            # being misclassified as OpenAI because no Google pattern matched.
+            ("models/gemini-embedding-001", "Google Generative AI"),
+            ("models/text-embedding-004", "Google Generative AI"),
+            ("models/embedding-001", "Google Generative AI"),
+            # OpenAI — must NOT be caught by the Google "models/text-embedding"
+            # pattern, since OpenAI names don't carry the "models/" prefix.
+            ("text-embedding-3-small", "OpenAI"),
+            ("text-embedding-3-large", "OpenAI"),
+            ("text-embedding-ada-002", "OpenAI"),
+            # Other providers
+            ("nomic-embed-text", "Ollama"),
+            ("embed-english-v3.0", "Cohere"),
+            # Unknown / empty fall back to the safe default.
+            ("unknown-model", "OpenAI"),
+            ("", "OpenAI"),
+        ],
+    )
+    def test_provider_inferred_correctly(self, model, expected):
+        from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
+
+        assert infer_embedding_provider(model) == expected
+
+    def test_inferred_provider_is_in_class_mapping(self):
+        """Inferred provider must be a registered embedding-class mapping key.
+
+        Otherwise the downstream ``KBIngestionHelper.build_embeddings`` call
+        will reject it.
+        """
+        from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
+        from lfx.base.models.unified_models.class_registry import EMBEDDING_PROVIDER_CLASS_MAPPING
+
+        for model in (
+            "models/gemini-embedding-001",
+            "text-embedding-3-small",
+            "text-embedding-3-large",
+            "nomic-embed-text",
+            "unknown-model",
+        ):
+            assert infer_embedding_provider(model) in EMBEDDING_PROVIDER_CLASS_MAPPING
+
+
+class TestKBIngestionHelperBuildEmbeddings:
+    """Regression tests for the Memory Base retrieval bug.
+
+    ``build_embeddings`` must not depend on the user-filtered catalog
+    returned by ``get_embedding_model_options``: that catalog is empty
+    whenever the per-user credential lookup fails (which can happen
+    transparently when the helper runs in a thread bridged from an async
+    event loop). The KB's ``embedding_metadata.json`` is the source of
+    truth — we resolve the embedding class from the static registry.
+    """
+
+    @pytest.mark.asyncio
+    async def test_builds_embeddings_for_openai_default_model(self):
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        sentinel = object()
+        with patch("langflow.api.utils.kb_helpers.EmbeddingModelComponent") as mock_component_cls:
+            instance = mock_component_cls.return_value
+            instance.build_embeddings.return_value = sentinel
+            user = MagicMock(id=uuid.uuid4())
+
+            result = await KBIngestionHelper.build_embeddings("OpenAI", "text-embedding-3-small", user)
+
+        assert result is sentinel
+        kwargs = mock_component_cls.call_args.kwargs
+        selected = kwargs["model"][0]
+        assert selected["provider"] == "OpenAI"
+        assert selected["name"] == "text-embedding-3-small"
+        assert selected["metadata"]["embedding_class"] == "OpenAIEmbeddings"
+        assert selected["metadata"]["model_type"] == "embeddings"
+        assert "param_mapping" in selected["metadata"]
+
+    @pytest.mark.asyncio
+    async def test_builds_embeddings_for_google_gemini_model(self):
+        """Google-side regression coverage.
+
+        ``gemini-embedding-001`` must resolve to
+        ``GoogleGenerativeAIEmbeddings`` rather than blowing up.
+        """
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        with patch("langflow.api.utils.kb_helpers.EmbeddingModelComponent") as mock_component_cls:
+            mock_component_cls.return_value.build_embeddings.return_value = MagicMock()
+            user = MagicMock(id=uuid.uuid4())
+
+            await KBIngestionHelper.build_embeddings("Google Generative AI", "models/gemini-embedding-001", user)
+
+        selected = mock_component_cls.call_args.kwargs["model"][0]
+        assert selected["provider"] == "Google Generative AI"
+        assert selected["metadata"]["embedding_class"] == "GoogleGenerativeAIEmbeddings"
+
+    @pytest.mark.asyncio
+    async def test_unregistered_provider_raises_with_helpful_message(self):
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        user = MagicMock(id=uuid.uuid4())
+        with pytest.raises(ValueError, match="not registered"):
+            await KBIngestionHelper.build_embeddings("MadeUpProvider", "some-model", user)
+
+    @pytest.mark.asyncio
+    async def test_does_not_consult_user_filtered_catalog(self):
+        """Helper must resolve from the static registry, not the user catalog.
+
+        Even if ``get_embedding_model_options`` would return an empty list
+        (e.g. the per-user credential lookup silently failed), the helper
+        must still resolve the model from the static registry.
+        """
+        from langflow.api.utils import kb_helpers as kb_helpers_module
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        # The helper used to call ``get_embedding_model_options`` and raise
+        # when the result was empty. Make sure that name is no longer wired
+        # into the helper's module — otherwise the bug can silently regress.
+        assert not hasattr(kb_helpers_module, "get_embedding_model_options")
+
+        with patch("langflow.api.utils.kb_helpers.EmbeddingModelComponent") as mock_component_cls:
+            mock_component_cls.return_value.build_embeddings.return_value = MagicMock()
+            user = MagicMock(id=uuid.uuid4())
+
+            await KBIngestionHelper.build_embeddings("OpenAI", "text-embedding-3-large", user)
+
+        assert mock_component_cls.called
+
+    @pytest.mark.asyncio
+    async def test_ollama_embeddings_honor_configured_base_url(self, monkeypatch):
+        """Ollama KB ingestion must use the configured OLLAMA_BASE_URL, not localhost.
+
+        Regression for https://github.com/langflow-ai/langflow/issues/13883. The helper
+        builds ``EmbeddingModelComponent`` programmatically; the component's
+        ``ollama_base_url`` ``StrInput`` defaults to ``http://localhost:11434``, and that
+        truthy default used to leak through ``getattr`` and short-circuit the
+        ``OLLAMA_BASE_URL`` global-variable lookup in ``get_embeddings`` — so a KB
+        pointed at a remote Ollama server silently tried localhost and failed with
+        "Failed to connect to Ollama". This test exercises the REAL component (no mock)
+        so the resolution path is covered end to end.
+        """
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+        user = MagicMock(id=uuid.uuid4())
+
+        with (
+            patch("lfx.base.models.unified_models.get_api_key_for_provider", return_value=None),
+            patch(
+                "lfx.base.models.unified_models.get_all_variables_for_provider",
+                return_value={"OLLAMA_BASE_URL": "http://ollama-server:11434"},
+            ),
+        ):
+            embeddings = await KBIngestionHelper.build_embeddings("Ollama", "nomic-embed-text", user)
+
+        assert str(embeddings.base_url).rstrip("/") == "http://ollama-server:11434"
+
+    @pytest.mark.asyncio
+    async def test_ollama_embeddings_fall_back_to_localhost_when_unconfigured(self, monkeypatch):
+        """With no OLLAMA_BASE_URL configured, the localhost fallback is preserved."""
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+        user = MagicMock(id=uuid.uuid4())
+
+        with (
+            patch("lfx.base.models.unified_models.get_api_key_for_provider", return_value=None),
+            patch("lfx.base.models.unified_models.get_all_variables_for_provider", return_value={}),
+        ):
+            embeddings = await KBIngestionHelper.build_embeddings("Ollama", "nomic-embed-text", user)
+
+        assert str(embeddings.base_url).rstrip("/") == "http://localhost:11434"
+
+
 class TestMemoryBaseModel:
     def test_defaults(self):
         mb = MemoryBase(
@@ -314,6 +496,164 @@ class TestMemoryBaseCreateFlowOwnership:
         assert exc_info.value.status_code == 404
 
 
+class TestMemoryBaseGuardPassesRealKbIdentity:
+    """The ID-bearing guards must pass the REAL kb identity, not actor-as-owner.
+
+    Previously the five F20 guards called ensure_knowledge_base_permission with
+    kb_user_id=current_user.id and no kb_id, so the owner-override path always
+    fired (a registered plugin's enforce never ran) and audit rows lacked the kb
+    id. The fix resolves the memory base first (via the owner-scoped service.get)
+    and passes kb_id / kb_user_id (the real owner) / kb_name so owner-override is
+    taken only for genuine owners.
+    """
+
+    @pytest.mark.asyncio
+    async def test_update_passes_real_kb_identity_to_guard(self):
+        from langflow.api.v1.memories import update_memory_base
+        from langflow.services.database.models.user.model import User
+
+        owner_id = uuid.uuid4()
+        mb = _make_mb(user_id=owner_id)
+        actor = User(id=uuid.uuid4(), username="actor")
+
+        mock_service = MagicMock()
+        mock_service.get = AsyncMock(return_value=mb)
+        mock_service.update = AsyncMock(return_value=mb)
+        captured = {}
+
+        async def _capture_guard(_user, _act, **kwargs):
+            captured.update(kwargs)
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+            patch("langflow.api.v1.memories.ensure_knowledge_base_permission", _capture_guard),
+        ):
+            await update_memory_base(
+                memory_base_id=mb.id,
+                current_user=actor,
+                patch=MemoryBaseUpdate(threshold=99),
+            )
+
+        assert captured["kb_id"] == mb.id
+        assert captured["kb_user_id"] == owner_id, "guard must receive the real owner, not the actor"
+        assert captured["kb_name"] == mb.kb_name
+
+    @pytest.mark.asyncio
+    async def test_delete_passes_real_kb_identity_to_guard(self):
+        from langflow.api.v1.memories import delete_memory_base
+        from langflow.services.database.models.user.model import User
+
+        owner_id = uuid.uuid4()
+        mb = _make_mb(user_id=owner_id)
+        actor = User(id=uuid.uuid4(), username="actor")
+
+        mock_service = MagicMock()
+        mock_service.get = AsyncMock(return_value=mb)
+        mock_service.delete = AsyncMock(return_value=True)
+        captured = {}
+
+        async def _capture_guard(_user, _act, **kwargs):
+            captured.update(kwargs)
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+            patch("langflow.api.v1.memories.ensure_knowledge_base_permission", _capture_guard),
+        ):
+            await delete_memory_base(memory_base_id=mb.id, current_user=actor)
+
+        assert captured["kb_id"] == mb.id
+        assert captured["kb_user_id"] == owner_id
+        assert captured["kb_name"] == mb.kb_name
+
+    @pytest.mark.asyncio
+    async def test_flush_passes_real_kb_identity_to_guard(self):
+        from langflow.api.v1.memories import FlushRequest, flush_memory_base
+        from langflow.services.database.models.user.model import User
+
+        owner_id = uuid.uuid4()
+        mb = _make_mb(user_id=owner_id)
+        actor = User(id=uuid.uuid4(), username="actor")
+
+        mock_service = MagicMock()
+        mock_service.get = AsyncMock(return_value=mb)
+        mock_service.trigger_ingestion = AsyncMock(return_value="job-1")
+        captured = {}
+
+        async def _capture_guard(_user, _act, **kwargs):
+            captured.update(kwargs)
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+            patch("langflow.api.v1.memories.ensure_knowledge_base_permission", _capture_guard),
+        ):
+            await flush_memory_base(
+                memory_base_id=mb.id,
+                current_user=actor,
+                body=FlushRequest(session_id="sess-1"),
+            )
+
+        assert captured["kb_id"] == mb.id
+        assert captured["kb_user_id"] == owner_id
+        assert captured["kb_name"] == mb.kb_name
+
+    @pytest.mark.asyncio
+    async def test_regenerate_passes_real_kb_identity_to_guard(self):
+        from langflow.api.v1.memories import regenerate_memory_base
+        from langflow.services.database.models.user.model import User
+
+        owner_id = uuid.uuid4()
+        mb = _make_mb(user_id=owner_id)
+        actor = User(id=uuid.uuid4(), username="actor")
+
+        mock_service = MagicMock()
+        mock_service.get = AsyncMock(return_value=mb)
+        mock_service.regenerate = AsyncMock(return_value=["job-1"])
+        captured = {}
+
+        async def _capture_guard(_user, _act, **kwargs):
+            captured.update(kwargs)
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+            patch("langflow.api.v1.memories.ensure_knowledge_base_permission", _capture_guard),
+        ):
+            await regenerate_memory_base(memory_base_id=mb.id, current_user=actor)
+
+        assert captured["kb_id"] == mb.id
+        assert captured["kb_user_id"] == owner_id
+        assert captured["kb_name"] == mb.kb_name
+
+    @pytest.mark.asyncio
+    async def test_update_returns_404_when_memory_base_not_found(self):
+        """If the resolve lookup returns None, the handler 404s before the guard runs."""
+        from fastapi import HTTPException
+        from langflow.api.v1.memories import update_memory_base
+        from langflow.services.database.models.user.model import User
+
+        actor = User(id=uuid.uuid4(), username="actor")
+        mock_service = MagicMock()
+        mock_service.get = AsyncMock(return_value=None)
+        guard_called = False
+
+        async def _guard(*_a, **_k):
+            nonlocal guard_called
+            guard_called = True
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+            patch("langflow.api.v1.memories.ensure_knowledge_base_permission", _guard),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await update_memory_base(
+                memory_base_id=uuid.uuid4(),
+                current_user=actor,
+                patch=MemoryBaseUpdate(threshold=1),
+            )
+
+        assert exc_info.value.status_code == 404
+        assert not guard_called, "guard must not run for a non-existent memory base"
+
+
 class TestMemoryBaseServiceConcurrency:
     """409 guard: only one active ingestion per (memory_base_id, session_id)."""
 
@@ -489,6 +829,157 @@ class TestMemoryBaseServiceMismatch:
         assert result is False
 
 
+class TestMemoryBaseServicePurgeSessionData:
+    @pytest.fixture
+    def service(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        return MemoryBaseService()
+
+    @pytest.mark.asyncio
+    async def test_purge_no_sessions_returns_zero(self, service):
+        result = await service.purge_session_data(uuid.uuid4(), [])
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_purge_no_matching_pairs_returns_zero(self, service):
+        # No (mb, session) pairs found in DB → nothing to do, no chunk wipes attempted.
+        with patch("langflow.services.memory_base.ingestion.session_scope") as mock_scope:
+            mock_db = AsyncMock()
+            empty_result = MagicMock()
+            empty_result.all = MagicMock(return_value=[])
+            mock_db.exec = AsyncMock(return_value=empty_result)
+
+            class FakeCtx:
+                async def __aenter__(self):
+                    return mock_db
+
+                async def __aexit__(self, *a):
+                    pass
+
+            mock_scope.return_value = FakeCtx()
+
+            result = await service.purge_session_data(uuid.uuid4(), ["s1"])
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_purge_deletes_chroma_chunks_and_tracking_rows(self, service, tmp_path):
+        mb = _make_mb()
+        mbs = _make_session(memory_base_id=mb.id, session_id="sess-x")
+
+        # First scope: lookup pairs + resolve username. Second scope: delete tracking rows.
+        first_db = AsyncMock()
+        pair_result = MagicMock()
+        pair_result.all = MagicMock(return_value=[(mb, mbs)])
+        username_result = MagicMock()
+        username_result.first = MagicMock(return_value="alice")
+        first_db.exec = AsyncMock(side_effect=[pair_result, username_result])
+        first_db.commit = AsyncMock()
+
+        second_db = AsyncMock()
+        second_db.exec = AsyncMock(return_value=MagicMock())
+        second_db.commit = AsyncMock()
+
+        scopes_iter = iter([first_db, second_db])
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return next(scopes_iter)
+
+            async def __aexit__(self, *a):
+                pass
+
+        kb_root = tmp_path / "kb"
+        (kb_root / "alice" / mb.kb_name).mkdir(parents=True)
+
+        adelete_mock = AsyncMock()
+        fake_chroma = MagicMock()
+        fake_chroma.adelete = adelete_mock
+
+        with (
+            patch(
+                "langflow.services.memory_base.ingestion.session_scope",
+                side_effect=lambda: FakeCtx(),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.KBStorageHelper.get_root_path",
+                return_value=kb_root,
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.KBStorageHelper.get_fresh_chroma_client",
+                return_value=MagicMock(),
+            ),
+            patch("langflow.services.memory_base.ingestion.KBStorageHelper.release_chroma_resources"),
+            patch(
+                "langflow.services.memory_base.ingestion.KBIngestionHelper.build_embeddings",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.resolve_embedding",
+                return_value=("OpenAI", "text-embedding-3-small"),
+            ),
+            patch("langflow.services.memory_base.ingestion.Chroma", return_value=fake_chroma),
+            patch("langflow.services.memory_base.ingestion._sync_metrics_after_purge"),
+        ):
+            result = await service.purge_session_data(mb.user_id, ["sess-x"])
+
+        assert result == 1
+        # Chroma was asked to drop chunks for the deleted session using $eq form.
+        adelete_mock.assert_awaited_once_with(where={"session_id": {"$eq": "sess-x"}})
+        # Tracking-row deletes were committed.
+        assert second_db.commit.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_purge_continues_when_chunk_delete_fails(self, service, tmp_path):
+        # Chunk delete failure must not block tracking-row cleanup — the user
+        # already pressed "delete session" and expects bookkeeping to clear.
+        mb = _make_mb()
+        mbs = _make_session(memory_base_id=mb.id, session_id="sess-x")
+
+        first_db = AsyncMock()
+        pair_result = MagicMock()
+        pair_result.all = MagicMock(return_value=[(mb, mbs)])
+        username_result = MagicMock()
+        username_result.first = MagicMock(return_value="alice")
+        first_db.exec = AsyncMock(side_effect=[pair_result, username_result])
+        first_db.commit = AsyncMock()
+
+        second_db = AsyncMock()
+        second_db.exec = AsyncMock(return_value=MagicMock())
+        second_db.commit = AsyncMock()
+
+        scopes_iter = iter([first_db, second_db])
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return next(scopes_iter)
+
+            async def __aexit__(self, *a):
+                pass
+
+        kb_root = tmp_path / "kb"
+        (kb_root / "alice" / mb.kb_name).mkdir(parents=True)
+
+        with (
+            patch(
+                "langflow.services.memory_base.ingestion.session_scope",
+                side_effect=lambda: FakeCtx(),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.KBStorageHelper.get_root_path",
+                return_value=kb_root,
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion._delete_chunks_for_session",
+                AsyncMock(side_effect=OSError("boom")),
+            ),
+        ):
+            result = await service.purge_session_data(mb.user_id, ["sess-x"])
+
+        assert result == 1
+        assert second_db.commit.await_count == 1
+
+
 class TestMemoryBaseServiceRegenerate:
     @pytest.fixture
     def service(self):
@@ -517,7 +1008,7 @@ class TestMemoryBaseServiceRegenerate:
             mock_mb_result.first = MagicMock(return_value=mb)
             mock_session_result = MagicMock()
             mock_session_result.all = MagicMock(return_value=[mbs1, mbs2])
-            mock_db.exec = AsyncMock(side_effect=[mock_mb_result, mock_session_result, MagicMock()])
+            mock_db.exec = AsyncMock(side_effect=[mock_mb_result, mock_session_result, MagicMock(), MagicMock()])
             mock_db.add = MagicMock()
             mock_db.commit = AsyncMock()
 
@@ -1222,11 +1713,14 @@ class TestMemoriesAPIRouting:
         """trigger_ingestion raising RuntimeError should map to HTTP 409."""
         from langflow.api.v1.memories import flush_memory_base
 
-        patched_service.trigger_ingestion = AsyncMock(side_effect=RuntimeError("already in progress"))
-
         # We call the handler directly to test the error mapping
         mock_user = MagicMock()
         mock_user.id = uuid.uuid4()
+
+        # The guard now resolves the memory base first; let it pass through so the
+        # error mapping under test (trigger_ingestion -> 409) is exercised.
+        patched_service.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
+        patched_service.trigger_ingestion = AsyncMock(side_effect=RuntimeError("already in progress"))
 
         from fastapi import HTTPException
         from langflow.api.v1.memories import FlushRequest
@@ -1293,6 +1787,47 @@ class TestMemoriesAPIHandlers:
 
         assert exc_info.value.status_code == 409
 
+    @pytest.mark.asyncio
+    async def test_create_missing_api_key_returns_422(self, mock_user):
+        from fastapi import HTTPException
+        from langflow.api.v1.memories import create_memory_base
+        from langflow.services.memory_base.service import PreprocessingValidationError
+
+        payload = MemoryBaseCreate(name="mb", flow_id=uuid.uuid4(), user_id=mock_user.id, kb_name="kb")
+
+        svc = MagicMock()
+        svc.create = AsyncMock(side_effect=PreprocessingValidationError("No API key found for provider 'OpenAI'"))
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await create_memory_base(current_user=mock_user, payload=payload)
+
+        assert exc_info.value.status_code == 422
+        assert "API key" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    async def test_update_missing_api_key_returns_403(self, mock_user):
+        from fastapi import HTTPException
+        from langflow.api.v1.memories import update_memory_base
+        from langflow.services.memory_base.service import PreprocessingValidationError
+
+        svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
+        svc.update = AsyncMock(side_effect=PreprocessingValidationError("No API key found for provider 'OpenAI'"))
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await update_memory_base(
+                memory_base_id=uuid.uuid4(),
+                current_user=mock_user,
+                patch=MemoryBaseUpdate(threshold=10),
+            )
+
+        assert exc_info.value.status_code == 403
+        assert "API key" in exc_info.value.detail
+
     # ---------------------------------------------------------------- #
     #  get_memory_base                                                  #
     # ---------------------------------------------------------------- #
@@ -1336,6 +1871,7 @@ class TestMemoriesAPIHandlers:
         mb = _make_mb(user_id=mock_user.id, threshold=99)
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=mb)
         svc.update = AsyncMock(return_value=mb)
         with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
             result = await update_memory_base(
@@ -1352,6 +1888,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import update_memory_base
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.update = AsyncMock(return_value=None)
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
@@ -1374,6 +1911,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import delete_memory_base
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.delete = AsyncMock(return_value=True)
         with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
             result = await delete_memory_base(memory_base_id=uuid.uuid4(), current_user=mock_user)
@@ -1386,6 +1924,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import delete_memory_base
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.delete = AsyncMock(return_value=False)
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
@@ -1406,6 +1945,7 @@ class TestMemoriesAPIHandlers:
         job_id = str(uuid.uuid4())
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.trigger_ingestion = AsyncMock(return_value=job_id)
         with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
             result = await flush_memory_base(
@@ -1422,6 +1962,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import FlushRequest, flush_memory_base
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.trigger_ingestion = AsyncMock(side_effect=ValueError("memory base not found"))
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
@@ -1442,6 +1983,7 @@ class TestMemoriesAPIHandlers:
         from langflow.services.jobs import DuplicateJobError
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.trigger_ingestion = AsyncMock(side_effect=DuplicateJobError("already running"))
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
@@ -1507,6 +2049,7 @@ class TestMemoriesAPIHandlers:
         job_ids = [str(uuid.uuid4()), str(uuid.uuid4())]
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.regenerate = AsyncMock(return_value=job_ids)
         with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
             result = await regenerate_memory_base(memory_base_id=uuid.uuid4(), current_user=mock_user)
@@ -1519,6 +2062,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import regenerate_memory_base
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.regenerate = AsyncMock(side_effect=ValueError("not found"))
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
@@ -1563,14 +2107,14 @@ class TestMemoriesAPIHandlers:
         assert exc_info.value.status_code == 404
 
     # ---------------------------------------------------------------- #
-    #  list_session_messages                                            #
+    #  list_memory_base_messages                                        #
     # ---------------------------------------------------------------- #
 
     @pytest.mark.asyncio
-    async def test_list_session_messages_not_found_raises_404(self, mock_user):
+    async def test_list_memory_base_messages_not_found_raises_404(self, mock_user):
         from fastapi import HTTPException
         from fastapi_pagination import Params
-        from langflow.api.v1.memories import list_session_messages
+        from langflow.api.v1.memories import list_memory_base_messages
 
         mock_db = AsyncMock()
         result_mock = MagicMock()
@@ -1588,7 +2132,7 @@ class TestMemoriesAPIHandlers:
             patch("langflow.api.v1.memories.session_scope", return_value=FakeCtx()),
             pytest.raises(HTTPException) as exc_info,
         ):
-            await list_session_messages(
+            await list_memory_base_messages(
                 memory_base_id=uuid.uuid4(),
                 session_id="s1",
                 current_user=mock_user,
@@ -1596,6 +2140,67 @@ class TestMemoriesAPIHandlers:
             )
 
         assert exc_info.value.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_list_memory_base_messages_without_session_id_not_found_raises_404(self, mock_user):
+        from fastapi import HTTPException
+        from fastapi_pagination import Params
+        from langflow.api.v1.memories import list_memory_base_messages
+
+        mock_db = AsyncMock()
+        result_mock = MagicMock()
+        result_mock.first = MagicMock(return_value=None)
+        mock_db.exec = AsyncMock(return_value=result_mock)
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, *a):
+                pass
+
+        with (
+            patch("langflow.api.v1.memories.session_scope", return_value=FakeCtx()),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await list_memory_base_messages(
+                memory_base_id=uuid.uuid4(),
+                current_user=mock_user,
+                params=Params(),
+            )
+
+        assert exc_info.value.status_code == 404
+
+    def test_session_raw_messages_stmt_omits_session_filter_when_none(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        svc = MemoryBaseService.__new__(MemoryBaseService)
+        mb_id = uuid.uuid4()
+
+        stmt_filtered = svc.session_raw_messages_stmt(mb_id, "s1")
+        stmt_all = svc.session_raw_messages_stmt(mb_id)
+
+        sql_filtered = str(stmt_filtered.compile(compile_kwargs={"literal_binds": True}))
+        sql_all = str(stmt_all.compile(compile_kwargs={"literal_binds": True}))
+
+        # The filtered variant constrains on the session_id literal; the "all" variant must not.
+        assert "session_id = 's1'" in sql_filtered
+        assert "session_id =" not in sql_all
+
+    def test_session_preprocessed_outputs_stmt_omits_session_filter_when_none(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        svc = MemoryBaseService.__new__(MemoryBaseService)
+        mb_id = uuid.uuid4()
+
+        stmt_filtered = svc.session_preprocessed_outputs_stmt(mb_id, "s1")
+        stmt_all = svc.session_preprocessed_outputs_stmt(mb_id)
+
+        sql_filtered = str(stmt_filtered.compile(compile_kwargs={"literal_binds": True}))
+        sql_all = str(stmt_all.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "session_id = 's1'" in sql_filtered
+        assert "session_id =" not in sql_all
 
     # ---------------------------------------------------------------- #
     #  MessageReadResponse schema                                       #
@@ -1629,6 +2234,168 @@ class TestMemoriesAPIHandlers:
 
         ids = ["a", "b", "c"]
         assert RegenerateResponse(job_ids=ids).job_ids == ids
+
+
+# ------------------------------------------------------------------ #
+#  Preprocessing API key validation tests                              #
+# ------------------------------------------------------------------ #
+
+
+class TestPreprocessingApiKeyValidation:
+    """_validate_preprocessing_api_key raises PreprocessingValidationError when key is absent."""
+
+    def test_no_op_when_preproc_model_is_none(self):
+        from langflow.services.memory_base.service import _validate_preprocessing_api_key
+
+        # Should not raise — no model means no key needed.
+        _validate_preprocessing_api_key(uuid.uuid4(), None)
+
+    def test_raises_when_api_key_missing(self):
+        from langflow.services.memory_base.service import (
+            PreprocessingValidationError,
+            _validate_preprocessing_api_key,
+        )
+
+        with (
+            patch(
+                "langflow.services.memory_base.service.infer_llm_provider",
+                return_value="OpenAI",
+            ),
+            patch(
+                "langflow.services.memory_base.service.get_api_key_for_provider",
+                return_value=None,
+            ),
+            pytest.raises(PreprocessingValidationError, match="No API key"),
+        ):
+            _validate_preprocessing_api_key(uuid.uuid4(), "gpt-4o")
+
+    def test_passes_when_api_key_present(self):
+        from langflow.services.memory_base.service import _validate_preprocessing_api_key
+
+        with (
+            patch(
+                "langflow.services.memory_base.service.infer_llm_provider",
+                return_value="OpenAI",
+            ),
+            patch(
+                "langflow.services.memory_base.service.get_api_key_for_provider",
+                return_value="sk-valid-key",
+            ),
+        ):
+            # Should not raise.
+            _validate_preprocessing_api_key(uuid.uuid4(), "gpt-4o")
+
+    def test_raises_when_provider_unknown(self):
+        from langflow.services.memory_base.service import (
+            PreprocessingValidationError,
+            _validate_preprocessing_api_key,
+        )
+
+        with (
+            patch(
+                "langflow.services.memory_base.service.infer_llm_provider",
+                side_effect=ValueError("Unknown model 'ghost-model'"),
+            ),
+            pytest.raises(PreprocessingValidationError, match="Unknown model"),
+        ):
+            _validate_preprocessing_api_key(uuid.uuid4(), "ghost-model")
+
+    @pytest.mark.asyncio
+    async def test_service_create_raises_preprocessing_validation_error_on_missing_key(self):
+        """create() raises PreprocessingValidationError before touching the filesystem."""
+        from langflow.services.database.models.flow.model import Flow
+        from langflow.services.memory_base.service import (
+            MemoryBaseService,
+            PreprocessingValidationError,
+        )
+
+        service = MemoryBaseService()
+        user_id = uuid.uuid4()
+        flow_id = uuid.uuid4()
+        payload = MemoryBaseCreate(
+            name="mb",
+            flow_id=flow_id,
+            preprocessing=True,
+            preproc_model="gpt-4o",
+        )
+
+        owned_flow = Flow(id=flow_id, user_id=user_id, name="my flow")
+        exec_result = MagicMock()
+        exec_result.first.return_value = owned_flow
+        mock_db = AsyncMock()
+        mock_db.exec = AsyncMock(return_value=exec_result)
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, *a):
+                pass
+
+        fake_scope = MagicMock(return_value=FakeCtx())
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", fake_scope),
+            patch(
+                "langflow.services.memory_base.service.infer_llm_provider",
+                return_value="OpenAI",
+            ),
+            patch(
+                "langflow.services.memory_base.service.get_api_key_for_provider",
+                return_value=None,
+            ),
+            pytest.raises(PreprocessingValidationError, match="No API key"),
+        ):
+            await service.create(payload, user_id=user_id)
+
+    @pytest.mark.asyncio
+    async def test_service_update_raises_preprocessing_validation_error_on_missing_key(self):
+        """update() raises PreprocessingValidationError.
+
+        When the existing MB uses preprocessing but the API key is gone.
+        """
+        from langflow.services.memory_base.service import (
+            MemoryBaseService,
+            PreprocessingValidationError,
+        )
+
+        service = MemoryBaseService()
+        user_id = uuid.uuid4()
+        mb = _make_mb(user_id=user_id)
+        mb.preprocessing = True
+        mb.preproc_model = "gpt-4o"
+
+        exec_result = MagicMock()
+        exec_result.first.return_value = mb
+        mock_db = AsyncMock()
+        mock_db.exec = AsyncMock(return_value=exec_result)
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, *a):
+                pass
+
+        fake_scope = MagicMock(return_value=FakeCtx())
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", fake_scope),
+            patch(
+                "langflow.services.memory_base.service.infer_llm_provider",
+                return_value="OpenAI",
+            ),
+            patch(
+                "langflow.services.memory_base.service.get_api_key_for_provider",
+                return_value=None,
+            ),
+            pytest.raises(PreprocessingValidationError, match="No API key"),
+        ):
+            await service.update(
+                mb.id,
+                user_id,
+                MemoryBaseUpdate(threshold=10),
+            )
 
 
 # ------------------------------------------------------------------ #
@@ -1717,3 +2484,36 @@ class TestMemoryBaseSecurityAdversarial:
         compiled = str(stmt)
         assert "user_id" in compiled
         assert "memory_base" in compiled.lower()
+
+
+class TestMemoryBaseBodyValidation:
+    """HTTP-level validation for endpoints that require a JSON request body.
+
+    Regression for: a *missing* request body must be rejected with 422
+    (the same as an empty JSON object), never a 500.  Previously the body
+    parameters were declared as ``Annotated[Model, Body(embed=False)] = ...``;
+    the Ellipsis default leaked through FastAPI's body solver when no body was
+    sent, so the handler received ``...`` and raised
+    ``'ellipsis' object has no attribute '...'`` (HTTP 500).
+    """
+
+    @pytest.mark.asyncio
+    async def test_flush_missing_body_returns_422(self, client, logged_in_headers):
+        """POST /memories/{id}/flush with no body -> 422 (not 500)."""
+        mb_id = uuid.uuid4()
+        response = await client.post(f"api/v1/memories/{mb_id}/flush", headers=logged_in_headers)
+        assert response.status_code == 422, response.text
+
+    @pytest.mark.asyncio
+    async def test_flush_empty_json_returns_422(self, client, logged_in_headers):
+        """POST /memories/{id}/flush with {} -> 422 flagging the missing session_id."""
+        mb_id = uuid.uuid4()
+        response = await client.post(f"api/v1/memories/{mb_id}/flush", headers=logged_in_headers, json={})
+        assert response.status_code == 422, response.text
+        assert "session_id" in response.text
+
+    @pytest.mark.asyncio
+    async def test_create_missing_body_returns_422(self, client, logged_in_headers):
+        """POST /memories with no body -> 422 (not 500); same root cause as flush."""
+        response = await client.post("api/v1/memories", headers=logged_in_headers)
+        assert response.status_code == 422, response.text

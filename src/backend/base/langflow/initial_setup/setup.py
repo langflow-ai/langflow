@@ -49,7 +49,6 @@ from langflow.services.database.models.folder.constants import (
 )
 from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead
 from langflow.services.deps import (
-    get_auth_service,
     get_settings_service,
     get_storage_service,
     get_variable_service,
@@ -59,6 +58,33 @@ from langflow.services.deps import (
 # In the folder ./starter_projects we have a few JSON files that represent
 # starter projects. We want to load these into the database so that users
 # can use them as a starting point for their own projects.
+
+# Extension components are loaded under the runtime-only ``_lfx_ext.*``
+# sys.modules namespace, so the live template's ``metadata.module`` is not an
+# importable path outside a running extension loader. Persisted starter
+# projects must keep the stable legacy path (``lfx.components.<provider>...``,
+# importable via the bundle shims) -- it is what the migration table and the
+# template tests resolve.
+_RUNTIME_EXT_MODULE_PREFIX = "_lfx_ext."
+
+
+def _merge_node_metadata(current_metadata, latest_metadata):
+    """Return the latest metadata, preserving a stored importable ``module`` path.
+
+    When the live template carries a runtime ``_lfx_ext.*`` module (an ext
+    component) and the node already has a module value, keep the node's --
+    otherwise persisting the runtime namespace breaks every consumer that
+    imports the path.
+    """
+    if not isinstance(latest_metadata, dict):
+        return latest_metadata
+    latest_module = latest_metadata.get("module")
+    current_module = current_metadata.get("module") if isinstance(current_metadata, dict) else None
+    if isinstance(latest_module, str) and latest_module.startswith(_RUNTIME_EXT_MODULE_PREFIX) and current_module:
+        merged = deepcopy(latest_metadata)
+        merged["module"] = current_module
+        return merged
+    return latest_metadata
 
 
 def update_projects_components_with_latest_component_versions(project_data, all_types_dict):
@@ -152,6 +178,9 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 for attr in NODE_FORMAT_ATTRIBUTES:
                     latest_attr_value = latest_node.get(attr)
                     current_attr_value = node_data.get(attr)
+
+                    if attr == "metadata":
+                        latest_attr_value = _merge_node_metadata(current_attr_value, latest_attr_value)
 
                     if (
                         attr in latest_node
@@ -1063,6 +1092,34 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
     return temp_dirs, list(component_paths)
 
 
+# Plain (non-relationship, non-PK, non-FK) columns on ``Flow`` that may be
+# refreshed from an on-disk flow file. Listing these explicitly avoids the
+# ``hasattr``/``setattr`` pattern that can call ``getattr`` on unloaded
+# relationship attributes — under an async SQLAlchemy session that triggers an
+# implicit lazy load outside greenlet context and raises ``MissingGreenlet``.
+# ``id``, ``user_id`` and ``folder_id`` are handled separately by the caller.
+_FLOW_UPDATABLE_COLUMNS = frozenset(
+    {
+        "name",
+        "description",
+        "icon",
+        "icon_bg_color",
+        "gradient",
+        "data",
+        "is_component",
+        "webhook",
+        "endpoint_name",
+        "tags",
+        "locked",
+        "mcp_enabled",
+        "action_name",
+        "action_description",
+        "access_type",
+        "fs_path",
+    }
+)
+
+
 async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: AsyncSession, user_id: UUID) -> None:
     flow = orjson.loads(file_content)
     flow_endpoint_name = flow.get("endpoint_name")
@@ -1077,14 +1134,47 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
             await logger.aerror(f"Invalid UUID string: {flow_id}")
             return
 
-    existing = await find_existing_flow(session, flow_id, flow_endpoint_name)
+    flow_name = flow.get("name")
+    existing = await find_existing_flow(
+        session,
+        flow_id,
+        flow_endpoint_name,
+        user_id=user_id,
+        name=flow_name,
+    )
     if existing:
         await logger.adebug(f"Found existing flow: {existing.name}")
-        await logger.ainfo(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
-        for key, value in flow.items():
-            if hasattr(existing, key):
-                # flow dict from json and db representation are not 100% the same
-                setattr(existing, key, value)
+        # Normalize the DB id to UUID for comparison without mutating the attached
+        # row: SQLAlchemy can return ids as strings on SQLite, but assigning back
+        # to ``existing.id`` would mark the PK dirty and alter the identity map.
+        db_id_raw = existing.id
+        if isinstance(db_id_raw, str):
+            try:
+                db_id = UUID(db_id_raw)
+            except ValueError:
+                await logger.aerror(f"Invalid UUID string in DB row: {db_id_raw}")
+                return
+        else:
+            db_id = db_id_raw
+        matched_by_id = flow_id is not None and db_id == flow_id
+        if not matched_by_id and not get_settings_service().settings.load_flows_overwrite_on_name_match:
+            await logger.awarning(
+                f"Skipping flow update: db_id={db_id} name={existing.name!r} matched by "
+                f"name/endpoint_name but file id differs (file id={flow_id}). "
+                "Set LANGFLOW_LOAD_FLOWS_OVERWRITE_ON_NAME_MATCH=true to overwrite."
+            )
+            return
+        await logger.ainfo(
+            f"Updating existing flow: db_id={db_id} name={existing.name!r} "
+            f"(file id={flow_id}, endpoint_name={flow_endpoint_name})"
+        )
+        # Only copy plain columns. Using ``hasattr`` here would return True for
+        # relationship attributes (``user``, ``folder``); calling ``getattr`` on
+        # an unloaded relationship under an async session triggers an implicit
+        # lazy load outside greenlet context and raises ``MissingGreenlet``.
+        for key in _FLOW_UPDATABLE_COLUMNS:
+            if key in flow:
+                setattr(existing, key, flow[key])
         existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
         existing.user_id = user_id
 
@@ -1092,13 +1182,6 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
         if existing.folder_id is None:
             folder = await get_or_create_default_folder(session, user_id)
             existing.folder_id = folder.id
-
-        if isinstance(existing.id, str):
-            try:
-                existing.id = UUID(existing.id)
-            except ValueError:
-                await logger.aerror(f"Invalid UUID string: {existing.id}")
-                return
 
         session.add(existing)
     else:
@@ -1114,18 +1197,39 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
         session.add(flow)
 
 
-async def find_existing_flow(session, flow_id, flow_endpoint_name):
+async def find_existing_flow(session, flow_id, flow_endpoint_name, *, user_id=None, name=None):
+    """Look up an existing flow row by endpoint_name, id, or (user_id, name).
+
+    The ``(user_id, name)`` fallback is required so that flows loaded from
+    ``LANGFLOW_LOAD_FLOWS_PATH`` can upsert against a DB row that shares the
+    user-visible name but has a different ``id`` (e.g. CI/CD re-import,
+    regenerated UUIDs, fresh database). Without it the loader hits the
+    ``unique_flow_name`` ``UniqueConstraint("user_id", "name")`` on INSERT
+    and Langflow fails to start.
+    """
     if flow_endpoint_name:
         await logger.adebug(f"flow_endpoint_name: {flow_endpoint_name}")
         stmt = select(Flow).where(Flow.endpoint_name == flow_endpoint_name)
+        # ``unique_flow_endpoint_name`` is scoped per user; scope the lookup too
+        # when a user_id is supplied so we don't return another user's flow.
+        if user_id is not None:
+            stmt = stmt.where(Flow.user_id == user_id)
         if existing := (await session.exec(stmt)).first():
             await logger.adebug(f"Found existing flow by endpoint name: {existing.name}")
             return existing
 
-    stmt = select(Flow).where(Flow.id == flow_id)
-    if existing := (await session.exec(stmt)).first():
-        await logger.adebug(f"Found existing flow by id: {flow_id}")
-        return existing
+    if flow_id is not None:
+        stmt = select(Flow).where(Flow.id == flow_id)
+        if existing := (await session.exec(stmt)).first():
+            await logger.adebug(f"Found existing flow by id: {flow_id}")
+            return existing
+
+    if user_id is not None and name:
+        stmt = select(Flow).where(Flow.user_id == user_id, Flow.name == name)
+        if existing := (await session.exec(stmt)).first():
+            await logger.adebug(f"Found existing flow by (user_id, name): {name}")
+            return existing
+
     return None
 
 
@@ -1243,15 +1347,29 @@ async def initialize_auto_login_default_superuser() -> None:
     settings_service = get_settings_service()
     if not settings_service.auth_settings.AUTO_LOGIN:
         return
-    # In AUTO_LOGIN mode, always use the default credentials for initial bootstrapping
-    # without persisting the password in memory after setup.
-    from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+    # In AUTO_LOGIN mode, bootstrap with a configured password if the operator
+    # provided one; otherwise generate an unknown password for the default user.
+    from lfx.services.settings.constants import DEFAULT_SUPERUSER
 
-    username = DEFAULT_SUPERUSER
-    password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+    from langflow.services.database.models.user.crud import get_user_by_username
+    from langflow.services.utils import get_auto_login_superuser_password, get_or_create_super_user
+
+    username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+    password = get_auto_login_superuser_password(settings_service.auth_settings)
 
     async with session_scope() as async_session:
-        super_user = await get_auth_service().create_super_user(username, password, db=async_session)
+        super_user = await get_or_create_super_user(
+            async_session,
+            username,
+            password,
+            is_default=True,
+            rotate_legacy_default_password=True,
+        )
+        if super_user is None:
+            super_user = await get_user_by_username(async_session, username)
+        if super_user is None or not super_user.is_superuser:
+            msg = "Auto-login superuser was not initialized."
+            raise RuntimeError(msg)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         # Initialize agentic variables if agentic experience is enabled
         from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables

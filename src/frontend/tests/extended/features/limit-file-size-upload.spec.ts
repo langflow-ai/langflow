@@ -1,7 +1,9 @@
-import * as dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import {
   closeAdvancedOptions,
@@ -28,29 +30,26 @@ test(
         },
       });
     });
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await initialGPTsetup(page);
 
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
     await disableInspectPanel(page);
-    await page.getByText("Chat Input", { exact: true }).click();
+    await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
     await openAdvancedOptions(page);
     await closeAdvancedOptions(page);
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,

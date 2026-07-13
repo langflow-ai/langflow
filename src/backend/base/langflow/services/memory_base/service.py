@@ -17,17 +17,21 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
+from lfx.base.models.unified_models import get_api_key_for_provider
 from sqlmodel import col, select
 
 from langflow.services.base import Service
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
     MemoryBaseCreate,
+    MemoryBasePreprocessingOutput,
     MemoryBaseSession,
     MemoryBaseUpdate,
+    MessageIngestionRecord,
 )
+from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import session_scope
-from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
+from langflow.services.memory_base.embedding_helpers import infer_embedding_provider, infer_llm_provider
 from langflow.services.memory_base.ingestion import (
     cancel_active_jobs,
 )
@@ -36,6 +40,9 @@ from langflow.services.memory_base.ingestion import (
 )
 from langflow.services.memory_base.ingestion import (
     on_flow_output as _on_flow_output,
+)
+from langflow.services.memory_base.ingestion import (
+    purge_session_data as _purge_session_data,
 )
 from langflow.services.memory_base.ingestion import (
     regenerate as _regenerate,
@@ -52,6 +59,27 @@ from langflow.services.memory_base.kb_path_helpers import (
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+class PreprocessingValidationError(ValueError):
+    """Raised when preprocessing is enabled but the provider API key is absent."""
+
+
+def _validate_preprocessing_api_key(user_id: uuid.UUID, preproc_model: str | None) -> None:
+    """Raise PreprocessingValidationError if the preprocessing provider API key is missing."""
+    if not preproc_model:
+        return
+    try:
+        provider = infer_llm_provider(preproc_model)
+    except ValueError as exc:
+        raise PreprocessingValidationError(str(exc)) from exc
+    api_key = get_api_key_for_provider(user_id, provider)
+    if not api_key:
+        msg = (
+            f"No API key found for provider '{provider}' (required for preprocessing model "
+            f"'{preproc_model}'). Add the key to your global variables before enabling preprocessing."
+        )
+        raise PreprocessingValidationError(msg)
 
 
 class MemoryBaseService(Service):
@@ -72,6 +100,10 @@ class MemoryBaseService(Service):
             if flow_result.first() is None:
                 msg = f"Flow {payload.flow_id} not found"
                 raise PermissionError(msg)
+
+        # 1b. Validate preprocessing API key before touching the filesystem.
+        if payload.preprocessing:
+            _validate_preprocessing_api_key(user_id, payload.preproc_model)
 
         # 2. Resolve username — needed for the KB path.
         async with session_scope() as db:
@@ -151,6 +183,10 @@ class MemoryBaseService(Service):
             mb = result.first()
             if mb is None:
                 return None
+
+            if mb.preprocessing:
+                _validate_preprocessing_api_key(user_id, mb.preproc_model)
+
             for field, value in patch.model_dump(exclude_unset=True).items():
                 setattr(mb, field, value)
             db.add(mb)
@@ -189,6 +225,56 @@ class MemoryBaseService(Service):
         """Raise ValueError if the Memory Base does not belong to user_id."""
         async with session_scope() as db:
             await self.get_memory_base_or_404(db, memory_base_id, user_id)
+
+    def session_raw_messages_stmt(self, memory_base_id: uuid.UUID, session_id: str | None = None):  # type: ignore[return]
+        """Statement for paginating raw ingested messages for a non-preprocessing MB.
+
+        INNER JOIN — only messages actually ingested into this MB are returned.
+        ``session_id`` denormalized on ``MessageIngestionRecord`` is immutable, so
+        no extra ``MessageTable.session_id`` filter is needed.
+
+        When ``session_id`` is ``None``, all messages ingested into the MB are
+        returned, sorted by timestamp descending across sessions.
+
+        Caller (the controller) verifies MB ownership before invoking — keeping
+        ownership in the API layer where ``CurrentActiveUser`` is materialized.
+        """
+        from sqlalchemy import and_
+
+        join_conditions = [
+            MessageIngestionRecord.message_id == MessageTable.id,
+            MessageIngestionRecord.memory_base_id == memory_base_id,
+        ]
+        if session_id is not None:
+            join_conditions.append(MessageIngestionRecord.session_id == session_id)
+
+        return (
+            select(MessageTable, MessageIngestionRecord)
+            .join(MessageIngestionRecord, and_(*join_conditions))
+            .order_by(col(MessageTable.timestamp).desc())
+        )
+
+    def session_preprocessed_outputs_stmt(  # type: ignore[return]
+        self, memory_base_id: uuid.UUID, session_id: str | None = None
+    ):
+        """Statement for paginating preprocessed (LLM-distilled) outputs.
+
+        Used in place of ``session_raw_messages_stmt`` when ``mb.preprocessing``
+        is True — for those MBs the KB stores the LLM output, not the raw rows.
+        Only ``ingested`` rows are returned; ``processed`` rows are not yet in
+        the KB and ``skipped`` rows have no content to surface.
+
+        When ``session_id`` is ``None``, all ingested outputs for the MB are
+        returned, sorted by ``created_at`` descending across sessions.
+        """
+        stmt = (
+            select(MemoryBasePreprocessingOutput)
+            .where(MemoryBasePreprocessingOutput.memory_base_id == memory_base_id)
+            .where(MemoryBasePreprocessingOutput.status == "ingested")
+        )
+        if session_id is not None:
+            stmt = stmt.where(MemoryBasePreprocessingOutput.session_id == session_id)
+        return stmt.order_by(col(MemoryBasePreprocessingOutput.created_at).desc())
 
     def sessions_stmt(self, memory_base_id: uuid.UUID, user_id: uuid.UUID):  # type: ignore[return]
         """Return the select statement for persisted sessions, for use with apaginate.
@@ -249,6 +335,15 @@ class MemoryBaseService(Service):
             get_mb_or_raise=self.get_memory_base_or_404,
             trigger_ingestion_fn=self.trigger_ingestion,
         )
+
+    async def purge_session_data(self, user_id: uuid.UUID, session_ids: list[str]) -> int:
+        """Remove Chroma chunks and tracking rows for the given sessions.
+
+        Called when the user deletes session messages from the UI so that the
+        ingested embeddings don't leak into newly-created sessions. Scoped to
+        the caller's Memory Bases — never touches another user's data.
+        """
+        return await _purge_session_data(user_id=user_id, session_ids=session_ids)
 
     # ------------------------------------------------------------------ #
     #  Public query helpers                                                #

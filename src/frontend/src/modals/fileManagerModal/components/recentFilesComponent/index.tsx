@@ -36,6 +36,7 @@ export default function RecentFilesComponent({
   types: string[];
   isList: boolean;
 }) {
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
@@ -68,7 +69,6 @@ export default function RecentFilesComponent({
       }),
     [filesWithDisabled],
   );
-  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
@@ -219,13 +219,13 @@ export default function RecentFilesComponent({
       {
         onSuccess: (data) => {
           setSuccessData({
-            title: data?.message ?? "Files deleted successfully",
+            title: data?.message ?? t("files.deletedSuccessfully"),
           });
           setSelectedFiles([]);
         },
         onError: (error: Error) => {
           setErrorData({
-            title: "Error deleting files",
+            title: t("files.errorDeleting"),
             list: [
               error?.message || "An error occurred while deleting the files",
             ],
@@ -241,7 +241,7 @@ export default function RecentFilesComponent({
         <div className="flex-1">
           <Input
             icon="Search"
-            placeholder="Search files..."
+            placeholder={t("fileManager.searchFiles")}
             inputClassName="h-8"
             data-testid="search-files-input"
             value={searchQuery}
@@ -251,7 +251,7 @@ export default function RecentFilesComponent({
         {selectedFiles.length > 0 && (
           <div className="ml-2 flex items-center gap-2">
             <span className="text-xs text-muted-foreground">
-              {selectedFiles.length} selected
+              {t("fileManager.selectedCount", { count: selectedFiles.length })}
             </span>
             <DeleteConfirmationModal
               onConfirm={() => handleBulkDelete()}
@@ -265,7 +265,7 @@ export default function RecentFilesComponent({
                 data-testid="bulk-delete-files-modal-btn"
               >
                 <ForwardedIconComponent name="Trash2" />
-                Delete
+                {t("fileManager.deleteButton")}
               </Button>
             </DeleteConfirmationModal>
           </div>
@@ -422,12 +422,12 @@ export default function RecentFilesComponent({
           <div className="flex h-full w-full items-center justify-center text-sm">
             <span>
               {searchQuery !== ""
-                ? "No files found, try again "
-                : "Upload or import files, "}
-              or visit{" "}
+                ? `${t("fileManager.noFilesFound")} `
+                : `${t("fileManager.uploadOrImport")}, `}
+              {t("fileManager.orVisit")}{" "}
               <CustomLink
                 className="text-accent-pink-foreground underline"
-                to="/files"
+                to="/assets/files"
               >
                 {t("files.myFiles")}.
               </CustomLink>

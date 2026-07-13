@@ -3,8 +3,10 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { openAdvancedOptions } from "../../utils/open-advanced-options";
+import { unselectNodes } from "../../utils/unselect-nodes";
 
 /**
  * E2E coverage for the Native Structured Output feature on the Agent
@@ -40,7 +42,10 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateSimpleAgent })
+      .first()
+      .click();
 
     await initialGPTsetup(page);
 
@@ -84,7 +89,10 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateSimpleAgent })
+      .first()
+      .click();
 
     await initialGPTsetup(page);
 
@@ -126,7 +134,10 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateSimpleAgent })
+      .first()
+      .click();
 
     await initialGPTsetup(page);
 
@@ -152,6 +163,7 @@ test(
     // The downstream Chat Output edge must remain intact — the swap reroutes
     // the same edge through json_response. Re-opening the dropdown must
     // still surface both options so the user can revert if needed.
+    await unselectNodes(page);
     await outputDropdown.click();
     await expect(
       page.getByTestId("dropdown-item-output-undefined-response"),

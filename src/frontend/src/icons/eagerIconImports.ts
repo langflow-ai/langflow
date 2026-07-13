@@ -39,11 +39,7 @@ import { GleanIcon } from "@/icons/Glean";
 import { GoogleIcon } from "@/icons/Google";
 import { GoogleDriveIcon } from "@/icons/GoogleDrive";
 import { GoogleGenerativeAIIcon } from "@/icons/GoogleGenerativeAI";
-import {
-  GradientInfinity,
-  GradientSave,
-  GradientUngroup,
-} from "@/icons/GradientSparkles";
+import { GradientInfinity, GradientUngroup } from "@/icons/GradientSparkles";
 import { GridHorizontalIcon } from "@/icons/GridHorizontal";
 import { GroqIcon } from "@/icons/Groq";
 import { GlobeOkIcon } from "@/icons/globe-ok";
@@ -78,6 +74,7 @@ import { OneDriveIcon } from "@/icons/OneDrive";
 import { OpenAiIcon } from "@/icons/OpenAi";
 import { OpenRouterIcon } from "@/icons/OpenRouter";
 import { OpenSearch } from "@/icons/OpenSearch";
+import { OracleIcon } from "@/icons/Oracle";
 import { PerplexityIcon } from "@/icons/Perplexity";
 import { PineconeIcon } from "@/icons/Pinecone";
 import { PostgresIcon } from "@/icons/Postgres";
@@ -167,7 +164,6 @@ export const eagerIconsMapping = {
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
   Gmail: GmailIcon,
   GradientInfinity: GradientInfinity,
-  GradientSave: GradientSave,
   GradientUngroup: GradientUngroup,
   GridHorizontal: GridHorizontalIcon,
   Groq: GroqIcon,
@@ -202,6 +198,7 @@ export const eagerIconsMapping = {
   OpenAI: OpenAiIcon,
   OpenRouter: OpenRouterIcon,
   OpenSearch: OpenSearch,
+  Oracle: OracleIcon,
   Perplexity: PerplexityIcon,
   Pinecone: PineconeIcon,
   Postgres: PostgresIcon,

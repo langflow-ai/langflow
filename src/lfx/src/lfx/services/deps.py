@@ -61,6 +61,10 @@ def get_service(service_type: ServiceType, default=None):
     try:
         return service_manager.get(service_type, default)
     except Exception:  # noqa: BLE001
+        # Preserve the traceback in logs so callers seeing a None return have something to grep
+        # for. Returning None remains the contract because several callers (e.g. get_db_service)
+        # treat absence as "not configured" and substitute a noop implementation.
+        logger.exception("Failed to resolve service %s", service_type)
         return None
 
 
@@ -107,6 +111,18 @@ def get_shared_component_cache_service() -> CacheServiceProtocol | None:
     from lfx.services.shared_component_cache.factory import SharedComponentCacheServiceFactory
 
     return get_service(ServiceType.SHARED_COMPONENT_CACHE_SERVICE, SharedComponentCacheServiceFactory())
+
+
+def get_extension_events_service():
+    """Retrieves the ExtensionEventsService instance.
+
+    Returns None if the service manager is not initialised (e.g. in unit-test
+    environments that don't boot the full service stack).  Callers must guard
+    against None and fall back to structured logging.
+    """
+    from lfx.services.extension_events.factory import ExtensionEventsServiceFactory
+
+    return get_service(ServiceType.EXTENSION_EVENTS_SERVICE, ExtensionEventsServiceFactory())
 
 
 def get_chat_service() -> ChatServiceProtocol | None:

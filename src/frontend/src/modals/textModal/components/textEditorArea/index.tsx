@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Textarea } from "../../../../components/ui/textarea";
 
 const TextEditorArea = ({
@@ -9,10 +10,12 @@ const TextEditorArea = ({
 }: {
   left: boolean | undefined;
   resizable?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: polymorphic value (string | object | ...) rendered as text
   value: any;
   onChange?: (string) => void;
   readonly: boolean;
 }) => {
+  const { t } = useTranslation();
   if (typeof value === "object" && Object.keys(value).includes("text")) {
     value = value.text;
   }
@@ -22,7 +25,7 @@ const TextEditorArea = ({
       className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"} ${
         resizable ? "resize-y" : "resize-none"
       }`}
-      placeholder={"Empty"}
+      placeholder={t("common.empty")}
       // update to real value on flowPool
       value={value}
       onChange={(e) => {

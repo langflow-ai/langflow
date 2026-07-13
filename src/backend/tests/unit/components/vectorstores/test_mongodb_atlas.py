@@ -1,14 +1,24 @@
 import os
 import time
 from typing import Any
+from unittest.mock import MagicMock
 
+# Import the module (not just the class) so the unit tests below can patch
+# MongoDBAtlasVectorSearch on the exact module object the component's methods
+# read their globals from. Since the bundle move, the same source file can be
+# materialized under several module identities (lfx.components.mongodb.*,
+# lfx_bundles.mongodb.*, _lfx_ext.official.mongodb.*) depending on what other
+# tests in the worker imported first -- patching by dotted name can land on a
+# different copy than the one this class was loaded from.
+import lfx.components.mongodb.mongodb_atlas as mongodb_atlas_mod
 import pytest
 from langchain_community.embeddings.fake import DeterministicFakeEmbedding
-from lfx.components.mongodb import MongoVectorStoreComponent
 from lfx.schema.data import Data
 from pymongo.collection import Collection
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
+
+MongoVectorStoreComponent = mongodb_atlas_mod.MongoVectorStoreComponent
 
 
 @pytest.mark.skipif(
@@ -204,3 +214,70 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
         # This should not raise an error as MongoDB creates databases and collections on demand
         vector_store = component.build_vector_store()
         assert vector_store is not None
+
+
+# CI-runnable unit tests (no live MongoDB Atlas required). These cover the
+# langchain-community 0.4.2 migration: MongoDBAtlasVectorSearch moved out of
+# langchain_community.vectorstores into the standalone langchain_mongodb package.
+# The network boundary (pymongo client + the store class) is mocked.
+def _mock_component(mocker, **overrides) -> tuple[MongoVectorStoreComponent, MagicMock, MagicMock]:
+    mock_client = MagicMock()
+    mocker.patch("pymongo.MongoClient", return_value=mock_client)
+    mock_store_cls = mocker.patch.object(mongodb_atlas_mod, "MongoDBAtlasVectorSearch")
+    kwargs = {
+        "mongodb_atlas_cluster_uri": "mongodb://localhost:27017",
+        "db_name": "test_db",
+        "collection_name": "test_collection",
+        "index_name": "test_index",
+        "enable_mtls": False,
+    }
+    kwargs.update(overrides)
+    component = MongoVectorStoreComponent(**kwargs)
+    component.embedding = MagicMock()
+    return component, mock_client, mock_store_cls
+
+
+def test_mongodb_initialization():
+    component = MongoVectorStoreComponent()
+    assert component.display_name == "MongoDB Atlas"
+    assert component.icon == "MongoDB"
+    # The class name / identifier must remain stable: it keys saved flows.
+    assert component.name == "MongoDBAtlasVector"
+
+
+def test_mongodb_build_vector_store_constructs_atlas_search(mocker):
+    component, mock_client, mock_store_cls = _mock_component(mocker)
+
+    store = component.build_vector_store()
+
+    # No ingest data -> the store is constructed directly (no from_documents).
+    mock_store_cls.assert_called_once()
+    mock_store_cls.from_documents.assert_not_called()
+    _, kwargs = mock_store_cls.call_args
+    assert kwargs["collection"] is mock_client["test_db"]["test_collection"]
+    assert kwargs["index_name"] == "test_index"
+    assert kwargs["embedding"] is component.embedding
+    assert store is mock_store_cls.return_value
+
+
+def test_mongodb_build_vector_store_with_documents_uses_from_documents(mocker):
+    component, mock_client, mock_store_cls = _mock_component(mocker, insert_mode="append")
+    component.ingest_data = [Data(data={"text": "hello"})]
+
+    component.build_vector_store()
+
+    mock_store_cls.from_documents.assert_called_once()
+    _, kwargs = mock_store_cls.from_documents.call_args
+    assert kwargs["collection"] is mock_client["test_db"]["test_collection"]
+    assert kwargs["index_name"] == "test_index"
+
+
+def test_mongodb_overwrite_insert_mode_clears_collection(mocker):
+    component, mock_client, mock_store_cls = _mock_component(mocker, insert_mode="overwrite")
+    component.ingest_data = [Data(data={"text": "hello"})]
+
+    component.build_vector_store()
+
+    collection = mock_client.__getitem__.return_value.__getitem__.return_value
+    collection.delete_many.assert_called_once_with({})
+    mock_store_cls.from_documents.assert_called_once()

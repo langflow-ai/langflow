@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StickToBottom } from "use-stick-to-bottom";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
@@ -40,6 +41,7 @@ export default function ChatView({
   playgroundPage,
   sidebarOpen,
 }: chatViewProps): JSX.Element {
+  const { t } = useTranslation();
   const inputs = useFlowStore((state) => state.inputs);
   const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowId = useGetFlowId();
@@ -194,8 +196,8 @@ export default function ChatView({
               <div className="flex flex-grow w-full flex-col items-center justify-center">
                 <div className="flex flex-col items-center justify-center gap-4 p-8">
                   <LangflowLogo
-                    title="Langflow logo"
                     className="h-10 w-10 scale-[1.5]"
+                    aria-hidden="true"
                   />
                   <div className="flex flex-col items-center justify-center">
                     <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">

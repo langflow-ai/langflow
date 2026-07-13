@@ -1,17 +1,21 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Badge } from "@/components/ui/badge";
 import {
   CommandGroup,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
 import { cn } from "@/utils/utils";
-import { useTranslation } from "react-i18next";
 import { ModelOption, SelectedModel } from "../types";
+
+export const getModelOptionTestId = (provider: string, modelName: string) =>
+  `${provider}-${modelName}-option`;
 
 interface ModelListProps {
   groupedOptions: Record<string, ModelOption[]>;
   selectedModel: SelectedModel | null;
-  onSelect: (modelName: string) => void;
+  onSelect: (modelName: string, provider: string) => void;
 }
 
 const ModelList = ({
@@ -37,17 +41,18 @@ const ModelList = ({
   return (
     <CommandList className="max-h-[300px] overflow-y-auto">
       {Object.entries(groupedOptions).map(([provider, models]) => (
-        <CommandGroup className="p-0" key={provider}>
-          <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center justify-between pr-4">
-            <div className="flex items-center">{provider}</div>
-          </div>
+        <CommandGroup
+          className="p-0 [&_[cmdk-group-heading]]:mx-4 [&_[cmdk-group-heading]]:my-2 [&_[cmdk-group-heading]]:p-0 [&_[cmdk-group-heading]]:font-semibold"
+          heading={provider}
+          key={provider}
+        >
           {models.map((data) => (
             <CommandItem
-              key={data.name}
-              value={data.name}
-              onSelect={() => onSelect(data.name)}
+              key={`${provider}-${data.name}`}
+              value={`${provider}::${data.name}`}
+              onSelect={() => onSelect(data.name, provider)}
               className="w-full items-center rounded-none"
-              data-testid={`${data.name}-option`}
+              data-testid={getModelOptionTestId(provider, data.name)}
             >
               <div className="flex w-full items-center gap-2">
                 <ForwardedIconComponent
@@ -55,12 +60,22 @@ const ModelList = ({
                   className="h-4 w-4 shrink-0 text-primary ml-2"
                 />
                 <div className="truncate text-[13px]">{data.name}</div>
+                {data.metadata?.deprecated ? (
+                  <Badge
+                    variant="secondaryStatic"
+                    size="tag"
+                    data-testid={`${data.name}-deprecated-badge`}
+                  >
+                    Deprecated
+                  </Badge>
+                ) : null}
                 <div className="pl-2 ml-auto">
                   <ForwardedIconComponent
                     name="Check"
                     className={cn(
                       "h-4 w-4 shrink-0 text-primary",
-                      selectedModel?.name === data.name
+                      selectedModel?.name === data.name &&
+                        selectedModel?.provider === provider
                         ? "opacity-100"
                         : "opacity-0",
                     )}

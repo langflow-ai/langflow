@@ -394,10 +394,15 @@ export function VoiceAssistant({
           )}
         >
           <ShadTooltip
-            content={isRecording ? "Mute" : "Unmute"}
+            content={isRecording ? t("ioModal.mute") : t("ioModal.unmute")}
             delayDuration={500}
           >
-            <Button unstyled onClick={handleToggleRecording}>
+            <Button
+              unstyled
+              onClick={handleToggleRecording}
+              aria-label={isRecording ? t("ioModal.mute") : t("ioModal.unmute")}
+              aria-pressed={isRecording}
+            >
               <IconComponent
                 name={isRecording ? "Mic" : "MicOff"}
                 strokeWidth={ICON_STROKE_WIDTH}
@@ -443,7 +448,11 @@ export function VoiceAssistant({
             >
               {hasOpenAIAPIKey ? (
                 <>
-                  <Button data-testid="voice-assistant-settings-icon" unstyled>
+                  <Button
+                    data-testid="voice-assistant-settings-icon"
+                    unstyled
+                    aria-label={t("voice.audioSettings")}
+                  >
                     <IconComponent
                       name="Settings"
                       strokeWidth={ICON_STROKE_WIDTH}
@@ -460,6 +469,7 @@ export function VoiceAssistant({
                     size={"icon"}
                     data-testid="voice-assistant-settings-icon-without-openai"
                     className="h-8 w-8"
+                    aria-label={t("voice.openaiApiKeyLabel")}
                   >
                     <IconComponent
                       name="Key"
@@ -476,6 +486,7 @@ export function VoiceAssistant({
             unstyled
             onClick={handleCloseAudioInput}
             data-testid="voice-assistant-close-button"
+            aria-label={t("voiceAssistant.close")}
           >
             <IconComponent
               name="X"

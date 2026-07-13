@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 import chromadb
 import chromadb.api.client
+import numpy as np
 from langchain_chroma import Chroma
 from langflow.api.utils.kb_helpers import KBIngestionHelper
 from langflow.services.database.models.memory_base.model import MemoryBase
@@ -19,6 +20,7 @@ from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.memory_base.kb_path_helpers import hash_session_id, validate_kb_path
 from sqlmodel import select
 
+from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.files_and_knowledge._kb_paths import (
     get_knowledge_bases_root_path,
     load_kb_metadata,
@@ -53,9 +55,26 @@ def _distance_to_similarity(distance: float) -> float:
     return -1 * distance
 
 
+def _to_python_scalar(value: Any) -> Any:
+    """Convert numpy scalars (int64, float64, bool_, …) to Python primitives.
+
+    Chroma persists integer/float metadata as numpy scalars, which break JSON
+    serialization when this component is consumed as an Agent tool — LangChain's
+    tool-output path calls ``vars()`` / iterates the value, both of which fail
+    on numpy C-extension scalars. Coerce at the boundary so downstream stays
+    primitive-only.
+    """
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
+
+
 class MemoryBaseComponent(Component):
     display_name = "Memory Base"
-    description = "Retrieve session-scoped chat memory from a Memory Base attached to this flow."
+    description = (
+        "Retrieve long-term memory from a Memory Base attached to this workflow. "
+        "When 'Filter by Session' is off, queries run across all sessions."
+    )
     icon = "brain"
     name = "MemoryBase"
 
@@ -95,7 +114,8 @@ class MemoryBaseComponent(Component):
             display_name="Filter by Session",
             info=(
                 "If enabled, only memories from the current session will be retrieved. "
-                "Enable this if you want per-session chat history data separation."
+                "Disable to allow retrieval across every session ingested into this "
+                "Memory Base (useful for cross-conversation recall)."
             ),
             value=True,
             advanced=True,
@@ -106,16 +126,27 @@ class MemoryBaseComponent(Component):
         Output(
             name="retrieve_data",
             display_name="Results",
-            method="retrieve_data",
-            info="Returns matching memory chunks scoped to the current session.",
+            method="retrieve_memory",
+            info=(
+                "Returns matching memory chunks. Scoped to the current session by "
+                "default; turn 'Filter by Session' off to retrieve across sessions."
+            ),
         ),
     ]
 
     def _build_where_clause(self, *, session_id: str | None = None) -> dict | None:
-        """Compose the Chroma ``where`` clause based on opt-in filters and manual params."""
+        """Compose the Chroma ``where`` clause based on opt-in filters and manual params.
+
+        Uses the canonical ``$eq`` operator form rather than the implicit
+        ``{"key": "value"}`` shorthand. Both are accepted by chromadb, but the
+        explicit form is unambiguous across versions and tooling.
+        """
         predicates: list[dict] = []
-        if self.filter_by_session and session_id:
-            predicates.append({"session_id": session_id})
+        # Defensive bool() — BoolInput coerces strings, but if this attribute is
+        # ever overridden externally with a non-bool value, ``"false"`` would be
+        # truthy and silently disable the toggle.
+        if bool(self.filter_by_session) and session_id:
+            predicates.append({"session_id": {"$eq": str(session_id)}})
 
         if not predicates:
             return None
@@ -203,25 +234,41 @@ class MemoryBaseComponent(Component):
             persist_directory=str(kb_path),
             embedding_function=embedding_function,
             collection_name=kb_name,
+            **chroma_langchain_collection_kwargs(),
         )
 
     def _format_results(self, results: list[tuple]) -> DataFrame:
-        """Convert Chroma (doc, score) tuples into the component's DataFrame output."""
+        """Convert Chroma (doc, score) tuples into the component's DataFrame output.
+
+        Metadata values are coerced from numpy scalars to Python primitives so the
+        resulting DataFrame is JSON-serializable when the component is invoked as
+        an Agent tool.
+        """
         data_list: list[Data] = []
         for doc, score in results:
             kwargs: dict = {"content": doc.page_content}
             if self.search_query:
-                kwargs["_score"] = _distance_to_similarity(score)
+                kwargs["_score"] = _to_python_scalar(_distance_to_similarity(score))
             if self.include_metadata:
-                kwargs.update(doc.metadata or {})
+                for key, value in (doc.metadata or {}).items():
+                    kwargs[key] = _to_python_scalar(value)
             data_list.append(Data(**kwargs))
         return DataFrame(data=data_list)
 
-    async def retrieve_data(self) -> DataFrame:
-        """Retrieve session-scoped chunks from the selected Memory Base."""
+    async def retrieve_memory(self) -> DataFrame:
+        """Retrieve chunks from the selected Memory Base.
+
+        Scoped to the current ``session_id`` when ``filter_by_session`` is true; when
+        false, every chunk in the Memory Base is queryable so the agent can recall
+        context from prior conversations across all sessions.
+        """
         session_id = getattr(self.graph, "session_id", None)
-        if not session_id:
-            msg = "A session_id is required on the flow request to enforce data separation for Memory Base retrieval."
+        if bool(self.filter_by_session) and not session_id:
+            # Only required when filtering is on, since the value gates the where clause.
+            msg = (
+                "A session_id is required on the flow request when 'Filter by Session' "
+                "is enabled — disable the toggle to allow cross-session retrieval."
+            )
             raise ValueError(msg)
 
         flow_id = _coerce_uuid(getattr(self.graph, "flow_id", None))
@@ -251,7 +298,7 @@ class MemoryBaseComponent(Component):
         logger.debug(
             "MemoryBase retrieval mb=%s session_hash=%s where=%s top_k=%s",
             selected,
-            hash_session_id(session_id),
+            hash_session_id(session_id) if session_id else "<none>",
             where,
             self.top_k,
         )

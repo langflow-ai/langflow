@@ -1,9 +1,11 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 test(
   "should copy code from playground modal",
@@ -11,26 +13,14 @@ test(
     tag: ["@release"],
   },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-
-    await page.getByTestId("blank-flow").click();
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
+    await openBlankFlow(page);
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 30000,
     });
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
 
     await page
       .getByTestId("input_outputChat Output")
@@ -39,7 +29,7 @@ test(
       });
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat input");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatInput);
 
     await page
       .getByTestId("input_outputChat Input")
@@ -48,13 +38,16 @@ test(
       });
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("openai");
-
     await page
-      .getByTestId("openaiOpenAI")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 200 },
-      });
+      .getByTestId("sidebar-search-input")
+      .fill(TEXTS.providerOpenAiSearch);
+
+    const openAIComponent = page.getByTestId("openaiOpenAI");
+    await skipIfComponentUnavailable(openAIComponent, "OpenAI");
+
+    await openAIComponent.dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 100, y: 200 },
+    });
 
     await initialGPTsetup(page);
     await adjustScreenView(page);
@@ -80,10 +73,12 @@ test(
     await page
       .getByTestId("handle-chatinput-noshownode-chat message-source")
       .click();
-    await page.getByTestId("handle-openaimodel-shownode-input-left").click();
+    await page
+      .getByTestId("handle-openaimodelcomponent-shownode-input-left")
+      .click();
 
     await page
-      .getByTestId("handle-openaimodel-shownode-model response-right")
+      .getByTestId("handle-openaimodelcomponent-shownode-model response-right")
       .click();
     await page
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
@@ -91,7 +86,9 @@ test(
       .click();
     await adjustScreenView(page);
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });
@@ -132,20 +129,14 @@ test(
   "playground button should be enabled or disabled",
   { tag: ["@release", "@api", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     expect(await page.getByTestId("playground-btn-flow").isDisabled());
 
     expect(await page.getByText("Langflow Chat").isHidden());
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
 
     await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 30000,

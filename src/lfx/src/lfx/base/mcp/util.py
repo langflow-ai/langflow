@@ -3,11 +3,9 @@ import contextlib
 import inspect
 import json
 import os
-import platform
 import re
 import shlex
 import shutil
-import subprocess
 import unicodedata
 from collections.abc import AsyncIterator, Awaitable, Callable
 from types import UnionType
@@ -43,8 +41,82 @@ HTTP_INTERNAL_SERVER_ERROR = 500
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
 
+# SECURITY: Environment variables that enable code injection via approved MCP
+# stdio commands. All comparisons are case-insensitive (see is_dangerous_mcp_env_var).
+#
+# The stdio launcher runs servers with shell=False (no bash -c / cmd /c wrapper;
+# see MCPStdioClient._connect_to_server), which structurally neutralizes the
+# shell-startup vectors below. They are retained as defense-in-depth: a fail-safe
+# if a shell wrapper is ever reintroduced, and to keep write-time validation
+# (MCPServerConfig) aligned with the launch-time backstop. The loader and
+# interpreter entries remain load-bearing regardless of the shell, because the
+# dynamic linker / target interpreter honors them directly.
+DANGEROUS_MCP_ENV_VARS = frozenset(
+    {
+        # -- Loader / interpreter injection (dangerous even with shell=False) --
+        # Shared-object / dylib injection (arbitrary native code in any process)
+        "ld_preload",
+        "ld_library_path",
+        "ld_audit",
+        "dyld_insert_libraries",
+        "dyld_library_path",
+        # glibc iconv module injection (loads arbitrary .so via iconv)
+        "gconv_path",
+        # Command resolution override (redirects which binary is exec'd)
+        "path",
+        # Node.js code injection (honored by the node runtime itself)
+        "node_options",
+        "node_extra_ca_certs",
+        # Python code injection (honored by the python runtime itself)
+        "pythonstartup",
+        "pythonpath",
+        # Home / config directory redirection (loads attacker-controlled configs)
+        "home",
+        "xdg_config_home",
+        "xdg_data_home",
+        # Temp directory redirection
+        "tmpdir",
+        "tmp",
+        "temp",
+        # DNS / network manipulation
+        "hostaliases",
+        "localdomain",
+        "res_options",
+        # Locale / getconf injection (can load arbitrary .so on some glibc)
+        "getconf_dir",
+        # -- Shell-startup vectors (defense-in-depth; inert while shell=False) --
+        # Shell startup, option, and tracing injection
+        "bash_env",
+        "env",
+        "bash_func_",
+        "shellopts",
+        "bashopts",
+        "ps4",
+        # Shell word-splitting / globbing manipulation
+        "ifs",
+        "cdpath",
+    }
+)
+
 # MCP Session Manager constants - lazy loaded
 _mcp_settings_cache: dict[str, Any] = {}
+
+
+def is_dangerous_mcp_env_var(key: str) -> bool:
+    lower_key = key.lower()
+    return lower_key in DANGEROUS_MCP_ENV_VARS or lower_key.startswith("bash_func_")
+
+
+def _validate_mcp_stdio_env(env: dict[str, str] | None) -> dict[str, str]:
+    if env is None:
+        return {}
+
+    for key in env:
+        if is_dangerous_mcp_env_var(key):
+            msg = f"Environment variable '{key}' is not allowed for MCP stdio servers"
+            raise ValueError(msg)
+
+    return env
 
 
 def _get_mcp_setting(key: str, default: Any = None) -> Any:
@@ -53,6 +125,28 @@ def _get_mcp_setting(key: str, default: Any = None) -> Any:
         settings = get_settings_service().settings
         _mcp_settings_cache[key] = getattr(settings, key, default)
     return _mcp_settings_cache[key]
+
+
+def _resolve_mcp_tool_execution_timeout(tool_execution_timeout: float | None) -> float:
+    """Resolve MCP tool execution timeout from explicit input or MCP settings.
+
+    Priority for picking the timeout:
+    1. `tool_execution_timeout`: Custom UI override directly on the component (Highest).
+    2. Global Settings: The maximum value between `mcp_tool_execution_timeout`
+       and `mcp_server_timeout` from global settings.
+    3. Fallback: 180.0 seconds if no custom or global settings exist (Lowest).
+
+    Negative values are treated as unset (use system default) because
+    ``asyncio.wait_for`` immediately raises ``TimeoutError`` for any timeout < 0.
+    """
+    if tool_execution_timeout is not None and float(tool_execution_timeout) > 0:
+        return float(tool_execution_timeout)
+
+    configured = _get_mcp_setting("mcp_tool_execution_timeout", None)
+    mcp_server_timeout = _get_mcp_setting("mcp_server_timeout", None)
+
+    configured_timeouts = [float(value) for value in (configured, mcp_server_timeout) if value is not None]
+    return max(configured_timeouts) if configured_timeouts else 180.0
 
 
 def get_max_sessions_per_server() -> int:
@@ -1548,51 +1642,56 @@ class MCPSessionManager:
 
 
 class MCPStdioClient:
-    def __init__(self, component_cache=None):
+    def __init__(self, component_cache=None, tool_execution_timeout: float | None = None):
         self.session: ClientSession | None = None
         self._connection_params = None
         self._connected = False
         self._session_context: str | None = None
         self._component_cache = component_cache
+        self._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
     async def _connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
         """Connect to MCP server using stdio transport (SDK style).
 
-        .. todo:: Remove the ``bash -c`` / ``cmd /c`` shell wrapper and pass
-           command + args directly to ``StdioServerParameters`` (i.e.
-           ``shell=False`` semantics).  This would eliminate an entire class of
-           injection vectors (shell metacharacters, IFS manipulation,
-           BASH_ENV/BASH_FUNC_* startup injection) and allow removing several
-           entries from ``DANGEROUS_ENV_VARS`` in ``schemas.py``.  Requires:
-           1. Changing the signature to accept ``(command, args)`` separately.
-           2. Updating ``update_tools()`` to stop joining into a shell string.
-           3. Handling multi-word ``command`` config values (e.g.
-              ``"uvx mcp-server-fetch"``) by splitting at the caller.
-           4. Verifying Windows PATH resolution works without ``cmd /c``
-              (e.g. ``.cmd`` wrapper scripts like ``npx.cmd``).
-           5. Replacing the ``|| echo 'Command failed…'`` error-reporting
-              pattern with proper exit-code handling from ``anyio.open_process``.
+        The server process is launched **without a shell** (``shell=False``
+        semantics): ``command_str`` is tokenized with :func:`shlex.split` and
+        the resulting executable + arguments are passed to
+        :class:`~mcp.StdioServerParameters` directly.  The MCP SDK then execs
+        the process via ``anyio.open_process`` on POSIX and
+        ``create_windows_process`` on Windows -- the latter resolving ``.cmd`` /
+        ``.bat`` / ``.exe`` wrappers (e.g. ``npx.cmd``) through ``shutil.which``
+        -- so no ``bash -c`` / ``cmd /c`` wrapper is required on any platform.
+
+        Removing the shell wrapper structurally eliminates the entire class of
+        injection vectors that depend on a shell interpreter starting up:
+        shell metacharacters, ``IFS`` word-splitting, ``CDPATH`` redirection,
+        ``BASH_ENV`` / ``ENV`` / ``BASH_FUNC_*`` startup injection, and
+        ``PS4`` / ``SHELLOPTS`` xtrace abuse.  None of those can fire because no
+        shell is ever spawned.  The :func:`_validate_mcp_stdio_env` backstop
+        still rejects loader and interpreter env vars (``LD_PRELOAD``,
+        ``DYLD_*``, ``GCONV_PATH``, ``PYTHONPATH``, ``NODE_OPTIONS``, ...) which
+        remain dangerous regardless of the shell because they are honored by the
+        dynamic linker or the target interpreter itself.
         """
         from mcp import StdioServerParameters
 
-        command = shlex.split(command_str)
-        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env or {})}
+        command_parts = shlex.split(command_str)
+        if not command_parts:
+            msg = "MCP stdio command is empty"
+            raise ValueError(msg)
 
-        if platform.system() == "Windows":
-            server_params = StdioServerParameters(
-                command="cmd",
-                args=[
-                    "/c",
-                    f"{subprocess.list2cmdline(command)} || echo Command failed with exit code %errorlevel% 1>&2",
-                ],
-                env=env_data,
-            )
-        else:
-            server_params = StdioServerParameters(
-                command="bash",
-                args=["-c", f"exec {command_str} || echo 'Command failed with exit code $?' >&2"],
-                env=env_data,
-            )
+        safe_env = _validate_mcp_stdio_env(env)
+        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **safe_env}
+
+        # shell=False: exec the binary directly with structured args. The MCP SDK
+        # abstracts the platform differences (POSIX exec vs. Windows executable
+        # resolution), so identical parameters work on every OS and no shell
+        # interpreter is ever interposed between Langflow and the server process.
+        server_params = StdioServerParameters(
+            command=command_parts[0],
+            args=command_parts[1:],
+            env=env_data,
+        )
 
         # Store connection parameters for later use in run_tool
         self._connection_params = server_params
@@ -1647,12 +1746,13 @@ class MCPStdioClient:
         session_manager = self._get_session_manager()
         return await session_manager.get_session(self._session_context, self._connection_params, "stdio")
 
-    async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+    async def run_tool(self, tool_name: str, arguments: dict[str, Any], timeout: float | None = None) -> Any:  # noqa: ASYNC109
         """Run a tool with the given arguments using context-specific session.
 
         Args:
             tool_name: Name of the tool to run
             arguments: Dictionary of arguments to pass to the tool
+            timeout: Optional timeout in seconds. If not provided, uses the client's configured timeout.
 
         Returns:
             The result of the tool execution
@@ -1672,9 +1772,9 @@ class MCPStdioClient:
             param_hash = uuid.uuid4().hex[:8]
             self._session_context = f"default_{param_hash}"
 
-        # Tool-call timeout: env LANGFLOW_MCP_SERVER_TIMEOUT (via settings), with a 180s
-        # floor so default deployments aren't shorter than the previous hardcoded 30s.
-        timeout = max(get_settings_service().settings.mcp_server_timeout, 180.0)
+        # Use provided timeout or fall back to client's configured timeout
+        effective_timeout = timeout if timeout is not None else self._tool_execution_timeout
+
         max_retries = 2
         last_error_type = None
 
@@ -1686,7 +1786,7 @@ class MCPStdioClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=timeout,
+                    timeout=effective_timeout,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
@@ -1780,12 +1880,13 @@ class MCPStdioClient:
 
 
 class MCPStreamableHttpClient:
-    def __init__(self, component_cache=None):
+    def __init__(self, component_cache=None, tool_execution_timeout: float | None = None):
         self.session: ClientSession | None = None
         self._connection_params = None
         self._connected = False
         self._session_context: str | None = None
         self._component_cache = component_cache
+        self._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
     def _get_session_manager(self) -> MCPSessionManager:
         """Get or create session manager from component cache."""
@@ -1930,12 +2031,13 @@ class MCPStreamableHttpClient:
             # DELETE is advisory—log and continue
             logger.debug(f"Unable to send session DELETE to '{url}': {e}")
 
-    async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+    async def run_tool(self, tool_name: str, arguments: dict[str, Any], timeout: float | None = None) -> Any:  # noqa: ASYNC109
         """Run a tool with the given arguments using context-specific session.
 
         Args:
             tool_name: Name of the tool to run
             arguments: Dictionary of arguments to pass to the tool
+            timeout: Optional timeout in seconds. If not provided, uses the client's configured timeout.
 
         Returns:
             The result of the tool execution
@@ -1955,9 +2057,9 @@ class MCPStreamableHttpClient:
             param_hash = uuid.uuid4().hex[:8]
             self._session_context = f"default_http_{param_hash}"
 
-        # Tool-call timeout: env LANGFLOW_MCP_SERVER_TIMEOUT (via settings), with a 180s
-        # floor so default deployments aren't shorter than the previous hardcoded 30s.
-        timeout = max(get_settings_service().settings.mcp_server_timeout, 180.0)
+        # Use provided timeout or fall back to client's configured timeout
+        effective_timeout = timeout if timeout is not None else self._tool_execution_timeout
+
         max_retries = 2
         last_error_type = None
 
@@ -1969,7 +2071,7 @@ class MCPStreamableHttpClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=timeout,
+                    timeout=effective_timeout,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
@@ -2065,6 +2167,7 @@ async def update_tools(
     mcp_streamable_http_client: MCPStreamableHttpClient | None = None,
     mcp_sse_client: MCPStreamableHttpClient | None = None,  # Backward compatibility
     request_variables: dict[str, str] | None = None,
+    tool_execution_timeout: float | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools.
 
@@ -2075,17 +2178,35 @@ async def update_tools(
         mcp_streamable_http_client: Optional streamable HTTP client instance
         mcp_sse_client: Optional SSE client instance (backward compatibility)
         request_variables: Optional dict of global variables to resolve in headers
+        tool_execution_timeout: Optional timeout in seconds for tool execution (int or float)
     """
     if server_config is None:
         server_config = {}
     if not server_name:
         return "", [], {}
+
     if mcp_stdio_client is None:
-        mcp_stdio_client = MCPStdioClient()
+        mcp_stdio_client = MCPStdioClient(tool_execution_timeout=tool_execution_timeout)
+    # Update timeout on existing client only if a new timeout is provided.
+    # Route through _resolve_mcp_tool_execution_timeout so that negative values
+    # (entered before UI validation fires) never reach asyncio.wait_for.
+    elif tool_execution_timeout is not None:
+        mcp_stdio_client._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
     # Backward compatibility: accept mcp_sse_client parameter
     if mcp_streamable_http_client is None:
-        mcp_streamable_http_client = mcp_sse_client if mcp_sse_client is not None else MCPStreamableHttpClient()
+        if mcp_sse_client is not None:
+            mcp_streamable_http_client = mcp_sse_client
+            # Set timeout on the aliased client if provided
+            if tool_execution_timeout is not None:
+                mcp_streamable_http_client._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(
+                    tool_execution_timeout
+                )
+        else:
+            mcp_streamable_http_client = MCPStreamableHttpClient(tool_execution_timeout=tool_execution_timeout)
+    # Update timeout on existing client only if a new timeout is provided
+    elif tool_execution_timeout is not None:
+        mcp_streamable_http_client._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
     # Fetch server config from backend
     # Determine mode from config, defaulting to Streamable_HTTP if URL present

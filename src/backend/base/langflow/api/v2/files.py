@@ -16,6 +16,8 @@ from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession, build_content_disposition
+from langflow.services.authorization import FileAction, ensure_file_permission
+from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
@@ -67,6 +69,38 @@ async def get_mcp_file(current_user: CurrentActiveUser, *, extension: bool = Fal
     return f"{MCP_SERVERS_FILE}_{current_user.id!s}" + (".json" if extension else "")
 
 
+async def _validate_uploaded_mcp_config(file: UploadFile) -> None:
+    """Validate an uploaded MCP servers config against MCPServerConfig.
+
+    Security: the uploaded bytes become the user's MCP servers config, whose
+    ``command``/``args`` are later spawned via the stdio transport. The structured
+    ``/api/v2/mcp/servers`` endpoints validate each entry with ``MCPServerConfig``
+    (command allow-list, arg/env checks); this file-upload path must apply the SAME
+    validation so it cannot be used to bypass the allow-list and run an arbitrary
+    command on the server. Rewinds the file so the subsequent save re-reads it.
+    """
+    import json
+
+    from pydantic import ValidationError
+
+    from langflow.api.v2.schemas import MCPServerConfig
+
+    raw = await file.read()
+    await file.seek(0)
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise HTTPException(status_code=422, detail="Invalid MCP servers config: not valid JSON") from exc
+    servers = parsed.get("mcpServers") if isinstance(parsed, dict) else None
+    if not isinstance(servers, dict):
+        raise HTTPException(status_code=422, detail="Invalid MCP servers config: expected an 'mcpServers' object")
+    for name, cfg in servers.items():
+        try:
+            MCPServerConfig.model_validate(cfg)
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail=f"Invalid MCP server '{name}': {exc}") from exc
+
+
 async def byte_stream_generator(file_input, chunk_size: int = 8192) -> AsyncGenerator[bytes, None]:
     """Convert bytes object or stream into an async generator that yields chunks."""
     if isinstance(file_input, bytes):
@@ -87,18 +121,20 @@ async def byte_stream_generator(file_input, chunk_size: int = 8192) -> AsyncGene
 
 
 async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser, session: DbSession):
-    # Fetch the file from the DB
-    stmt = select(UserFile).where(UserFile.id == file_id)
-    results = await session.exec(stmt)
-    file = results.first()
+    # Share-aware fetch. Under the OSS pass-through this keeps the existing
+    # owner-scoped query (cannot widen visibility). Authorization plugins set
+    # ``SUPPORTS_CROSS_USER_FETCH=True`` so a share grant can resolve here.
+    file = await authorized_or_owner_scoped(
+        session,
+        UserFile,
+        id_column=UserFile.id,
+        resource_id=file_id,
+        owner_column=UserFile.user_id,
+        owner_id=current_user.id,
+    )
 
     # Check if the file exists
     if not file:
-        raise HTTPException(status_code=404, detail="File not found")
-
-    # Make sure the user has access to the file
-    if file.user_id != current_user.id:
-        # Return 404 to prevent information disclosure about resource existence
         raise HTTPException(status_code=404, detail="File not found")
 
     return file
@@ -140,6 +176,11 @@ async def upload_user_file(
     ephemeral: bool = False,
 ) -> UploadFileResponse:
     """Upload a file for the current user and track it in the database."""
+    await ensure_file_permission(
+        current_user,
+        FileAction.CREATE,
+        file_user_id=current_user.id,
+    )
     # Get the max allowed file size from settings (in MB)
     try:
         max_file_size_upload = settings_service.settings.max_file_size_upload
@@ -241,6 +282,24 @@ async def upload_user_file(
         existing_file = None
 
         if new_filename == mcp_file_ext:
+            # Honor the MCP-servers lock on this path too. The structured
+            # /api/v2/mcp/servers endpoints reject non-superuser writes when the lock
+            # is on, but this branch writes the same _mcp_servers_<uid>.json that
+            # get_server_list reads — so without the same guard a non-superuser could
+            # replace their MCP config via the file-upload path while it's locked.
+            from langflow.api.v2.mcp import is_mcp_servers_locked
+
+            if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
+                raise HTTPException(
+                    status_code=403,
+                    detail="MCP server configuration is locked. "
+                    "Contact an administrator to manage external MCP servers.",
+                )
+            # Validate the uploaded MCP servers config before storing it, so this
+            # path can't bypass the command allow-list enforced by the structured
+            # /api/v2/mcp/servers endpoints (otherwise an attacker-supplied command
+            # would later be spawned via the stdio transport -> RCE).
+            await _validate_uploaded_mcp_config(file)
             # Check if an existing record exists; if so, delete it to replace with the new one
             existing_mcp_file = await get_file_by_name(mcp_file, current_user, session)
             if existing_mcp_file:
@@ -414,6 +473,11 @@ async def list_files(
     # storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ) -> list[UserFile]:
     """List the files available to the current user."""
+    await ensure_file_permission(
+        current_user,
+        FileAction.READ,
+        file_user_id=current_user.id,
+    )
     try:
         # Load sample files if they don't exist
         # TODO: Pending further testing
@@ -441,13 +505,32 @@ async def delete_files_batch(
 ):
     """Delete multiple files by their IDs."""
     try:
-        # Fetch all files from the DB
-        stmt = select(UserFile).where(col(UserFile.id).in_(file_ids), col(UserFile.user_id) == current_user.id)
+        # Share-aware fetch: when an authorization plugin supports cross-user
+        # access, the SELECT loads by id alone so each row's true owner
+        # surfaces and per-row ``ensure_file_permission`` can decide. The OSS
+        # pass-through keeps the owner-scoped query.
+        from langflow.services.deps import get_authorization_service
+
+        authz = get_authorization_service()
+        share_aware = await authz.supports_cross_user_fetch() and await authz.is_enabled()
+        stmt = select(UserFile).where(col(UserFile.id).in_(file_ids))
+        if not share_aware:
+            stmt = stmt.where(col(UserFile.user_id) == current_user.id)
         results = await session.exec(stmt)
         files = results.all()
 
         if not files:
             raise HTTPException(status_code=404, detail="No files found")
+
+        # Per-file authorization. Use the true owner so a delete share on
+        # someone else's file is enforced against the right object key.
+        for file in files:
+            await ensure_file_permission(
+                current_user,
+                FileAction.DELETE,
+                file_id=file.id,
+                file_user_id=file.user_id,
+            )
 
         # Track storage deletion failures
         storage_failures = []
@@ -456,12 +539,14 @@ async def delete_files_batch(
 
         # Delete all files from the storage service
         for file in files:
-            # Extract just the filename from the path (strip user_id prefix)
+            # Extract just the filename from the path (strip user_id prefix).
+            # The file lives under its owner's namespace.
             file_name = Path(file.path).name
+            owner_id = str(file.user_id)
             storage_deleted = False
 
             try:
-                await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
+                await storage_service.delete_file(flow_id=owner_id, file_name=file_name)
                 storage_deleted = True
             except OSError as err:
                 # Check if this is a "permanent" failure where file/storage is gone
@@ -538,24 +623,37 @@ async def download_files_batch(
 ):
     """Download multiple files as a zip file by their IDs."""
     try:
-        # Fetch all files from the DB
-        stmt = select(UserFile).where(col(UserFile.id).in_(file_ids), col(UserFile.user_id) == current_user.id)
+        # Share-aware SELECT so a non-owner with a read share resolves the
+        # row; per-row ensure_file_permission below uses the true owner.
+        from langflow.services.deps import get_authorization_service
+
+        authz = get_authorization_service()
+        share_aware = await authz.supports_cross_user_fetch() and await authz.is_enabled()
+        stmt = select(UserFile).where(col(UserFile.id).in_(file_ids))
+        if not share_aware:
+            stmt = stmt.where(col(UserFile.user_id) == current_user.id)
         results = await session.exec(stmt)
         files = results.all()
 
         if not files:
             raise HTTPException(status_code=404, detail="No files found")
 
+        for file in files:
+            await ensure_file_permission(
+                current_user,
+                FileAction.READ,
+                file_id=file.id,
+                file_user_id=file.user_id,
+            )
+
         # Create a byte stream to hold the ZIP file
         zip_stream = io.BytesIO()
 
-        # Create a ZIP file
+        # Create a ZIP file. Each file is read from its owner's storage
+        # namespace, not the actor's.
         with zipfile.ZipFile(zip_stream, "w") as zip_file:
             for file in files:
-                # Get the file content from storage
-                file_content = await storage_service.get_file(
-                    flow_id=str(current_user.id), file_name=Path(file.path).name
-                )
+                file_content = await storage_service.get_file(flow_id=str(file.user_id), file_name=Path(file.path).name)
 
                 # Get the file extension from the original filename
                 file_extension = Path(file.path).suffix
@@ -648,13 +746,26 @@ async def download_file(
         if not file:
             raise HTTPException(status_code=404, detail="File not found")
 
-        # Get the basename of the file path
+        try:
+            await ensure_file_permission(
+                current_user,
+                FileAction.READ,
+                file_id=file.id,
+                file_user_id=file.user_id,
+            )
+        except HTTPException as exc:
+            raise deny_to_404(exc, detail="File not found") from exc
+
+        # Get the basename of the file path. The file lives under the owner's
+        # storage namespace, not the actor's — for a shared-file read by a
+        # non-owner the bytes are at ``flow_id=str(file.user_id)``.
         file_name = Path(file.path).name
+        owner_id = str(file.user_id)
 
         # If return_content is True, read the file content and return it
         if return_content:
             # For content return, get the full file
-            file_content = await storage_service.get_file(flow_id=str(current_user.id), file_name=file_name)
+            file_content = await storage_service.get_file(flow_id=owner_id, file_name=file_name)
             if file_content is None:
                 raise HTTPException(status_code=404, detail="File not found")
             return await read_file_content(file_content, decode=True)
@@ -662,12 +773,12 @@ async def download_file(
         # Check file exists before streaming (to catch errors before response headers are sent)
         # This is important because once StreamingResponse starts, we can't change the status code
         try:
-            await storage_service.get_file_size(flow_id=str(current_user.id), file_name=file_name)
+            await storage_service.get_file_size(flow_id=owner_id, file_name=file_name)
         except FileNotFoundError as e:
             raise HTTPException(status_code=404, detail=f"File not found: {e}") from e
 
         # Wrap the async generator in byte_stream_generator to ensure proper iteration
-        file_stream = storage_service.get_file_stream(flow_id=str(current_user.id), file_name=file_name)
+        file_stream = storage_service.get_file_stream(flow_id=owner_id, file_name=file_name)
         byte_stream = byte_stream_generator(file_stream)
 
         # Create the filename with extension
@@ -701,10 +812,21 @@ async def edit_file_name(
     try:
         # Fetch the file from the DB
         file = await fetch_file_object(file_id, current_user, session)
+        try:
+            await ensure_file_permission(
+                current_user,
+                FileAction.WRITE,
+                file_id=file.id,
+                file_user_id=file.user_id,
+            )
+        except HTTPException as exc:
+            raise deny_to_404(exc, detail="File not found") from exc
 
         # Update the file name
         file.name = name
         session.add(file)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error editing file: {e}") from e
 
@@ -725,13 +847,26 @@ async def delete_file(
         if not file_to_delete:
             raise HTTPException(status_code=404, detail="File not found")
 
-        # Extract just the filename from the path (strip user_id prefix)
+        try:
+            await ensure_file_permission(
+                current_user,
+                FileAction.DELETE,
+                file_id=file_to_delete.id,
+                file_user_id=file_to_delete.user_id,
+            )
+        except HTTPException as exc:
+            raise deny_to_404(exc, detail="File not found") from exc
+
+        # Extract just the filename from the path (strip user_id prefix).
+        # The file lives under the owner's namespace; for shared-file deletes
+        # by a non-owner, we must point at ``file_to_delete.user_id``.
         file_name = Path(file_to_delete.path).name
+        owner_id = str(file_to_delete.user_id)
 
         # Delete the file from the storage service first
         storage_deleted = False
         try:
-            await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
+            await storage_service.delete_file(flow_id=owner_id, file_name=file_name)
             storage_deleted = True
         except Exception as err:
             # Check if this is a "permanent" failure where file/storage is gone
@@ -788,6 +923,11 @@ async def delete_all_files(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Delete all files for the current user."""
+    await ensure_file_permission(
+        current_user,
+        FileAction.DELETE,
+        file_user_id=current_user.id,
+    )
     try:
         # Fetch all files from the DB
         stmt = select(UserFile).where(UserFile.user_id == current_user.id)

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import type { Deployment } from "../types";
+import { type Deployment, getDeploymentDisplayName } from "../types";
 
 interface TestDeploymentModal {
   testTarget: { id: string; name: string } | null;
@@ -40,8 +40,11 @@ export function useTestDeploymentModal(): TestDeploymentModal {
   }, [location.state, navigate]);
 
   const handleTestDeployment = useCallback((deployment: Deployment) => {
-    setTestTarget(deployment);
-    setTestProviderId(deployment.provider_id ?? "");
+    setTestTarget({
+      id: deployment.id,
+      name: getDeploymentDisplayName(deployment),
+    });
+    setTestProviderId(deployment.provider_id);
   }, []);
 
   const handleTestFromStepper = useCallback(

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import shutil
 
 # we need to import tmpdir
@@ -25,7 +26,13 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id_unchecked
-from langflow.services.deps import get_auth_service, get_db_service, session_scope
+from langflow.services.deps import (
+    get_auth_service,
+    get_db_service,
+    get_settings_service,
+    is_settings_service_initialized,
+    session_scope,
+)
 from lfx.components.input_output import ChatInput
 from lfx.graph import Graph
 from lfx.log.logger import logger
@@ -39,6 +46,59 @@ from typer.testing import CliRunner
 from tests.api_keys import get_openai_api_key
 
 load_dotenv()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_rate_limiting():
+    """Disable rate limiting for all tests to prevent 429 errors during test execution."""
+    os.environ["LANGFLOW_RATE_LIMIT_ENABLED"] = "false"
+    yield
+    os.environ.pop("LANGFLOW_RATE_LIMIT_ENABLED", None)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_models_dev_refresh():
+    """Keep the models.dev background refresh out of tests.
+
+    Every app boot otherwise launches a lifespan task that fetches
+    https://models.dev/api.json mid-test, which both hits the network and
+    trips event-loop-block detectors (pyleak) in whatever test happens to be
+    running when the request lands. The bundled static model lists are used
+    instead, which is also deterministic.
+    """
+    os.environ["LANGFLOW_MODELS_DEV_REFRESH"] = "false"
+    yield
+    os.environ.pop("LANGFLOW_MODELS_DEV_REFRESH", None)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_mcp_auto_init():
+    """Keep the MCP server auto-initialization out of tests.
+
+    Every app boot otherwise schedules a lifespan task (``delayed_init_mcp_servers``)
+    that, ~10s in, reconciles each project's MCP server config. For apikey/none projects
+    that reconciliation spawns ``uvx mcp-proxy`` and makes an outbound connect with no
+    bounded timeout, so on a slow/CI runner it hangs until the OS connect timeout (~127s),
+    inflating every app-fixture test by ~130s and pushing the heaviest test split past the
+    CI step timeout. Skipping it keeps the boot local and deterministic.
+    """
+    previous_env_value = os.environ.get("LANGFLOW_SKIP_MCP_AUTO_INIT")
+    previous_setting = (
+        get_settings_service().settings.skip_mcp_auto_init
+        if is_settings_service_initialized()
+        else (previous_env_value or "").lower() in {"1", "true", "yes", "on"}
+    )
+
+    os.environ["LANGFLOW_SKIP_MCP_AUTO_INIT"] = "true"
+    if is_settings_service_initialized():
+        get_settings_service().set("skip_mcp_auto_init", value=True)
+    yield
+    if previous_env_value is None:
+        os.environ.pop("LANGFLOW_SKIP_MCP_AUTO_INIT", None)
+    else:
+        os.environ["LANGFLOW_SKIP_MCP_AUTO_INIT"] = previous_env_value
+    if is_settings_service_initialized():
+        get_settings_service().set("skip_mcp_auto_init", previous_setting)
 
 
 # TODO: Revert this to True once bb.functions[func].can_block_in("http/client.py", "_safe_read") is fixed
@@ -109,6 +169,10 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "noclient: don't create a client for this test")
     config.addinivalue_line("markers", "load_flows: load the flows for this test")
     config.addinivalue_line("markers", "api_key_required: run only if the api key is set in the environment variables")
+    config.addinivalue_line(
+        "markers",
+        "real_services: Tests that need real service instances (real SQLite + real Postgres + real Redis)",
+    )
     data_path = Path(__file__).parent.absolute() / "data"
 
     pytest.BASIC_EXAMPLE_PATH = data_path / "basic_example.json"
@@ -294,6 +358,8 @@ def distributed_client_fixture(
         db_path = Path(db_dir) / "test.db"
         monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
         monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+        monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
+        monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
         # monkeypatch langflow.services.task.manager.USE_CELERY to True
         # monkeypatch.setattr(manager, "USE_CELERY", True)
         monkeypatch.setattr(celery_app, "celery_app", celery_app.make_celery("langflow", Config))
@@ -409,6 +475,16 @@ def deactivate_tracing(monkeypatch):
     monkeypatch.undo()
 
 
+@pytest.fixture(autouse=True)
+def disable_telemetry_writer(monkeypatch):
+    # Tests assert on freshly-written transactions / vertex_builds rows. The
+    # batched writer is a production optimization; in tests we want the
+    # synchronous legacy DB path so reads-after-writes are visible.
+    monkeypatch.setenv("LANGFLOW_TELEMETRY_WRITER_ENABLED", "false")
+    yield
+    monkeypatch.undo()
+
+
 @pytest.fixture
 def use_noop_session(monkeypatch):
     monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
@@ -436,6 +512,9 @@ async def client_fixture(
             db_path = Path(db_dir) / "test.db"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
+            monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
+            monkeypatch.setenv("DO_NOT_TRACK", "true")
             if "load_flows" in request.keywords:
                 shutil.copyfile(
                     pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"

@@ -61,7 +61,11 @@ def test_round_trip_every_v0_field() -> None:
     # Required fields preserved exactly.
     assert dumped["id"] == _VALID["id"]
     assert dumped["version"] == _VALID["version"]
-    assert dumped["bundles"] == _VALID["bundles"]
+    # Optional bundle metadata (``display_name`` / ``icon``) defaults to None
+    # when unset; strip those keys before comparing so adding new optional
+    # fields stays backwards-compatible with manifests that omit them.
+    normalised = [{k: v for k, v in b.items() if v is not None} for b in dumped["bundles"]]
+    assert normalised == _VALID["bundles"]
     assert dumped["lfx"] == _VALID["lfx"]
     assert dumped["capabilities"] == _VALID["capabilities"]
 
@@ -94,7 +98,10 @@ def test_minimal_manifest_round_trip() -> None:
         ({"name": ""}, "name"),
         ({"lfx": {"compat": []}}, "compat"),
         ({"lfx": {"compat": ["0"]}}, "compat"),
-        ({"bundles": []}, "bundles"),
+        # Empty bundles is now allowed at the field level (provider-only
+        # extensions ship no components); the cross-field rule rejects a manifest
+        # that declares neither a bundle nor a provider.
+        ({"bundles": []}, "at least one bundle"),
         ({"bundles": [{"name": "Bad-Name", "path": "x"}]}, "name"),
         ({"bundles": [{"name": "x", "path": "/abs/path"}]}, "path"),
         ({"bundles": [{"name": "x", "path": "../escape"}]}, "path"),

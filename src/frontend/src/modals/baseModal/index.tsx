@@ -225,6 +225,8 @@ interface BaseModalProps {
   dialogContentWithouFixed?: boolean;
   height?: string;
   width?: string;
+  /** Accessible name for type="full-screen", which has no DialogTitle. */
+  ariaLabel?: string;
 }
 function BaseModal({
   className,
@@ -241,6 +243,7 @@ function BaseModal({
   dialogContentWithouFixed = false,
   height: customHeight,
   width: customWidth,
+  ariaLabel,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header,
@@ -299,7 +302,12 @@ function BaseModal({
           </ModalContent>
         </Modal>
       ) : type === "full-screen" ? (
-        <div className="min-h-full w-full flex-1 overflow-hidden">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={ariaLabel ?? "Dialog"}
+          className="min-h-full w-full flex-1 overflow-hidden"
+        >
           {modalContent}
         </div>
       ) : (

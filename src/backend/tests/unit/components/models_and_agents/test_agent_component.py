@@ -40,14 +40,12 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             "_type": "Agent",
             "add_current_date_tool": True,
             "add_calculator_tool": True,
-            "agent_description": "A helpful agent",
             "model": MockLanguageModel(),
             "handle_parsing_errors": True,
             "input_value": "",
             "max_iterations": 10,
             "system_prompt": "You are a helpful assistant.",
             "tools": [],
-            "verbose": True,
             "n_messages": 100,
             "format_instructions": "You are an AI that extracts structured JSON objects from unstructured text.",
             "output_schema": [],
@@ -184,7 +182,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert watsonx_url_input.show is False
         assert project_id_input.show is False
 
-    @patch("lfx.components.models_and_agents.agent.get_language_model_options")
+    @patch("lfx.base.models.unified_models.get_language_model_options")
     async def test_update_build_config_shows_watsonx_fields(self, mock_opts, component_class, default_kwargs):
         """Test that update_build_config shows WatsonX fields when IBM WatsonX is selected."""
         from lfx.schema.dotdict import dotdict
@@ -221,7 +219,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert updated_config["base_url_ibm_watsonx"]["required"] is False
         assert updated_config["project_id"]["required"] is False
 
-    @patch("lfx.components.models_and_agents.agent.get_language_model_options")
+    @patch("lfx.base.models.unified_models.get_language_model_options")
     async def test_update_build_config_hides_watsonx_fields_for_other_providers(
         self, mock_opts, component_class, default_kwargs
     ):
@@ -451,6 +449,100 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         # Note: The provider-specific field name mapping happens inside get_llm,
         # so we just verify max_tokens is passed correctly
 
+    async def test_should_expose_stream_input_when_agent_component_is_loaded(self, component_class, default_kwargs):
+        """Regression: the Stream toggle disappeared from the Agent after the ModelInput unification (#12025).
+
+        Given the Agent component is loaded, When its inputs are inspected,
+        Then a 'stream' input field must be present so users can control LLM streaming.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
+
+        assert "stream" in input_names, "stream input field should be present on the Agent component"
+        assert hasattr(component, "stream"), "Component should have a stream attribute"
+
+    async def test_should_default_stream_input_value_to_true_when_agent_loaded(self, component_class, default_kwargs):
+        """Regression guard for PR #13358: the ``stream`` BoolInput default MUST be True.
+
+        If a future refactor flips the default back to False (as it was between PR #13155
+        and PR #13358), new flows created from the bare AgentComponent will save
+        ``stream=False`` and silently lose Playground live-typing. The fix in
+        ``_get_llm`` hard-codes stream=True regardless of the toggle, but the
+        UI-facing default must STILL be True so users don't see a misleading
+        OFF state in the inspector.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        stream_input = next((inp for inp in component.inputs if getattr(inp, "name", None) == "stream"), None)
+        assert stream_input is not None, "stream BoolInput must exist on AgentComponent"
+        assert getattr(stream_input, "value", None) is True, (
+            "AgentComponent.inputs[stream].value must default to True. "
+            "Flipping this default reintroduces the regression that PR #13358 fixed."
+        )
+        assert getattr(stream_input, "advanced", False) is True, (
+            "stream toggle is hidden under Advanced so users don't accidentally disable it."
+        )
+
+    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_should_force_stream_true_to_get_llm_even_when_toggle_is_false(
+        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
+    ):
+        """Streaming is mandatory: even if a saved flow has ``stream=False``, the LLM must stream.
+
+        Belt-and-suspenders against the PR-#13155 regression: even if a future change
+        accidentally re-wires ``_get_llm`` to read ``self.stream`` (and the saved value
+        is False), the contract is that ``get_llm`` MUST receive ``stream=True`` so the
+        chat model is built with ``streaming=True``. Mirror of the lfx-side test
+        ``test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_false``.
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_get_memory_data.return_value = AsyncMock(return_value=[])
+        mock_get_llm.return_value = MagicMock()
+
+        default_kwargs["stream"] = False
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+
+        await component.get_agent_requirements()
+
+        mock_get_llm.assert_called_once()
+        call_kwargs = mock_get_llm.call_args.kwargs
+        assert call_kwargs.get("stream") is True, (
+            "Agent must call get_llm with stream=True regardless of the BoolInput value. "
+            f"Got stream={call_kwargs.get('stream')!r}. The Agent has no opt-out from streaming."
+        )
+
+    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_should_pass_stream_value_to_get_llm_when_stream_input_is_enabled(
+        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
+    ):
+        """Regression: the Agent must forward the Stream toggle value to get_llm().
+
+        Given stream=True on the Agent, When get_agent_requirements runs,
+        Then get_llm() must be called with stream=True so the LLM streams responses.
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_get_memory_data.return_value = AsyncMock(return_value=[])
+        mock_get_llm.return_value = MagicMock()
+
+        default_kwargs["stream"] = True
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # validate_model_selection requires a list — set a valid model selection
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+
+        await component.get_agent_requirements()
+
+        mock_get_llm.assert_called_once()
+        call_kwargs = mock_get_llm.call_args.kwargs
+        assert "stream" in call_kwargs, "stream should be passed to get_llm"
+        assert call_kwargs["stream"] is True
+
     async def test_should_append_calculator_tool_when_add_calculator_toggle_is_true(
         self, component_class, default_kwargs
     ):
@@ -502,6 +594,48 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             _, _, tools = await component.get_agent_requirements()
 
         assert tools == []
+
+    async def test_should_register_calculator_tool_only_once_when_external_calculator_connected_and_toggle_enabled(
+        self, component_class, default_kwargs
+    ):
+        """Internal toggle must not register a tool whose name already comes from an external connection.
+
+        Bug: Agent has add_calculator_tool=True (default). When a Calculator component is also
+        wired into the external Tools input, the StructuredTool 'evaluate_expression' is registered
+        twice. Anthropic and Gemini reject duplicate tool names with HTTP 400
+        ('Tool names must be unique' / 'Duplicate function declaration found: evaluate_expression').
+
+        Given add_calculator_tool=True AND an external Calculator-derived tool already in self.tools,
+        When get_agent_requirements runs,
+        Then the resulting tools list contains 'evaluate_expression' exactly once.
+        """
+        from unittest.mock import AsyncMock
+
+        from lfx.components.utilities.calculator_core import CalculatorComponent
+
+        # An external connection delivers exactly the StructuredTool that
+        # CalculatorComponent.to_toolkit() produces — re-use the same path here.
+        external_calc_tool = (await CalculatorComponent().to_toolkit()).pop(0)
+        assert external_calc_tool.name == "evaluate_expression"
+
+        default_kwargs["add_calculator_tool"] = True
+        default_kwargs["add_current_date_tool"] = False
+        default_kwargs["tools"] = [external_calc_tool]
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+            _, _, tools = await component.get_agent_requirements()
+
+        tool_names = [t.name for t in tools]
+        assert tool_names.count("evaluate_expression") == 1, (
+            f"'evaluate_expression' must be registered exactly once; got {tool_names!r}. "
+            "Duplicate tool names are rejected by Anthropic/Gemini with HTTP 400."
+        )
 
     def test_should_replace_current_date_and_model_name_when_both_placeholders_present(self, component_class):
         """Unit test: helper replaces both placeholders with concrete values."""
@@ -780,6 +914,131 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert prompt_input is not None
         assert "{current_date}" in prompt_input.value
         assert "{model_name}" in prompt_input.value
+
+    async def test_should_keep_description_in_sync_when_agent_used_as_tool(self, component_class, default_kwargs):
+        """Regression for GitHub issue #9155.
+
+        When an Agent is exposed as a tool, the deprecated agent_description
+        override made the generated tool's ``description`` diverge from
+        ``display_description`` on the very first build. That divergence made the
+        merge logic in ``_build_tools_metadata_input()`` permanently treat the
+        description as a user customization, so later changes to the agent's
+        description never reached the parent agent's Actions panel.
+
+        Invariant under test: on the first build, a non-user-edited
+        agent-as-tool entry must have ``description == display_description``,
+        exactly like regular tool components.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        await component._build_tools_metadata_input()
+
+        metadata = component.tools_metadata
+        assert metadata, "Agent-as-tool should produce at least one tool entry"
+        for item in metadata:
+            assert item["description"] == item["display_description"], (
+                "Agent-as-tool description diverged from display_description on "
+                f"first build (issue #9155): {item['description']!r} != {item['display_description']!r}"
+            )
+
+    async def test_should_propagate_description_change_when_agent_used_as_tool(self, component_class, default_kwargs):
+        """Regression for GitHub issue #9155 (user-visible symptom).
+
+        A change to the child agent's tool description must reach the parent
+        agent's Actions panel on the next build, as long as the user did not
+        manually customize it in the panel.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        await component._build_tools_metadata_input()
+        first_description = component.tools_metadata[0]["description"]
+
+        # Simulate the child agent's description changing (e.g. component.description),
+        # then the parent re-reading the tool. The new value must propagate.
+        component.description = "An updated agent description"
+        await component._build_tools_metadata_input()
+        second_description = component.tools_metadata[0]["description"]
+
+        assert second_description != first_description, (
+            "Description change on the child agent was not propagated to the "
+            f"Actions panel (issue #9155): still {second_description!r}"
+        )
+        assert "An updated agent description" in second_description
+
+    async def test_update_build_config_does_not_require_deprecated_agent_description(
+        self, component_class, default_kwargs
+    ):
+        """Regression for PR #13151 review (P0).
+
+        The deprecated ``agent_description`` input was removed from the agent
+        template. The concrete ``AgentComponent`` must no longer list it in the
+        ``update_build_config`` ``default_keys``, otherwise a model refresh
+        raises ``ValueError: Missing required keys`` because the key is gone
+        from the generated template.
+        """
+        from lfx.schema.dotdict import dotdict
+
+        with patch("lfx.components.models_and_agents.agent.get_language_model_options") as mock_opts:
+            mock_opts.return_value = [
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ]
+            component = await self.component_setup(component_class, default_kwargs)
+            frontend_node = component.to_frontend_node()
+            build_config = frontend_node["data"]["node"]["template"]
+
+            assert "agent_description" not in build_config, (
+                "Deprecated agent_description must not be present in the agent template"
+            )
+
+            # Must not raise "Missing required keys in build_config".
+            updated_config = await component.update_build_config(
+                dotdict(build_config), mock_opts.return_value, field_name="model"
+            )
+
+        assert "agent_description" not in updated_config
+
+    async def test_get_tools_does_not_call_removed_api(self, component_class, default_kwargs):
+        """Regression for PR #13151 review (P0).
+
+        The concrete ``AgentComponent._get_tools()`` used to call the removed
+        ``get_tool_description()`` for a tool-description override. Building the
+        agent-as-tool must not raise ``AttributeError`` and must succeed.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        tools = await component._get_tools()
+
+        assert tools, "Agent-as-tool must still produce at least one tool"
+
+    async def test_get_tool_description_backward_compat_shim(self, component_class, default_kwargs):
+        """Regression for PR #13151 review (P1).
+
+        Flows serialized with the pre-deprecation component code still call
+        ``self.get_tool_description()``. The base class must keep this shim so
+        those flows stay loadable: it returns the default when no
+        ``agent_description`` is set, and the old value when an old serialized
+        component still defines and sets it.
+        """
+        from lfx.base.agents.agent import DEFAULT_TOOLS_DESCRIPTION
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # New components have no agent_description -> falls back to the default.
+        assert component.get_tool_description() == DEFAULT_TOOLS_DESCRIPTION
+
+        # Old serialized component code defines its own agent_description input
+        # and sets it; the shim must surface that value unchanged.
+        component.agent_description = "Legacy serialized description"
+        assert component.get_tool_description() == "Legacy serialized description"
 
 
 class TestAgentComponentWithClient(ComponentTestBaseWithClient):

@@ -25,6 +25,7 @@ from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models import Flow
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.user.model import User
@@ -287,6 +288,18 @@ async def handle_call_tool(
             msg = f"Flow '{name}' not found in project {project_id}"
             raise ValueError(msg)
 
+        # Enforce execute permission (owner override + external access ceiling)
+        # before running the flow. Without this an external "viewer" could run a
+        # flow as a tool, escaping the deny-only access ceiling.
+        await ensure_flow_permission(
+            current_user,
+            FlowAction.EXECUTE,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            workspace_id=flow.workspace_id,
+            folder_id=flow.folder_id,
+        )
+
         # Process inputs
         processed_inputs = dict(arguments)
 
@@ -296,10 +309,8 @@ async def handle_call_tool(
                 progress_token=progress_token, progress=0.0, total=1.0
             )
 
-        conversation_id = str(uuid4())
-        input_request = SimplifiedAPIRequest(
-            input_value=processed_inputs.get("input_value", ""), session_id=conversation_id
-        )
+        session_id = processed_inputs.pop("session_id", None) or str(uuid4())
+        input_request = SimplifiedAPIRequest(input_value=processed_inputs.get("input_value", ""), session_id=session_id)
 
         async def send_progress_updates(progress_token):
             try:
@@ -384,7 +395,7 @@ async def handle_call_tool(
         raise
 
 
-async def handle_list_tools(project_id=None, *, mcp_enabled_only=False):
+async def handle_list_tools(project_id: UUID | None = None, *, mcp_enabled_only: bool = False):
     """Handle listing tools for MCP.
 
     Args:
@@ -403,8 +414,20 @@ async def handle_list_tools(project_id=None, *, mcp_enabled_only=False):
         async with session_scope() as session:
             # Build query based on parameters
             if project_id:
-                # Filter flows by project and optionally by MCP enabled status
-                flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.is_component == False)  # noqa: E712
+                # SECURITY (defense-in-depth): Filter by both folder_id AND user_id.
+                # While verify_project_auth_conditional already ensures the user owns the project,
+                # this query-level filter provides an additional safety layer and maintains
+                # consistency with handle_list_resources() and handle_read_resource().
+                if current_user is None:
+                    await logger.awarning(
+                        "handle_list_tools called with project_id but no current user; returning empty list"
+                    )
+                    return tools
+                flows_query = select(Flow).where(
+                    Flow.folder_id == project_id,
+                    Flow.user_id == current_user.id,
+                    Flow.is_component == False,  # noqa: E712
+                )
                 if mcp_enabled_only:
                     flows_query = flows_query.where(Flow.mcp_enabled == True)  # noqa: E712
             elif current_user is not None:

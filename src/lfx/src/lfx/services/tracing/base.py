@@ -37,16 +37,22 @@ class BaseTracingService(Service, ABC):
         session_id: str | None,
         project_name: str | None = None,
         flow_id: str | None = None,
+        tracing_user_id: str | None = None,
     ) -> None:
         """Start tracers for a graph run.
 
         Args:
             run_id: Unique identifier for the run
             run_name: Name of the run
-            user_id: User identifier (optional)
+            user_id: Authenticated Langflow user identifier (optional)
             session_id: Session identifier (optional)
             project_name: Project name (optional)
             flow_id: Flow identifier (optional)
+            tracing_user_id: Optional caller-supplied label forwarded to tracing
+                providers. Does not change ``trace.userId`` (which stays as the
+                auth ``user_id``); each provider decides how to surface it (e.g.
+                LangFuseTracer stamps it under ``langflow.tracing_user_id`` in
+                trace metadata).
         """
 
     @abstractmethod

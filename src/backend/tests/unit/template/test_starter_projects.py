@@ -22,6 +22,30 @@ from langflow.utils.template_validation import (
     validate_template_structure,
 )
 
+# Component modules that ship in bundle distributions which can be temporarily
+# unpublished (see the re-enable note in pyproject.toml). A template that wires
+# one of these cannot be built while its bundle is absent, so the build/execute
+# tests skip it instead of failing. The check imports the live distribution, so
+# it turns back into a no-op the moment the bundle is restored -- no revert.
+_OPTIONAL_BUNDLE_MODULES = {
+    "lfx.components.datastax": "lfx_datastax",
+    "lfx.components.openai": "lfx_openai",
+    "lfx.components.oracle": "lfx_oracle",
+}
+
+
+def _template_unavailable_bundle(template_data: dict) -> str | None:
+    """Return the missing distribution if the template needs an absent bundle, else None."""
+    for node in template_data.get("data", {}).get("nodes", []):
+        module_path = node.get("data", {}).get("node", {}).get("metadata", {}).get("module", "")
+        for prefix, distribution in _OPTIONAL_BUNDLE_MODULES.items():
+            if module_path.startswith(prefix):
+                try:
+                    import_module(distribution)
+                except ImportError:
+                    return distribution
+    return None
+
 
 def get_starter_projects_path() -> Path:
     """Get path to starter projects directory."""
@@ -36,7 +60,7 @@ def get_template_files():
 def get_basic_template_files():
     """Get basic template files for parameterization."""
     path = get_starter_projects_path()
-    basic_templates = ["Basic Prompting.json", "Basic Prompt Chaining.json"]
+    basic_templates = ["Basic Prompting.json"]
     return [path / name for name in basic_templates if (path / name).exists()]
 
 
@@ -83,6 +107,10 @@ class TestStarterProjects:
         with template_file.open(encoding="utf-8") as f:
             template_data = json.load(f)
 
+        unavailable = _template_unavailable_bundle(template_data)
+        if unavailable:
+            pytest.skip(f"{template_file.name} needs the temporarily-unavailable {unavailable} bundle")
+
         errors = validate_flow_can_build(template_data, template_file.name)
         if errors:
             error_msg = "\n".join(errors)
@@ -94,6 +122,10 @@ class TestStarterProjects:
         """Test template using the validate endpoint."""
         with template_file.open(encoding="utf-8") as f:
             template_data = json.load(f)
+
+        unavailable = _template_unavailable_bundle(template_data)
+        if unavailable:
+            pytest.skip(f"{template_file.name} needs the temporarily-unavailable {unavailable} bundle")
 
         errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers)
         if errors:
@@ -108,6 +140,10 @@ class TestStarterProjects:
             with template_file.open(encoding="utf-8") as f:
                 template_data = json.load(f)
 
+            unavailable = _template_unavailable_bundle(template_data)
+            if unavailable:
+                pytest.skip(f"{template_file.name} needs the temporarily-unavailable {unavailable} bundle")
+
             errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers)
             if errors:
                 error_msg = "\n".join(errors)
@@ -121,6 +157,10 @@ class TestStarterProjects:
         """Test that field_order in starter project JSON matches the actual component's input order."""
         with template_file.open(encoding="utf-8") as f:
             template_data = json.load(f)
+
+        unavailable = _template_unavailable_bundle(template_data)
+        if unavailable:
+            pytest.skip(f"{template_file.name} needs the temporarily-unavailable {unavailable} bundle")
 
         errors = []
         for node in template_data.get("data", {}).get("nodes", []):
@@ -213,6 +253,61 @@ class TestStarterProjects:
         if errors:
             error_msg = "\n".join(errors)
             pytest.fail(f"Node overlaps in {template_file.name}:\n{error_msg}")
+
+    def test_knowledge_retrieval_starter_includes_parser(self):
+        """Knowledge Retrieval starter must format the Knowledge Table via a Parser.
+
+        Knowledge node outputs a ``Table``; without a Parser between Knowledge
+        and ChatOutput the raw table arrives unformatted (BUG-02 additional
+        finding). The Vector Store RAG starter sets the precedent — the
+        Knowledge Retrieval starter must follow it so first-run users see
+        a working flow, not a JSON dump in chat.
+        """
+        path = get_starter_projects_path() / "Knowledge Retrieval.json"
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+        node_types = [n["data"].get("type") for n in data["data"]["nodes"]]
+        assert "parser" in node_types, (
+            "Knowledge Retrieval starter must include a Parser node between Knowledge and "
+            "ChatOutput so Table → Message conversion is wired by default."
+        )
+        # The topology should be Knowledge → parser → ChatOutput. Pin the
+        # adjacency so future edits can't silently disconnect the path.
+        edges = data["data"]["edges"]
+        knowledge_id = next(n["id"] for n in data["data"]["nodes"] if n["data"].get("type") == "Knowledge")
+        chatout_id = next(n["id"] for n in data["data"]["nodes"] if n["data"].get("type") == "ChatOutput")
+        parser_id = next(n["id"] for n in data["data"]["nodes"] if n["data"].get("type") == "parser")
+        assert any(e["source"] == knowledge_id and e["target"] == parser_id for e in edges), (
+            "Knowledge -> Parser edge missing in Knowledge Retrieval starter"
+        )
+        assert any(e["source"] == parser_id and e["target"] == chatout_id for e in edges), (
+            "Parser -> ChatOutput edge missing in Knowledge Retrieval starter"
+        )
+        assert not any(e["source"] == knowledge_id and e["target"] == chatout_id for e in edges), (
+            "Stale direct Knowledge -> ChatOutput edge must be removed when the Parser is present"
+        )
+
+    def test_knowledge_starters_keep_single_typed_retrieve_handle(self):
+        """Saved Knowledge ``retrieve_data`` edges must stay single-typed.
+
+        Saved edges in starters must keep ``output_types=['Table']`` for
+        Knowledge ``retrieve_data`` outputs. The live component must advertise
+        the same single-type list (BUG-02 primary), so this test pins the
+        starter side of the contract — the component side is pinned in
+        ``test_knowledge.TestOutputHandleTypesMatchStarterEdges``.
+        """
+        for name in ("Knowledge Retrieval.json", "Vector Store RAG.json"):
+            path = get_starter_projects_path() / name
+            with path.open(encoding="utf-8") as f:
+                data = json.load(f)
+            for edge in data["data"]["edges"]:
+                src_handle = edge.get("data", {}).get("sourceHandle") or {}
+                if src_handle.get("dataType") == "Knowledge" and src_handle.get("name") == "retrieve_data":
+                    assert src_handle.get("output_types") == ["Table"], (
+                        f"{name}: Knowledge retrieve_data edge must store output_types=['Table'] "
+                        f"(found {src_handle.get('output_types')!r}). Widening here re-breaks "
+                        f"React Flow handle matching against the live API."
+                    )
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("template_file", get_basic_template_files(), ids=lambda x: x.name)

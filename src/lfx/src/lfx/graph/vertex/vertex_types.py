@@ -99,6 +99,15 @@ class ComponentVertex(Vertex):
             The built result if use_result is True, else the built object.
         """
         if not self.built:
+            # A downstream node pulling from a conditionally-excluded predecessor receives
+            # that input's template default instead of triggering a build of the excluded
+            # branch. ``target_handle_name`` is always set on this pull path (the requester
+            # reads a named input handle); the ``None`` case falls through to the cycle-edge
+            # default resolution below. Either way the excluded vertex is never built here --
+            # ``is_vertex_runnable`` already returns False for it.
+            if self.id in self.graph.conditionally_excluded_vertices and target_handle_name:
+                return requester.get_value_from_template_dict(target_handle_name)
+
             default_value: Any = UNDEFINED
             for edge in self.get_edge_with_target(requester.id):
                 # We need to check if the edge is a normal edge
@@ -415,7 +424,7 @@ class InterfaceVertex(ComponentVertex):
         self.params[INPUT_FIELD_NAME] = complete_message
         if isinstance(self.built_object, dict):
             for key, value in self.built_object.items():
-                if hasattr(value, "text") and (isinstance(value.text, AsyncIterator | Iterator) or value.text == ""):
+                if hasattr(value, "text_stream") and (value.text_stream is not None or value.text == ""):
                     self.built_object[key] = message
         else:
             self.built_object = message

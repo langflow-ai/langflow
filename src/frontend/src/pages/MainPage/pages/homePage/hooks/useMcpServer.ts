@@ -1,5 +1,4 @@
 import { useQueryClient } from "@tanstack/react-query";
-import i18n from "../../../../../i18n";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   useGetFlowsMCP,
@@ -17,6 +16,7 @@ import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import type { InputFieldType } from "@/types/api";
 import type { AuthSettingsType, MCPSettingsType } from "@/types/mcp";
+import i18n from "../../../../../i18n";
 import {
   buildMcpServerJson,
   extractInstalledClientNames,
@@ -144,7 +144,7 @@ export const useMcpServer = ({
     } catch (e) {
       console.error("Error generating API key:", e);
       setErrorData({
-        title: "Error generating API key",
+        title: i18n.t("errors.errorGeneratingApiKey"),
         list: [(e as Error).message],
       });
     } finally {
@@ -182,9 +182,9 @@ export const useMcpServer = ({
           onError: (e) => {
             const message = (e as { message?: string })?.message ?? String(e);
             setErrorData({
-              title: `Failed to install MCP Server on ${
-                clientTitle ?? clientName
-              }`,
+              title: i18n.t("mcp.failedToInstall", {
+                client: clientTitle ?? clientName,
+              }),
               list: [message],
             });
             setS((p) => ({

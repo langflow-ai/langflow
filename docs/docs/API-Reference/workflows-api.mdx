@@ -2,7 +2,7 @@
 title: Workflow API (Beta)
 slug: /workflow-api
 ---
-import CodeSnippet from '@site/src/components/CodeSnippet';
+import CodeBlock from '@theme/CodeBlock';
 import exampleWorkflowsApiExampleSynchronousRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-synchronous-request.sh';
 import exampleWorkflowsApiExampleAsynchronousRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-asynchronous-request.sh';
 import exampleWorkflowsApiExampleRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-request.sh';
@@ -15,9 +15,12 @@ import exampleJavascriptWorkflowsApiExampleSynchronousRequest from '!!raw-loader
 import exampleJavascriptWorkflowsApiExampleAsynchronousRequest from '!!raw-loader!@site/docs/API-Reference/javascript-examples/workflows-api/example-asynchronous-request.js';
 import exampleJavascriptWorkflowsApiExampleRequest from '!!raw-loader!@site/docs/API-Reference/javascript-examples/workflows-api/example-request.js';
 import exampleJavascriptWorkflowsApiExampleRequest2 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/workflows-api/example-request-2.js';
-
-
-
+import exampleWorkflowsApiExampleStreamLangflowRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-stream-langflow-request.sh';
+import examplePythonWorkflowsApiExampleStreamLangflowRequest from '!!raw-loader!@site/docs/API-Reference/python-examples/workflows-api/example-stream-langflow-request.py';
+import exampleJavascriptWorkflowsApiExampleStreamLangflowRequest from '!!raw-loader!@site/docs/API-Reference/javascript-examples/workflows-api/example-stream-langflow-request.js';
+import exampleWorkflowsApiExampleStreamAguiRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-stream-agui-request.sh';
+import examplePythonWorkflowsApiExampleStreamAguiRequest from '!!raw-loader!@site/docs/API-Reference/python-examples/workflows-api/example-stream-agui-request.py';
+import exampleJavascriptWorkflowsApiExampleStreamAguiRequest from '!!raw-loader!@site/docs/API-Reference/javascript-examples/workflows-api/example-stream-agui-request.js';
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -28,15 +31,19 @@ The Workflow API is currently in **Beta**.
 The API endpoints and response formats may change in future releases.
 :::
 
-The Workflow API provides programmatic access to execute Langflow workflows synchronously or asynchronously.
-Synchronous requests receive complete results immediately upon completion.
-Asynchronous requests are queued in the background and will run until complete, or a request is issued to the [Stop Workflow endpoint](#stop-workflow-endpoint).
+The Workflow API provides programmatic access to execute Langflow workflows in `sync`, `stream`, or `background` modes.
 
 The Workflow API is part of the Langflow Developer v2 API and offers enhanced workflow execution capabilities compared to the v1 `/run` endpoint.
 
+As of Langflow version 1.11, `stream` mode supports both Langflow's built-in `EventManager` and the [AG-UI protocol](https://docs.ag-ui.com/introduction).
+
+:::tip New to the Workflow API?
+Start with the [Workflow API quickstart](./workflow-api-quickstart) for a step-by-step walkthrough of sync, stream, and background modes.
+:::
+
 <PartialAPISetup />
 
-## Execute workflows endpoint (synchronous or asynchronous)
+## Execute workflow endpoint
 
 **Endpoint:**
 
@@ -44,121 +51,276 @@ The Workflow API is part of the Langflow Developer v2 API and offers enhanced wo
 POST /api/v2/workflows
 ```
 
-**Description:** Execute a workflow synchronously and receive complete results immediately upon completion.
-Set `background=false` to make the request synchronous.
-
-### Example synchronous request
-
-Execute a workflow synchronously and receive complete results immediately:
-
-<Tabs>
-<TabItem value="Python" label="Python" default>
-
-<CodeSnippet source={examplePythonWorkflowsApiExampleSynchronousRequest} language="python" />
-
-</TabItem>
-<TabItem value="JavaScript" label="JavaScript">
-
-<CodeSnippet source={exampleJavascriptWorkflowsApiExampleSynchronousRequest} language="javascript" />
-
-</TabItem>
-<TabItem value="curl" label="curl">
-
-<CodeSnippet source={exampleWorkflowsApiExampleSynchronousRequest} language="bash" />
-
-</TabItem>
-</Tabs>
-
-### Example asynchronous request
-
-For long-running workflows, set `background=true` to get a `job_id` immediately, and then poll the status [using the GET endpoint](#get-workflow-status-endpoint) until the job is complete.
-
-To stop a job, send a POST request to the [Stop workflow endpoint](#stop-workflow-endpoint).
-
-:::tip
-The asynchronous request contains `stream` parameter, but streaming is not yet supported. The parameter is included for future compatibility.
-:::
-
-**Example request:**
-
-<Tabs>
-<TabItem value="Python" label="Python" default>
-
-<CodeSnippet source={examplePythonWorkflowsApiExampleAsynchronousRequest} language="python" />
-
-</TabItem>
-<TabItem value="JavaScript" label="JavaScript">
-
-<CodeSnippet source={exampleJavascriptWorkflowsApiExampleAsynchronousRequest} language="javascript" />
-
-</TabItem>
-<TabItem value="curl" label="curl">
-
-<CodeSnippet source={exampleWorkflowsApiExampleAsynchronousRequest} language="bash" />
-
-</TabItem>
-</Tabs>
-
-**Response:**
-
-```json
-{
-  "job_id": "job_id_1234567890",
-  "created_timestamp": "2025-01-15T10:30:00Z",
-  "status": "queued",
-  "errors": []
-}
-```
+**Description:** Execute a workflow in `sync`, `stream`, or `background` mode.
 
 ### Request body
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `flow_id` | `string` | Yes | - | The ID or endpoint name of the flow to execute. |
-| `flow_version` | `string` | No | - | Optional version hash to pin to a specific flow version. |
-| `background` | `boolean` | No | `false` | Must be `false` for synchronous execution. |
-| `inputs` | `object` | No | `{}` | Inputs for the workflow execution. Uses component identifiers with dot notation (e.g., `ChatInput-abc.input_value`). See [Component identifiers and input structure](#component-identifiers-and-input-structure) for detailed information. |
+| `flow_id` | `string` | Yes | - | UUID of the flow to execute. |
+| `input_value` | `string` | No | `""` | Chat-style input for the run. |
+| `mode` | `string` | No | `sync` | Execution mode: `sync`, `stream`, or `background`. |
+| `stream_protocol` | `string` | No | `langflow` | Stream adapter name used for `stream` responses and background event re-attachment. Unknown values return a `422` code for any request mode because the API validates the field against the registered adapters before execution starts. |
+| `session_id` | `string` | No | - | Scopes message memory and chat history to this session. |
+| `tweaks` | `object` | No | `{}` | Per-component parameter overrides keyed by component id. See [Component tweaks](#component-tweaks). |
+| `globals` | `object` | No | `{}` | Request-level global variables (sync mode only). Keys are limited to 256 characters and values to 64 KB. See [Request-level global variables](#request-level-global-variables).
+| `output_ids` | `array` | No | - | Output component ids to use when resolving sync-mode answers (sync mode only). |
+| `data` | `object` | No | - | Live-canvas override of nodes and edges (stream and background modes only). |
+| `files` | `array` | No | - | Pre-uploaded file paths to attach to the run (stream and background modes only). |
+| `start_component_id` | `string` | No | - | Partial-run start component id (stream and background modes only). |
+| `stop_component_id` | `string` | No | - | Partial-run stop component id (stream and background modes only). |
 
-### Example response
+### Execute flow in `sync` mode
+
+Set `"mode": "sync"` or omit `mode` to run inline and receive the full response when execution completes.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeBlock language="python">{examplePythonWorkflowsApiExampleSynchronousRequest}</CodeBlock>
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeBlock language="javascript">{exampleJavascriptWorkflowsApiExampleSynchronousRequest}</CodeBlock>
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeBlock language="bash">{exampleWorkflowsApiExampleSynchronousRequest}</CodeBlock>
+
+</TabItem>
+</Tabs>
+
+### Execute flow with selected `stream` mode {#execute-flow-with-selected-stream-mode}
+
+Set `"mode": "stream"` to receive a Server-Sent Events (SSE) stream for the run.
+
+`stream_protocol` is set to `langflow` by default, which emits the built-in Langflow `EventManager` output.
+For more information, see [Stream with Langflow EventManager](#stream-with-langflow)
+
+Set `stream_protocol` to `agui` to emit events using the [AG-UI protocol](https://docs.ag-ui.com/introduction) instead.
+For more information, see [Stream with AG-UI](#stream-with-ag-ui).
+
+If `stream_protocol` names an unknown adapter, the endpoint returns `422` with an `available` list of registered protocol names.
+
+#### Stream with Langflow EventManager {#stream-with-langflow}
+
+`stream_protocol` defaults to `langflow`, which passes through the built-in Langflow `EventManager` events. Each SSE frame has a monotonic `id:` and a `data:` line containing JSON shaped like `{"event": "<type>", "data": {...}}`. This is the same wire format the v1 build stream uses, so existing Langflow clients can read it without changes.
+
+Omit `stream_protocol` or set it explicitly to `"langflow"`. Use `curl -N` so the client does not buffer the stream.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeBlock language="python">{examplePythonWorkflowsApiExampleStreamLangflowRequest}</CodeBlock>
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeBlock language="javascript">{exampleJavascriptWorkflowsApiExampleStreamLangflowRequest}</CodeBlock>
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeBlock language="bash">{exampleWorkflowsApiExampleStreamLangflowRequest}</CodeBlock>
+
+</TabItem>
+</Tabs>
+
+**Common EventManager event types:**
+
+| Event | Purpose |
+|-------|---------|
+| `vertices_sorted` | Execution order for the flow's components. |
+| `add_message` | Chat message added (user or assistant). |
+| `token` | Streaming LLM token chunk (`data.chunk`). |
+| `end_vertex` | A component finished building. |
+| `output` | Normalized terminal component output (same shape as sync-mode `outputs`). |
+| `end` | Run finished successfully. |
+| `error` | Run failed (`data.error`). |
+| `cancelled` | Run stopped by the client. |
+
+For more examples of `token` and `add_message` events, see [Stream LLM token responses](/api-flows-run#stream-llm-token-responses).
+
+#### Stream with AG-UI {#stream-with-ag-ui}
+
+Stream with the [AG-UI protocol](https://docs.ag-ui.com/introduction) when your client expects agent lifecycle events such as `RUN_STARTED` and `TEXT_MESSAGE_*` instead of Langflow's internal events.
+Read responses as an SSE stream. Each `data:` line contains one AG-UI event serialized as JSON. Close flow runs when you receive `RUN_FINISHED`, or handle failures on `RUN_ERROR`.
+
+Send `POST /api/v2/workflows` with `"mode": "stream"` and `"stream_protocol": "agui"`.
+
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeBlock language="python">{examplePythonWorkflowsApiExampleStreamAguiRequest}</CodeBlock>
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeBlock language="javascript">{exampleJavascriptWorkflowsApiExampleStreamAguiRequest}</CodeBlock>
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeBlock language="bash">{exampleWorkflowsApiExampleStreamAguiRequest}</CodeBlock>
+
+</TabItem>
+</Tabs>
+
+**Common AG-UI event types:**
+
+| Event type | Purpose |
+|------------|---------|
+| `RUN_STARTED` / `RUN_FINISHED` / `RUN_ERROR` | Run lifecycle. |
+| `TEXT_MESSAGE_START` / `TEXT_MESSAGE_CONTENT` / `TEXT_MESSAGE_END` | Streaming assistant text. |
+| `TOOL_CALL_START` / `TOOL_CALL_ARGS` / `TOOL_CALL_END` / `TOOL_CALL_RESULT` | Tool invocation lifecycle. |
+| `STEP_STARTED` / `STEP_FINISHED` | Per-component execution steps. |
+| `STATE_SNAPSHOT` / `STATE_DELTA` | Node graph state (status and output). |
+| `CUSTOM` | Langflow-specific extensions (see below). |
+
+Langflow also emits `CUSTOM` events that generic AG-UI clients can ignore, such as `langflow.log`, `langflow.content.*`, `langflow.message.removed`, and `langflow.run.cancelled`.
+
+For the full AG-UI event catalog, see the [AG-UI specification](https://docs.ag-ui.com/concepts/architecture).
+
+For a longer client example that parses AG-UI frames and chains two runs in one `session_id`, see `example-stream-agui-parse.py` (and matching `.js` / `.sh` files) under [`docs/docs/API-Reference/`](https://github.com/langflow-ai/langflow/tree/main/docs/docs/API-Reference).
+
+### Execute flow in `background` mode
+
+Set `"mode": "background"` to queue a job and receive a `job_id` immediately. Poll [GET /api/v2/workflows](#get-workflow-status-endpoint) for status and results, [re-attach to the event stream](#re-attach-to-a-background-run) with `GET /api/v2/workflows/{job_id}/events`, or stop the job with [POST /api/v2/workflows/stop](#stop-workflow-endpoint).
+
+Background runs honor the `stream_protocol` selected when the job was created.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeBlock language="python">{examplePythonWorkflowsApiExampleAsynchronousRequest}</CodeBlock>
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeBlock language="javascript">{exampleJavascriptWorkflowsApiExampleAsynchronousRequest}</CodeBlock>
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeBlock language="bash">{exampleWorkflowsApiExampleAsynchronousRequest}</CodeBlock>
+
+</TabItem>
+</Tabs>
+
+See [Background response fields](#background-response-fields) in [Response body](#response-body) for the job object returned when you queue a background run.
+
+#### Re-attach to a background run {#re-attach-to-a-background-run}
+
+**Endpoint:** `GET /api/v2/workflows/{job_id}/events` (also returned as `links.events` on the background job response)
+
+You can replay buffered SSE events from a background run and tail the stream until the job finishes.
+
+Each SSE frame includes an `id:` line. Pass the last `id` value you received in a `Last-Event-ID` header to resume from the next event.
+```python
+headers = {
+    "x-api-key": api_key,
+    "Accept": "text/event-stream",
+    "Last-Event-ID": last_event_id,
+}
+```
+
+### Response body {#response-body}
+
+The response shape depends on the selected `mode`.
+
+`stream` mode returns Server Sent Events.
+For more information, see [Execute flow with selected `stream` mode](#execute-flow-with-selected-stream-mode).
+
+`sync` mode returns a completed `WorkflowExecutionResponse`, for example:
 
 ```json
 {
-  "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
-  "job_id": "job_id_1234567890",
+  "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+  "session_id": "session-123",
+  "job_id": "a98d9753-9259-47ca-9783-69a9d8d26889",
   "object": "response",
-  "created_at": 1741476542,
+  "created_timestamp": "2026-06-30T16:00:56.917538+00:00",
   "status": "completed",
+  "output": {
+    "reason": "single",
+    "text": "2 + 2 equals 4.",
+    "source": "ChatOutput-xyz"
+  },
+  "has_errors": false,
   "errors": [],
-  "inputs": {
-    "ChatInput-abc.input_type": "chat",
-    "ChatInput-abc.input_value": "what is 2+2",
-    "ChatInput-abc.session_id": "session-123"
+  "inputs": {},
+  "globals": {
+    "FILENAME": "relatório—final.pdf",
+    "OWNER_NAME": "José"
   },
   "outputs": {
     "ChatOutput-xyz": {
       "type": "message",
-      "component_id": "ChatOutput-xyz",
       "status": "completed",
+      "display_name": "Chat Output",
       "content": "2 + 2 equals 4."
     }
-  },
-  "metadata": {}
+  }
 }
 ```
 
-### Response body
+#### Sync response fields
 
-The response includes an `outputs` field containing component-level results. Each output has a `type` field indicating the type of content:
+| Field | Description |
+|-------|-------------|
+| `output` | Primary text answer for the run. |
+| `output.reason` | Why `output.text` was or wasn't populated: `single`, `multiple`, `none`, `non_string`, or `failed`. |
+| `output.text` | The answer when `output.reason` is `single`; otherwise `null`. |
+| `output.source` | Component id that produced `output.text` when `output.reason` is `single`. |
+| `outputs` | Map of component id → component result. |
+| `has_errors` | `true` when `errors` is non-empty. |
+| `created_timestamp` | ISO-8601 UTC timestamp (not a Unix epoch). |
+| `session_id` | Session used for the run; pass it on the next request to continue the same chat history. |
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `message` | Text message content. | Chat responses, summaries |
-| `image` | Image URL or data. | Generated images, processed images |
-| `sql` | SQL query results. | Database query outputs |
-| `data` | Structured data. | JSON objects, arrays |
-| `file` | File reference. | Generated documents, reports |
+Each value in `outputs` includes:
 
-## Get workflow status endpoint
+| Field | Description |
+|-------|-------------|
+| `type` | Content type (`message`, `image`, `sql`, `data`, `file`, etc.). |
+| `status` | Component run status (`completed`, `failed`, …). |
+| `display_name` | Human-readable component name. |
+| `content` | Component payload. |
+| `metadata` | Optional extra metadata for the component output. |
+
+#### Background response fields {#background-response-fields}
+
+`background` mode returns a job object immediately (`object: "job"`). Poll [GET /api/v2/workflows](#get-workflow-status-endpoint) until the job completes; the completed result uses the same `WorkflowExecutionResponse` shape as sync mode (see the example above).
+
+```json
+{
+  "job_id": "a98d9753-9259-47ca-9783-69a9d8d26889",
+  "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+  "object": "job",
+  "created_timestamp": "2026-06-30T16:00:56.917538+00:00",
+  "status": "queued",
+  "links": {
+    "status": "/api/v2/workflows?job_id=a98d9753-9259-47ca-9783-69a9d8d26889",
+    "events": "/api/v2/workflows/a98d9753-9259-47ca-9783-69a9d8d26889/events",
+    "stop": "/api/v2/workflows/stop"
+  },
+  "errors": [],
+  "globals": {}
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `object` | Always `"job"`. |
+| `job_id` | UUID for polling, re-attaching to events, and stop requests. |
+| `links.status` | `GET /api/v2/workflows?job_id=…` |
+| `links.events` | `GET /api/v2/workflows/{job_id}/events` |
+| `links.stop` | `POST /api/v2/workflows/stop` |
+
+
+## Get workflow status endpoint {#get-workflow-status-endpoint}
 
 **Endpoint:** `GET /api/v2/workflows`
 
@@ -169,17 +331,17 @@ The response includes an `outputs` field containing component-level results. Eac
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonWorkflowsApiExampleRequest} language="python" />
+<CodeBlock language="python">{examplePythonWorkflowsApiExampleRequest}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptWorkflowsApiExampleRequest} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptWorkflowsApiExampleRequest}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleWorkflowsApiExampleRequest} language="bash" />
+<CodeBlock language="bash">{exampleWorkflowsApiExampleRequest}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -189,41 +351,51 @@ The response includes an `outputs` field containing component-level results. Eac
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `job_id` | `string` | Yes | The job ID returned from a workflow execution. |
-| `stream` | `boolean` | No | If `true`, returns server-sent events stream. Default: `false`. |
-| `sequence_id` | `integer` | No | Optional sequence ID to resume streaming from a specific point. |
 
 ### Example response
 
 ```json
 {
-  "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
-  "job_id": "job_id_1234567890",
+  "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+  "session_id": "session-123",
+  "job_id": "a98d9753-9259-47ca-9783-69a9d8d26889",
   "object": "response",
-  "created_at": 1741476542,
+  "created_timestamp": "2026-06-30T16:00:56.917538+00:00",
   "status": "completed",
+  "output": {
+    "reason": "single",
+    "text": "Processing complete...",
+    "source": "ChatOutput-xyz"
+  },
+  "has_errors": false,
   "errors": [],
+  "inputs": {},
+  "globals": {},
   "outputs": {
     "ChatOutput-xyz": {
       "type": "message",
-      "component_id": "ChatOutput-xyz",
       "status": "completed",
+      "display_name": "Chat Output",
       "content": "Processing complete..."
     }
-  },
-  "input": [
-    {
-      "type": "text",
-      "data": "Input text prompt for the workflow execution",
-      "role": "User"
-    }
-  ],
-  "metadata": {}
+  }
 }
 ```
 
 ### Response body
 
-The response includes a `status` field that indicates the current state of the workflow execution:
+Returns one of two JSON schemas depending on job state:
+
+| Job state | Response | Notes |
+|-----------|----------|-------|
+| `queued`, `in_progress`, `cancelled` | `WorkflowJobResponse` | Same shape as a background job create response (`object: "job"`, `links`, …). |
+| `completed` | `WorkflowExecutionResponse` | Full results (example above). |
+| `failed` | HTTP `500` | Error detail in the response body; not a workflow result object. |
+| `timed_out` | HTTP `408` | Error detail in the response body. |
+
+When the job is still active, poll `GET /api/v2/workflows?job_id=…` or re-attach to [events](#re-attach-to-a-background-run) for live output.
+
+The `status` values are:
 
 | Status | Description |
 |--------|-------------|
@@ -231,9 +403,10 @@ The response includes a `status` field that indicates the current state of the w
 | `in_progress` | Job is currently executing. |
 | `completed` | Job completed successfully. |
 | `failed` | Job failed during execution. |
-| `error` | Job encountered an error. |
+| `cancelled` | Job was stopped by the client. |
+| `timed_out` | Job exceeded the execution timeout. |
 
-## Stop workflow endpoint
+## Stop workflow endpoint {#stop-workflow-endpoint}
 
 **Endpoint:** `POST /api/v2/workflows/stop`
 
@@ -244,17 +417,17 @@ The response includes a `status` field that indicates the current state of the w
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonWorkflowsApiExampleRequest2} language="python" />
+<CodeBlock language="python">{examplePythonWorkflowsApiExampleRequest2}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptWorkflowsApiExampleRequest2} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptWorkflowsApiExampleRequest2}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleWorkflowsApiExampleRequest2} language="bash" />
+<CodeBlock language="bash">{exampleWorkflowsApiExampleRequest2}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -274,31 +447,54 @@ The response includes a `status` field that indicates the current state of the w
 }
 ```
 
-## Component identifiers and input structure
+## Request-level global variables {#request-level-global-variables}
 
-The Workflows API uses component identifiers with dot notation to specify inputs for individual components in your workflow. This allows you to pass values to specific components and override component parameters.
+Pass request-scoped variables in the `globals` JSON field. They are available to workflow components for the duration of the run. Use this field when values may include Unicode or other characters that HTTP headers handle poorly.
 
-Component identifiers use the format `{component_id}.{parameter_name}`.
-When making requests to the Workflows API, include component identifiers in the `inputs` object.
-For example, this demonstrates targeting multiple components and their parameters in a single request.
+`globals` is honored in **sync mode only**; stream and background runs ignore it.
 
 ```json
 {
-  "flow_id": "your-flow-id",
-  "inputs": {
-    "ChatInput-abc.input_type": "chat",
-    "ChatInput-abc.input_value": "what is 2+2",
-    "ChatInput-abc.session_id": "session-123",
-    "OpenSearchComponent-xyz.opensearch_url": "https://opensearch:9200",
-    "LLMComponent-123.temperature": 0.7,
-    "LLMComponent-123.max_tokens": 100
+  "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+  "input_value": "Summarize the attached file",
+  "globals": {
+    "FILENAME": "relatório—final.pdf",
+    "OWNER_NAME": "José"
   }
 }
 ```
 
-To find the component ID in the Langflow UI, open your flow in Langflow, click the component, and then click **Controls**. The component ID is at the top of the **Controls** pane.
+Keys may use the same characters supported by the global variables panel in the Langflow UI. Keys are bounded to 256 characters; values are bounded to 64 KB.
 
-You can override any component's parameters.
+<details>
+<summary>Legacy: `X-LANGFLOW-GLOBAL-VAR-*` headers (Workflow API, sync mode only)</summary>
+
+If you integrated against an earlier Workflow API preview, `X-LANGFLOW-GLOBAL-VAR-*` headers still work for **sync** runs on `POST /api/v2/workflows`. The server merges them with body `globals`; when the same key is sent both ways, the body value wins.
+
+Prefer the `globals` body field for new integrations. Header-based globals may be removed in a future release.
+
+This note applies to the **Workflow API only**. The v1 [`/run`](/api-flows-run) and [`/responses`](/api-openai-responses) endpoints still document `X-LANGFLOW-GLOBAL-VAR-*` headers as their normal transport for request-level variables.
+
+</details>
+
+## Component tweaks
+
+Use the `tweaks` object to override component parameters. Keys are component ids; values are objects of field names and values to set on that component's template.
+
+```json
+{
+  "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+  "input_value": "what is 2+2",
+  "tweaks": {
+    "LLMComponent-123": {
+      "temperature": 0.7,
+      "max_tokens": 100
+    }
+  }
+}
+```
+
+To find a component id in the Langflow UI, open your flow, click the component, and then click **Controls**. The component id is at the top of the **Controls** pane.
 
 ## Error handling
 
@@ -310,6 +506,7 @@ The API uses standard HTTP status codes to indicate success or failure:
 | `400 Bad Request` | Invalid request parameters. |
 | `401 Unauthorized` | Invalid or missing API key. |
 | `404 Not Found` | Flow not found or developer API disabled. |
+| `422 Unprocessable Entity` | Unknown `stream_protocol` or unsupported field for the selected mode. |
 | `500 Internal Server Error` | Server error during execution. |
 | `501 Not Implemented` | Endpoint not yet implemented. |
 
@@ -320,3 +517,9 @@ The API uses standard HTTP status codes to indicate success or failure:
   "detail": "Error message describing what went wrong"
 }
 ```
+
+For an unknown `stream_protocol`, the `422` response includes an `available` list of registered protocol names (`langflow`, `agui`).
+
+## See also
+
+* [Workflow API quickstart](./workflow-api-quickstart) — run a flow in sync, stream, and background modes with copy-paste examples.

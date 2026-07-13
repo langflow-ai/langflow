@@ -6,17 +6,20 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from lfx.base.models.model_utils import replace_with_live_models
 from lfx.base.models.unified_models import (
+    get_live_only_providers,
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
     get_provider_all_variables,
     get_unified_models_detailed,
 )
+from lfx.base.models.unified_models.credentials import model_status_contains, model_status_key
 from loguru import logger
 from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.auth.utils import get_current_active_user
+from langflow.services.authorization import VariableAction, ensure_variable_permission
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
@@ -49,30 +52,6 @@ def get_provider_from_variable_name(variable_name: str) -> str | None:
         if var_name == variable_name:
             return provider
     return None
-
-
-def get_model_names_for_provider(provider: str) -> set[str]:
-    """Get all model names for a given provider.
-
-    Args:
-        provider: The provider name (e.g., "OpenAI")
-
-    Returns:
-        A set of model names for that provider
-    """
-    models_by_provider = get_unified_models_detailed(
-        providers=[provider],
-        include_unsupported=True,
-        include_deprecated=True,
-    )
-
-    model_names = set()
-    for provider_dict in models_by_provider:
-        if provider_dict.get("provider") == provider:
-            for model in provider_dict.get("models", []):
-                model_names.add(model.get("model_name"))
-
-    return model_names
 
 
 class ModelStatusUpdate(BaseModel):
@@ -195,32 +174,55 @@ async def list_models(
         **metadata_filters,
     )
 
-    # Add configured and enabled status to each provider
+    # Live-discovery-only providers (contributed by extension bundles, e.g. vLLM or
+    # OpenAI Compatible) ship no static catalog rows, so the catalog query above can
+    # never emit them, and replace_with_live_models below only fills providers that
+    # are already configured. Union them in with an empty model list so the Model
+    # Providers dialog can offer their configuration form in the first place; once
+    # configured, replace_with_live_models fills this same entry with the endpoint's
+    # discovered models. Skipped for model_name/metadata queries, which ask about
+    # concrete models rather than which providers exist.
+    if model_name is None and not metadata_filters:
+        provider_metadata = get_model_provider_metadata()
+        listed_providers = {provider_dict.get("provider") for provider_dict in filtered_models}
+        for live_only_provider in get_live_only_providers():
+            if live_only_provider in listed_providers:
+                continue
+            if selected_providers and live_only_provider not in selected_providers:
+                continue
+            filtered_models.append(
+                {
+                    "provider": live_only_provider,
+                    "models": [],
+                    "num_models": 0,
+                    **provider_metadata.get(live_only_provider, {}),
+                }
+            )
+
+    # Run before status is computed so live-only providers appended here (e.g. IBM WatsonX,
+    # whose static catalog is fully deprecated) still receive is_enabled/is_configured (#13735).
+    configured_providers = {p for p, configured in provider_configured_status.items() if configured}
+    replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type)
+
+    # replace_with_live_models iterates every live-capable provider regardless of
+    # the ?provider= filter, so it can append providers the caller excluded (e.g.
+    # a configured OpenRouter appearing in a ?provider=OpenAI response). Re-apply
+    # the filter so the response honors its own contract.
+    if selected_providers:
+        filtered_models = [p for p in filtered_models if p.get("provider") in selected_providers]
+
     for provider_dict in filtered_models:
         prov_name = provider_dict.get("provider")
         provider_dict["is_configured"] = provider_configured_status.get(prov_name, False)
-
-        # Provider is "enabled" (active) if it has at least one enabled model
         prov_models_status = enabled_models_map.get(prov_name, {})
         has_active_model = any(prov_models_status.values())
         provider_dict["is_enabled"] = has_active_model
 
-    # Replace static models with live models for providers that support it
-    configured_providers = {p for p, configured in provider_configured_status.items() if configured}
-    replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type)
-
-    # Sort providers:
-    # 1. Provider with default model first
-    # 2. Configured providers next
-    # 3. Alphabetically after that
     def sort_key(provider_dict):
         provider_name = provider_dict.get("provider", "")
-        # Use is_configured for sorting priority (so they appear at top when ready)
         is_configured = provider_dict.get("is_configured", False)
         is_default = provider_name == default_provider
-
-        # Return tuple for sorting: (not is_default, not is_configured, provider_name)
-        # This way default comes first (False < True), then configured, then alphabetical
+        # default first, then configured, then alphabetical (False sorts before True)
         return (not is_default, not is_configured, provider_name)
 
     filtered_models.sort(key=sort_key)
@@ -402,23 +404,73 @@ async def _get_enabled_models(session: DbSession, current_user: CurrentActiveUse
     return set()
 
 
-def _build_model_default_flags() -> dict[str, bool]:
-    """Build a map of model names to their default flag status.
+def build_model_providers_by_name(
+    all_models_by_provider: list[dict] | None = None,
+) -> dict[str, set[str]]:
+    """Build a catalog index used to migrate legacy bare-name status entries."""
+    if all_models_by_provider is None:
+        all_models_by_provider = get_unified_models_detailed(
+            include_unsupported=True,
+            include_deprecated=True,
+        )
 
-    Returns:
-        Dictionary mapping model names to whether they are default models
-    """
-    all_models_by_provider = get_unified_models_detailed(
-        include_unsupported=True,
-        include_deprecated=True,
-    )
-
-    is_default_model = {}
+    providers_by_name: dict[str, set[str]] = {}
     for provider_dict in all_models_by_provider:
+        provider = provider_dict.get("provider")
+        if not isinstance(provider, str):
+            continue
         for model in provider_dict.get("models", []):
             model_name = model.get("model_name")
+            if isinstance(model_name, str):
+                providers_by_name.setdefault(model_name, set()).add(provider)
+    return providers_by_name
+
+
+def normalize_model_status_entries(
+    entries: set[str],
+    providers_by_name: dict[str, set[str]],
+) -> set[str]:
+    """Expand known legacy bare names to every matching provider identity.
+
+    Bare entries historically applied globally. Expanding all matching catalog
+    providers preserves that state while allowing the current write to change a
+    single provider. Unknown bare names remain intact for read compatibility.
+    """
+    normalized: set[str] = set()
+    for entry in entries:
+        providers = providers_by_name.get(entry)
+        if providers:
+            normalized.update(model_status_key(provider, entry) for provider in providers)
+        else:
+            normalized.add(entry)
+    return normalized
+
+
+def _build_model_default_flags(
+    all_models_by_provider: list[dict] | None = None,
+) -> dict[str, bool]:
+    """Build a map of provider-qualified model identities to default status.
+
+    Returns:
+        Dictionary mapping provider-qualified model identities to default status
+    """
+    if all_models_by_provider is None:
+        all_models_by_provider = get_unified_models_detailed(
+            include_unsupported=True,
+            include_deprecated=True,
+        )
+
+    is_default_model: dict[str, bool] = {}
+    for provider_dict in all_models_by_provider:
+        provider = provider_dict.get("provider")
+        if not isinstance(provider, str):
+            continue
+        for model in provider_dict.get("models", []):
+            model_name = model.get("model_name")
+            if not isinstance(model_name, str):
+                continue
             is_default = model.get("metadata", {}).get("default", False)
-            is_default_model[model_name] = is_default
+            is_default_model[model_status_key(provider, model_name)] = is_default
 
     return is_default_model
 
@@ -435,21 +487,24 @@ def _update_model_sets(
         updates: List of model status updates from user
         disabled_models: Set of disabled model IDs (modified in place)
         explicitly_enabled_models: Set of explicitly enabled model IDs (modified in place)
-        is_default_model: Map of model names to their default flag status
+        is_default_model: Map of provider-qualified model identities to default status
     """
     for update in updates:
-        model_is_default = is_default_model.get(update.model_id, False)
+        status_key = model_status_key(update.provider, update.model_id)
+        model_is_default = is_default_model.get(status_key, False)
 
         if update.enabled:
             # User wants to enable the model
-            disabled_models.discard(update.model_id)
+            disabled_models.discard(status_key)
             # If it's not a default model, add to explicitly enabled list
             if not model_is_default:
-                explicitly_enabled_models.add(update.model_id)
+                explicitly_enabled_models.add(status_key)
+            else:
+                explicitly_enabled_models.discard(status_key)
         else:
             # User wants to disable the model
-            disabled_models.add(update.model_id)
-            explicitly_enabled_models.discard(update.model_id)
+            disabled_models.add(status_key)
+            explicitly_enabled_models.discard(status_key)
 
 
 async def _save_model_list_variable(
@@ -528,17 +583,14 @@ async def get_enabled_models(
     model_names: Annotated[list[str] | None, Query()] = None,
 ):
     """Get enabled models for the current user."""
-    # Get all models - this returns a list of provider dicts with nested models
     all_models_by_provider = get_unified_models_detailed(
         include_unsupported=True,
         include_deprecated=True,
     )
 
-    # Get enabled providers status
     enabled_providers_result = await get_enabled_providers(session=session, current_user=current_user)
     provider_status = enabled_providers_result.get("provider_status", {})
 
-    # Replace static models with live models for providers that support it
     configured_providers = {p for p, configured in provider_status.items() if configured}
     replace_with_live_models(all_models_by_provider, current_user.id, configured_providers)
 
@@ -546,10 +598,8 @@ async def get_enabled_models(
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)
     explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
 
-    # Build model status based on provider enablement
     enabled_models: dict[str, dict[str, bool]] = {}
 
-    # Iterate through providers and their models
     for provider_dict in all_models_by_provider:
         provider = provider_dict.get("provider")
         models = provider_dict.get("models", [])
@@ -567,19 +617,12 @@ async def get_enabled_models(
             is_not_supported = metadata.get("not_supported", False)
             is_default = metadata.get("default", False)
 
-            # Model is enabled if:
-            # 1. Provider is enabled
-            # 2. Model is not deprecated/unsupported
-            # 3. Model is either:
-            #    - Marked as default (default=True), OR
-            #    - Explicitly enabled by user (in explicitly_enabled_models), AND
-            #    - NOT explicitly disabled by user (not in disabled_models)
             is_enabled = (
                 provider_status.get(provider, False)
                 and not is_deprecated
                 and not is_not_supported
-                and (is_default or model_name in explicitly_enabled_models)
-                and model_name not in disabled_models
+                and (is_default or model_status_contains(explicitly_enabled_models, provider, model_name))
+                and not model_status_contains(disabled_models, provider, model_name)
             )
             # Store model status per provider (true/false)
             enabled_models[provider][model_name] = is_enabled
@@ -614,6 +657,14 @@ async def update_enabled_models(
     Accepts a list of model IDs with their desired enabled status.
     This only affects model-level enablement - provider credentials must still be configured.
     """
+    # Persists the enabled/disabled model lists as the user's own Variables: a
+    # variable WRITE. Enforce so the external access ceiling caps a "viewer";
+    # the owner with no ceiling fast-paths via owner-override.
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.WRITE,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         raise HTTPException(
@@ -632,8 +683,19 @@ async def update_enabled_models(
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)
     explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
 
-    # Build map of model names to their default flag
-    is_default_model = _build_model_default_flags()
+    all_models_by_provider = get_unified_models_detailed(
+        include_unsupported=True,
+        include_deprecated=True,
+    )
+    is_default_model = _build_model_default_flags(all_models_by_provider)
+    providers_by_name = build_model_providers_by_name(all_models_by_provider)
+    # Live/custom models may not be in the static catalog. The provider in this
+    # request still gives a known identity for migrating a matching bare entry.
+    for update in updates:
+        providers_by_name.setdefault(update.model_id, set()).add(update.provider)
+
+    disabled_models = normalize_model_status_entries(disabled_models, providers_by_name)
+    explicitly_enabled_models = normalize_model_status_entries(explicitly_enabled_models, providers_by_name)
 
     # Update model sets based on user requests
     # For any model being enabled, validate the provider credentials
@@ -755,6 +817,14 @@ async def set_default_model(
     request: DefaultModelRequest,
 ):
     """Set the default model for the current user."""
+    # Creating/updating the default-model Variable is a variable WRITE. Enforce
+    # so the external access ceiling caps a "viewer"; the owner with no ceiling
+    # fast-paths via owner-override.
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.WRITE,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         raise HTTPException(
@@ -830,6 +900,14 @@ async def clear_default_model(
     model_type: Annotated[str, Query(description="Type of model: 'language' or 'embedding'")] = "language",
 ):
     """Clear the default model for the current user."""
+    # Deleting the default-model Variable is a variable DELETE. Enforce so the
+    # external access ceiling caps a "viewer"; the owner with no ceiling
+    # fast-paths via owner-override.
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.DELETE,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         raise HTTPException(

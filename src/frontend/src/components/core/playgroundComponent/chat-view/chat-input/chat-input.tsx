@@ -1,9 +1,11 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useChatFileUpload } from "@/shared/hooks/use-chat-file-upload";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useSessionManagerStore } from "@/stores/sessionManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { ChatInputType, FilePreviewType } from "@/types/components";
 import InputWrapper from "./components/input-wrapper";
@@ -25,6 +27,7 @@ export default function ChatInput({
   isDragging,
   sendMessage,
 }: ChatInputProps): JSX.Element {
+  const { t } = useTranslation();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -37,11 +40,26 @@ export default function ChatInput({
   );
 
   const inputRef = useRef<HTMLTextAreaElement>(null!);
+  const activeSessionId = useSessionManagerStore((s) => s.activeSessionId);
   const { handleFileChange } = useChatFileUpload({
     currentFlowId,
     setFiles,
     playgroundPage: true,
   });
+
+  // Auto-focus the textarea whenever the active session changes (covers
+  // "New Chat" creation, sidebar session selection, and the initial
+  // playground mount). Skipped when noInput is true because the textarea
+  // is not rendered in that branch. requestAnimationFrame defers the
+  // focus call until after AnimatePresence/motion settles so the focus
+  // is not stolen back by an in-flight mount transition.
+  useEffect(() => {
+    if (noInput || !activeSessionId) return;
+    const raf = requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [activeSessionId, noInput]);
 
   // Audio transcription handler - appends transcribed text to the chat input
   const handleTranscriptionComplete = useCallback(
@@ -60,7 +78,7 @@ export default function ChatInput({
   const handleAudioError = useCallback(
     (error: string) => {
       setErrorData({
-        title: "Voice Input Error",
+        title: t("chat.voiceInputError"),
         list: [error],
       });
     },

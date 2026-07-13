@@ -25,6 +25,9 @@ export const HeaderButtons = ({
   const hideGettingStartedProgress = useUtilityStore(
     (state) => state.hideGettingStartedProgress,
   );
+  const hideNewProjectButton = useUtilityStore(
+    (state) => state.hideNewProjectButton,
+  );
 
   const [isDismissedDialog, setIsDismissedDialog] = useState(
     userData?.optins?.dialog_dismissed,
@@ -81,7 +84,7 @@ export const HeaderButtons = ({
           <IconComponent name="PanelLeftClose" className="h-4 w-4" />
         </SidebarTrigger>
 
-        <div className="flex-1 text-sm font-medium">
+        <div id="project-sidebar-title" className="flex-1 text-sm font-medium">
           {t("sidebar.projects")}
         </div>
         <div className="flex items-center gap-1">
@@ -89,11 +92,13 @@ export const HeaderButtons = ({
             onClick={handleUploadFlowsToFolder}
             disabled={isUpdatingFolder}
           />
-          <AddFolderButton
-            onClick={addNewFolder}
-            disabled={isUpdatingFolder}
-            loading={isPending}
-          />
+          {!hideNewProjectButton && (
+            <AddFolderButton
+              onClick={addNewFolder}
+              disabled={isUpdatingFolder}
+              loading={isPending}
+            />
+          )}
         </div>
       </div>
     </>

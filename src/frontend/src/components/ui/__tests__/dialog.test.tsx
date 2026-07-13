@@ -1,10 +1,10 @@
 import { render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogHeader,
   DialogTitle,
 } from "../dialog";
 
@@ -59,5 +59,65 @@ describe("DialogContent", () => {
 
     // Assert — custom handler was called
     expect(customHandler).toHaveBeenCalledTimes(1);
+  });
+
+  it("should_hide_close_button_when_requested", () => {
+    renderWithProviders(
+      <Dialog open>
+        <DialogContent hideCloseButton>
+          <DialogTitle>Test Dialog</DialogTitle>
+          <DialogDescription>Test description</DialogDescription>
+          <p>Content</p>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /close/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should_detect_dialog_title_and_description_inside_dialog_header", () => {
+    renderWithProviders(
+      <Dialog open>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nested title</DialogTitle>
+            <DialogDescription>Nested description</DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Nested title" });
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAccessibleDescription("Nested description");
+    expect(screen.queryByText("Dialog")).not.toBeInTheDocument();
+    expect(document.querySelectorAll("p")).toHaveLength(1);
+  });
+
+  it("should_stop_scanning_for_dialog_title_after_safe_depth", () => {
+    renderWithProviders(
+      <Dialog open>
+        <DialogContent>
+          <div>
+            <div>
+              <div>
+                <div>
+                  <div>
+                    <div>
+                      <DialogTitle>Too deep</DialogTitle>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogDescription>Test description</DialogDescription>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    expect(screen.getByText("Dialog")).toBeInTheDocument();
   });
 });

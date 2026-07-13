@@ -1,7 +1,8 @@
 import type { UseMutationResult } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import type {
   DeleteSessionError,
   DeleteSessionParams,
@@ -25,6 +26,7 @@ export const useDeleteSession = (options?: {
   ) => void;
   onError?: (error: DeleteSessionError) => void;
 }) => {
+  const { t } = useTranslation();
   const { mutate, queryClient } = UseRequestProcessor();
 
   const deleteSession = async ({
@@ -51,7 +53,7 @@ export const useDeleteSession = (options?: {
         (msg: { session_id?: string }) => msg.session_id !== sessionId,
       );
       window.sessionStorage.setItem(flowId, JSON.stringify(filtered));
-      return { message: "Session deleted from local storage" };
+      return { message: t("errors.sessionDeletedLocalStorage") };
     }
 
     const response = await api.delete(

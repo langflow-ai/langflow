@@ -1,26 +1,24 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
   enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
-  await awaitBootstrapTest(page);
-
-  await page.waitForSelector('[data-testid="blank-flow"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("blank-flow").click();
+  await openBlankFlow(page);
   await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("openai");
+  await page
+    .getByTestId("sidebar-search-input")
+    .fill(TEXTS.providerOpenAiSearch);
 
-  await page.waitForSelector('[data-testid="openaiOpenAI"]', {
-    timeout: 3000,
-  });
+  await skipIfComponentUnavailable(page.getByTestId("openaiOpenAI"), "OpenAI");
 
   await page
     .getByTestId("openaiOpenAI")

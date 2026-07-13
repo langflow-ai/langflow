@@ -16,9 +16,11 @@ def update_base_dep(pyproject_path: str, new_version: str) -> None:
     content = filepath.read_text(encoding="utf-8")
 
     # Updated pattern to handle PEP 440 version suffixes, extras (e.g., [complete]),
-    # both ~= and == version specifiers, and both langflow-base and langflow-base-nightly names
+    # ~=, ==, and >= version specifiers, and both langflow-base and langflow-base-nightly names
     # Captures extras in group 2 to preserve them in the replacement
-    pattern = re.compile(r'("langflow-base(?:-nightly)?((?:\[[^\]]+\])?)(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")')
+    pattern = re.compile(
+        r'("langflow-base(?:-nightly)?((?:\[[^\]]+\])?)(?:~=|==|>=)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")'
+    )
 
     # Check if the pattern is found
     match = pattern.search(content)
@@ -28,7 +30,9 @@ def update_base_dep(pyproject_path: str, new_version: str) -> None:
 
     # Extract extras if present (e.g., "[complete]")
     extras = match.group(2) if match.group(2) else ""
-    replacement = f'"langflow-base-nightly{extras}=={new_version}"'
+    # Keep the canonical `langflow-base` name; the exact `==<dev>` pin enables pre-release
+    # resolution down the tree and keeps base in lockstep with the run.
+    replacement = f'"langflow-base{extras}=={new_version}"'
 
     # Replace the matched pattern with the new one
     content = pattern.sub(replacement, content)
@@ -41,17 +45,24 @@ def update_lfx_dep_in_base(pyproject_path: str, lfx_version: str) -> None:
     content = filepath.read_text(encoding="utf-8")
 
     # Updated pattern to handle PEP 440 version suffixes, both ~= and == version specifiers,
-    # and both lfx and lfx-nightly names
-    pattern = re.compile(r'("lfx(?:-nightly)?(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")')
-    replacement = f'"lfx-nightly=={lfx_version}"'
+    # both lfx and lfx-nightly names, extras (e.g. lfx[cassandra], lfx[toolguard]), and
+    # trailing markers (e.g. `; python_version < '3.14'`).
+    # The extras group (1) MUST be preserved: base's `[complete]` extra pulls these
+    # `lfx[extra]` references, and if they keep a `~=X.Y.0` floor while base's bare `lfx`
+    # dep is pinned to `==X.Y.0.devN`, the floor (>=X.Y.0) excludes the dev release and
+    # the nightly resolve becomes unsatisfiable.
+    version_pattern = r"[0-9]+(?:\.[0-9]+)*(?:\.(?:post|dev|a|b|rc)\d+)*"
+    pattern = re.compile(rf'"lfx(?:-nightly)?((?:\[[^\]]+\])?)(?:~=|==){version_pattern}([^"]*)"')
+    # Pin base's lfx dep to the exact canonical dev version (single `lfx` distribution, no
+    # `lfx-nightly`), so there is no `lfx` vs `lfx-nightly` install collision with the bundles.
 
     # Check if the pattern is found
     if not pattern.search(content):
         msg = f'LFX dependency not found in "{filepath}"'
         raise ValueError(msg)
 
-    # Replace the matched pattern with the new one
-    content = pattern.sub(replacement, content)
+    # Replace each match, preserving its own extras and environment marker.
+    content = pattern.sub(lambda m: f'"lfx{m.group(1)}=={lfx_version}{m.group(2)}"', content)
     filepath.write_text(content, encoding="utf-8")
 
 

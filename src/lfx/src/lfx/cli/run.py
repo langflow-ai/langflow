@@ -49,7 +49,7 @@ def _check_langchain_version_compatibility(error_message: str) -> str | None:
 
 @partial(syncify, raise_sync_error=False)
 async def run(
-    script_path: Path | None = typer.Argument(  # noqa: B008
+    script_path: Path | None = typer.Argument(
         None, help="Path to the Python script (.py) or JSON flow (.json) containing a graph"
     ),
     input_value: str | None = typer.Argument(None, help="Input value to pass to the graph"),
@@ -81,6 +81,11 @@ async def run(
         show_default=True,
         help="Check global variables for environment compatibility",
     ),
+    check_dependencies: bool = typer.Option(
+        default=True,
+        show_default=True,
+        help="Preflight the flow's required packages; fail fast with install guidance when any are missing",
+    ),
     verbose: bool = typer.Option(
         False,  # noqa: FBT003
         "-v",
@@ -109,6 +114,7 @@ async def run(
             "Session ID to attach to the run. Agent and Memory Components will use this to track conversation history."
         ),
     ),
+    upgrade_flow: str | None = None,
 ) -> None:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -127,8 +133,10 @@ async def run(
         flow_json: Inline JSON flow content as a string
         stdin: Read JSON flow content from stdin
         check_variables: Check global variables for environment compatibility
+        check_dependencies: Preflight required packages and fail fast when any are missing
         timing: Include detailed timing information in output
         session_id: Optional session ID; auto-generated if not supplied
+        upgrade_flow: Component compatibility mode ('check' or 'safe')
     """
     # Determine verbosity for output formatting
     verbosity = 3 if verbose_full else (2 if verbose_detailed else (1 if verbose else 0))
@@ -142,12 +150,14 @@ async def run(
             flow_json=flow_json,
             stdin=bool(stdin),
             check_variables=check_variables,
+            check_dependencies=check_dependencies,
             verbose=verbose,
             verbose_detailed=verbose_detailed,
             verbose_full=verbose_full,
             timing=timing,
             global_variables=None,
             session_id=session_id,
+            upgrade_flow=upgrade_flow,
         )
 
         # Output based on format

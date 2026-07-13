@@ -4,11 +4,15 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
+import numpy as np
+import pandas as pd
+from fastapi.encoders import jsonable_encoder
+from lfx.schema.legacy_render import render_v1_content_blocks
 from pydantic import ConfigDict, field_serializer, field_validator
 from sqlalchemy import Index, Text, text
 from sqlmodel import JSON, Column, Field, SQLModel
 
-from langflow.schema.content_block import ContentBlock
+from langflow.schema.content_block import ContentType
 from langflow.schema.properties import Properties
 from langflow.schema.validators import TF_WITH_TZ_AND_MICROSECONDS, str_to_timestamp, str_to_timestamp_validator
 
@@ -31,7 +35,7 @@ class MessageBase(SQLModel):
 
     properties: Properties = Field(default_factory=Properties)
     category: str = Field(default="message")
-    content_blocks: list[ContentBlock] = Field(default_factory=list)
+    content_blocks: list[ContentType] = Field(default_factory=list)
     session_metadata: dict | None = Field(default=None)
 
     @field_serializer("timestamp")
@@ -61,7 +65,14 @@ class MessageBase(SQLModel):
 
     @classmethod
     def from_message(cls, message: "Message", flow_id: str | UUID | None = None, run_id: str | UUID | None = None):
-        if message.text is None or not message.sender or not message.sender_name:
+        # ``message.text`` is now a computed_field over content_blocks. The
+        # "content present" signal is: ``data["text"]`` explicitly set
+        # (covers ``text=""`` from ChatInput), a pending text stream
+        # (iterator), or any ``content_blocks`` entries (covers tool-call /
+        # media-only agent messages whose ``content_blocks`` carry the
+        # whole payload).
+        no_content = message.data.get("text") is None and message.text_stream is None and not message.content_blocks
+        if no_content or not message.sender or not message.sender_name:
             msg = "The message does not have the required fields (text, sender, sender_name)."
             raise ValueError(msg)
 
@@ -99,6 +110,8 @@ class MessageBase(SQLModel):
 
         if not flow_id and message.flow_id:
             flow_id = message.flow_id
+        if not run_id and getattr(message, "run_id", None):
+            run_id = message.run_id
 
         message_text = "" if not isinstance(message.text, str) else message.text
 
@@ -172,7 +185,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         sa_column=Column(JSON),
     )
     category: str = Field(sa_column=Column(Text))
-    content_blocks: list[dict | ContentBlock] = Field(  # type: ignore[assignment]
+    content_blocks: list[dict | ContentType] = Field(  # type: ignore[assignment]
         default_factory=list,
         sa_column=Column(JSON),
     )
@@ -195,7 +208,27 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
     @staticmethod
     def _sanitize_json(value):
-        """Replace float NaN/Infinity with None to avoid PostgreSQL jsonb rejection."""
+        """Coerce values into a JSON-safe shape before they reach the SQL UPDATE.
+
+        Replaces float NaN/Infinity with None to avoid PostgreSQL jsonb rejection,
+        and resolves non-serializable Python objects (notably pandas DataFrame /
+        lfx Table instances and numpy scalars) that can leak into ContentBlock
+        fields when an upstream component output — e.g. the Memory Base
+        ``retrieve_data`` Table — is captured by message tracking before the
+        consumer (Parser) has converted it to text.
+        """
+        # numpy scalars (np.float64, np.int64, np.bool_, ...) survive
+        # ``jsonable_encoder`` when nested inside a DataFrame-derived dict
+        # and would later be rejected by the jsonb encoder. Coerce them to
+        # their Python-native counterparts so persistence succeeds. This must
+        # come before the ``float`` / ``int`` / ``bool`` checks because numpy
+        # scalars inherit from those Python types.
+        if isinstance(value, np.generic):
+            return MessageTable._sanitize_json(value.item())
+
+        if isinstance(value, bool):
+            return value
+
         if isinstance(value, float):
             if not math.isfinite(value):
                 return None
@@ -207,7 +240,21 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         if isinstance(value, list):
             return [MessageTable._sanitize_json(v) for v in value]
 
-        return value
+        if isinstance(value, pd.DataFrame):
+            return [MessageTable._sanitize_json(record) for record in value.to_dict(orient="records")]
+
+        if value is None or isinstance(value, str | int):
+            return value
+
+        # Unknown type — coerce to a JSON-safe representation rather than
+        # letting it propagate to the SQL UPDATE and fail persistence.
+        try:
+            encoded = jsonable_encoder(value)
+        except (TypeError, ValueError):
+            return str(value)
+        if encoded is value:
+            return str(value)
+        return MessageTable._sanitize_json(encoded)
 
     @field_validator("properties", "content_blocks", "session_metadata", mode="before")
     @classmethod
@@ -241,10 +288,38 @@ class MessageRead(MessageBase):
     flow_id: UUID | None = None
     session_metadata: dict | None = None
     run_id: UUID | None = None
+    # v1 read shape: hold content_blocks as legacy dicts and render the
+    # release-1.11.0 shape, so editing/reading a stored message (new-shape rows
+    # or pre-1.11.0 untagged rows) keeps the v1 wire shape and never trips the
+    # new union validator (the union_tag_not_found 500 on PUT /messages/{id}).
+    content_blocks: list[dict] = Field(default_factory=list)  # type: ignore[assignment]
+
+    @field_validator("content_blocks", mode="before")
+    @classmethod
+    def render_legacy_content_blocks(cls, value):
+        return render_v1_content_blocks(value) or []
+
+
+def _coerce_content_block_dicts(value):
+    """Normalize content_blocks items to plain dicts (request-parse path).
+
+    Accepts legacy/new dicts and ContentType model instances without forcing
+    them through the new discriminated union, and stores them as-sent (no v1
+    legacy projection: these are input models, not the v1 response).
+    """
+    if isinstance(value, list):
+        return [block.model_dump() if hasattr(block, "model_dump") else block for block in value]
+    return value
 
 
 class MessageCreate(MessageBase):
     session_metadata: dict | None = None
+    content_blocks: list[dict] = Field(default_factory=list)  # type: ignore[assignment]
+
+    @field_validator("content_blocks", mode="before")
+    @classmethod
+    def coerce_content_blocks(cls, value):
+        return _coerce_content_block_dicts(value) or []
 
 
 class MessageUpdate(SQLModel):
@@ -259,4 +334,9 @@ class MessageUpdate(SQLModel):
     properties: Properties | None = None
     session_metadata: dict | None = None
     category: str | None = None
-    content_blocks: list[ContentBlock] | None = None
+    content_blocks: list[dict] | None = None
+
+    @field_validator("content_blocks", mode="before")
+    @classmethod
+    def coerce_content_blocks(cls, value):
+        return _coerce_content_block_dicts(value)

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { SidebarSection } from "@/components/ui/sidebar";
 import enTranslations from "@/locales/en.json";
 import SidebarSegmentedNav, { NAV_ITEMS } from "../sidebarSegmentedNav";
@@ -117,6 +117,7 @@ jest.mock("@/utils/utils", () => ({
 }));
 
 jest.mock("@/stores/playgroundStore", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   usePlaygroundStore: (selector: (state: typeof mockPlaygroundStore) => any) =>
     selector(mockPlaygroundStore),
 }));
@@ -186,12 +187,12 @@ describe("SidebarSegmentedNav", () => {
     expect(componentsButton).toHaveAttribute("data-active", "false");
   });
 
-  it("sets active state for search when activeSection is search", () => {
-    mockUseSidebar.activeSection = "search";
+  it("sets active state for bundles when activeSection is bundles", () => {
+    mockUseSidebar.activeSection = "bundles";
     render(<SidebarSegmentedNav />);
 
-    const searchButton = screen.getByTestId("sidebar-nav-search");
-    expect(searchButton).toHaveAttribute("data-active", "true");
+    const bundlesButton = screen.getByTestId("sidebar-nav-bundles");
+    expect(bundlesButton).toHaveAttribute("data-active", "true");
   });
 
   it("calls setActiveSection when clicking on different section", () => {
@@ -256,40 +257,6 @@ describe("SidebarSegmentedNav", () => {
 
     expect(mockUseSearchContext.setSearch).toHaveBeenCalledWith("");
     expect(mockUseSearchContext.setSearch).toHaveBeenCalledTimes(1);
-  });
-
-  it("focuses search input when search section is clicked", async () => {
-    render(<SidebarSegmentedNav />);
-
-    const searchButton = screen.getByTestId("sidebar-nav-search");
-    fireEvent.click(searchButton);
-
-    expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith("search");
-
-    // Fast-forward the setTimeout
-    jest.advanceTimersByTime(100);
-
-    await waitFor(() => {
-      expect(mockUseSearchContext.focusSearch).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it("focuses search input even when sidebar is closed", async () => {
-    mockUseSidebar.open = false;
-    render(<SidebarSegmentedNav />);
-
-    const searchButton = screen.getByTestId("sidebar-nav-search");
-    fireEvent.click(searchButton);
-
-    expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith("search");
-    expect(mockUseSidebar.toggleSidebar).toHaveBeenCalledTimes(1);
-
-    // Fast-forward the setTimeout
-    jest.advanceTimersByTime(100);
-
-    await waitFor(() => {
-      expect(mockUseSearchContext.focusSearch).toHaveBeenCalledTimes(1);
-    });
   });
 
   it("renders accessibility labels correctly", () => {
@@ -388,43 +355,87 @@ describe("SidebarSegmentedNav", () => {
     expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith("mcp");
   });
 
+  it("renders a separator element before the memories nav item", () => {
+    const { container } = render(<SidebarSegmentedNav />);
+    // The separator is a <li role="separator" aria-hidden="true"> injected before memories
+    const separator = container.querySelector('li[role="separator"]');
+    expect(separator).toBeInTheDocument();
+    expect(separator).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("separator renders only once", () => {
+    const { container } = render(<SidebarSegmentedNav />);
+    const separators = container.querySelectorAll('li[role="separator"]');
+    expect(separators).toHaveLength(1);
+  });
+
+  it("separator appears between versions and memories in the DOM order", () => {
+    const { container } = render(<SidebarSegmentedNav />);
+    const menuItems = container.querySelectorAll(
+      '[data-testid="sidebar-menu-item"], li[role="separator"]',
+    );
+    const nodes = Array.from(menuItems);
+    const separatorIndex = nodes.findIndex(
+      (n) => n.getAttribute("role") === "separator",
+    );
+    const memoriesButton = container.querySelector(
+      '[data-testid="sidebar-nav-memories"]',
+    );
+    const memoriesItem = memoriesButton?.closest(
+      '[data-testid="sidebar-menu-item"]',
+    );
+    const memoriesIndex = nodes.indexOf(memoriesItem as Element);
+    // Separator should appear immediately before memories
+    expect(separatorIndex).toBe(memoriesIndex - 1);
+  });
+
+  it("sidebar-menu has no direct div children between it and menu items", () => {
+    const { container } = render(<SidebarSegmentedNav />);
+    const sidebarMenu = container.querySelector('[data-testid="sidebar-menu"]');
+    const directDivChildren = Array.from(sidebarMenu?.children ?? []).filter(
+      (child) => child.tagName === "DIV" && !child.hasAttribute("data-testid"),
+    );
+    // No anonymous wrapper divs — each direct child is either a menu-item or separator
+    expect(directDivChildren).toHaveLength(0);
+  });
+
   it("exports NAV_ITEMS correctly", () => {
-    expect(NAV_ITEMS).toHaveLength(7);
+    expect(NAV_ITEMS).toHaveLength(6);
     expect(NAV_ITEMS[0]).toEqual({
-      id: "search",
-      icon: "search",
-      label: "sidebar.nav.search",
-      tooltip: "sidebar.nav.search",
+      id: "components",
+      icon: "component",
+      label: "sidebar.nav.components",
+      tooltip: "sidebar.nav.components",
     });
-    expect(NAV_ITEMS[2]).toEqual({
+    expect(NAV_ITEMS[1]).toEqual({
       id: "mcp",
       icon: "Mcp",
       label: "sidebar.nav.mcp",
       tooltip: "sidebar.nav.mcp",
     });
-    expect(NAV_ITEMS[3]).toEqual({
+    expect(NAV_ITEMS[2]).toEqual({
       id: "bundles",
       icon: "blocks",
       label: "sidebar.nav.bundles",
       tooltip: "sidebar.nav.bundles",
     });
-    expect(NAV_ITEMS[4]).toEqual({
+    expect(NAV_ITEMS[3]).toEqual({
       id: "versions",
       icon: "History",
       label: "sidebar.nav.versions",
       tooltip: "sidebar.nav.versionHistory",
+    });
+    expect(NAV_ITEMS[4]).toEqual({
+      id: "memories",
+      icon: "BrainCog",
+      label: "memory.sidebarTitle",
+      tooltip: "memory.sidebarTitle",
     });
     expect(NAV_ITEMS[5]).toEqual({
       id: "traces",
       icon: "Activity",
       label: "sidebar.nav.traces",
       tooltip: "sidebar.nav.traces",
-    });
-    expect(NAV_ITEMS[6]).toEqual({
-      id: "memories",
-      icon: "Brain",
-      label: "Memories",
-      tooltip: "Memories",
     });
   });
 

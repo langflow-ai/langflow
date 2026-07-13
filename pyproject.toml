@@ -1,8 +1,8 @@
 [project]
 name = "langflow"
-version = "1.10.0"
+version = "1.11.0"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -17,7 +17,38 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.10.0",
+    "langflow-base[complete]>=0.11.0",
+    # langflow-extensions:bundle-deps-start
+    # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
+    # curated lfx-* package, never exact pins -- exact pins in reusable library
+    # metadata create resolver conflicts for downstreams that depend on a
+    # different version. Exact pins for reproducibility live in uv.lock and the
+    # release-build manifests. Bundles follow their own 0.1.x cadence (bound
+    # <1.0.0); lfx-bundles versions with the metapackage contract (bound <2.0).
+    # The cross-bundle CI matrix verifies these ranges resolve together across
+    # the supported lfx axis.
+    "lfx-duckduckgo>=0.1.0,<1.0.0",
+    "lfx-arxiv>=0.1.0,<1.0.0",
+    "lfx-ibm>=0.1.0,<1.0.0",
+    "lfx-docling>=0.1.0,<1.0.0",
+    # all-no-torch == all minus the torch-pulling providers (cuga, codeagents),
+    # so the default install is torch-free. Users who want those two components
+    # opt in with: pip install "lfx-bundles[all]" (or the per-provider extra).
+    "lfx-bundles[all-no-torch]>=1.1,<2.0",
+    "lfx-datastax>=0.1.0,<1.0.0",
+    "lfx-openai>=0.1.0,<1.0.0",
+    "lfx-anthropic>=0.1.0,<1.0.0",
+    "lfx-amazon>=0.1.0,<1.0.0",
+    "lfx-cohere>=0.1.0,<1.0.0",
+    "lfx-oracle>=0.1.0,<1.0.0",
+    "lfx-firecrawl>=0.1.0,<1.0.0",
+    "lfx-nextplaid>=0.1.0,<1.0.0",
+    "lfx-paddle>=0.1.0,<1.0.0",
+    "lfx-vllm>=0.1.0,<1.0.0",
+    "lfx-empiriolabs>=0.1.0,<1.0.0",
+    "lfx-openai-compatible>=0.1.0,<1.0.0",
+    "lfx-exa>=0.1.0,<1.0.0",
+    # langflow-extensions:bundle-deps-end
 ]
 
 
@@ -27,7 +58,7 @@ dev = [
     "ipykernel>=6.29.0",
     "ruff~=0.13.1",
     "httpx>=0.28.1",
-    "pytest>=8.2.0",
+    "pytest>=9.0.3",
     "requests>=2.33.0",
     "pytest-cov>=5.0.0",
     "pytest-mock>=3.14.0",
@@ -48,7 +79,7 @@ dev = [
     "types-aiofiles>=24.1.0.20240626",
     "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
-    "locust~=2.40.5",
+    "locust~=2.43.4",
     "pytest-rerunfailures>=15.0",
     "scrapegraph-py>=1.10.2",
     'elevenlabs==1.58.1; python_version == "3.12"',
@@ -58,7 +89,8 @@ dev = [
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
     "mcp-server-fetch>=2025.1.17",
-    "onnxruntime>=1.20,<1.24", # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
+    "onnxruntime>=1.20,<1.24; python_version<'3.14'", # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
+    "onnxruntime>=1.26; python_version>='3.14'",
     "fakeredis>=2.0.0",
 ]
 
@@ -72,6 +104,26 @@ langflow-base = { workspace = true }
 langflow = { workspace = true }
 lfx = { workspace = true }
 langflow-sdk = { workspace = true }
+# langflow-extensions:bundle-sources-start
+lfx-duckduckgo = { workspace = true }
+lfx-arxiv = { workspace = true }
+lfx-ibm = { workspace = true }
+lfx-docling = { workspace = true }
+lfx-bundles = { workspace = true }
+lfx-datastax = { workspace = true }
+lfx-openai = { workspace = true }
+lfx-anthropic = { workspace = true }
+lfx-amazon = { workspace = true }
+lfx-cohere = { workspace = true }
+lfx-oracle = { workspace = true }
+lfx-firecrawl = { workspace = true }
+lfx-nextplaid = { workspace = true }
+lfx-paddle = { workspace = true }
+lfx-vllm = { workspace = true }
+lfx-empiriolabs = { workspace = true }
+lfx-openai-compatible = { workspace = true }
+lfx-exa = { workspace = true }
+# langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
 
@@ -80,7 +132,28 @@ members = [
     "src/backend/base",
     ".",
     "src/lfx",
+    "src/langflow-stepflow",
     "src/sdk",
+    # langflow-extensions:bundle-members-start
+    "src/bundles/duckduckgo",
+    "src/bundles/arxiv",
+    "src/bundles/ibm",
+    "src/bundles/docling",
+    "src/bundles/lfx-bundles",
+    "src/bundles/datastax",
+    "src/bundles/openai",
+    "src/bundles/anthropic",
+    "src/bundles/amazon",
+    "src/bundles/cohere",
+    "src/bundles/oracle",
+    "src/bundles/firecrawl",
+    "src/bundles/nextplaid",
+    "src/bundles/paddle",
+    "src/bundles/vllm",
+    "src/bundles/empiriolabs",
+    "src/bundles/openai-compatible",
+    "src/bundles/exa",
+    # langflow-extensions:bundle-members-end
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -92,15 +165,15 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
-    "langchain-docling>=1.1.0",
-    "tesserocr>=2.8.0",
-    "rapidocr-onnxruntime>=1.4.4",
-    "ocrmac>=1.0.0; sys_platform == 'darwin'",
-    # CPU-only PyTorch required for docling features
-    # Loose version ranges intentionally used to avoid conflicts with transitive dependencies (e.g., altk)
-    # Updated to 2.6.0+ to address CVE: RCE vulnerability in torch.load() with weights_only=True
-    "torch>=2.6.0",
-    "torchvision>=0.21.0",  # torchvision 0.21+ is compatible with PyTorch 2.6+
+    "lfx-docling[local]>=0.1.0,<1.0.0",
+]
+
+docling-chunking = [
+    "lfx-docling[chunking]>=0.1.0,<1.0.0",
+]
+
+docling-image-description = [
+    "lfx-docling[image-description]>=0.1.0,<1.0.0",
 ]
 
 audio = [
@@ -147,6 +220,14 @@ override-dependencies = [
     "dynaconf>=3.2.13",
     "pillow>=12.1.1",  # Force Pillow 12.1.1+ to prevent CVE-vulnerable versions
     "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
+    # Keep uv workspace resolution on the supported LiteLLM floor without forcing
+    # an upstream package that declares Requires-Python <3.14 onto Python 3.14.
+    "litellm>=1.85.1,<2.0.0; python_version < '3.14'",
+    # Transitive dependency CVE fixes
+    "lxml>=6.1.0,<7.0.0",  # CVE-2026-41066
+    "mako>=1.3.12,<2.0.0",  # CVE-2026-44307
+    "urllib3>=2.7.0,<3.0.0",  # CVE-2026-44431, CVE-2026-44432
+    "python-liquid>=2.2.0,<3.0.0",  # CVE-2026-45017
 ]
 
 [project.scripts]
@@ -159,10 +240,17 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
-timeout = 150
-timeout_method = "signal"
+# DIAGNOSTIC (temporary): lowered from 150 and switched from "signal" to "thread" to identify the
+# nightly Backend Unit Tests Group 3 stall. Group 3 app-boot ("client" fixture) tests hang ~127s on
+# a firewalled outbound connect (Linux tcp_syn_retries); at timeout=150 that stall finished just
+# under the cap, so the per-test timeout never fired and the group silently accumulated until the
+# 50-min step wall. A 90s cap fires below the ~127s stall, and timeout_method="thread" dumps ALL
+# thread stacks (faulthandler) — naming the exact blocking call even when it is a leaked background
+# task. Revert to timeout=150 / timeout_method="signal" once the stall is identified and bounded.
+timeout = 90
+timeout_method = "thread"
 minversion = "6.0"
-testpaths = ["src/backend/tests", "src/lfx/tests"]
+testpaths = ["src/backend/tests", "src/lfx/tests", "src/bundles/*/tests"]
 console_output_style = "progress"
 filterwarnings = [
     "ignore::DeprecationWarning",
@@ -182,7 +270,8 @@ markers = [
     "unit: Unit tests",
     "integration: Integration tests",
     "slow: Slow-running tests",
-    "security: Security regression tests (IDOR, auth, access control)"
+    "security: Security regression tests (IDOR, auth, access control)",
+    "real_services: Tests that need real service instances (real SQLite + real Postgres + real Redis)"
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
@@ -225,6 +314,7 @@ flake8-bugbear.extend-immutable-calls = [
     "fastapi.Depends",
     "fastapi.File",
     "fastapi.Query",
+    "typer.Argument",
     "typer.Option",
 ]
 flake8-type-checking.runtime-evaluated-base-classes = [
@@ -259,7 +349,21 @@ external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
+"src/backend/tests/stress/*" = [
+    "D1",     # Docstrings: this is a manual CLI tool, not a test target
+    "INP001", # Stress tests live outside the unit test package
+    "S101",   # Asserts ok in stress harness
+    "S311",   # Standard PRNG is fine for stress payload jitter
+    "T201",   # Print statements: this is a CLI script
+]
 "scripts/gp/tests/*" = [
+    "D1",      # Missing docstrings
+    "PLR2004", # Magic value comparisons
+    "S101",    # Use of assert (required for pytest)
+    "TRY003",  # Long exception messages
+    "EM101",   # String literals in exceptions
+]
+"scripts/ci/test_*.py" = [
     "D1",      # Missing docstrings
     "PLR2004", # Magic value comparisons
     "S101",    # Use of assert (required for pytest)
@@ -300,14 +404,14 @@ external = ["RUF027"]
     "S104",  # Intentional binding to all interfaces for server
     "S105",  # False positive: GITHUB_TOKEN_ENV is an env var name
 ]
+"src/lfx/src/lfx/cli/upgrade.py" = [
+    "TC003",  # Path is used at runtime, not just in type hints
+]
 "src/lfx/src/lfx/components/__init__.py" = [
     "SLF001",  # Accessing _dynamic_imports from modules
 ]
 "src/lfx/src/lfx/components/data/save_file.py" = [
     "SLF001",  # Google API client private member access
-]
-"src/lfx/src/lfx/components/datastax/astradb_vectorstore.py" = [
-    "S110",  # Try-except-pass for optional metadata
 ]
 "src/lfx/src/lfx/components/google/google_generative_ai_embeddings.py" = [
     "SLF001",  # Google AI library private member access
@@ -315,7 +419,7 @@ external = ["RUF027"]
 "src/lfx/src/lfx/components/knowledge_bases/retrieval.py" = [
     "SLF001",  # Chroma client private member access
 ]
-"src/lfx/src/lfx/components/mongodb/mongodb_atlas.py" = [
+"src/bundles/lfx-bundles/src/lfx_bundles/mongodb/mongodb_atlas.py" = [
     "SLF001",  # MongoDB collection private member access
 ]
 "src/lfx/src/lfx/components/tools/{python_code_structured_tool.py,searxng.py}" = [
@@ -349,6 +453,11 @@ external = ["RUF027"]
     "FBT003", # Boolean positional values in typer.Option() calls
 ]
 "src/lfx/src/lfx/cli/_setup_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_prewarm_commands.py" = [
     "B008",   # Typer CLI requires function calls in argument defaults
     "FBT001", # Bool flags are the standard typer pattern
     "FBT003", # Boolean positional values in typer.Option() calls
@@ -412,6 +521,16 @@ external = ["RUF027"]
     "BLE001",  # allow broad-exception catching in tests
     "S104",    # Binding to all interfaces (test servers)
     "S108",    # Insecure temp file usage (safe in tests)
+]
+"src/bundles/*/tests/*" = [
+    "D1",
+    "PLR2004",
+    "S101",
+    "SLF001",
+    "BLE001",  # allow broad-exception catching in tests
+    "S104",    # Binding to all interfaces (test servers)
+    "S108",    # Insecure temp file usage (safe in tests)
+    "INP001",  # Bundle test dirs are not import packages
 ]
 "src/backend/tests/locust/*" = [
     "D1",      # Missing docstrings (CLI tools don't need full docstrings)

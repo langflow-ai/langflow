@@ -100,6 +100,197 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
     )
 
 
+async def test_custom_component_update_admin_only_allows_known_template_refresh(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """Non-admin users can refresh known server templates in admin-only mode."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    component = AgentComponent()
+    component_node, _cc_instance = build_custom_component_template(component)
+    template = component_node["template"]
+
+    agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
+    code = await Path(agent_component_file).read_text(encoding="utf-8")
+
+    request = UpdateCustomComponentRequest(
+        code=code,
+        frontend_node=component_node,
+        field="model",
+        field_value=[{"provider": "Anthropic", "name": "claude-3-opus-20240229"}],
+        template=template,
+    )
+    response = await client.post("api/v1/custom_component/update", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+
+
+async def test_custom_component_update_admin_only_blocks_unknown_custom_code(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """Non-admin users cannot edit truly custom code in admin-only mode."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    component_code = """
+from lfx.custom import Component
+
+class TestMetadataComponent(Component):
+    display_name = "Test Metadata Component"
+    description = "Test component for metadata"
+
+    def run(self) -> str:
+        return "ok"
+"""
+
+    request = UpdateCustomComponentRequest(
+        code=component_code,
+        frontend_node={"outputs": []},
+        field="tool_mode",
+        field_value=False,
+        template={},
+    )
+    response = await client.post("api/v1/custom_component/update", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "restricted to administrators" in response.json().get("detail", "")
+
+
+async def test_custom_component_create_admin_only_allows_known_template_refresh(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """Non-admin users can create/refresh known server templates in admin-only mode."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
+    code = await Path(agent_component_file).read_text(encoding="utf-8")
+
+    request = CustomComponentRequest(code=code)
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+
+
+async def test_custom_component_create_admin_only_blocks_unknown_custom_code(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """Non-admin users cannot create truly custom code in admin-only mode."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    component_code = """
+from lfx.custom import Component
+
+class TestMetadataComponent(Component):
+    display_name = "Test Metadata Component"
+    description = "Test component for metadata"
+
+    def run(self) -> str:
+        return "ok"
+"""
+
+    request = CustomComponentRequest(code=component_code)
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "restricted to administrators" in response.json().get("detail", "")
+
+
+async def test_custom_component_create_admin_only_allows_superuser(
+    client: AsyncClient,
+    logged_in_headers_super_user: dict,
+    monkeypatch,
+):
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    code = """
+from lfx.custom import Component
+
+class SuperUserMetadataComponent(Component):
+    display_name = "SuperUser Metadata Component"
+    description = "Test component for superuser bypass"
+
+    def run(self) -> str:
+        return "ok"
+"""
+
+    request = CustomComponentRequest(code=code)
+    response = await client.post(
+        "api/v1/custom_component",
+        json=request.model_dump(),
+        headers=logged_in_headers_super_user,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+    assert "data" in response.json()
+
+
+async def test_custom_component_update_admin_only_allows_superuser(
+    client: AsyncClient,
+    logged_in_headers_super_user: dict,
+    monkeypatch,
+):
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    component_code = """
+from lfx.custom import Component
+
+class SuperUserUpdateMetadataComponent(Component):
+    display_name = "SuperUser Update Metadata Component"
+    description = "Test component update for superuser bypass"
+
+    def run(self) -> str:
+        return "ok"
+"""
+
+    request = UpdateCustomComponentRequest(
+        code=component_code,
+        frontend_node={"outputs": []},
+        field="tool_mode",
+        field_value=False,
+        template={},
+    )
+    response = await client.post(
+        "api/v1/custom_component/update",
+        json=request.model_dump(),
+        headers=logged_in_headers_super_user,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+
+
 async def test_custom_component_endpoint_returns_metadata(client: AsyncClient, logged_in_headers: dict):
     """Test that the /custom_component endpoint returns metadata with module and code_hash."""
     component_code = """
@@ -293,6 +484,78 @@ async def test_get_config_authenticated_returns_full_config(client: AsyncClient,
     assert "feature_flags" in result, "Authenticated response must contain 'feature_flags'"
 
 
+async def test_get_config_embedded_mode_cascades_hide_flags(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """Embedded mode should only force UI hide flags, not security lock flags."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "embedded_mode", True)
+    monkeypatch.setattr(settings_service.settings, "hide_logout_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_new_project_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_new_flow_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_starter_projects", False)
+    monkeypatch.setattr(settings_service.settings, "hide_getting_started_progress", False)
+    monkeypatch.setattr(settings_service.settings, "mcp_servers_locked", False)
+    monkeypatch.setattr(settings_service.settings, "custom_component_admin_only", False)
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert result["embedded_mode"] is True
+    assert result["hide_logout_button"] is True
+    assert result["hide_new_project_button"] is True
+    assert result["hide_new_flow_button"] is True
+    assert result["hide_starter_projects"] is True
+    # This flag is currently a direct passthrough (not part of embedded_mode cascade).
+    assert result["hide_getting_started_progress"] is False
+    # Security lock flags are explicit opt-ins and do not cascade from embedded_mode.
+    assert result["mcp_servers_locked"] is False
+    assert result["custom_component_admin_only"] is False
+
+
+async def test_get_config_embedded_mode_false_keeps_individual_hide_flags(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """When embedded mode is disabled, individual hide flags should retain explicit values."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "embedded_mode", False)
+    monkeypatch.setattr(settings_service.settings, "hide_logout_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_new_project_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_new_flow_button", True)
+    monkeypatch.setattr(settings_service.settings, "hide_starter_projects", False)
+    monkeypatch.setattr(settings_service.settings, "hide_getting_started_progress", True)
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert result["embedded_mode"] is False
+    assert result["hide_logout_button"] is False
+    assert result["hide_new_project_button"] is False
+    assert result["hide_new_flow_button"] is True
+    assert result["hide_starter_projects"] is False
+    assert result["hide_getting_started_progress"] is True
+
+
+async def test_get_config_returns_mcp_and_admin_only_flags(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """Config response should expose lock/admin feature flags from settings."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "mcp_servers_locked", True)
+    monkeypatch.setattr(settings_service.settings, "custom_component_admin_only", True)
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert result["mcp_servers_locked"] is True
+    assert result["custom_component_admin_only"] is True
+
+
 async def test_get_config_returns_mcp_base_url(client: AsyncClient, logged_in_headers: dict):
     """Test that /config includes mcp_base_url for both authenticated and unauthenticated responses."""
     # Authenticated
@@ -388,3 +651,162 @@ async def test_deprecated_upload_enforces_max_file_size(
     assert response.status_code == status.HTTP_413_CONTENT_TOO_LARGE, (
         f"Expected 413 for oversized upload, got {response.status_code}: {response.text}"
     )
+
+
+async def test_custom_component_runs_trusted_copy_on_hash_collision(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+    tmp_path,
+):
+    """Restricted mode must run the trusted copy, not colliding attacker bytes.
+
+    Security (#13496): the truncated code-hash is the only gate in front of
+    exec(). A second-preimage collision must NOT run attacker code — the server
+    substitutes its own trusted copy keyed by the same hash. Proven end-to-end
+    with a forced collision and a module-level side-effect sentinel: the attacker
+    payload writes a file at import time, so if it ever executed the sentinel
+    would exist. It must not.
+    """
+    import lfx.utils.flow_validation as fv
+    from langflow.services.deps import get_settings_service
+    from lfx.interface.components import component_cache
+
+    # The server's trusted copy for the (collided) hash: a benign, buildable component.
+    trusted_path = Path(__file__).parent.parent.parent.parent / "data" / "dynamic_output_component.py"
+    trusted_code = await trusted_path.read_text(encoding="utf-8")
+
+    # Attacker payload: valid component whose MODULE-LEVEL code drops a sentinel.
+    # prepare_global_scope() exec's module-level assignments, so this WOULD fire
+    # at build time if the client bytes were executed.
+    sentinel = tmp_path / "pwned.txt"
+    malicious_code = (
+        "from lfx.custom import Component\n"
+        "from lfx.inputs import MessageTextInput\n"
+        "from lfx.template.field.base import Output\n"
+        f"_pwn = open({str(sentinel)!r}, 'w').write('pwned')\n"
+        "class EvilComponent(Component):\n"
+        '    display_name = "Evil Component"\n'
+        "    inputs = [MessageTextInput(display_name='Input', name='input_value')]\n"
+        "    outputs = [Output(display_name='Output', name='output', method='process_input')]\n"
+        "    def process_input(self) -> str:\n"
+        "        return 'evil'\n"
+    )
+
+    settings_service = get_settings_service()
+    # Restricted mode — the hash gate is the only thing in front of exec().
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", False)
+
+    # Force a 48-bit collision: every blob maps to the same known hash.
+    collision_hash = "c0ffeec0ffee"  # pragma: allowlist secret
+    monkeypatch.setattr(fv, "_compute_code_hash", lambda _code: collision_hash)
+
+    # Seed the cache so the collided hash resolves to the trusted copy. A non-None
+    # type_to_current_hash stops the endpoint's lazy builder from rebuilding over the seed.
+    monkeypatch.setattr(component_cache, "type_to_current_hash", {"EvilComponent": {collision_hash}})
+    monkeypatch.setattr(component_cache, "all_known_hashes", {collision_hash})
+    monkeypatch.setattr(component_cache, "code_by_hash", {collision_hash: trusted_code})
+
+    request = CustomComponentRequest(code=malicious_code)
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+
+    # The trusted copy built successfully (gate passed via the collided hash)...
+    assert response.status_code == status.HTTP_200_OK, response.json()
+    # ...and the attacker's module-level code NEVER executed.
+    assert not sentinel.exists(), "Attacker module-level code executed — trusted-copy substitution failed"
+
+
+async def test_custom_component_update_runs_trusted_copy_on_hash_collision(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+    tmp_path,
+):
+    """The /update endpoint must also run the trusted copy on a hash collision.
+
+    Mirror of ``test_custom_component_runs_trusted_copy_on_hash_collision`` for
+    the update path (#13496). In addition to proving the attacker payload never
+    executes, this asserts the returned node template carries the trusted code —
+    not the colliding client bytes — so the substitution can't be undone by
+    persisting the response into a saved flow and re-building it.
+    """
+    import lfx.utils.flow_validation as fv
+    from langflow.services.deps import get_settings_service
+    from lfx.interface.components import component_cache
+
+    trusted_path = Path(__file__).parent.parent.parent.parent / "data" / "dynamic_output_component.py"
+    trusted_code = await trusted_path.read_text(encoding="utf-8")
+
+    sentinel = tmp_path / "pwned_update.txt"
+    malicious_code = (
+        "from lfx.custom import Component\n"
+        "from lfx.inputs import MessageTextInput\n"
+        "from lfx.template.field.base import Output\n"
+        f"_pwn = open({str(sentinel)!r}, 'w').write('pwned')\n"
+        "class EvilComponent(Component):\n"
+        '    display_name = "Evil Component"\n'
+        "    inputs = [MessageTextInput(display_name='Input', name='input_value')]\n"
+        "    outputs = [Output(display_name='Output', name='output', method='process_input')]\n"
+        "    def process_input(self) -> str:\n"
+        "        return 'evil'\n"
+    )
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", False)
+
+    collision_hash = "c0ffeec0ffee"  # pragma: allowlist secret
+    monkeypatch.setattr(fv, "_compute_code_hash", lambda _code: collision_hash)
+    monkeypatch.setattr(component_cache, "type_to_current_hash", {"EvilComponent": {collision_hash}})
+    monkeypatch.setattr(component_cache, "all_known_hashes", {collision_hash})
+    monkeypatch.setattr(component_cache, "code_by_hash", {collision_hash: trusted_code})
+
+    request = UpdateCustomComponentRequest(
+        code=malicious_code,
+        frontend_node={"outputs": []},
+        field="",
+        field_value="",
+        template={},
+    )
+    response = await client.post("api/v1/custom_component/update", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+    # The attacker's module-level code NEVER executed...
+    assert not sentinel.exists(), "Attacker module-level code executed — trusted-copy substitution failed"
+    # ...and the returned node carries the trusted code, not the colliding bytes.
+    returned_code = response.json().get("template", {}).get("code", {}).get("value")
+    assert returned_code != malicious_code
+    assert returned_code == trusted_code
+
+
+async def test_custom_component_fails_closed_when_no_trusted_copy(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """Restricted mode must 403 when the hash gate passes but no trusted copy exists.
+
+    Security (#13496): if a submitted blob clears the truncated-hash gate but
+    ``code_by_hash`` has no entry for that hash (e.g. a poisoned/incomplete
+    index, or a collision against a hash whose source failed the integrity
+    check), the endpoint must fail closed rather than fall back to client bytes.
+    """
+    import lfx.utils.flow_validation as fv
+    from langflow.services.deps import get_settings_service
+    from lfx.interface.components import component_cache
+
+    code = 'from lfx.custom import Component\nclass Anything(Component):\n    display_name = "Anything"\n'
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", False)
+
+    collision_hash = "c0ffeec0ffee"  # pragma: allowlist secret
+    monkeypatch.setattr(fv, "_compute_code_hash", lambda _code: collision_hash)
+    # Gate passes (hash is "known"), but there is no trusted source for it.
+    monkeypatch.setattr(component_cache, "type_to_current_hash", {"Anything": {collision_hash}})
+    monkeypatch.setattr(component_cache, "all_known_hashes", {collision_hash})
+    monkeypatch.setattr(component_cache, "code_by_hash", {})
+
+    request = CustomComponentRequest(code=code)
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from typing import TYPE_CHECKING, Any, cast
 
 import nanoid
@@ -27,6 +28,9 @@ if TYPE_CHECKING:
 class LangWatchTracer(BaseTracer):
     flow_id: str
     tracer_provider = None
+    # Guards the missing-``langwatch``-package warning so it is logged once per process
+    # rather than on every flow run (a tracer instance is created per run).
+    _missing_dependency_warned = False
 
     def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
         self.trace_name = trace_name
@@ -90,10 +94,45 @@ class LangWatchTracer(BaseTracer):
                 )
 
             self._client = langwatch
+
+            # Instrument HTTP clients to propagate W3C TraceContext on outgoing requests
+            from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+            get_http_instrumentation_manager().enable(self.tracer_provider)
         except ImportError as e:
-            logger.exception(f"{e}")
+            self._warn_langwatch_unavailable()
+            logger.debug(f"LangWatch tracing disabled; 'langwatch' import failed: {e}")
             return False
         return True
+
+    @classmethod
+    def _warn_langwatch_unavailable(cls) -> None:
+        """Log a single actionable warning when the optional ``langwatch`` package is missing.
+
+        ``LANGWATCH_API_KEY`` is set (so the user expects LangWatch), but ``langwatch`` could
+        not be imported. The most common cause is running on Python 3.14+, where ``langwatch``
+        is unavailable because it caps ``requires-python`` at ``<3.14`` -- which is the case for
+        the official Langflow Docker images. Warn only once to avoid log spam, since a tracer
+        instance is created on every flow run.
+        """
+        if cls._missing_dependency_warned:
+            return
+        cls._missing_dependency_warned = True
+        if sys.version_info >= (3, 14):
+            logger.warning(
+                "LANGWATCH_API_KEY is set but the 'langwatch' package is not installed, so "
+                "LangWatch tracing is disabled. 'langwatch' does not yet support Python "
+                f"{sys.version_info.major}.{sys.version_info.minor} (it requires Python <3.14), so "
+                "it is excluded from Python 3.14+ environments, including the official Langflow "
+                "Docker images. To enable LangWatch tracing, run Langflow on Python 3.10-3.13 "
+                "(for example via 'pip install langflow')."
+            )
+        else:
+            logger.warning(
+                "LANGWATCH_API_KEY is set but the 'langwatch' package is not installed, so "
+                "LangWatch tracing is disabled. Install it with 'pip install langwatch' or "
+                "'pip install \"langflow-base[langwatch]\"'."
+            )
 
     @override
     def add_trace(
@@ -164,10 +203,15 @@ class LangWatchTracer(BaseTracer):
             self.trace.update(metadata=(self.trace.metadata or {}) | {"labels": [f"Flow: {metadata['flow_name']}"]})
 
         if self.trace.api_key or self._client._api_key:
-            try:
+            import contextlib
+
+            with contextlib.suppress(ValueError):
+                # Ignore "token was created in a different Context" errors
                 self.trace.__exit__(None, None, None)
-            except ValueError:  # ignoring token was created in a different Context errors
-                return
+
+        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+        get_http_instrumentation_manager().disable()
 
     def _convert_to_langwatch_types(self, io_dict: dict[str, Any] | None):
         from langwatch.utils import autoconvert_typed_values

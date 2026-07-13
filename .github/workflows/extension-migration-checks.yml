@@ -1,0 +1,119 @@
+name: Extension Migration Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, auto_merge_enabled]
+    paths:
+      - "BUNDLE_API.md"
+      - "scripts/migrate/**"
+      - "src/lfx/src/lfx/extension/**"
+      - "src/lfx/src/lfx/components/**"
+      - "src/bundles/**"
+      - "src/backend/base/langflow/api/**.py"
+      - "scripts/ci/check_components_frozen.py"
+      - "scripts/ci/frozen_component_dirs.txt"
+      - ".github/workflows/extension-migration-checks.yml"
+
+jobs:
+  bare-names:
+    name: Migration table - bare-name uniqueness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run check_bare_names.py
+        run: python scripts/migrate/check_bare_names.py
+
+  append-only:
+    name: Migration table - append-only
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run check_migration_append_only.py
+        run: |
+          base_ref="origin/${GITHUB_BASE_REF:-main}"
+          python scripts/migrate/check_migration_append_only.py --base "$base_ref"
+
+  bundle-api-changelog:
+    name: BUNDLE_API.md changelog gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run check_bundle_api_changelog.py
+        run: |
+          base_ref="origin/${GITHUB_BASE_REF:-main}"
+          python scripts/migrate/check_bundle_api_changelog.py --base "$base_ref"
+
+  router-trust:
+    name: Router trust - no install/uninstall under /api/v1/extensions
+    runs-on: ubuntu-latest
+    # Trigger on any change to API modules so the guard catches a new
+    # router file that mounts /extensions, not just edits to the existing
+    # extensions.py.  The guard itself filters down to in-scope files.
+    if: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run check_router_trust.py
+        run: python scripts/migrate/check_router_trust.py
+
+  freeze-components:
+    name: Freeze lfx/components
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # Stdlib-only gate; no uv sync needed.  After the bundle metapackage
+      # split, new providers go to lfx-bundles, not src/lfx/src/lfx/components/.
+      - name: Forbid new top-level directories under lfx/components (post-freeze)
+        run: python3 scripts/ci/check_components_frozen.py
+
+  env-writes:
+    name: No process-global os.environ writes in components
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # Stdlib-only gate; no uv sync needed.  Mirrors the pre-commit
+      # `component-env-writes` hook so the credential-bleed guard is enforced
+      # in CI even when a contributor skips local hooks (git commit -n, web UI).
+      - name: Forbid component writes to process-global os.environ
+        run: python3 scripts/lint/check_component_env_writes.py

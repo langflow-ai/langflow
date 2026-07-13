@@ -5,6 +5,18 @@ export interface NodeColors {
   [key: string]: string;
 }
 
+export interface SidebarBundle {
+  display_name: string;
+  name: string;
+  icon: string;
+  /**
+   * Distribution / extension id this bundle was loaded from.  Optional:
+   * the static SIDEBAR_BUNDLES list does not populate this; the future
+   * bundle-list endpoint will.
+   */
+  extension_id?: string;
+}
+
 export interface CategoryGroupProps {
   dataFilter: APIDataType;
   sortedCategories: string[];
@@ -18,7 +30,7 @@ export interface CategoryGroupProps {
   search: string;
   nodeColors: NodeColors;
   onDragStart: (
-    event: React.DragEvent<any>,
+    event: React.DragEvent<HTMLDivElement>,
     data: { type: string; node?: APIClassType },
   ) => void;
   sensitiveSort: (a: string, b: string) => number;
@@ -27,7 +39,7 @@ export interface CategoryGroupProps {
 }
 
 export interface SidebarGroupProps {
-  BUNDLES: any;
+  BUNDLES: SidebarBundle[];
   search: string;
   sortedCategories: string[];
   dataFilter: APIDataType;
@@ -49,21 +61,20 @@ export interface SidebarGroupProps {
 }
 
 export interface BundleItemProps {
-  item: {
-    name: string;
-    display_name: string;
-    icon: string;
-  };
+  item: SidebarBundle;
   openCategories: string[];
   setOpenCategories: Dispatch<SetStateAction<string[]>>;
   dataFilter: APIDataType;
   nodeColors: NodeColors;
   onDragStart: (
-    event: React.DragEvent<any>,
+    event: React.DragEvent<HTMLDivElement>,
     data: { type: string; node?: APIClassType },
   ) => void;
   sensitiveSort: (a: string, b: string) => number;
-  handleKeyDownInput: (event: React.KeyboardEvent<any>, name: string) => void;
+  handleKeyDownInput: (
+    event: React.KeyboardEvent<HTMLDivElement>,
+    name: string,
+  ) => void;
 }
 
 export interface SidebarHeaderComponentProps {
@@ -82,9 +93,4 @@ export interface SidebarHeaderComponentProps {
   filterName: string;
   filterDescription: string;
   resetFilters: () => void;
-}
-
-export interface UniqueInputsComponents {
-  chatInput: boolean;
-  webhookInput: boolean;
 }

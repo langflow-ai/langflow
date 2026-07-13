@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { Outlet } from "react-router-dom";
 import SideBarFoldersButtonsComponent from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
 import CustomEmptyPageCommunity from "@/customization/components/custom-empty-page";
 import CustomLoader from "@/customization/components/custom-loader";
@@ -88,7 +87,7 @@ export default function CollectionPage(): JSX.Element {
           </div>
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <CustomLoader remSize={30} />
+            <CustomLoader remSize={20} />
           </div>
         )}
       </main>

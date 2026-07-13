@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from typing import TYPE_CHECKING
 
@@ -13,6 +14,7 @@ from sqlalchemy import delete
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.services.database.models.auth.authz import AuthzShare
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
 )
@@ -112,6 +114,14 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         if trace_ids:
             await session.exec(delete(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids)))
             await session.exec(delete(TraceTable).where(col(TraceTable.id).in_(trace_ids)))
+        # authz_share is polymorphic over resource_type/resource_id with no
+        # FK, so DB cascades cannot remove stale share rows when the flow is
+        # deleted. Clean them up here so a deleted flow's grants do not
+        # silently survive — that would let an authorization plugin keep
+        # honoring share rows that point at a tombstoned resource.
+        await session.exec(
+            delete(AuthzShare).where(AuthzShare.resource_type == "flow").where(AuthzShare.resource_id == flow_id)
+        )
         await session.exec(delete(Flow).where(Flow.id == flow_id))
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
@@ -120,6 +130,42 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         )
         msg = f"Unable to cascade delete flow: {flow_id}"
         raise RuntimeError(msg, e) from e
+
+
+# Public flow file paths must be ``{source_flow_id}/{safe_basename}`` — uploads
+# under that namespace are the only legitimate inputs for an unauthenticated
+# build. Anything else (absolute paths, traversal, foreign flow_ids) is a
+# probe at the arbitrary-file-read class of bug (GHSA-rcjh-r59h-gq37).
+_PUBLIC_FILE_PATH_RE = re.compile(
+    r"^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/([^/\\]+)$"
+)
+_PUBLIC_FILE_REJECTED_SUBSTRINGS = ("\x00", "..", "\\")
+
+
+def validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) -> None:
+    """Reject file references that aren't ``{source_flow_id}/{basename}``.
+
+    Mitigates GHSA-rcjh-r59h-gq37: an unauthenticated build must not be
+    able to address files outside its own flow's storage namespace.
+    Called from any endpoint that accepts caller-supplied file references
+    under a public-access boundary.
+    """
+    if not files:
+        return
+    expected_flow_id = str(source_flow_id).lower()
+    for entry in files:
+        if not isinstance(entry, str) or not entry:
+            raise HTTPException(status_code=400, detail="Invalid file entry")
+        if any(token in entry for token in _PUBLIC_FILE_REJECTED_SUBSTRINGS):
+            raise HTTPException(status_code=400, detail="Invalid file path")
+        match = _PUBLIC_FILE_PATH_RE.match(entry)
+        if not match:
+            raise HTTPException(status_code=400, detail="Invalid file path format")
+        flow_id_segment, basename = match.group(1), match.group(2)
+        if flow_id_segment.lower() != expected_flow_id:
+            raise HTTPException(status_code=400, detail="File not in this flow's namespace")
+        if basename in (".", ".."):
+            raise HTTPException(status_code=400, detail="Invalid filename")
 
 
 def compute_virtual_flow_id(identifier: str | uuid.UUID, flow_id: uuid.UUID) -> uuid.UUID:

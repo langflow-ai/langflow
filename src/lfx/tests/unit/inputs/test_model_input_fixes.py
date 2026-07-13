@@ -180,7 +180,7 @@ class TestModelInputRefreshButton:
 
 
 class TestModelInputEmbeddingType:
-    """Test that ModelInput correctly handles embedding model_type (fix for LE-278).
+    """Test that ModelInput correctly handles embedding model_type.
 
     input_types should always be set based on model_type:
     - "embedding" -> ["Embeddings"]

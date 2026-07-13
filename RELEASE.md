@@ -85,7 +85,14 @@ git push -u origin release-X.Y.Z       # Push RC branch to remote
 3. Review and approve as normal.
 4. Merge into the RC branch after review.
 
-### 3. Final Release
+### 3. Review Regression Log
+
+Before tagging, review `regressions/X.Y.x.yaml` to confirm no unresolved `blocking` entries exist.
+If `blocking` entries exist, they should be signed off on.
+
+See [regressions/README.md](./regressions/README.md) for the full schema and entry instructions.
+
+### 4. Final Release
 
 ```sh
 git checkout release-X.Y.Z && git pull # Ensure RC branch is up to date
@@ -93,7 +100,7 @@ git tag vX.Y.Z                         # Create final release tag
 git push origin vX.Y.Z                 # Push tag to remote
 ```
 
-### 4. Merge RC Back into Main
+### 5. Merge RC Back into Main
 
 ```sh
 git checkout main
@@ -124,6 +131,43 @@ git merge --ff-only release-X.Y.Z      # Fast-forward main to include RC changes
   * The release workflow validates this format and rejects tags without the `v` prefix.
   * Duplicate tags (e.g., both `1.8.3` and `v1.8.3`) cause GitHub's release notes generation to use the wrong base comparison, resulting in incomplete changelogs.
   * The workflow automatically checks for and prevents duplicate tags.
+
+## LFX Compatibility
+
+Langflow and LFX share a **major.minor version line**. The compatibility contract is:
+
+> **LFX X.Y.N is guaranteed compatible with any Flow exported from Langflow X.Y.M.**
+
+Patch releases (`N` and `M`) are independent — a patch to LFX does not require a Langflow patch release, and vice versa.
+
+### Version management
+
+`make patch v=X.Y.Z` updates all four artifacts together:
+
+| Artifact | Version set |
+|---|---|
+| `langflow` | `X.Y.Z` |
+| `langflow-base` | `0.Y.Z` |
+| `lfx` | `X.Y.Z` |
+| frontend | `X.Y.Z` |
+
+### Cutting an LFX patch release
+
+Use `scripts/release-lfx.sh <version>`. The script warns if the LFX minor version does not match the current Langflow minor version, which would violate the compatibility contract. A warning is not a hard block — patch-only LFX releases within the same minor are expected and fine.
+
+### Implications for users
+
+Users can pin `lfx~=X.Y.0` in their `requirements.txt` to receive all compatible LFX patch releases for a given Langflow minor.
+
+### Migrating from lfx 0.5.x to 1.10.0
+
+LFX was realigned from its standalone `0.5.x` line onto Langflow's `major.minor` line, so the version jumps from `0.5.0` to `1.10.0` in a single step. This is a version-numbering change, not 95 minors of feature churn. The jump affects downstream pins, and neither pip nor uv will flag it — so it must be called out in the release announcement, not just here:
+
+- `lfx==0.5.x` or `lfx<1.0` pins will **not** upgrade (intentional — those deployments stay put).
+- `lfx>=0.5,<1` pins will **not** upgrade.
+- `lfx>=0.5` with no upper bound **will** pull `1.10.0` on the next install — a major jump with no warning.
+
+Going forward, pin `lfx~=X.Y.0` (e.g. `lfx~=1.10.0`) so you track compatible patches for a given Langflow minor without silently crossing minor lines.
 
 ## Roles
 

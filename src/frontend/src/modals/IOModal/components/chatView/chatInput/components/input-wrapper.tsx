@@ -55,7 +55,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    if (target.closest("textarea")) {
+    if (target.closest("textarea,button,input,[role='button']")) {
       return;
     }
     inputRef.current?.focus();
@@ -67,27 +67,11 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
 
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    if (target.closest("textarea")) {
+    if (target.closest("textarea,button,input,[role='button']")) {
       return;
     }
     e.stopPropagation();
     e.preventDefault();
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    if (target.closest("textarea")) {
-      return;
-    }
-    if (e.key !== "Enter" && e.key !== " ") {
-      return;
-    }
-    e.preventDefault();
-    inputRef.current?.focus();
-    inputRef.current?.setSelectionRange(
-      inputRef.current.value.length,
-      inputRef.current.value.length,
-    );
   };
 
   return (
@@ -97,10 +81,8 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
         className="flex w-full flex-col rounded-md border cursor-text border-input bg-muted p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary"
         onClick={onClick}
         onMouseDown={onMouseDown}
-        onKeyDown={onKeyDown}
-        role="button"
-        tabIndex={0}
-        aria-label="Focus chat input"
+        role="group"
+        aria-label={t("playgroundComponent.focusChatInput")}
       >
         <TextAreaWrapper
           isBuilding={isBuilding}

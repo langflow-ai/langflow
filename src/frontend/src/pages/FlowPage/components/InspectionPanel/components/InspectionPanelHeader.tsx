@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -27,6 +28,7 @@ export default function InspectionPanelHeader({
   isEditingFields,
   setIsEditingFields,
 }: InspectionPanelHeaderProps) {
+  const { t } = useTranslation();
   const [openCodeModal, setOpenCodeModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [isHoveringContent, setIsHoveringContent] = useState(false);
@@ -47,7 +49,7 @@ export default function InspectionPanelHeader({
 
   const handleCopyId = useCallback(() => {
     navigator.clipboard.writeText(data.id);
-    setSuccessData({ title: "Component ID copied to clipboard" });
+    setSuccessData({ title: t("success.componentIdCopied") });
   }, [data.id, setSuccessData]);
 
   const handleOpenCode = useCallback(() => {
@@ -116,7 +118,10 @@ export default function InspectionPanelHeader({
         onMouseLeave={() => setIsHoveringContent(false)}
       >
         <div className="absolute -left-2 top-[18px] w-7 pr-2">
-          <ShadTooltip content={editMode ? "Save" : "Edit"} side="top">
+          <ShadTooltip
+            content={editMode ? t("settings.saveButton") : t("admin.editTitle")}
+            side="top"
+          >
             <Button
               unstyled
               onClick={() => {
@@ -132,6 +137,9 @@ export default function InspectionPanelHeader({
                 editMode
                   ? "save-name-description-button"
                   : "edit-name-description-button"
+              }
+              aria-label={
+                editMode ? t("settings.saveButton") : t("admin.editTitle")
               }
             >
               <ForwardedIconComponent
@@ -152,7 +160,7 @@ export default function InspectionPanelHeader({
             <span className="font-semibold truncate" data-testid="panel-name">
               {nameElement}
             </span>
-            <ShadTooltip content="Click to copy full ID">
+            <ShadTooltip content={t("node.clickToCopyFullId")}>
               <Badge
                 variant="secondaryStatic"
                 size="sm"
@@ -176,6 +184,7 @@ export default function InspectionPanelHeader({
                 )}
                 className="!text-muted-foreground"
                 dataTestId="docs-button-modal"
+                label={t("nodeToolbar.docs")}
               />
             )}
             {hasCode && (

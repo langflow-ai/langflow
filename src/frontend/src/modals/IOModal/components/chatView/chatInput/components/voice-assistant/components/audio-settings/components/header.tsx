@@ -1,8 +1,9 @@
-import React from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "../../../../../../../../../../components/common/genericIconComponent";
 import { ICON_STROKE_WIDTH } from "../../../../../../../../../../constants/constants";
 
 const AudioSettingsHeader = () => {
+  const { t } = useTranslation();
   return (
     <div
       className="grid gap-1 p-4"
@@ -14,11 +15,10 @@ const AudioSettingsHeader = () => {
           strokeWidth={ICON_STROKE_WIDTH}
           className="h-4 w-4 text-muted-foreground hover:text-foreground"
         />
-        Voice settings
+        {t("voice.settingsTitle")}
       </p>
       <p className="text-mmd leading-4 text-muted-foreground">
-        Voice chat is powered by OpenAI. You can also add more voices with
-        ElevenLabs.
+        {t("voice.settingsDescription")}
       </p>
     </div>
   );

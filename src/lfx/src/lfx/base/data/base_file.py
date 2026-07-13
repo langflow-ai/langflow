@@ -1,6 +1,7 @@
 import ast
 import shutil
 import tarfile
+import threading
 from abc import ABC, abstractmethod
 from io import BytesIO
 from pathlib import Path
@@ -115,17 +116,31 @@ class BaseFileComponent(Component, ABC):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Dynamically update FileInput to include valid extensions and bundles
-        self.get_base_inputs()[0].file_types = [
+        # Eagerly create the per-instance lock used to serialize load_files_base.
+        # Lazy creation inside load_files_base would itself be racy on the very
+        # first concurrent entry — two threads could each create their own Lock
+        # and bypass serialization on the call this PR is meant to fix.
+        self._load_files_base_lock = threading.Lock()
+        file_types = [
             *self.valid_extensions,
             *self.SUPPORTED_BUNDLE_EXTENSIONS,
         ]
-
-        file_types = ", ".join(self.valid_extensions)
+        supported_file_types = ", ".join(self.valid_extensions)
         bundles = ", ".join(self.SUPPORTED_BUNDLE_EXTENSIONS)
-        self.get_base_inputs()[
-            0
-        ].info = f"Supported file extensions: {file_types}; optionally bundled in file extensions: {bundles}"
+        info = f"Supported file extensions: {supported_file_types}; optionally bundled in file extensions: {bundles}"
+        self._update_file_input_metadata(file_types=file_types, info=info)
+
+    def _update_file_input_metadata(self, *, file_types: list[str], info: str) -> None:
+        for input_ in self.inputs:
+            if isinstance(input_, FileInput) and input_.name == "path":
+                input_.file_types = file_types.copy()
+                input_.info = info
+                break
+
+        mapped_input = self._inputs.get("path")
+        if isinstance(mapped_input, FileInput):
+            mapped_input.file_types = file_types.copy()
+            mapped_input.info = info
 
     _base_inputs = [
         FileInput(
@@ -202,41 +217,107 @@ class BaseFileComponent(Component, ABC):
             list[BaseFile]: A list of BaseFile objects with updated `data`.
         """
 
+    def _load_files_paths_cache_key(self) -> tuple:
+        """Build a stable cache key for ``load_files_base`` from the current inputs.
+
+        The key includes both the local ``path`` input and any server file paths from
+        ``file_path``, plus the ``markdown`` flag (which can change which content
+        ``process_files`` produces). It is paths-keyed by design so different
+        component executions or input changes never reuse another call's cache.
+        """
+        path_value = getattr(self, "path", None)
+        if isinstance(path_value, list):
+            paths_part: tuple[str, ...] = tuple(str(p) for p in path_value)
+        elif path_value:
+            paths_part = (str(path_value),)
+        else:
+            paths_part = ()
+
+        file_path_part: tuple[str, ...] = ()
+        try:
+            server_data = self._file_path_as_list()
+        except (ValueError, AttributeError):
+            server_data = []
+        for d in server_data:
+            sp = d.data.get(self.SERVER_FILE_PATH_FIELDNAME) if isinstance(d.data, dict) else None
+            if sp:
+                file_path_part = (*file_path_part, str(sp))
+
+        markdown_flag = getattr(self, "markdown", False)
+        return (paths_part, file_path_part, markdown_flag)
+
     def load_files_base(self) -> list[Data]:
         """Loads and parses file(s), including unpacked file bundles.
+
+        Concurrent output methods on the same component instance are serialized so
+        that only one performs the actual file read/process/delete; the others see
+        the cached parsed result. This prevents both the spurious ``ValueError``
+        from a deleted server file and the silent data-loss interleaving where a
+        second caller would otherwise pass validation, then find the file gone in
+        ``_filter_and_mark_files`` and produce empty data.
 
         Returns:
             list[Data]: Parsed data from the processed files.
         """
-        self._temp_dirs: list[TemporaryDirectory] = []
-        final_files = []  # Initialize to avoid UnboundLocalError
-        try:
-            # Step 1: Validate the provided paths
-            files = self._validate_and_resolve_paths()
+        cache_key = self._load_files_paths_cache_key()
+        paths_subkey = cache_key[:-1]  # paths only, ignoring markdown flag
 
-            # Step 2: Handle bundles recursively
-            all_files = self._unpack_and_collect_files(files)
+        with self._load_files_base_lock:
+            cache: dict = getattr(self, "_load_files_base_processed_cache", None) or {}
 
-            # Step 3: Final validation of file types
-            final_files = self._filter_and_mark_files(all_files)
+            # Exact-key fast path: same inputs already processed once on this
+            # instance — return the cached parsed data and avoid reprocessing
+            # (and re-attempting to read a possibly-deleted server file).
+            if cache_key in cache:
+                return cache[cache_key]
 
-            # Step 4: Process files
-            processed_files = self.process_files(final_files)
+            self._temp_dirs: list[TemporaryDirectory] = []
+            self._validate_skipped_due_to_delete_race = False
+            final_files: list = []
+            try:
+                files = self._validate_and_resolve_paths()
 
-            # Extract and flatten Data objects to return
-            return [data for file in processed_files for data in file.data if file.data]
+                # Recovery path: validation skipped a missing server file marked
+                # ``delete_after_processing=True`` (i.e. a prior output call on
+                # this same instance already processed and deleted it). If we
+                # have any cached parsed result for the same source paths, reuse
+                # it so connected outputs see the same content instead of empty
+                # data. We accept that the cached entry may have been produced
+                # under a different ``markdown`` flag; preserving content is
+                # better than silently dropping it.
+                if self._validate_skipped_due_to_delete_race and not files and cache:
+                    for cached_key, cached_value in cache.items():
+                        if cached_key[:-1] == paths_subkey:
+                            self.log(
+                                "Server file already processed and deleted by a prior call "
+                                "on this component instance; reusing cached parsed data."
+                            )
+                            return cached_value
 
-        finally:
-            # Delete temporary directories
-            for temp_dir in self._temp_dirs:
-                temp_dir.cleanup()
-            # Delete files marked for deletion
-            for file in final_files:
-                if file.delete_after_processing and file.path.exists():
-                    if file.path.is_dir():
-                        shutil.rmtree(file.path)
-                    else:
-                        file.path.unlink()
+                all_files = self._unpack_and_collect_files(files)
+                final_files = self._filter_and_mark_files(all_files)
+                processed_files = self.process_files(final_files)
+                result = [data for file in processed_files for data in file.data if file.data]
+
+                # Only cache successful, non-empty results so a legitimate empty
+                # input on a later call cannot be misread as a race-recovery hit.
+                if result:
+                    cache[cache_key] = result
+                    self._load_files_base_processed_cache = cache
+
+                return result
+
+            finally:
+                # Delete temporary directories
+                for temp_dir in self._temp_dirs:
+                    temp_dir.cleanup()
+                # Delete files marked for deletion
+                for file in final_files:
+                    if file.delete_after_processing and file.path.exists():
+                        if file.path.is_dir():
+                            shutil.rmtree(file.path)
+                        else:
+                            file.path.unlink()
 
     def load_files_core(self) -> list[Data]:
         """Load files and return as Data objects, with per-instance caching.
@@ -290,6 +371,7 @@ class BaseFileComponent(Component, ABC):
                 file_size = 0
 
         # Basic file metadata
+        metadata["file_path"] = file_path
         metadata["filename"] = filename
         metadata["file_size"] = file_size
 
@@ -433,9 +515,12 @@ class BaseFileComponent(Component, ABC):
             # TODO: Parse according to docling standards
             rows = [data_list[0].data]
 
-        self.status = DataFrame(rows)
+        result = DataFrame(rows)
+        if file_path:
+            result.attrs["source_file_path"] = str(file_path)
+        self.status = result
 
-        return DataFrame(rows)
+        return result
 
     def parse_string_to_dict(self, s: str) -> dict:
         # Try JSON first (handles true/false/null)
@@ -646,6 +731,16 @@ class BaseFileComponent(Component, ABC):
                     resolved_path = Path(self.resolve_path(path_str))
 
                 if not resolved_path.exists():
+                    if delete_after_processing:
+                        # File may have already been processed and deleted by a concurrent output call.
+                        # Flag the skip so ``load_files_base`` can recover from any cached
+                        # parsed result for these paths instead of returning empty data.
+                        self._validate_skipped_due_to_delete_race = True
+                        self.log(
+                            f"Server file '{path}' not found - skipping as it may have been "
+                            "already processed and deleted by a concurrent call."
+                        )
+                        return
                     msg = f"File not found: '{path}' (resolved to: '{resolved_path}'). Please upload the file again."
                     self.log(msg)
                     if not self.silent_errors:

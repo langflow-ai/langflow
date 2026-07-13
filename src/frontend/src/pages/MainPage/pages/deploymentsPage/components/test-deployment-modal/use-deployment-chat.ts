@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useGetDeploymentRun } from "@/controllers/API/queries/deployments/use-get-deployment-run";
 import { usePostDeploymentRun } from "@/controllers/API/queries/deployments/use-post-deployment-run";
 import type { ChatMessage } from "./types";
@@ -36,6 +37,7 @@ export function useDeploymentChat({
   providerId,
   deploymentId,
 }: UseDeploymentChatOptions) {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
@@ -148,7 +150,7 @@ export function useDeploymentChat({
         }
       } catch (err: unknown) {
         const message =
-          err instanceof Error ? err.message : "Failed to start run";
+          err instanceof Error ? err.message : t("errors.failedToStartRun");
         updateAssistantMessage(assistantMsgId, {
           content: "",
           isLoading: false,
@@ -238,7 +240,9 @@ export function useDeploymentChat({
           } catch (err: unknown) {
             if (!isMountedRef.current) return;
             const message =
-              err instanceof Error ? err.message : "Failed to fetch run status";
+              err instanceof Error
+                ? err.message
+                : t("errors.failedToFetchRunStatus");
             updateAssistantMessage(assistantMsgId, {
               content: "",
               isLoading: false,

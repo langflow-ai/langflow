@@ -122,7 +122,12 @@ def test_component_inputs_toolkit():
     component = AllInputsComponent()
     component_toolkit = ComponentToolkit(component=component)
     component_tool = component_toolkit.get_tools()[0]
-    assert component_tool.name == "build_output"
+    # The single output's method is ``build_output`` — a generic name carrying
+    # no semantic signal — so ``_derive_tool_name`` falls back to the snake_cased
+    # class name (``AllInputsComponent`` → ``all_inputs_component``). This makes
+    # the LLM-facing tool name informative. See ``_GENERIC_OUTPUT_METHOD_NAMES``
+    # and ``_class_name_to_tool_name`` in component_tool.py.
+    assert component_tool.name == "all_inputs_component"
     assert issubclass(component_tool.args_schema, BaseModel)
     properties = component_tool.args_schema.model_json_schema()["properties"]
 

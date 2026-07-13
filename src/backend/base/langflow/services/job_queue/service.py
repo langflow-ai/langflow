@@ -23,12 +23,16 @@ _STREAM_SENTINEL_DATA = b"__sentinel__"
 # consumer (RedisQueueWrapper) MUST agree on this — keep a single source of truth.
 _STREAM_PREFIX = "langflow:queue:"
 _OWNER_PREFIX = "langflow:owner:"
-# Pub/Sub channel for cross-worker cancel signals.  Any worker can publish here;
+# Pub/Sub channel for cross-worker cancel signals. Any worker can publish here;
 # the producer worker subscribes when the job starts and cancels the local task.
 _CANCEL_CHANNEL_PREFIX = "langflow:cancel:"
-# Activity heartbeat key written by polling and streaming responses.  The
+# Activity heartbeat key written by polling and streaming responses. The
 # polling watchdog scans these to detect abandoned builds (client gave up).
 _ACTIVITY_PREFIX = "langflow:activity:"
+# Presence key for jobs started through the public (unauthenticated) build
+# endpoint. Allows the public events/cancel endpoints to reject job_ids that
+# belong to private-flow builds. Uses the same TTL as the stream/owner keys.
+_PUBLIC_JOB_PREFIX = "langflow:public_job:"
 
 
 class JobQueueNotFoundError(Exception):
@@ -37,6 +41,47 @@ class JobQueueNotFoundError(Exception):
     def __init__(self, job_id: str) -> None:
         self.job_id = job_id
         super().__init__(f"Job queue not found for job_id: {job_id}")
+
+
+class JobQueueBackendUnavailableError(Exception):
+    """Raised when the configured job queue backend (e.g. Redis) is unreachable.
+
+    Route handlers translate this into a clean HTTP 503 so callers get an
+    actionable message instead of a raw redis ``ConnectionError`` stack trace.
+    """
+
+
+def _is_backend_connection_error(exc: BaseException) -> bool:
+    """Return True if *exc* indicates the Redis backend is unreachable.
+
+    Covers both builtin socket-level errors and redis-py's own
+    ``ConnectionError`` / ``TimeoutError`` (which are NOT subclasses of the
+    builtins). ``redis`` is an optional dependency, so its exception types are
+    imported lazily — this only runs on a failure path, never the hot path.
+    """
+    if isinstance(exc, ConnectionError | TimeoutError | OSError):
+        return True
+    try:
+        from redis.exceptions import ConnectionError as RedisConnectionError
+        from redis.exceptions import TimeoutError as RedisTimeoutError
+    except ImportError:
+        return False
+    return isinstance(exc, RedisConnectionError | RedisTimeoutError)
+
+
+def _redact_url_credentials(url: str) -> str:
+    """Strip userinfo from a URL so credentials never reach logs or HTTP responses."""
+    from urllib.parse import urlparse, urlunparse
+
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return "<redacted>"
+    if parsed.username is None and parsed.password is None:
+        return url
+    host = parsed.hostname or ""
+    netloc = f"***@{host}:{parsed.port}" if parsed.port else f"***@{host}"
+    return urlunparse(parsed._replace(netloc=netloc))
 
 
 class JobQueueService(Service):
@@ -95,6 +140,7 @@ class JobQueueService(Service):
         """
         self._queues: dict[str, tuple[asyncio.Queue, EventManager, asyncio.Task | None, float | None]] = {}
         self._job_owners: dict[str, UUID] = {}
+        self._public_jobs: set[str] = set()
         self._cleanup_task: asyncio.Task | None = None
         self._closed = False
         self.ready = False
@@ -144,6 +190,18 @@ class JobQueueService(Service):
             bool: True if the service has started, False otherwise.
         """
         return self._cleanup_task is not None
+
+    @property
+    def cross_worker_cancel_enabled(self) -> bool:
+        """True when this backend can deliver cancels across worker processes.
+
+        Callers using ``signal_cancel`` to reach a build owned by another
+        worker must check this first: when False, ``signal_cancel`` exists but
+        is a no-op (returns 0 without setting the persistent marker), so
+        treating its return value as a successful cross-worker dispatch is
+        misleading.
+        """
+        return False
 
     def set_ready(self) -> None:
         if not self.is_started():
@@ -238,7 +296,7 @@ class JobQueueService(Service):
 
         The coroutine is wrapped with :meth:`_guarded_task` so that any unhandled
         exception causes an ``on_error`` event to be emitted and the end-of-stream
-        sentinel to be written before the task exits.  This guarantees that
+        sentinel to be written before the task exits. This guarantees that
         cross-worker consumers can always distinguish a clean end from a crash —
         both paths terminate with the sentinel in the Redis Stream, but a crash
         will be preceded by an ``error`` event.
@@ -277,7 +335,7 @@ class JobQueueService(Service):
         """Run *task_coro* and guarantee the end-of-stream sentinel is written on crash.
 
         A well-behaved build coroutine (``generate_flow_events``) writes the sentinel
-        itself after emitting ``on_end``.  If the coroutine raises an unexpected
+        itself after emitting ``on_end``. If the coroutine raises an unexpected
         exception before doing so, this wrapper:
 
         1. Emits an ``on_error`` event so consumers can distinguish a crash from a
@@ -340,6 +398,32 @@ class JobQueueService(Service):
         """Return the user ID that owns a job, or None if not tracked."""
         return self._job_owners.get(job_id)
 
+    async def register_public_job(self, job_id: str) -> None:
+        """Mark a job as started through the public (unauthenticated) build endpoint.
+
+        Only jobs registered here may be accessed via the public events/cancel endpoints.
+        This prevents unauthenticated callers from reading or cancelling private-flow jobs.
+
+        Async (even though the base implementation is a synchronous set add):
+        RedisJobQueueService overrides this to also persist the marker to Redis
+        *before returning*, so a request landing on a different worker immediately
+        after registration sees the marker via is_public_job_async.
+        """
+        self._public_jobs.add(job_id)
+
+    def is_public_job(self, job_id: str) -> bool:
+        """Return True if the job was started through the public build endpoint."""
+        return job_id in self._public_jobs
+
+    async def is_public_job_async(self, job_id: str) -> bool:
+        """Return True if the job was started through the public build endpoint.
+
+        Base implementation is synchronous (in-memory set lookup).
+        RedisJobQueueService overrides this to also check Redis for cross-worker
+        correctness in multi-worker deployments.
+        """
+        return self.is_public_job(job_id)
+
     async def cleanup_job(self, job_id: str) -> None:
         """Clean up and release resources for a specific job.
 
@@ -396,12 +480,13 @@ class JobQueueService(Service):
         if self._queues.pop(job_id, None) is not None:
             self._emit_otel_up_down("langflow_job_queue_active_jobs", -1, {"backend": self._backend_label})
         self._job_owners.pop(job_id, None)
+        self._public_jobs.discard(job_id)
         await logger.adebug(f"Cleanup successful for job_id {job_id}: resources have been released.")
 
     async def cancel_job(self, job_id: str) -> None:
         """Cancel an active job and release its resources.
 
-        The in-memory backend can use the normal cleanup path directly.  Backends
+        The in-memory backend can use the normal cleanup path directly. Backends
         with cross-worker consumers can override this hook when cancellation needs
         extra coordination before resource teardown.
         """
@@ -500,7 +585,7 @@ class RedisQueueWrapper:
     """Consumer-side asyncio.Queue interface backed by a Redis Stream.
 
     Created by :class:`RedisJobQueueService` when :meth:`get_queue_data` is called
-    for a job that was started on a different worker process.  A background
+    for a job that was started on a different worker process. A background
     ``_fill_task`` reads from the Redis Stream and populates a local buffer so that
     the rest of ``build.py`` can use the familiar ``asyncio.Queue`` interface.
 
@@ -530,6 +615,10 @@ class RedisQueueWrapper:
     # Protects against the early-poll race where the consumer wrapper is created
     # before the producer worker has issued its first XADD.
     _STARTUP_GRACE_S = 30.0
+    # Hard cap on in-process buffered events per consumer. Bounds memory when a
+    # slow client falls behind a fast producer; without it, the buffer can grow
+    # without limit until the consumer drains it.
+    _BUFFER_MAXSIZE = 10_000
 
     def __init__(self, job_id: str, client: Any, ttl: int, startup_grace_s: float | None = None) -> None:
         self._job_id = job_id
@@ -538,7 +627,7 @@ class RedisQueueWrapper:
         # Allow callers to override the class-level grace period (driven by settings).
         if startup_grace_s is not None:
             self._STARTUP_GRACE_S = startup_grace_s
-        self._buffer: asyncio.Queue = asyncio.Queue()
+        self._buffer: asyncio.Queue = asyncio.Queue(maxsize=self._BUFFER_MAXSIZE)
         self._last_id = "0-0"  # read from the beginning of the stream
         # Flips to True the first time XREAD returns messages for this stream.
         # Until then, "stream key does not exist" is NOT treated as end-of-stream
@@ -546,11 +635,45 @@ class RedisQueueWrapper:
         self._observed_stream: bool = False
         self._created_at: float = time.monotonic()
         # Flips to True after the very first XREAD call returns (regardless of
-        # whether it had results).  empty() returns False until this flag is set
+        # whether it had results). empty() returns False until this flag is set
         # so that the while-not-empty drain loop in build.py suspends on get()
         # and lets the fill task populate the buffer before the loop exits.
         self._first_read_done: bool = False
         self._fill_task: asyncio.Task = asyncio.create_task(self._fill_from_redis())
+        # Defense-in-depth: if the fill task is cancelled or crashes with an
+        # unhandled exception, deliver an end-of-stream sentinel into the buffer
+        # so consumers waiting on ``await get()`` are unblocked. The clean exit
+        # paths inside ``_fill_from_redis`` already put the sentinel themselves;
+        # this callback only fires when those paths are bypassed.
+        self._fill_task.add_done_callback(self._on_fill_done)
+
+    def _on_fill_done(self, task: asyncio.Task) -> None:
+        """Ensure the consumer is unblocked if the fill task exits unexpectedly.
+
+        A clean exit (sentinel received, stream cleaned up, grace exhausted)
+        already puts the sentinel into the buffer. Cancellation and unhandled
+        exceptions skip that path — this callback catches both gaps so the
+        consumer's ``await queue.get()`` never blocks forever.
+
+        Done callbacks run synchronously, so we use the non-blocking
+        ``put_nowait``. If the buffer happens to be at capacity (slow consumer
+        + bounded buffer), evict the oldest item to make room: losing one event
+        is strictly preferable to leaving the consumer stuck.
+        """
+        if not task.cancelled() and task.exception() is None:
+            # Clean exit: _fill_from_redis already put the sentinel.
+            return
+        if not task.cancelled():
+            exc = task.exception()
+            logger.error(
+                f"RedisQueueWrapper fill task raised for job {self._job_id}: {exc!r} "
+                "— delivering end-of-stream sentinel so the consumer is not left hanging."
+            )
+        if self._buffer.full():
+            with contextlib.suppress(asyncio.QueueEmpty):
+                self._buffer.get_nowait()
+        with contextlib.suppress(asyncio.QueueFull):
+            self._buffer.put_nowait((None, None, time.time()))
 
     @property
     def _stream_key(self) -> str:
@@ -558,6 +681,7 @@ class RedisQueueWrapper:
 
     async def _fill_from_redis(self) -> None:
         """Read events from the Redis Stream and forward them to the local buffer."""
+        _error_start: float | None = None
         try:
             while True:
                 try:
@@ -567,27 +691,44 @@ class RedisQueueWrapper:
                         count=self._XREAD_BATCH_COUNT,
                     )
                 except Exception as exc:  # noqa: BLE001
-                    await logger.awarning(f"RedisQueueWrapper read error for {self._job_id}: {exc}")
+                    now = time.monotonic()
+                    if _error_start is None:
+                        _error_start = now
+                    elapsed = now - _error_start
+                    await logger.awarning(
+                        f"RedisQueueWrapper read error for {self._job_id} (elapsed {elapsed:.1f}s): {exc}"
+                    )
+                    if elapsed >= self._STARTUP_GRACE_S:
+                        await logger.aerror(
+                            f"RedisQueueWrapper: persistent Redis error for {self._job_id} "
+                            f"after {elapsed:.1f}s; delivering end-of-stream sentinel."
+                        )
+                        await self._buffer.put((None, None, time.time()))
+                        return
                     await asyncio.sleep(self._READ_ERROR_BACKOFF_S)
                     continue
+                _error_start = None  # reset on successful XREAD
 
                 self._first_read_done = True
                 if results:
                     self._observed_stream = True
                     for _, messages in results:
                         for msg_id, fields in messages:
-                            self._last_id = msg_id.decode() if isinstance(msg_id, bytes) else msg_id
                             data = fields.get(b"data")
                             ts = float(fields.get(b"ts", b"0") or b"0")
                             if data == _STREAM_SENTINEL_DATA:
                                 await self._buffer.put((None, None, ts))
+                                self._last_id = msg_id.decode() if isinstance(msg_id, bytes) else msg_id
                                 return
                             event_id = (fields.get(b"event_id") or b"").decode()
                             await self._buffer.put((event_id, data, ts))
+                            # Advance cursor only after the item is safely in the buffer.
+                            # Advancing before the await would skip this message on cancellation.
+                            self._last_id = msg_id.decode() if isinstance(msg_id, bytes) else msg_id
                 # No results within the block timeout.
                 elif not self._observed_stream:
                     # Stream hasn't appeared yet — the producer may not have issued its
-                    # first XADD (early-poll race between workers).  Keep blocking until
+                    # first XADD (early-poll race between workers). Keep blocking until
                     # the startup grace period expires to avoid a false end-of-stream.
                     elapsed = time.monotonic() - self._created_at
                     if elapsed > self._STARTUP_GRACE_S:
@@ -612,10 +753,10 @@ class RedisQueueWrapper:
 
     def empty(self) -> bool:
         # Before the first XREAD completes the local buffer is empty even if
-        # Redis already has events queued.  Returning False here causes the
+        # Redis already has events queued. Returning False here causes the
         # while-not-empty drain loop in build.py to suspend on await get(),
         # which yields to the event loop so the fill task can run its first
-        # XREAD and populate the buffer.  After warm-up, delegate to the
+        # XREAD and populate the buffer. After warm-up, delegate to the
         # actual buffer state.
         return self._first_read_done and self._buffer.empty()
 
@@ -640,12 +781,22 @@ class RedisQueueWrapper:
                 await self._fill_task
 
     async def finish_with_sentinel(self) -> None:
-        """Stop the fill task and wake active consumers with an end-of-stream item."""
+        """Stop the fill task and wake active consumers with an end-of-stream item.
+
+        Mirrors ``_on_fill_done``: when the buffer is full because the consumer
+        is gone or slow, evict the oldest item and ``put_nowait`` the sentinel
+        instead of awaiting. Losing one buffered event is strictly preferable
+        to a teardown that hangs forever on a closed-out consumer.
+        """
         if not self._fill_task.done():
             self._fill_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._fill_task
-        await self._buffer.put((None, None, time.time()))
+        if self._buffer.full():
+            with contextlib.suppress(asyncio.QueueEmpty):
+                self._buffer.get_nowait()
+        with contextlib.suppress(asyncio.QueueFull):
+            self._buffer.put_nowait((None, None, time.time()))
 
 
 class RedisJobQueueService(JobQueueService):
@@ -678,27 +829,28 @@ class RedisJobQueueService(JobQueueService):
     -------------------
     When ``cancel_channel_enabled=True`` (the default), the service runs a
     single Redis PSUBSCRIBE dispatcher per worker over the pattern
-    ``langflow:cancel:*``.  Any worker can publish a cancel signal via
+    ``langflow:cancel:*``. Any worker can publish a cancel signal via
     :meth:`signal_cancel`; the worker that owns the job (i.e. has an entry in
     ``self._queues``) cancels the local task, flushes a sentinel through the
     bridge so cross-worker consumers see end-of-stream promptly, and triggers
     fast cleanup of the Redis stream + owner keys.
 
     Note: callers of :meth:`signal_cancel` are responsible for any
-    authorization checks.  The HTTP cancel endpoint already verifies job
+    authorization checks. The HTTP cancel endpoint already verifies job
     ownership before calling through; programmatic callers must do the same.
 
     Cross-worker passive disconnect is also wired through: when a client closes
     its streaming connection on a worker that doesn't own the job, the streaming
     response's disconnect handler calls :meth:`signal_cancel` so the owning
     worker stops emitting events promptly instead of running to natural
-    completion.  See ``langflow.api.build.create_flow_response``.
+    completion. See ``langflow.api.build.create_flow_response``.
     """
 
     STREAM_PREFIX = _STREAM_PREFIX
     OWNER_PREFIX = _OWNER_PREFIX
     CANCEL_CHANNEL_PREFIX = _CANCEL_CHANNEL_PREFIX
     ACTIVITY_PREFIX = _ACTIVITY_PREFIX
+    PUBLIC_JOB_PREFIX = _PUBLIC_JOB_PREFIX
 
     _backend_label: str = "redis"
 
@@ -737,11 +889,11 @@ class RedisJobQueueService(JobQueueService):
         # in active job count.
         self._cancel_dispatcher_task: asyncio.Task | None = None
         # Periodic loop that publishes cancel for owned jobs whose activity
-        # heartbeat has gone stale (client abandoned a polling build).  Started
+        # heartbeat has gone stale (client abandoned a polling build). Started
         # only when polling_stale_threshold_s > 0.
         self._polling_watchdog_task: asyncio.Task | None = None
         # Strong references for short-lived fire-and-forget tasks (marker check,
-        # post-cancel cleanup).  Each task removes itself on completion.  Without
+        # post-cancel cleanup). Each task removes itself on completion. Without
         # this, asyncio is free to GC the task while it's still scheduled.
         self._background_tasks: set[asyncio.Task] = set()
         # Counters used for observability — bumped on each cancel event.
@@ -758,10 +910,19 @@ class RedisJobQueueService(JobQueueService):
             "activity_get_errors": 0,
             "activity_parse_errors": 0,
         }
-        # Monotonic timestamp of when each owned job entered start_job.  Used
+        # Monotonic timestamp of when each owned job entered start_job. Used
         # by the polling watchdog to grant a brand-new job a grace window
         # before reclaiming it if the activity key hasn't been written yet.
         self._job_start_times: dict[str, float] = {}
+
+    @property
+    def cross_worker_cancel_enabled(self) -> bool:
+        """Reflects ``cancel_channel_enabled`` for the Redis backend.
+
+        When False, ``signal_cancel`` short-circuits to a 0 return without
+        setting the marker, so cross-worker delivery is genuinely unavailable.
+        """
+        return self._cancel_channel_enabled
 
     def _bump_cancel_stat(self, key: str, value: int = 1) -> None:
         """Increment a cancel_stat counter and emit the matching OTel counter event.
@@ -779,6 +940,9 @@ class RedisJobQueueService(JobQueueService):
     def _owner_key(self, job_id: str) -> str:
         return f"{self.OWNER_PREFIX}{job_id}"
 
+    def _public_job_key(self, job_id: str) -> str:
+        return f"{self.PUBLIC_JOB_PREFIX}{job_id}"
+
     def _cancel_channel(self, job_id: str) -> str:
         return f"{self.CANCEL_CHANNEL_PREFIX}{job_id}"
 
@@ -786,21 +950,24 @@ class RedisJobQueueService(JobQueueService):
         """Schedule a fire-and-forget task with a strong reference until completion.
 
         Without holding a strong reference, asyncio is free to garbage-collect a
-        scheduled task before it runs.  Each task removes itself on completion.
+        scheduled task before it runs. Each task removes itself on completion.
         """
         task = asyncio.create_task(coro)
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
         return task
 
-    def start(self) -> None:
-        """Create the Redis client, start the periodic cleanup, and run one cancel dispatcher."""
+    def _make_client(self):
+        """Build a Redis client from the configured settings."""
         from redis.asyncio import StrictRedis
 
         if self._redis_url:
-            self._client = StrictRedis.from_url(self._redis_url)
-        else:
-            self._client = StrictRedis(host=self._redis_host, port=self._redis_port, db=self._redis_db)
+            return StrictRedis.from_url(self._redis_url)
+        return StrictRedis(host=self._redis_host, port=self._redis_port, db=self._redis_db)
+
+    def start(self) -> None:
+        """Create the Redis client, start the periodic cleanup, and run one cancel dispatcher."""
+        self._client = self._make_client()
         super().start()
         # Schedule a connectivity check so startup logs a clear error if Redis is unreachable.
         self._connection_check_task = asyncio.create_task(self._check_connection())
@@ -808,11 +975,78 @@ class RedisJobQueueService(JobQueueService):
         # connection-pool usage regardless of how many jobs are active.
         if self._cancel_channel_enabled:
             self._cancel_dispatcher_task = asyncio.create_task(self._run_cancel_dispatcher())
-        # Polling watchdog: nuke abandoned builds whose activity heartbeat has
-        # gone stale.  Disabled when threshold <= 0 so deployments can opt out.
-        if self._polling_stale_threshold_s > 0 and self._cancel_channel_enabled:
+        # Polling watchdog: reclaim owned jobs whose activity heartbeat has gone
+        # stale (client abandoned a polling build). Runs independently of the
+        # pub/sub cancel channel — it uses only local state and _handle_cancel
+        # directly, so disabling cancel_channel_enabled must not silence it.
+        # Disabled entirely when threshold <= 0.
+        if self._polling_stale_threshold_s > 0:
             self._polling_watchdog_task = asyncio.create_task(self._run_polling_watchdog())
         logger.debug("RedisJobQueueService started.")
+
+    # Startup connectivity probe tunables (overridable in tests). A short retry
+    # window tolerates Redis that comes up a beat after Langflow, e.g. a
+    # docker-compose service without a healthcheck-gated dependency.
+    _STARTUP_PROBE_ATTEMPTS = 5
+    _STARTUP_PROBE_BACKOFF_S = 1.0
+
+    @property
+    def connection_target(self) -> str:
+        """Human-readable description of the configured Redis endpoint for error messages.
+
+        Credentials embedded in the URL are redacted — this string ends up in
+        server logs and in HTTP 503 details returned to API clients.
+        """
+        if self._redis_url:
+            return _redact_url_credentials(self._redis_url)
+        return f"{self._redis_host}:{self._redis_port} db={self._redis_db}"
+
+    def _backend_unavailable_message(self) -> str:
+        """Actionable message for JobQueueBackendUnavailableError."""
+        return (
+            f"Job queue backend (Redis) is unavailable at {self.connection_target}. "
+            "Start Redis, fix the LANGFLOW_REDIS_QUEUE_* settings, or set "
+            "LANGFLOW_JOB_QUEUE_TYPE=asyncio."
+        )
+
+    async def is_connected(self, *, attempts: int | None = None, backoff_s: float | None = None) -> bool:
+        """Ping Redis with bounded retry; return True if reachable, False otherwise.
+
+        Used at startup to fail fast when ``LANGFLOW_JOB_QUEUE_TYPE=redis`` but the
+        Redis server is not reachable, instead of booting "fine" and then emitting
+        confusing connection errors on the first flow execution.
+
+        The startup probe runs from ``initialize_services()``, before the per-worker
+        ``start()`` creates ``self._client``, so a temporary client is used (and
+        closed) when the service has not started yet. It is not retained: ``start()``
+        runs on the worker's event loop, which may differ from the probe's.
+        """
+        attempts = self._STARTUP_PROBE_ATTEMPTS if attempts is None else attempts
+        backoff_s = self._STARTUP_PROBE_BACKOFF_S if backoff_s is None else backoff_s
+        temp_client = None
+        client = self._client
+        if client is None:
+            client = temp_client = self._make_client()
+        try:
+            for attempt in range(1, attempts + 1):
+                try:
+                    await client.ping()
+                except Exception as exc:  # noqa: BLE001
+                    if attempt < attempts:
+                        await logger.adebug(
+                            f"RedisJobQueueService: Redis not reachable at {self.connection_target} "
+                            f"(attempt {attempt}/{attempts}): {exc}. Retrying in {backoff_s}s."
+                        )
+                        await asyncio.sleep(backoff_s)
+                        continue
+                    return False
+                else:
+                    return True
+            return False
+        finally:
+            if temp_client is not None:
+                with contextlib.suppress(Exception):
+                    await temp_client.aclose()
 
     async def _check_connection(self) -> None:
         """Ping Redis and log a prominent error if the connection is unavailable."""
@@ -821,8 +1055,7 @@ class RedisJobQueueService(JobQueueService):
             await logger.adebug("RedisJobQueueService: Redis connection OK.")
         except Exception as exc:  # noqa: BLE001
             await logger.aerror(
-                f"RedisJobQueueService: cannot reach Redis at "
-                f"{self._redis_url or f'{self._redis_host}:{self._redis_port} db={self._redis_db}'} — {exc}. "
+                f"RedisJobQueueService: cannot reach Redis at {self.connection_target} — {exc}. "
                 "Build events will NOT be delivered. "
                 "Set LANGFLOW_JOB_QUEUE_TYPE=asyncio or start Redis before running Langflow."
             )
@@ -934,6 +1167,16 @@ class RedisJobQueueService(JobQueueService):
                             published = True
                         if needs_ttl_refresh:
                             await self._client.expire(stream_key, self._ttl)
+                            # Why: register_public_job sets the public_job marker with
+                            # ex=self._ttl once at job start. Long-running builds that
+                            # outlive that TTL would have the marker expire while the
+                            # stream itself is kept alive, causing is_public_job_async
+                            # to 404 a still-active public job on other workers. Refresh
+                            # it on the same cadence as the stream TTL. is_public_job is
+                            # the in-memory (sync) check — true on the worker that owns
+                            # this bridge, which is the same worker that registered it.
+                            if self.is_public_job(job_id):
+                                await self._client.expire(self._public_job_key(job_id), self._ttl)
                             last_ttl_refresh = time.monotonic()
                         in_flight_item = None
                         _retry_delay = 0.1
@@ -969,7 +1212,7 @@ class RedisJobQueueService(JobQueueService):
 
     # Persistent marker that :meth:`signal_cancel` sets in addition to publishing.
     # Closes the race where a cancel signal is sent before the worker's dispatcher
-    # finishes PSUBSCRIBE (or before this worker has even started the job).  On
+    # finishes PSUBSCRIBE (or before this worker has even started the job). On
     # ``start_job`` the worker checks the marker; if present, fires cancel immediately.
     _CANCEL_MARKER_PREFIX = "langflow:cancel-marker:"
 
@@ -989,7 +1232,7 @@ class RedisJobQueueService(JobQueueService):
         # Initialize the activity heartbeat so the watchdog gives clients the
         # configured threshold to make first contact before reclaiming the job.
         self._spawn_background(self.touch_activity(job_id))
-        # Cancel may have been signaled before we registered this job_id.  Check
+        # Cancel may have been signaled before we registered this job_id. Check
         # the persistent marker in a background task to avoid making start_job async.
         self._spawn_background(self._check_pending_cancel_marker(job_id))
 
@@ -1005,7 +1248,7 @@ class RedisJobQueueService(JobQueueService):
         TTL is set to 4x the stale threshold (min 60s) so the activity key
         outlives a single dropped touch without the watchdog misclassifying
         the job as abandoned — Redis keeps the value around long enough for
-        the next successful refresh to land.  Errors here are non-fatal but
+        the next successful refresh to land. Errors here are non-fatal but
         observable via :attr:`_cancel_stats` (``activity_touch_errors``);
         sustained heartbeat failure combined with the start-time grace window
         in :meth:`_run_polling_watchdog` keeps an in-flight build alive even
@@ -1067,9 +1310,20 @@ class RedisJobQueueService(JobQueueService):
     async def _run_polling_watchdog(self) -> None:
         """Periodically reclaim owned jobs whose activity heartbeat has gone stale.
 
-        Each tick scans :attr:`_queues` (jobs this worker owns) and pulls the
-        activity timestamp from Redis.  Missing-or-older-than
-        :attr:`_polling_stale_threshold_s` means the client gave up.
+        Each tick scans :attr:`_queues` (jobs this worker owns), filters to
+        jobs that have a registered owner (i.e. user-facing flow builds that
+        expect client polling/streaming), and pulls their activity timestamp
+        from Redis. Missing-or-older-than :attr:`_polling_stale_threshold_s`
+        means the client gave up.
+
+        **Why the owner filter:** The :class:`TaskService` also uses
+        :meth:`start_job` for server-internal tasks that have no polling client
+        and never call :meth:`touch_activity`. Without the filter, every such
+        task would trip the start-time fallback at the threshold and get
+        cancelled mid-flight if it ran longer than the threshold — even though
+        no client was ever waiting on it. Registered ownership is the
+        existing signal for "user-facing build with an expected client", so
+        scope the watchdog to that set.
 
         Brand-new jobs are protected by a start-time grace window: if the
         activity key is missing (e.g. the background ``touch_activity`` from
@@ -1097,6 +1351,12 @@ class RedisJobQueueService(JobQueueService):
             now_mono = time.monotonic()
             # Iterate a snapshot so concurrent inserts don't disturb the scan.
             for job_id in list(self._queues.keys()):
+                # Only watch jobs with a registered owner — TaskService and
+                # other server-internal callers use start_job without
+                # registering ownership, and they never refresh activity
+                # heartbeats. See the docstring for rationale.
+                if job_id not in self._job_owners:
+                    continue
                 try:
                     raw = await self._client.get(self._activity_key(job_id))
                 except Exception as exc:  # noqa: BLE001
@@ -1107,9 +1367,9 @@ class RedisJobQueueService(JobQueueService):
                 # leave `last` unbound; the if-branches narrow this down.
                 last = 0.0
                 if raw is None:
-                    # Activity key not in Redis.  Could be a brand-new job whose
+                    # Activity key not in Redis. Could be a brand-new job whose
                     # background touch hasn't landed yet, or a touch_activity
-                    # failure (counter bumped elsewhere).  Respect the start-time
+                    # failure (counter bumped elsewhere). Respect the start-time
                     # grace window before reclaiming.
                     start_ts = self._job_start_times.get(job_id)
                     if start_ts is None or (now_mono - start_ts) < threshold:
@@ -1126,7 +1386,7 @@ class RedisJobQueueService(JobQueueService):
                 age = now - last if last > 0 else float("inf")
                 if age <= threshold:
                     continue
-                # Stale → cancel this job.  Local cancel on owned jobs skips the
+                # Stale → cancel this job. Local cancel on owned jobs skips the
                 # pubsub round-trip and stays correct even during a dispatcher
                 # reconnect window.
                 self._bump_cancel_stat("polling_watchdog_kills")
@@ -1143,7 +1403,7 @@ class RedisJobQueueService(JobQueueService):
         """PSUBSCRIBE loop with auto-reconnect.
 
         The dispatcher is the single point of cross-worker cancel delivery for
-        this worker.  If the pubsub connection dies (Redis restart, network
+        this worker. If the pubsub connection dies (Redis restart, network
         blip, broker timeout), we MUST reconnect — otherwise the worker becomes
         silently blind to cancels until restart.
 
@@ -1186,12 +1446,12 @@ class RedisJobQueueService(JobQueueService):
                 return
             except (ConnectionError, TimeoutError, OSError) as exc:
                 # Expected transient failure: Redis dropped the pubsub, network
-                # blip, broker restart.  Reconnect quietly via the backoff loop.
+                # blip, broker restart. Reconnect quietly via the backoff loop.
                 self._bump_cancel_stat("dispatcher_reconnects")
                 await logger.awarning(f"Cancel dispatcher disconnect (retrying in {backoff:.1f}s): {exc!r}")
             except Exception as exc:  # noqa: BLE001
                 # Unexpected exception — likely a bug in dispatch logic, NOT a
-                # Redis problem.  Surface at error level with traceback so it
+                # Redis problem. Surface at error level with traceback so it
                 # reaches Sentry / log aggregation, then still reconnect so a
                 # one-off bug doesn't kill cross-worker cancel permanently.
                 self._bump_cancel_stat("dispatcher_reconnects")
@@ -1246,7 +1506,7 @@ class RedisJobQueueService(JobQueueService):
 
         Cancels the local task, flushes a sentinel through the bridge so cross-worker
         consumers see end-of-stream promptly, and triggers fast cleanup of the
-        Redis stream + owner keys.  No-op if this worker doesn't own the job
+        Redis stream + owner keys. No-op if this worker doesn't own the job
         (the owning worker's dispatcher will receive the same publish for
         pub/sub cancels).
         """
@@ -1278,7 +1538,7 @@ class RedisJobQueueService(JobQueueService):
 
     # Max time _post_cancel_cleanup waits on cleanup_job before giving up.
     # Bounds the lifetime of the background task even under Redis pathology
-    # (e.g. a hung DELETE).  Periodic cleanup will still reap stale state later.
+    # (e.g. a hung DELETE). Periodic cleanup will still reap stale state later.
     _POST_CANCEL_CLEANUP_TIMEOUT_S = 10.0
 
     async def _post_cancel_cleanup(self, job_id: str) -> None:
@@ -1286,7 +1546,7 @@ class RedisJobQueueService(JobQueueService):
 
         Waits for the bridge task to drain the sentinel we just put on the local
         queue and publish the Redis end-of-stream marker before cancelling it via
-        :meth:`cleanup_job`.  Without this wait, a fast cleanup races the bridge
+        :meth:`cleanup_job`. Without this wait, a fast cleanup races the bridge
         and may cancel it before XADD completes, leaving cross-worker consumers
         without the sentinel record in the stream.
 
@@ -1300,7 +1560,7 @@ class RedisJobQueueService(JobQueueService):
             # ``shield`` keeps the bridge alive even if our task is cancelled
             # during the wait; the inner timeout caps the worst case if XADD
             # is stuck (cross-worker consumers can still recover via the
-            # missing-stream-key sentinel path).  Narrow the except to the
+            # missing-stream-key sentinel path). Narrow the except to the
             # timeout case only so real bridge failures bubble up.
             try:
                 await asyncio.wait_for(asyncio.shield(bridge), timeout=2.0)
@@ -1333,7 +1593,7 @@ class RedisJobQueueService(JobQueueService):
         """Cancel an owned Redis job after publishing an end-of-stream sentinel.
 
         ``cleanup_job`` alone cancels the bridge before the cancelled build task
-        can publish a terminal stream record.  Route explicit same-worker cancels
+        can publish a terminal stream record. Route explicit same-worker cancels
         through the same sentinel-flush path used by cross-worker pub/sub cancels
         so any Redis-backed consumer terminates promptly.
         """
@@ -1347,13 +1607,13 @@ class RedisJobQueueService(JobQueueService):
         cancel endpoint does this via ``_verify_job_ownership`` before calling
         through.
 
-        Returns the number of dispatchers reached by the PUBLISH.  A return of 0
+        Returns the number of dispatchers reached by the PUBLISH. A return of 0
         is not necessarily a failure — the persistent marker key is also set, so
         a worker that picks up the job *after* this publish will still process
         the cancel during its start_job marker check.
 
         Raises:
-            redis exceptions if the Redis connection is unavailable.  Callers
+            redis exceptions if the Redis connection is unavailable. Callers
             that want best-effort behaviour should wrap in their own try/except.
         """
         if not self._cancel_channel_enabled or self._client is None:
@@ -1396,16 +1656,16 @@ class RedisJobQueueService(JobQueueService):
         """Return queue data for a job, always backed by a Redis Stream consumer.
 
         The queue returned is always a :class:`RedisQueueWrapper` that reads from the
-        Redis Stream, regardless of whether the job was started on this worker.  This
+        Redis Stream, regardless of whether the job was started on this worker. This
         avoids the race condition that would occur if the bridge coroutine and the HTTP
         consumer both read from the same local ``asyncio.Queue``.
 
         * **Same-worker path**: the bridge is the sole reader of the local queue; the
-          HTTP consumer reads from Redis via the wrapper.  The real ``asyncio.Task`` and
+          HTTP consumer reads from Redis via the wrapper. The real ``asyncio.Task`` and
           ``EventManager`` are returned from the local registry so that disconnect
           handling and ownership checks work normally.
         * **Cross-worker path**: no local entry exists; a null ``EventManager`` and
-          ``None`` task are returned.  Cancellation from this worker travels via
+          ``None`` task are returned. Cancellation from this worker travels via
           :meth:`signal_cancel` rather than a local ``task.cancel()`` — the
           dispatcher on the owning worker fires the cancel, and the streaming
           response's :func:`langflow.api.build.create_flow_response.on_disconnect`
@@ -1439,14 +1699,14 @@ class RedisJobQueueService(JobQueueService):
         """Run base queue cleanup then sweep done cross-worker consumer wrappers.
 
         Cross-worker jobs are never inserted into ``self._queues``, so the base
-        sweep never sees them.  Their ``RedisQueueWrapper._fill_task`` exits on
+        sweep never sees them. Their ``RedisQueueWrapper._fill_task`` exits on
         its own (sentinel or ``exists()=False``), but the dict entry in
         ``_consumer_wrappers`` stays forever unless we explicitly prune it here.
         """
         await super()._cleanup_old_queues()
 
         # Only prune wrappers that are NOT owned by this worker (i.e. absent from
-        # self._queues).  Same-worker wrappers are removed by cleanup_job(); touching
+        # self._queues). Same-worker wrappers are removed by cleanup_job(); touching
         # them here would race with the grace-period logic in the base class.
         done_cross_worker = [
             job_id
@@ -1461,7 +1721,7 @@ class RedisJobQueueService(JobQueueService):
     async def cleanup_job(self, job_id: str) -> None:
         """Cancel local task and bridge, then delete the Redis Stream and owner keys."""
         # Capture ownership before super() pops the entry from self._queues so that
-        # the Redis-key deletion below is scoped to the owning worker only.  A
+        # the Redis-key deletion below is scoped to the owning worker only. A
         # cross-worker poll populates _consumer_wrappers but not _queues; deleting
         # the stream/owner keys from that worker would corrupt an in-flight build on
         # the true owner.
@@ -1494,17 +1754,41 @@ class RedisJobQueueService(JobQueueService):
             if is_owner and self._client:
                 # Best-effort delete of all Redis state owned by this job.
                 # Combined into one DEL so a single round-trip handles them.
-                await self._client.delete(
-                    self._stream_key(job_id),
-                    self._owner_key(job_id),
-                    self._activity_key(job_id),
-                )
-                await logger.adebug(f"Redis keys deleted for job_id {job_id}")
+                # Truly best-effort: a Redis failure here must not escape and
+                # break stop() / explicit cancel, which is most likely to happen
+                # exactly when Redis is unhealthy.
+                try:
+                    await self._client.delete(
+                        self._stream_key(job_id),
+                        self._owner_key(job_id),
+                        self._activity_key(job_id),
+                        self._public_job_key(job_id),
+                    )
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:  # noqa: BLE001
+                    await logger.awarning(f"Redis key cleanup failed for job_id {job_id}: {exc!r}")
+                else:
+                    await logger.adebug(f"Redis keys deleted for job_id {job_id}")
 
     async def register_job_owner(self, job_id: str, user_id: UUID) -> None:
-        """Store the job owner in Redis for cross-worker ownership checks."""
+        """Store the job owner in Redis for cross-worker ownership checks.
+
+        Raises:
+            JobQueueBackendUnavailableError: if Redis is unreachable. Callers
+                (route handlers) translate this into a clean HTTP 503 instead of
+                letting a raw redis ``ConnectionError`` escape as a 500.
+        """
+        # Write to Redis first: registering locally before a failed Redis write
+        # would let same-worker ownership checks pass while every other worker
+        # sees the job as unowned.
+        try:
+            await self._set_owner_key(job_id, user_id)
+        except Exception as exc:
+            if _is_backend_connection_error(exc):
+                raise JobQueueBackendUnavailableError(self._backend_unavailable_message()) from exc
+            raise
         self._job_owners[job_id] = user_id
-        await self._set_owner_key(job_id, user_id)
         if job_id in self._queues:
             self._ensure_owner_refresh_task(job_id)
 
@@ -1513,19 +1797,74 @@ class RedisJobQueueService(JobQueueService):
 
         The Redis key TTL is refreshed on every successful cross-worker lookup so
         that long-running builds (agent loops, large RAG ingests, etc.) do not lose
-        their ownership anchor mid-flight.  The in-memory path is not TTL-bound.
+        their ownership anchor mid-flight. The in-memory path is not TTL-bound.
         """
         local = self._job_owners.get(job_id)
         if local is not None:
             return local
         if self._client:
             owner_key = self._owner_key(job_id)
-            value = await self._client.get(owner_key)
-            if value:
-                from uuid import UUID as _UUID
+            try:
+                value = await self._client.get(owner_key)
+                if value:
+                    from uuid import UUID as _UUID
 
-                # Slide the TTL forward so builds longer than the initial TTL
-                # continue to pass ownership checks as long as they are polled.
-                await self._client.expire(owner_key, self._ttl)
-                return _UUID(value.decode())
+                    # Slide the TTL forward so builds longer than the initial TTL
+                    # continue to pass ownership checks as long as they are polled.
+                    await self._client.expire(owner_key, self._ttl)
+                    return _UUID(value.decode())
+            except Exception as exc:
+                # A Redis outage mid-session must surface as a clean 503 at the
+                # ownership-check endpoints, not a raw ConnectionError 500.
+                if _is_backend_connection_error(exc):
+                    raise JobQueueBackendUnavailableError(self._backend_unavailable_message()) from exc
+                raise
         return None
+
+    async def register_public_job(self, job_id: str) -> None:
+        """Mark a job as public in both local memory and Redis for cross-worker access.
+
+        Why synchronous (not fire-and-forget): a request for the public events/cancel
+        endpoint can land on a different worker than the one that registered the job.
+        If the Redis write were backgrounded, that worker could run is_public_job_async
+        before the marker exists and incorrectly 404 a legitimate public job. Awaiting
+        the write here guarantees the marker is visible to every worker by the time
+        build_public_tmp's response (containing job_id) reaches the client.
+
+        Raises:
+            JobQueueBackendUnavailableError: if a Redis client is configured but the
+                marker write fails. Surfacing (instead of swallowing) prevents
+                build_public_tmp from returning a job_id that only this worker
+                recognizes — on a multi-worker deployment that would let the public
+                events/cancel endpoints 404 on every other worker. The caller cleans
+                up the started job and returns a 503. With no Redis client configured
+                (single-worker, in-memory) there is no shared marker to persist, so
+                the base no-op success path is unchanged.
+        """
+        await super().register_public_job(job_id)
+        if self._client:
+            await self._set_public_job_key(job_id)
+
+    async def _set_public_job_key(self, job_id: str) -> None:
+        try:
+            await self._client.set(self._public_job_key(job_id), b"1", ex=self._ttl)
+        except Exception as exc:
+            if _is_backend_connection_error(exc):
+                raise JobQueueBackendUnavailableError(self._backend_unavailable_message()) from exc
+            raise
+
+    async def is_public_job_async(self, job_id: str) -> bool:
+        """Return True if the job was started through the public build endpoint.
+
+        Checks local memory first (fast path), then falls back to Redis so that
+        a request hitting a different worker than the one that started the build
+        still works correctly.
+        """
+        if super().is_public_job(job_id):
+            return True
+        if self._client:
+            try:
+                return bool(await self._client.exists(self._public_job_key(job_id)))
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning(f"Redis public_job check failed for {job_id}: {exc!r}")
+        return False

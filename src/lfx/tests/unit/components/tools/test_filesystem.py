@@ -4,23 +4,34 @@ import json
 from pathlib import Path
 
 import pytest
-from lfx.components.tools.filesystem import FileSystemToolComponent
+from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 
 
 @pytest.fixture
-def sandbox(tmp_path: Path) -> Path:
-    """Pre-populated sandbox directory used by filesystem-tool tests."""
-    (tmp_path / "hello.txt").write_text("line1\nline2\nline3\n", encoding="utf-8")
-    nested = tmp_path / "nested"
+def sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Pre-populated sandbox directory used by filesystem-tool tests.
+
+    Uses AUTO_LOGIN=True (shared mode) by default so the test fixture lands
+    files under ``<BASE>/shared/`` and the component points at the same root
+    via an empty sub_path. Tests that need isolated mode override
+    ``_resolve_auto_login`` directly.
+    """
+    monkeypatch.setenv("LANGFLOW_FS_TOOL_BASE_DIR", str(tmp_path))
+    shared = tmp_path / "shared"
+    shared.mkdir(parents=True, exist_ok=True)
+    (shared / "hello.txt").write_text("line1\nline2\nline3\n", encoding="utf-8")
+    nested = shared / "nested"
     nested.mkdir()
     (nested / "deep.py").write_text("def foo():\n    return 1\n", encoding="utf-8")
-    (tmp_path / "binary.bin").write_bytes(b"\x00\x01\x02\x03BIN\x00")
-    return tmp_path
+    (shared / "binary.bin").write_bytes(b"\x00\x01\x02\x03BIN\x00")
+    return shared
 
 
 @pytest.fixture
-def component(sandbox: Path) -> FileSystemToolComponent:
-    return FileSystemToolComponent(root_path=str(sandbox), read_only=False)
+def component(sandbox: Path) -> FileSystemToolComponent:  # noqa: ARG001 — sandbox sets BASE_DIR via monkeypatch
+    component = FileSystemToolComponent(root_path="", read_only=False)
+    component._resolve_auto_login = lambda: True  # type: ignore[method-assign]
+    return component
 
 
 class TestComponentSkeleton:
@@ -184,7 +195,7 @@ class TestReadFile:
     def test_should_reject_read_when_file_exceeds_size_limit(
         self, component: FileSystemToolComponent, sandbox: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from lfx.components.tools import filesystem as fs_mod
+        from lfx.components.files_and_knowledge import filesystem as fs_mod
 
         (sandbox / "big.txt").write_text("x" * 128, encoding="utf-8")
         monkeypatch.setattr(fs_mod, "MAX_FILE_SIZE_BYTES", 64)
@@ -224,19 +235,24 @@ class TestWriteFile:
     def test_should_reject_write_when_content_exceeds_size_limit(
         self, component: FileSystemToolComponent, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from lfx.components.tools import filesystem as fs_mod
+        from lfx.components.files_and_knowledge import filesystem as fs_mod
 
         monkeypatch.setattr(fs_mod, "MAX_FILE_SIZE_BYTES", 8)
         result = component._write_file("too_big.txt", "this content exceeds eight bytes")
         assert "error" in result
         assert "size" in result["error"].lower() or "limit" in result["error"].lower()
 
-    def test_should_return_structured_error_when_parent_directory_missing(
-        self, component: FileSystemToolComponent
+    def test_should_create_parent_directories_when_writing_to_nested_path(
+        self, component: FileSystemToolComponent, sandbox: Path
     ) -> None:
-        result = component._write_file("missing_dir/new.txt", "x")
-        assert "error" in result
-        assert "directory" in result["error"].lower() or "parent" in result["error"].lower()
+        # BUG-1: agent filesystem tools must create missing parent directories
+        # automatically (standard mkdir(parents=True) behavior). Previously this
+        # returned {"error": "Parent directory does not exist: ..."} which forced
+        # agents to issue a separate mkdir tool call we do not expose.
+        result = component._write_file("subdir/nested/file.txt", "hello")
+        assert result["status"] == "created"
+        assert result["bytes_written"] == len(b"hello")
+        assert (sandbox / "subdir" / "nested" / "file.txt").read_text(encoding="utf-8") == "hello"
 
     def test_should_return_structured_error_when_path_escapes_sandbox(self, component: FileSystemToolComponent) -> None:
         result = component._write_file("../escape.txt", "x")
@@ -330,6 +346,35 @@ class TestGlobSearch:
         result = component._glob_search("*.txt", path="../")
         assert "error" in result
 
+    def test_should_return_structured_error_when_glob_pattern_is_empty(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        # BUG-2: Path.glob("") raises ValueError("Unacceptable pattern: ''") which
+        # propagates uncaught and crashes the agent. The tool surface contract is
+        # to return a structured error dict for every misuse.
+        result = component._glob_search("")
+        assert "error" in result
+        assert "empty" in result["error"].lower()
+
+    def test_should_return_structured_error_when_glob_pattern_contains_dotdot_traversal(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        # BUG-3: a "../*" pattern silently slipped through because each match
+        # was resolved and compared against the sandbox root, but `shared/../shared`
+        # resolves back to the root itself and surfaced as "." in matches.
+        # Must be rejected up-front — same posture as `_validate_path`.
+        result = component._glob_search("../*")
+        assert "error" in result
+        assert ".." in result["error"] or "traversal" in result["error"].lower()
+
+    def test_should_return_structured_error_when_glob_pattern_contains_nested_dotdot(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        # Variant of BUG-3 — `..` mid-pattern is equally a traversal attempt.
+        result = component._glob_search("foo/../*")
+        assert "error" in result
+        assert ".." in result["error"] or "traversal" in result["error"].lower()
+
 
 class TestGrepSearch:
     """Slices 18-21 — grep_search supports files_with_matches | content | count."""
@@ -381,7 +426,7 @@ class TestGrepSearch:
     def test_should_truncate_grep_output_at_default_line_limit(
         self, component: FileSystemToolComponent, sandbox: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from lfx.components.tools import filesystem as fs_mod
+        from lfx.components.files_and_knowledge import filesystem as fs_mod
 
         monkeypatch.setattr(fs_mod, "GREP_LINE_LIMIT", 5)
         big = "foo\n" * 20
@@ -497,106 +542,12 @@ class TestBuildMetadata:
         assert set(result.data["tools_registered"]) == {"read_file", "glob_search", "grep_search"}
 
 
-class TestRootPathAllowlist:
-    """Slice 27 — root_path is server-controlled via env-var allowlist.
-
-    A flow author should not be able to escape the operator's intent by
-    pointing root_path at `/`, an app config directory, or any other
-    sensitive server location. When `LANGFLOW_FS_TOOL_ALLOWED_ROOTS` is set,
-    every operation must reject root_path values that don't resolve under
-    one of the allowlisted paths.
-    """
-
-    def test_should_reject_root_outside_allowlist(
-        self, sandbox: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        # Allowlist names a different directory than the requested root.
-        allowed = tmp_path / "workspace"
-        allowed.mkdir()
-        monkeypatch.setenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", str(allowed))
-        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
-
-        result = component._read_file("hello.txt")
-        assert "error" in result
-        assert "allowlist" in result["error"].lower() or "not allowed" in result["error"].lower()
-
-    def test_should_accept_root_inside_allowlist(self, sandbox: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        # Allowlist names the parent of sandbox.
-        monkeypatch.setenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", str(sandbox.parent))
-        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
-
-        result = component._read_file("hello.txt")
-        assert result.get("status") == "ok", f"Got: {result}"
-
-    def test_should_accept_root_exactly_equal_to_allowlist_entry(
-        self, sandbox: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", str(sandbox))
-        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
-
-        result = component._read_file("hello.txt")
-        assert result.get("status") == "ok", f"Got: {result}"
-
-    def test_should_support_multiple_paths_separated_by_os_pathsep(
-        self, sandbox: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        import os
-
-        other = tmp_path / "other"
-        other.mkdir()
-        monkeypatch.setenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", os.pathsep.join([str(other), str(sandbox.parent)]))
-        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
-
-        result = component._read_file("hello.txt")
-        assert result.get("status") == "ok", f"Got: {result}"
-
-    def test_should_reject_root_when_running_in_astra_cloud(
-        self, sandbox: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        # Defense in depth: even without an allowlist, a hosted/cloud env
-        # MUST refuse free-form filesystem access from a flow author.
-        monkeypatch.setenv("ASTRA_CLOUD_DISABLE_COMPONENT", "true")
-        monkeypatch.delenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", raising=False)
-        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
-
-        result = component._read_file("hello.txt")
-        assert "error" in result
-        assert "cloud" in result["error"].lower() or "disabled" in result["error"].lower()
-
-    def test_glob_search_should_honor_allowlist(
-        self, sandbox: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        allowed = tmp_path / "workspace"
-        allowed.mkdir()
-        monkeypatch.setenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", str(allowed))
-        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
-
-        result = component._glob_search("**/*.py")
-        assert "error" in result
-
-    def test_grep_search_should_honor_allowlist(
-        self, sandbox: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        allowed = tmp_path / "workspace"
-        allowed.mkdir()
-        monkeypatch.setenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", str(allowed))
-        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
-
-        result = component._grep_search(r"foo")
-        assert "error" in result
-
-    def test_write_and_edit_should_honor_allowlist(
-        self, sandbox: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        allowed = tmp_path / "workspace"
-        allowed.mkdir()
-        monkeypatch.setenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", str(allowed))
-        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
-
-        write_result = component._write_file("new.txt", "data")
-        assert "error" in write_result
-        edit_result = component._edit_file("hello.txt", old_string="line2", new_string="X")
-        assert "error" in edit_result
+# Note: TestRootPathAllowlist (Slice 27) was deleted with the refactor that
+# replaced the legacy LANGFLOW_FS_TOOL_ALLOWED_ROOTS env var and the Astra cloud
+# special-case with the AUTO_LOGIN-driven model. The boundary guarantee that
+# class enforced (operator-controlled scope) is now provided by
+# LANGFLOW_FS_TOOL_BASE_DIR + AUTO_LOGIN dispatch — covered by
+# test_filesystem_isolation_integration.py.
 
 
 class TestGrepSearchReDoSGuard:
@@ -982,82 +933,73 @@ class TestBug02GlobTruncationDropsNestedSilently:
         assert result.get("truncated_branches", []) == []
 
 
-class TestBug03EmptyRootPathSilentlyDefaultsToCwd:
-    """BUG-03 (UI-022) — empty `root_path` silently resolves to the process CWD.
+class TestEmptyRootPathDoesNotLeakCwd:
+    """Sub-path empty/None/whitespace must NOT make the tool read from CWD.
 
-    Scenario: when an agent invokes the tool via Tool Mode, the UI's
-    `required=True` constraint on `root_path` is bypassed (each StructuredTool
-    has its own per-operation args schema; `root_path` is component-level
-    config). With an empty/None/whitespace value, `Path("").resolve()` returns
-    the CWD — in a container that's typically `/app/`. The tool then accepts
-    every operation against the CWD as if it were a legitimate sandbox.
-
-    Fix contract: the public methods MUST return a structured error mentioning
-    `root_path` before any I/O, regardless of whether root_path is "", None,
-    or whitespace-only.
+    Original BUG-03 (UI-022): with the legacy ``required=True`` field, agents
+    bypassing the UI could pass empty/None and land on ``Path("").resolve()`` =
+    process CWD. That contract is gone — empty sub_path is now a valid value
+    meaning "root of my namespace". The remaining security guarantee is: it
+    must resolve under ``<BASE>/<namespace>/``, NEVER under the host CWD.
     """
 
-    def test_should_return_structured_error_when_root_path_is_empty_string(self) -> None:
-        component = FileSystemToolComponent(root_path="", read_only=False)
-        result = component._read_file("anything.txt")
-        assert "error" in result, f"Expected structured error, got: {result}"
-        assert "root_path" in result["error"].lower()
-        assert "required" in result["error"].lower() or "empty" in result["error"].lower()
-
-    def test_should_return_structured_error_when_root_path_is_whitespace_only(self) -> None:
-        component = FileSystemToolComponent(root_path="   ", read_only=False)
-        result = component._read_file("anything.txt")
-        assert "error" in result, f"Expected structured error, got: {result}"
-        assert "root_path" in result["error"].lower()
-
-    def test_should_return_structured_error_when_root_path_is_none(self) -> None:
-        # The current code raises TypeError on None — must also be converted
-        # into a structured error envelope (no raise from the public methods).
-        component = FileSystemToolComponent(root_path=None, read_only=False)
-        result = component._read_file("anything.txt")
-        assert "error" in result, f"Expected structured error, got: {result}"
-        assert "root_path" in result["error"].lower()
-
-    def test_should_not_read_files_from_cwd_when_root_path_is_empty(
+    def test_should_anchor_empty_sub_path_to_base_not_cwd_in_shared_mode(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # The actual security implication of the bug: the agent MUST NOT be
-        # able to read files from the process working directory just because
-        # root_path was left blank. Set CWD to a place with a known file,
-        # then verify _read_file does NOT read it.
-        monkeypatch.chdir(tmp_path)
-        marker = tmp_path / "should_never_be_readable_via_empty_root.txt"
-        marker.write_text("compromised", encoding="utf-8")
+        # Pre-condition: a marker file lives in CWD. If empty sub_path leaked
+        # to CWD again, the agent could read it.
+        cwd_dir = tmp_path / "cwd"
+        cwd_dir.mkdir()
+        marker = cwd_dir / "leak.txt"
+        marker.write_text("must_not_leak", encoding="utf-8")
+        monkeypatch.chdir(cwd_dir)
+
+        base = tmp_path / "base"
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_BASE_DIR", str(base))
 
         component = FileSystemToolComponent(root_path="", read_only=False)
+        component._resolve_auto_login = lambda: True  # type: ignore[method-assign]
+
         result = component._read_file(marker.name)
 
-        assert "error" in result, (
-            f"Empty root_path must NEVER read from CWD. Got: {result}. "
-            "This is the sandbox-escape-via-misconfig path from the bug report."
-        )
-        assert result.get("status") != "ok"
+        assert "error" in result, f"Empty sub_path leaked to CWD: {result}"
 
-    def test_glob_search_should_return_structured_error_when_root_path_is_empty(self) -> None:
-        component = FileSystemToolComponent(root_path="", read_only=False)
-        result = component._glob_search("**/*.txt")
-        assert "error" in result
-        assert "root_path" in result["error"].lower()
+    @pytest.mark.parametrize("blank_value", ["", "   ", None])
+    def test_should_treat_blank_sub_path_as_namespace_root_in_shared_mode(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, blank_value
+    ) -> None:
+        base = tmp_path / "base"
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_BASE_DIR", str(base))
 
-    def test_grep_search_should_return_structured_error_when_root_path_is_empty(self) -> None:
-        component = FileSystemToolComponent(root_path="", read_only=False)
-        result = component._grep_search("foo")
-        assert "error" in result
-        assert "root_path" in result["error"].lower()
+        component = FileSystemToolComponent(root_path=blank_value, read_only=False)
+        component._resolve_auto_login = lambda: True  # type: ignore[method-assign]
 
-    def test_write_file_should_return_structured_error_when_root_path_is_empty(self) -> None:
-        component = FileSystemToolComponent(root_path="", read_only=False)
-        result = component._write_file("anything.txt", "x")
-        assert "error" in result
-        assert "root_path" in result["error"].lower()
+        result = component._write_file("hello.txt", "ok")
 
-    def test_edit_file_should_return_structured_error_when_root_path_is_empty(self) -> None:
+        assert result.get("status") in {"created", "updated"}, result
+        assert (base / "shared" / "hello.txt").read_text(encoding="utf-8") == "ok"
+
+    @pytest.mark.parametrize(
+        "method_call",
+        [
+            lambda c: c._read_file("a.txt"),
+            lambda c: c._write_file("a.txt", "x"),
+            lambda c: c._edit_file("a.txt", old_string="x", new_string="y"),
+            lambda c: c._glob_search("**/*"),
+            lambda c: c._grep_search("foo"),
+        ],
+        ids=["read", "write", "edit", "glob", "grep"],
+    )
+    def test_should_refuse_when_isolated_and_no_user_id(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, method_call
+    ) -> None:
+        base = tmp_path / "base"
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_BASE_DIR", str(base))
+
         component = FileSystemToolComponent(root_path="", read_only=False)
-        result = component._edit_file("anything.txt", old_string="x", new_string="y")
-        assert "error" in result
-        assert "root_path" in result["error"].lower()
+        component._resolve_auto_login = lambda: False  # type: ignore[method-assign]
+
+        result = method_call(component)
+
+        assert "error" in result, f"Isolated mode without user_id must refuse: {result}"
+        assert "user" in result["error"].lower() or "authenticated" in result["error"].lower()

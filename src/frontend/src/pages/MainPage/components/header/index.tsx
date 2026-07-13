@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { usePermissions } from "@/contexts/permissionsContext";
 import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
 import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-download-flows";
 import { ENABLE_MCP } from "@/customization/feature-flags";
@@ -24,6 +25,13 @@ interface HeaderComponentProps {
   view: "list" | "grid";
   setView: (view: "list" | "grid") => void;
   setNewProjectModal: (newProjectModal: boolean) => void;
+  /**
+   * Primary "New Flow" handler. Preferred when defined — bypasses the
+   * templates modal and routes the user straight to a freshly-created
+   * empty flow with the welcome overlay primed. Falls back to opening the
+   * templates modal when not provided so legacy call sites still work.
+   */
+  onNewFlow?: () => void;
   folderName?: string;
   setSearch: (search: string) => void;
   isEmptyFolder: boolean;
@@ -37,6 +45,7 @@ const HeaderComponent = ({
   view,
   setView,
   setNewProjectModal,
+  onNewFlow,
   setSearch,
   isEmptyFolder,
   selectedFlows,
@@ -82,12 +91,13 @@ const HeaderComponent = ({
   const isDeploymentsEnabled = useUtilityStore(
     (s) => s.featureFlags.wxo_deployments === true,
   );
+  const hideNewFlowButton = useUtilityStore((s) => s.hideNewFlowButton);
 
   // Determine which tabs to show based on feature flags
   const tabTypes = [
-    ...(isDeploymentsEnabled ? ["deployments"] : []),
-    ...(isMCPEnabled ? ["mcp"] : ["components"]),
     "flows",
+    ...(isMCPEnabled ? ["mcp"] : ["components"]),
+    ...(isDeploymentsEnabled ? ["deployments"] : []),
   ];
 
   const handleDownload = () => {
@@ -114,6 +124,14 @@ const HeaderComponent = ({
 
   const hasSelection = selectedFlows.length > 0;
 
+  // Bulk actions operate on the same flow ids as the per-card menu, so gate
+  // them on the same actions: every selected flow must allow the action. This
+  // keeps the single-item and bulk entry points consistent. Fail-open (no
+  // provider / OSS pass-through) leaves both buttons enabled.
+  const { can } = usePermissions();
+  const canBulkDownload = selectedFlows.every((id) => can(id, "read"));
+  const canBulkDelete = selectedFlows.every((id) => can(id, "delete"));
+
   return (
     <>
       <div
@@ -135,8 +153,7 @@ const HeaderComponent = ({
       </div>
       {!isEmptyFolder && (
         <>
-          <div className={cn("flex flex-row-reverse pb-4")}>
-            <div className="w-full border-b dark:border-border" />
+          <div className={cn("flex pb-4")}>
             {tabTypes.map((type) => (
               <Button
                 key={type}
@@ -160,7 +177,13 @@ const HeaderComponent = ({
                 >
                   {type === "mcp"
                     ? t("mainPage.mcpServer")
-                    : type.charAt(0).toUpperCase() + type.slice(1)}
+                    : type === "flows"
+                      ? t("mainPage.tabFlows")
+                      : type === "deployments"
+                        ? t("mainPage.tabDeployments")
+                        : type === "components"
+                          ? t("mainPage.tabComponents")
+                          : type.charAt(0).toUpperCase() + type.slice(1)}
                   {type === "deployments" && (
                     <Badge
                       variant="purpleStatic"
@@ -173,6 +196,7 @@ const HeaderComponent = ({
                 </div>
               </Button>
             ))}
+            <div className="w-full border-b dark:border-border" />
           </div>
           {/* Search and filters */}
           {flowType !== "mcp" && flowType !== "deployments" && (
@@ -182,7 +206,9 @@ const HeaderComponent = ({
                   icon="Search"
                   data-testid="search-store-input"
                   type="text"
-                  placeholder={t("mainPage.searchPlaceholder", { flowType })}
+                  placeholder={t("mainPage.searchPlaceholder", {
+                    flowType: t(`mainPage.flowType.${flowType}`),
+                  })}
                   className="mr-2 !text-mmd"
                   inputClassName="!text-mmd"
                   value={debouncedSearch}
@@ -210,6 +236,12 @@ const HeaderComponent = ({
                           : "text-muted-foreground hover:bg-muted"
                       }`}
                       onClick={() => setView(viewType as "list" | "grid")}
+                      aria-label={t(
+                        viewType === "list"
+                          ? "flows.viewList"
+                          : "flows.viewGrid",
+                      )}
+                      aria-pressed={view === viewType}
                     >
                       <ForwardedIconComponent
                         name={viewType === "list" ? "Menu" : "LayoutGrid"}
@@ -234,7 +266,9 @@ const HeaderComponent = ({
                     data-testid="download-bulk-btn"
                     onClick={handleDownload}
                     loading={isDownloading}
-                    tabIndex={hasSelection ? 0 : -1}
+                    disabled={!canBulkDownload}
+                    tabIndex={hasSelection && canBulkDownload ? 0 : -1}
+                    aria-label={t("flows.downloadSelected")}
                   >
                     <ForwardedIconComponent name="Download" />
                   </Button>
@@ -254,32 +288,37 @@ const HeaderComponent = ({
                       className="px-2.5 !text-mmd"
                       data-testid="delete-bulk-btn"
                       loading={isDeleting}
-                      tabIndex={hasSelection ? 0 : -1}
+                      disabled={!canBulkDelete}
+                      tabIndex={hasSelection && canBulkDelete ? 0 : -1}
                     >
                       <ForwardedIconComponent name="Trash2" />
                       {t("mainPage.delete")}
                     </Button>
                   </DeleteConfirmationModal>
                 </div>
-                <ShadTooltip content={t("mainPage.newFlow")} side="bottom">
-                  <Button
-                    variant="default"
-                    size="iconMd"
-                    className="z-50 px-2.5 !text-mmd"
-                    onClick={() => setNewProjectModal(true)}
-                    id="new-project-btn"
-                    data-testid="new-project-btn"
-                  >
-                    <ForwardedIconComponent
-                      name="Plus"
-                      aria-hidden="true"
-                      className="h-4 w-4"
-                    />
-                    <span className="hidden whitespace-nowrap font-semibold md:inline">
-                      {t("mainPage.newFlow")}
-                    </span>
-                  </Button>
-                </ShadTooltip>
+                {!hideNewFlowButton && (
+                  <ShadTooltip content={t("mainPage.newFlow")} side="bottom">
+                    <Button
+                      variant="default"
+                      size="iconMd"
+                      className="z-50 px-2.5 !text-mmd"
+                      onClick={() =>
+                        onNewFlow ? onNewFlow() : setNewProjectModal(true)
+                      }
+                      id="new-project-btn"
+                      data-testid="new-project-btn"
+                    >
+                      <ForwardedIconComponent
+                        name="Plus"
+                        aria-hidden="true"
+                        className="h-4 w-4"
+                      />
+                      <span className="hidden whitespace-nowrap font-semibold md:inline">
+                        {t("mainPage.newFlow")}
+                      </span>
+                    </Button>
+                  </ShadTooltip>
+                )}
               </div>
             </div>
           )}

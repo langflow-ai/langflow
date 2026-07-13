@@ -14,6 +14,22 @@ class LangflowUvicornWorker(UvicornWorker):
     CONFIG_KWARGS = {"loop": "asyncio"}
     _has_exited = False
 
+    def init_process(self) -> None:
+        from langflow.services.deps import get_settings_service
+
+        trust_proxy = get_settings_service().settings.rate_limit_trust_proxy
+        forwarded_allow_ips = "*" if trust_proxy else ""
+
+        # Gunicorn cfg: keeps the value consistent for anything that reads it later.
+        self.cfg.set("forwarded_allow_ips", forwarded_allow_ips)
+
+        # Uvicorn Config: UvicornWorker.__init__ already snapshotted cfg.forwarded_allow_ips
+        # into self.config before init_process runs.  ProxyHeadersMiddleware reads
+        # self.config.forwarded_allow_ips at startup, so we must update it directly.
+        self.config.forwarded_allow_ips = forwarded_allow_ips
+
+        super().init_process()
+
     def _install_sigint_handler(self) -> None:
         """Install a SIGQUIT handler on workers.
 
@@ -74,57 +90,44 @@ class LangflowApplication(BaseApplication):
         self.application = None
         super().__init__()
 
-    # Thread name prefixes that are known to be benign before fork.
-    # BatchSpanProcessor (OTel), Prometheus scrape threads, and loguru's
-    # async queue worker are all safe to ignore here - they never survive
-    # into workers and produce no side-effects when the fd is inherited.
-    _BENIGN_THREAD_PREFIXES = (
-        "OTel",  # OpenTelemetry SDK (BatchSpanProcessor, etc.)
-        "opentelemetry",  # alternate OTel naming
-        "prometheus",  # Prometheus client background threads
-        "loguru",  # loguru enqueue=True worker
-        "asyncio",  # event-loop helper threads (Python internals)
-        "ThreadPoolExecutor",  # stdlib executor - harmless in parent
-        "concurrent.futures",  # same pool, different prefix
-    )
-
-    @classmethod
-    def _is_benign_thread(cls, thread) -> bool:
-        return any(thread.name.startswith(prefix) for prefix in cls._BENIGN_THREAD_PREFIXES)
-
     @classmethod
     def pre_fork(cls, server, _worker):
         import gc
         import os
-        import threading
 
-        all_non_main = [t for t in threading.enumerate() if t.is_alive() and t is not threading.main_thread()]
-        debug_mode = os.environ.get("LANGFLOW_DEBUG_FORK_GHOSTS", "").lower() in ("1", "true", "yes")
+        # Benign-thread allowlist + ghost detection live in lfx.fork (shared with lfx serve).
+        from lfx.fork import find_ghost_connections, find_ghost_threads
 
-        if debug_mode and all_non_main:
-            names = [t.name for t in all_non_main]
-            server.log.debug("All non-main threads before fork (debug): %s", names)
+        ghost_threads = find_ghost_threads()
 
-        suspicious = [t for t in all_non_main if not cls._is_benign_thread(t)]
-        if suspicious:
-            names = [t.name for t in suspicious]
+        if os.environ.get("LANGFLOW_DEBUG_FORK_GHOSTS", "").lower() in ("1", "true", "yes"):
+            import threading
+
+            all_non_main = [t.name for t in threading.enumerate() if t.is_alive() and t is not threading.main_thread()]
+            if all_non_main:
+                server.log.debug("All non-main threads before fork (debug): %s", all_non_main)
+
+        if ghost_threads:
+            names = [t.name for t in ghost_threads]
             server.log.warning("Ghost threads found before fork (these will be dead in workers): %s", names)
 
-        try:
-            import psutil
+        # find_ghost_connections() returns [] when psutil is absent; surface that here as a
+        # debug breadcrumb so an empty result isn't mistaken for "checked and clean".
+        import importlib.util
 
-            conns = psutil.Process().net_connections(kind="tcp")
-            ghost_conns = [c for c in conns if c.status != "LISTEN"]
-            if ghost_conns:
-                details = [(c.laddr, c.raddr, c.status) for c in ghost_conns]
-                server.log.warning(
-                    "Ghost TCP connections found before fork (will be dead in workers): %s",
-                    details,
-                )
-        except ImportError:
+        if importlib.util.find_spec("psutil") is None:
             server.log.debug("psutil not installed; skipping ghost TCP connection check")
+
+        try:
+            ghost_conns = find_ghost_connections()
         except Exception as e:  # noqa: BLE001
             server.log.warning("Failed to inspect TCP connections before fork: %s", e)
+            ghost_conns = []
+        if ghost_conns:
+            server.log.warning(
+                "Ghost TCP connections found before fork (will be dead in workers): %s",
+                ghost_conns,
+            )
 
         try:
             gc.collect()

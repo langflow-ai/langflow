@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -11,75 +12,41 @@ import {
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../index";
+import { NAV_ITEMS } from "./sidebar-nav-items";
 
 export type { SidebarSection };
+export { NAV_ITEMS };
 
-interface NavItem {
-  id: SidebarSection;
-  icon: string;
-  label: string;
-  tooltip: string;
-}
+type SidebarSegmentedNavProps = {
+  hiddenFromTabOrder?: boolean;
+};
 
-export const NAV_ITEMS: NavItem[] = [
-  {
-    id: "search",
-    icon: "search",
-    label: "sidebar.nav.search",
-    tooltip: "sidebar.nav.search",
-  },
-  {
-    id: "components",
-    icon: "component",
-    label: "sidebar.nav.components",
-    tooltip: "sidebar.nav.components",
-  },
-  {
-    id: "mcp",
-    icon: "Mcp",
-    label: "sidebar.nav.mcp",
-    tooltip: "sidebar.nav.mcp",
-  },
-  {
-    id: "bundles",
-    icon: "blocks",
-    label: "sidebar.nav.bundles",
-    tooltip: "sidebar.nav.bundles",
-  },
-  {
-    id: "versions",
-    icon: "History",
-    label: "sidebar.nav.versions",
-    tooltip: "sidebar.nav.versionHistory",
-  },
-  {
-    id: "traces",
-    icon: "Activity",
-    label: "sidebar.nav.traces",
-    tooltip: "sidebar.nav.traces",
-  },
-  {
-    id: "memories",
-    icon: "Brain",
-    label: "Memories",
-    tooltip: "Memories",
-  },
-];
-
-const SidebarSegmentedNav = () => {
+const SidebarSegmentedNav = ({
+  hiddenFromTabOrder = false,
+}: SidebarSegmentedNavProps) => {
   const { t } = useTranslation();
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
-  const { focusSearch, setSearch } = useSearchContext();
+  const { setSearch } = useSearchContext();
   const setPlaygroundOpen = usePlaygroundStore((state) => state.setIsOpen);
   const setPlaygroundFullscreen = usePlaygroundStore(
     (state) => state.setIsFullscreen,
   );
 
   return (
-    <div className="flex h-full flex-col border-r border-border bg-background">
+    <div
+      className="flex h-full flex-col border-r border-border bg-background"
+      aria-hidden={hiddenFromTabOrder || undefined}
+    >
       <SidebarMenu className="gap-2 py-1">
         {NAV_ITEMS.map((item) => (
-          <div key={item.id}>
+          <Fragment key={item.id}>
+            {item.id === "memories" && (
+              <li
+                role="separator"
+                aria-hidden="true"
+                className="mx-auto my-1 w-5 border-t border-border"
+              />
+            )}
             <SidebarMenuItem className="px-1 pt-1">
               <ShadTooltip content={t(item.tooltip)} side="right">
                 <SidebarMenuButton
@@ -102,9 +69,6 @@ const SidebarSegmentedNav = () => {
                       if (!open) {
                         toggleSidebar();
                       }
-                      if (item.id === "search") {
-                        setTimeout(() => focusSearch(), 100);
-                      }
                     }
                   }}
                   isActive={activeSection === item.id}
@@ -115,6 +79,8 @@ const SidebarSegmentedNav = () => {
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                   )}
                   data-testid={`sidebar-nav-${item.id}`}
+                  data-sidebar-nav-item={item.id}
+                  tabIndex={hiddenFromTabOrder ? -1 : undefined}
                 >
                   <ForwardedIconComponent
                     name={item.icon}
@@ -124,7 +90,7 @@ const SidebarSegmentedNav = () => {
                 </SidebarMenuButton>
               </ShadTooltip>
             </SidebarMenuItem>
-          </div>
+          </Fragment>
         ))}
       </SidebarMenu>
     </div>

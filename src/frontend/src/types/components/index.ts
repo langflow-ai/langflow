@@ -1,5 +1,5 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
-import type { ReactElement, ReactNode } from "react";
+import type { InputHTMLAttributes, ReactElement, ReactNode } from "react";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import type { InputOutput } from "../../constants/enums";
 import type {
@@ -26,12 +26,20 @@ export type InputComponentType = {
   password: boolean;
   required?: boolean;
   isForm?: boolean;
+  /**
+   * Opt back into browser / password-manager autofill (default false). Only set
+   * by real credential-entry forms (login / signup / admin login); node-config
+   * inputs leave it false so autofill cannot inject values that autosave
+   * persists. See utils/inputAutofill.ts.
+   */
+  allowAutofill?: boolean;
   editNode?: boolean;
   onChangePass?: (value: boolean | boolean) => void;
   showPass?: boolean;
   placeholder?: string;
   className?: string;
   id?: string;
+  inputProps?: InputHTMLAttributes<HTMLInputElement>;
   blurOnEnter?: boolean;
   optionsIcon?: string;
   optionsPlaceholder?: string;
@@ -44,6 +52,7 @@ export type InputComponentType = {
   setSelectedOptions?: (value: string[]) => void;
   objectOptions?: Array<{ name: string; id: string }>;
   isObjectOption?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose event handler type
   onChangeFolderName?: (e: any) => void;
   nodeStyle?: boolean;
   isToolMode?: boolean;
@@ -60,13 +69,16 @@ export type DropDownComponent = {
   combobox?: boolean;
   nodeId: string;
   nodeClass: APIClassType;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose handler type
   handleNodeClass: (value: any, code?: string, type?: string) => void;
   options: string[];
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped metadata array
   optionsMetaData?: any[];
   onSelect: (
     value: string,
     dbValue?: boolean,
     snapshot?: boolean,
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped metadata
     selectedMetadata?: any,
   ) => void;
   editNode?: boolean;
@@ -77,6 +89,7 @@ export type DropDownComponent = {
     fields: { data: { node: APIClassType } };
     functionality: string;
   };
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped external options
   externalOptions?: any;
   toggle?: boolean;
 };
@@ -121,7 +134,9 @@ export type NodeOutputFieldComponentType = {
   isToolMode?: boolean;
   showHiddenOutputs?: boolean;
   hidden?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped outputs
   outputs?: any;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped output handler
   handleSelectOutput?: (output: any) => void;
 };
 
@@ -146,6 +161,7 @@ export type NodeInputFieldComponentType = {
 };
 
 export type IOJSONInputComponentType = {
+  // biome-ignore lint/suspicious/noExplicitAny: JSON values are inherently untyped
   value: any;
   onChange: (value) => void;
   left?: boolean;
@@ -160,7 +176,9 @@ export type outputComponentType = {
   name: string;
   proxy?: OutputFieldProxyType;
   isToolMode?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped outputs
   outputs?: any;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped output handler
   handleSelectOutput?: (output: any) => void;
   outputName?: string;
 };
@@ -315,6 +333,11 @@ export type IconComponentProps = {
   id?: string;
   skipFallback?: boolean;
   dataTestId?: string;
+  /** Icons are decorative (aria-hidden) by default; pass false to expose. */
+  ariaHidden?: boolean;
+  /** Accessible name for meaningful icons; implies ariaHidden=false. */
+  ariaLabel?: string;
+  title?: string;
 };
 
 export type InputProps = {
@@ -396,6 +419,7 @@ export type ConfirmationModalType = {
     | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
     | React.ReactElement<ContentProps>;
   icon?: string;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing generic modal data prop
   data?: any;
   index?: number;
   onConfirm?: (index, data) => void;
@@ -421,6 +445,7 @@ export type UserManagementType = {
   confirmationText: string;
   children: ReactElement;
   icon: string;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing generic modal data prop
   data?: any;
   index?: number;
   asChild?: boolean;
@@ -437,6 +462,7 @@ export type patchUserInputStateType = {
   cnfPassword: string;
   profilePicture: string;
   apikey: string;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing gradient value (string or object)
   gradient?: any;
 };
 
@@ -452,6 +478,7 @@ export type UserInputType = {
 
 export type ApiKeyType = {
   children: ReactElement;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing generic modal data prop
   data?: any;
   onCloseModal?: () => void;
   modalProps?: {
@@ -553,6 +580,7 @@ export type ChatInputType = {
     files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
   ) => void;
   inputRef: {
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing ref type for various input elements
     current: any;
   };
   noInput: boolean;
@@ -594,7 +622,7 @@ export type fileCardPropsType = {
 export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
-  setShowNode: (boolean: any) => void;
+  setShowNode: (show: boolean) => void;
   numberOfOutputHandles: number;
   showNode: boolean;
   name?: string;
@@ -805,6 +833,7 @@ export type Log = {
 
 export type validationStatusType = {
   id: string;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing validation data shape
   data: object | any;
   outputs: Log[];
   progress?: number;
@@ -819,6 +848,7 @@ export type ApiKey = {
   created_at: string;
   last_used_at: string;
   total_uses: number;
+  expires_at?: string | null;
 };
 export type fetchErrorComponentType = {
   message: string;
@@ -863,6 +893,7 @@ export type chatViewProps = {
 
 export type IOFileInputProps = {
   field: InputFieldType;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose event handler type
   updateValue: (e: any, type: string) => void;
 };
 

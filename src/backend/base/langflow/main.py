@@ -42,6 +42,7 @@ from langflow.plugin_routes import load_plugin_routes
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
+    get_background_execution_service,
     get_queue_service,
     get_service,
     get_settings_service,
@@ -49,6 +50,7 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.schema import ServiceType
+from langflow.services.tracing.otel_fastapi_patch import patch_otel_fastapi_route_details
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
@@ -132,12 +134,26 @@ async def load_bundles_with_error_handling():
         return [], []
 
 
+def cors_origins_contain_wildcard(origins) -> bool:
+    """Return True if the configured CORS origins include a wildcard (`*`).
+
+    `LANGFLOW_CORS_ORIGINS="*"` is parsed as the raw string on some Python versions
+    and as a single-element list (`["*"]`) on others, and an operator may also mix a
+    wildcard into a list of specific origins (e.g. `"https://app.com,*"` ->
+    `["https://app.com", "*"]`). All of these mean "all origins"; treat them the same
+    so wildcard detection stays consistent everywhere it is used.
+    """
+    return origins == "*" or (isinstance(origins, list) and "*" in origins)
+
+
 def warn_about_future_cors_changes(settings):
     """Warn users about upcoming CORS security changes in version 1.7."""
-    # Check if using default (backward compatible) settings
-    using_defaults = settings.cors_origins == "*" and settings.cors_allow_credentials is True
+    # Check if using permissive (backward compatible) settings: a wildcard origin
+    # combined with credentials. Share the wildcard predicate with the middleware
+    # configuration so both fire for the same set of origins (string or list form).
+    using_permissive = cors_origins_contain_wildcard(settings.cors_origins) and settings.cors_allow_credentials is True
 
-    if using_defaults:
+    if using_permissive:
         logger.warning(
             "CORS: Using permissive defaults (all origins + credentials). "
             "Set LANGFLOW_CORS_ORIGINS for production. Stricter defaults in v2.0."
@@ -163,6 +179,13 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         sync_flows_from_fs_task = None
         mcp_init_task = None
+        models_dev_refresh_task = None
+        # Bind ``temp_dirs`` before the ``try`` so the shutdown cleanup in the
+        # ``finally`` block (which iterates it) never raises ``UnboundLocalError``
+        # when startup fails before bundle loading assigns it below. Otherwise an
+        # early failure (e.g. an unresolvable LANGFLOW_DATABASE_URL) is masked by a
+        # secondary error during cleanup. See issue #13634.
+        temp_dirs: list = []
 
         try:
             start_time = asyncio.get_event_loop().time()
@@ -197,6 +220,34 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
+            # Start the telemetry writer (no-op when telemetry_writer_enabled is False).
+            try:
+                from langflow.services.deps import get_telemetry_writer_service
+
+                telemetry_writer = get_telemetry_writer_service()
+                if telemetry_writer is not None and telemetry_writer.is_enabled():
+                    await telemetry_writer.start()
+            except Exception as exc:  # noqa: BLE001
+                # If the user explicitly opted in (telemetry_writer_enabled=True)
+                # but startup failed, this is an error not a warning — every
+                # subsequent write will silently fall back to the legacy direct-
+                # write path that this feature was built to replace.
+                await logger.aerror(
+                    f"Failed to start telemetry writer; transactions and vertex_build "
+                    f"writes will use the legacy direct-write path: {exc}"
+                )
+
+            # Start the periodic authz audit-log retention sweep. No-op unless
+            # AUTHZ_AUDIT_ENABLED and AUTHZ_AUDIT_RETENTION_DAYS > 0. The startup
+            # sweep in initialize_services() already pruned at boot; this keeps a
+            # long-running instance bounded between restarts.
+            try:
+                from langflow.services.task.audit_cleanup import audit_log_cleanup_worker
+
+                await audit_log_cleanup_worker.start()
+            except Exception as exc:  # noqa: BLE001 — never block startup on cleanup scheduling
+                await logger.awarning(f"Failed to start authz audit-log cleanup worker: {exc}")
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")
             setup_llm_caching()
@@ -210,6 +261,19 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await logger.adebug("Copying profile pictures")
                 await copy_profile_pictures()
                 await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Reconciling knowledge base rows from disk")
+            try:
+                from langflow.api.utils import knowledge_base_service
+
+                inserted = await knowledge_base_service.backfill_all_users_from_disk()
+                elapsed = asyncio.get_event_loop().time() - current_time
+                await logger.adebug(
+                    f"Knowledge base reconciliation completed in {elapsed:.2f}s ({inserted} rows inserted)"
+                )
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
 
             if get_settings_service().settings.prometheus_enabled:
                 try:
@@ -250,6 +314,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                 temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
                 get_settings_service().settings.components_path.extend(bundles_components_paths)
                 await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            # Locally-registered dev extensions (``lfx extension dev``) are
+            # loaded later via :func:`import_extension_components` through the
+            # @official-slot pathway alongside installed extensions, so they
+            # share the BundleRegistry, palette decoration, and reload
+            # endpoint with pip-installed bundles.  Nothing to wire here.
 
             # Gate: Cache component types
             # When types_cached is True, workers inherited the populated cache via COW; we still need a
@@ -353,6 +423,17 @@ def get_lifespan(*, fix_migration=False, version=None):
                     except Exception as e:  # noqa: BLE001
                         await logger.awarning(f"Failed to configure agentic MCP server: {e}")
 
+            # Backfill MCP servers from the legacy per-user JSON file into the
+            # mcp_server table (idempotent + multi-replica-safe; existing file-based
+            # users are migrated to the DB store automatically on upgrade).
+            try:
+                from langflow.api.utils.mcp.backfill import backfill_mcp_servers_from_files
+
+                async with session_scope() as session:
+                    await backfill_mcp_servers_from_files(session)
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(f"Failed to backfill MCP servers from legacy files: {e}")
+
             # Gate: Load flows from directory
             current_time = asyncio.get_event_loop().time()
             if is_step_complete(PreloadStep.FLOWS):
@@ -368,6 +449,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             queue_service = get_queue_service()
             if not queue_service.is_started():
                 queue_service.start()
+
+            # Reconcile background-execution jobs left behind by a crashed worker:
+            # fail orphaned IN_PROGRESS rows, re-enqueue QUEUED rows. Best-effort
+            # so a reconcile hiccup never blocks boot.
+            with suppress(Exception):
+                await get_background_execution_service().sweep_orphans_on_startup()
 
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
@@ -394,7 +481,65 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             # Start the delayed initialization as a background task
             # Allows the server to start first to avoid race conditions with MCP Server startup
-            mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
+            if get_settings_service().settings.skip_mcp_auto_init:
+                await logger.adebug("Skipping MCP server auto-initialization (skip_mcp_auto_init=True)")
+            else:
+                mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
+
+            async def refresh_models_dev_periodically() -> None:
+                """Hydrate the models.dev catalog at startup and refresh daily.
+
+                Loads any disk snapshot first so the in-memory catalog reflects
+                last-known-good metadata immediately, then attempts a live
+                fetch. On failure the disk snapshot (or bundled static lists)
+                stays in effect — startup is never blocked by models.dev
+                availability.
+                """
+                from lfx.base.models.models_dev_catalog import (
+                    fetch_models_dev_snapshot,
+                    invalidate_catalog_cache,
+                    load_models_dev_snapshot,
+                    save_models_dev_snapshot,
+                    set_active_snapshot,
+                )
+
+                refresh_interval_seconds = 24 * 60 * 60
+
+                disk_snapshot = load_models_dev_snapshot()
+                if disk_snapshot is not None:
+                    set_active_snapshot(disk_snapshot)
+                    invalidate_catalog_cache()
+                    await logger.adebug("Loaded models.dev snapshot from disk")
+
+                while True:
+                    try:
+                        fresh = await fetch_models_dev_snapshot()
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"models.dev refresh failed: {e}")
+                        fresh = None
+
+                    if fresh is not None:
+                        set_active_snapshot(fresh)
+                        invalidate_catalog_cache()
+                        try:
+                            save_models_dev_snapshot(fresh)
+                        except Exception as e:  # noqa: BLE001
+                            await logger.awarning(f"models.dev snapshot save failed: {e}")
+                        else:
+                            await logger.adebug("models.dev snapshot refreshed")
+
+                    await asyncio.sleep(refresh_interval_seconds)
+
+            # LANGFLOW_MODELS_DEV_REFRESH=false disables the live models.dev
+            # fetch. Tests set this: the startup fetch otherwise fires from a
+            # background task during whatever test is running, hitting the
+            # network and tripping event-loop-block detectors (pyleak).
+            if os.getenv("LANGFLOW_MODELS_DEV_REFRESH", "true").lower() not in ("false", "0", "no"):
+                models_dev_refresh_task = asyncio.create_task(refresh_models_dev_periodically())
+            else:
+                await logger.adebug("models.dev refresh disabled via LANGFLOW_MODELS_DEV_REFRESH")
 
             # v1 and project MCP server context managers
             from langflow.api.v1.mcp import start_streamable_http_manager
@@ -462,6 +607,15 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await stop_streamable_http_manager()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Stop the authz audit-log retention worker (best-effort;
+                    # no-op when it was never scheduled).
+                    try:
+                        from langflow.services.task.audit_cleanup import audit_log_cleanup_worker
+
+                        await audit_log_cleanup_worker.stop()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop authz audit-log cleanup worker: {e}")
+
                     # Cancel background tasks
                     tasks_to_cancel = []
                     if sync_flows_from_fs_task:
@@ -470,6 +624,9 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if mcp_init_task and not mcp_init_task.done():
                         mcp_init_task.cancel()
                         tasks_to_cancel.append(mcp_init_task)
+                    if models_dev_refresh_task and not models_dev_refresh_task.done():
+                        models_dev_refresh_task.cancel()
+                        tasks_to_cancel.append(models_dev_refresh_task)
                     if tasks_to_cancel:
                         # Wait for all tasks to complete, capturing exceptions
                         results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
@@ -480,6 +637,16 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 2: Cleaning Up Services
                 with shutdown_progress.step(2):
+                    # Drain pending audit writes before services tear down so
+                    # rows scheduled mid-request still land in the DB. We do
+                    # this here (not in teardown_services) because the DB
+                    # session factory must still be alive.
+                    try:
+                        from langflow.services.authorization.utils import drain_pending_audit_writes
+
+                        await drain_pending_audit_writes(timeout=5.0)
+                    except Exception as drain_exc:  # noqa: BLE001 — never block shutdown on audit
+                        await logger.awarning(f"drain_pending_audit_writes failed: {drain_exc}")
                     try:
                         await asyncio.wait_for(teardown_services(), timeout=30)
                     except asyncio.TimeoutError:
@@ -540,6 +707,25 @@ def create_app():
 
     # Configure CORS using settings (with backward compatible defaults)
     origins = settings.cors_origins
+    allow_credentials = settings.cors_allow_credentials
+    # Security: a wildcard origin combined with credentials is unsafe (and invalid
+    # per the CORS spec). Starlette would reflect the caller's Origin and return
+    # Access-Control-Allow-Credentials: true, letting any site make credentialed
+    # cross-origin requests (CSRF / token theft). Force credentials off whenever
+    # the origin list is a wildcard; specific origins keep credentials.
+    if cors_origins_contain_wildcard(origins):
+        if allow_credentials:
+            # Surface the override so an operator who set credentials on purpose can
+            # see why credentialed requests stopped working and points them at the
+            # wildcard origin as the cause.
+            logger.warning(
+                "CORS: wildcard origin ('*') is configured together with "
+                "LANGFLOW_CORS_ALLOW_CREDENTIALS=true; disabling credentials because a "
+                "wildcard origin with credentials enables cross-site credentialed "
+                "requests (CSRF / token theft) and is invalid per the CORS spec. "
+                "Set LANGFLOW_CORS_ORIGINS to explicit origins to keep credentials enabled."
+            )
+        allow_credentials = False
     if isinstance(origins, str) and origins != "*":
         origins = [origins]
 
@@ -547,7 +733,7 @@ def create_app():
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_credentials=settings.cors_allow_credentials,
+        allow_credentials=allow_credentials,
         allow_methods=settings.cors_allow_methods,
         allow_headers=settings.cors_allow_headers,
     )
@@ -676,6 +862,36 @@ def create_app():
             content={"detail": exc.detail},
         )
 
+    # Add rate limit exception handler
+    from slowapi.errors import RateLimitExceeded
+
+    @app.exception_handler(RateLimitExceeded)
+    async def rate_limit_exception_handler(request: Request, _exc: RateLimitExceeded):
+        """Handle rate limit exceeded errors with structured logging."""
+        from langflow.services.rate_limit.service import get_limiter_key
+
+        # Default to 60 seconds for "/minute" window
+        retry_after_seconds = "60"
+
+        client_ip = get_limiter_key(request)
+        logger.warning(
+            "Rate limit exceeded",
+            auth_event="rate_limit_exceeded",
+            client_ip=client_ip,
+            path=request.url.path,
+            method=request.method,
+        )
+        return JSONResponse(
+            status_code=HTTPStatus.TOO_MANY_REQUESTS,
+            content={
+                "detail": "Too many requests. Please try again later.",
+                "retry_after": retry_after_seconds,
+            },
+            headers={
+                "Retry-After": retry_after_seconds,
+            },
+        )
+
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
         if isinstance(exc, HTTPException):
@@ -693,9 +909,19 @@ def create_app():
             content={"message": str(exc)},
         )
 
+    # FastAPI >=0.137 lazy include_router puts `_IncludedRouter` wrappers (no `.path`)
+    # in `app.routes`, which crashes OTel's span route extraction on partial matches
+    # (e.g. CORS preflight). Patch the helper before instrumenting.
+    patch_otel_fastapi_route_details()
     FastAPIInstrumentor.instrument_app(app)
 
     add_pagination(app)
+
+    # Add SlowAPI state to app for rate limiting
+    from langflow.services.rate_limit import get_rate_limiter
+
+    limiter = get_rate_limiter()
+    app.state.limiter = limiter
 
     return app
 

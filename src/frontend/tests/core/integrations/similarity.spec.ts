@@ -2,8 +2,10 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { dismissLegacyWarnings } from "../../utils/dismiss-legacy-warnings";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 import { unselectNodes } from "../../utils/unselect-nodes";
-
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -26,9 +28,10 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai embedding");
-    await page.waitForSelector("text=OpenAI Embeddings", {
-      timeout: 1000,
-    });
+    await skipIfComponentUnavailable(
+      page.getByText("OpenAI Embeddings", { exact: true }),
+      "OpenAI Embeddings",
+    );
 
     await page
       .getByText("OpenAI Embeddings", { exact: true })
@@ -89,7 +92,7 @@ test(
     //seventh component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextOutput);
     await page.waitForSelector("text=Text Output", {
       timeout: 1000,
     });
@@ -128,7 +131,7 @@ test(
     await page
       .getByTestId("popover-anchor-input-message")
       .first()
-      .fill("langflow");
+      .fill(TEXTS.authDefaultCredential);
 
     const firstApiKeyInput = page
       .getByTestId("popover-anchor-input-openai_api_key")
@@ -163,7 +166,9 @@ test(
 
     //connection 1
     const openAiEmbeddingOutput_0 = await page
-      .getByTestId("handle-openaiembeddings-shownode-embedding model-right")
+      .getByTestId(
+        "handle-openaiembeddingscomponent-shownode-embedding model-right",
+      )
       .nth(0);
     await openAiEmbeddingOutput_0.hover();
     await page.mouse.down();
@@ -176,7 +181,9 @@ test(
 
     //connection 2
     const openAiEmbeddingOutput_1 = await page
-      .getByTestId("handle-openaiembeddings-shownode-embedding model-right")
+      .getByTestId(
+        "handle-openaiembeddingscomponent-shownode-embedding model-right",
+      )
       .nth(0);
     await openAiEmbeddingOutput_1.hover();
     await page.mouse.down();
@@ -249,9 +256,16 @@ test(
 
     await page.getByTestId("button_run_text output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 120000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 120000,
+    });
 
     await unselectNodes(page);
+
+    // Data to Message, Filter Data, and Text Output are legacy components; their
+    // "Legacy" warning bars increase node height and can overlap the Text Output
+    // inspection button. Dismiss the bars so the button is clickable.
+    await dismissLegacyWarnings(page);
 
     await page
       .getByTestId(/rf__node-TextOutput-[a-zA-Z0-9]{5}/)

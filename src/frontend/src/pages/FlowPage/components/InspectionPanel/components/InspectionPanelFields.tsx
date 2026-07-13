@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import {
   isCodeField,
@@ -12,9 +13,9 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useFlowStore from "@/stores/flowStore";
 import type { NodeDataType, targetHandleType } from "@/types/flow";
 import { scapeJSONParse } from "@/utils/reactflowUtils";
+import { HIDDEN_FIELDS, INSPECTION_PANEL_ONLY_FIELDS } from "./hidden-fields";
 import InspectionPanelEditField from "./InspectionPanelEditField";
 import InspectionPanelField from "./InspectionPanelField";
-import { HIDDEN_FIELDS, INSPECTION_PANEL_ONLY_FIELDS } from "./hidden-fields";
 
 interface InspectionPanelFieldsProps {
   data: NodeDataType;
@@ -25,6 +26,7 @@ export default function InspectionPanelFields({
   data,
   isEditingFields = false,
 }: InspectionPanelFieldsProps) {
+  const { t } = useTranslation();
   const isToolMode = data.node?.tool_mode;
 
   const connectedFieldNames = useFlowStore(
@@ -51,7 +53,10 @@ export default function InspectionPanelFields({
       .filter((templateField) => {
         const template = data.node?.template[templateField];
         if (isInternalField(templateField)) return false;
-        if (HIDDEN_FIELDS[data.type]?.includes(templateField)) return false;
+        // HIDDEN_FIELDS are intentionally kept out of the default advanced
+        // view (see advancedFields below) but must remain reachable here in
+        // edit mode so users still have a path to toggle their visibility and
+        // edit them (regression fixed: github.com/langflow-ai/langflow/issues/13595).
         if (INSPECTION_PANEL_ONLY_FIELDS[data.type]?.includes(templateField))
           return false;
         if (
@@ -116,7 +121,7 @@ export default function InspectionPanelFields({
     if (allEditableFields.length === 0) {
       return (
         <div className="flex items-center justify-center p-8 text-sm text-muted-foreground">
-          No editable fields
+          {t("inspectionPanel.noEditableFields")}
         </div>
       );
     }
@@ -150,7 +155,7 @@ export default function InspectionPanelFields({
           name="Settings2"
           className="text-input w-6 h-6"
         />
-        No advanced settings
+        {t("inspectionPanel.noAdvancedSettings")}
       </div>
     );
   }

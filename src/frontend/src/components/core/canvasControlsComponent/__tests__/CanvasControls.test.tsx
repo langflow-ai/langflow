@@ -1,5 +1,24 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import CanvasControls from "../CanvasControls";
+
+// The modal/dialog/dropdown overlay layer in the app all sits at `z-50`
+// (see ui/dialog.tsx, ui/popover.tsx). The assistant onboarding tooltip must
+// stay at canvas level — strictly BELOW this layer — so it never floats in
+// front of an open modal like "My Files".
+const MODAL_LAYER_Z_INDEX = 50;
+const ONBOARDING_TOOLTIP_DELAY_MS = 10_000;
+
+// Extract the numeric z-index from a Tailwind className, supporting both the
+// scale token (`z-40`) and the arbitrary-value form (`z-[60]`).
+const getZIndex = (className: string): number | null => {
+  const token = className
+    .split(/\s+/)
+    .find((cls) => /^z-(\[?\d+\]?)$/.test(cls));
+  if (!token) return null;
+  const digits = token.replace(/^z-\[?/, "").replace(/\]$/, "");
+  return Number.parseInt(digits, 10);
+};
 
 const reactFlowFns = {
   fitView: jest.fn(),
@@ -65,6 +84,10 @@ jest.mock("../HelpDropdown", () => ({
 }));
 
 jest.mock("@/assets/langflow_assistant.svg", () => "mock-assistant-icon.svg");
+jest.mock(
+  "@/assets/langflow_assistant_idle.svg",
+  () => "mock-assistant-idle-icon.svg",
+);
 
 jest.mock("@/stores/assistantManagerStore", () => ({
   __esModule: true,
@@ -150,5 +173,63 @@ describe("CanvasControls", () => {
 
     const panel = screen.getByTestId("main_canvas_controls");
     expect(panel.className).toContain("!overflow-visible");
+  });
+
+  it("should_render_onboarding_tooltip_below_modal_layer_when_active", () => {
+    // Arrange — fresh browser (assistant not yet discovered) so the onboarding
+    // tooltip is eligible to surface after the idle delay.
+    localStorage.clear();
+    jest.useFakeTimers();
+
+    try {
+      render(<CanvasControls selectedNode={null} />);
+
+      // Act — let the idle delay elapse so the popover opens and the tooltip
+      // (rendered via a Portal on document.body) mounts.
+      act(() => {
+        jest.advanceTimersByTime(ONBOARDING_TOOLTIP_DELAY_MS);
+      });
+
+      // Assert — the tooltip stays at canvas level: its z-index must be below
+      // the z-50 modal/dialog layer so it never floats over an open modal.
+      const tooltip = screen.getByTestId("assistant-onboarding-tooltip");
+      const zIndex = getZIndex(tooltip.className);
+
+      expect(zIndex).not.toBeNull();
+      expect(zIndex as number).toBeLessThan(MODAL_LAYER_Z_INDEX);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("should_allow_tab_to_leave_onboarding_tooltip", async () => {
+    localStorage.clear();
+    jest.useFakeTimers();
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    const nextButton = document.createElement("button");
+    nextButton.textContent = "Next focus target";
+
+    try {
+      render(<CanvasControls selectedNode={null} />);
+
+      act(() => {
+        jest.advanceTimersByTime(ONBOARDING_TOOLTIP_DELAY_MS);
+      });
+
+      document.body.appendChild(nextButton);
+
+      screen.getByTestId("assistant-onboarding-dismiss").focus();
+      await user.tab();
+      expect(screen.getByTestId("assistant-onboarding-open")).toHaveFocus();
+      await user.tab();
+
+      expect(nextButton).toHaveFocus();
+      expect(
+        screen.queryByTestId("assistant-onboarding-tooltip"),
+      ).not.toBeInTheDocument();
+    } finally {
+      nextButton.remove();
+      jest.useRealTimers();
+    }
   });
 });

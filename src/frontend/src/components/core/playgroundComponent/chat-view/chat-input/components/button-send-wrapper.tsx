@@ -1,4 +1,5 @@
 import { Square } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import useFlowStore from "@/stores/flowStore";
@@ -25,6 +26,7 @@ const ButtonSendWrapper = ({
   files,
   isBuilding,
 }: ButtonSendWrapperProps) => {
+  const { t } = useTranslation();
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const isLoading = files.some((file) => file.loading);
 
@@ -34,6 +36,9 @@ const ButtonSendWrapper = ({
   };
 
   const buttonClasses = cn("form-modal-send-button", getButtonState());
+  const buttonLabel = isBuilding
+    ? t("flowBuild.stop")
+    : t("playground.sendButton");
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
@@ -54,12 +59,13 @@ const ButtonSendWrapper = ({
       onClick={handleClick}
       disabled={isLoading}
       unstyled
-      data-testid="button-send"
-      title={isBuilding ? "Cancel" : "Send"}
+      data-testid={isBuilding ? "button-stop" : "button-send"}
+      aria-label={buttonLabel}
+      title={buttonLabel}
     >
       <div className="flex h-fit w-fit items-center gap-2 text-sm font-medium">
         {isBuilding ? (
-          <Square className="h-3.5 w-3.5" fill="currentColor" />
+          <Square className="h-3.5 w-3.5" fill="currentColor" aria-hidden />
         ) : (
           <ForwardedIconComponent name="ArrowUp" className="h-4 w-4" />
         )}

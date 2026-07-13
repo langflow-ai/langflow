@@ -1,45 +1,19 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "sticky notes should have consistent 280x140px dimensions",
   { tag: ["@release", "@workspace"] },
 
   async ({ page }) => {
-    await awaitBootstrapTest(page);
+    await openBlankFlow(page);
 
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
-
-    // Take reference element for size comparison
-    const targetElement = page.locator('//*[@id="react-flow-id"]');
-
-    // Start adding note
+    // Clicking the button places the note immediately above the toolbar
     await page.getByTestId("canvas-add-note-button").click();
-
-    // Get shadow-box dimensions while dragging
-    const shadowBox = page.locator("#shadow-box");
-    await page.mouse.move(300, 300);
-
-    const shadowBoxSize = await shadowBox.evaluate((el) => {
-      const style = window.getComputedStyle(el);
-      return {
-        width: parseInt(style.width),
-        height: parseInt(style.height),
-        borderRadius: style.borderRadius,
-      };
-    });
-
-    // Place the note
-    await targetElement.click();
-    await page.mouse.up();
-    await page.mouse.down();
     await adjustScreenView(page);
 
-    // Get placed note dimensions
+    // Verify the note appeared with the correct dimensions
     const noteNode = page.getByTestId("note_node");
     await expect(noteNode).toBeVisible();
 
@@ -52,14 +26,8 @@ test(
       };
     });
 
-    // Verify shadow-box and note have same dimensions
-    expect(shadowBoxSize.width).toBe(280);
-    expect(shadowBoxSize.height).toBe(140);
     expect(noteSize.width).toBe(280);
     expect(noteSize.height).toBe(140);
-
-    // Verify rounded corners consistency
-    expect(shadowBoxSize.borderRadius).toBe("12px");
     expect(noteSize.borderRadius).toBe("12px");
   },
 );
@@ -69,12 +37,7 @@ test(
   { tag: ["@release", "@workspace"] },
 
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     // Add sticky note
     await page.getByTestId("canvas-add-note-button").click();
@@ -131,12 +94,7 @@ test(
   { tag: ["@release", "@workspace"] },
 
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     // Add sticky note
     await page.getByTestId("canvas-add-note-button").click();
@@ -192,12 +150,7 @@ test(
   { tag: ["@release", "@workspace"] },
 
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     // Add sticky note
     await page.getByTestId("canvas-add-note-button").click();
@@ -263,12 +216,7 @@ test(
   { tag: ["@release", "@workspace"] },
 
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     // Add sticky note
     await page.getByTestId("canvas-add-note-button").click();

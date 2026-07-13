@@ -9,10 +9,9 @@ import json
 from typing import TYPE_CHECKING
 
 from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.log.logger import logger
 
-from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBStorageHelper
+from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBStorageHelper, chunk_text_for_ingestion
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -71,10 +70,6 @@ def build_documents_from_messages(
     types (tool_use, error, media, ...) are ignored.  Long combined texts are
     split by RecursiveCharacterTextSplitter before embedding.
     """
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=MESSAGE_CHUNK_SIZE,
-        chunk_overlap=MESSAGE_CHUNK_OVERLAP,
-    )
     docs: list[Document] = []
     for msg in messages:
         parts: list[str] = []
@@ -87,7 +82,11 @@ def build_documents_from_messages(
         text = "\n\n".join(parts)
         if not text:
             continue
-        chunks = splitter.split_text(text)
+        chunks = chunk_text_for_ingestion(
+            text,
+            chunk_size=MESSAGE_CHUNK_SIZE,
+            chunk_overlap=MESSAGE_CHUNK_OVERLAP,
+        )
         for i, chunk in enumerate(chunks):
             docs.append(
                 Document(
@@ -108,6 +107,54 @@ def build_documents_from_messages(
                 )
             )
     return docs
+
+
+def build_preprocessed_document(
+    *,
+    output_text: str,
+    source_message_ids: list[str],
+    session_id: str,
+    flow_id: str,
+    job_id: str,
+    preproc_output_id: str,
+) -> list[Document]:
+    """Build LangChain Documents from a preprocessed (LLM-distilled) batch.
+
+    Uses :func:`chunk_text_for_ingestion` so chunk size / overlap is identical
+    across raw-message and preprocessed paths. Returns ``[]`` for empty output.
+
+    Metadata mirrors :func:`build_documents_from_messages` and adds two keys:
+      - ``preprocessed`` — boolean for query-side filtering / debug visibility.
+      - ``preproc_output_id`` — pointer back to ``MemoryBasePreprocessingOutput``.
+    """
+    chunks = chunk_text_for_ingestion(
+        output_text,
+        chunk_size=MESSAGE_CHUNK_SIZE,
+        chunk_overlap=MESSAGE_CHUNK_OVERLAP,
+    )
+    if not chunks:
+        return []
+    return [
+        Document(
+            page_content=chunk,
+            metadata={
+                "session_id": session_id,
+                "flow_id": flow_id,
+                "sender": "Machine",
+                "sender_name": "Preprocessor",
+                "timestamp": "",
+                "run_id": "",
+                "chunk_index": i,
+                "total_chunks": len(chunks),
+                "source": f"memory_base/{session_id}",
+                "job_id": job_id,
+                "preprocessed": True,
+                "preproc_output_id": preproc_output_id,
+                "source_message_ids": ",".join(source_message_ids),
+            },
+        )
+        for i, chunk in enumerate(chunks)
+    ]
 
 
 def sync_kb_metadata(*, kb_path: Path, chroma: Chroma) -> None:

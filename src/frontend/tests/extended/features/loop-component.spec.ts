@@ -1,7 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { uploadFile } from "../../utils/upload-file";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -9,8 +10,7 @@ test(
   "should process loop with update data correctly",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await addLegacyComponents(page);
 
@@ -23,7 +23,7 @@ test(
 
     // Add URL component
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("url");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchUrl);
     await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 1000,
     });
@@ -53,12 +53,12 @@ test(
     // Add Update Data component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("data operations");
-    await page.waitForSelector('[data-testid="processingJSON Operations"]', {
+    await page.waitForSelector('[data-testid="processingOperations"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingJSON Operations")
+      .getByTestId("processingOperations")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 100 },
       });
@@ -98,7 +98,7 @@ test(
 
     // Add Chat Output component
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
 
     await page.locator(".react-flow__renderer").click();
 
@@ -112,6 +112,12 @@ test(
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
+    // The unified Operations component defaults to the "Text" input type.
+    // Switch it to "JSON" so its JSON input/output handles render and the
+    // JSON operations (e.g. "Append or Update") become selectable below.
+    await page.getByTestId("tab_1_json").first().click();
+    await page.waitForTimeout(500);
+
     // Loop Item -> Update Data
 
     await page
@@ -119,7 +125,7 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-dataoperations-shownode-json-left")
+      .getByTestId("handle-operations-shownode-json-left")
       .first()
       .click();
 
@@ -172,7 +178,7 @@ test(
       .getByTestId("inputlist_str_urls_1")
       .fill("https://en.wikipedia.org/wiki/Human_intelligence");
 
-    await page.getByTestId("title-JSON Operations").click();
+    await page.getByTestId("title-Operations").click();
 
     await page.waitForTimeout(1000);
 
@@ -194,7 +200,9 @@ test(
     // Build and run, expect the wrong loop message
     await page.getByTestId("button_run_read file").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     // Delete the second parse data used to test
 
@@ -202,12 +210,12 @@ test(
 
     await page.getByTestId("more-options-modal").click();
 
-    await page.getByText("Delete").first().click();
+    await page.getByText(TEXTS.delete).first().click();
 
     // Update Data -> Loop Item (left side)
 
     await page
-      .getByTestId("handle-dataoperations-shownode-json-right")
+      .getByTestId("handle-operations-shownode-json-right")
       .first()
       .click();
     await page
@@ -228,7 +236,9 @@ test(
     await expect(chatOutputInspectionButton).toBeEnabled({ timeout: 60000 });
     await chatOutputInspectionButton.click();
 
-    const output = await page.getByPlaceholder("Empty").textContent();
+    const output = await page
+      .getByPlaceholder(TEXTS.placeholderEmpty)
+      .textContent();
     expect(output).toContain("modified_value");
 
     // Count occurrences of modified_value in output

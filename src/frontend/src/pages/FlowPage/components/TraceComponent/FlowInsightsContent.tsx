@@ -1,5 +1,6 @@
-import type { CellClickedEvent } from "ag-grid-community";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { CellClickedEvent, CellKeyDownEvent } from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
@@ -62,6 +63,13 @@ export function FlowInsightsContent({
   const [tracePanelTraceId, setTracePanelTraceId] = useState<string | null>(
     null,
   );
+  const traceTableRef = useRef<AgGridReact<unknown> | null>(null);
+  const tracePanelOpenerRef = useRef<HTMLElement | null>(null);
+  const tracePanelFocusedCellRef = useRef<{
+    rowIndex: number;
+    columnId: string;
+    rowPinned?: "top" | "bottom" | null;
+  } | null>(null);
 
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -77,12 +85,12 @@ export function FlowInsightsContent({
 
   const { mutate: deleteTraces } = useDeleteTracesMutation({
     onSuccess: () => {
-      setSuccessData({ title: "Records cleared successfully" });
+      setSuccessData({ title: t("trace.clearedSuccess") });
       refetch();
     },
     onError: (error) => {
       setErrorData({
-        title: "Error clearing records",
+        title: t("trace.clearError"),
         list: [error.message],
       });
     },
@@ -141,6 +149,8 @@ export function FlowInsightsContent({
 
   useEffect(() => {
     if (!initialTraceId) return;
+    tracePanelOpenerRef.current = null;
+    tracePanelFocusedCellRef.current = null;
     setTracePanelTraceId(initialTraceId);
     setTracePanelOpen(true);
   }, [initialTraceId]);
@@ -173,14 +183,75 @@ export function FlowInsightsContent({
     [],
   );
 
-  const handleCellClicked = useCallback((event: CellClickedEvent) => {
-    event.event?.preventDefault?.();
-    event.event?.stopPropagation?.();
+  const rememberTracePanelOpener = useCallback(
+    (event: CellClickedEvent | CellKeyDownEvent) => {
+      const eventTarget = event.event?.target;
+      tracePanelOpenerRef.current =
+        eventTarget instanceof HTMLElement ? eventTarget : null;
 
-    const rowData = event.data as TraceListItem | undefined;
-    setTracePanelTraceId(rowData?.id ?? null);
-    setTracePanelOpen(true);
+      if (event.node.rowIndex == null || !event.column) {
+        tracePanelFocusedCellRef.current = null;
+        return;
+      }
+
+      tracePanelFocusedCellRef.current = {
+        rowIndex: event.node.rowIndex,
+        columnId: event.column.getColId(),
+        rowPinned: event.node.rowPinned,
+      };
+    },
+    [],
+  );
+
+  const restoreTracePanelFocus = useCallback(() => {
+    const opener = tracePanelOpenerRef.current;
+    if (opener?.isConnected) {
+      opener.focus({ preventScroll: true });
+      return;
+    }
+
+    const focusedCell = tracePanelFocusedCellRef.current;
+    const gridApi = traceTableRef.current?.api;
+    if (!focusedCell || !gridApi || gridApi.isDestroyed()) return;
+
+    gridApi.ensureIndexVisible(focusedCell.rowIndex);
+    requestAnimationFrame(() => {
+      if (gridApi.isDestroyed()) return;
+      gridApi.setFocusedCell(
+        focusedCell.rowIndex,
+        focusedCell.columnId,
+        focusedCell.rowPinned,
+      );
+    });
   }, []);
+
+  const handleCellClicked = useCallback(
+    (event: CellClickedEvent) => {
+      event.event?.preventDefault?.();
+      event.event?.stopPropagation?.();
+      rememberTracePanelOpener(event);
+
+      const rowData = event.data as TraceListItem | undefined;
+      setTracePanelTraceId(rowData?.id ?? null);
+      setTracePanelOpen(true);
+    },
+    [rememberTracePanelOpener],
+  );
+
+  const handleCellKeyDown = useCallback(
+    (event: CellKeyDownEvent) => {
+      const keyboardEvent = event.event as KeyboardEvent | undefined;
+      if (keyboardEvent?.key === "Enter") {
+        keyboardEvent.preventDefault();
+        keyboardEvent.stopPropagation();
+        rememberTracePanelOpener(event);
+        const rowData = event.data as TraceListItem | undefined;
+        setTracePanelTraceId(rowData?.id ?? null);
+        setTracePanelOpen(true);
+      }
+    },
+    [rememberTracePanelOpener],
+  );
 
   const totalRuns = tracesData?.total ?? rows.length;
   const totalPages = Math.max(
@@ -229,15 +300,20 @@ export function FlowInsightsContent({
           <AccordionItem key={sessionId} value={sessionId}>
             <AccordionTrigger className="px-4 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="font-medium text-foreground">Session</span>
+                <span className="font-medium text-foreground">
+                  {t("trace.session")}
+                </span>
                 <span className="font-mono text-xs">{sessionId}</span>
-                <span className="text-xs">{sessionRows.length} runs</span>
+                <span className="text-xs">
+                  {t("trace.runsCount", { count: sessionRows.length })}
+                </span>
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
               <TableComponent
                 key={`Executions-${sessionId}`}
                 readOnlyEdit
+                aria-label={`${t("trace.tableAriaLabel")} ${sessionId}`}
                 className="h-auto w-full"
                 domLayout="autoHeight"
                 pagination={false}
@@ -262,14 +338,18 @@ export function FlowInsightsContent({
             className="border-b border-border px-4 py-3"
             data-testid="flow-activity-header"
           >
-            <h2 className="text-base font-semibold">Flow Activity</h2>
+            <h2 className="text-base font-semibold">
+              {t("trace.flowActivity")}
+            </h2>
           </div>
         )}
         <div className="flex flex-nowrap items-center justify-between gap-2 border-b px-4 py-2">
           <div className="flex min-w-0 items-center gap-3 whitespace-nowrap">
             <div className="flex items-center gap-3 text-sm">
-              <span className="font-medium">Runs</span>
-              <span className="text-muted-foreground">Total {totalRuns}</span>
+              <span className="font-medium">{t("trace.runs")}</span>
+              <span className="text-muted-foreground">
+                {t("trace.total", { count: totalRuns })}
+              </span>
             </div>
             <Button
               variant="ghost"
@@ -282,32 +362,32 @@ export function FlowInsightsContent({
               aria-pressed={groupBySession}
             >
               <IconComponent name="Layers" className="h-4 w-4" />
-              Group by Session
+              {t("trace.groupBySession")}
             </Button>
           </div>
 
           <div className="flex min-w-0 flex-nowrap items-center gap-2">
-            <div className="relative w-[220px] min-w-[180px]">
-              <IconComponent
-                name="Search"
-                className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              />
+            <div className="w-[220px] min-w-[180px]">
               <Input
+                icon="Search"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search runs..."
-                className="h-8 pl-8 text-sm"
+                placeholder={t("trace.searchRuns")}
+                inputClassName="h-8 text-sm"
               />
             </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-8 w-[130px]">
-                <SelectValue placeholder="All Status" />
+              <SelectTrigger
+                className="h-8 w-[130px] [&>span]:truncate"
+                aria-label={t("trace.statusFilterLabel")}
+              >
+                <SelectValue placeholder={t("trace.allStatus")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="ok">Success</SelectItem>
-                <SelectItem value="error">Error</SelectItem>
+                <SelectItem value="all">{t("trace.allStatus")}</SelectItem>
+                <SelectItem value="ok">{t("trace.success")}</SelectItem>
+                <SelectItem value="error">{t("trace.error")}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -322,7 +402,7 @@ export function FlowInsightsContent({
               <Button
                 variant="ghost"
                 className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                aria-label="Clear All"
+                aria-label={t("trace.clearAll")}
                 onClick={(e) => {
                   (e.currentTarget as HTMLButtonElement).blur();
                   setClearConfirmOpen(true);
@@ -339,20 +419,18 @@ export function FlowInsightsContent({
                       name="Trash2"
                       className="h-5 w-5 text-destructive"
                     />
-                    Clear All Records
+                    {t("trace.clearAllRecords")}
                   </DialogTitle>
                 </DialogHeader>
                 <p className="text-sm text-muted-foreground">
-                  Are you sure you want to clear all records? This will
-                  permanently delete all related Flow Activity Traces and cannot
-                  be undone.
+                  {t("trace.clearAllConfirm")}
                 </p>
                 <DialogFooter>
                   <Button
                     variant="outline"
                     onClick={() => setClearConfirmOpen(false)}
                   >
-                    Cancel
+                    {t("trace.cancel")}
                   </Button>
                   <Button
                     variant="destructive"
@@ -361,7 +439,7 @@ export function FlowInsightsContent({
                       setClearConfirmOpen(false);
                     }}
                   >
-                    Clear All
+                    {t("trace.clearAll")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -371,7 +449,7 @@ export function FlowInsightsContent({
               variant="ghost"
               size="icon"
               onClick={() => refetch()}
-              aria-label="Reload"
+              aria-label={t("trace.reload")}
             >
               <IconComponent name="RefreshCcw" className="h-4 w-4" />
             </Button>
@@ -381,7 +459,7 @@ export function FlowInsightsContent({
               onClick={() =>
                 downloadJson(`runs-${resolvedFlowId ?? "unknown"}.json`, rows)
               }
-              aria-label="Download"
+              aria-label={t("trace.download")}
             >
               <IconComponent name="Download" className="h-4 w-4" />
             </Button>
@@ -399,8 +477,10 @@ export function FlowInsightsContent({
             })
           ) : (
             <TableComponent
+              ref={traceTableRef}
               key="Executions"
               readOnlyEdit
+              aria-label={t("trace.tableAriaLabel")}
               className="h-max-full h-full w-full"
               data-testid="flow-insights-trace-table"
               pagination={false}
@@ -409,6 +489,7 @@ export function FlowInsightsContent({
               rowData={rows}
               headerHeight={rows.length === 0 ? 0 : undefined}
               onCellClicked={handleCellClicked}
+              onCellKeyDown={handleCellKeyDown}
             />
           )}
         </div>
@@ -432,12 +513,22 @@ export function FlowInsightsContent({
       >
         <DialogContent
           className={
-            "right-0 top-[3rem] h-[calc(100dvh-3rem)] w-full max-w-none rounded-l-xl rounded-r-none p-0 sm:w-[80vw] " +
+            "right-0 top-0 h-dvh w-full max-w-none rounded-none p-0 sm:w-[65vw] " +
             "data-[state=open]:animate-in data-[state=closed]:animate-out " +
             "data-[state=open]:slide-in-from-right-1/2 data-[state=closed]:slide-out-to-right-1/2"
           }
           closeButtonClassName="top-1"
           data-testid="flow-insights-trace-panel"
+          onCloseAutoFocus={(event) => {
+            if (
+              !tracePanelOpenerRef.current &&
+              !tracePanelFocusedCellRef.current
+            ) {
+              return;
+            }
+            event.preventDefault();
+            restoreTracePanelFocus();
+          }}
         >
           <div className="flex h-full flex-col overflow-hidden">
             <div className="flex-1 overflow-hidden">

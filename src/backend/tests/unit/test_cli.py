@@ -1,6 +1,7 @@
 import socket
 import threading
 import time
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -8,9 +9,11 @@ import typer
 from langflow.__main__ import (
     DIRECT_UVICORN_PLATFORMS,
     _create_superuser,
+    api_key_banner,
     app,
     build_direct_uvicorn_kwargs,
     clamp_uvicorn_workers,
+    ensure_multi_worker_safe,
     get_number_of_workers,
     use_direct_uvicorn,
 )
@@ -128,8 +131,8 @@ class TestSuperuserCommand:
 
     @pytest.mark.skip(reason="Skip -- default superuser is created by initialize_services() function")
     @pytest.mark.asyncio
-    async def test_auto_login_forces_default_credentials(self, client):
-        """Test AUTO_LOGIN=true forces default credentials."""
+    async def test_auto_login_uses_bootstrap_superuser(self, client):
+        """Test AUTO_LOGIN=true bootstraps the configured superuser."""
         # Since client fixture already creates default user, we need to test in a clean DB scenario
         # But that's why this test is skipped - the behavior is already handled by initialize_services
 
@@ -279,6 +282,40 @@ def test_build_direct_uvicorn_kwargs_does_not_clamp_on_linux():
     assert result["workers"] == 4
 
 
+# ---------------------------------------------------------------------------
+# api_key_banner: clipboard must be best-effort.
+#
+# Regression guard for #12341: pyperclip raises in headless/Docker/SSH
+# environments because no clipboard mechanism is available. The banner must
+# still print the API key (the only time it's ever shown) instead of crashing.
+# ---------------------------------------------------------------------------
+
+
+def test_api_key_banner_survives_pyperclip_failure(capsys):
+    """Clipboard failure must not crash the banner — the key is the user's only copy."""
+    api_key_obj = SimpleNamespace(api_key="lf-test-12341")
+
+    with patch("pyperclip.copy", side_effect=Exception("Pyperclip could not find a copy/paste mechanism")):
+        api_key_banner(api_key_obj)
+
+    output = capsys.readouterr().out
+    assert "lf-test-12341" in output, "API key must still be displayed when clipboard fails"
+    assert "clipboard" not in output.lower(), "no clipboard hint should appear when copy failed"
+
+
+def test_api_key_banner_shows_clipboard_hint_on_success(capsys):
+    """Happy path: when clipboard copy succeeds, the paste hint is shown."""
+    api_key_obj = SimpleNamespace(api_key="lf-test-ok")
+
+    with patch("pyperclip.copy") as mock_copy:
+        api_key_banner(api_key_obj)
+
+    mock_copy.assert_called_once_with("lf-test-ok")
+    output = capsys.readouterr().out
+    assert "lf-test-ok" in output
+    assert "clipboard" in output.lower()
+
+
 def test_build_direct_uvicorn_kwargs_pins_full_shape():
     """Drift guard: the exact key set passed to uvicorn.run must stay stable."""
     result = build_direct_uvicorn_kwargs(**_kwargs())
@@ -293,5 +330,60 @@ def test_build_direct_uvicorn_kwargs_pins_full_shape():
         "loop",
         "ssl_certfile",
         "ssl_keyfile",
+        "forwarded_allow_ips",
     }
     assert result["reload"] is False
+
+
+# ---------------------------------------------------------------------------
+# ensure_multi_worker_safe: refuse to boot with the in-memory queue and N>1
+# workers. The bug is silent: ~45-66% of build polls return "Job not found"
+# because Gunicorn round-robins the POST and the follow-up GET across workers,
+# but the queue is worker-local.
+# ---------------------------------------------------------------------------
+
+
+def test_ensure_multi_worker_safe_allows_single_worker():
+    """Single worker means no cross-worker routing; must not raise."""
+    ensure_multi_worker_safe(num_workers=1)
+
+
+def _settings_service_with_queue(queue_type: str) -> SimpleNamespace:
+    return SimpleNamespace(settings=SimpleNamespace(job_queue_type=queue_type))
+
+
+def test_ensure_multi_worker_safe_refuses_multiple_workers():
+    """Default in-memory queue + workers > 1 must refuse to start."""
+    with (
+        patch("langflow.__main__.get_settings_service", return_value=_settings_service_with_queue("asyncio")),
+        pytest.raises(RuntimeError) as exc_info,
+    ):
+        ensure_multi_worker_safe(num_workers=3)
+
+    msg = str(exc_info.value)
+    assert "3 workers" in msg
+    assert "in-memory job queue" in msg
+
+
+def test_ensure_multi_worker_safe_error_lists_workarounds():
+    """Error must point operators at concrete fixes, not just describe the bug."""
+    with (
+        patch("langflow.__main__.get_settings_service", return_value=_settings_service_with_queue("asyncio")),
+        pytest.raises(RuntimeError) as exc_info,
+    ):
+        ensure_multi_worker_safe(num_workers=3)
+
+    msg = str(exc_info.value)
+    # Shared queue is the proper fix for any event_delivery mode.
+    assert "LANGFLOW_JOB_QUEUE_TYPE=redis" in msg
+    # Single worker sidesteps cross-worker routing entirely.
+    assert "--workers 1" in msg
+    # event_delivery=direct works but cannot be enforced at startup, so it's a
+    # note, not a "pick one of" option — call that out explicitly.
+    assert "event_delivery=direct" in msg
+
+
+def test_ensure_multi_worker_safe_allows_redis_queue():
+    """Redis-backed job queue shares state across workers; multi-worker is safe."""
+    with patch("langflow.__main__.get_settings_service", return_value=_settings_service_with_queue("redis")):
+        ensure_multi_worker_safe(num_workers=4)

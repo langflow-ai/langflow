@@ -6,12 +6,18 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from lfx.utils.flow_requirements import (
+        find_missing_dependencies,
+        format_missing_dependencies_error,
+        format_missing_module_error,
         generate_requirements_from_file,
         generate_requirements_from_flow,
         generate_requirements_txt,
     )
 
 __all__ = [
+    "find_missing_dependencies",
+    "format_missing_dependencies_error",
+    "format_missing_module_error",
     "generate_requirements_from_file",
     "generate_requirements_from_flow",
     "generate_requirements_txt",

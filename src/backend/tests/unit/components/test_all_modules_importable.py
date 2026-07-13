@@ -19,6 +19,28 @@ import pkgutil
 
 import pytest
 from langflow import components
+from lfx.interface.components import _warm_circular_imports
+
+# Provider components ship in bundle distributions that can be temporarily
+# unpublished (see the re-enable note in pyproject.toml). While a bundle is
+# absent its category stays in
+# ``components.__all__`` but cannot be imported, so these tests skip it instead
+# of failing. Each guard is computed from the live import result, so it turns
+# back into a no-op the moment the bundle is restored -- no revert needed.
+_OPTIONAL_BUNDLE_CATEGORIES = ("openai", "datastax", "oracle")
+
+
+def _unavailable_bundle_categories() -> set[str]:
+    unavailable = set()
+    for category_name in _OPTIONAL_BUNDLE_CATEGORIES:
+        try:
+            getattr(components, category_name)
+        except Exception:
+            unavailable.add(category_name)
+    return unavailable
+
+
+UNAVAILABLE_BUNDLE_CATEGORIES = _unavailable_bundle_categories()
 
 
 class TestAllModulesImportable:
@@ -29,6 +51,8 @@ class TestAllModulesImportable:
         failed_imports = []
 
         for category_name in components.__all__:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             try:
                 category_module = getattr(components, category_name)
                 assert category_module is not None, f"Category {category_name} is None"
@@ -44,12 +68,30 @@ class TestAllModulesImportable:
 
     def test_all_components_in_categories_importable(self):
         """Test that all components in each category's __all__ can be imported."""
+        import sys
+
+        # Components whose underlying packages are gated to python_version<'3.14'
+        # in pyproject.toml because upstream pins exclude 3.14. These are expected
+        # to fail import on 3.14 until the upstreams adapt.
+        # NOTE: ibm.* moved to the lfx-ibm bundle (src/bundles/ibm) and is no
+        # longer iterated through ``langflow.components``; the watsonx
+        # 3.14-gating moved with them.
+        gated_on_py314 = {
+            "altk.ALTKAgentComponent",
+            "crewai.CrewAIAgentComponent",
+            "crewai.HierarchicalCrewComponent",
+            "crewai.SequentialCrewComponent",
+        }
+        on_py314 = sys.version_info >= (3, 14)
+
         failed_imports = []
         successful_imports = 0
 
         print(f"Testing component imports across {len(components.__all__)} categories")  # noqa: T201
 
         for category_name in components.__all__:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             try:
                 category_module = getattr(components, category_name)
 
@@ -58,6 +100,7 @@ class TestAllModulesImportable:
                     print(f"Testing {category_components} components in {category_name}")  # noqa: T201
 
                     for component_name in category_module.__all__:
+                        qualified = f"{category_name}.{component_name}"
                         try:
                             component = getattr(category_module, component_name)
                             assert component is not None, f"Component {component_name} is None"
@@ -65,8 +108,11 @@ class TestAllModulesImportable:
                             successful_imports += 1
 
                         except Exception as e:
-                            failed_imports.append(f"{category_name}.{component_name}: {e!s}")
-                            print(f"FAILED: {category_name}.{component_name}: {e!s}")  # noqa: T201
+                            if on_py314 and qualified in gated_on_py314:
+                                print(f"SKIPPED on 3.14: {qualified}: {e!s}")  # noqa: T201
+                                continue
+                            failed_imports.append(f"{qualified}: {e!s}")
+                            print(f"FAILED: {qualified}: {e!s}")  # noqa: T201
                 else:
                     # Category doesn't have __all__, skip
                     print(f"Skipping {category_name} (no __all__ attribute)")  # noqa: T201
@@ -92,6 +138,8 @@ class TestAllModulesImportable:
         failed_mappings = []
 
         for category_name in components.__all__:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             try:
                 category_module = getattr(components, category_name)
 
@@ -119,16 +167,17 @@ class TestAllModulesImportable:
         """Test that traditional import patterns still work."""
         # Test some key imports that should always work
         traditional_imports = [
-            ("langflow.components.openai", "OpenAIModelComponent"),
-            ("langflow.components.anthropic", "AnthropicModelComponent"),
             ("langflow.components.data", "APIRequestComponent"),
             ("langflow.components.models_and_agents", "AgentComponent"),
+            ("langflow.components.models_and_agents", "LanguageModelComponent"),
             ("langflow.components.helpers", "CalculatorComponent"),
         ]
 
         failed_imports = []
 
         for module_name, component_name in traditional_imports:
+            if module_name.rsplit(".", 1)[-1] in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             try:
                 module = importlib.import_module(module_name)
                 component = getattr(module, component_name)
@@ -146,6 +195,8 @@ class TestAllModulesImportable:
         failed_modules = []
 
         for category_name in components.__all__:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             try:
                 category_module = getattr(components, category_name)
 
@@ -175,14 +226,16 @@ class TestAllModulesImportable:
         """Test that there are no circular import issues."""
         # Test importing in different orders to catch circular imports
         import_orders = [
-            ["models_and_agents", "data", "openai"],
-            ["openai", "models_and_agents", "data"],
-            ["data", "openai", "models_and_agents"],
+            ["models_and_agents", "data", "helpers"],
+            ["helpers", "models_and_agents", "data"],
+            ["data", "helpers", "models_and_agents"],
         ]
 
         for order in import_orders:
             try:
                 for category_name in order:
+                    if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                        continue
                     category_module = getattr(components, category_name)
                     # Access a component to trigger dynamic import
                     if hasattr(category_module, "__all__") and category_module.__all__:
@@ -196,12 +249,14 @@ class TestAllModulesImportable:
         """Test that component access caching works correctly."""
         # Access the same component multiple times and ensure caching works
         test_cases = [
-            ("openai", "OpenAIModelComponent"),
             ("data", "APIRequestComponent"),
+            ("models_and_agents", "LanguageModelComponent"),
             ("helpers", "CalculatorComponent"),
         ]
 
         for category_name, component_name in test_cases:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             category_module = getattr(components, category_name)
 
             # First access
@@ -217,11 +272,13 @@ class TestAllModulesImportable:
     def test_error_handling_for_missing_components(self):
         """Test that appropriate errors are raised for missing components."""
         test_cases = [
-            ("openai", "NonExistentComponent"),
             ("data", "AnotherNonExistentComponent"),
+            ("models_and_agents", "NonExistentComponent"),
         ]
 
         for category_name, component_name in test_cases:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             category_module = getattr(components, category_name)
 
             with pytest.raises(AttributeError, match=f"has no attribute '{component_name}'"):
@@ -231,12 +288,15 @@ class TestAllModulesImportable:
         """Test that __dir__ functionality works for all modules."""
         # Test main components module
         main_dir = dir(components)
-        assert "openai" in main_dir
+        if "openai" not in UNAVAILABLE_BUNDLE_CATEGORIES:
+            assert "openai" in main_dir
         assert "data" in main_dir
         assert "models_and_agents" in main_dir
 
         # Test category modules
-        for category_name in ["openai", "data", "helpers"]:
+        for category_name in ["openai", "data", "helpers", "models_and_agents"]:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             category_module = getattr(components, category_name)
             category_dir = dir(category_module)
 
@@ -248,12 +308,13 @@ class TestAllModulesImportable:
     def test_module_metadata_preservation(self):
         """Test that module metadata is preserved after dynamic loading."""
         test_components = [
-            ("openai", "OpenAIModelComponent"),
-            ("anthropic", "AnthropicModelComponent"),
             ("data", "APIRequestComponent"),
+            ("models_and_agents", "LanguageModelComponent"),
         ]
 
         for category_name, component_name in test_components:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             category_module = getattr(components, category_name)
             component = getattr(category_module, component_name)
 
@@ -387,6 +448,22 @@ class TestDirectModuleImports:
                         "redis",
                         "elasticsearch",
                         "langchain_community",
+                        # Gated to python_version<'3.14' in pyproject.toml until
+                        # upstream caps lift.
+                        "altk",
+                        "langchain_ibm",
+                        "ibm_watsonx_ai",
+                        # Bundle distributions that can be temporarily unpublished;
+                        # the relocation shim raises with the distribution name.
+                        "lfx-openai",
+                        "lfx-datastax",
+                        "lfx-oracle",
+                        # litellm has no 3.14-compatible release, so it is gated to
+                        # python_version<'3.14'. Its absence surfaces transitively
+                        # via crewai (``from crewai import Agent`` -> litellm) and
+                        # via toolguard (the policies components import it directly).
+                        "litellm",
+                        "toolguard",
                     ]
                 ):
                     return ("skipped", modname, "missing optional dependency")
@@ -395,6 +472,13 @@ class TestDirectModuleImports:
                 return ("failed", modname, f"{type(e).__name__}: {e}")
             else:
                 return ("success", modname, None)
+
+        # Pre-import third-party modules with internal circular imports single-threaded
+        # before the concurrent fan-out below. This reuses the exact warm-up the
+        # production loader (``_load_components_dynamically``) runs, so the test and
+        # production stay in lockstep -- see ``_warm_circular_imports`` for the full
+        # deadlock explanation.
+        _warm_circular_imports()
 
         # Import all modules in parallel
         results = await asyncio.gather(*[import_module_async(modname) for modname in module_names])
@@ -572,7 +656,7 @@ class TestDirectModuleImports:
             assert QdrantVectorStoreComponent.display_name == "Qdrant"
 
         except ImportError as e:
-            if "qdrant_client" in str(e) or "langchain_community" in str(e):
+            if "qdrant_client" in str(e) or "langchain_qdrant" in str(e):
                 pytest.skip("Qdrant dependencies not installed (expected in test environment)")
             pytest.fail(f"Failed to import QdrantVectorStoreComponent: {e}")
         except AttributeError as e:

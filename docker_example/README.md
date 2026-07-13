@@ -21,7 +21,15 @@ This guide will help you get LangFlow up and running using Docker and Docker Com
    cd langflow/docker_example
    ```
 
-3. Run the Docker Compose file:
+3. Create a `.env` file with the LangFlow admin password:
+
+   ```sh
+   LANGFLOW_SUPERUSER_PASSWORD=replace-with-a-strong-password
+   ```
+
+   The default admin username is `langflow`.
+
+4. Run the Docker Compose file:
 
    ```sh
    docker compose up
@@ -40,6 +48,7 @@ The `langflow` service uses the `langflowai/langflow:latest` Docker image and ex
 Environment variables:
 
 - `LANGFLOW_DATABASE_URL`: The connection string for the PostgreSQL database.
+- `LANGFLOW_SUPERUSER_PASSWORD`: The initial admin password. This value is required in `.env`.
 - `LANGFLOW_CONFIG_DIR`: The directory where LangFlow stores logs, file storage, monitor data, and secret keys.
 
 Volumes:
@@ -48,7 +57,7 @@ Volumes:
 
 ### PostgreSQL Service
 
-The `postgres` service uses the `postgres:16` Docker image and exposes port 5432.
+The `postgres` service uses the `postgres:16-trixie` Docker image and exposes port 5432. The image is pinned to a specific Debian base (`trixie`, Debian 13) so the `postgres:16` tag cannot silently roll its underlying OS, which would otherwise produce a glibc collation version mismatch warning on existing data volumes.
 
 Environment variables:
 
@@ -59,6 +68,26 @@ Environment variables:
 Volumes:
 
 - `langflow-postgres`: This volume is mapped to `/var/lib/postgresql/data` in the container.
+
+### Upgrading from a `bookworm`-initialized volume
+
+Earlier versions of this example used `postgres:16`, which initially shipped on Debian Bookworm (glibc 2.36). The pinned image now uses Trixie (glibc 2.41). On the first start against a volume that was initialized under Bookworm, PostgreSQL logs a one-time warning:
+
+```
+WARNING: database "langflow" has a collation version mismatch
+DETAIL: The database was created using collation version 2.36, but the operating system provides version 2.41.
+```
+
+To clear it, refresh the collation version against the running database (one-off, takes seconds on a typical Langflow database):
+
+```sh
+docker compose exec postgres \
+  psql -U langflow -d langflow \
+  -c "REINDEX DATABASE langflow;" \
+  -c "ALTER DATABASE langflow REFRESH COLLATION VERSION;"
+```
+
+Fresh installs are unaffected.
 
 ## Switching to a Specific LangFlow Version
 

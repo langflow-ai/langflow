@@ -1,7 +1,8 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import type { Page } from "@playwright/test";
 
 test.describe("Bulk Delete Sessions", () => {
   // Helper to send a message in the playground
@@ -62,7 +63,7 @@ test.describe("Bulk Delete Sessions", () => {
 
   test(
     "should show Select All checkbox when multiple sessions exist",
-    { tag: ["@release", "@features"] },
+    { tag: ["@release"] },
     async ({ page }) => {
       test.skip(
         !process?.env?.OPENAI_API_KEY,
@@ -73,12 +74,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -96,7 +99,7 @@ test.describe("Bulk Delete Sessions", () => {
 
   test(
     "should select all sessions when Select All checkbox is clicked",
-    { tag: ["@release", "@features"] },
+    { tag: ["@release"] },
     async ({ page }) => {
       test.skip(
         !process?.env?.OPENAI_API_KEY,
@@ -107,12 +110,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -145,7 +150,7 @@ test.describe("Bulk Delete Sessions", () => {
 
   test(
     "should deselect all sessions when Select All is clicked again",
-    { tag: ["@release", "@features"] },
+    { tag: ["@release"] },
     async ({ page }) => {
       test.skip(
         !process?.env?.OPENAI_API_KEY,
@@ -156,12 +161,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -195,7 +202,7 @@ test.describe("Bulk Delete Sessions", () => {
 
   test(
     "should allow individual session selection",
-    { tag: ["@release", "@features"] },
+    { tag: ["@release"] },
     async ({ page }) => {
       test.skip(
         !process?.env?.OPENAI_API_KEY,
@@ -206,12 +213,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -252,7 +261,7 @@ test.describe("Bulk Delete Sessions", () => {
 
   test(
     "should use bulk delete API endpoint for multiple sessions",
-    { tag: ["@release", "@features", "@api"] },
+    { tag: ["@release", "@api"] },
     async ({ page }) => {
       test.skip(
         !process?.env?.OPENAI_API_KEY,
@@ -266,12 +275,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -311,7 +322,7 @@ test.describe("Bulk Delete Sessions", () => {
 
   test(
     "should delete all sessions including current and create new default session",
-    { tag: ["@release", "@features"] },
+    { tag: ["@release"] },
     async ({ page }) => {
       test.skip(
         !process?.env?.OPENAI_API_KEY,
@@ -322,12 +333,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -372,7 +385,7 @@ test.describe("Bulk Delete Sessions", () => {
 
   test(
     "should hide checkboxes and Select All when only one session exists",
-    { tag: ["@release", "@features"] },
+    { tag: ["@release"] },
     async ({ page }) => {
       test.skip(
         !process?.env?.OPENAI_API_KEY,
@@ -383,12 +396,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -409,7 +424,7 @@ test.describe("Bulk Delete Sessions", () => {
 
   test(
     "should update Select All checkbox state based on individual selections",
-    { tag: ["@release", "@features"] },
+    { tag: ["@release"] },
     async ({ page }) => {
       test.skip(
         !process?.env?.OPENAI_API_KEY,
@@ -420,12 +435,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 

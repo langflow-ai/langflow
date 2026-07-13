@@ -5,7 +5,7 @@ import { useConnectionPanelState } from "../use-connection-panel-state";
 const baseParams = () => ({
   connections: [] as ConnectionItem[],
   setConnections: jest.fn(),
-  effectiveFlowId: "flow-1",
+  effectiveAttachmentKey: "flow-1",
   attachedConnectionByFlow: new Map<string, string[]>(),
   onAttachConnection: jest.fn(),
   commitPendingAttachment: jest.fn(),
@@ -81,7 +81,7 @@ describe("useConnectionPanelState", () => {
 
     it("does nothing when effectiveFlowId is null", () => {
       const params = baseParams();
-      params.effectiveFlowId = null;
+      params.effectiveAttachmentKey = null;
       params.connections = [makeConnection({ id: "conn-1" })];
       const { result } = renderHook(() => useConnectionPanelState(params));
 
@@ -186,7 +186,7 @@ describe("useConnectionPanelState", () => {
       const newList = updater([]);
       expect(newList[0].variableCount).toBe(1);
       expect(newList[0].environmentVariables).toEqual({
-        API_KEY: "secret123",
+        API_KEY: "secret123", // pragma: allowlist secret
       });
     });
 
@@ -501,7 +501,7 @@ describe("useConnectionPanelState", () => {
 
     it("still commits and switches panel when effectiveFlowId is null (but does not call onAttachConnection)", () => {
       const params = baseParams();
-      params.effectiveFlowId = null;
+      params.effectiveAttachmentKey = null;
       const { result } = renderHook(() => useConnectionPanelState(params));
 
       act(() => {

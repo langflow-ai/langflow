@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import os
 import secrets
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -20,9 +21,28 @@ if TYPE_CHECKING:
     from sqlmodel.sql.expression import SelectOfScalar
 
 
+@dataclass(frozen=True)
+class ApiKeyAuthResult:
+    """Authenticated API-key metadata."""
+
+    user: User
+    api_key_source: str
+    api_key_id: UUID | None = None
+
+
 def hash_api_key(api_key: str) -> str:
     """One-way SHA-256 hash of a plaintext API key for indexed lookup."""
     return hashlib.sha256(api_key.encode()).hexdigest()
+
+
+def _is_expired(expires_at: datetime.datetime | None) -> bool:
+    if expires_at is None:
+        return False
+    # Rows written before the expires_at column became tz-aware come back naive.
+    # All historical writes used datetime.now(timezone.utc), so interpret naive as UTC.
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=datetime.timezone.utc)
+    return datetime.datetime.now(datetime.timezone.utc) > expires_at
 
 
 async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]:
@@ -53,6 +73,19 @@ async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]
 
 
 async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
+    """Create a new API key, storing an encrypted value and a SHA-256 hash for fast lookup."""
+    settings_service = get_settings_service()
+    auth_settings = settings_service.auth_settings
+    if (
+        auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED
+        and auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS
+    ):
+        from langflow.services.authorization.access_ceiling import get_current_external_access_context
+
+        if get_current_external_access_context() is not None:
+            msg = "API key creation is disabled for externally authenticated users"
+            raise PermissionError(msg)
+
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
 
@@ -64,6 +97,7 @@ async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, us
         name=api_key_create.name,
         user_id=user_id,
         created_at=api_key_create.created_at or datetime.datetime.now(datetime.timezone.utc),
+        expires_at=api_key_create.expires_at,
     )
 
     session.add(api_key)
@@ -75,6 +109,7 @@ async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, us
 
 
 async def delete_api_key(session: AsyncSession, api_key_id: UUID, user_id: UUID) -> None:
+    """Delete an API key, raising ValueError if not found or not owned by user_id."""
     api_key = await session.get(ApiKey, api_key_id)
     if api_key is None:
         msg = "API Key not found"
@@ -104,7 +139,56 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
     return await _check_key_from_db(session, api_key, settings_service)
 
 
+async def authenticate_api_key(session: AsyncSession, api_key: str) -> ApiKeyAuthResult | None:
+    """Validate an API key and return the user plus non-secret key metadata."""
+    settings_service = get_settings_service()
+    api_key_source = settings_service.auth_settings.API_KEY_SOURCE
+
+    if api_key_source == "env":
+        user = await _check_key_from_env(session, api_key, settings_service)
+        if user is not None:
+            return ApiKeyAuthResult(user=user, api_key_source="env")
+        # Fallback to database if env validation fails
+    return await _check_key_from_db_with_context(session, api_key, settings_service)
+
+
+async def _external_access_ceiling_blocks_user(session: AsyncSession, user: User, settings_service) -> bool:
+    """Return True when API-key auth must be denied for an externally-managed user.
+
+    Single chokepoint for the EXTERNAL_AUTH access ceiling: every DB-path API-key
+    authentication flows through ``_check_key_from_db_with_context``, so enforcing
+    here covers ``_api_key_security_impl`` (/run, v2 workflow, openai_responses),
+    ``ws_api_key_security``, ``get_webhook_user``, ``get_current_user_mcp`` and the
+    auth service. When the feature is OFF (ceiling disabled OR disable-keys
+    disabled) this is a no-op.
+    """
+    auth_settings = settings_service.auth_settings
+    if (
+        not auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED
+        or not auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS
+    ):
+        return False
+
+    from langflow.services.database.models.auth import SSOUserProfile
+
+    profile_stmt = select(SSOUserProfile).where(
+        SSOUserProfile.user_id == user.id,
+        SSOUserProfile.sso_provider == auth_settings.EXTERNAL_AUTH_PROVIDER,
+    )
+    return (await session.exec(profile_stmt)).first() is not None
+
+
 async def _check_key_from_db(session: AsyncSession, api_key: str, settings_service) -> User | None:
+    """Validate API key against the database and return only the user."""
+    result = await _check_key_from_db_with_context(session, api_key, settings_service)
+    return result.user if result is not None else None
+
+
+async def _check_key_from_db_with_context(
+    session: AsyncSession,
+    api_key: str,
+    settings_service,
+) -> ApiKeyAuthResult | None:
     """Validate API key against the database.
 
     Uses hash-based O(1) lookup first. Falls back to decrypt-and-compare
@@ -116,17 +200,28 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
     incoming_hash = hash_api_key(api_key)
 
     # Fast path: O(1) indexed lookup by hash
-    query = select(ApiKey).where(ApiKey.api_key_hash == incoming_hash)
+    query = select(ApiKey).where(ApiKey.api_key_hash == incoming_hash, ApiKey.is_active.is_(True))
     matches = (await session.exec(query)).all()
 
     if len(matches) == 1:
         api_key_obj = matches[0]
+        if _is_expired(api_key_obj.expires_at):
+            return None
+        # Resolve + authorize the user BEFORE mutating usage counters so a denied
+        # authentication (missing user or blocked external user) does not bump
+        # total_uses / last_used_at.
+        user = await session.get(User, api_key_obj.user_id)
+        if user is None:
+            return None
+        if await _external_access_ceiling_blocks_user(session, user, settings_service):
+            logger.info("API key rejected for externally managed user while external access ceiling is enabled")
+            return None
         if settings_service.settings.disable_track_apikey_usage is not True:
             api_key_obj.total_uses += 1
             api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
             await session.flush()
-        return await session.get(User, api_key_obj.user_id)
+        return ApiKeyAuthResult(user=user, api_key_source="db", api_key_id=api_key_obj.id)  # pragma: allowlist secret
 
     if len(matches) > 1:
         key_ids = [str(m.id) for m in matches]
@@ -139,7 +234,7 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
         return None
 
     # Slow path: legacy keys without hash (plaintext from 1.6.x or encrypted without hash)
-    query = select(ApiKey).where(ApiKey.api_key_hash.is_(None))  # type: ignore[union-attr]
+    query = select(ApiKey).where(ApiKey.api_key_hash.is_(None), ApiKey.is_active.is_(True))  # type: ignore[union-attr]
     legacy_keys = (await session.exec(query)).all()
 
     for api_key_obj in legacy_keys:
@@ -155,6 +250,17 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
             matched = candidate == api_key
 
         if matched:
+            if _is_expired(api_key_obj.expires_at):
+                return None
+            # Resolve + authorize the user BEFORE mutating usage counters / hash
+            # backfill so a denied authentication (missing user or blocked
+            # external user) does not bump total_uses / last_used_at.
+            user = await session.get(User, api_key_obj.user_id)
+            if user is None:
+                return None
+            if await _external_access_ceiling_blocks_user(session, user, settings_service):
+                logger.info("API key rejected for externally managed user while external access ceiling is enabled")
+                return None
             # Backfill hash for future O(1) lookups
             api_key_obj.api_key_hash = incoming_hash
             if settings_service.settings.disable_track_apikey_usage is not True:
@@ -162,7 +268,11 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
                 api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
             await session.flush()
-            return await session.get(User, api_key_obj.user_id)
+            return ApiKeyAuthResult(
+                user=user,
+                api_key_source="db",  # pragma: allowlist secret
+                api_key_id=api_key_obj.id,
+            )
 
     return None
 

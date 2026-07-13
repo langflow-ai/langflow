@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
   oneDark,
@@ -9,7 +10,6 @@ import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import { customCodeTabsClass } from "@/customization/constants";
-import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTweaksStore } from "@/stores/tweaksStore";
@@ -20,6 +20,16 @@ import { formatPayloadTweaks } from "../utils/filter-tweaks";
 import { getNewCurlCode } from "../utils/get-curl-code";
 import { getNewJsApiCode } from "../utils/get-js-api-code";
 import { getNewPythonApiCode } from "../utils/get-python-api-code";
+import {
+  getV2WorkflowsCurlCode,
+  getV2WorkflowsJsCode,
+  getV2WorkflowsPythonCode,
+} from "../utils/get-v2-workflows-code";
+
+const apiVersionTabs = [
+  { name: "v1", title: "v1" },
+  { name: "v2", title: "v2", beta: true },
+];
 
 const operatingSystemTabs = [
   {
@@ -34,7 +44,13 @@ const operatingSystemTabs = [
   },
 ];
 
+const STEP_TITLE_KEYS: Record<string, string> = {
+  "Upload files to the server": "apiModal.uploadFilesStep",
+  "Execute the flow with uploaded files": "apiModal.executeFlowStep",
+};
+
 export default function APITabsComponent() {
+  const { t } = useTranslation();
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [copiedStep, setCopiedStep] = useState<string | null>(null);
   const endpointName = useFlowStore(
@@ -62,6 +78,7 @@ export default function APITabsComponent() {
   );
 
   const includeTopLevelInputValue = formatPayloadTweaks(tweaks);
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const processedPayload: any = {
     output_type: hasChatOutput ? "chat" : "text",
     input_type: hasChatInput ? "chat" : "text",
@@ -92,7 +109,9 @@ export default function APITabsComponent() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const shouldDisplayApiKey = isAuthenticated;
 
-  const tabsList = [
+  const [apiVersion, setApiVersion] = useState<"v1" | "v2">("v1");
+
+  const v1TabsList = [
     {
       title: "Python",
       icon: "BWPython",
@@ -122,6 +141,38 @@ export default function APITabsComponent() {
       }),
     },
   ];
+
+  // v2 (beta) targets POST /api/v2/workflows. It uses the flow UUID and the
+  // raw input_value/tweaks the modal already collects, not the v1 /run shape.
+  const v2CodeOptions = {
+    flowId: flowId || "",
+    inputValue: input_value,
+    tweaks: activeTweaks ? tweaks : undefined,
+    shouldDisplayApiKey,
+  };
+
+  const v2TabsList = [
+    {
+      title: "Python",
+      icon: "BWPython",
+      language: "python",
+      code: getV2WorkflowsPythonCode(v2CodeOptions),
+    },
+    {
+      title: "JavaScript",
+      icon: "javascript",
+      language: "javascript",
+      code: getV2WorkflowsJsCode(v2CodeOptions),
+    },
+    {
+      title: "cURL",
+      icon: "TerminalSquare",
+      language: "shell",
+      code: getV2WorkflowsCurlCode(v2CodeOptions),
+    },
+  ];
+
+  const tabsList = apiVersion === "v2" ? v2TabsList : v1TabsList;
 
   const [selectedTab, setSelectedTab] = useState("Python");
 
@@ -153,13 +204,39 @@ export default function APITabsComponent() {
   useEffect(() => {
     setIsCopied(false);
     setCopiedStep(null);
-  }, [selectedTab, selectedPlatform]);
+  }, [selectedTab, selectedPlatform, apiVersion]);
 
   const currentTab = tabsList.find((tab) => tab.title === selectedTab);
 
   return (
     <div className="api-modal-tabs inset-0 m-0 h-full overflow-hidden">
       <div className="flex h-full flex-col gap-4 overflow-hidden">
+        {/* API version selector (v1 / v2 beta) */}
+        <div className="flex flex-row justify-start">
+          <Tabs
+            value={apiVersion}
+            onValueChange={(value) => setApiVersion(value as "v1" | "v2")}
+          >
+            <TabsList>
+              {apiVersionTabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.name}
+                  value={tab.name}
+                  className="flex select-none items-center gap-1.5"
+                  data-testid={`api_version_${tab.name}`}
+                >
+                  <span>{tab.title}</span>
+                  {tab.beta && (
+                    <span className="rounded border border-border px-1 py-px text-[9px] font-medium uppercase leading-none text-muted-foreground">
+                      beta
+                    </span>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+
         {/* Main language tabs */}
         <div className="flex flex-row justify-start border-b border-border">
           {tabsList.map((tab) => (
@@ -180,8 +257,8 @@ export default function APITabsComponent() {
           ))}
         </div>
 
-        {/* Platform selection for cURL */}
-        {selectedTab === "cURL" && (
+        {/* Platform selection for cURL (v1 only) */}
+        {apiVersion === "v1" && selectedTab === "cURL" && (
           <div className="flex flex-col gap-4">
             <Tabs value={selectedPlatform} onValueChange={setSelectedPlatform}>
               <TabsList>
@@ -212,7 +289,13 @@ export default function APITabsComponent() {
 
             if (hasSteps) {
               const steps = (
-                codeData as { steps: { title: string; code: string }[] }
+                codeData as {
+                  steps: {
+                    title: string;
+                    code: string;
+                    description?: string;
+                  }[];
+                }
               ).steps;
               return (
                 <div className="api-modal-tabs-content flex h-full flex-col gap-4 overflow-auto">
@@ -225,7 +308,16 @@ export default function APITabsComponent() {
                           : ""
                       }
                     >
-                      <h4 className="mb-2 text-sm font-medium">{step.title}</h4>
+                      <h4 className="mb-2 text-sm font-medium">
+                        {STEP_TITLE_KEYS[step.title]
+                          ? t(STEP_TITLE_KEYS[step.title])
+                          : step.title}
+                      </h4>
+                      {step.description && (
+                        <p className="mb-2 text-xs text-muted-foreground">
+                          {step.description}
+                        </p>
+                      )}
                       <div
                         className={`relative flex ${
                           index === steps.length - 1 ? "h-full" : ""

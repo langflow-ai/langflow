@@ -1,13 +1,17 @@
 from pydantic import SecretStr
 
 DEFAULT_SUPERUSER = "langflow"
-DEFAULT_SUPERUSER_PASSWORD = SecretStr("langflow")
+DEFAULT_SUPERUSER_PASSWORD = SecretStr("")
+# Only used to detect and rotate credentials created by older releases.
+LEGACY_DEFAULT_SUPERUSER_PASSWORD = SecretStr("langflow")
 
 VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "COMPOSIO_API_KEY",
     "OPENAI_API_KEY",
     "ANTHROPIC_API_KEY",
     "GOOGLE_API_KEY",
+    "AZURE_AI_FOUNDRY_API_KEY",
+    "AZURE_AI_FOUNDRY_ENDPOINT",
     "AZURE_OPENAI_API_KEY",
     "AZURE_OPENAI_API_VERSION",
     "AZURE_OPENAI_API_INSTANCE_NAME",
@@ -32,10 +36,15 @@ VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "NOVITA_API_KEY",
     "TAVILY_API_KEY",
     "COMETAPI_KEY",
+    "EMPIRIOLABS_API_KEY",
     # IBM WatsonX variables
     "WATSONX_APIKEY",
     "WATSONX_PROJECT_ID",
     "WATSONX_URL",
+    # OpenRouter variables
+    "OPENROUTER_API_KEY",
+    "OPENROUTER_SITE_URL",
+    "OPENROUTER_APP_NAME",
 ]
 
 # Agentic experience specific variables

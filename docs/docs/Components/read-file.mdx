@@ -15,7 +15,7 @@ In Langflow version 1.7.0, this component was renamed from **File** to **Read Fi
 The **Read File** component loads and parses files, converts the content into a `JSON`, `Table`, or `Message` object.
 It supports multiple file types, provides parameters for parallel processing and error handling, and supports advanced parsing with the Docling library.
 
-You can add files to the **Read File** component in the visual editor or at runtime, and you can upload multiple files at once.
+You can add files to the **Read File** component in the visual editor or at runtime, and you can upload multiple files.
 For more information about uploading files and working with files in flows, see [File management](/concepts-file-management) and [Create a chatbot that can ingest files](/chat-with-files).
 
 The **Read File** component can read files from the local Langflow database, **AWS S3**, or **Google Drive**.
@@ -30,7 +30,7 @@ To modify this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment va
 <summary>Supported file types</summary>
 
 The following file types are supported by the **Read File** component.
-Use archive and compressed formats to bundle multiple files together, or use the [**Directory** component](/directory) to load all files in a directory.
+Use archive and compressed formats to bundle multiple files together, or upload a folder to load all files in a directory.
 
 - `.bz2`
 - `.csv`
@@ -90,9 +90,7 @@ To use advanced parsing, do the following:
 
     * **Install Langflow version 1.6 or later**: Earlier versions don't support advanced parsing with the **Read File** component. For upgrade guidance, see the [Release notes](/release-notes).
 
-    * **Install Docling dependency on macOS Intel (x86_64)**: The Docling dependency isn't installed by default for macOS Intel (x86_64). Use the [Docling installation guide](https://docling-project.github.io/docling/installation/) to install the Docling dependency.
-
-        For all other operating systems, the Docling dependency is installed by default.
+    * **Install Docling dependency**: Advanced parsing requires a [torch opt-in install](/components-bundle-components#torch-opt-in).
 
     <PartialDockerDoclingDeps />
 

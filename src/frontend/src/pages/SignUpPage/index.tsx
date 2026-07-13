@@ -1,13 +1,18 @@
 import * as Form from "@radix-ui/react-form";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
+import { extractApiErrorMessage } from "@/controllers/API/helpers/extract-api-error-message";
 import { useAddUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
+import {
+  appendErrorSuggestion,
+  getRequiredFieldError,
+} from "@/utils/authErrorMessages";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CONTROL_INPUT_STATE } from "../../constants/constants";
@@ -21,8 +26,8 @@ import type {
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =
     useState<signUpInputStateType>(CONTROL_INPUT_STATE);
-
-  const [isDisabled, setDisableBtn] = useState<boolean>(true);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
 
   const { t } = useTranslation();
   const { password, cnfPassword, username } = inputState;
@@ -37,13 +42,6 @@ export default function SignUp(): JSX.Element {
   }: inputHandlerEventType): void {
     setInputState((prev) => ({ ...prev, [name]: value }));
   }
-
-  useEffect(() => {
-    if (password !== cnfPassword) return setDisableBtn(true);
-    if (password === "" || cnfPassword === "") return setDisableBtn(true);
-    if (username === "") return setDisableBtn(true);
-    setDisableBtn(false);
-  }, [password, cnfPassword, username, handleInput]);
 
   function handleSignup(): void {
     const { username, password } = inputState;
@@ -61,36 +59,79 @@ export default function SignUp(): JSX.Element {
         navigate("/login");
       },
       onError: (error) => {
-        const {
-          response: {
-            data: { detail },
-          },
-        } = error;
         setErrorData({
           title: t("errors.signup"),
-          list: [detail],
+          list: [
+            appendErrorSuggestion(
+              extractApiErrorMessage(
+                error as Parameters<typeof extractApiErrorMessage>[0],
+                t("errors.signup"),
+              ),
+              t("errors.signupSuggestion", {
+                defaultValue:
+                  "Use a different username or contact an administrator if you already have an account.",
+              }),
+            ),
+          ],
         });
       },
     });
   }
 
+  const passwordMismatch =
+    password !== "" && cnfPassword !== "" && password !== cnfPassword;
+  const usernameError = getRequiredFieldError(
+    submitAttempted,
+    username,
+    t("auth.usernameRequired"),
+  );
+  const passwordError = getRequiredFieldError(
+    submitAttempted,
+    password,
+    t("auth.passwordEnterRequired"),
+  );
+  const shouldShowPasswordMismatch =
+    passwordMismatch && (submitAttempted || confirmPasswordTouched);
+  const confirmPasswordRequiredError = getRequiredFieldError(
+    submitAttempted,
+    cnfPassword,
+    t("auth.confirmPasswordRequired"),
+  );
+  const confirmPasswordError =
+    confirmPasswordRequiredError ??
+    (shouldShowPasswordMismatch
+      ? `${t("errors.passwordMismatch")}. ${t(
+          "errors.passwordMismatchSuggestion",
+          {
+            defaultValue: "Re-enter both passwords so they match.",
+          },
+        )}`
+      : undefined);
+
   return (
     <Form.Root
+      onInvalidCapture={() => setSubmitAttempted(true)}
       onSubmit={(event: FormEvent<HTMLFormElement>) => {
-        if (password === "") {
+        setSubmitAttempted(true);
+        if (
+          username.trim() === "" ||
+          password.trim() === "" ||
+          cnfPassword.trim() === "" ||
+          passwordMismatch
+        ) {
           event.preventDefault();
           return;
         }
 
-        const _data = Object.fromEntries(new FormData(event.currentTarget));
         event.preventDefault();
+        handleSignup();
       }}
       className="h-screen w-full"
     >
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
         <div className="flex w-full max-w-xs flex-col items-center justify-center gap-2">
           <LangflowLogo
-            title="Langflow logo"
+            title={t("common.langflowLogo")}
             className="mb-4 h-10 w-10 scale-[1.5]"
           />
           <span className="mb-6 text-2xl font-semibold text-primary text-center">
@@ -98,7 +139,12 @@ export default function SignUp(): JSX.Element {
           </span>
           <div className="mb-3 w-full">
             <Form.Field name="username">
-              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+              <label
+                htmlFor="signup-username"
+                className={`flex items-center gap-1 overflow-hidden ${
+                  usernameError ? "label-invalid" : ""
+                }`}
+              >
                 <ShadTooltip
                   content={t("auth.usernameLabel")}
                   styleClasses="z-50"
@@ -106,29 +152,46 @@ export default function SignUp(): JSX.Element {
                   <span className="truncate">{t("auth.usernameLabel")}</span>
                 </ShadTooltip>
                 <span className="shrink-0 font-medium text-destructive">*</span>
-              </Form.Label>
+              </label>
 
-              <Form.Control asChild>
-                <Input
-                  type="username"
-                  onChange={({ target: { value } }) => {
-                    handleInput({ target: { name: "username", value } });
-                  }}
-                  value={username}
-                  className="w-full"
-                  required
-                  placeholder={t("auth.usernamePlaceholder")}
-                />
-              </Form.Control>
+              <Input
+                id="signup-username"
+                name="username"
+                type="text"
+                allowAutofill
+                autoComplete="username"
+                onChange={({ target: { value } }) => {
+                  handleInput({ target: { name: "username", value } });
+                }}
+                value={username}
+                className="w-full"
+                required
+                aria-describedby={
+                  usernameError ? "signup-username-error" : undefined
+                }
+                aria-invalid={Boolean(usernameError)}
+                placeholder={t("auth.usernamePlaceholder")}
+              />
 
-              <Form.Message match="valueMissing" className="field-invalid">
-                {t("auth.usernameRequired")}
-              </Form.Message>
+              {usernameError && (
+                <p
+                  id="signup-username-error"
+                  role="alert"
+                  className="field-invalid"
+                >
+                  {usernameError}
+                </p>
+              )}
             </Form.Field>
           </div>
           <div className="mb-3 w-full">
-            <Form.Field name="password" serverInvalid={password != cnfPassword}>
-              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+            <Form.Field name="password" serverInvalid={Boolean(passwordError)}>
+              <label
+                htmlFor="form-signup-password"
+                className={`flex items-center gap-1 overflow-hidden ${
+                  passwordError ? "label-invalid" : ""
+                }`}
+              >
                 <ShadTooltip
                   content={t("auth.passwordLabel")}
                   styleClasses="z-50"
@@ -136,36 +199,49 @@ export default function SignUp(): JSX.Element {
                   <span className="truncate">{t("auth.passwordLabel")}</span>
                 </ShadTooltip>
                 <span className="shrink-0 font-medium text-destructive">*</span>
-              </Form.Label>
+              </label>
               <InputComponent
                 onChange={(value) => {
                   handleInput({ target: { name: "password", value } });
                 }}
                 value={password}
                 isForm
+                allowAutofill
                 password={true}
                 required
+                id="signup-password"
+                inputProps={{
+                  "aria-describedby": passwordError
+                    ? "signup-password-error"
+                    : undefined,
+                  "aria-invalid": Boolean(passwordError) || undefined,
+                }}
                 placeholder={t("auth.passwordPlaceholder")}
                 className="w-full"
               />
 
-              <Form.Message className="field-invalid" match="valueMissing">
-                {t("auth.passwordEnterRequired")}
-              </Form.Message>
-
-              {password != cnfPassword && (
-                <Form.Message className="field-invalid">
-                  {t("errors.passwordMismatch")}
-                </Form.Message>
+              {passwordError && (
+                <p
+                  id="signup-password-error"
+                  role="alert"
+                  className="field-invalid"
+                >
+                  {passwordError}
+                </p>
               )}
             </Form.Field>
           </div>
           <div className="w-full">
             <Form.Field
               name="confirmpassword"
-              serverInvalid={password != cnfPassword}
+              serverInvalid={Boolean(confirmPasswordError)}
             >
-              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+              <label
+                htmlFor="form-signup-confirm-password"
+                className={`flex items-center gap-1 overflow-hidden ${
+                  confirmPasswordError ? "label-invalid" : ""
+                }`}
+              >
                 <ShadTooltip
                   content={t("auth.confirmPasswordLabel")}
                   styleClasses="z-50"
@@ -175,35 +251,43 @@ export default function SignUp(): JSX.Element {
                   </span>
                 </ShadTooltip>
                 <span className="shrink-0 font-medium text-destructive">*</span>
-              </Form.Label>
+              </label>
 
               <InputComponent
                 onChange={(value) => {
                   handleInput({ target: { name: "cnfPassword", value } });
                 }}
+                onBlur={() => setConfirmPasswordTouched(true)}
                 value={cnfPassword}
                 isForm
+                allowAutofill
                 password={true}
                 required
+                id="signup-confirm-password"
+                inputProps={{
+                  "aria-describedby": confirmPasswordError
+                    ? "signup-confirm-password-error"
+                    : undefined,
+                  "aria-invalid": Boolean(confirmPasswordError) || undefined,
+                }}
                 placeholder={t("auth.confirmPasswordPlaceholder")}
                 className="w-full"
               />
 
-              <Form.Message className="field-invalid" match="valueMissing">
-                {t("auth.confirmPasswordRequired")}
-              </Form.Message>
+              {confirmPasswordError && (
+                <p
+                  id="signup-confirm-password-error"
+                  role="alert"
+                  className="field-invalid"
+                >
+                  {confirmPasswordError}
+                </p>
+              )}
             </Form.Field>
           </div>
           <div className="w-full">
             <Form.Submit asChild>
-              <Button
-                disabled={isDisabled}
-                type="submit"
-                className="mr-3 mt-6 w-full"
-                onClick={() => {
-                  handleSignup();
-                }}
-              >
+              <Button type="submit" className="mr-3 mt-6 w-full">
                 {t("auth.signupButton")}
               </Button>
             </Form.Submit>

@@ -41,7 +41,7 @@ from fastapi import HTTPException
 from httpx import HTTPError
 from jwt import InvalidTokenError
 from lfx.log.logger import configure, logger
-from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from lfx.services.settings.constants import DEFAULT_SUPERUSER
 from multiprocess import cpu_count
 from multiprocess.context import Process
 from packaging import version as pkg_version
@@ -58,7 +58,7 @@ from langflow.services.auth.utils import get_current_user_from_access_token
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError, check_postgresql_version_sync
 from langflow.services.deps import get_db_service, get_settings_service, is_settings_service_initialized, session_scope
-from langflow.services.utils import initialize_services
+from langflow.services.utils import get_auto_login_superuser_password, initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
@@ -196,6 +196,7 @@ def build_direct_uvicorn_kwargs(
     ssl_cert_file_path: str | None,
     ssl_key_file_path: str | None,
     system: str | None = None,
+    trust_proxy: bool = False,
 ) -> dict:
     """Build the kwargs dict for ``uvicorn.run(app, **kwargs)`` on Win/macOS.
 
@@ -203,6 +204,11 @@ def build_direct_uvicorn_kwargs(
     the launch site stays a single call and so tests can assert that things
     like TLS cert/key pass through. Mirrors the option set used on the
     Gunicorn (Linux) path so platform parity does not drift again.
+
+    ``trust_proxy=False`` (default) passes ``forwarded_allow_ips=""`` so
+    uvicorn's ProxyHeadersMiddleware trusts no source for X-Forwarded-For,
+    preventing IP-spoofing attacks against the login rate limit.
+    ``trust_proxy=True`` passes ``"*"`` for deployments behind a trusted proxy.
     """
     return {
         "host": host,
@@ -213,7 +219,52 @@ def build_direct_uvicorn_kwargs(
         "loop": loop,
         "ssl_certfile": ssl_cert_file_path,
         "ssl_keyfile": ssl_key_file_path,
+        "forwarded_allow_ips": "*" if trust_proxy else "",
     }
+
+
+def ensure_multi_worker_safe(num_workers: int) -> None:
+    """Refuse to start with multiple workers when the job queue is worker-local.
+
+    The default JobQueueService keeps build queues in process-local memory.
+    POLLING and STREAMING event delivery rely on a follow-up
+    ``GET /api/v1/build/<job_id>/events`` request after the initial
+    ``POST /api/v1/build/.../flow``; Gunicorn round-robins those two requests
+    across workers, so the polling worker finds no queue and returns
+    "Job queue not found for job_id" roughly 45-66% of the time under load.
+
+    ``event_delivery=direct`` is the exception: the POST endpoint streams events
+    back on the same request that started the build, so the build and event
+    consumption stay on a single worker and never cross worker boundaries.
+    Operators who only need direct delivery should run with ``--workers 1`` or
+    configure a shared queue anyway; this check refuses to start because the
+    process cannot know which delivery mode every future client will pick.
+
+    Skipped entirely when ``LANGFLOW_JOB_QUEUE_TYPE=redis`` is configured —
+    Redis-backed queues share state across workers and support every delivery
+    mode, so the race the check guards against cannot occur.
+
+    Only called on the Gunicorn (Linux) path — the direct-uvicorn path on
+    Windows/macOS clamps workers to 1, so the race cannot occur there.
+    """
+    if num_workers <= 1:
+        return
+    if get_settings_service().settings.job_queue_type == "redis":
+        return
+    msg = (
+        f"Refusing to start with {num_workers} workers and the default in-memory "
+        "job queue. POLLING and STREAMING event delivery fail with 'Job not found' "
+        "roughly half the time because the build queue lives in one worker's "
+        "memory and the follow-up GET /api/v1/build/<job_id>/events request lands "
+        "on a different worker. Pick one of:\n"
+        "  * Configure a shared job queue: LANGFLOW_JOB_QUEUE_TYPE=redis. Works "
+        "for every event_delivery mode.\n"
+        "  * Run with --workers 1. Single worker, no cross-worker routing.\n"
+        "Note: event_delivery=direct works in multi-worker because the POST "
+        "endpoint streams events back inline, but every client must opt into "
+        "direct delivery; the server cannot enforce that at startup."
+    )
+    raise RuntimeError(msg)
 
 
 def display_results(results) -> None:
@@ -507,6 +558,7 @@ def run(
                 loop=loop_type,
                 ssl_cert_file_path=ssl_cert_file_path,
                 ssl_key_file_path=ssl_key_file_path,
+                trust_proxy=get_settings_service().settings.rate_limit_trust_proxy,
             ),
         )
     else:
@@ -518,9 +570,11 @@ def run(
                 msg = "Gunicorn startup requires an application factory."
                 raise RuntimeError(msg)
 
+            num_workers = get_number_of_workers(workers)
+            ensure_multi_worker_safe(num_workers)
             options = {
                 "bind": f"{host}:{port}",
-                "workers": get_number_of_workers(workers),
+                "workers": num_workers,
                 "timeout": worker_timeout,
                 "certfile": ssl_cert_file_path,
                 "keyfile": ssl_key_file_path,
@@ -790,10 +844,10 @@ def print_banner(host: str, port: int, protocol: str) -> None:
 @app.command()
 def superuser(
     username: str = typer.Option(
-        None, help="Username for the superuser. Defaults to 'langflow' when AUTO_LOGIN is enabled."
+        None, help="Username for the superuser. Defaults to the configured AUTO_LOGIN superuser."
     ),
     password: str = typer.Option(
-        None, help="Password for the superuser. Defaults to 'langflow' when AUTO_LOGIN is enabled."
+        None, help="Password for the superuser. Ignored when AUTO_LOGIN generates the bootstrap password."
     ),
     log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
     auth_token: str = typer.Option(
@@ -802,7 +856,7 @@ def superuser(
 ) -> None:
     """Create a superuser.
 
-    When AUTO_LOGIN is enabled, uses default credentials.
+    When AUTO_LOGIN is enabled, uses configured or generated bootstrap credentials.
     In production mode, requires authentication.
     """
     configure(log_level=log_level)
@@ -812,7 +866,7 @@ def superuser(
 
 async def _create_superuser(username: str, password: str, auth_token: str | None):
     """Create a superuser."""
-    await initialize_services()
+    await initialize_services(skip_superuser_setup=True)
 
     settings_service = get_settings_service()
     # Check if superuser creation via CLI is enabled
@@ -822,9 +876,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
         raise typer.Exit(1)
 
     if settings_service.auth_settings.AUTO_LOGIN:
-        # Force default credentials for AUTO_LOGIN mode
-        username = DEFAULT_SUPERUSER
-        password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+        username = getattr(settings_service.auth_settings, "SUPERUSER", None) or DEFAULT_SUPERUSER
     else:
         # Production mode - prompt for credentials if not provided
         if not username:
@@ -836,8 +888,6 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
 
     existing_superusers = []
     async with session_scope() as session:
-        # Note that the default superuser is created by the initialize_services() function,
-        # but leaving this check here in case we change that behavior
         existing_superusers = await get_all_superusers(session)
     is_first_setup = len(existing_superusers) == 0
 
@@ -851,6 +901,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
             typer.echo("2. Run this command again with --auth-token")
             raise typer.Exit(1)
 
+        password = get_auto_login_superuser_password(settings_service.auth_settings)
         typer.echo(f"AUTO_LOGIN enabled. Creating default superuser '{username}'...")
         # Do not echo the default password to avoid exposing it in logs.
     # AUTO_LOGIN is false - production mode
@@ -922,6 +973,33 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
         else:
             logger.error(f"SECURITY AUDIT: Failed attempt to create superuser '{username}' via CLI")
             typer.echo("Superuser creation failed.")
+
+
+@app.command(name="migrate-mcp")
+def migrate_mcp(
+    log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    dry_run: bool = typer.Option(default=False, help="Report what would be imported without writing."),  # noqa: FBT001
+) -> None:
+    """Import existing per-user MCP config files (_mcp_servers_<id>.json) into the mcp_server table.
+
+    This also runs automatically on startup; use this command to run or preview it on demand.
+    It is idempotent and never deletes the legacy files.
+    """
+    configure(log_level=log_level)
+    asyncio.run(_migrate_mcp(dry_run=dry_run))
+
+
+async def _migrate_mcp(*, dry_run: bool) -> None:
+    from langflow.api.utils.mcp.backfill import backfill_mcp_servers_from_files
+
+    await initialize_services()
+    async with session_scope() as session:
+        summary = await backfill_mcp_servers_from_files(session, dry_run=dry_run)
+    verb = "would import" if dry_run else "imported"
+    typer.echo(
+        f"MCP migration complete: {verb} {summary['imported']} server(s) across "
+        f"{summary['users']} user(s) (skipped {summary['skipped']}, errors {summary['errors']})."
+    )
 
 
 # command to copy the langflow database from the cache to the current directory
@@ -1011,11 +1089,15 @@ def api_key(
         async with session_scope() as session:
             from langflow.services.database.models.user.model import User
 
-            stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
+            superuser_username = auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+            stmt = select(User).where(
+                User.username == superuser_username,
+                User.is_superuser == True,  # noqa: E712
+            )
             superuser = (await session.exec(stmt)).first()
             if not superuser:
                 typer.echo(
-                    "Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled."
+                    "Auto-login superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled."
                 )
                 return None
             from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key
@@ -1061,15 +1143,23 @@ def version_option(
 
 def api_key_banner(unmasked_api_key) -> None:
     is_mac = platform.system() == "Darwin"
-    import pyperclip
+    clipboard_msg = ""
+    try:
+        import pyperclip
 
-    pyperclip.copy(unmasked_api_key.api_key)
+        pyperclip.copy(unmasked_api_key.api_key)
+        clipboard_msg = (
+            f"\nThe API key has been copied to your clipboard. [bold]{['Ctrl', 'Cmd'][is_mac]} + V[/bold] to paste it."
+        )
+    except Exception as exc:  # noqa: BLE001
+        # Clipboard access is best-effort: pyperclip raises in headless/Docker/SSH environments
+        # where no clipboard mechanism is available. Log and continue so the key is still displayed.
+        logger.debug(f"Could not copy API key to clipboard: {exc}")
     panel = Panel(
         f"[bold]API Key Created Successfully:[/bold]\n\n"
         f"[bold blue]{unmasked_api_key.api_key}[/bold blue]\n\n"
         "This is the only time the API key will be displayed. \n"
-        "Make sure to store it in a secure location. \n\n"
-        f"The API key has been copied to your clipboard. [bold]{['Ctrl', 'Cmd'][is_mac]} + V[/bold] to paste it.",
+        f"Make sure to store it in a secure location.{clipboard_msg}",
         box=box.ROUNDED,
         border_style="blue",
         expand=False,

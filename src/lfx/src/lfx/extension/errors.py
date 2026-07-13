@@ -22,8 +22,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 DOCS_BASE = "https://docs.langflow.org/extensions/errors"
-"""Base URL for error reference documentation.  Concrete pages are anchors of
-the form ``#<error-code>`` (e.g. ``#manifest-invalid``).
+"""URL for extension error guidance.  Every ``ref_url`` / CLI ``see:`` line points
+to one page on how to read errors.
 """
 
 
@@ -33,8 +33,7 @@ the form ``#<error-code>`` (e.g. ``#manifest-invalid``).
 
 # Phase-1 error codes.  Each code shipped here MUST have:
 #   1. a branch in ``format_extension_error``,
-#   2. a snapshot test in ``tests/unit/extension/test_errors.py``,
-#   3. a documented reference URL anchor.
+#   2. a snapshot test in ``tests/unit/extension/test_errors.py``.
 #
 # Loader / reload / migration / events codes are added when those subsystems
 # land.
@@ -45,7 +44,10 @@ ERROR_CODES: frozenset[str] = frozenset(
         "manifest-invalid",
         "manifest-unreadable",
         "field-deferred-in-this-milestone",
+        # Deprecated alias of multi-bundle-unsupported; kept for one
+        # milestone for log scrapers.
         "multi-bundle-deferred-in-this-milestone",
+        "multi-bundle-unsupported",
         "template-deferred-in-this-milestone",
         # Validate-specific codes
         "path-escape",
@@ -57,9 +59,81 @@ ERROR_CODES: frozenset[str] = frozenset(
         "import-star-disallowed",
         "top-level-io-disallowed",
         "execute-imports-failed",
+        "version-constraint-unsatisfied",
+        # Loader-specific codes
+        "module-import-failed",
+        "duplicate-component-name",
+        "duplicate-distribution",
+        "duplicate-inline-bundle",
+        "inline-bundle-name-invalid",
+        "inline-path-missing",
+        "inline-path-unreadable",
+        "bundle-json-invalid",
+        # init / dev CLI codes
+        "extension-target-exists",
+        "extension-target-invalid",
+        "local-extension-missing",
+        # Migration-specific codes
+        "migration-table-missing",
+        "migration-table-unreadable",
+        "migration-table-invalid",
+        "component-not-found-with-hint",
+        "component-name-ambiguous",
+        # Production install / discovery
+        "installed-extension-immutable",
+        "seed-directory-immutable",
+        "seed-directory-not-found",
+        "seed-bundle-shadowed",
+        "bundle-shadowed",
+        # Manifest-less lfx.bundles root whose entry-point declaration could
+        # not be resolved to a real package directory. Surfaced as a *warning*
+        # (never aborts startup) so a broken third-party declaration degrades
+        # to "that bundle root is skipped".
+        "bundle-discovery-malformed",
+        # lfx.bundles tier intra-tier diagnostics.  Every code here is
+        # warning-only: a broken manifest-less declaration degrades to "that
+        # provider/root is skipped" and never aborts startup.  This is *not* a
+        # full mirror of the inline tier -- there inline-bundle-name-invalid and
+        # inline-path-unreadable are hard errors (ok=False).  Only the duplicate
+        # case lines up: duplicate-lfx-bundles-provider and duplicate-inline-bundle
+        # are both warnings ("first wins"); the name-invalid / root-unreadable
+        # pair is intentionally a warning here where its inline counterpart errors.
+        "bundles-provider-name-invalid",
+        "bundles-root-unreadable",
+        "duplicate-lfx-bundles-provider",
+        "duplicate-extension-id",
+        # Reload-specific codes
+        "reload-in-progress",
+        "reload-bundle-not-installed",
+        "reload-bundle-name-mismatch",
+        "reload-source-missing",
+        # Manifest-less lfx.bundles providers carry no manifest for the
+        # reload pipeline's load_extension stage; hot reload refuses them
+        # with this typed code instead of a misleading manifest-not-found.
+        "reload-manifestless-unsupported",
+        # Post-swap hook failures: the registry swap committed but a
+        # downstream side-effect (e.g. component cache rebuild) raised.
+        # Surfaced on ReloadResult.warnings so the API caller knows the
+        # palette may be stale even though ok=True.
+        "reload-post-swap-hook-failed",
+        "reload-class-retag-failed",
+        "reload-transport-error",
+        "duplicate-bundle-name",
+        # HTTP route gate (Mode A only): the runtime guard that hides the
+        # reload route on Mode B/C deployments returns this code so the
+        # client gets the same typed envelope as every other reload error.
+        "extension-reload-disabled",
+        # Extension events route: keyspace is server-derived from the
+        # authenticated user; clients that pass ``?keyspace=...`` are
+        # rejected so the contract is explicit instead of silently dropped.
+        "extension-events-keyspace-forbidden",
+        # Model-provider registration (manifest ``providers[]``). Both are
+        # warning-only: a malformed or colliding provider is skipped so the rest
+        # of the extension still loads.
+        "provider-invalid",
+        "provider-skipped",
     }
 )
-
 
 # ---------------------------------------------------------------------------
 # ExtensionError
@@ -82,7 +156,7 @@ class ExtensionError:
             symbol name).  ``None`` if the error is purely positional.
         hint: Concrete suggestion for how to fix the problem.  Required for
             every code shipped in Phase 1.
-        ref_url: Link to the error reference docs.  Auto-derived from ``code``
+        ref_url: Link to the extension error docs.  Auto-set to :data:`DOCS_BASE`
             when not provided.
     """
 
@@ -102,7 +176,7 @@ class ExtensionError:
             )
             raise ValueError(msg)
         if self.ref_url is None:
-            object.__setattr__(self, "ref_url", f"{DOCS_BASE}#{self.code}")
+            object.__setattr__(self, "ref_url", f"{DOCS_BASE}")
 
     def to_dict(self) -> dict[str, Any]:
         """Serializable representation suitable for HTTP bodies / JSON output."""
@@ -158,6 +232,15 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "multi-bundle-deferred-in-this-milestone": (
         "Manifest declares more than one bundle entry; multi-bundle extensions are deferred in this milestone."
     ),
+    "multi-bundle-unsupported": (
+        "Manifest declares more than one bundle entry; v0 supports exactly one bundle per extension."
+    ),
+    "duplicate-bundle-name": (
+        "Bundle name {content!r} is provided by two installed distributions; "
+        "the second is dropped to prevent collision."
+    ),
+    "reload-class-retag-failed": ("Could not retag {content}.__module__ after reload at {location}: {message}"),
+    "reload-transport-error": ("Could not reach the reload endpoint at {location}: {message}"),
     "template-deferred-in-this-milestone": ("Template {content!r} is deferred in this milestone."),
     "path-escape": (
         "Path {content!r} escapes the bundle root (..; absolute path; or symlink leaving the bundle directory)."
@@ -172,6 +255,103 @@ _BRANCH_TEMPLATES: dict[str, str] = {
         "Top-level I/O primitive {content!r} used in {location}; bundle module import must be side-effect free."
     ),
     "execute-imports-failed": ("Subprocess import probe (--execute-imports) failed for {location}: {message}"),
+    "version-constraint-unsatisfied": (
+        "Manifest at {location} declares lfx.compat={content!r}, which does not "
+        "include this lfx package's BUNDLE_API_VERSION; refusing to load."
+    ),
+    "module-import-failed": ("Failed to import bundle module {location}: {message}"),
+    "duplicate-component-name": (
+        "Duplicate Component class name {content!r} in bundle {location}; "
+        "component class names must be unique within a bundle."
+    ),
+    "duplicate-distribution": (
+        "Two installed distributions share the canonical name {content!r}; "
+        "the lexicographically-first manifest path wins. Locations: {location}."
+    ),
+    "duplicate-inline-bundle": (
+        "Inline bundle name {content!r} appears in multiple LANGFLOW_COMPONENTS_PATH entries; "
+        "first wins. Locations: {location}."
+    ),
+    "inline-bundle-name-invalid": (
+        "Inline bundle directory {content!r} does not match the bundle name pattern (lowercase snake_case)."
+    ),
+    "inline-path-missing": (
+        "LANGFLOW_COMPONENTS_PATH entry {content!r} does not exist or is not a directory; skipped."
+    ),
+    "inline-path-unreadable": ("LANGFLOW_COMPONENTS_PATH entry {content!r} could not be enumerated: {message}"),
+    "bundle-json-invalid": (
+        "Inline bundle.json at {location} is unreadable or malformed; falling back to derived id/version."
+    ),
+    "extension-target-exists": ("Cannot create extension at {location}: directory already exists and is not empty."),
+    "extension-target-invalid": ("Cannot create extension at {location}: {message}"),
+    "local-extension-missing": (
+        "Registered dev extension at {location} is missing or no longer a directory; skipping until it reappears."
+    ),
+    "migration-table-missing": ("Migration table not found at {location}."),
+    "migration-table-unreadable": ("Could not read migration table at {location}: {message}"),
+    "migration-table-invalid": ("Invalid migration table at {location}: {message}"),
+    "component-not-found-with-hint": (
+        "Legacy component reference {content!r} (in flow node {location}) is not in the migration table."
+    ),
+    "component-name-ambiguous": (
+        "Legacy component reference {content!r} (in flow node {location}) matches more than one migration entry."
+    ),
+    "installed-extension-immutable": ("Extension {content!r} is installed via pip and cannot be mutated at runtime."),
+    "seed-directory-immutable": ("Extension {content!r} comes from a seed directory and cannot be mutated at runtime."),
+    "seed-directory-not-found": ("Configured seed directory {location} does not exist or is not a directory."),
+    "seed-bundle-shadowed": (
+        "Seed-directory bundle {content!r} at {location} is shadowed by an installed Extension "
+        "of the same name; the seed copy is being skipped."
+    ),
+    "bundle-shadowed": (
+        "Bundle {content!r} is registered from multiple discovery sources; the lower-precedence copy "
+        "at {location} is being skipped in favor of the higher-precedence one."
+    ),
+    "bundle-discovery-malformed": (
+        "lfx.bundles entry point {content!r} could not be resolved to a package directory: {message}"
+    ),
+    "bundles-provider-name-invalid": (
+        "lfx.bundles provider directory {content!r} (at {location}) is not a valid bundle name; "
+        "bundle names are lowercase snake_case (a-z, 0-9, _), 2-64 characters."
+    ),
+    "bundles-root-unreadable": ("lfx.bundles root {location} could not be enumerated: {message}"),
+    "duplicate-lfx-bundles-provider": (
+        "Provider {content!r} appears in more than one lfx.bundles root; the copy at {location} "
+        "is skipped (the first discovered root wins)."
+    ),
+    "duplicate-extension-id": ("Extension id {content!r} is registered more than once (already at {location})."),
+    "reload-in-progress": (
+        "Reload already in progress for bundle {content!r}; refuse to start a second concurrent reload."
+    ),
+    "reload-bundle-not-installed": (
+        "Cannot reload bundle {content!r}: it is not registered. "
+        "Install the extension first or pass an explicit source path."
+    ),
+    "reload-bundle-name-mismatch": (
+        "Reload source at {location} declares bundle name {content!r}, "
+        "which does not match the registered bundle being reloaded."
+    ),
+    "reload-source-missing": (
+        "Reload source path {content!r} for bundle {location!r} does not exist or is not a directory."
+    ),
+    "reload-manifestless-unsupported": (
+        "Bundle {content!r} comes from a manifest-less lfx.bundles metapackage and cannot be "
+        "hot-reloaded; upgrade the metapackage distribution and restart the process instead."
+    ),
+    "reload-post-swap-hook-failed": (
+        "Post-swap hook failed for bundle {content!r}; the bundle swap committed but a "
+        "downstream side-effect (e.g. component cache rebuild) raised."
+    ),
+    "extension-reload-disabled": (
+        "Extension reload is disabled on this server.  "
+        "Set LANGFLOW_ENABLE_EXTENSION_RELOAD=true to enable it on a local-development install (Mode A)."
+    ),
+    "extension-events-keyspace-forbidden": (
+        "The {location} query parameter is not accepted; events are scoped server-side to the "
+        "authenticated user (rejected value: {content!r})."
+    ),
+    "provider-invalid": ("Model provider {content!r} declared at {location} could not be registered: {message}"),
+    "provider-skipped": ("Model provider {content!r} declared at {location} was skipped: {message}"),
 }
 
 

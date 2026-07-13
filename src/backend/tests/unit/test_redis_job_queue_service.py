@@ -13,11 +13,16 @@ from typing import Any
 
 import fakeredis.aioredis as fakeredis_aio
 import pytest
-from langflow.api.build import cancel_flow_build, create_flow_response, get_flow_events_response
+from langflow.api.build import (
+    cancel_flow_build,
+    create_flow_response,
+    get_flow_events_response,
+)
 from langflow.api.utils import EventDeliveryType
 from langflow.events.event_manager import EventManager
 from langflow.services.job_queue.service import (
     _STREAM_SENTINEL_DATA,
+    JobQueueService,
     RedisJobQueueService,
     RedisQueueWrapper,
 )
@@ -44,6 +49,10 @@ async def _make_service(
     # Inject the fake client directly so no real Redis connection is attempted.
     service._client = fake_client
     service._closed = False
+    # Track whether this service owns the FakeRedis client so the first
+    # _stop_service() doesn't aclose() it out from under a sibling that's
+    # sharing it (cross-worker tests).
+    service._owns_test_client = shared_client is None  # type: ignore[attr-defined]
     service._cleanup_task = asyncio.create_task(service._periodic_cleanup())
     if cancel_channel_enabled:
         service._cancel_dispatcher_task = asyncio.create_task(service._run_cancel_dispatcher())
@@ -85,9 +94,9 @@ async def _stop_service(service: RedisJobQueueService) -> None:
     for wrapper in list(service._consumer_wrappers.values()):
         await wrapper.cancel()
     service._consumer_wrappers.clear()
-    if service._client:
+    if service._client and getattr(service, "_owns_test_client", True):
         await service._client.aclose()
-        service._client = None
+    service._client = None
 
 
 class _BlockingXaddClient:
@@ -410,6 +419,56 @@ async def test_redis_service_cleanup_deletes_redis_keys_when_cancelled():
         assert not await fake_client.exists(stream_key)
         assert not await fake_client.exists(owner_key)
     finally:
+        await _stop_service(service)
+
+
+@pytest.mark.asyncio
+async def test_redis_service_cleanup_swallows_redis_delete_error():
+    """cleanup_job must not raise when Redis DEL fails.
+
+    Regression: the DEL ran in a finally block but a Redis error still escaped.
+    Real Redis tends to fail exactly when teardown runs (network blip,
+    failover), and that propagation could break stop() and explicit cancel.
+    The fix logs a warning and continues.
+    """
+
+    class _DeleteFailingClient:
+        """Proxies a real FakeRedis but makes delete() raise."""
+
+        def __init__(self, real: Any) -> None:
+            self._real = real
+
+        def __getattr__(self, name: str) -> Any:
+            return getattr(self._real, name)
+
+        async def delete(self, *_args: Any, **_kwargs: Any) -> None:
+            msg = "simulated Redis delete failure during teardown"
+            raise ConnectionError(msg)
+
+    real_client = fakeredis_aio.FakeRedis()
+    service, _ = await _make_service(shared_client=real_client)
+    # Swap in the failing wrapper after _make_service has wired up everything.
+    service._client = _DeleteFailingClient(real_client)
+    try:
+        job_id = str(uuid.uuid4())
+        service.create_queue(job_id)
+
+        async def _noop():
+            await asyncio.sleep(0)
+
+        service.start_job(job_id, _noop())
+        await asyncio.sleep(0.05)
+
+        # Must not raise — the warning path absorbs the Redis error and the
+        # rest of cleanup_job (local state, super().cleanup_job) still runs.
+        await service.cleanup_job(job_id)
+
+        # Local state was still torn down even though Redis DEL failed.
+        assert job_id not in service._queues
+        assert job_id not in service._job_owners
+    finally:
+        # Put the real client back so _stop_service can aclose cleanly.
+        service._client = real_client
         await _stop_service(service)
 
 
@@ -850,9 +909,28 @@ async def test_redis_service_cancel_marker_closes_signal_before_subscribe_race()
     producer, _ = await _make_service(shared_client=shared_client)
     try:
         job_id = str(uuid.uuid4())
-        # Publish a cancel BEFORE the producer has registered the job.  The
-        # pubsub publish reaches no relevant owner; only the marker key matters.
+        # Publish a cancel BEFORE the producer has registered the job.
         await publisher.signal_cancel(job_id)
+
+        # In production there is real elapsed time between the publish and this
+        # worker registering the job, so the producer's cancel dispatcher receives
+        # the publish while it owns no matching queue and discards it (counted as a
+        # "foreign" dispatch). Wait for that to happen before create_queue/start_job
+        # so this single-process test reproduces the real ordering: the pubsub
+        # signal is spent before the job exists, leaving only the persistent marker
+        # to surface the cancel during start_job's marker check. Without this, the
+        # buffered publish can land in the window after start_job registers the task
+        # but before that task runs its first step, cancelling it before the build
+        # coroutine ever starts — a scheduling-order artifact of the shared loop, not
+        # the marker mechanism under test.
+        async def _dispatcher_discarded_publish() -> None:
+            # Poll the dispatcher's stat counter: it is mutated by an opaque
+            # background task, so there is no Event to await (asyncio.wait_for
+            # below bounds the wait).
+            while producer._cancel_stats["dispatched_foreign"] < 1:  # noqa: ASYNC110
+                await asyncio.sleep(0.01)
+
+        await asyncio.wait_for(_dispatcher_discarded_publish(), timeout=2)
 
         producer.create_queue(job_id)
         cancelled = asyncio.Event()
@@ -893,6 +971,9 @@ async def test_polling_watchdog_cancels_stale_owned_job():
     try:
         job_id = str(uuid.uuid4())
         producer.create_queue(job_id)
+        # Watchdog only scans jobs with a registered owner — register one to
+        # simulate a real user-facing build.
+        await producer.register_job_owner(job_id, uuid.uuid4())
         cancelled_event = asyncio.Event()
 
         async def _long_running():
@@ -910,7 +991,11 @@ async def test_polling_watchdog_cancels_stale_owned_job():
         assert producer._cancel_stats["polling_watchdog_kills"] >= 1
     finally:
         producer._closed = True
-        for task_attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for task_attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(producer, task_attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -948,6 +1033,10 @@ async def test_polling_watchdog_skips_fresh_activity():
     try:
         job_id = str(uuid.uuid4())
         producer.create_queue(job_id)
+        # Watchdog skips unowned jobs entirely (see _run_polling_watchdog).
+        # Without registering an owner this test passes even if touch_activity
+        # is broken, which defeats the assertion.
+        await producer.register_job_owner(job_id, uuid.uuid4())
         cancelled_event = asyncio.Event()
 
         async def _long_running():
@@ -972,7 +1061,11 @@ async def test_polling_watchdog_skips_fresh_activity():
         assert producer._cancel_stats["polling_watchdog_kills"] == 0
     finally:
         producer._closed = True
-        for task_attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for task_attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(producer, task_attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -984,6 +1077,75 @@ async def test_polling_watchdog_skips_fresh_activity():
                 with contextlib.suppress(asyncio.CancelledError, Exception):
                     await bg
         for bridge in list(producer._bridge_tasks.values()):
+            if not bridge.done():
+                bridge.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await bridge
+
+
+@pytest.mark.asyncio
+async def test_polling_watchdog_ignores_jobs_without_registered_owner():
+    """Jobs without a registered owner (TaskService internal tasks) are not watched.
+
+    TaskService and other server-internal callers use start_job without
+    registering an owner.  They never refresh the activity heartbeat because
+    no polling client is involved.  The watchdog must leave them alone so a
+    long-running internal task is not killed mid-flight at the threshold.
+    Surfaced by load testing: 1:1 ratio of start_job to watchdog kills under
+    the /api/v1/run path because every TaskService task was being reclaimed.
+    """
+    shared_client = fakeredis_aio.FakeRedis()
+    svc = RedisJobQueueService(
+        ttl=60,
+        cancel_channel_enabled=True,
+        polling_stale_threshold_s=0.2,
+        polling_watchdog_interval_s=0.05,
+    )
+    svc._client = shared_client
+    svc._closed = False
+    svc._cleanup_task = asyncio.create_task(svc._periodic_cleanup())
+    svc._cancel_dispatcher_task = asyncio.create_task(svc._run_cancel_dispatcher())
+    svc._polling_watchdog_task = asyncio.create_task(svc._run_polling_watchdog())
+    svc.ready = True
+    await asyncio.sleep(0.05)
+    try:
+        job_id = str(uuid.uuid4())
+        svc.create_queue(job_id)
+        # Intentionally NO register_job_owner — this mimics a TaskService task.
+        cancelled_event = asyncio.Event()
+
+        async def _alive():
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled_event.set()
+                raise
+
+        svc.start_job(job_id, _alive())
+        # Wait well past the threshold + a few watchdog ticks.  The kill must
+        # never fire because the job has no registered owner.
+        await asyncio.sleep(0.8)
+        assert not cancelled_event.is_set(), "watchdog killed an unowned (internal) task"
+        assert svc._cancel_stats["polling_watchdog_kills"] == 0
+        assert job_id in svc._queues
+    finally:
+        svc._closed = True
+        for attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
+            task = getattr(svc, attr, None)
+            if task is not None and not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+        for bg in list(svc._background_tasks):
+            if not bg.done():
+                bg.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await bg
+        for bridge in list(svc._bridge_tasks.values()):
             if not bridge.done():
                 bridge.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
@@ -1039,6 +1201,9 @@ async def test_polling_watchdog_grants_start_grace_window():
     try:
         job_id = str(uuid.uuid4())
         svc.create_queue(job_id)
+        # Watchdog only scans jobs with a registered owner — register one so
+        # this test exercises the start-time grace branch.
+        await svc.register_job_owner(job_id, uuid.uuid4())
 
         async def _alive():
             await asyncio.Event().wait()
@@ -1060,7 +1225,11 @@ async def test_polling_watchdog_grants_start_grace_window():
         assert svc._cancel_stats["polling_watchdog_kills"] >= 1
     finally:
         svc._closed = True
-        for attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(svc, attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -1098,6 +1267,9 @@ async def test_polling_watchdog_skips_malformed_activity_value():
     try:
         job_id = str(uuid.uuid4())
         svc.create_queue(job_id)
+        # Watchdog only scans jobs with a registered owner — register one so
+        # this test exercises the malformed-value parse branch.
+        await svc.register_job_owner(job_id, uuid.uuid4())
 
         async def _alive():
             await asyncio.Event().wait()
@@ -1115,7 +1287,11 @@ async def test_polling_watchdog_skips_malformed_activity_value():
         assert svc._cancel_stats["polling_watchdog_kills"] == 0
     finally:
         svc._closed = True
-        for attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(svc, attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -1129,13 +1305,20 @@ async def test_polling_watchdog_skips_malformed_activity_value():
 
 
 @pytest.mark.asyncio
-async def test_streaming_heartbeat_runs_independent_of_event_yield():
+async def test_streaming_heartbeat_runs_independent_of_event_yield(monkeypatch):
     """A quiet streaming build (no events for > threshold) is NOT reclaimed.
 
     The heartbeat task in create_flow_response fires every N seconds regardless
     of whether the queue is producing events, so the polling watchdog can tell
     that the streaming client is still attached even during a long silent step.
     """
+    from langflow.api import build as build_module
+
+    # Patch the heartbeat interval down so the spawned task actually fires
+    # within the test budget. Without this the verification below would
+    # depend on the production 10s interval.
+    monkeypatch.setattr(build_module, "STREAMING_ACTIVITY_REFRESH_S", 0.1)
+
     shared_client = fakeredis_aio.FakeRedis()
     svc, _ = await _make_service(shared_client=shared_client)
     try:
@@ -1147,20 +1330,15 @@ async def test_streaming_heartbeat_runs_independent_of_event_yield():
 
         svc.start_job(job_id, _alive())
 
-        # Force the activity timestamp to be old enough that without an
-        # independent heartbeat, the watchdog would reclaim the job.
-        await shared_client.set(svc._activity_key(job_id), str(time.time() - 100.0))
+        # Force the activity timestamp to be old enough that any update must
+        # come from the spawned heartbeat task, not from start_job's own touch.
+        stale_ts = time.time() - 100.0
+        await shared_client.set(svc._activity_key(job_id), str(stale_ts))
 
-        # Build a streaming response — its heartbeat task should immediately
-        # start refreshing activity.  Patch the refresh interval down so the
-        # test is fast.
-        from langflow.api.build import create_flow_response
-
-        # Temporarily monkey-patch the constant for this test only.
         monkey_q: asyncio.Queue = asyncio.Queue()
         # Use the real consumer wrapper for realism.
         wrapper = svc._get_consumer_wrapper(job_id)
-        response = await create_flow_response(
+        response = await build_module.create_flow_response(
             queue=wrapper,
             event_manager=EventManager(monkey_q),
             event_task=None,
@@ -1168,15 +1346,21 @@ async def test_streaming_heartbeat_runs_independent_of_event_yield():
             job_id=job_id,
         )
         try:
-            # Find the heartbeat task we just spawned.
             tasks = [t for t in asyncio.all_tasks() if t.get_name().startswith(f"stream-heartbeat-{job_id}")]
             assert tasks, "stream heartbeat task was not spawned"
-            # Trigger one manual touch (faster than waiting 10s) and verify TTL refresh.
-            await svc.touch_activity(job_id)
-            raw = await shared_client.get(svc._activity_key(job_id))
-            assert raw is not None
-            recorded = float(raw.decode() if isinstance(raw, bytes) else raw)
-            assert time.time() - recorded < 5.0, "activity timestamp not refreshed"
+            # Wait for the heartbeat task itself to refresh the activity key.
+            # No manual touch_activity here: if the spawned task is broken,
+            # the timestamp never advances and the loop times out.
+            deadline = time.monotonic() + 2.0
+            recorded = stale_ts
+            while time.monotonic() < deadline:
+                raw = await shared_client.get(svc._activity_key(job_id))
+                if raw is not None:
+                    recorded = float(raw.decode() if isinstance(raw, bytes) else raw)
+                    if recorded > stale_ts + 1.0:
+                        break
+                await asyncio.sleep(0.05)
+            assert recorded > stale_ts + 1.0, "heartbeat task did not refresh activity timestamp"
         finally:
             # Trigger disconnect; the heartbeat task must be cancelled cleanly.
             await response.on_disconnect()
@@ -1594,6 +1778,1127 @@ async def test_redis_service_signal_cancel_flushes_sentinel_to_consumer():
     finally:
         await _stop_service(producer)
         await _stop_service(publisher)
+
+
+@pytest.mark.asyncio
+async def test_redis_queue_wrapper_buffer_is_bounded():
+    """The internal buffer respects _BUFFER_MAXSIZE.
+
+    A slow consumer cannot let the fill task consume unbounded memory.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
+    try:
+        assert wrapper._buffer.maxsize == RedisQueueWrapper._BUFFER_MAXSIZE
+        assert wrapper._buffer.maxsize > 0
+    finally:
+        await wrapper.cancel()
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_redis_queue_wrapper_on_fill_done_delivers_sentinel_on_crash():
+    """A crash in the fill task must still unblock consumers.
+
+    The done-callback delivers the end-of-stream sentinel into the buffer
+    so consumers waiting on ``await get()`` never hang.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
+    try:
+        await wrapper.cancel()
+        # Drain anything already in the buffer so the simulated-crash sentinel
+        # is the next item delivered.
+        while not wrapper._buffer.empty():
+            wrapper._buffer.get_nowait()
+
+        class _FailedTask:
+            def cancelled(self) -> bool:
+                return False
+
+            def exception(self) -> BaseException:
+                return RuntimeError("simulated fill crash")
+
+        wrapper._on_fill_done(_FailedTask())  # type: ignore[arg-type]
+
+        sentinel = wrapper._buffer.get_nowait()
+        assert sentinel[0] is None
+        assert sentinel[1] is None
+    finally:
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_redis_queue_wrapper_on_fill_done_evicts_to_make_room_for_sentinel():
+    """A full buffer at crash time must not prevent sentinel delivery.
+
+    The oldest item is evicted so the sentinel still reaches the consumer.
+    Losing one event is strictly better than leaving the consumer stuck on
+    ``await get()`` indefinitely.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
+    try:
+        await wrapper.cancel()
+        while not wrapper._buffer.empty():
+            wrapper._buffer.get_nowait()
+
+        for i in range(wrapper._buffer.maxsize):
+            wrapper._buffer.put_nowait((f"e{i}", b"data", float(i)))
+        assert wrapper._buffer.full()
+
+        class _FailedTask:
+            def cancelled(self) -> bool:
+                return False
+
+            def exception(self) -> BaseException:
+                return RuntimeError("simulated fill crash")
+
+        wrapper._on_fill_done(_FailedTask())  # type: ignore[arg-type]
+
+        # Buffer is still at capacity (one evicted, one sentinel added).
+        assert wrapper._buffer.full()
+
+        items: list = []
+        while not wrapper._buffer.empty():
+            items.append(wrapper._buffer.get_nowait())
+        sentinels = [item for item in items if item[0] is None and item[1] is None]
+        assert len(sentinels) == 1, "Exactly one sentinel must reach the consumer"
+    finally:
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_finish_with_sentinel_does_not_hang_on_full_buffer():
+    """finish_with_sentinel must not block on the bounded buffer during teardown.
+
+    Regression: the old implementation awaited buffer.put(...) here. If a slow or
+    abandoned consumer had already filled the buffer, shutdown would hang
+    forever. The fix mirrors _on_fill_done: evict one item and put_nowait the
+    sentinel so teardown always returns.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
+    try:
+        # Stop the fill task so we own the buffer for this test.
+        await wrapper.cancel()
+        # _on_fill_done already enqueued one sentinel when cancel completed.
+        while not wrapper._buffer.empty():
+            wrapper._buffer.get_nowait()
+
+        # Fill the buffer to capacity. Without the fix, finish_with_sentinel
+        # would now hang on an awaited put.
+        for i in range(wrapper._buffer.maxsize):
+            wrapper._buffer.put_nowait((f"e{i}", b"data", float(i)))
+        assert wrapper._buffer.full()
+
+        # Must return promptly. The 1.0s budget is generous: the operation is
+        # pure in-memory eviction + put_nowait, so anything close to it means
+        # the buffer is blocking.
+        await asyncio.wait_for(wrapper.finish_with_sentinel(), timeout=1.0)
+        assert wrapper._buffer.full()
+
+        items: list = []
+        while not wrapper._buffer.empty():
+            items.append(wrapper._buffer.get_nowait())
+        sentinels = [item for item in items if item[0] is None and item[1] is None]
+        assert len(sentinels) == 1, "Exactly one sentinel must reach the consumer"
+    finally:
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_get_flow_events_response_rejects_unknown_event_delivery():
+    """Unknown EventDeliveryType values produce a clear 4xx with instructions.
+
+    Without this guard, unknown values silently fall through to the polling
+    code path, masking real misconfigurations in multi-worker setups.
+    """
+    from enum import Enum
+
+    from fastapi import HTTPException
+    from langflow.services.job_queue.service import JobQueueService
+
+    service = JobQueueService()
+    job_id = str(uuid.uuid4())
+    service._queues[job_id] = (
+        asyncio.Queue(),
+        EventManager(asyncio.Queue()),
+        None,
+        None,
+    )
+
+    class _BogusDelivery(str, Enum):
+        WEBSOCKET = "websocket"
+
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await get_flow_events_response(
+                job_id=job_id,
+                queue_service=service,
+                event_delivery=_BogusDelivery.WEBSOCKET,  # type: ignore[arg-type]
+            )
+        assert exc_info.value.status_code == 400
+        detail = str(exc_info.value.detail)
+        assert "Unsupported event_delivery" in detail
+        assert "LANGFLOW_EVENT_DELIVERY" in detail
+        for known in ("streaming", "direct", "polling"):
+            assert known in detail
+    finally:
+        service._queues.pop(job_id, None)
+
+
+@pytest.mark.asyncio
+async def test_task_service_launch_does_not_trigger_polling_watchdog(monkeypatch):
+    """TaskService.fire_and_forget_task must not trip the polling watchdog.
+
+    Integration check via the real entrypoint: a server-internal task launched
+    through TaskService never registers an owner and never calls
+    touch_activity, so the watchdog must leave it alone.  Surfaced by locust
+    load testing on the /api/v1/run path where every internal task was being
+    reclaimed.
+    """
+    from langflow.services.task.service import TaskService
+
+    shared_client = fakeredis_aio.FakeRedis()
+    svc = RedisJobQueueService(
+        ttl=60,
+        cancel_channel_enabled=True,
+        polling_stale_threshold_s=0.2,
+        polling_watchdog_interval_s=0.05,
+    )
+    svc._client = shared_client
+    svc._closed = False
+    svc._cleanup_task = asyncio.create_task(svc._periodic_cleanup())
+    svc._cancel_dispatcher_task = asyncio.create_task(svc._run_cancel_dispatcher())
+    svc._polling_watchdog_task = asyncio.create_task(svc._run_polling_watchdog())
+    svc.ready = True
+
+    # Patch get_queue_service so TaskService.fire_and_forget_task wires through
+    # to our test instance instead of the global one.
+    monkeypatch.setattr("langflow.services.task.service.get_queue_service", lambda: svc)
+
+    # Minimal settings_service stub: TaskService only needs .settings.celery_enabled.
+    class _StubSettings:
+        celery_enabled = False
+
+    class _StubSettingsService:
+        settings = _StubSettings()
+
+    task_service = TaskService(_StubSettingsService())  # type: ignore[arg-type]
+
+    work_started = asyncio.Event()
+    cancelled_event = asyncio.Event()
+
+    async def _internal_work():
+        work_started.set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            cancelled_event.set()
+            raise
+
+    try:
+        task_id = await task_service.fire_and_forget_task(_internal_work)
+        await asyncio.wait_for(work_started.wait(), timeout=1.0)
+        # No register_job_owner was called by TaskService.
+        assert task_id not in svc._job_owners
+
+        # Wait well past the threshold + a few watchdog ticks.  An owned job
+        # would have been killed by now; this one must survive.
+        await asyncio.sleep(0.8)
+        assert svc._cancel_stats["polling_watchdog_kills"] == 0, "watchdog killed an internal TaskService task"
+        assert not cancelled_event.is_set(), "watchdog cancelled an internal TaskService task"
+        assert task_id in svc._queues
+    finally:
+        # Cancel the long-running task manually so the test teardown doesn't hang.
+        entry = svc._queues.get(task_id)
+        if entry and entry[2] is not None and not entry[2].done():
+            entry[2].cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await entry[2]
+        svc._closed = True
+        for attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
+            task = getattr(svc, attr, None)
+            if task is not None and not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+        for bg in list(svc._background_tasks):
+            if not bg.done():
+                bg.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await bg
+        for bridge in list(svc._bridge_tasks.values()):
+            if not bridge.done():
+                bridge.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await bridge
+
+
+@pytest.mark.asyncio
+async def test_redis_queue_wrapper_buffer_applies_backpressure(monkeypatch):
+    """The bounded buffer must actually cap in-flight events, not just expose a maxsize.
+
+    Floods the fill task with more events than the buffer can hold while the
+    consumer drains slowly, and verifies the buffer size never exceeds the
+    declared maxsize.  Without backpressure the buffer would grow unbounded
+    as the fill task races ahead of the consumer.
+    """
+    # Use a tiny maxsize so the test is fast and the bound is exercised after
+    # a handful of events instead of 10,000.
+    monkeypatch.setattr(RedisQueueWrapper, "_BUFFER_MAXSIZE", 5)
+
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    stream_key = f"{RedisQueueWrapper.STREAM_PREFIX}{job_id}"
+
+    # Pre-populate the stream with 20 events BEFORE starting the wrapper so
+    # the fill task immediately hits the maxsize ceiling.
+    total_events = 20
+    for i in range(total_events):
+        await fake_client.xadd(stream_key, {b"event_id": f"e{i}".encode(), b"data": b"x", b"ts": b"0"})
+
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60, startup_grace_s=10.0)
+    try:
+        # Sample the buffer size repeatedly while the fill task races.  With
+        # backpressure, qsize() must never exceed _BUFFER_MAXSIZE.
+        observed_sizes: list[int] = []
+        for _ in range(20):
+            observed_sizes.append(wrapper._buffer.qsize())
+            await asyncio.sleep(0.01)
+        assert max(observed_sizes) <= RedisQueueWrapper._BUFFER_MAXSIZE, (
+            f"buffer grew past maxsize={RedisQueueWrapper._BUFFER_MAXSIZE}: peak={max(observed_sizes)}"
+        )
+
+        # Drain the buffer; backpressure should release and the fill task should
+        # be able to make forward progress so all events eventually arrive.
+        drained = 0
+        while drained < total_events:
+            await asyncio.wait_for(wrapper.get(), timeout=1.0)
+            drained += 1
+        assert drained == total_events
+    finally:
+        await wrapper.cancel()
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_generate_flow_events_calls_end_all_traces_on_cancel(monkeypatch):
+    """When a flow build is cancelled, graph.end_all_traces must be called.
+
+    Regression: the cancel handler in _run_vertex_build previously used
+    background_tasks.add_task(), which is silently dropped after FastAPI drains
+    the POST /build response queue.  The fix uses asyncio.create_task() so
+    trace cleanup runs regardless of the background_tasks lifecycle.
+
+    Setup: _blocking_build_vertex blocks until the task is cancelled, which
+    triggers the CancelledError handler in _run_vertex_build.  The test then
+    asserts that end_all_traces is eventually called via the independent task.
+    """
+    from collections import defaultdict
+    from contextlib import asynccontextmanager
+    from unittest.mock import AsyncMock, MagicMock
+
+    from fastapi import BackgroundTasks
+    from langflow.api.build import generate_flow_events
+    from langflow.events.event_manager import EventManager
+    from lfx.schema.schema import InputValueRequest
+
+    # ── trace spy ────────────────────────────────────────────────────────────
+    traces_ended = asyncio.Event()
+
+    async def _fake_end_all_traces(_outputs=None, _error=None):
+        traces_ended.set()
+
+    def _fake_end_all_traces_in_context(_outputs=None, _error=None):
+        # Mirror the real signature: returns a callable, not a coroutine.
+        async def _run():
+            await _fake_end_all_traces()
+
+        return _run
+
+    # ── mock vertex that blocks so we can observe the cancel path ─────────────
+    vertex_started = asyncio.Event()
+
+    async def _blocking_build_vertex(**_kwargs):
+        vertex_started.set()
+        await asyncio.Event().wait()  # hangs until the task is cancelled
+
+    mock_vertex = MagicMock()
+    mock_vertex.outputs = [{"name": "output"}]
+    mock_vertex.will_stream = False
+
+    # ── mock graph ────────────────────────────────────────────────────────────
+    mock_graph = MagicMock()
+    mock_graph.run_id = str(uuid.uuid4())
+    mock_graph.session_id = "test-session"
+    mock_graph.flow_id = str(uuid.uuid4())
+    mock_graph.inactivated_vertices = set()
+    mock_graph.conditionally_excluded_vertices = set()
+    mock_graph.stop_vertex = None
+    mock_graph.vertices_to_run = {"v1"}
+    mock_graph.vertices = [mock_vertex]
+    mock_graph.sort_vertices = MagicMock(return_value=["v1"])
+    mock_graph.get_vertex = MagicMock(return_value=mock_vertex)
+    mock_graph.run_manager = MagicMock()
+    mock_graph.run_manager.vertices_being_run = set()
+    mock_graph.build_vertex = _blocking_build_vertex
+    mock_graph.end_all_traces = _fake_end_all_traces
+    mock_graph.end_all_traces_in_context = _fake_end_all_traces_in_context
+
+    # ── mock services ─────────────────────────────────────────────────────────
+    mock_chat = MagicMock()
+    mock_chat.async_cache_locks = defaultdict(asyncio.Lock)
+    mock_chat.get_cache = AsyncMock(return_value=None)
+    mock_chat.set_cache = AsyncMock()
+
+    mock_telemetry = MagicMock()
+    mock_telemetry.log_package_playground = MagicMock()
+
+    @asynccontextmanager
+    async def _fake_session_scope():
+        yield MagicMock()
+
+    # Raise in create_job so _build_job_svc is set to None — the simpler
+    # code path that calls _run_vertex_build() directly without execute_with_status.
+    mock_job_svc = MagicMock()
+    mock_job_svc.create_job = AsyncMock(side_effect=Exception("skip in test"))
+
+    monkeypatch.setattr("langflow.api.build.get_chat_service", lambda: mock_chat)
+    monkeypatch.setattr("langflow.api.build.get_telemetry_service", lambda: mock_telemetry)
+    monkeypatch.setattr("langflow.api.build.session_scope", _fake_session_scope)
+    monkeypatch.setattr(
+        "langflow.api.build.build_graph_from_db",
+        AsyncMock(return_value=mock_graph),
+    )
+    monkeypatch.setattr("langflow.api.build.get_job_service", lambda: mock_job_svc)
+    monkeypatch.setattr("langflow.api.build.get_task_service", lambda: MagicMock())
+    monkeypatch.setattr("langflow.api.build.get_memory_base_service", lambda: MagicMock())
+    monkeypatch.setattr("langflow.api.build.get_top_level_vertices", lambda *_: [])
+
+    # ── wire up the event manager ─────────────────────────────────────────────
+    main_queue: asyncio.Queue = asyncio.Queue()
+    flow_id = uuid.uuid4()
+    current_user = MagicMock()
+    current_user.id = uuid.uuid4()
+
+    build_task = asyncio.create_task(
+        generate_flow_events(
+            flow_id=flow_id,
+            background_tasks=BackgroundTasks(),
+            event_manager=EventManager(main_queue),
+            inputs=InputValueRequest(session=str(flow_id)),
+            data=None,
+            files=None,
+            stop_component_id=None,
+            start_component_id=None,
+            log_builds=False,
+            current_user=current_user,
+        )
+    )
+
+    # Wait until the blocking vertex is actually running, then cancel.
+    await asyncio.wait_for(vertex_started.wait(), timeout=2.0)
+    build_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await build_task
+
+    # Give the spawned end_all_traces task a beat to complete.
+    await asyncio.sleep(0.1)
+
+    assert traces_ended.is_set(), (
+        "graph.end_all_traces was not called after the build was cancelled. "
+        "The cancel handler in _run_vertex_build must use asyncio.create_task() "
+        "not background_tasks.add_task(), which is silently dropped once FastAPI "
+        "drains the POST /build response queue."
+    )
+
+
+@pytest.mark.asyncio
+async def test_fill_from_redis_last_id_not_advanced_before_put_completes(monkeypatch):
+    """_last_id must not advance until after await buffer.put() returns.
+
+    Regression: the cursor was previously advanced before the await, so a task
+    cancellation while put() was blocked on a full buffer would silently lose
+    that event — the next XREAD would start past it.  With the fix, the cursor
+    stays at the prior position and the event is re-delivered on restart.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    stream_key = f"langflow:queue:{job_id}"
+
+    # Pre-populate two events before the wrapper starts so both land in the
+    # same XREAD batch.
+    id_a = (await fake_client.xadd(stream_key, {"event_id": b"a", "data": b"event-A", "ts": b"1.0"})).decode()
+    await fake_client.xadd(stream_key, {"event_id": b"b", "data": b"event-B", "ts": b"2.0"})
+
+    # Buffer size 1: after A lands, put(B) blocks until A is consumed.
+    monkeypatch.setattr(RedisQueueWrapper, "_BUFFER_MAXSIZE", 1)
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
+
+    # Spin until A is in the buffer — at that point the fill task is blocked
+    # on put(B) and has NOT yet updated _last_id to B's position.
+    for _ in range(200):
+        if not wrapper._buffer.empty():
+            break
+        await asyncio.sleep(0.01)
+    assert not wrapper._buffer.empty(), "event-A never landed in the buffer"
+
+    # Cancel the fill task while it is blocked inside put(B).
+    wrapper._fill_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await wrapper._fill_task
+
+    # The cursor must still be at A's ID — B was not committed to the buffer.
+    assert wrapper._last_id == id_a, (
+        f"_last_id advanced to {wrapper._last_id!r} before put(B) completed; "
+        f"expected it to stay at {id_a!r} so event-B is not silently dropped."
+    )
+
+    await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_fill_from_redis_persistent_xread_error_delivers_sentinel(monkeypatch):
+    """Persistent XREAD failures must eventually deliver an end-of-stream sentinel.
+
+    Regression: the error-elapsed tracking was removed, causing the fill task
+    to retry forever and leaving the consumer stuck on await get() indefinitely.
+    With the fix, after _STARTUP_GRACE_S of continuous errors the sentinel is
+    delivered and the fill task exits.
+    """
+
+    class _FailingXreadClient:
+        """Thin wrapper whose xread always raises, simulating a persistent Redis error."""
+
+        def __init__(self, real: Any) -> None:
+            self._real = real
+
+        def __getattr__(self, name: str) -> Any:
+            return getattr(self._real, name)
+
+        async def xread(self, *_args: Any, **_kwargs: Any) -> None:
+            msg = "simulated persistent Redis error"
+            raise ConnectionError(msg)
+
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+
+    # Very short grace period so the test completes quickly.
+    monkeypatch.setattr(RedisQueueWrapper, "_STARTUP_GRACE_S", 0.15)
+    monkeypatch.setattr(RedisQueueWrapper, "_READ_ERROR_BACKOFF_S", 0.02)
+
+    wrapper = RedisQueueWrapper(job_id, _FailingXreadClient(fake_client), ttl=60)
+    try:
+        # The sentinel must arrive within a generous timeout well above the grace period.
+        evt = await asyncio.wait_for(wrapper.get(), timeout=3.0)
+        assert evt[0] is None, f"expected sentinel event_id, got {evt}"
+        assert evt[1] is None, f"expected sentinel payload, got {evt}"
+    finally:
+        await wrapper.cancel()
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_cancel_flow_build_returns_false_for_in_memory_backend_without_task():
+    """cancel_flow_build must return False when no task exists and no cross-worker path.
+
+    Regression: the function returned True ("Nothing to cancel is still a success")
+    when event_task is None and the queue service has no signal_cancel method
+    (in-memory backend).  This misled callers into believing cancellation succeeded
+    when in fact the build was unreachable.
+    """
+    svc = JobQueueService()
+    svc.start()
+    job_id = str(uuid.uuid4())
+
+    # create_queue registers the job with task=None; start_job has not been called,
+    # so get_queue_data returns event_task=None.
+    svc.create_queue(job_id)
+
+    result = await cancel_flow_build(job_id=job_id, queue_service=svc)
+    assert result is False, (
+        "cancel_flow_build must return False when it cannot reach the build "
+        "(no local task and no cross-worker signal channel available)."
+    )
+
+    await svc.stop()
+
+
+@pytest.mark.asyncio
+async def test_cancel_flow_build_returns_false_for_redis_with_disabled_cancel_channel():
+    """Redis with cancel_channel_enabled=False is the same as no cross-worker cancel.
+
+    signal_cancel exists on the service but short-circuits to 0 without setting
+    the persistent marker, so treating its return as a successful dispatch is
+    misleading. cancel_flow_build must fall through to the unreachable-build
+    branch and return False.
+    """
+    svc, _ = await _make_service(cancel_channel_enabled=False)
+    try:
+        assert getattr(svc, "signal_cancel", None) is not None
+        assert svc.cross_worker_cancel_enabled is False
+
+        job_id = str(uuid.uuid4())
+        svc.create_queue(job_id)  # registers event_task=None
+
+        result = await cancel_flow_build(job_id=job_id, queue_service=svc)
+        assert result is False, (
+            "Redis with cancel_channel_enabled=False has no cross-worker cancel; "
+            "cancel_flow_build must report failure rather than a false success."
+        )
+    finally:
+        await _stop_service(svc)
+
+
+@pytest.mark.asyncio
+async def test_polling_watchdog_runs_when_cancel_channel_disabled():
+    """Watchdog must operate independently of cancel_channel_enabled.
+
+    Regression: the watchdog was only started when cancel_channel_enabled=True,
+    so disabling the pub/sub cancel channel also silently disabled stale-client
+    reclamation.  The fix starts the watchdog based on polling_stale_threshold_s
+    alone.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    svc = RedisJobQueueService(
+        ttl=60,
+        cancel_channel_enabled=False,  # pub/sub disabled
+        polling_stale_threshold_s=0.3,
+        polling_watchdog_interval_s=0.1,
+    )
+    svc._client = fake_client
+    svc._closed = False
+    svc._cleanup_task = asyncio.create_task(svc._periodic_cleanup())
+    # Replicate what start() does after our fix: watchdog starts regardless of channel.
+    svc._polling_watchdog_task = asyncio.create_task(svc._run_polling_watchdog())
+    svc.ready = True
+
+    try:
+        job_id = str(uuid.uuid4())
+        svc.create_queue(job_id)
+        await svc.register_job_owner(job_id, uuid.uuid4())
+
+        cancelled_event = asyncio.Event()
+
+        async def _long_running():
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled_event.set()
+                raise
+
+        svc.start_job(job_id, _long_running())
+
+        # Do NOT call touch_activity — let the job go stale.  The grace window
+        # (populated by start_job via _job_start_times) protects the first
+        # threshold window, so the watchdog fires after ~threshold seconds.
+        await asyncio.wait_for(cancelled_event.wait(), timeout=5.0)
+
+        assert cancelled_event.is_set(), "watchdog did not cancel the stale job"
+        assert svc._cancel_stats["polling_watchdog_kills"] >= 1
+    finally:
+        svc._closed = True
+        for attr in ("_cleanup_task", "_polling_watchdog_task"):
+            task = getattr(svc, attr, None)
+            if task is not None and not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+        for bg in list(svc._background_tasks):
+            if not bg.done():
+                bg.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await bg
+        for bridge in list(svc._bridge_tasks.values()):
+            if not bridge.done():
+                bridge.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await bridge
+        await fake_client.aclose()
+
+
+# ── Public job registry — Redis-specific tests ───────────────────────────────
+# Complement the base-class unit tests in test_chat_endpoint.py.
+# These tests verify the Redis-specific paths: cross-worker fallback (#6)
+# and cleanup deleting the Redis key (#7).
+
+
+async def test_redis_public_job_cross_worker_fallback():
+    """is_public_job_async returns True for Worker B even when its in-memory set is empty.
+
+    Why: Worker A registers the job (writes local memory + Redis key via background task).
+    Worker B has no local memory entry — it must fall back to Redis.
+    This is the multi-worker correctness guarantee of RedisJobQueueService.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    # Worker A — registers the public job
+    svc_a, _ = await _make_service(shared_client=fake_client, cancel_channel_enabled=False)
+    # Worker B — shares same Redis, but has empty local memory
+    svc_b, _ = await _make_service(shared_client=fake_client, cancel_channel_enabled=False)
+
+    try:
+        job_id = str(uuid.uuid4())
+        # register_public_job awaits the Redis write directly (no background task
+        # to drain) — see Why comment on RedisJobQueueService.register_public_job.
+        await svc_a.register_public_job(job_id)
+
+        # Worker B must have no in-memory entry (no shared memory between workers)
+        assert not svc_b.is_public_job(job_id), "Worker B must have no in-memory entry"
+
+        # Why: is_public_job_async on Worker B must hit Redis fallback and return True
+        assert await svc_b.is_public_job_async(job_id) is True
+    finally:
+        await _stop_service(svc_a)
+        await _stop_service(svc_b)
+        await fake_client.aclose()
+
+
+async def test_redis_cleanup_removes_public_job_key():
+    """cleanup_job deletes the public_job Redis key so the job_id cannot be reused cross-worker.
+
+    Why: after cleanup the in-memory discard is proven by the base-class test in
+    test_chat_endpoint.py. This test proves the Redis key (cross-worker marker) is
+    also removed. A missing delete would let a cross-worker is_public_job_async
+    return True for a finished/evicted job.
+    """
+    svc, fake_client = await _make_service(cancel_channel_enabled=False)
+
+    try:
+        job_id = str(uuid.uuid4())
+        # register_public_job awaits the Redis write directly (no background task
+        # to drain) — see Why comment on RedisJobQueueService.register_public_job.
+        await svc.register_public_job(job_id)
+
+        # Confirm the key exists in Redis before cleanup
+        pub_key = svc._public_job_key(job_id)
+        assert await fake_client.exists(pub_key), "public_job Redis key must exist after registration"
+
+        # Seed a minimal queue entry so cleanup_job doesn't early-return
+        svc._queues[job_id] = (asyncio.Queue(), None, None, None)  # type: ignore[arg-type]
+        await svc.cleanup_job(job_id)
+
+        # Drain any background tasks spawned by cleanup
+        for task in list(svc._background_tasks):
+            with contextlib.suppress(Exception):
+                await task
+
+        # Why: if cleanup_job's Redis DEL call ever drops public_job_key, this catches it
+        assert not await fake_client.exists(pub_key), "public_job Redis key must be deleted after cleanup"
+        # In-memory also cleared
+        assert svc.is_public_job(job_id) is False
+    finally:
+        await _stop_service(svc)
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_register_public_job_raises_backend_unavailable_when_marker_write_fails() -> None:
+    """register_public_job must surface (not swallow) a failed Redis marker write.
+
+    Swallowing the failure would let build_public_tmp return a job_id that only
+    this worker recognizes — on a multi-worker deployment the public events/cancel
+    endpoints would 404 it on every other worker. With a Redis client configured,
+    the failure must raise JobQueueBackendUnavailableError.
+    """
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    with pytest.raises(JobQueueBackendUnavailableError):
+        await service.register_public_job(str(uuid.uuid4()))
+
+
+@pytest.mark.asyncio
+async def test_register_public_job_is_noop_success_for_in_memory_backend() -> None:
+    """The in-memory base class stays a pure no-op success (no shared marker to persist).
+
+    Single-worker deployments have no Redis client; there is no shared marker, so
+    register_public_job must not raise and must record the job locally.
+    """
+    service = JobQueueService()
+    job_id = str(uuid.uuid4())
+    await service.register_public_job(job_id)  # must not raise
+    assert service.is_public_job(job_id) is True
+
+
+@pytest.mark.asyncio
+async def test_build_public_tmp_returns_503_when_public_marker_persist_fails(monkeypatch) -> None:
+    """build_public_tmp returns 503 (not an un-shareable job_id) when the marker write fails.
+
+    The build task is started before the public marker is persisted. If the shared
+    backend write fails, the handler must cancel the just-started build and surface
+    a clean 503 instead of returning a job_id that other workers cannot resolve.
+    """
+    from fastapi import HTTPException
+    from langflow.api.v1 import chat as chat_module
+
+    service, fake_client = await _make_service(cancel_channel_enabled=False)
+    service._POST_CANCEL_CLEANUP_TIMEOUT_S = 0.5
+    try:
+        flow_id = uuid.uuid4()
+        new_flow_id = uuid.uuid4()
+        job_id = str(uuid.uuid4())
+        service.create_queue(job_id)
+
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+
+        async def _build() -> None:
+            started.set()
+            try:
+                await asyncio.sleep(30)
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+
+        class _Owner:
+            id = uuid.uuid4()
+
+        async def _fake_verify_public_flow_and_get_user(**_kwargs):
+            return _Owner(), new_flow_id
+
+        async def _fake_start_flow_build(**_kwargs):
+            service.start_job(job_id, _build())
+            await asyncio.wait_for(started.wait(), timeout=5)
+            return job_id
+
+        class _FakeFlow:
+            data = None
+
+        class _FakeSession:
+            async def get(self, *_args, **_kwargs):
+                return _FakeFlow()
+
+        @contextlib.asynccontextmanager
+        async def _fake_session_scope():
+            yield _FakeSession()
+
+        class _FakeSettingsService:
+            class auth_settings:  # noqa: N801
+                AUTO_LOGIN = True
+
+        monkeypatch.setattr(chat_module, "verify_public_flow_and_get_user", _fake_verify_public_flow_and_get_user)
+        monkeypatch.setattr(chat_module, "start_flow_build", _fake_start_flow_build)
+        monkeypatch.setattr(chat_module, "session_scope", _fake_session_scope)
+        monkeypatch.setattr(chat_module, "get_settings_service", lambda: _FakeSettingsService())
+
+        # Redis marker write fails: register_public_job raises JobQueueBackendUnavailableError.
+        service._client = _PingFailRedis()
+
+        class _FakeRequest:
+            cookies: dict[str, str] = {"client_id": "test-client"}
+
+        with pytest.raises(HTTPException) as exc_info:
+            await chat_module.build_public_tmp(
+                background_tasks=None,
+                flow_id=flow_id,
+                inputs=None,
+                files=None,
+                stop_component_id=None,
+                start_component_id=None,
+                log_builds=False,
+                flow_name=None,
+                request=_FakeRequest(),
+                queue_service=service,
+                authenticated_user=None,
+                event_delivery=EventDeliveryType.POLLING,
+            )
+        assert exc_info.value.status_code == 503
+        # The just-started build must have been cancelled, not left running unreachable.
+        await asyncio.wait_for(cancelled.wait(), timeout=5)
+    finally:
+        await _stop_service(service)
+        await fake_client.aclose()
+
+
+# ---------------------------------------------------------------------------
+# Startup connectivity probe + runtime backstop (LE-1396)
+# ---------------------------------------------------------------------------
+
+
+class _PingFailRedis:
+    """Minimal async Redis stand-in whose every op raises a redis ConnectionError."""
+
+    @staticmethod
+    def _boom() -> None:
+        from redis.exceptions import ConnectionError as RedisConnectionError
+
+        raise RedisConnectionError
+
+    async def ping(self) -> None:
+        self._boom()
+
+    async def set(self, *_args, **_kwargs) -> None:
+        self._boom()
+
+    async def get(self, *_args, **_kwargs) -> None:
+        self._boom()
+
+    async def delete(self, *_args, **_kwargs) -> None:
+        self._boom()
+
+    async def expire(self, *_args, **_kwargs) -> None:
+        self._boom()
+
+    async def xadd(self, *_args, **_kwargs) -> None:
+        self._boom()
+
+    async def publish(self, *_args, **_kwargs) -> None:
+        self._boom()
+
+    async def aclose(self) -> None:
+        return None
+
+
+@pytest.mark.asyncio
+async def test_is_connected_true_with_reachable_redis() -> None:
+    """is_connected() returns True when the backing Redis responds to ping."""
+    fake_client = fakeredis_aio.FakeRedis()
+    service = RedisJobQueueService()
+    service._client = fake_client
+    try:
+        assert await service.is_connected() is True
+    finally:
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_is_connected_false_when_redis_unreachable() -> None:
+    """is_connected() returns False (after bounded retry) when Redis is down."""
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    # Two quick attempts, no real waiting, so the bounded retry exits fast.
+    assert await service.is_connected(attempts=2, backoff_s=0.0) is False
+
+
+@pytest.mark.asyncio
+async def test_is_connected_probes_temp_client_before_start() -> None:
+    """Before start() creates the worker client, is_connected() probes a temporary client.
+
+    Guards the startup fail-fast in initialize_services(): the probe runs before the
+    per-worker start(), so it must not depend on started service state. A probe that
+    returns False whenever ``_client is None`` would reject every redis boot,
+    healthy or not.
+    """
+    closed = asyncio.Event()
+
+    class _ClosableFakeRedis(fakeredis_aio.FakeRedis):
+        async def aclose(self) -> None:
+            closed.set()
+            await super().aclose()
+
+    class _Service(RedisJobQueueService):
+        def _make_client(self):
+            return _ClosableFakeRedis()
+
+    service = _Service()
+    assert service._client is None
+    assert await service.is_connected(attempts=1, backoff_s=0.0) is True
+    # The temporary probe client is closed and not retained: start() must create
+    # the real client on the worker's own event loop.
+    assert service._client is None
+    assert closed.is_set()
+
+
+@pytest.mark.asyncio
+async def test_is_connected_false_before_start_when_redis_unreachable() -> None:
+    """Pre-start probe returns False when nothing is listening at the configured endpoint."""
+    service = RedisJobQueueService(host="127.0.0.1", port=6390, db=1)  # nothing listening
+    assert service._client is None
+    assert await service.is_connected(attempts=1, backoff_s=0.0) is False
+    assert service._client is None
+
+
+@pytest.mark.asyncio
+async def test_register_job_owner_raises_backend_unavailable_when_redis_down() -> None:
+    """register_job_owner raises a typed error (not a raw redis ConnectionError) when Redis is down."""
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    with pytest.raises(JobQueueBackendUnavailableError):
+        await service.register_job_owner(str(uuid.uuid4()), uuid.uuid4())
+
+
+@pytest.mark.asyncio
+async def test_register_job_owner_failure_leaves_no_local_owner() -> None:
+    """A failed Redis owner write must not leave a local _job_owners entry.
+
+    A stale local entry would let same-worker ownership checks pass while every
+    other worker sees the job as unowned, and the refresh task would never start.
+    """
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    job_id = str(uuid.uuid4())
+    with pytest.raises(JobQueueBackendUnavailableError):
+        await service.register_job_owner(job_id, uuid.uuid4())
+    assert job_id not in service._job_owners
+
+
+@pytest.mark.asyncio
+async def test_connection_target_describes_endpoint() -> None:
+    """connection_target gives an actionable host:port/db (or url) string for error messages."""
+    service = RedisJobQueueService(host="db.example", port=6380, db=2)
+    target = service.connection_target
+    assert "db.example" in target
+    assert "6380" in target
+
+    service_url = RedisJobQueueService(url="redis://cache:6379/3")
+    assert "redis://cache:6379/3" in service_url.connection_target
+
+
+@pytest.mark.asyncio
+async def test_connection_target_redacts_url_credentials() -> None:
+    """Credentials in the queue URL never reach connection_target.
+
+    connection_target is embedded in startup errors and in the 503 detail
+    returned to API clients, so a URL carrying userinfo must not leak it.
+    """
+    service = RedisJobQueueService(url="redis://admin:s3cret@cache:6379/3")  # pragma: allowlist secret
+    target = service.connection_target
+    assert "s3cret" not in target
+    assert "admin" not in target
+    assert "cache:6379" in target
+    assert "s3cret" not in service._backend_unavailable_message()
+
+
+@pytest.mark.asyncio
+async def test_start_creates_client_and_is_connected_false_when_unreachable() -> None:
+    """start() creates a real client; is_connected() then probes it and returns False when down.
+
+    Guards against a regression where the startup probe runs against an un-started
+    service (``_client is None``) and would reject every redis boot, healthy or not.
+    """
+    service = RedisJobQueueService(
+        host="127.0.0.1",
+        port=6390,  # nothing listening
+        db=1,
+        cancel_channel_enabled=False,
+        polling_stale_threshold_s=0,
+    )
+    service.start()
+    try:
+        assert service.is_started() is True
+        assert service._client is not None
+        assert await service.is_connected(attempts=1, backoff_s=0.0) is False
+    finally:
+        await service.stop()
+
+
+@pytest.mark.asyncio
+async def test_get_job_owner_raises_backend_unavailable_when_redis_down() -> None:
+    """get_job_owner raises the typed error (not a raw redis ConnectionError) when Redis is down."""
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    with pytest.raises(JobQueueBackendUnavailableError):
+        await service.get_job_owner(str(uuid.uuid4()))
+
+
+@pytest.mark.asyncio
+async def test_verify_job_ownership_maps_backend_unavailable_to_503() -> None:
+    """The ownership-check chokepoint maps a backend-unavailable error to HTTP 503."""
+    from fastapi import HTTPException
+    from langflow.api.v1.chat import _verify_job_ownership
+
+    class _User:
+        id = uuid.uuid4()
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    with pytest.raises(HTTPException) as exc_info:
+        await _verify_job_ownership(str(uuid.uuid4()), _User(), service)
+    assert exc_info.value.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_register_job_owner_or_cancel_cancels_started_build_and_raises_503() -> None:
+    """When owner registration fails after the build started, the build is cancelled.
+
+    The build endpoint launches the build task before registering the owner. If
+    Redis dies in between, the client never receives the job_id, so the
+    just-started build must be cancelled (not left running unreachable) before
+    the 503 is raised.
+    """
+    from fastapi import HTTPException
+    from langflow.api.v1.chat import _register_job_owner_or_cancel
+
+    service, fake_client = await _make_service(cancel_channel_enabled=False)
+    # Keep cancel_job fast: with Redis down the bridge can never flush the
+    # sentinel, so don't wait out the full post-cancel cleanup window.
+    service._POST_CANCEL_CLEANUP_TIMEOUT_S = 0.5
+    try:
+        job_id = str(uuid.uuid4())
+        service.create_queue(job_id)
+
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+
+        async def _build() -> None:
+            started.set()
+            try:
+                await asyncio.sleep(30)
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+
+        service.start_job(job_id, _build())
+        await asyncio.wait_for(started.wait(), timeout=5)
+
+        # Redis goes down between start_flow_build and owner registration.
+        service._client = _PingFailRedis()
+        with pytest.raises(HTTPException) as exc_info:
+            await _register_job_owner_or_cancel(service, job_id, uuid.uuid4())
+        assert exc_info.value.status_code == 503
+        await asyncio.wait_for(cancelled.wait(), timeout=5)
+    finally:
+        await _stop_service(service)
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(30)
+async def test_initialize_services_fails_fast_when_redis_queue_unreachable(monkeypatch, tmp_path) -> None:
+    """initialize_services() aborts boot with an actionable error when the redis queue backend is down.
+
+    Exercises the real startup path: the probe runs before the per-worker
+    start() creates the service's client, so it must reach (or fail to reach)
+    Redis on its own.
+    """
+    from langflow.services.utils import initialize_services
+    from lfx.services.manager import get_service_manager
+
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.setenv("LANGFLOW_JOB_QUEUE_TYPE", "redis")
+    monkeypatch.setenv("LANGFLOW_REDIS_QUEUE_HOST", "127.0.0.1")
+    monkeypatch.setenv("LANGFLOW_REDIS_QUEUE_PORT", "6390")  # nothing listening
+    # Single fast probe attempt so the test doesn't wait out the retry window.
+    monkeypatch.setattr(RedisJobQueueService, "_STARTUP_PROBE_ATTEMPTS", 1)
+    monkeypatch.setattr(RedisJobQueueService, "_STARTUP_PROBE_BACKOFF_S", 0.0)
+
+    manager = get_service_manager()
+    manager.factories.clear()
+    manager.services.clear()
+    try:
+        with pytest.raises(ConnectionError, match="not reachable"):
+            await initialize_services()
+    finally:
+        manager.factories.clear()
+        manager.services.clear()
 
 
 # ---------------------------------------------------------------------------
