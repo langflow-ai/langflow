@@ -1060,7 +1060,7 @@ class TestUpdateToolsStdioHeaders:
         mock_stdio._connected = True
 
         server_config = {
-            "command": "some-tool",
+            "command": "uvx",
             "args": ["--verbose", "--debug"],
             "headers": {"Authorization": "Bearer tok"},
         }
@@ -1068,7 +1068,7 @@ class TestUpdateToolsStdioHeaders:
         await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
 
         full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "some-tool --verbose --debug --headers authorization 'Bearer tok'"
+        assert full_command == "uvx --verbose --debug --headers authorization 'Bearer tok'"
 
     @pytest.mark.asyncio
     async def test_stdio_headers_appended_when_last_token_is_flag_value(self):
@@ -1078,7 +1078,7 @@ class TestUpdateToolsStdioHeaders:
         mock_stdio._connected = True
 
         server_config = {
-            "command": "some-tool",
+            "command": "uvx",
             "args": ["--port", "8080"],
             "headers": {"Authorization": "Bearer tok"},
         }
@@ -1087,7 +1087,7 @@ class TestUpdateToolsStdioHeaders:
 
         full_command = mock_stdio.connect_to_server.call_args[0][0]
         # 8080 is a value for --port, not a positional arg, so headers go at the end
-        assert full_command == "some-tool --port 8080 --headers authorization 'Bearer tok'"
+        assert full_command == "uvx --port 8080 --headers authorization 'Bearer tok'"
 
     @pytest.mark.asyncio
     async def test_stdio_headers_inserted_before_positional_with_flag_value_pairs(self):
@@ -1194,7 +1194,7 @@ class TestUpdateToolsPerToolResilience:
         ):
             mode, tool_list, tool_cache = await update_tools(
                 server_name="linear-like",
-                server_config={"command": "fake-cmd", "args": []},
+                server_config={"command": "uvx", "args": []},
                 mcp_stdio_client=mock_stdio,
             )
 
@@ -1244,7 +1244,7 @@ class TestUpdateToolsPerToolResilience:
         with patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=selective_converter):
             _, tool_list, tool_cache = await update_tools(
                 server_name="stress",
-                server_config={"command": "fake-cmd", "args": []},
+                server_config={"command": "uvx", "args": []},
                 mcp_stdio_client=mock_stdio,
             )
 
@@ -3769,7 +3769,7 @@ class TestMCPStructuredToolToolCallId:
         mock_client.run_tool = AsyncMock(return_value=raw_result)
         mock_client._connected = True
 
-        server_config = {"command": "fake-server"}
+        server_config = {"command": "uvx"}
         _, tools, _ = await update_tools("test-server", server_config, mcp_stdio_client=mock_client)
         assert tools, "update_tools() must return at least one tool"
         return tools[0]

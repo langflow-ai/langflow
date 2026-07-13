@@ -20,6 +20,7 @@ from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.file_path_security import enforce_local_file_access
 from lfx.utils.helpers import build_content_type_from_extension
 
 if TYPE_CHECKING:
@@ -729,6 +730,10 @@ class BaseFileComponent(Component, ABC):
                         resolved_path = Path(self.resolve_path(path_str))
                 else:
                     resolved_path = Path(self.resolve_path(path_str))
+
+                # Security: in restricted (multi-tenant) mode, confine reads to the storage dir
+                # so a tenant cannot read arbitrary server files via an absolute/traversal path.
+                resolved_path = enforce_local_file_access(resolved_path)
 
                 if not resolved_path.exists():
                     if delete_after_processing:

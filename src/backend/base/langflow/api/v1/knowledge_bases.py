@@ -226,6 +226,13 @@ def _resolve_kb_path(kb_name: str, owner_user) -> Path:
     kb_user_path = (kb_root_path / kb_user).resolve()
     kb_path = (kb_user_path / kb_name).resolve()
 
+    # The username roots the KB directory, so a username containing path separators
+    # or ".." (e.g. "../../etc") could make kb_user_path resolve outside kb_root_path
+    # while kb_path stays "contained" within that escaped base — bypassing the kb_name
+    # check below and enabling arbitrary-directory access/deletion. Check containment
+    # against the real root first, then the user dir for kb_name, matching the list
+    # endpoint's guard.
+    _validate_kb_path_containment(kb_root_path.resolve(), kb_user_path, kb_name, kb_user)
     _validate_kb_path_containment(kb_user_path, kb_path, kb_name, kb_user)
 
     if not kb_path.exists() or not kb_path.is_dir():
@@ -705,6 +712,9 @@ async def create_knowledge_base(
         # rejected before any directory is created.
         kb_user_path = (kb_root_path / kb_user).resolve()
         kb_path = (kb_user_path / kb_name).resolve()
+        # The username also roots the path, so it must be contained within the KB root
+        # too (a username with ".." would otherwise escape it before mkdir).
+        _validate_kb_path_containment(kb_root_path.resolve(), kb_user_path, kb_name, kb_user)
         _validate_kb_path_containment(kb_user_path, kb_path, kb_name, kb_user)
 
         # Check both durable DB state and legacy disk state. During
