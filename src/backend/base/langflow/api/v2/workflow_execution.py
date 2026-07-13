@@ -249,6 +249,10 @@ async def _stream_event_frames(
                     source_flow_id=source_flow_id,
                     run_id=run_id,
                     track_job_status=track_job_status,
+                    # The sync path applies tweaks before Graph construction; this loop
+                    # builds from the DB (or request data), so without this the streaming
+                    # and background paths silently drop request tweaks.
+                    tweaks=parsed.tweaks,
                 ),
                 timeout=execution_timeout,
             )
