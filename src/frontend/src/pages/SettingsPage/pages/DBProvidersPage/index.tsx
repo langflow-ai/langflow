@@ -2,30 +2,23 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
-  ACTIVE_DB_PROVIDER_VARIABLE,
   type AvailableDBProviderId,
   DB_PROVIDER_OPTIONS,
   type DBProviderConfigField,
   type DBProviderId,
-  type DBProviderOption,
   type DBProviderTextField,
   getActiveDBProvider,
   getGlobalVariableValue,
   parseBooleanGlobalVariable,
   toAPIBackendType,
 } from "@/constants/dbProviderConstants";
-import { VARIABLE_CATEGORY } from "@/constants/providerConstants";
 import { useTestDBProviderConnection } from "@/controllers/API/queries/knowledge-bases/use-test-kb-connection";
-import {
-  useGetGlobalVariables,
-  usePatchGlobalVariables,
-  usePostGlobalVariables,
-} from "@/controllers/API/queries/variables";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
 import { ProviderConfigurationPanel } from "./components/ProviderConfigurationPanel";
 import { ProviderListItem } from "./components/ProviderListItem";
 import { buildBackendConfigPayload } from "./helpers/build-backend-config-payload";
+import { useDBProviderVariables } from "./hooks/useDBProviderVariables";
 
 type ApiError = {
   response?: {
@@ -41,7 +34,12 @@ const getErrorDetail = (error: unknown) =>
 
 export default function DBProvidersPage() {
   const { t } = useTranslation();
-  const { data: globalVariables = [] } = useGetGlobalVariables();
+  const {
+    globalVariables,
+    isPending,
+    setVariable,
+    activateProvider,
+  } = useDBProviderVariables();
   const [selectedProviderId, setSelectedProviderId] = useState<DBProviderId>(
     getActiveDBProvider(globalVariables),
   );
@@ -54,10 +52,6 @@ export default function DBProvidersPage() {
     {},
   );
 
-  const { mutateAsync: createGlobalVariable, isPending: isCreating } =
-    usePostGlobalVariables();
-  const { mutateAsync: updateGlobalVariable, isPending: isUpdating } =
-    usePatchGlobalVariables();
   const { mutateAsync: testProviderConnection, isPending: isTesting } =
     useTestDBProviderConnection();
 
@@ -79,54 +73,6 @@ export default function DBProvidersPage() {
     DB_PROVIDER_OPTIONS.find(
       (provider) => provider.id === selectedProviderId,
     ) ?? DB_PROVIDER_OPTIONS[0];
-
-  const isPending = isCreating || isUpdating;
-
-  const findVariable = (name: string) =>
-    globalVariables.find((variable) => variable.name === name);
-
-  const setVariable = async ({
-    name,
-    value,
-    isSecret,
-  }: {
-    name: string;
-    value: string;
-    isSecret: boolean;
-  }) => {
-    const existingVariable = findVariable(name);
-    if (existingVariable) {
-      await updateGlobalVariable({ id: existingVariable.id, value });
-      return;
-    }
-
-    await createGlobalVariable({
-      name,
-      value,
-      type: isSecret ? "Credential" : "Generic",
-      category: VARIABLE_CATEGORY.GLOBAL,
-      default_fields: [],
-    });
-  };
-
-  const activateProvider = async (provider: DBProviderOption) => {
-    const activeProviderVariable = findVariable(ACTIVE_DB_PROVIDER_VARIABLE);
-    if (activeProviderVariable) {
-      await updateGlobalVariable({
-        id: activeProviderVariable.id,
-        value: provider.id,
-      });
-      return;
-    }
-
-    await createGlobalVariable({
-      name: ACTIVE_DB_PROVIDER_VARIABLE,
-      value: provider.id,
-      type: "Generic",
-      category: VARIABLE_CATEGORY.SETTINGS,
-      default_fields: [],
-    });
-  };
 
   const getFieldValue = (field: DBProviderConfigField): string => {
     if (field.variableKey in variableValues) {
