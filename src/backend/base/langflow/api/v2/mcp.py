@@ -292,6 +292,7 @@ async def get_servers(
                 mcp_stdio_client=mcp_stdio_client,
                 mcp_streamable_http_client=mcp_streamable_http_client,
                 request_variables=request_variables,
+                current_user_id=current_user.id,
             )
             server_info["mode"] = mode.lower()
             server_info["toolsCount"] = len(tool_list)
