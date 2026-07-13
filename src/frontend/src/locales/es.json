@@ -2136,5 +2136,8 @@
   "paginator.pageLabel": "Page",
   "flow.flowSettings": "Flow settings",
   "files.actionsMenu": "Acciones de archivo para {{name}}",
-  "mcp.servers.actionsMenu": "Acciones para {{name}}"
+  "mcp.servers.actionsMenu": "Acciones para {{name}}",
+  "assistant.modelNotice.fallback": "El modelo {{failed}} falló ({{reason}}); se usó {{used}} en su lugar.",
+  "assistant.modelNotice.remediation": "El modelo {{failed}} necesitó un ajuste para ejecutarse ({{reason}}).",
+  "assistant.modelNotice.ariaLabel": "Aviso del modelo"
 }
