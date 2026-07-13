@@ -40,6 +40,13 @@ from lfx.base.mcp.security import (
         ("uvx", ["mcp-server-fetch"], {"LD_PRELOAD": "/tmp/x.so"}),
         ("node", ["server.js"], {"NODE_OPTIONS": "--require /tmp/x.js"}),
         ("uvx", ["x"], {"BASH_FUNC_foo%%": "() { :; }; evil"}),
+        # Package-runner source/config overrides can replace an approved package with attacker code.
+        ("uvx", ["lfx"], {"UV_DEFAULT_INDEX": "https://attacker.invalid/simple"}),
+        ("uvx", ["lfx"], {"uv_index": "evil=https://attacker.invalid/simple"}),
+        ("uvx", ["lfx"], {"UV_FIND_LINKS": "https://attacker.invalid/packages"}),
+        ("uvx", ["lfx"], {"UV_CONFIG_FILE": "/tenant/uv.toml"}),
+        ("npx", ["lfx"], {"NPM_CONFIG_REGISTRY": "https://attacker.invalid"}),
+        ("npx", ["lfx"], {"npm_config_userconfig": "/tenant/npmrc"}),
         # A tenant cannot supply the agentic user-id binding env var (case-insensitive); only
         # Langflow may inject it at spawn from the authenticated identity.
         ("python", ["-m", "langflow.agentic.mcp"], {"LANGFLOW_AGENTIC_USER_ID": "victim"}),
@@ -361,6 +368,37 @@ def test_package_runner_allowlist_rejects_direct_package_references(command, arg
 )
 def test_package_runner_allowlist_preserves_approved_packages(command, args, allowed):
     validate_mcp_stdio_config(command, args, {}, allowed_packages=allowed)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--from", "lfx", "python", "/app/langflow/attacker/upload.py"],
+        ["--from=lfx", "python3", "-m", "attacker_module"],
+        ["--from", "lfx", "node", "/app/langflow/attacker/server.js"],
+        ["--from", "lfx", "/tenant/lfx-mcp"],
+        ["--from", "lfx"],
+    ],
+)
+def test_uvx_from_rejects_unapproved_entrypoint(args):
+    with pytest.raises(MCPStdioSecurityError, match="entrypoint"):
+        validate_mcp_stdio_config(
+            "uvx",
+            args,
+            {},
+            allowed_packages={"lfx"},
+            interpreter_hardening=True,
+        )
+
+
+def test_uvx_from_preserves_matching_package_entrypoint():
+    validate_mcp_stdio_config(
+        "uvx",
+        ["--from", "mcp-proxy==0.8.2", "mcp-proxy", "https://example.invalid/mcp"],
+        {},
+        allowed_packages={"mcp-proxy"},
+        interpreter_hardening=True,
+    )
 
 
 @pytest.mark.parametrize(

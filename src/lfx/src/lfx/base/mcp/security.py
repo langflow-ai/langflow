@@ -83,6 +83,15 @@ COMMAND_SAFE_FLAGS: dict[str, frozenset[str]] = {
     "uvx": frozenset({"-y", "--yes"}),
 }
 
+# ``uvx --from PACKAGE COMMAND`` decouples the approved package from the executable that
+# uvx launches. Without an entrypoint policy, an approved package can therefore be used only
+# to construct an environment before launching a system interpreter (for example,
+# ``uvx --from lfx python tenant_script.py``). Package-name entrypoints are the safe default;
+# packages whose executable intentionally differs must be listed explicitly.
+UVX_SAFE_FROM_ENTRYPOINTS: dict[str, frozenset[str]] = {
+    "lfx": frozenset({"lfx-mcp"}),
+}
+
 # SECURITY: Environment variables that enable code injection via approved commands.
 # All comparisons are case-insensitive.
 DANGEROUS_ENV_VARS = frozenset(
@@ -135,6 +144,11 @@ DANGEROUS_ENV_VARS = frozenset(
         "langflow_agentic_user_id",
     }
 )
+
+# Prefixes whose values can alter command execution or the package source selected by an
+# approved package runner. In particular, UV_* and NPM_CONFIG_* can redirect uvx/npx to an
+# attacker-controlled registry while retaining an allowlisted package name.
+DANGEROUS_ENV_VAR_PREFIXES = ("bash_func_", "npm_config_", "uv_")
 
 # SECURITY: docker-flag policy for MCP stdio servers. ``docker`` is allowlisted but several flags
 # turn a container run into host access. Two modes, selected by LANGFLOW_MCP_SERVER_DOCKER_HARDENING
@@ -301,8 +315,8 @@ def _normalize_package_name(package_spec: str) -> str:
     return package.strip()
 
 
-def _package_runner_target(base_command: str, args: list[str]) -> str | None:
-    """Extract the package downloaded by a strict ``npx`` or ``uvx`` invocation."""
+def _package_runner_target(base_command: str, args: list[str]) -> tuple[str | None, str | None]:
+    """Extract the package and explicit ``uvx --from`` entrypoint, when present."""
     index = 0
     while index < len(args):
         arg = args[index]
@@ -311,21 +325,42 @@ def _package_runner_target(base_command: str, args: list[str]) -> str | None:
             continue
         if base_command == "uvx" and arg == "--from":
             if index + 1 >= len(args):
-                return None
-            if index + 2 < len(args) and args[index + 2].startswith("-"):
-                msg = f"Package runner option '{args[index + 2]}' is not allowed after --from"
+                return None, None
+            if index + 2 >= len(args):
+                msg = "Package runner option '--from' requires an approved entrypoint"
                 raise MCPStdioSecurityError(msg)
-            return args[index + 1]
+            entrypoint = args[index + 2]
+            if entrypoint.startswith("-"):
+                msg = f"Package runner option '{entrypoint}' is not allowed after --from"
+                raise MCPStdioSecurityError(msg)
+            return args[index + 1], entrypoint
         if base_command == "uvx" and arg.startswith("--from="):
-            if index + 1 < len(args) and args[index + 1].startswith("-"):
-                msg = f"Package runner option '{args[index + 1]}' is not allowed after --from"
+            if index + 1 >= len(args):
+                msg = "Package runner option '--from' requires an approved entrypoint"
                 raise MCPStdioSecurityError(msg)
-            return arg.split("=", 1)[1]
+            entrypoint = args[index + 1]
+            if entrypoint.startswith("-"):
+                msg = f"Package runner option '{entrypoint}' is not allowed after --from"
+                raise MCPStdioSecurityError(msg)
+            return arg.split("=", 1)[1], entrypoint
         if arg.startswith("-"):
             msg = f"Package runner option '{arg}' is not allowed before the package name"
             raise MCPStdioSecurityError(msg)
-        return arg
-    return None
+        return arg, None
+    return None, None
+
+
+def _validate_uvx_from_entrypoint(package: str, entrypoint: str | None) -> None:
+    """Ensure ``uvx --from`` cannot launch an unrelated executable from the environment."""
+    if entrypoint is None:
+        return
+    allowed_entrypoints = UVX_SAFE_FROM_ENTRYPOINTS.get(package, frozenset({package}))
+    if entrypoint not in allowed_entrypoints:
+        msg = (
+            f"Entrypoint '{entrypoint}' is not allowed for MCP uvx package '{package}'. "
+            f"Allowed entrypoints: {', '.join(sorted(allowed_entrypoints))}"
+        )
+        raise MCPStdioSecurityError(msg)
 
 
 def _validate_registry_package_spec(package_spec: str) -> None:
@@ -352,7 +387,7 @@ def _validate_package_runner(
 
     configured = allowed_packages.split(",") if isinstance(allowed_packages, str) else allowed_packages
     allowed = {_normalize_package_name(package) for package in configured if str(package).strip()}
-    target = _package_runner_target(base_command, args)
+    target, uvx_from_entrypoint = _package_runner_target(base_command, args)
     if target:
         _validate_registry_package_spec(target)
     normalized_target = _normalize_package_name(target or "")
@@ -362,6 +397,8 @@ def _validate_package_runner(
             "Configure LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES with server-approved package names."
         )
         raise MCPStdioSecurityError(msg)
+    if base_command == "uvx":
+        _validate_uvx_from_entrypoint(normalized_target, uvx_from_entrypoint)
 
 
 def _validate_interpreter_invocation(base_command: str, args: list[str], *, hardened: bool) -> None:
@@ -648,7 +685,7 @@ def validate_mcp_stdio_config(
     if env:
         for key in env:
             lower_key = key.lower()
-            if lower_key in DANGEROUS_ENV_VARS or lower_key.startswith("bash_func_"):
+            if lower_key in DANGEROUS_ENV_VARS or lower_key.startswith(DANGEROUS_ENV_VAR_PREFIXES):
                 msg = f"Environment variable '{key}' is not allowed for security reasons"
                 raise MCPStdioSecurityError(msg)
 
