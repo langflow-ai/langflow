@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS
@@ -14,7 +14,11 @@ from lfx.base.models.unified_models import (
     get_provider_all_variables,
     get_unified_models_detailed,
 )
-from lfx.base.models.unified_models.credentials import model_status_contains, model_status_key
+from lfx.base.models.unified_models.credentials import (
+    model_status_contains,
+    model_status_key,
+    parse_model_status_key,
+)
 from loguru import logger
 from pydantic import BaseModel, field_validator
 
@@ -61,6 +65,7 @@ class ModelStatusUpdate(BaseModel):
     provider: str
     model_id: str
     enabled: bool
+    model_type: Literal["llm", "embeddings"] | None = None
 
     @field_validator("model_id", "provider")
     @classmethod
@@ -464,10 +469,10 @@ def normalize_model_status_entries(
 def _build_model_default_flags(
     all_models_by_provider: list[dict] | None = None,
 ) -> dict[str, bool]:
-    """Build a map of provider-qualified model identities to default status.
+    """Build a map of typed and legacy model identities to default status.
 
     Returns:
-        Dictionary mapping provider-qualified model identities to default status
+        Dictionary mapping model-status identities to default status
     """
     if all_models_by_provider is None:
         all_models_by_provider = get_unified_models_detailed(
@@ -484,10 +489,68 @@ def _build_model_default_flags(
             model_name = model.get("model_name")
             if not isinstance(model_name, str):
                 continue
-            is_default = model.get("metadata", {}).get("default", False)
-            is_default_model[model_status_key(provider, model_name)] = is_default
+            metadata = model.get("metadata", {})
+            is_default = metadata.get("default", False)
+            model_type = metadata.get("model_type", "llm")
+            legacy_key = model_status_key(provider, model_name)
+            # Legacy name-level state spans every row with this identity, so
+            # keep its default behavior stable and order-independent.
+            is_default_model[legacy_key] = is_default_model.get(legacy_key, False) or is_default
+            if model_type in {"llm", "embeddings"}:
+                is_default_model[model_status_key(provider, model_name, model_type)] = is_default
 
     return is_default_model
+
+
+def _build_model_types_by_identity(
+    all_models_by_provider: list[dict] | None = None,
+) -> dict[str, set[str]]:
+    """Build a map of provider-qualified model identities to catalog model types."""
+    if all_models_by_provider is None:
+        all_models_by_provider = get_unified_models_detailed(
+            include_unsupported=True,
+            include_deprecated=True,
+        )
+
+    model_types_by_identity: dict[str, set[str]] = {}
+    for provider_dict in all_models_by_provider:
+        provider = provider_dict.get("provider")
+        if not isinstance(provider, str):
+            continue
+        for model in provider_dict.get("models", []):
+            model_name = model.get("model_name")
+            if not isinstance(model_name, str):
+                continue
+            model_type = model.get("metadata", {}).get("model_type", "llm")
+            if model_type not in {"llm", "embeddings"}:
+                continue
+            identity = model_status_key(provider, model_name)
+            model_types_by_identity.setdefault(identity, set()).add(model_type)
+
+    return model_types_by_identity
+
+
+def _discard_typed_status_variants(entries: set[str], provider: str, model_name: str) -> None:
+    """Remove typed statuses for one provider/name while leaving legacy identities intact."""
+    for entry in tuple(entries):
+        entry_provider, entry_model_name, entry_model_type = parse_model_status_key(entry)
+        if entry_provider == provider and entry_model_name == model_name and entry_model_type is not None:
+            entries.discard(entry)
+
+
+def _expand_matching_legacy_status(
+    entries: set[str],
+    provider: str,
+    model_name: str,
+    model_types: set[str],
+) -> None:
+    """Replace one legacy provider/name status with its typed equivalents."""
+    legacy_key = model_status_key(provider, model_name)
+    if legacy_key not in entries:
+        return
+
+    entries.discard(legacy_key)
+    entries.update(model_status_key(provider, model_name, model_type) for model_type in model_types)
 
 
 def _update_model_sets(
@@ -495,6 +558,7 @@ def _update_model_sets(
     disabled_models: set[str],
     explicitly_enabled_models: set[str],
     is_default_model: dict[str, bool],
+    model_types_by_identity: dict[str, set[str]] | None = None,
 ) -> None:
     """Update disabled and enabled model sets based on user requests.
 
@@ -503,16 +567,48 @@ def _update_model_sets(
         disabled_models: Set of disabled model IDs (modified in place)
         explicitly_enabled_models: Set of explicitly enabled model IDs (modified in place)
         is_default_model: Map of provider-qualified model identities to default status
+        model_types_by_identity: Catalog model types keyed by provider-qualified identity
     """
+    model_types_by_identity = model_types_by_identity or {}
+
     for update in updates:
-        status_key = model_status_key(update.provider, update.model_id)
-        model_is_default = is_default_model.get(status_key, False)
+        legacy_key = model_status_key(update.provider, update.model_id)
+
+        if update.model_type is not None:
+            # A legacy provider/name status applies to every catalog row with
+            # that identity. Expand it before applying a typed change so the
+            # legacy fallback cannot override the requested type while the
+            # other known type retains its previous state. Unknown custom
+            # deployments predate typed statuses as language models.
+            legacy_types = model_types_by_identity.get(legacy_key) or {"llm"}
+            _expand_matching_legacy_status(
+                disabled_models,
+                update.provider,
+                update.model_id,
+                legacy_types,
+            )
+            _expand_matching_legacy_status(
+                explicitly_enabled_models,
+                update.provider,
+                update.model_id,
+                legacy_types,
+            )
+            status_key = model_status_key(update.provider, update.model_id, update.model_type)
+        else:
+            # Old clients still write name-level state. Remove typed variants
+            # first so no stale per-type entry survives the legacy update.
+            _discard_typed_status_variants(disabled_models, update.provider, update.model_id)
+            _discard_typed_status_variants(explicitly_enabled_models, update.provider, update.model_id)
+            status_key = legacy_key
+
+        model_is_default = is_default_model.get(status_key, is_default_model.get(legacy_key, False))
 
         if update.enabled:
             # User wants to enable the model
             disabled_models.discard(status_key)
-            # If it's not a default model, add to explicitly enabled list
-            if not model_is_default:
+            # Foundry catalog defaults are suggestions rather than callable
+            # deployment ids, so they must remain explicitly enabled.
+            if update.provider in EXPLICIT_ENABLE_ONLY_PROVIDERS or not model_is_default:
                 explicitly_enabled_models.add(status_key)
             else:
                 explicitly_enabled_models.discard(status_key)
@@ -615,6 +711,7 @@ async def get_enabled_models(
     inject_custom_enabled_models(all_models_by_provider, explicitly_enabled_models)
 
     enabled_models: dict[str, dict[str, bool]] = {}
+    enabled_models_by_type: dict[str, dict[str, dict[str, bool]]] = {}
 
     for provider_dict in all_models_by_provider:
         provider = provider_dict.get("provider")
@@ -623,6 +720,7 @@ async def get_enabled_models(
         # Initialize provider dict if not exists
         if provider not in enabled_models:
             enabled_models[provider] = {}
+            enabled_models_by_type[provider] = {}
 
         for model in models:
             model_name = model.get("model_name")
@@ -632,24 +730,42 @@ async def get_enabled_models(
             is_deprecated = metadata.get("deprecated", False)
             is_not_supported = metadata.get("not_supported", False)
             is_default = metadata.get("default", False)
+            model_type = metadata.get("model_type", "llm")
+            if model_type not in {"llm", "embeddings"}:
+                model_type = "llm"
 
             # Explicit-enable-only providers (Azure AI Foundry): seed defaults
             # are suggestions for the Settings list, not auto-enabled models —
             # the callable id must match a portal deployment the user enabled.
             requires_explicit = provider in EXPLICIT_ENABLE_ONLY_PROVIDERS
-            explicitly_on = model_status_contains(explicitly_enabled_models, provider, model_name)
+            explicitly_on = model_status_contains(
+                explicitly_enabled_models,
+                provider,
+                model_name,
+                model_type=model_type,
+            )
+            explicitly_off = model_status_contains(
+                disabled_models,
+                provider,
+                model_name,
+                model_type=model_type,
+            )
             is_enabled = (
                 provider_status.get(provider, False)
                 and not is_deprecated
                 and not is_not_supported
                 and (explicitly_on if requires_explicit else (is_default or explicitly_on))
-                and not model_status_contains(disabled_models, provider, model_name)
+                and not explicitly_off
             )
-            # Store model status per provider (true/false)
-            enabled_models[provider][model_name] = is_enabled
+            # Preserve exact per-type state while retaining the historical flat
+            # response as an OR across rows sharing a provider/name.
+            models_for_type = enabled_models_by_type[provider].setdefault(model_type, {})
+            models_for_type[model_name] = models_for_type.get(model_name, False) or is_enabled
+            enabled_models[provider][model_name] = enabled_models[provider].get(model_name, False) or is_enabled
 
     result = {
         "enabled_models": enabled_models,
+        "enabled_models_by_type": enabled_models_by_type,
     }
 
     if model_names:
@@ -659,8 +775,20 @@ async def get_enabled_models(
             filtered_models = {m: v for m, v in models_dict.items() if m in model_names}
             if filtered_models:
                 filtered_enabled[provider] = filtered_models
+
+        filtered_enabled_by_type: dict[str, dict[str, dict[str, bool]]] = {}
+        for provider, models_by_type in enabled_models_by_type.items():
+            filtered_models_by_type: dict[str, dict[str, bool]] = {}
+            for model_type, models_dict in models_by_type.items():
+                filtered_models = {m: v for m, v in models_dict.items() if m in model_names}
+                if filtered_models:
+                    filtered_models_by_type[model_type] = filtered_models
+            if filtered_models_by_type:
+                filtered_enabled_by_type[provider] = filtered_models_by_type
+
         return {
             "enabled_models": filtered_enabled,
+            "enabled_models_by_type": filtered_enabled_by_type,
         }
 
     return result
@@ -709,6 +837,7 @@ async def update_enabled_models(
         include_deprecated=True,
     )
     is_default_model = _build_model_default_flags(all_models_by_provider)
+    model_types_by_identity = _build_model_types_by_identity(all_models_by_provider)
     providers_by_name = build_model_providers_by_name(all_models_by_provider)
     # Live/custom models may not be in the static catalog. The provider in this
     # request still gives a known identity for migrating a matching bare entry.
@@ -743,7 +872,13 @@ async def update_enabled_models(
                     detail=f"Validation failed for {update.provider}: {e}",
                 ) from e
 
-    _update_model_sets(updates, disabled_models, explicitly_enabled_models, is_default_model)
+    _update_model_sets(
+        updates,
+        disabled_models,
+        explicitly_enabled_models,
+        is_default_model,
+        model_types_by_identity=model_types_by_identity,
+    )
 
     # Log the operation for audit trail
     logger.info(

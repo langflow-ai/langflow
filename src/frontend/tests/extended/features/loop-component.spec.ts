@@ -53,12 +53,12 @@ test(
     // Add Update Data component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("data operations");
-    await page.waitForSelector('[data-testid="processingOperations"]', {
+    await page.waitForSelector('[data-testid="processingData Operations"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingOperations")
+      .getByTestId("processingData Operations")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 100 },
       });
@@ -178,7 +178,7 @@ test(
       .getByTestId("inputlist_str_urls_1")
       .fill("https://en.wikipedia.org/wiki/Human_intelligence");
 
-    await page.getByTestId("title-Operations").click();
+    await page.getByTestId("title-Data Operations").click();
 
     await page.waitForTimeout(1000);
 

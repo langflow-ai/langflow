@@ -1452,6 +1452,8 @@
   "modelProviders.searchOrAddDeployment": "Pesquisar ou adicionar um nome de implantação…",
   "modelProviders.customDeploymentHint": "Use os nomes de implantação do Azure AI Foundry no portal (não os IDs do catálogo). Pesquise ou digite um nome para adicionar.",
   "modelProviders.addDeployment": "Adicionar implantação \"{{name}}\"",
+  "modelProviders.addLanguageDeployment": "Adicionar a implantação \"{{name}}\" como modelo de linguagem",
+  "modelProviders.addEmbeddingDeployment": "Adicionar a implantação \"{{name}}\" como modelo de embeddings",
   "modelProviders.noProvidersMatch": "Não foram encontrados prestadores que correspondam à sua pesquisa.",
   "modelProviders.ollamaNoModelsAll": "Parece que você não tem nenhum modelo instalado para o Ollama. Por favor, selecione os modelos que deseja usar.",
   "modelProviders.ollamaNoModelsEmbeddings": "Parece que você não tem nenhum modelo de incorporação instalado para o Ollama. Por favor, selecione os modelos que deseja usar.",
