@@ -159,11 +159,7 @@ async def _build_serve_registry(
         if upgrade_flow:
             # --upgrade-flow with a path supports exactly one .json flow file: directories,
             # multiple files, and .py scripts can't be safely upgraded in place here.
-            if (
-                len(resolved) != 1
-                or resolved[0].is_dir()
-                or resolved[0].suffix.lower() != ".json"
-            ):
+            if len(resolved) != 1 or resolved[0].is_dir() or resolved[0].suffix.lower() != ".json":
                 typer.echo(
                     "Error: --upgrade-flow with a path supports exactly one .json flow file "
                     "(not directories, multiple files, or .py scripts).",
@@ -179,9 +175,7 @@ async def _build_serve_registry(
                 )
                 raise typer.Exit(1) from e
             gated = _gate_flow_for_serve(payload, upgrade_flow, verbose=verbose)
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".json", delete=False
-            ) as tmp:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
                 json.dump(gated, tmp, indent=2)
                 temp_file_to_cleanup = tmp.name
             try:
@@ -250,9 +244,7 @@ def serve_command(
             "Optional when using --flow-json or --stdin."
         ),
     ),
-    host: str = typer.Option(
-        "127.0.0.1", "--host", "-h", help="Host to bind the server to"
-    ),
+    host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host to bind the server to"),
     port: int = typer.Option(8000, "--port", "-p", help="Port to bind the server to"),
     workers: int = typer.Option(
         1,
@@ -261,9 +253,7 @@ def serve_command(
         help="Number of worker processes (gunicorn on Unix, uvicorn on Windows). "
         "Use with --flow-dir for multi-worker flow sharing.",
     ),
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Show diagnostic output and execution details"
-    ),  # noqa: FBT001, FBT003
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show diagnostic output and execution details"),
     env_file: Path | None = typer.Option(
         None,
         "--env-file",
@@ -356,9 +346,7 @@ def serve_command(
 
     if env_file:
         if not env_file.exists():
-            typer.echo(
-                f"Error: Environment file '{env_file}' does not exist.", err=True
-            )
+            typer.echo(f"Error: Environment file '{env_file}' does not exist.", err=True)
             raise typer.Exit(1)
         verbose_print(f"Loading environment variables from: {env_file}")
         load_dotenv(env_file)
@@ -368,9 +356,7 @@ def serve_command(
         verbose_print("LANGFLOW_API_KEY is configured")
     except ValueError as e:
         typer.echo(str(e), err=True)
-        typer.echo(
-            "Set the LANGFLOW_API_KEY environment variable before serving.", err=True
-        )
+        typer.echo("Set the LANGFLOW_API_KEY environment variable before serving.", err=True)
         raise typer.Exit(1) from e
 
     valid_log_levels = {"debug", "info", "warning", "error", "critical"}
@@ -508,11 +494,7 @@ def serve_command(
 
         protocol = "http"
         access_host = get_best_access_host(host)
-        masked_key = (
-            f"{api_key[:API_KEY_MASK_LENGTH]}..."
-            if len(api_key) > API_KEY_MASK_LENGTH
-            else "***"
-        )
+        masked_key = f"{api_key[:API_KEY_MASK_LENGTH]}..." if len(api_key) > API_KEY_MASK_LENGTH else "***"
         server_line = f"{protocol}://{access_host}:{port}"
         if access_host != host:
             server_line += f"  [dim](bound to {host}:{port})[/dim]"
@@ -573,12 +555,8 @@ def serve_command(
                 # multi-worker routing concern and has no effect with one worker.
                 os.environ[_SERVE_RESET_ENVIRON_ENV] = "1" if reset_environ else "0"
                 try:
-                    serve_app = create_multi_serve_app(
-                        registry=registry, identity_config=identity_config
-                    )
-                    uvicorn.run(
-                        serve_app, host=host, port=port, workers=1, log_level=log_level
-                    )
+                    serve_app = create_multi_serve_app(registry=registry, identity_config=identity_config)
+                    uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)
                 finally:
                     # Symmetry with _launch_workers: don't leave our key in the parent env.
                     os.environ.pop(_SERVE_RESET_ENVIRON_ENV, None)
@@ -773,9 +751,7 @@ def _launch_workers(
 
             # Unset (None) -> DEFAULT_MAX_REQUESTS so warm workers recycle periodically and
             # shed accumulated memory. Explicit 0 disables recycling; explicit N overrides.
-            effective_max_requests = (
-                max_requests if max_requests is not None else DEFAULT_MAX_REQUESTS
-            )
+            effective_max_requests = max_requests if max_requests is not None else DEFAULT_MAX_REQUESTS
             # Unset (None) -> DEFAULT_TIMEOUT; explicit --timeout N overrides.
             effective_timeout = timeout if timeout is not None else DEFAULT_TIMEOUT
 
@@ -856,9 +832,7 @@ async def _populate_registry(
     errors: list[str] = []
     for path in paths:
         try:
-            graph, meta, raw_json = await _load_graph_and_meta(
-                path, root_dir, check_variables=check_variables
-            )
+            graph, meta, raw_json = await _load_graph_and_meta(path, root_dir, check_variables=check_variables)
             registry.add(graph, meta, raw_json=raw_json)
             verbose_print(f"Loaded flow '{meta.title}' (id={meta.id})")
         except FlowAlreadyRegisteredError:
@@ -892,12 +866,8 @@ async def build_registry_from_directory(
         msg = f"No .json files found in directory: {dir_path}"
         raise ValueError(msg)
 
-    registry = FlowRegistry(
-        no_env_fallback=no_env_fallback, store=store or NullFlowStore()
-    )
-    await _populate_registry(
-        json_files, dir_path, registry, verbose_print, check_variables=check_variables
-    )
+    registry = FlowRegistry(no_env_fallback=no_env_fallback, store=store or NullFlowStore())
+    await _populate_registry(json_files, dir_path, registry, verbose_print, check_variables=check_variables)
     return registry
 
 
@@ -919,14 +889,8 @@ async def build_registry_from_paths(
 
     # Use a shared root so same-named files in different directories get distinct IDs.
     common_root = (
-        Path(os.path.commonpath([str(p) for p in paths]))
-        if len(paths) > 1
-        else paths[0].parent if paths else Path()
+        Path(os.path.commonpath([str(p) for p in paths])) if len(paths) > 1 else paths[0].parent if paths else Path()
     )
-    registry = FlowRegistry(
-        no_env_fallback=no_env_fallback, store=store or NullFlowStore()
-    )
-    await _populate_registry(
-        paths, common_root, registry, verbose_print, check_variables=check_variables
-    )
+    registry = FlowRegistry(no_env_fallback=no_env_fallback, store=store or NullFlowStore())
+    await _populate_registry(paths, common_root, registry, verbose_print, check_variables=check_variables)
     return registry
