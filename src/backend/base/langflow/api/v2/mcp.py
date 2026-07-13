@@ -439,12 +439,17 @@ async def update_server(
             try:
                 await session.commit()
             except IntegrityError:
-                # Lost a create race; re-read the winner and fall through to the update path.
+                # The expected IntegrityError here is the duplicate-name race: re-read the
+                # winner and fall through to the update path. Any other integrity failure
+                # (e.g. a bad FK) leaves no winning row, so re-raise it instead of masking
+                # it as retries that end in a misleading 409.
                 await session.rollback()
                 result = await session.exec(
                     select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == server_name)
                 )
                 existing = result.first()
+                if existing is None:
+                    raise
                 continue
             break
 
@@ -473,11 +478,20 @@ async def update_server(
                 raise HTTPException(status_code=404, detail="Server not found.")
             continue
 
-        existing.config = encrypt_mcp_config(server_config)
-        existing.transport = _derive_transport(server_config)
-        existing.version += 1
-        existing.updated_at = datetime.now(timezone.utc)
-        session.add(existing)
+        # Full replace: last-writer-wins on config, but bump the version DB-side
+        # (version = version + 1) so it stays strictly monotonic even when our ORM copy
+        # is stale. An ORM `+= 1` off a stale read could reuse a version a concurrent
+        # PATCH already consumed, letting a later guarded PATCH pass its version check.
+        await session.execute(
+            update(MCPServer)
+            .where(MCPServer.id == existing.id)
+            .values(
+                config=encrypt_mcp_config(server_config),
+                transport=_derive_transport(server_config),
+                version=MCPServer.version + 1,
+                updated_at=datetime.now(timezone.utc),
+            )
+        )
         await session.commit()
         break
     else:
