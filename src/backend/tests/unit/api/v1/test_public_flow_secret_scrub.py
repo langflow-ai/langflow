@@ -51,6 +51,55 @@ def _flow_payload() -> dict:
                                     "value": "https://api.openai.com/v1",
                                     "type": "str",
                                 },
+                                "database_url": {
+                                    "name": "database_url",
+                                    "password": False,
+                                    "value": "postgresql://owner:db-secret@db.example/app",  # pragma: allowlist secret
+                                    "type": "str",
+                                },
+                                "authenticated_url": {
+                                    "name": "base_url",
+                                    "password": False,
+                                    "value": "https://owner:url-secret@example.com/api",  # pragma: allowlist secret
+                                    "type": "str",
+                                },
+                                "headers": {
+                                    "name": "headers",
+                                    "password": False,
+                                    "value": [
+                                        {
+                                            "key": "Authorization",
+                                            "value": "Bearer header-secret",
+                                        },  # pragma: allowlist secret
+                                        {"key": "X-Tenant", "value": "acme"},
+                                    ],
+                                    "type": "dict",
+                                },
+                                "mcp_server": {
+                                    "name": "mcp_server",
+                                    "password": False,
+                                    "value": {
+                                        "name": "tenant-mcp",
+                                        "config": {
+                                            "command": "uvx",
+                                            "args": ["mcp-proxy"],
+                                            "env": {"SERVICE_TOKEN": "mcp-secret"},  # pragma: allowlist secret
+                                        },
+                                    },
+                                    "type": "mcp",
+                                },
+                                "max_tokens": {
+                                    "name": "max_tokens",
+                                    "password": False,
+                                    "value": 512,
+                                    "type": "int",
+                                },
+                                "token_count": {
+                                    "name": "token_count",
+                                    "password": False,
+                                    "value": 42,
+                                    "type": "int",
+                                },
                             }
                         },
                     },
@@ -72,8 +121,17 @@ def test_strip_secret_field_values_nulls_all_password_fields():
     template = scrubbed["nodes"][0]["data"]["node"]["template"]
     assert template["api_key"]["value"] is None
     assert template["service_token"]["value"] is None
+    assert template["database_url"]["value"] is None
+    assert template["authenticated_url"]["value"] is None
+    assert template["headers"]["value"] == [
+        {"key": "Authorization", "value": None},
+        {"key": "X-Tenant", "value": "acme"},
+    ]
+    assert template["mcp_server"]["value"] == {"name": "tenant-mcp"}
     # non-secret field preserved
     assert template["base_url"]["value"] == "https://api.openai.com/v1"
+    assert template["max_tokens"]["value"] == 512
+    assert template["token_count"]["value"] == 42
 
 
 def test_strip_secret_field_values_does_not_mutate_input():
@@ -131,7 +189,14 @@ async def test_public_flow_read_strips_secrets(client: AsyncClient, logged_in_he
     template = resp.json()["data"]["nodes"][0]["data"]["node"]["template"]
     assert template["api_key"]["value"] is None, "API key leaked through public flow read"
     assert template["service_token"]["value"] is None, "non-api-named secret leaked through public flow read"
+    assert template["database_url"]["value"] is None, "database credentials leaked through public flow read"
+    assert template["authenticated_url"]["value"] is None, "URL credentials leaked through public flow read"
+    assert template["headers"]["value"][0]["value"] is None, "authorization header leaked"
+    assert template["headers"]["value"][1]["value"] == "acme", "non-secret header should be preserved"
+    assert template["mcp_server"]["value"] == {"name": "tenant-mcp"}, "MCP config leaked"
     assert template["base_url"]["value"] == "https://api.openai.com/v1", "non-secret field should be preserved"
+    assert template["max_tokens"]["value"] == 512, "non-secret token-count field should be preserved"
+    assert template["token_count"]["value"] == 42, "non-secret token-count field should be preserved"
 
 
 # ---------------------------------------------------------------------------

@@ -6,7 +6,7 @@ import re
 from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
-from urllib.parse import quote
+from urllib.parse import parse_qsl, quote, urlsplit
 
 from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
@@ -26,6 +26,25 @@ if TYPE_CHECKING:
 
 
 API_WORDS = ["api", "key", "token"]
+
+_SECRET_NAME_PARTS = frozenset({"credential", "credentials", "passwd", "password", "secret"})
+_SECRET_COMPOUND_NAMES = frozenset(
+    {
+        "access_key",
+        "api_key",
+        "apikey",
+        "authorization",
+        "client_secret",
+        "connection_string",
+        "cookie",
+        "database_uri",
+        "database_url",
+        "dsn",
+        "private_key",
+        "proxy_authorization",
+        "set_cookie",
+    }
+)
 
 MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
@@ -128,6 +147,71 @@ def strip_secret_field_values(flow_data: dict | None) -> dict | None:
     return scrubbed
 
 
+def _normalized_secret_name(value: object) -> str:
+    """Normalize snake/kebab/camel-case names for secret-name classification."""
+    name = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(value or ""))
+    return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
+
+
+def _is_secret_name(value: object) -> bool:
+    normalized = _normalized_secret_name(value)
+    if normalized in _SECRET_COMPOUND_NAMES:
+        return True
+    parts = set(normalized.split("_"))
+    is_token_value = normalized == "token" or normalized.endswith("_token")
+    return bool(parts & _SECRET_NAME_PARTS) or is_token_value or {"api", "key"}.issubset(parts)
+
+
+def _contains_url_credentials(value: str) -> bool:
+    """Return whether a URL contains userinfo or a secret-named query parameter."""
+    if "://" not in value:
+        return False
+    try:
+        parsed = urlsplit(value)
+    except ValueError:
+        return False
+    if parsed.username is not None or parsed.password is not None:
+        return True
+    return any(_is_secret_name(key) for key, _ in parse_qsl(parsed.query, keep_blank_values=True))
+
+
+def _strip_structured_secret_values(value: object) -> object:
+    """Recursively null secret-named values in dict/list component inputs."""
+    if isinstance(value, dict):
+        scrubbed = copy.deepcopy(value)
+        # DictInput headers are commonly serialized as {"key": "Authorization", "value": "..."}.
+        if _is_secret_name(scrubbed.get("key")) and "value" in scrubbed:
+            scrubbed["value"] = None
+        for key, nested_value in scrubbed.items():
+            if key == "value" and _is_secret_name(scrubbed.get("key")):
+                continue
+            scrubbed[key] = None if _is_secret_name(key) else _strip_structured_secret_values(nested_value)
+        return scrubbed
+    if isinstance(value, list):
+        return [_strip_structured_secret_values(item) for item in value]
+    if isinstance(value, str) and _contains_url_credentials(value):
+        return None
+    return value
+
+
+def _strip_template_field_value(field: dict) -> None:
+    """Strip a template field according to its secret metadata and value shape."""
+    if field.get("password") or _is_secret_name(field.get("name")):
+        field["value"] = None
+        return
+
+    field_type = str(field.get("type") or "").lower()
+    input_type = str(field.get("_input_type") or "").lower()
+    if field_type == "mcp" or input_type == "mcpinput":
+        # The server name is safe and needed to render the public flow; embedded config is not.
+        value = field.get("value")
+        name = value.get("name") if isinstance(value, dict) else None
+        field["value"] = {"name": name} if name else None
+        return
+
+    field["value"] = _strip_structured_secret_values(field.get("value"))
+
+
 def _strip_secrets_from_nodes(nodes: list) -> None:
     """Recursively strip secret field values from a list of nodes.
 
@@ -147,8 +231,8 @@ def _strip_secrets_from_nodes(nodes: list) -> None:
                     template = node_inner.get("template")
                     if isinstance(template, dict):
                         for value in template.values():
-                            if isinstance(value, dict) and value.get("password"):
-                                value["value"] = None
+                            if isinstance(value, dict):
+                                _strip_template_field_value(value)
 
                     flow = node_inner.get("flow")
                     if isinstance(flow, dict):
