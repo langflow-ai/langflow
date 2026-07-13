@@ -92,6 +92,25 @@ class McpSettings(BaseModel):
     explicitly when you want to lock MCP server management.
     """
 
+    mcp_server_allowed_packages: str | None = None
+    """Comma-separated package allowlist for MCP ``npx``/``uvx`` stdio servers.
+
+    When set, package runners may download and execute only these exact package names.
+    Version specifiers are allowed but do not change the package identity. Leave unset to
+    preserve the legacy single-tenant behavior. Multi-tenant deployments should set this
+    to the packages installed by their operator; an empty value blocks all package runners.
+    """
+
+    mcp_server_interpreter_hardening: bool = False
+    """If set to True, blocks tenant-controlled Python, Node.js, and shell MCP entrypoints.
+
+    The command allowlist alone cannot make ``python <uploaded-file>`` or
+    ``node <uploaded-file>`` or ``bash <uploaded-file>`` safe. Hardened mode rejects direct
+    interpreter/script invocations while retaining validated package wrappers and the
+    authenticated internal ``python -m langflow.agentic.mcp`` server. Leave disabled to
+    preserve legacy single-tenant MCP configurations.
+    """
+
     @field_validator("mcp_composer_version", mode="before")
     @classmethod
     def validate_mcp_composer_version(cls, value):
