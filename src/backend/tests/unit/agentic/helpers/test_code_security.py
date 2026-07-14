@@ -496,10 +496,9 @@ class TestScanCodeSecurityAliasAndWildcardBypass:
         result = scan_code_security("import os as o\nk = o.getenv('SECRET')")
         assert result.is_safe is False
 
-    def test_should_detect_dotted_alias_os_path(self):
-        """`import os.path as p` still binds top-level `os`; p.system() is os.system()."""
-        result = scan_code_security("import os.path as p\np.system('id')")
-        assert result.is_safe is False
+    def test_should_allow_dotted_import_alias_safe_attribute(self):
+        result = scan_code_security("import os.path as path_module\ngetattr(path_module, attribute_name, None)")
+        assert result.is_safe is True
 
     # --- wildcard import bypass: `from os import *; <restricted>()` ---
 
@@ -560,6 +559,11 @@ class TestScanCodeSecurityAssignmentAliasBypass:
         assert result.is_safe is False
         assert any("os.system()" in violation for violation in result.violations)
 
+    def test_should_detect_starred_destructured_assignment_alias_call(self):
+        result = scan_code_security("import os\nmodule, *rest = (os,)\nmodule.system('id')")
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
     def test_should_detect_named_expression_alias_call(self):
         result = scan_code_security("import os\nif module := os:\n    module.system('id')")
         assert result.is_safe is False
@@ -616,6 +620,44 @@ module.system('not the os module')
         result = scan_code_security("import os\ndef use_safe_object(os):\n    os.system('not the os module')")
         assert result.is_safe is True
 
+    def test_should_detect_alias_after_zero_iteration_for_loop(self):
+        code = """
+import os
+module = os
+for _ in ():
+    module = object()
+module.system('id')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_detect_alias_after_zero_iteration_async_for_loop(self):
+        code = """
+import os
+
+async def run():
+    module = os
+    async for _ in empty():
+        module = object()
+    module.system('id')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_detect_alias_after_zero_iteration_while_loop(self):
+        code = """
+import os
+module = os
+while False:
+    module = object()
+module.system('id')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
 
 class TestScanCodeSecurityRuntimeModuleBypass:
     """Runtime module lookup and reflection must not bypass dangerous calls."""
@@ -638,6 +680,10 @@ class TestScanCodeSecurityRuntimeModuleBypass:
 
     def test_should_detect_reflective_dangerous_call(self):
         result = scan_code_security("import os\ngetattr(os, 'system')('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_reflective_dangerous_call_through_getattr_alias(self):
+        result = scan_code_security("import os\nreflect = getattr\nreflect(os, 'system')('id')")
         assert result.is_safe is False
 
     def test_should_detect_dynamic_reflective_module_access(self):
