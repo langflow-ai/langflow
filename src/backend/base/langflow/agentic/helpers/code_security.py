@@ -78,7 +78,12 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
 DANGEROUS_IMPORTS: set[str] = {
     "subprocess",
     "shutil",
+    # Native FFI modules can load arbitrary shared libraries. Include the
+    # lower-level backends so blocking only the public frontends is not bypassable.
     "ctypes",
+    "_ctypes",
+    "cffi",
+    "_cffi_backend",
     "pickle",
     "shelve",
     "marshal",
