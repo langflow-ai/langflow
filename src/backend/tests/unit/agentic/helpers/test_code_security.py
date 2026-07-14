@@ -7,6 +7,7 @@ Tests cover:
 - Edge cases (syntax errors, empty code)
 """
 
+import pytest
 from langflow.agentic.helpers.code_security import scan_code_security
 
 
@@ -185,6 +186,31 @@ class TestScanCodeSecurityDangerousImports:
         code = "import ctypes"
         result = scan_code_security(code)
         assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import _ctypes",
+            "from _ctypes import dlopen",
+            "import cffi",
+            "from cffi import FFI",
+            "import cffi.api",
+            "import _cffi_backend",
+        ],
+        ids=[
+            "ctypes-backend",
+            "ctypes-backend-from",
+            "cffi",
+            "cffi-from",
+            "cffi-submodule",
+            "cffi-backend",
+        ],
+    )
+    def test_should_detect_native_ffi_imports(self, code):
+        """Native FFI entry points can load arbitrary shared libraries."""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("forbidden" in violation for violation in result.violations)
 
     def test_should_detect_from_subprocess_import(self):
         """From subprocess import run should be detected."""
@@ -470,10 +496,9 @@ class TestScanCodeSecurityAliasAndWildcardBypass:
         result = scan_code_security("import os as o\nk = o.getenv('SECRET')")
         assert result.is_safe is False
 
-    def test_should_detect_dotted_alias_os_path(self):
-        """`import os.path as p` still binds top-level `os`; p.system() is os.system()."""
-        result = scan_code_security("import os.path as p\np.system('id')")
-        assert result.is_safe is False
+    def test_should_allow_dotted_import_alias_safe_attribute(self):
+        result = scan_code_security("import os.path as path_module\ngetattr(path_module, attribute_name, None)")
+        assert result.is_safe is True
 
     # --- wildcard import bypass: `from os import *; <restricted>()` ---
 
@@ -503,6 +528,195 @@ class TestScanCodeSecurityAliasAndWildcardBypass:
     def test_should_allow_wildcard_os_safe_member(self):
         """`from os import *` then a non-restricted member (getcwd) is fine."""
         result = scan_code_security("from os import *\nd = getcwd()")
+        assert result.is_safe is True
+
+
+class TestScanCodeSecurityAssignmentAliasBypass:
+    """Assignment aliases of imported modules must retain their security policy."""
+
+    def test_should_detect_os_assignment_alias_call(self):
+        result = scan_code_security("import os\nmodule = os\nmodule.system('id')")
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_detect_transitive_assignment_alias_call(self):
+        result = scan_code_security("import os as imported\nfirst = imported\nsecond = first\nsecond.getenv('SECRET')")
+        assert result.is_safe is False
+        assert any("os.getenv()" in violation for violation in result.violations)
+
+    def test_should_detect_chained_assignment_alias_call(self):
+        result = scan_code_security("import os\nfirst = second = os\nsecond.putenv('KEY', 'value')")
+        assert result.is_safe is False
+        assert any("os.putenv()" in violation for violation in result.violations)
+
+    def test_should_detect_annotated_assignment_alias_read(self):
+        result = scan_code_security("import os\nmodule: object = os\nsecret = module.environ['SECRET']")
+        assert result.is_safe is False
+        assert any("os.environ" in violation for violation in result.violations)
+
+    def test_should_detect_destructured_assignment_alias_call(self):
+        result = scan_code_security("import os\n(module,) = (os,)\nmodule.system('id')")
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_detect_starred_destructured_assignment_alias_call(self):
+        result = scan_code_security("import os\nmodule, *rest = (os,)\nmodule.system('id')")
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_detect_named_expression_alias_call(self):
+        result = scan_code_security("import os\nif module := os:\n    module.system('id')")
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_detect_assignment_alias_dotted_submodule(self):
+        result = scan_code_security("import urllib\nmodule = urllib\nmodule.request.urlopen('http://x')")
+        assert result.is_safe is False
+        assert any("urllib.request" in violation for violation in result.violations)
+
+    def test_should_allow_assignment_alias_of_safe_module(self):
+        result = scan_code_security("import requests\nclient = requests\nclient.get('https://api.example.com')")
+        assert result.is_safe is True
+
+    def test_should_allow_assignment_of_safe_module_attribute(self):
+        result = scan_code_security("import os\npath_module = os.path\npath_module.join('a', 'b')")
+        assert result.is_safe is True
+
+    def test_should_allow_alias_rebound_to_safe_value(self):
+        code = "import os\nmodule = os\nmodule = object()\nmodule.system('not the os module')"
+        result = scan_code_security(code)
+        assert result.is_safe is True
+
+    def test_should_not_leak_safe_local_shadow_into_later_function(self):
+        code = """
+import os
+
+def safe_function():
+    os = object()
+    return os
+
+def dangerous_function():
+    os.system('id')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_not_leak_local_module_alias_into_outer_scope(self):
+        code = """
+import os
+module = object()
+
+def bind_locally():
+    module = os
+    return module
+
+module.system('not the os module')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is True
+
+    def test_should_allow_parameter_shadowing_module_name(self):
+        result = scan_code_security("import os\ndef use_safe_object(os):\n    os.system('not the os module')")
+        assert result.is_safe is True
+
+    def test_should_detect_alias_after_zero_iteration_for_loop(self):
+        code = """
+import os
+module = os
+for _ in ():
+    module = object()
+module.system('id')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_detect_alias_after_zero_iteration_async_for_loop(self):
+        code = """
+import os
+
+async def run():
+    module = os
+    async for _ in empty():
+        module = object()
+    module.system('id')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_detect_alias_after_zero_iteration_while_loop(self):
+        code = """
+import os
+module = os
+while False:
+    module = object()
+module.system('id')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+
+class TestScanCodeSecurityRuntimeModuleBypass:
+    """Runtime module lookup and reflection must not bypass dangerous calls."""
+
+    def test_should_detect_sys_modules_attribute_call(self):
+        result = scan_code_security("sys.modules['os'].system('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_getattr_from_sys_modules(self):
+        result = scan_code_security("getattr(sys.modules['os'], 'system')('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_aliased_sys_modules_access(self):
+        result = scan_code_security("import sys as runtime\nruntime.modules['os'].system('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_imported_sys_modules_access(self):
+        result = scan_code_security("from sys import modules\nmodules['os'].system('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_reflective_dangerous_call(self):
+        result = scan_code_security("import os\ngetattr(os, 'system')('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_reflective_dangerous_call_through_getattr_alias(self):
+        result = scan_code_security("import os\nreflect = getattr\nreflect(os, 'system')('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_dynamic_reflective_module_access(self):
+        result = scan_code_security("import os\nvalue = getattr(os, self.method_name)")
+        assert result.is_safe is False
+
+    def test_should_detect_reflective_sys_modules_access(self):
+        result = scan_code_security("getattr(sys, 'modules')['os'].system('id')")
+        assert result.is_safe is False
+
+    def test_should_allow_safe_sys_attribute(self):
+        result = scan_code_security("import sys\nversion = sys.version_info")
+        assert result.is_safe is True
+
+    def test_should_allow_reflective_safe_module_attribute(self):
+        result = scan_code_security("import os\npath_module = getattr(os, 'path')")
+        assert result.is_safe is True
+
+    def test_should_allow_dynamic_getattr_on_ordinary_objects(self):
+        result = scan_code_security("field = 'value'\nvalue = getattr(self, field, None)")
+        assert result.is_safe is True
+
+    def test_should_detect_reflective_call_through_assignment_alias(self):
+        result = scan_code_security("import os\nmodule = os\ngetattr(module, 'system')('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_dynamic_getattr_through_assignment_alias(self):
+        result = scan_code_security("import os\nmodule = os\nvalue = getattr(module, self.method_name)")
+        assert result.is_safe is False
+
+    def test_should_allow_getattr_after_alias_is_rebound_to_safe_value(self):
+        code = "import os\nmodule = os\nmodule = object()\nvalue = getattr(module, 'system', None)"
+        result = scan_code_security(code)
         assert result.is_safe is True
 
 
