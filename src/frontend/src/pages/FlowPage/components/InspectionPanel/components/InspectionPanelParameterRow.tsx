@@ -122,6 +122,7 @@ export default function InspectionPanelParameterRow({
         >
           <Button
             unstyled
+            ignoreTitleCase
             onClick={handleToggleApiEditable}
             disabled={isDisabledField}
             className={cn(
