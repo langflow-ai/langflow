@@ -620,6 +620,39 @@ async def test_resubscribe_to_same_flow_input_required_task_does_not_hang(
     assert any("error" in f for f in frames)
 
 
+@pytest.mark.usefixtures("client")
+async def test_resubscribe_to_working_task_without_local_producer_does_not_hang():
+    """A task WORKING in the durable store but with no live producer in THIS worker must not hang.
+
+    This is the cross-worker case: the durable state says WORKING but the run lives on another worker,
+    so this worker's ActiveTaskRegistry has no producer to tail. Delegating to the SDK would tap an
+    empty queue forever; the handler must return the spec error instead. Complements the
+    input-required no-hang test above (which covers the non-WORKING branch of the same guard).
+    """
+    import asyncio
+    from types import SimpleNamespace
+
+    from a2a.server.context import ServerCallContext
+    from a2a.types import a2a_pb2 as pb
+    from a2a.utils.errors import UnsupportedOperationError
+    from langflow.api.v1.a2a import _HANDLER, _TASK_STORE
+
+    task_id = uuid.uuid4().hex
+    ctx = ServerCallContext(state={"flow_id": str(uuid.uuid4())})
+    await _TASK_STORE.save(
+        pb.Task(id=task_id, context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_WORKING)), ctx
+    )
+    # No producer was ever started for this task in this process, so the local registry can't satisfy it.
+    assert await _HANDLER._active_task_registry.get(task_id) is None
+
+    async def _drain():
+        async for _ in _HANDLER.on_subscribe_to_task(SimpleNamespace(id=task_id), ctx):
+            pass
+
+    with pytest.raises(UnsupportedOperationError):
+        await asyncio.wait_for(_drain(), timeout=5)
+
+
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_task_scope_is_canonical_across_uuid_encodings(client: AsyncClient, active_user, echo_flow_data):
     """A task created via a non-canonical flow-id URL is readable via the canonical one.

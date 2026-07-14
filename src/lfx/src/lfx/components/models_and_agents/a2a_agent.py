@@ -203,6 +203,31 @@ async def _reply_or_raise(responses) -> str:
     return reply
 
 
+async def _resolve_card_bounded(httpx_client: httpx.AsyncClient, base_url: str) -> Any:
+    """Fetch and parse the remote agent card with the body capped at ``_MAX_CARD_BYTES``.
+
+    Runtime counterpart to the editor's :meth:`A2AAgentComponent._fetch_card`: same bounded read,
+    but this raises on failure/oversize instead of degrading to no preview, because a runtime call
+    with no card can't proceed. Returns the parsed SDK ``AgentCard`` for ``create_client`` to reuse.
+    """
+    from a2a.client.card_resolver import parse_agent_card
+
+    async with httpx_client.stream("GET", f"{base_url}{_CARD_SUFFIX}") as response:
+        response.raise_for_status()
+        # Trust neither the declared length nor the actual stream.
+        declared = response.headers.get("content-length")
+        if declared is not None and int(declared) > _MAX_CARD_BYTES:
+            msg = f"Agent card at {base_url} exceeds {_MAX_CARD_BYTES} bytes"
+            raise ValueError(msg)
+        body = bytearray()
+        async for chunk in response.aiter_bytes():
+            body.extend(chunk)
+            if len(body) > _MAX_CARD_BYTES:
+                msg = f"Agent card at {base_url} exceeds {_MAX_CARD_BYTES} bytes"
+                raise ValueError(msg)
+    return parse_agent_card(json.loads(bytes(body)))
+
+
 async def call_a2a_agent(
     agent_url: str,
     message: str,
@@ -223,8 +248,13 @@ async def call_a2a_agent(
     from a2a.helpers.proto_helpers import new_text_part
     from a2a.types import a2a_pb2 as pb
 
+    # Resolve the card ourselves with a bounded read, then hand it to create_client so the SDK
+    # skips its own unbounded fetch. create_client(url) delegates to A2ACardResolver, which buffers
+    # the whole card body with no cap; a hostile server streaming an endless card would OOM the
+    # worker. Same 256KB cap as the editor preview, but here a bad card raises (fails the call).
+    card = await _resolve_card_bounded(httpx_client, agent_url)
     client = await create_client(
-        agent_url,
+        card,
         client_config=ClientConfig(
             streaming=False,
             httpx_client=httpx_client,

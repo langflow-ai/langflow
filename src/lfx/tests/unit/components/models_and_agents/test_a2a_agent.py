@@ -21,7 +21,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest.mock import patch
 
 import pytest
-from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent, _agent_base_url, build_a2a_client
+from lfx.components.models_and_agents.a2a_agent import (
+    A2AAgentComponent,
+    _agent_base_url,
+    _resolve_card_bounded,
+    build_a2a_client,
+)
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_and_resolve_url
 
 
@@ -431,6 +436,25 @@ async def test_external_card_preview_rejects_oversized_card(monkeypatch, handler
 
     assert build_config["agent_card"]["value"] == {}
     assert build_config["agent_card"]["show"] is False
+
+
+@pytest.mark.parametrize("handler", [_DeclaredOversizedHandler, _UndeclaredOversizedHandler])
+async def test_runtime_card_fetch_rejects_oversized_card(monkeypatch, handler):
+    """The runtime call path bounds the card body the same way, but RAISES rather than degrading.
+
+    create_client(url) would let the SDK resolver buffer the whole card body with no cap; the
+    runtime resolves it here instead, capped. A call can't proceed without a card, so an oversized
+    one raises (the editor preview degrades to no preview). Covers the declared and streamed caps.
+    """
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
+
+    with _HandlerServer(handler) as server:
+        url = f"http://127.0.0.1:{server.port}"
+        _url, validated_ips = validate_and_resolve_url(url)
+        async with build_a2a_client(url, validated_ips, timeout=10) as client:
+            with pytest.raises(ValueError, match="exceeds"):
+                await _resolve_card_bounded(client, url)
 
 
 def test_card_payload_clips_untrusted_strings():

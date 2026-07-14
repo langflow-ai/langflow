@@ -526,17 +526,24 @@ class _DurableCancelHandler(DefaultRequestHandler):
         await A2ACheckpointStore().delete_by_run_id(params.id)
         return task
 
-    async def on_subscribe_to_task(self, params, _context):
-        # tasks/resubscribe re-attaches to the live event queue of an in-flight message/stream request.
-        # Our runs are synchronous: by the time a client could resubscribe, that request has returned,
-        # so there is never a live producer to tail. The SDK's on_subscribe_to_task taps the task's
-        # event queue and waits, so for a parked (input-required) or idle-registry task it blocks
-        # forever. Don't inspect task state or liveness: unconditionally return a spec error and let
-        # tasks/get cover reading a paused/terminal task back. The uniform error also means resubscribe
-        # never reaches the store, so it can't reveal another flow's task by id.
-        msg = f"Task {params.id} has no active stream to resubscribe to"
-        raise UnsupportedOperationError(message=msg)
-        yield  # unreachable: the raise always fires, but the yield makes this an async generator
+    async def on_subscribe_to_task(self, params, context: ServerCallContext):
+        # Reattach to a still-streaming run, but only when there is genuinely a live producer to tail
+        # in THIS worker. Two gates, both required:
+        #   1. Flow-scoped store: a task this flow can't see is "not found" (same as on_cancel_task);
+        #      never reveal that it exists under another flow, and keep the store off the delegate path.
+        #   2. Live producer: the SDK's subscribe() taps the task's event queue and waits, so for a
+        #      parked (input-required), terminal, or run-on-another-worker task it blocks forever and
+        #      leaks an ActiveTask. Require both a WORKING durable state and a live registry entry
+        #      before delegating; otherwise return the spec error and let tasks/get read it back.
+        stored = await _TASK_STORE.get(params.id, context)
+        if stored is None:
+            raise TaskNotFoundError
+        active = await self._active_task_registry.get(params.id)
+        if stored.status.state != pb.TaskState.TASK_STATE_WORKING or active is None:
+            msg = f"Task {params.id} has no active stream to resubscribe to"
+            raise UnsupportedOperationError(message=msg)
+        async for event in super().on_subscribe_to_task(params, context):
+            yield event
 
 
 # One shared httpx client sends webhooks; a short timeout so a slow/hostile webhook
