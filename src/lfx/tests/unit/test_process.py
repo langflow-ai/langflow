@@ -73,6 +73,18 @@ def test_apply_tweaks_blocks_python_interpreter_code_and_imports():
     assert node["data"]["node"]["template"]["global_imports"]["value"] == "math"
 
 
+def test_apply_tweaks_blocks_python_function_code_for_all_aliases():
+    """Python Function aliases must not bypass the by-name code-field guard."""
+    for node_type in ("Python Function", "PythonFunction", "PythonFunctionComponent"):
+        node = _template_node(
+            {"function_code": {"value": "def run():\n    return 'safe'", "type": "str"}},
+            node_type=node_type,
+        )
+        apply_tweaks(node, {"function_code": "def run():\n    return __import__('os').system('id')"})
+
+        assert node["data"]["node"]["template"]["function_code"]["value"] == "def run():\n    return 'safe'"
+
+
 def test_apply_tweaks_allows_benign_fields_on_code_execution_component():
     """Scoped block: name/description on a Python REPL tool remain tweakable."""
     node = _template_node(
@@ -141,29 +153,30 @@ def test_apply_tweaks_smart_transform_blocks_instruction_allows_data():
 #   - CSVAgent: allow_dangerous_code enables LangChain Python execution
 #   - PythonREPLComponent (Python Interpreter): python_code exec + global_imports sandbox
 #   - PythonREPLTool (Python REPL): code exec (global block) + global_imports sandbox
+#   - PythonFunctionComponent (Python Function): function_code exec
 #   - Smart Transform (LambdaFilterComponent): filter_instruction → eval()'d lambda
 #   - PythonCodeStructuredTool (removed): tool_code exec input, type retained
 _EXPECTED_CODE_FIELDS_BY_TYPE: dict[str, set[str]] = {
     "CSVAgent": {"allow_dangerous_code"},
     "LambdaFilterComponent": {"filter_instruction"},
     "Python Code Structured": {"tool_code"},
-    "Python Function": {"code"},
+    "Python Function": {"function_code"},
     "Python Interpreter": {"python_code", "global_imports"},
     "Python REPL": {"code", "global_imports"},
+    "PythonFunction": {"function_code"},
+    "PythonFunctionComponent": {"function_code"},
     "PythonREPLComponent": {"python_code", "global_imports"},
-    "PythonREPLToolComponent": {"code", "global_imports"},
     "PythonREPLTool": {"code", "global_imports"},
+    "PythonREPLToolComponent": {"code", "global_imports"},
     "Smart Transform": {"filter_instruction"},
     "PythonCodeStructuredTool": {"tool_code"},
-    "PythonFunction": {"code"},
-    "PythonFunctionComponent": {"code"},
 }
 
 # Code-execution components with no tweakable code/sandbox field. They are still
 # blocked on unauthenticated public builds by CODE_EXECUTION_COMPONENT_TYPES.
 _CODE_EXECUTION_TYPES_WITHOUT_TWEAK_CODE_FIELDS = {
-    "CodeActAgentSmolagents",
     "CodeAct Agent (Smolagents)",
+    "CodeActAgentSmolagents",
     "Cuga",
     "OpenDsStar Agent",
     "OpenDsStarAgent",
