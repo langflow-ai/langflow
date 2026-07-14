@@ -20,6 +20,7 @@ from ag_ui.core import RunFinishedEvent, RunStartedEvent
 
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
+from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.constants import Finish, lazy_load_vertex_dict
 from lfx.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from lfx.graph.graph.schema import GraphData, GraphDump, StartConfigDict, VertexBuildResult
@@ -55,6 +56,8 @@ if TYPE_CHECKING:
 
     from lfx.custom.custom_component.component import Component
     from lfx.events.event_manager import EventManager
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+    from lfx.graph.checkpoint.store import CheckpointStore
     from lfx.graph.edge.schema import EdgeData
     from lfx.graph.schema import ResultData
     from lfx.schema.schema import InputValueRequest
@@ -141,6 +144,20 @@ class Graph:
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
         self._is_subgraph = False
+        self.checkpointing_enabled = False
+        self.pause_requested = False
+        self.pause_info: dict[str, Any] | None = None
+        self.checkpoint_store: CheckpointStore | None = None
+        self.job_id: str | None = None
+        self.resumed_from_checkpoint = False
+        # Vertices already built at checkpoint time: on resume their async generators are exhausted,
+        # so the output-collection loop must NOT re-consume them. Empty for fresh (non-resume) runs.
+        self.checkpoint_restored_built_ids: set[str] = set()
+        # Built vertices whose live output (Tool/model client) was opaque-dropped to None in the
+        # checkpoint: only these re-run on resume to regenerate the object, so producers whose output
+        # round-tripped (e.g. an Agent's Message) are not needlessly re-executed. Empty otherwise.
+        self.checkpoint_opaque_dropped_ids: set[str] = set()
+        self.pause_probe: Callable[[str], Any] | None = None
 
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
@@ -678,6 +695,90 @@ class Graph:
 
         self._run_id = str(run_id)
 
+    def request_pause(self, reason: str = "pause_requested", data: dict[str, Any] | None = None) -> None:
+        self.pause_requested = True
+        self.pause_info = {"reason": reason, "data": data or {}}
+
+    @classmethod
+    def resume_from_checkpoint(cls, checkpoint: GraphCheckpoint, *, checkpoint_store: CheckpointStore | None = None):
+        from lfx.graph.checkpoint.resume import restore_graph_from_checkpoint
+
+        return restore_graph_from_checkpoint(checkpoint, store=checkpoint_store)
+
+    def resume_first_layer(self) -> list[str]:
+        from lfx.graph.checkpoint.resume import compute_resume_layer
+
+        return compute_resume_layer(self)
+
+    def build_checkpoint(self) -> GraphCheckpoint:
+        from lfx.graph.checkpoint.builder import build_checkpoint
+
+        return build_checkpoint(self)
+
+    def _persist_resolved_branch_exclusions(self) -> None:
+        """Promote already-answered HumanInput decisions into the persistent exclusion channel.
+
+        A HumanInput stops its non-chosen branches with ``self.stop()`` (transient INACTIVE: reset
+        per build and never checkpointed). When a later HumanInput pauses, the earlier node's dead
+        branches would revive on resume and run — surfacing extra outputs and a re-paused first node.
+        Move each resolved decision into ``conditionally_excluded_vertices`` (the same durable channel
+        ConditionalRouter uses) so the dead branches stay dead across the resume. Derived from graph
+        edges plus the recorded decision, so it also covers saved flows whose frozen component code
+        predates any in-component exclusion call.
+        """
+        decisions = getattr(self, "human_input_decisions", {}) or {}
+        if not decisions:
+            return
+        for vertex in self.vertices:
+            if (getattr(vertex, "data", None) or {}).get("type") != "HumanInput":
+                continue
+            decision = decisions.get(f"{vertex.id}:{self.run_id}")
+            if not decision:
+                continue
+            chosen = decision.get("action_id")
+            branch_outputs = {
+                edge.source_handle.name
+                for edge in self.edges
+                if edge.source_id == vertex.id and edge.source_handle.name.startswith("branch_")
+            }
+            non_chosen = sorted(branch_outputs - {f"branch_{chosen}"})
+            if non_chosen:
+                self.exclude_branches_conditionally(vertex.id, non_chosen)
+
+    async def _check_for_pause_signal(self) -> None:
+        if self.pause_probe is None or self.job_id is None:
+            return
+        decision = await self.pause_probe(self.job_id)
+        if decision == "pause":
+            self.request_pause()
+        elif decision == "cancel":
+            raise asyncio.CancelledError
+
+    async def check_and_handle_pause(self) -> None:
+        """Boundary hook: consult the probe and suspend if a pause is pending.
+
+        Raises GraphPausedException after persisting the checkpoint. Default-off:
+        with no probe, no pause request, or checkpointing disabled this is a no-op,
+        so existing flows are unchanged.
+        """
+        await self._check_for_pause_signal()
+        if not (self.checkpointing_enabled and self.pause_requested):
+            return
+        self._persist_resolved_branch_exclusions()
+        checkpoint = self.build_checkpoint()
+        store = self.checkpoint_store
+        if store is None:
+            from lfx.services.deps import get_checkpoint_service
+
+            store = get_checkpoint_service()
+        await store.save(checkpoint)
+        info = self.pause_info or {}
+        raise GraphPausedException(
+            checkpoint_id=checkpoint.checkpoint_id,
+            reason=info.get("reason", "pause_requested"),
+            data=info.get("data"),
+        )
+
     async def initialize_run(self) -> None:
         if not self._run_id:
             self.set_run_id()
@@ -844,6 +945,10 @@ class Graph:
                 event_manager=event_manager,
             )
             self.increment_run_count()
+        except (GraphPausedException, asyncio.CancelledError):
+            # Why: a HITL pause/cancel must propagate UNWRAPPED so the job/runner layer suspends the
+            # run instead of finalizing it; wrapping it as ValueError terminalizes the job (LE-1440).
+            raise
         except Exception as exc:
             self._end_all_traces_async(error=exc)
             msg = f"Error running graph: {exc}"
@@ -859,7 +964,14 @@ class Graph:
                 msg = f"Vertex {vertex_id} not found"
                 raise ValueError(msg)
 
-            if not vertex.result and not stream and hasattr(vertex, "consume_async_generator"):
+            if (
+                not vertex.result
+                and not stream
+                and vertex.id not in self.checkpoint_restored_built_ids
+                and hasattr(vertex, "consume_async_generator")
+            ):
+                # A vertex restored from a checkpoint already consumed its generator in the original
+                # run; re-consuming here would re-iterate an exhausted/absent iterator and raise.
                 await vertex.consume_async_generator()
             if (not outputs and vertex.is_output) or (vertex.display_name in outputs or vertex.id in outputs):
                 vertex_outputs.append(vertex.result)
@@ -1832,7 +1944,11 @@ class Graph:
     ) -> Graph:
         """Processes the graph with vertices in each layer run in parallel."""
         has_webhook_component = "webhook" in start_component_id.lower() if start_component_id else False
-        first_layer = self.sort_vertices(start_component_id=start_component_id)
+        if self.resumed_from_checkpoint:
+            # A full re-sort would reset the restored run state and re-queue built vertices.
+            first_layer = self.resume_first_layer()
+        else:
+            first_layer = self.sort_vertices(start_component_id=start_component_id)
         vertex_task_run_count: dict[str, int] = {}
         to_process = deque(first_layer)
         layer_index = 0
@@ -1853,6 +1969,7 @@ class Graph:
         await self.initialize_run()
         lock = asyncio.Lock()
         while to_process:
+            await self.check_and_handle_pause()
             current_batch = list(to_process)  # Copy current deque items to a list
             to_process.clear()  # Clear the deque for new items
             tasks = []
@@ -2376,6 +2493,23 @@ class Graph:
         """
         return [vertex.id for vertex in self.vertices if not self.successor_map.get(vertex.id, [])]
 
+    def _orphaned_tool_vertex_ids(self) -> set[str]:
+        """Tool-mode components with no consumer, excluded from scheduling.
+
+        A tool-mode component's only output is the synthetic ``component_as_tool`` Tool, meaningful
+        only when wired into a consumer (an Agent). With no successor it is a leftover — typically a
+        tool left behind after its Agent was deleted — and building it standalone runs its underlying
+        logic with no inputs (e.g. a URL fetch with no URL), raising a ComponentBuildError that fails
+        the whole run. Skipping it keeps the rest of the flow runnable.
+        """
+        orphaned: set[str] = set()
+        for vertex in self.vertices:
+            data = getattr(vertex, "data", None)
+            node = data.get("node") if isinstance(data, dict) else None
+            if isinstance(node, dict) and node.get("tool_mode") and not self.successor_map.get(vertex.id):
+                orphaned.add(vertex.id)
+        return orphaned
+
     def sort_vertices(
         self,
         stop_component_id: str | None = None,
@@ -2398,6 +2532,15 @@ class Graph:
             get_vertex_successors=self.get_vertex_successors_ids,
             is_cyclic=self.is_cyclic,
         )
+
+        # A run that explicitly targets the tool-mode node (the node's play button sets
+        # stop/start to it) is the user inspecting its toolset output — never skip that one.
+        orphaned_tools = self._orphaned_tool_vertex_ids() - {stop_component_id, start_component_id}
+        if orphaned_tools:
+            first_layer = [vertex_id for vertex_id in first_layer if vertex_id not in orphaned_tools]
+            remaining_layers = [
+                [vertex_id for vertex_id in layer if vertex_id not in orphaned_tools] for layer in remaining_layers
+            ]
 
         self.increment_run_count()
         self._sorted_vertices_layers = [first_layer, *remaining_layers]

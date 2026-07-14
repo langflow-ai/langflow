@@ -513,6 +513,7 @@ module.exports = {
             "Components/bundles-openai",
             "Components/bundles-openrouter",
             "Components/bundles-oracle",
+            "Components/bundles-paddle",
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",
             "Components/bundles-pinecone",

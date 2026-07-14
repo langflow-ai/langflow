@@ -27,6 +27,9 @@ def _frame(event_type: str, data: dict) -> tuple[bytes, str]:
 
 
 async def _scripted_source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+    # Why: these tests isolate the service/runner plumbing (submit, status, dedupe, cross-user
+    # ownership, terminal handling) from graph execution. The REAL frame source
+    # (generate_flow_events over a live graph) is exercised end-to-end in test_build_pause_seam.
     yield _frame("build_start", {})
     yield _frame("end_vertex", {"id": "n1"})
     yield _frame("end", {})
@@ -77,6 +80,45 @@ async def test_events_reattach_replays_durable(active_user):
         await svc.stop()
 
 
+async def test_events_polls_durable_log_for_cross_worker_job(active_user):
+    # The job runs on ANOTHER worker, so this facade's live bus never sees its
+    # frames. Durable job_events rows appear over time and the job goes terminal.
+    # events() must replay them gap-free from the durable log and return, instead
+    # of blocking forever on the empty local live queue.
+    from langflow.services.deps import get_job_service
+
+    job_service = get_job_service()
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=active_user.id)
+    await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+    await job_service.append_event(job_id, "build_start", {"event": "build_start", "data": {}})
+
+    svc = _make_service()
+    await svc.start()
+
+    async def other_worker():
+        await asyncio.sleep(0.3)
+        await job_service.append_event(job_id, "end_vertex", {"event": "end_vertex", "data": {"id": "n1"}})
+        await asyncio.sleep(0.3)
+        await job_service.append_event(job_id, "end", {"event": "end", "data": {}})
+        await job_service.set_result(job_id, {"ok": True})
+        await job_service.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
+
+    async def consume() -> list[bytes]:
+        return [chunk async for chunk in svc.events(job_id, last_event_id=None, user=active_user)]
+
+    worker = asyncio.create_task(other_worker())
+    try:
+        seen = await asyncio.wait_for(consume(), timeout=15)
+    finally:
+        await worker
+        await svc.stop()
+
+    assert any(b"build_start" in c for c in seen)
+    assert any(b"end_vertex" in c for c in seen)
+    assert any(b"end" in c for c in seen)
+
+
 async def test_status_rejects_cross_user(active_user, user_two):
     # ``active_super_user`` shares ``active_user``'s username (and thus DB row),
     # so a genuinely distinct second user (``user_two``) is needed to exercise
@@ -87,6 +129,32 @@ async def test_status_rejects_cross_user(active_user, user_two):
         job_id = await svc.submit(flow_id=uuid4(), request={"stream_protocol": "langflow"}, user=active_user)
         with pytest.raises(PermissionError):
             await svc.status(job_id, user_two)
+    finally:
+        await svc.stop()
+
+
+async def test_submit_runs_in_process_when_job_queue_type_redis(active_user, monkeypatch):
+    # With job_queue_type=redis the scaled backend is not shipped on this branch
+    # (no redis_backend / worker modules). The facade must fall back to the
+    # in-process executor, not raise ModuleNotFoundError building a scaled backend.
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "job_queue_type", "redis")
+    assert settings_service.settings.background_backend_is_scaled is True
+
+    svc = BackgroundExecutionService(
+        settings_service=settings_service,
+        frame_source_factory=lambda **_kw: _scripted_source,
+    )
+    await svc.start()
+    try:
+        job_id = await svc.submit(flow_id=uuid4(), request={"stream_protocol": "langflow"}, user=active_user)
+        st = None
+        for _ in range(50):
+            st = await svc.status(job_id, active_user)
+            if st["status"] in {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED}:
+                break
+            await asyncio.sleep(0.05)
+        assert st["status"] == JobStatus.COMPLETED
     finally:
         await svc.stop()
 
