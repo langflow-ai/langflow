@@ -1609,6 +1609,8 @@
   "settings.apiPageParagraph": "秘密のLangflow APIキーは以下の通りです。 APIキーを他人と共有したり、ブラウザやその他のクライアントサイドのコード内で公開したりしないでください。",
   "settings.confirmPasswordPlaceholder": "パスワードの確認",
   "settings.confirmPasswordRequired": "パスワードの確認をお願いします",
+  "settings.currentPasswordPlaceholder": "現在のパスワード",
+  "settings.currentPasswordRequired": "現在のパスワードを入力してください",
   "settings.dbProviders.active": "アクティブ",
   "settings.dbProviders.chromaDescription": "Chromaは、Langflowと同じディスク上にベクトルを保存し、デフォルトで有効になっています。 ここでこれを選択すると、新しいナレッジベースのデフォルトのプロバイダーになります。",
   "settings.dbProviders.chromaSelected": "色を選択しました",

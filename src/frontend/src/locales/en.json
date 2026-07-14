@@ -281,6 +281,8 @@
   "settings.confirmPasswordPlaceholder": "Confirm Password",
   "settings.passwordRequired": "Please enter your password",
   "settings.confirmPasswordRequired": "Please confirm your password",
+  "settings.currentPasswordPlaceholder": "Current Password",
+  "settings.currentPasswordRequired": "Please enter your current password",
   "settings.saveButton": "Save",
   "settings.languageTitle": "Language",
   "settings.languageDescription": "Choose the display language for the Langflow interface.",

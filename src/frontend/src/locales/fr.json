@@ -1609,6 +1609,8 @@
   "settings.apiPageParagraph": "Vos clés API Langflow confidentielles sont répertoriées ci-dessous. Ne communiquez pas votre clé API à des tiers et ne la divulguez pas dans le navigateur ou dans tout autre code côté client.",
   "settings.confirmPasswordPlaceholder": "Confirmer le mot de passe",
   "settings.confirmPasswordRequired": "Veuillez confirmer votre mot de passe",
+  "settings.currentPasswordPlaceholder": "Mot de passe actuel",
+  "settings.currentPasswordRequired": "Veuillez saisir votre mot de passe actuel",
   "settings.dbProviders.active": "Actif",
   "settings.dbProviders.chromaDescription": "Chroma stocke les fichiers vectoriels sur le disque aux côtés de Langflow et est activé par défaut. Si vous le sélectionnez ici, il deviendra le fournisseur par défaut pour les nouvelles bases de connaissances.",
   "settings.dbProviders.chromaSelected": "Chroma sélectionné",
