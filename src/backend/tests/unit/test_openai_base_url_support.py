@@ -214,6 +214,7 @@ class TestBaseUrlNormalizationParity:
         with (
             patch("langchain_openai.ChatOpenAI", chat_openai),
             patch("lfx.utils.util.transform_localhost_url", return_value=self.TRANSFORMED),
+            patch("lfx.base.models.unified_models.credentials.validate_connector_url_for_ssrf") as ssrf_validator,
         ):
             validate_model_provider_key(
                 "OpenAI",
@@ -221,6 +222,7 @@ class TestBaseUrlNormalizationParity:
                 model_name="gpt-oss:20b",
             )
 
+        ssrf_validator.assert_called_once_with(self.TRANSFORMED)
         assert chat_openai.call_args.kwargs.get("base_url") == self.TRANSFORMED
 
     def test_get_llm_normalizes_base_url(self):
