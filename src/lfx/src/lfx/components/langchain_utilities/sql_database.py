@@ -7,6 +7,7 @@ from lfx.io import (
     Output,
     StrInput,
 )
+from lfx.utils.ssrf_protection import validate_connector_database_url_for_ssrf
 
 
 class SQLDatabaseComponent(Component):
@@ -30,6 +31,7 @@ class SQLDatabaseComponent(Component):
 
     def build_sqldatabase(self) -> SQLDatabase:
         uri = self.clean_up_uri(self.uri)
+        validate_connector_database_url_for_ssrf(uri)
         # Create an engine using SQLAlchemy with StaticPool
         engine = create_engine(uri, poolclass=StaticPool)
         return SQLDatabase(engine)

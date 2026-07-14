@@ -1,3 +1,5 @@
+import base64
+import binascii
 from typing import Any
 
 from elasticsearch import Elasticsearch
@@ -15,6 +17,29 @@ from lfx.io import (
     StrInput,
 )
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
+
+
+def _cloud_id_elasticsearch_url(cloud_id: str) -> str:
+    """Return the Elasticsearch endpoint encoded by an Elastic Cloud ID."""
+    try:
+        _, _, encoded = cloud_id.partition(":")
+        padded_encoded = encoded + "=" * (-len(encoded) % 4)
+        decoded = base64.b64decode(padded_encoded.encode("ascii")).decode("ascii")
+        parts = decoded.split("$")
+        parent_dn = parts[0]
+        es_uuid = parts[1]
+        if not parent_dn or not es_uuid:
+            raise ValueError
+        if ":" in parent_dn:
+            parent_dn, _, port = parent_dn.rpartition(":")
+            int(port)
+        else:
+            port = "443"
+    except (binascii.Error, ValueError, IndexError, UnicodeError) as e:
+        msg = "Cloud ID is not properly formatted"
+        raise ValueError(msg) from e
+    return f"https://{es_uuid}.{parent_dn}:{port}"
 
 
 class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
@@ -111,6 +136,10 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
     @check_cached_vector_store
     def build_vector_store(self) -> ElasticsearchStore:
         """Builds the Elasticsearch Vector Store object."""
+        if self.elasticsearch_url:
+            validate_connector_url_for_ssrf(self.elasticsearch_url)
+        if self.cloud_id:
+            validate_connector_url_for_ssrf(_cloud_id_elasticsearch_url(self.cloud_id))
         if self.cloud_id and self.elasticsearch_url:
             msg = (
                 "Both 'cloud_id' and 'elasticsearch_url' provided. "

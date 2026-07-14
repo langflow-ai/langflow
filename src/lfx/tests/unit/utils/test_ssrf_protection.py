@@ -1,5 +1,6 @@
 """Unit tests for SSRF protection utilities."""
 
+import os
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
@@ -11,21 +12,26 @@ from lfx.utils.ssrf_protection import (
     is_ip_blocked,
     is_ssrf_protection_enabled,
     resolve_hostname,
+    validate_connector_database_url_for_ssrf,
+    validate_connector_url_for_ssrf,
+    validate_database_url_for_ssrf,
+    validate_git_repository_url,
     validate_url_for_ssrf,
 )
 
 
 @contextmanager
-def mock_ssrf_settings(*, enabled=False, allowed_hosts=None):
+def mock_ssrf_settings(*, enabled=False, allowed_hosts=None, restrict_files=False, connector_validation=True):
     """Context manager to mock SSRF settings."""
     if allowed_hosts is None:
         allowed_hosts = []
 
-    with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
-        mock_settings = MagicMock()
-        mock_settings.settings.ssrf_protection_enabled = enabled
-        mock_settings.settings.ssrf_allowed_hosts = allowed_hosts
-        mock_get_settings.return_value = mock_settings
+    mock_settings = MagicMock()
+    mock_settings.settings.ssrf_protection_enabled = enabled
+    mock_settings.settings.ssrf_allowed_hosts = allowed_hosts
+    mock_settings.settings.connector_ssrf_validation_enabled = connector_validation
+    mock_settings.settings.restrict_local_file_access = restrict_files
+    with patch("lfx.utils.ssrf_protection.get_settings_service", return_value=mock_settings):
         yield
 
 
@@ -433,3 +439,147 @@ class TestIntegrationScenarios:
 
             validate_url_for_ssrf("http://database:5432", warn_only=False)
             validate_url_for_ssrf("http://api.internal.local", warn_only=False)
+
+
+class TestDatabaseURLValidation:
+    @pytest.mark.parametrize("uri", ["sqlite:////etc/passwd", "duckdb:///data.duckdb"])
+    def test_local_file_dialects_blocked_when_restricted(self, uri):
+        with (
+            mock_ssrf_settings(enabled=True, restrict_files=True),
+            pytest.raises(SSRFProtectionError, match="local filesystem"),
+        ):
+            validate_database_url_for_ssrf(uri)
+
+    @pytest.mark.parametrize(
+        "uri",
+        [
+            "postgresql://127.0.0.1:5432/db",
+            "postgresql://localhost/db",
+            "mysql://10.0.0.5:3306/db",
+            "postgresql+psycopg2://user:pass@192.168.1.10/db",  # pragma: allowlist secret
+        ],
+    )
+    def test_internal_hosts_blocked(self, uri):
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError):
+            validate_database_url_for_ssrf(uri)
+
+    def test_sqlite_allowed_by_compatibility_default(self):
+        with mock_ssrf_settings(enabled=True, restrict_files=False):
+            validate_database_url_for_ssrf("sqlite:///./local.db")
+
+    def test_connector_gate_only_disables_network_check(self):
+        with mock_ssrf_settings(enabled=True, connector_validation=False):
+            validate_connector_database_url_for_ssrf("postgresql://127.0.0.1:5432/db")
+        with (
+            mock_ssrf_settings(enabled=True, connector_validation=False, restrict_files=True),
+            pytest.raises(SSRFProtectionError, match="local filesystem"),
+        ):
+            validate_connector_database_url_for_ssrf("sqlite:////etc/passwd")
+
+    def test_public_host_allowed(self):
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+        ):
+            validate_database_url_for_ssrf("postgresql://db.example.com:5432/app")
+
+
+class TestGitRepositoryURLValidation:
+    @pytest.mark.parametrize("url", ['ext::sh -c "id"', "fd::17/foo", "::bar", "-upload-pack=evil"])
+    def test_code_execution_and_option_injection_always_blocked(self, url):
+        with mock_ssrf_settings(enabled=False), pytest.raises(SSRFProtectionError):
+            validate_git_repository_url(url)
+
+    @pytest.mark.parametrize("url", ["file:///etc/passwd", "/etc/passwd", "../escape"])
+    def test_local_paths_blocked_when_ssrf_on(self, url):
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError, match="local-filesystem"):
+            validate_git_repository_url(url)
+
+    def test_local_paths_preserve_single_tenant_compatibility(self):
+        with mock_ssrf_settings(enabled=False, restrict_files=False):
+            validate_git_repository_url("/srv/repos/myrepo")
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://169.254.169.254/latest/meta-data/",
+            "https://10.0.0.5/repo.git",
+            "git@127.0.0.1:user/repo.git",
+            "gopher://example.com/repo",
+        ],
+    )
+    def test_internal_hosts_and_disallowed_schemes_blocked(self, url):
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError):
+            validate_git_repository_url(url)
+
+    def test_public_https_and_scp_like_allowed(self):
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["140.82.112.3"]),
+        ):
+            validate_git_repository_url("https://github.com/user/repo.git")
+            validate_git_repository_url("git@github.com:user/repo.git")
+
+
+class TestConnectorURLValidation:
+    def test_explicit_disable_is_noop(self):
+        with (
+            patch.dict(os.environ, {"LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "false"}),
+            mock_ssrf_settings(enabled=True),
+        ):
+            validate_connector_url_for_ssrf("http://169.254.169.254/latest/meta-data/")
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://169.254.169.254/latest/meta-data/",
+            "http://10.0.0.5:8000",
+            "http://192.168.1.10:11434",
+        ],
+    )
+    def test_metadata_and_private_hosts_blocked_by_default(self, url):
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            mock_ssrf_settings(enabled=True),
+            pytest.raises(SSRFProtectionError),
+        ):
+            validate_connector_url_for_ssrf(url)
+
+    @pytest.mark.parametrize(
+        "url",
+        ["http://localhost:11434", "http://127.0.0.5:1234/v1", "http://[::1]:11434"],
+    )
+    def test_literal_loopback_allowed_by_default(self, url):
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true",
+                    "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK": "true",
+                },
+            ),
+            mock_ssrf_settings(enabled=True),
+        ):
+            validate_connector_url_for_ssrf(url)
+
+    def test_loopback_can_be_blocked(self):
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true",
+                    "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK": "false",
+                },
+            ),
+            mock_ssrf_settings(enabled=True),
+            pytest.raises(SSRFProtectionError),
+        ):
+            validate_connector_url_for_ssrf("http://127.0.0.1:11434")
+
+    def test_scheme_less_host_has_actionable_error(self):
+        with (
+            patch.dict(os.environ, {"LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true"}),
+            mock_ssrf_settings(enabled=True),
+            pytest.raises(SSRFProtectionError, match=r"http\(s\) URL with a host"),
+        ):
+            validate_connector_url_for_ssrf("host:19530")

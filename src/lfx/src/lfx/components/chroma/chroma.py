@@ -10,6 +10,7 @@ from lfx.base.vectorstores.user_scoping import runtime_user_id, scoped_collectio
 from lfx.base.vectorstores.utils import chroma_collection_to_data
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
@@ -104,6 +105,10 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             except ImportError as e:
                 msg = "Could not import chromadb. Please install it with `pip install chromadb`."
                 raise ImportError(msg) from e
+            scheme = "https" if self.chroma_server_ssl_enabled else "http"
+            validate_connector_url_for_ssrf(
+                f"{scheme}://{self.chroma_server_host}:{self.chroma_server_http_port or 8000}"
+            )
             client = HttpClient(
                 host=self.chroma_server_host,
                 port=self.chroma_server_http_port or 8000,

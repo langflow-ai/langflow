@@ -14,6 +14,7 @@ from lfx.services.deps import get_variable_service, session_scope
 from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.secrets import secret_value_to_str
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 from .provider_queries import (
     get_model_provider_variable_mapping,
@@ -432,7 +433,9 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             if base_url:
                 from lfx.utils.util import transform_localhost_url
 
-                llm_kwargs["base_url"] = transform_localhost_url(base_url)
+                transformed_base_url = transform_localhost_url(base_url)
+                validate_connector_url_for_ssrf(transformed_base_url)
+                llm_kwargs["base_url"] = transformed_base_url
             llm = ChatOpenAI(**llm_kwargs)
             llm.invoke("test")
 
@@ -462,6 +465,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             url = variables.get("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
             if not api_key or not project_id:
                 return
+            validate_connector_url_for_ssrf(url)
             llm = ChatWatsonx(
                 apikey=api_key,
                 url=url,
@@ -515,7 +519,9 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 raise ValueError(msg)
 
             base_url = base_url.rstrip("/")
-            response = requests.get(f"{base_url}/api/tags", timeout=5)
+            tags_url = f"{base_url}/api/tags"
+            validate_connector_url_for_ssrf(tags_url)
+            response = requests.get(tags_url, timeout=5, allow_redirects=False)
             response.raise_for_status()
 
             data = response.json()

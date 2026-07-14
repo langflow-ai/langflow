@@ -11,6 +11,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output
 from lfx.schema.data import Data
 from lfx.schema.message import Message
+from lfx.utils.ssrf_protection import validate_git_repository_url
 
 
 class GitExtractorComponent(Component):
@@ -42,6 +43,7 @@ class GitExtractorComponent(Component):
     @asynccontextmanager
     async def temp_git_repo(self):
         """Async context manager for temporary git repository cloning."""
+        validate_git_repository_url(self.repository_url)
         temp_dir = tempfile.mkdtemp()
         try:
             # Clone is still sync but wrapped in try/finally
