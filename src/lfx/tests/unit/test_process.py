@@ -3,13 +3,14 @@
 These mirror the langflow-side regression tests in
 ``src/backend/tests/unit/test_process.py`` so the two copies of ``apply_tweaks``
 (``langflow.processing.process`` used by the API and ``lfx.processing.process``)
-cannot drift. They guard the Tweaks-API code-injection gate (CWE-94): a tweak must
-never override an executable/sandbox input, while leaving benign fields tweakable.
+cannot drift. They guard Tweaks-API security boundaries: a tweak must never
+override an executable/sandbox input or repoint a protected sink, while leaving
+benign fields tweakable.
 """
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 from lfx.processing.process import apply_tweaks
 from lfx.utils.flow_validation import CODE_EXECUTION_COMPONENT_TYPES, CODE_EXECUTION_FIELD_NAMES
@@ -27,6 +28,37 @@ def test_apply_tweaks_applies_ordinary_field():
     node = _template_node({"param1": {"value": "old", "type": "str"}})
     apply_tweaks(node, {"param1": "new"})
     assert node["data"]["node"]["template"]["param1"]["value"] == "new"
+
+
+def test_apply_tweaks_blocks_sql_connection_and_query():
+    """A run caller cannot repoint the stored SQL sink or replace its query."""
+    node = _template_node(
+        {
+            "database_url": {"value": "postgresql://stored/db", "type": "str"},
+            "query": {"value": "SELECT 1", "type": "str"},
+            "include_columns": {"value": True, "type": "bool"},
+        },
+        node_type="SQLComponent",
+    )
+
+    with patch("lfx.processing.process.logger") as mock_logger:
+        apply_tweaks(
+            node,
+            {
+                "database_url": "sqlite:////etc/passwd",
+                "query": "DROP TABLE users",
+                "include_columns": False,
+            },
+        )
+
+    template = node["data"]["node"]["template"]
+    assert template["database_url"]["value"] == "postgresql://stored/db"
+    assert template["query"]["value"] == "SELECT 1"
+    assert template["include_columns"]["value"] is False
+    assert mock_logger.warning.call_args_list == [
+        call("Security: refusing to override protected field 'database_url' via tweaks."),
+        call("Security: refusing to override protected field 'query' via tweaks."),
+    ]
 
 
 def test_apply_tweaks_blocks_code_named_field():
