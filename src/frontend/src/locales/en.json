@@ -1399,7 +1399,6 @@
   "node.runComponent": "Run component",
   "node.stopBuild": "Stop build",
   "node.betaComponent": "Beta component",
-  "node.minimizeNotAvailable": "Minimization is only available for components with one active connection or fewer.",
   "node.cannotAccessCode": "You can not access {{id}} code",
   "node.customComponentEditingDisabled": "Custom component editing is disabled",
   "node.docsUnavailable": "{{id}} docs is not available at the moment.",

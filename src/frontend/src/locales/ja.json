@@ -1506,7 +1506,6 @@
   "node.errorUpdatingCodeReport": "それでもエラーが解消されない場合は、Discordまたは GitHub までご連絡ください。",
   "node.incompatibleWith": "互換性がありません",
   "node.inspectOutput": "出力を確認する",
-  "node.minimizeNotAvailable": "最小化は、アクティブな接続が1つ以下のコンポーネントでのみ利用可能です。",
   "node.outputCantBeDisplayed": "出力が表示されません",
   "node.replaceConfirmBody": "{{name}} はすでに存在しているようです。 現在のものと置き換えますか、それとも新しいものを作成しますか？",
   "node.runComponent": "コンポーネントを実行",

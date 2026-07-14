@@ -1506,7 +1506,6 @@
   "node.errorUpdatingCodeReport": "如果错误仍然存在，请在我们的 Discord 频道或 GitHub 上反馈。",
   "node.incompatibleWith": "不兼容",
   "node.inspectOutput": "检查输出",
-  "node.minimizeNotAvailable": "“最小化”功能仅适用于具有一个或更少活动连接的组件。",
   "node.outputCantBeDisplayed": "无法显示输出",
   "node.replaceConfirmBody": "似乎 {{name}} 这个域名已经存在了。 您是要用当前的替换它，还是创建一个新的？",
   "node.runComponent": "运行组件",

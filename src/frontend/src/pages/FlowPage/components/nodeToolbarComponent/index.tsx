@@ -85,7 +85,6 @@ const NodeToolbarComponent = memo(
     const paste = useFlowStore((state) => state.paste);
     const setNodes = useFlowStore((state) => state.setNodes);
     const setEdges = useFlowStore((state) => state.setEdges);
-    const edges = useFlowStore((state) => state.edges);
     const getNodePosition = useFlowStore((state) => state.getNodePosition);
     const flows = useFlowsManagerStore((state) => state.flows);
     const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -128,20 +127,6 @@ const NodeToolbarComponent = memo(
       [data.node?.template, isGroup],
     );
     const addFlow = useAddFlow();
-
-    const hasGroupOutputs = data.node?.outputs?.some?.(
-      (output) => output.group_outputs,
-    );
-    const hasOutputs =
-      data.node?.outputs?.length && data.node?.outputs?.length > 1;
-
-    const hasSelectOutput = hasOutputs && !hasGroupOutputs;
-    const hasOnlyOneOutput = data.node?.outputs?.length === 1;
-    const hasMaximumOneConnectedInput =
-      edges.filter((edge) => edge.target === data.id).length <= 1;
-
-    const isMinimal =
-      (hasSelectOutput || hasOnlyOneOutput) && hasMaximumOneConnectedInput;
 
     const [toolMode, setToolMode] = useState(
       () =>
@@ -188,22 +173,12 @@ const NodeToolbarComponent = memo(
       );
     };
 
+    // LE-1810: any component can be minimized, regardless of how many
+    // input/output handles it has.
     const handleMinimize = useCallback(() => {
-      if (isMinimal || !showNode) {
-        setShowNode(!showNode);
-        updateNodeInternals(data.id);
-        return;
-      }
-      setNoticeData({ title: t("node.minimizeNotAvailable") });
-    }, [isMinimal, showNode, data.id]);
-
-    useEffect(() => {
-      if (!isMinimal && !showNode) {
-        setShowNode(true);
-        updateNodeInternals(data.id);
-        return;
-      }
-    }, [isMinimal, showNode, data.id]);
+      setShowNode(!showNode);
+      updateNodeInternals(data.id);
+    }, [showNode, data.id]);
 
     const handleungroup = useCallback(() => {
       if (isGroup) {
@@ -732,27 +707,25 @@ const NodeToolbarComponent = memo(
                   />
                 </SelectItem>
 
-                {(isMinimal || !showNode) && (
-                  <SelectItem
-                    value={"show"}
-                    data-testid={`${
-                      showNode ? "minimize" : "expand"
-                    }-button-modal`}
-                  >
-                    <ToolbarSelectItem
-                      shortcut={
-                        shortcuts.find((obj) => obj.name === "Minimize")
-                          ?.shortcut!
-                      }
-                      value={
-                        showNode
-                          ? t("nodeToolbar.minimize")
-                          : t("nodeToolbar.expand")
-                      }
-                      icon={showNode ? "Minimize2" : "Maximize2"}
-                    />
-                  </SelectItem>
-                )}
+                <SelectItem
+                  value={"show"}
+                  data-testid={`${
+                    showNode ? "minimize" : "expand"
+                  }-button-modal`}
+                >
+                  <ToolbarSelectItem
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Minimize")
+                        ?.shortcut!
+                    }
+                    value={
+                      showNode
+                        ? t("nodeToolbar.minimize")
+                        : t("nodeToolbar.expand")
+                    }
+                    icon={showNode ? "Minimize2" : "Maximize2"}
+                  />
+                </SelectItem>
                 {isGroup && (
                   <SelectItem value="ungroup">
                     <ToolbarSelectItem

@@ -1506,7 +1506,6 @@
   "node.errorUpdatingCodeReport": "Sollte der Fehler weiterhin auftreten, melde ihn bitte auf unserem Discord-Server oder unter GitHub.",
   "node.incompatibleWith": "Nicht kompatibel mit",
   "node.inspectOutput": "Ausgabe überprüfen",
-  "node.minimizeNotAvailable": "Die Minimierung ist nur für Komponenten mit höchstens einer aktiven Verbindung verfügbar.",
   "node.outputCantBeDisplayed": "Die Ausgabe kann nicht angezeigt werden",
   "node.replaceConfirmBody": "Es scheint, als gäbe es {{name}} bereits. Möchtest du es durch das aktuelle ersetzen oder ein neues erstellen?",
   "node.runComponent": "Komponente ausführen",
