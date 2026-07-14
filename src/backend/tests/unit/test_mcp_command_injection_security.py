@@ -39,9 +39,27 @@ class TestMCPCommandInjectionSecurity:
 
     def test_allowed_commands_accepted(self):
         """Test that all allowed commands are accepted."""
-        for command in ALLOWED_MCP_COMMANDS:
-            config = MCPServerConfig(command=command, args=["--version"])
+        valid_args_by_command = {
+            "bash": ["-c", "node server.js"],
+            "cmd": ["/c", "node", "server.js"],
+            "docker": ["run", "--rm", "-i", "mcp-image"],
+            "node": ["server.js"],
+            "npx": ["@modelcontextprotocol/server-filesystem", "/workspace"],
+            "python": ["-m", "mcp_server"],
+            "python3": ["-m", "mcp_server"],
+            "sh": ["-c", "node server.js"],
+            "uvx": ["mcp-proxy"],
+        }
+
+        assert valid_args_by_command.keys() == ALLOWED_MCP_COMMANDS
+        for command, args in valid_args_by_command.items():
+            config = MCPServerConfig(command=command, args=args)
             assert config.command == command
+
+    def test_npx_unapproved_flag_rejected(self):
+        """Test that npx flags must be explicitly approved by the source policy."""
+        with pytest.raises(ValidationError, match="Argument '--version' is not allowed"):
+            MCPServerConfig(command="npx", args=["--version"])
 
     def test_allowed_command_with_path_accepted(self):
         """Test that allowed commands with full paths are accepted."""
@@ -116,12 +134,11 @@ class TestMCPCommandInjectionSecurity:
                 or ("not allowed" in error_msg)
             )
 
-    def test_c_flag_blocked_for_non_shell_commands(self):
-        """Test that -c flag is blocked for non-shell commands like python/node."""
+    def test_c_flag_blocked_for_python_commands(self):
+        """Test that the Python code-execution flag is blocked."""
         dangerous_c_usage = [
             ("python", ["-c", "import os; os.system('rm -rf /')"]),
             ("python3", ["-c", "malicious code"]),
-            ("node", ["-c", "require('child_process').exec('evil')"]),
             ("python", ["-Lc", "import os"]),
         ]
 
