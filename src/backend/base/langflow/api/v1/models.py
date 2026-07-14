@@ -393,16 +393,17 @@ async def _get_enabled_models(session: DbSession, current_user: CurrentActiveUse
     return set()
 
 
-def _build_model_default_flags() -> dict[str, bool]:
+def _build_model_default_flags(all_models_by_provider: list[dict] | None = None) -> dict[str, bool]:
     """Build a map of model names to their default flag status.
 
     Returns:
         Dictionary mapping model names to whether they are default models
     """
-    all_models_by_provider = get_unified_models_detailed(
-        include_unsupported=True,
-        include_deprecated=True,
-    )
+    if all_models_by_provider is None:
+        all_models_by_provider = get_unified_models_detailed(
+            include_unsupported=True,
+            include_deprecated=True,
+        )
 
     is_default_model = {}
     for provider_dict in all_models_by_provider:
@@ -611,13 +612,39 @@ async def update_enabled_models(
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)
     explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
 
+    all_models_by_provider = get_unified_models_detailed(
+        include_unsupported=True,
+        include_deprecated=True,
+    )
     # Build map of model names to their default flag
-    is_default_model = _build_model_default_flags()
+    is_default_model = _build_model_default_flags(all_models_by_provider)
+
+    unavailable_models: dict[tuple[str, str], str] = {}
+    for provider_dict in all_models_by_provider:
+        provider = provider_dict.get("provider")
+        if not isinstance(provider, str):
+            continue
+        for model in provider_dict.get("models", []):
+            model_name = model.get("model_name")
+            if not isinstance(model_name, str):
+                continue
+            metadata = model.get("metadata", {})
+            if metadata.get("deprecated", False):
+                unavailable_models[(provider, model_name)] = "deprecated"
+            elif metadata.get("not_supported", False):
+                unavailable_models[(provider, model_name)] = "not supported"
 
     # Update model sets based on user requests
     # For any model being enabled, validate the provider credentials
     for update in updates:
         if update.enabled:
+            unavailable_reason = unavailable_models.get((update.provider, update.model_id))
+            if unavailable_reason:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot enable {unavailable_reason} model: {update.model_id}",
+                )
+
             from lfx.base.models.unified_models import get_all_variables_for_provider, validate_model_provider_key
 
             # Get variables from DB or environment

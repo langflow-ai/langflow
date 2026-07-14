@@ -366,6 +366,19 @@ async def test_enabled_providers_reflects_models_endpoint(client: AsyncClient, o
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_cannot_enable_deprecated_model(client: AsyncClient, logged_in_headers):
+    """Deprecated models cannot be persisted as explicitly enabled."""
+    response = await client.post(
+        "api/v1/models/enabled_models",
+        json=[{"provider": "OpenAI", "model_id": "gpt-3.5-turbo", "enabled": True}],
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "Cannot enable deprecated model: gpt-3.5-turbo"
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_security_credential_value_never_exposed_in_variables_endpoint(
     client: AsyncClient, openai_credential, logged_in_headers
 ):

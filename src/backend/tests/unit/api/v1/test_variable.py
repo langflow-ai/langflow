@@ -596,7 +596,7 @@ async def test_delete_provider_credential_cleans_up_enabled_models(client: Async
         enable_response = await client.post(
             "api/v1/models/enabled_models",
             json=[
-                {"provider": "OpenAI", "model_id": "gpt-4-turbo-preview", "enabled": True},
+                {"provider": "OpenAI", "model_id": "gpt-4.1-mini", "enabled": True},
             ],
             headers=logged_in_headers,
         )
@@ -617,7 +617,7 @@ async def test_delete_provider_credential_cleans_up_enabled_models(client: Async
         import json
 
         enabled_models = json.loads(enabled_models_var["value"])
-        assert "gpt-4-turbo-preview" not in enabled_models
+        assert "gpt-4.1-mini" not in enabled_models
 
 
 @pytest.mark.usefixtures("active_user")
