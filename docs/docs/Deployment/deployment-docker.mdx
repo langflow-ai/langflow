@@ -391,7 +391,7 @@ As of Langflow 1.11.x, official Langflow Docker images set `LANGFLOW_ALLOW_CUSTO
 | `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | `true` | `false` |
 | `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | `true` (main `langflowai/langflow` image only) | `false` |
 
-These image values match the [multi-tenant component hardening](/api-keys-and-authentication#multi-tenant-component-hardening) recommendation.
+These image values match the [component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening) recommendation.
 They apply whether you use `docker run`, Docker Compose, or Kubernetes with the published image, unless you override them.
 
 The image sets `LANGFLOW_AUTO_LOGIN=false`, so you must set `LANGFLOW_SUPERUSER_PASSWORD` (and optionally, `LANGFLOW_SUPERUSER`) unless you explicitly set `LANGFLOW_AUTO_LOGIN=true`.
@@ -410,4 +410,4 @@ docker run -p 7860:7860 \
 
 In Docker Compose, add the same keys under `services.langflow.environment`.
 
-For more information, see [Multi-tenant component hardening](/api-keys-and-authentication#multi-tenant-component-hardening) and [Block custom components](/deployment-block-custom-components).
+For more information, see [Component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening) and [Block custom components](/deployment-block-custom-components).

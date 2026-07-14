@@ -157,37 +157,23 @@ For JWT token signing configuration, including algorithm selection and key manag
 
 ### LANGFLOW_AUTO_LOGIN {#langflow-auto-login}
 
-This variable controls whether authentication is required to access your Langflow server, including the visual editor, API, and Langflow CLI:
+This variable controls whether the visual editor uses automatic login or requires users to sign in.
 
 * If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor, authenticate as a superuser to run certain Langflow CLI commands, and use a Langflow API key for Langflow API requests.
-If `false`, you must explicitly set [`LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) before startup. Set [`LANGFLOW_SUPERUSER`](#langflow-superuser) only if you want to override the default superuser username.
+You must explicitly set [`LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) before startup. Set [`LANGFLOW_SUPERUSER`](#langflow-superuser) only if you want to override the default superuser username (`langflow`).
 
-* If `LANGFLOW_AUTO_LOGIN=True` (default), all API requests require authentication with a Langflow API key, but the visual editor automatically signs in all users as superusers, and Langflow uses the configured superuser username with a configured or generated bootstrap password.
-All users access the same visual editor environment without password protection, they can run all Langflow CLI commands as superusers, and Langflow automatically authenticates internal requests between the backend and frontend based on the users' superuser privileges.
-If you also want to bypass authentication for Langflow API requests in addition to other bypassed authentication, see [`LANGFLOW_SKIP_AUTH_AUTO_LOGIN`](/api-keys-and-authentication#langflow-skip-auth-auto-login).
+* If `LANGFLOW_AUTO_LOGIN=True`, the visual editor automatically signs in all users as the configured superuser, and Langflow uses that username with a configured or generated bootstrap password.
+All users share the same visual editor environment without password protection, and they can run Langflow CLI commands as superusers.
+API requests still require a Langflow API key unless you also set [`LANGFLOW_SKIP_AUTH_AUTO_LOGIN`](#langflow-skip-auth-auto-login) to `true`.
 
-Langflow doesn't allow users to simultaneously edit the same flow in real time.
-If two users edit the same flow, Langflow saves only the work of the most recent editor based on the state of that user's [workspace](/concepts-overview#workspace). Any changes made by the other user in the interim are overwritten.
+The Langflow application default is `True`.
+Official Langflow Docker images set `false`. For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
 
-#### Default authentication enforcement and LANGFLOW_SKIP_AUTH_AUTO_LOGIN {#langflow-skip-auth-auto-login}
+#### LANGFLOW_SKIP_AUTH_AUTO_LOGIN {#langflow-skip-auth-auto-login}
 
-In Langflow version 1.6, the default settings are `LANGFLOW_AUTO_LOGIN=True` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False`.
-This enforces authentication for API requests only, as explained in the preceding section.
-
-For temporary backwards compatibility, you can revert to the fully unauthenticated behavior from earlier versions by setting both variables to `true`.
-However, a future release will set `LANGFLOW_AUTO_LOGIN=False` and remove `LANGFLOW_SKIP_AUTH_AUTO_LOGIN`.
-At that point, Langflow will strictly enforce API key authentication for API requests, and you can manually disable authentication for some features, like the visual editor, by setting `LANGFLOW_AUTO_LOGIN=True`.
-
-<details>
-<summary>Authentication enforcement in earlier versions</summary>
-
-Langflow version 1.5 was the first version that could enforce authentication for Langflow API requests, regardless of the value of `LANGFLOW_AUTO_LOGIN`.
-As a temporary bypass for backwards compatibility, this version added the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` environment variable and set both variables to `true` by default to preserve the fully unauthenticated behavior from earlier versions.
-This allowed users to upgrade to version 1.5 with no change in the authentication behavior.
-
-In Langflow versions earlier than 1.5, Langflow API requests didn't require authentication.
-Additionally, the default setting of `LANGFLOW_AUTO_LOGIN=True` automatically granted all users superuser privileges in the visual editor, and it allowed all users to run all Langflow CLI commands as superusers.
-</details>
+When `LANGFLOW_AUTO_LOGIN=true`, set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` to also skip API key authentication for API requests.
+The default is `false`, so API keys are still required even when auto-login is enabled.
+This variable will be removed in a future release.
 
 ### LANGFLOW_ENABLE_SUPERUSER_CLI {#langflow-enable-superuser-cli}
 
@@ -465,17 +451,19 @@ LANGFLOW_CORS_ALLOW_METHODS=["GET","POST","PUT"]
 ```
 :::
 
-### SSRF protection {#ssrf-protection}
+###  LANGFLOW_ACCESS_* {#session-cookie-hardening}
 
-The following environment variables configure Server-Side Request Forgery (SSRF) protection for the [**API Request** component](/api-request).
-SSRF protection prevents requests to internal or private network resources, such as private IP ranges, loopback addresses, and cloud metadata endpoints.
+For a shared or public deployment served over HTTPS, harden the access-token cookie. These default to permissive values for local HTTP development and for the current frontend, which reads the access token in JavaScript.
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `True` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
-| `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
+| `LANGFLOW_ACCESS_SECURE` | Boolean | `False` | When `true`, the `access_token_lf` cookie is sent only over HTTPS. Recommended `true` for any HTTPS deployment. |
+| `LANGFLOW_ACCESS_HTTPONLY` | Boolean | `False` | When `true`, the `access_token_lf` cookie is not readable by JavaScript. The default is `false` because the bundled frontend currently reads this cookie in JavaScript. |
+| `LANGFLOW_ACCESS_SAME_SITE` | String | `lax` | The `SameSite` attribute of the access-token cookie (`lax`, `strict`, or `none`). |
 
-### Login rate limiting {#login-rate-limiting}
+The refresh-token cookie is already `HttpOnly` + `Secure` + `SameSite` by default.
+
+### LANGFLOW_RATE_LIMIT_* {#login-rate-limiting}
 
 The following environment variables configure IP-based rate limiting to protect against brute-force attacks on the `/login` endpoint and abuse of public flow endpoints.
 When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` header.
@@ -487,6 +475,48 @@ When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` h
 | `LANGFLOW_RATE_LIMIT_STORAGE_URI` | String | `memory://` | Storage backend for rate limit counters. Use `memory://` for single-server deployments or `redis://host:port` for multi-server deployments where the limit should be shared across instances. |
 | `LANGFLOW_RATE_LIMIT_TRUST_PROXY` | Boolean | `False` | When `true`, Langflow reads the client IP from the rightmost `X-Forwarded-For` header entry instead of the direct connection IP. Enable only when Langflow is behind a trusted reverse proxy or load balancer. Do not enable if users can reach Langflow directly, as this allows header spoofing. |
 | `LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE` | Integer | `20` | Maximum number of unauthenticated public-flow runs allowed per minute from a single IP address. Public flows run as the flow owner and consume resources, so anonymous callers are rate-limited separately from the `/login` endpoint. |
+### LANGFLOW_SSRF_* and LANGFLOW_CONNECTOR_SSRF_* {#ssrf-protection}
+
+The following environment variables configure Server-Side Request Forgery (SSRF) protection for the [**API Request** component](/api-request) and for connector components that take a tenant-controlled host or URL.
+SSRF protection prevents requests to internal or private network resources, such as private IP ranges, loopback addresses, and cloud metadata endpoints.
+
+In a shared server where users you do not fully trust can build flows, set `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED=true`, `LANGFLOW_SSRF_PROTECTION_ENABLED=true`, and `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK=false`, and then allowlist your own internal hosts with `LANGFLOW_SSRF_ALLOWED_HOSTS`.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `True` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
+| `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
+| `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED` | Boolean | `True` | Apply SSRF host validation to connector components that take a tenant-controlled host or URL. Uses `LANGFLOW_SSRF_PROTECTION_ENABLED` and `LANGFLOW_SSRF_ALLOWED_HOSTS` for the host policy. Set to `false`, or allowlist specific hosts, only when a trusted single-tenant deployment intentionally connects to private-network services. |
+| `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK` | Boolean | `True` | When connector SSRF validation is enabled, allow literal loopback hosts (`localhost`, `127.0.0.0/8`, `::1`) so local Ollama, LM Studio, and similar services keep working. Multi-tenant deployments where a tenant must not reach the server's loopback should set this to `false`. |
+
+### Component hardening for untrusted users {#multi-tenant-component-hardening}
+
+Use these variables when users who can build or run flows on your server should not get host-level code execution, arbitrary file reads, or  MCP mounts.
+
+As of Langflow 1.11.x, Langflow application defaults remain permissive for trusted single-user installs, while official Docker images enable the hardened values. For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | Boolean | `False` | When `true`, blocks execution of any flow containing a built-in arbitrary-code-execution component, including the [**Python Interpreter**](/python-interpreter), Python REPL/Code tools, [**Smart Transform**](/smart-transform), [**CSV Agent**](/bundles-langchain#csv-agent), and code-running agents such as [**CodeAct**](/bundles-codeagents#codeact-agent-smolagents), [**CUGA**](/bundles-cuga), and [**OpenDsStar**](/bundles-codeagents#opendstar-agent). |
+| `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `False` | When `true`, built-in file-reading components, including the [**File**](/read-file), [**Directory**](/legacy-core-components#legacy-data-components), [**JSON/CSV-to-Data**](/legacy-core-components#legacy-data-components), and the [**CSV Agent**](/bundles-langchain#csv-agent), [**JSON Agent**](/bundles-langchain#legacy-langchain-components), and [**OpenAPI Agent**](/bundles-langchain#openapi-agent) can only read and write paths inside the [`LANGFLOW_CONFIG_DIR`](/memory) storage directory. This also blocks `sqlite` and `duckdb` dialects in the [**SQL Database**](/sql-database) components and local-filesystem Git clones. |
+| `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | Boolean | `False` | When `true`, applies a strict Docker-argument policy to MCP stdio servers that use the `docker` transport. Rejects host filesystem or device mounts, `host/another-container` namespaces, non-default networks, privilege flags, and sandbox-disabling `--security-opt` values. Forms such as `--network none` / `bridge` and `--security-opt no-new-privileges` remain allowed. |
+
+:::note When to enable these flags
+If untrusted users can build flows on this server, set the following together:
+
+* `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` — blocks user-authored component code. See [Block custom components](/deployment-block-custom-components).
+* `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true` — blocks built-in code-execution components.
+* `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true` — confines built-in file access to the upload sandbox.
+* `LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true` — tightens Docker MCP server arguments.
+
+Pair these with the SSRF settings above to reduce common escape hatches; they are not full user isolation. See [Security](/security).
+:::
+
+:::warning Shared tracing backends
+External tracing integrations (LangSmith, Langfuse, Phoenix, Arize, Opik, and similar) are process-wide, not per user.
+On a shared server, every user's flow inputs and outputs go to the same tracing project.
+Do not enable a shared SaaS tracer when users are untrusted; use built-in local tracing instead.
+:::
 
 ### LANGFLOW_WEBHOOK_AUTH_ENABLE {#langflow-webhook-auth-enable}
 
@@ -702,12 +732,18 @@ LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS=3600    # 1 hour
 LANGFLOW_REFRESH_TOKEN_EXPIRE_SECONDS=604800 # 7 days
 ```
 
-## Start a Langflow server with authentication enabled
+## Start a Langflow server with authentication enabled {#start-a-langflow-server-with-authentication-enabled}
 
 This section shows you how to use the [authentication environment variables](/api-keys-and-authentication#authentication-environment-variables) to deploy a Langflow server with authentication enabled.
 This involves disabling automatic login, setting superuser credentials, generating a secret encryption key, and enabling user management.
 
 This configuration is recommended for any deployment where Langflow is exposed to a shared or public network, or where multiple users access the same Langflow server.
+
+:::tip Docker images
+Official Langflow Docker images already set `LANGFLOW_AUTO_LOGIN=false`.
+You still must set `LANGFLOW_SUPERUSER_PASSWORD` (and optionally `LANGFLOW_SUPERUSER`) before the container can start.
+For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
+:::
 
 With authentication enabled, all users must sign in to the visual editor with valid credentials, and API requests require authentication with a Langflow API key.
 Additionally, you must sign in as a superuser to manage users and [create a Langflow API key](#create-a-langflow-api-key) with superuser privileges.

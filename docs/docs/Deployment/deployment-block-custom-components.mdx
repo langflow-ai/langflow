@@ -17,7 +17,7 @@ When set to `false`, Langflow blocks creating custom components and changing cod
 When unset or `true`, Langflow allows custom code.
 Existing non-Docker installations keep the default `true` behavior until you opt in to this restriction.
 
-As of Langflow 1.11.x, official Langflow Docker images set `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` at image build time, along with related [multi-tenant component hardening](/api-keys-and-authentication#multi-tenant-component-hardening) flags.
+As of Langflow 1.11.x, official Langflow Docker images set `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` at image build time, along with related [component hardening](/api-keys-and-authentication#multi-tenant-component-hardening) flags.
 
 This environment variable is a beta feature, and should not be your only safeguard in production environments.
 
