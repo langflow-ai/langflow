@@ -664,6 +664,17 @@ module.system('id')
         assert result.is_safe is False
         assert any("os.system()" in violation for violation in result.violations)
 
+    def test_should_preserve_alias_bound_while_evaluating_for_iterable(self):
+        code = """
+import os
+for _ in [(module := os)][0:0]:
+    module = object()
+module.system('id')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
     def test_should_detect_alias_after_zero_iteration_async_for_loop(self):
         code = """
 import os
@@ -683,6 +694,18 @@ async def run():
 import os
 module = os
 while False:
+    module = object()
+module.system('id')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_preserve_alias_bound_while_evaluating_while_condition(self):
+        code = """
+import os
+module = object()
+while (module := os) and False:
     module = object()
 module.system('id')
 """

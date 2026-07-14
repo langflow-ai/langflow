@@ -159,16 +159,16 @@ def test_docker_hardened_policy_allows_benign(args):
         (["run", "--privileged", "img"], True),
         (["run", "--cap-add", "SYS_ADMIN", "img"], True),
         (["run", "--network=host", "img"], True),
-        # ...but host mounts / named networks / space-form namespaces are allowed by default
-        # (only the opt-in hardened policy rejects them).
-        (["run", "-v", "/:/host", "alpine"], False),
-        (["run", "--mount", "type=bind,src=/,dst=/host", "alpine"], False),
-        (["run", "--device", "/dev/mem", "img"], False),
-        (["run", "--network", "host", "img"], False),
-        (["run", "--security-opt", "seccomp=unconfined", "img"], False),
+        # Baseline source policy now blocks direct host access even when the
+        # additional multi-tenant Docker hardening setting is disabled.
+        (["run", "-v", "/:/host", "alpine"], True),
+        (["run", "--mount", "type=bind,src=/,dst=/host", "alpine"], True),
+        (["run", "--device", "/dev/mem", "img"], True),
+        (["run", "--network", "host", "img"], True),
+        (["run", "--security-opt", "seccomp=unconfined", "img"], True),
     ],
 )
-def test_docker_default_policy_is_lenient(args, should_block):
+def test_docker_default_policy_blocks_baseline_host_access(args, should_block):
     if should_block:
         with pytest.raises(MCPStdioSecurityError):
             validate_mcp_stdio_config("docker", args, {}, docker_hardening=False)
@@ -350,7 +350,7 @@ def test_package_runner_allowlist_rejects_unapproved_packages(command, args):
     ],
 )
 def test_package_runner_allowlist_rejects_direct_package_references(command, args):
-    with pytest.raises(MCPStdioSecurityError, match="registry package"):
+    with pytest.raises(MCPStdioSecurityError, match=r"registry package|not allowed"):
         validate_mcp_stdio_config(command, args, {}, allowed_packages={"mcp-proxy", "lfx"})
 
 
@@ -381,7 +381,7 @@ def test_package_runner_allowlist_preserves_approved_packages(command, args, all
     ],
 )
 def test_uvx_from_rejects_unapproved_entrypoint(args):
-    with pytest.raises(MCPStdioSecurityError, match="entrypoint"):
+    with pytest.raises(MCPStdioSecurityError, match=r"entrypoint|not allowed"):
         validate_mcp_stdio_config(
             "uvx",
             args,
@@ -675,7 +675,6 @@ async def test_update_tools_injects_bound_user_for_agentic_server():
     """A provided user id is injected into the agentic server's spawn env (never from config)."""
     from unittest.mock import AsyncMock
 
-    from lfx.base.mcp.security import AGENTIC_USER_ID_ENV_VAR
     from lfx.base.mcp.util import update_tools
 
     stdio_client = AsyncMock()
@@ -685,6 +684,8 @@ async def test_update_tools_injects_bound_user_for_agentic_server():
 
     await update_tools("langflow-agentic", config, mcp_stdio_client=stdio_client, current_user_id=user_id)
 
-    assert stdio_client.connect_to_server.call_count == 1
-    _command, env_arg = stdio_client.connect_to_server.call_args.args
-    assert env_arg[AGENTIC_USER_ID_ENV_VAR] == user_id
+    stdio_client.connect_to_server.assert_awaited_once_with(
+        "python -m langflow.agentic.mcp",
+        {},
+        current_user_id=user_id,
+    )
