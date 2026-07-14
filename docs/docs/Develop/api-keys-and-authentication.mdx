@@ -457,8 +457,38 @@ SSRF protection prevents requests to internal or private network resources, such
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `False` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
+| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `True` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
 | `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
+| `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED` | Boolean | `True` | Apply SSRF host validation to connector components that take a tenant-controlled host or URL, including vector stores, SQL databases, model-provider discovery, and remote service base URLs. It defers to `LANGFLOW_SSRF_PROTECTION_ENABLED` and `LANGFLOW_SSRF_ALLOWED_HOSTS` for the host policy. Set to `false`, or allowlist specific hosts, only when a trusted single-tenant deployment intentionally connects to private-network services. |
+
+:::note Multi-tenant recommendation
+In a multi-tenant deployment where mutually-untrusted users build flows, keep `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED=true` and `LANGFLOW_SSRF_PROTECTION_ENABLED=true`. Allowlist your own internal hosts with `LANGFLOW_SSRF_ALLOWED_HOSTS`.
+:::
+
+### Multi-tenant component hardening {#multi-tenant-component-hardening}
+
+The following environment variables close code-execution and local-file-read surfaces that remain reachable through *built-in* components even when user-authored custom components are disabled.
+They are disabled by default to preserve single-tenant behavior, and are meant to be set together with [`LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`](/deployment-block-custom-components) in deployments where mutually-untrusted users build flows.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | Boolean | `False` | When `true`, blocks execution of flows containing built-in arbitrary-code-execution components, including Python interpreter/REPL tools, lambda evaluators, and code-running agents. |
+| `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `False` | When `true`, built-in file-reading components can read only from the authenticated user's or executing flow's storage namespace, and `save_file` writes are confined there. This also blocks local-file database dialects and local-filesystem Git clones. |
+| `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | Boolean | `False` | When `true`, MCP Docker transports are limited to isolated `docker run` invocations. Host file/API/device access, namespace sharing, named networks, published ports, custom runtimes, restart persistence, and sandbox downgrades are rejected. Published Langflow images enable this by default. |
+| `LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES` | String | Not set | A comma-separated allowlist of exact package names that MCP `npx` and `uvx` stdio servers may download and execute. Version pins are permitted, but direct URL/path references and package-injection options are rejected. Published Langflow images allow only `mcp-proxy` and `lfx` by default. |
+| `LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING` | Boolean | `False` | When `true`, MCP stdio configurations cannot execute tenant-selected Python modules/scripts, Node.js files, or direct shell scripts. Validated package-runner wrappers and Langflow's authenticated internal agentic MCP module remain available. Published Langflow images enable this by default. |
+
+:::caution Upgrade behavior
+This hardening limits `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true` to the authenticated user's or executing flow's storage namespace. Before upgrading a deployment that already enables this setting, move component-managed files stored directly under `config_dir` into the appropriate user or flow storage namespace and update saved paths.
+:::
+
+:::note Multi-tenant recommendation
+For a deployment where mutually-untrusted users build flows, set `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`, `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true`, `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true`, `LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true`, `LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING=true`, and `LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES` together. Pair these controls with the SSRF settings above.
+:::
+
+:::warning Tracing in multi-tenant deployments
+External tracing integrations are configured process-wide, not per user. When one is enabled in a multi-tenant deployment, every tenant's flow inputs, outputs, and prompts are sent to that external project. Do not enable a shared SaaS tracing backend where mutually-untrusted tenants can build flows; use built-in local tracing instead.
+:::
 
 ### Session cookie hardening {#session-cookie-hardening}
 
@@ -474,11 +504,12 @@ The refresh-token cookie is already `HttpOnly` + `Secure` + `SameSite` by defaul
 
 ### Login rate limiting {#login-rate-limiting}
 
-The following environment variables configure IP-based rate limiting on the `/login` endpoint to protect against brute-force attacks.
+The following environment variables configure IP-based rate limiting to protect against brute-force attacks on the `/login` endpoint and abuse of public flow endpoints.
 When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` header.
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
+| `LANGFLOW_RATE_LIMIT_ENABLED` | Boolean | `True` | Enable rate limiting globally. Set to `False` to disable all rate limiting (not recommended in production). |
 | `LANGFLOW_RATE_LIMIT_PER_MINUTE` | Integer | `5` | Maximum number of login attempts allowed per minute from a single IP address. |
 | `LANGFLOW_RATE_LIMIT_STORAGE_URI` | String | `memory://` | Storage backend for rate limit counters. Use `memory://` for single-server deployments or `redis://host:port` for multi-server deployments where the limit should be shared across instances. |
 | `LANGFLOW_RATE_LIMIT_TRUST_PROXY` | Boolean | `False` | When `true`, Langflow reads the client IP from the rightmost `X-Forwarded-For` header entry instead of the direct connection IP. Enable only when Langflow is behind a trusted reverse proxy or load balancer. Do not enable if users can reach Langflow directly, as this allows header spoofing. |
