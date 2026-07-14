@@ -18,7 +18,11 @@ describe("NodeToolbar minimize contract (LE-1810)", () => {
     jest.clearAllMocks();
   });
 
-  const scenarios: Array<{ name: string; outputs: any[]; edges: number }> = [
+  const scenarios: Array<{
+    name: string;
+    outputs: { name: string }[];
+    edges: number;
+  }> = [
     {
       name: "single output, no connections",
       outputs: [{ name: "o1" }],

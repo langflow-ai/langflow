@@ -5,7 +5,13 @@ import type { NodeDataType } from "@/types/flow";
 import InspectionPanelParameterRow from "../components/InspectionPanelParameterRow";
 
 jest.mock("@/components/common/genericIconComponent", () => {
-  return function MockIconComponent({ name, className }: any) {
+  return function MockIconComponent({
+    name,
+    className,
+  }: {
+    name: string;
+    className?: string;
+  }) {
     return (
       <span data-testid={`icon-${name}`} className={className}>
         {name}
@@ -15,7 +21,7 @@ jest.mock("@/components/common/genericIconComponent", () => {
 });
 
 jest.mock("@/CustomNodes/GenericNode/components/NodeInputInfo", () => {
-  return function MockNodeInputInfo({ info }: any) {
+  return function MockNodeInputInfo({ info }: { info?: string }) {
     return <span>{info}</span>;
   };
 });
@@ -28,20 +34,21 @@ jest.mock("@/CustomNodes/hooks/use-handle-new-value", () => ({
   }),
 }));
 
-let mockEdges: any[] = [];
+let mockEdges: { target: string; targetHandle?: string }[] = [];
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: (selector: any) => selector({ edges: mockEdges }),
+  default: (selector: (state: unknown) => unknown) =>
+    selector({ edges: mockEdges }),
 }));
 
-let mockFactoryTemplates: Record<string, any> = {};
+let mockFactoryTemplates: Record<string, unknown> = {};
 jest.mock("@/stores/typesStore", () => ({
-  useTypesStore: (selector: any) =>
+  useTypesStore: (selector: (state: unknown) => unknown) =>
     selector({ templates: mockFactoryTemplates }),
 }));
 
 jest.mock("@/utils/utils", () => ({
-  cn: (...classes: any[]) => classes.filter(Boolean).join(" "),
+  cn: (...classes: string[]) => classes.filter(Boolean).join(" "),
 }));
 
 jest.mock("@/utils/reactflowUtils", () => ({

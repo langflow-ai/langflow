@@ -11,23 +11,31 @@ jest.mock("@xyflow/react", () => ({
   useReactFlow: () => ({ fitView: mockFitView }),
 }));
 
+type MockNode = {
+  id: string;
+  type: string;
+  position: { x: number; y: number };
+  data: { id: string; showNode?: boolean };
+};
+
 const mockTakeSnapshot = jest.fn();
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
-  default: (selector: any) => selector({ takeSnapshot: mockTakeSnapshot }),
+  default: (selector: (state: unknown) => unknown) =>
+    selector({ takeSnapshot: mockTakeSnapshot }),
 }));
 
-let mockNodes: any[] = [];
+let mockNodes: MockNode[] = [];
 const mockSetNodes = jest.fn();
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: (selector: any) =>
+  default: (selector: (state: unknown) => unknown) =>
     selector({ nodes: mockNodes, edges: [], setNodes: mockSetNodes }),
 }));
 
 const mockGetLayoutedNodes = jest.fn();
 jest.mock("@/utils/layoutUtils", () => ({
-  getLayoutedNodes: (...args: any[]) => mockGetLayoutedNodes(...args),
+  getLayoutedNodes: (...args: unknown[]) => mockGetLayoutedNodes(...args),
 }));
 
 const genericNode = (id: string, showNode?: boolean) => ({
@@ -82,12 +90,14 @@ describe("useMinimizeAllAndAlign (LE-1810 T9)", () => {
 
     const [collapsedNodes, , sizeOverride] = mockGetLayoutedNodes.mock.calls[0];
     const generics = collapsedNodes.filter(
-      (node: any) => node.type === "genericNode",
+      (node: MockNode) => node.type === "genericNode",
     );
-    expect(generics.every((node: any) => node.data.showNode === false)).toBe(
-      true,
+    expect(
+      generics.every((node: MockNode) => node.data.showNode === false),
+    ).toBe(true);
+    const note = collapsedNodes.find(
+      (node: MockNode) => node.type === "noteNode",
     );
-    const note = collapsedNodes.find((node: any) => node.type === "noteNode");
     expect(note.data.showNode).toBeUndefined();
     expect(sizeOverride).toEqual({
       width: MINIMIZED_NODE_WIDTH,
@@ -112,8 +122,8 @@ describe("useMinimizeAllAndAlign (LE-1810 T9)", () => {
     const [expandedNodes, , sizeOverride] = mockGetLayoutedNodes.mock.calls[0];
     expect(
       expandedNodes
-        .filter((node: any) => node.type === "genericNode")
-        .every((node: any) => node.data.showNode === true),
+        .filter((node: MockNode) => node.type === "genericNode")
+        .every((node: MockNode) => node.data.showNode === true),
     ).toBe(true);
     expect(sizeOverride).toBeUndefined();
 

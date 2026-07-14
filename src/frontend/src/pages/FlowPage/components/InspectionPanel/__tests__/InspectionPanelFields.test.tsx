@@ -4,20 +4,26 @@ import InspectionPanelFields from "../components/InspectionPanelFields";
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: function MockIconComponent({ name }: any) {
+  default: function MockIconComponent({ name }: { name: string }) {
     return <span data-testid={`icon-${name}`}>{name}</span>;
   },
 }));
 
 jest.mock("../components/InspectionPanelParameterRow", () => {
-  return function MockParameterRow({ name, title }: any) {
+  return function MockParameterRow({
+    name,
+    title,
+  }: {
+    name: string;
+    title: string;
+  }) {
     return <div data-testid={`row-${name}`}>{title}</div>;
   };
 });
 
 describe("InspectionPanelFields", () => {
   const createMockData = (
-    template: Record<string, any>,
+    template: Record<string, unknown>,
     overrides = {},
   ): NodeDataType =>
     ({
@@ -92,7 +98,7 @@ describe("InspectionPanelFields", () => {
       method: { type: "str", show: true, value: "GET" },
       body: { type: "dict", show: true },
     });
-    (data as any).type = "APIRequest";
+    data.type = "APIRequest";
     render(<InspectionPanelFields data={data} />);
 
     expect(screen.queryByTestId("row-body")).not.toBeInTheDocument();

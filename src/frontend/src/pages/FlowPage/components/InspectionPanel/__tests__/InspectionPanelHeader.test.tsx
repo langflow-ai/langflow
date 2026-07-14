@@ -5,7 +5,7 @@ import InspectionPanelHeader from "../components/InspectionPanelHeader";
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: function MockIconComponent({ name }: any) {
+  default: function MockIconComponent({ name }: { name: string }) {
     return <span data-testid={`icon-${name}`}>{name}</span>;
   },
 }));
@@ -13,12 +13,12 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 const mockSetInspectionPanelVisible = jest.fn();
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: (selector: any) =>
+  default: (selector: (state: unknown) => unknown) =>
     selector({ setInspectionPanelVisible: mockSetInspectionPanelVisible }),
 }));
 
 jest.mock("@/utils/utils", () => ({
-  cn: (...classes: any[]) => classes.filter(Boolean).join(" "),
+  cn: (...classes: string[]) => classes.filter(Boolean).join(" "),
 }));
 
 const renderWithProviders = () =>

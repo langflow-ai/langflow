@@ -1,16 +1,25 @@
 import { render, screen } from "@testing-library/react";
+import type React from "react";
 import type { AllNodeType } from "@/types/flow";
 import InspectionPanel from "../index";
 
 jest.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({
+      children,
+      ...props
+    }: React.PropsWithChildren<Record<string, unknown>>) => (
+      <div {...props}>{children}</div>
+    ),
   },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
+  AnimatePresence: ({ children }: React.PropsWithChildren) => <>{children}</>,
 }));
 
 jest.mock("@xyflow/react", () => ({
-  Panel: ({ children, ...props }: any) => (
+  Panel: ({
+    children,
+    ...props
+  }: React.PropsWithChildren<Record<string, unknown>>) => (
     <div data-testid="xyflow-panel" {...props}>
       {children}
     </div>
@@ -26,7 +35,11 @@ jest.mock("../components/InspectionPanelHeader", () => {
 });
 
 jest.mock("../components/InspectionPanelFields", () => {
-  return function MockInspectionPanelFields({ data }: any) {
+  return function MockInspectionPanelFields({
+    data,
+  }: {
+    data?: { id?: string };
+  }) {
     return (
       <div data-testid="inspection-panel-fields">
         Fields for {data?.id || "unknown"}
@@ -40,7 +53,7 @@ jest.mock("@/components/ui/separator", () => ({
 }));
 
 jest.mock("@/utils/utils", () => ({
-  cn: (...classes: any[]) => classes.filter(Boolean).join(" "),
+  cn: (...classes: string[]) => classes.filter(Boolean).join(" "),
 }));
 
 describe("InspectionPanel", () => {
@@ -76,7 +89,9 @@ describe("InspectionPanel", () => {
   it("renders nothing for non-generic nodes", () => {
     render(
       <InspectionPanel
-        selectedNode={createMockNode({ type: "noteNode" } as any)}
+        selectedNode={createMockNode({
+          type: "noteNode",
+        } as Partial<AllNodeType>)}
       />,
     );
 
@@ -93,7 +108,7 @@ describe("InspectionPanel", () => {
 
     const otherNode = createMockNode();
     otherNode.id = "other-node-456";
-    otherNode.data = { ...otherNode.data, id: "other-node-456" } as any;
+    otherNode.data = { ...otherNode.data, id: "other-node-456" };
     rerender(<InspectionPanel selectedNode={otherNode} />);
 
     expect(screen.getByText(/Fields for other-node-456/)).toBeInTheDocument();
