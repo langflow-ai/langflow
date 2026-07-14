@@ -47,6 +47,7 @@ from lfx.graph.checkpoint.schema import GraphCheckpoint
 from lfx.graph.checkpoint.store import CheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.log.logger import logger
+from lfx.run.hitl import reroute_decision_on_timeout
 from lfx.schema.workflow import (
     GLOBAL_KEY_MAX_LEN,
     JobStatus,
@@ -260,6 +261,10 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
         return _suspended_response(flow_id, task_id, checkpoint.session_id, pending)
 
     decision = {"action_id": action_id or text.strip().lower().replace(" ", "_"), "values": {}}
+    # Lazy HITL timeout: if the pause elapsed, a late answer must not take the picked branch. Reroute
+    # to the fallback/expired path exactly like the CLI resume loop and the background build do. No-op
+    # when the node defined no timeout.
+    decision = reroute_decision_on_timeout(pending, decision)
     # Shared HITL resume seam (restore + inject decision + un-build the paused vertex), so this path
     # can't drift from the CLI resume loop; see lfx.run.hitl.resume_graph_with_decision.
     graph = resume_graph_with_decision(checkpoint, store, pending.get("request_id"), decision)

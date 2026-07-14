@@ -43,5 +43,11 @@ export const usePostA2AMessage: useMutationFunctionType<
     return response.data;
   };
 
-  return mutate(["usePostA2AMessage"], postA2AMessageFn, options);
+  // message/send runs the flow and is not idempotent (no server-side messageId
+  // dedupe), so a retry on a 5xx/network error re-executes the whole flow and can
+  // spawn duplicate HITL tasks. Default retry off; a caller can still opt back in.
+  return mutate(["usePostA2AMessage"], postA2AMessageFn, {
+    retry: false,
+    ...options,
+  });
 };

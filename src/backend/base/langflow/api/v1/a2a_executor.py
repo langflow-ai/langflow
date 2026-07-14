@@ -147,8 +147,11 @@ class FlowAgentExecutor(AgentExecutor):
         # ponytail: this in-band branch needs a flow that builds then errors at a
         # component to exercise; left to the suite's raised-failure coverage this slice.
         if response.status == JobStatus.FAILED or response.has_errors:
+            # The endpoint is unauthenticated, so redact like the raised-exception branch above:
+            # log the component error text server-side, hand the caller a generic message.
             detail = "; ".join(error.error for error in response.errors) or "Flow execution failed"
-            await updater.failed(updater.new_agent_message([new_text_part(detail)]))
+            logger.error("A2A flow failed in-band for task %s: %s", context.task_id, detail)
+            await updater.failed(updater.new_agent_message([new_text_part("Flow execution failed")]))
             return
 
         # Emit the answer artifact and complete. This runs OUTSIDE the try above, and _answer_parts

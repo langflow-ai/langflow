@@ -288,6 +288,7 @@ class FlowHeader(BaseModel):
     mcp_enabled: bool | None = Field(None, description="Flag indicating whether the flow is exposed in the MCP server")
     flow_type: FlowType | None = Field(None, description="Whether the flow is a plain workflow or an agent")
     a2a_enabled: bool | None = Field(None, description="Flag indicating whether the flow is exposed as an A2A agent")
+    a2a_card_overrides: dict | None = Field(None, description="User overrides for the served A2A agent card")
     action_name: str | None = Field(None, description="The name of the action associated with the flow")
     action_description: str | None = Field(None, description="The description of the action associated with the flow")
 
