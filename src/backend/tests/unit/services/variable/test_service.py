@@ -372,3 +372,53 @@ async def test_create_credential_variable_with_fernet_signature_succeeds(service
     assert variable.name == "TEST_CRED"
     # The value should be encrypted (different from input)
     assert variable.value != "gAAAAABsome-value"
+
+
+_FERNET_TOKEN = "gAAAAABthis-stands-in-for-an-encrypted-credential"  # noqa: S105
+
+
+async def test_credential_to_generic_type_flip_without_value_is_rejected(service, session: AsyncSession):
+    user_id = uuid4()
+    variable = await service.create_variable(
+        user_id,
+        "OPENAI_API_KEY",
+        "placeholder",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+    variable.value = _FERNET_TOKEN
+    session.add(variable)
+    await session.flush()
+
+    flip = VariableUpdate(id=variable.id, type=GENERIC_TYPE)
+    with pytest.raises(ValueError, match="without providing a new value"):
+        await service.update_variable_fields(
+            user_id=user_id,
+            variable_id=variable.id,
+            variable=flip,
+            session=session,
+        )
+
+    unchanged = await service.get_variable_by_id(user_id, variable.id, session=session)
+    assert unchanged.type == CREDENTIAL_TYPE
+    assert unchanged.updated_at is None
+
+
+async def test_get_all_never_decrypts_credential_shaped_generic_value(service, session: AsyncSession):
+    user_id = uuid4()
+    variable = await service.create_variable(
+        user_id,
+        "AWS_SECRET_ACCESS_KEY",
+        "placeholder",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+    variable.type = GENERIC_TYPE
+    variable.value = _FERNET_TOKEN
+    session.add(variable)
+    await session.flush()
+
+    with patch("langflow.services.variable.service.auth_utils.decrypt_api_key", return_value="plaintext-secret"):
+        results = await service.get_all(user_id, session=session)
+
+    assert all(result.id != variable.id for result in results)

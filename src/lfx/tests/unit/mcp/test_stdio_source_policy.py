@@ -1,0 +1,179 @@
+import pytest
+from lfx.base.mcp.security import validate_mcp_stdio_config
+from lfx.base.mcp.source_policy import (
+    is_package_manager_config_env_var,
+    validate_mcp_stdio_source_policy,
+)
+
+
+def _validate_policy(command, args):
+    if command in {"sh", "bash", "cmd"}:
+        validate_mcp_stdio_config(command, args, None)
+    else:
+        validate_mcp_stdio_source_policy(command, args)
+
+
+@pytest.mark.parametrize(
+    "env_var",
+    [
+        "NPM_CONFIG_REGISTRY",
+        "npm_config_userconfig",
+        "UV_DEFAULT_INDEX",
+        "uv_index_url",
+        "PIP_INDEX_URL",
+        "pip_extra_index_url",
+    ],
+)
+def test_package_manager_configuration_namespaces_are_reserved(env_var):
+    assert is_package_manager_config_env_var(env_var)
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("uvx", ["--default-index", "https://packages.example.invalid/simple", "mcp-server"]),
+        ("uvx", ["--index-url=https://packages.example.invalid/simple", "mcp-server"]),
+        ("uvx", ["--from", "git+https://code.example.invalid/server.git", "mcp-server"]),
+        ("uvx", ["--from", "server.whl", "mcp-server"]),
+        ("uvx", ["-wgit+https://code.example.invalid/addon.git", "mcp-server"]),
+        ("uvx", ["https://packages.example.invalid/server.whl"]),
+        ("npx", ["--registry=https://packages.example.invalid", "@example/mcp-server"]),
+        ("npx", ["--package", "git+https://code.example.invalid/server.git"]),
+        ("npx", ["https://packages.example.invalid/server.tgz"]),
+        ("npx", ["server.tgz"]),
+        ("docker", ["run", "-v", "/:/host", "mcp-server"]),
+        ("docker", ["run", "-iv", "/:/host", "mcp-server"]),
+        ("docker", ["run", "--volume=/var/run:/host/run", "mcp-server"]),
+        ("docker", ["run", "--mount", "type=bind,source=/,target=/host", "mcp-server"]),
+        ("docker", ["run", "--volumes-from=other", "mcp-server"]),
+        ("docker", ["run", "--device", "/dev/example", "mcp-server"]),
+        ("docker", ["run", "--device=/dev/example", "mcp-server"]),
+        ("docker", ["run", "--device-cgroup-rule", "b 8:0 rwm", "mcp-server"]),
+        ("docker", ["run", "--privileged", "mcp-server"]),
+        ("docker", ["run", "--cap-add", "SYS_ADMIN", "mcp-server"]),
+        ("docker", ["run", "--pid", "host", "mcp-server"]),
+        ("docker", ["run", "--ipc=container:other", "mcp-server"]),
+        ("docker", ["run", "--uts", "host", "mcp-server"]),
+        ("docker", ["run", "--network", "host", "mcp-server"]),
+        ("docker", ["run", "--net=container:other", "mcp-server"]),
+        ("docker", ["run", "--security-opt", "seccomp=unconfined", "mcp-server"]),
+        ("docker", ["run", "--security-opt=apparmor=unconfined", "mcp-server"]),
+        ("docker", ["run", "--security-opt", "label:disable", "mcp-server"]),
+        ("sh", ["-c", "uvx --default-index https://packages.example.invalid/simple mcp-server"]),
+        ("bash", ["-lc", "npx --registry=https://packages.example.invalid @example/mcp-server"]),
+        ("cmd", ["/c", "docker", "run", "--mount", "type=bind,source=/,target=/host", "mcp-server"]),
+        ("sh", ["-c", "true; uvx --index-url https://packages.example.invalid/simple mcp-server"]),
+        ("sh", ["-c", "exec uvx --index-url https://packages.example.invalid/simple mcp-server"]),
+    ],
+)
+def test_source_redirects_and_docker_host_access_are_rejected(command, args):
+    with pytest.raises(ValueError, match=r"not allowed|dangerous shell metacharacter"):
+        _validate_policy(command, args)
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("uvx", ["--from", "lfx", "lfx-mcp"]),
+        ("uvx", ["--from=lfx==1.10.3", "lfx-mcp"]),
+        ("uvx", ["-wlfx", "mcp-server"]),
+        ("uvx", ["mcp-proxy", "--transport", "streamablehttp", "https://mcp.example.com"]),
+        ("npx", ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]),
+        ("npx", ["@example/mcp-server@1.2.3", "--endpoint", "https://mcp.example.com"]),
+        ("docker", ["run", "--rm", "-i", "--entrypoint", "mcp-server", "-u", "1000", "mcp-image"]),
+        ("docker", ["run", "--rm", "-i", "--network", "bridge", "mcp-image"]),
+        ("docker", ["run", "--rm", "-i", "--network", "mcp-network", "mcp-image"]),
+        ("docker", ["run", "--rm", "-i", "--ipc", "private", "mcp-image"]),
+        ("docker", ["run", "--rm", "-i", "--security-opt", "no-new-privileges", "mcp-image"]),
+        ("sh", ["-c", "uvx --from lfx lfx-mcp"]),
+        ("bash", ["-c", "python -m mcp_server"]),
+        ("cmd", ["/c", "npx", "@example/mcp-server", "--endpoint", "https://mcp.example.com"]),
+    ],
+)
+def test_trusted_registry_packages_and_isolated_docker_args_are_allowed(command, args):
+    _validate_policy(command, args)
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("uvx", ["unapproved-server"]),
+        ("npx", ["@example/unapproved-server"]),
+        ("uvx", ["--from", "lfx", "python"]),
+    ],
+)
+def test_operator_package_allowlist_and_uvx_entrypoints_are_enforced(command, args):
+    with pytest.raises(ValueError, match=r"not allowed"):
+        validate_mcp_stdio_source_policy(
+            command,
+            args,
+            allowed_packages=frozenset({"lfx", "mcp-proxy"}),
+        )
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("uvx", ["mcp-proxy"]),
+        ("uvx", ["--from", "lfx", "lfx-mcp"]),
+    ],
+)
+def test_operator_package_allowlist_preserves_approved_packages(command, args):
+    validate_mcp_stdio_source_policy(
+        command,
+        args,
+        allowed_packages=frozenset({"lfx", "mcp-proxy"}),
+    )
+
+
+def test_npx_noninteractive_flag_remains_allowed_by_shared_policy():
+    validate_mcp_stdio_config("npx", ["-y", "@modelcontextprotocol/server-filesystem"], None)
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("python", ["/tmp/tenant.py"]),
+        ("python3", ["-m", "tenant.module"]),
+        ("node", ["/tmp/tenant.js"]),
+        ("bash", ["/tmp/tenant.sh"]),
+        ("sh", ["/tmp/tenant.sh", "-c", "uvx mcp-proxy"]),
+        ("cmd", [r"C:\tenant\evil.bat", "/c", "uvx", "mcp-proxy"]),
+    ],
+)
+def test_interpreter_hardening_rejects_tenant_selected_code(command, args):
+    with pytest.raises(ValueError, match=r"not allowed"):
+        validate_mcp_stdio_source_policy(command, args, interpreter_hardening=True)
+
+
+def test_interpreter_hardening_preserves_authenticated_agentic_module():
+    validate_mcp_stdio_source_policy(
+        "python",
+        ["-m", "langflow.agentic.mcp"],
+        interpreter_hardening=True,
+    )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["exec", "running-container", "sh"],
+        ["run", "--env-file", "/etc/secrets", "mcp-image"],
+        ["run", "--use-api-socket", "mcp-image"],
+        ["run", "--network", "internal-control-plane", "mcp-image"],
+        ["run", "-itp8080:80", "mcp-image"],
+        ["run", "--runtime", "host-runtime", "mcp-image"],
+        ["run", "--restart", "always", "mcp-image"],
+    ],
+)
+def test_docker_hardening_rejects_remaining_host_access_bypasses(args):
+    with pytest.raises(ValueError, match=r"not allowed"):
+        validate_mcp_stdio_source_policy("docker", args, docker_hardening=True)
+
+
+def test_docker_hardening_preserves_isolated_run():
+    validate_mcp_stdio_source_policy(
+        "docker",
+        ["run", "--rm", "--network", "bridge", "--security-opt", "no-new-privileges", "mcp-image"],
+        docker_hardening=True,
+    )

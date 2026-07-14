@@ -11,6 +11,7 @@ from lfx.base.agents.agent import LCAgentComponent
 from lfx.base.models.unified_models import get_language_model_options, get_llm, handle_model_input_update
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.inputs.inputs import BoolInput, DropdownInput, FileInput, ModelInput, SecretStrInput, StrInput
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 
 
 class OpenAPIAgentComponent(LCAgentComponent):
@@ -77,8 +78,8 @@ class OpenAPIAgentComponent(LCAgentComponent):
 
     def build_agent(self) -> AgentExecutor:
         llm = self._get_llm()
-        path = Path(self.path)
-        if path.suffix in {"yaml", "yml"}:
+        path = enforce_local_file_access(Path(self.path), scope_ids=component_file_access_scopes(self))
+        if path.suffix in {".yaml", ".yml"}:
             with path.open(encoding="utf-8") as file:
                 yaml_dict = yaml.safe_load(file)
             spec = JsonSpec(dict_=yaml_dict)

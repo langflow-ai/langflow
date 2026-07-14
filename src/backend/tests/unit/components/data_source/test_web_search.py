@@ -1,9 +1,10 @@
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pandas as pd
 import pytest
 from lfx.components.data_source.web_search import WebSearchComponent
 from lfx.schema import DataFrame
+from lfx.utils.ssrf_protection import SSRFProtectionError
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -63,6 +64,43 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         assert component.ensure_url("example.com") == "https://example.com"
         assert component.ensure_url("www.example.com") == "https://www.example.com"
 
+    @patch("lfx.components.data_source.web_search.is_ssrf_protection_enabled", return_value=True)
+    @patch("lfx.components.data_source.web_search.create_ssrf_protected_sync_client")
+    @patch("lfx.components.data_source.web_search.validate_and_resolve_url")
+    def test_safe_get_url_validates_and_uses_dns_pinning(self, mock_validate, mock_create_client, mock_ssrf_enabled):
+        """Arbitrary URL fetches must use SSRF validation and DNS pinning."""
+        component = WebSearchComponent()
+        component.timeout = 5
+        mock_validate.return_value = ("https://example.com/feed.rss", ["93.184.216.34"])
+
+        mock_response = Mock()
+        mock_client = MagicMock()
+        mock_client.__enter__.return_value = mock_client
+        mock_client.get.return_value = mock_response
+        mock_create_client.return_value = mock_client
+
+        result = component._safe_get_url("example.com/feed.rss")
+
+        assert result is mock_response
+        mock_validate.assert_called_once_with("https://example.com/feed.rss")
+        mock_ssrf_enabled.assert_called_once()
+        mock_create_client.assert_called_once_with(hostname="example.com", validated_ips=["93.184.216.34"])
+        mock_client.get.assert_called_once_with(
+            "https://example.com/feed.rss", headers=None, timeout=5, follow_redirects=False
+        )
+
+    @patch("lfx.components.data_source.web_search.validate_and_resolve_url")
+    def test_safe_get_url_blocks_ssrf_targets(self, mock_validate):
+        """SSRF validation failures must surface before any network fetch."""
+        component = WebSearchComponent()
+        component.timeout = 5
+        mock_validate.side_effect = SSRFProtectionError("blocked")
+
+        with pytest.raises(ValueError, match="SSRF Protection: blocked"):
+            component._safe_get_url("http://169.254.169.254/latest/meta-data")
+
+        mock_validate.assert_called_once_with("http://169.254.169.254/latest/meta-data")
+
     def test_sanitize_query(self):
         """Test query sanitization."""
         component = WebSearchComponent()
@@ -112,8 +150,9 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         assert result["query"]["info"] == "RSS feed URL to parse"
         assert result["query"]["display_name"] == "RSS Feed URL"
 
+    @patch.object(WebSearchComponent, "_safe_get_url")
     @patch("lfx.components.data.web_search.requests.get")
-    def test_perform_web_search_success(self, mock_get):
+    def test_perform_web_search_success(self, mock_get, mock_safe_get):
         """Test successful web search."""
         component = WebSearchComponent()
         component.query = "test query"
@@ -137,7 +176,8 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         mock_page_response.text = "<html><body>Page content</body></html>"
         mock_page_response.raise_for_status.return_value = None
 
-        mock_get.side_effect = [mock_response, mock_page_response]
+        mock_get.return_value = mock_response
+        mock_safe_get.return_value = mock_page_response
 
         result = component.perform_web_search()
 
@@ -258,7 +298,7 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, DataFrame)
         assert "No search parameters provided" in result.iloc[0]["summary"]
 
-    @patch("lfx.components.data.web_search.requests.get")
+    @patch.object(WebSearchComponent, "_safe_get_url")
     def test_perform_rss_read_success(self, mock_get):
         """Test successful RSS feed reading."""
         component = WebSearchComponent()
@@ -295,7 +335,7 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         assert result.iloc[0]["title"] == "RSS Item 1"
         assert result.iloc[1]["title"] == "RSS Item 2"
 
-    @patch("lfx.components.data.web_search.requests.get")
+    @patch.object(WebSearchComponent, "_safe_get_url")
     def test_perform_rss_read_empty_response(self, mock_get):
         """Test RSS read with empty response."""
         component = WebSearchComponent()
@@ -312,7 +352,7 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, DataFrame)
         assert "Empty response received" in result.iloc[0]["summary"]
 
-    @patch("lfx.components.data.web_search.requests.get")
+    @patch.object(WebSearchComponent, "_safe_get_url")
     def test_perform_rss_read_invalid_xml(self, mock_get):
         """Test RSS read with invalid XML - returns empty DataFrame when no items found."""
         component = WebSearchComponent()
@@ -339,6 +379,45 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
 
         assert isinstance(result, DataFrame)
         assert "No RSS URL provided" in result.iloc[0]["summary"]
+
+    def test_perform_rss_read_blocks_ssrf(self, monkeypatch):
+        """RSS mode must block cloud-metadata URLs before the network request."""
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        component = WebSearchComponent()
+        component.query = "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
+        component.timeout = 5
+
+        with patch("lfx.components.data_source.web_search.requests.get") as mock_get:
+            result = component.perform_rss_read()
+
+        mock_get.assert_not_called()
+        assert isinstance(result, DataFrame)
+        assert "SSRF Protection" in result.iloc[0]["summary"]
+
+    def test_perform_web_search_blocks_ssrf_on_result_links(self, monkeypatch):
+        """Search result links targeting cloud metadata must not be fetched."""
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        component = WebSearchComponent()
+        component.query = "test query"
+        component.timeout = 5
+
+        mock_response = Mock()
+        mock_response.text = (
+            '<html><div class="result">'
+            '<a class="result__a" href="?uddg=http%3A%2F%2F169.254.169.254%2Flatest%2Fmeta-data%2F">Title</a>'
+            '<a class="result__snippet">snippet</a>'
+            "</div></html>"
+        )
+        mock_response.headers = {"content-type": "text/html"}
+        mock_response.raise_for_status.return_value = None
+
+        with patch("lfx.components.data_source.web_search.requests.get") as mock_get:
+            mock_get.return_value = mock_response
+            result = component.perform_web_search()
+
+        assert mock_get.call_count == 1
+        assert isinstance(result, DataFrame)
+        assert "Blocked by SSRF protection" in result.iloc[0]["content"]
 
     @patch.object(WebSearchComponent, "perform_web_search")
     def test_perform_search_web_mode(self, mock_web_search):

@@ -10,6 +10,8 @@ from langchain_community.document_loaders.git import GitLoader
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, MessageTextInput, Output
 from lfx.schema.data import Data
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
+from lfx.utils.ssrf_protection import validate_git_repository_url
 
 
 class GitLoaderComponent(Component):
@@ -235,11 +237,17 @@ class GitLoaderComponent(Component):
 
         repo_source = getattr(self, "repo_source", None)
         if repo_source == "Local":
-            repo_path = self.repo_path
+            repo_path = str(
+                enforce_local_file_access(
+                    self.repo_path,
+                    scope_ids=component_file_access_scopes(self),
+                )
+            )
             clone_url = None
         else:
             # Clone source
             clone_url = self.clone_url
+            validate_git_repository_url(clone_url)
             async with self.temp_clone_dir() as temp_dir:
                 repo_path = temp_dir
 

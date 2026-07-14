@@ -23,11 +23,14 @@ from mcp.shared.exceptions import McpError
 from pydantic import BaseModel
 
 from lfx.base.agents.utils import maybe_unflatten_dict
+from lfx.base.mcp import security as mcp_security
+from lfx.base.mcp.security import validate_mcp_stdio_config
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
@@ -41,82 +44,18 @@ HTTP_INTERNAL_SERVER_ERROR = 500
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
 
-# SECURITY: Environment variables that enable code injection via approved MCP
-# stdio commands. All comparisons are case-insensitive (see is_dangerous_mcp_env_var).
-#
-# The stdio launcher runs servers with shell=False (no bash -c / cmd /c wrapper;
-# see MCPStdioClient._connect_to_server), which structurally neutralizes the
-# shell-startup vectors below. They are retained as defense-in-depth: a fail-safe
-# if a shell wrapper is ever reintroduced, and to keep write-time validation
-# (MCPServerConfig) aligned with the launch-time backstop. The loader and
-# interpreter entries remain load-bearing regardless of the shell, because the
-# dynamic linker / target interpreter honors them directly.
-DANGEROUS_MCP_ENV_VARS = frozenset(
-    {
-        # -- Loader / interpreter injection (dangerous even with shell=False) --
-        # Shared-object / dylib injection (arbitrary native code in any process)
-        "ld_preload",
-        "ld_library_path",
-        "ld_audit",
-        "dyld_insert_libraries",
-        "dyld_library_path",
-        # glibc iconv module injection (loads arbitrary .so via iconv)
-        "gconv_path",
-        # Command resolution override (redirects which binary is exec'd)
-        "path",
-        # Node.js code injection (honored by the node runtime itself)
-        "node_options",
-        "node_extra_ca_certs",
-        # Python code injection (honored by the python runtime itself)
-        "pythonstartup",
-        "pythonpath",
-        # Home / config directory redirection (loads attacker-controlled configs)
-        "home",
-        "xdg_config_home",
-        "xdg_data_home",
-        # Temp directory redirection
-        "tmpdir",
-        "tmp",
-        "temp",
-        # DNS / network manipulation
-        "hostaliases",
-        "localdomain",
-        "res_options",
-        # Locale / getconf injection (can load arbitrary .so on some glibc)
-        "getconf_dir",
-        # -- Shell-startup vectors (defense-in-depth; inert while shell=False) --
-        # Shell startup, option, and tracing injection
-        "bash_env",
-        "env",
-        "bash_func_",
-        "shellopts",
-        "bashopts",
-        "ps4",
-        # Shell word-splitting / globbing manipulation
-        "ifs",
-        "cdpath",
-    }
-)
+# Backward-compatible export; the canonical policy now lives in lfx.base.mcp.security.
+DANGEROUS_MCP_ENV_VARS = mcp_security.DANGEROUS_MCP_ENV_VARS
+is_dangerous_mcp_env_var = mcp_security.is_dangerous_mcp_env_var
 
 # MCP Session Manager constants - lazy loaded
 _mcp_settings_cache: dict[str, Any] = {}
 
 
-def is_dangerous_mcp_env_var(key: str) -> bool:
-    lower_key = key.lower()
-    return lower_key in DANGEROUS_MCP_ENV_VARS or lower_key.startswith("bash_func_")
-
-
 def _validate_mcp_stdio_env(env: dict[str, str] | None) -> dict[str, str]:
-    if env is None:
-        return {}
-
-    for key in env:
-        if is_dangerous_mcp_env_var(key):
-            msg = f"Environment variable '{key}' is not allowed for MCP stdio servers"
-            raise ValueError(msg)
-
-    return env
+    """Backward-compatible env-only wrapper around the shared stdio policy."""
+    validate_mcp_stdio_config(None, None, env)
+    return env or {}
 
 
 def _get_mcp_setting(key: str, default: Any = None) -> Any:
@@ -1667,8 +1606,8 @@ class MCPStdioClient:
         shell metacharacters, ``IFS`` word-splitting, ``CDPATH`` redirection,
         ``BASH_ENV`` / ``ENV`` / ``BASH_FUNC_*`` startup injection, and
         ``PS4`` / ``SHELLOPTS`` xtrace abuse.  None of those can fire because no
-        shell is ever spawned.  The :func:`_validate_mcp_stdio_env` backstop
-        still rejects loader and interpreter env vars (``LD_PRELOAD``,
+        shell is ever spawned.  The shared :func:`validate_mcp_stdio_config`
+        backstop still rejects loader and interpreter env vars (``LD_PRELOAD``,
         ``DYLD_*``, ``GCONV_PATH``, ``PYTHONPATH``, ``NODE_OPTIONS``, ...) which
         remain dangerous regardless of the shell because they are honored by the
         dynamic linker or the target interpreter itself.
@@ -1680,7 +1619,8 @@ class MCPStdioClient:
             msg = "MCP stdio command is empty"
             raise ValueError(msg)
 
-        safe_env = _validate_mcp_stdio_env(env)
+        validate_mcp_stdio_config(command_parts[0], command_parts[1:], env)
+        safe_env = env or {}
         env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **safe_env}
 
         # shell=False: exec the binary directly with structured args. The MCP SDK
@@ -2168,6 +2108,7 @@ async def update_tools(
     mcp_sse_client: MCPStreamableHttpClient | None = None,  # Backward compatibility
     request_variables: dict[str, str] | None = None,
     tool_execution_timeout: float | None = None,
+    current_user_id: str | UUID | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools.
 
@@ -2179,6 +2120,9 @@ async def update_tools(
         mcp_sse_client: Optional SSE client instance (backward compatibility)
         request_variables: Optional dict of global variables to resolve in headers
         tool_execution_timeout: Optional timeout in seconds for tool execution (int or float)
+        current_user_id: Authenticated user id of the caller. Injected into the env of the
+            internal agentic MCP server (``langflow.agentic.mcp``) at spawn time so its tools are
+            scoped to this user. Never sourced from the (tenant-controlled) server config.
     """
     if server_config is None:
         server_config = {}
@@ -2230,6 +2174,21 @@ async def update_tools(
     if mode == "Stdio":
         args = list(server_config.get("args", []))
         env = server_config.get("env", {})
+        # Configs embedded in flows/tweaks bypass the REST MCPServerConfig model. Enforce
+        # the same policy on every resolved stdio config immediately before it is used.
+        validate_mcp_stdio_config(command, args, env)
+
+        # SECURITY: the internal agentic MCP server (`python -m langflow.agentic.mcp`) reads the
+        # owning user's id from AGENTIC_USER_ID_ENV_VAR and fails closed without it. Inject it here
+        # from the AUTHENTICATED caller (never from the tenant-controlled config -- that env key is
+        # in the stdio denylist above, so a tenant cannot supply it). This runs for ANY stdio config
+        # targeting the agentic module -- the auto-provisioned server AND a tenant-authored config --
+        # so a tenant only ever gets their own id bound and cannot read/write another tenant's flows.
+        if mcp_security.AGENTIC_MCP_MODULE in command or any(mcp_security.AGENTIC_MCP_MODULE in arg for arg in args):
+            if not current_user_id:
+                msg = "The Langflow agentic MCP server requires an authenticated user context and cannot be used here."
+                raise ValueError(msg)
+            env = {**(env or {}), mcp_security.AGENTIC_USER_ID_ENV_VAR: str(current_user_id)}
         # For stdio mode, inject component headers as --headers CLI args.
         # This enables passing headers through proxy tools like mcp-proxy
         # that forward them to the upstream HTTP server.
@@ -2273,11 +2232,12 @@ async def update_tools(
                     args = args[:last_positional_idx] + extra_args + args[last_positional_idx:]
                 else:
                     args.extend(extra_args)
-        full_command = shlex.join([*shlex.split(command), *args])
+        full_command = shlex.join([command, *args])
         tools = await mcp_stdio_client.connect_to_server(full_command, env)
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:
         # Streamable HTTP connection with SSE fallback
+        validate_connector_url_for_ssrf(url)
         verify_ssl = server_config.get("verify_ssl", True)
         tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
         client = mcp_streamable_http_client

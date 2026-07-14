@@ -26,7 +26,9 @@ def build_orchestrate_run_payload(
 
     payload: dict[str, Any] = {
         "message": message_payload,
-        "agent_id": str(provider_data.get("agent_id") or deployment_id),
+        # The deployment resource is the authorized run target. Do not let caller-supplied
+        # provider data retarget the server's privileged client to another agent.
+        "agent_id": str(deployment_id),
     }
 
     thread_id = provider_data.get("thread_id")

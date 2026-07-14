@@ -36,7 +36,7 @@ export const GeneralPage = () => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);
-  const { password, cnfPassword, profilePicture } = inputState;
+  const { currentPassword, password, cnfPassword, profilePicture } = inputState;
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const { storeApiKey } = useContext(AuthContext);
@@ -56,11 +56,15 @@ export const GeneralPage = () => {
       return;
     }
 
-    if (password !== "") {
+    if (currentPassword !== "" && password !== "") {
       mutateResetPassword(
-        { user_id: userData!.id, password: { password } },
+        {
+          user_id: userData!.id,
+          password: { current_password: currentPassword, password },
+        },
         {
           onSuccess: () => {
+            handleInput({ target: { name: "currentPassword", value: "" } });
             handleInput({ target: { name: "password", value: "" } });
             handleInput({ target: { name: "cnfPassword", value: "" } });
             setSuccessData({ title: t("success.changesSaved") });
@@ -156,6 +160,7 @@ export const GeneralPage = () => {
 
         {!autoLogin && (
           <PasswordFormComponent
+            currentPassword={currentPassword}
             password={password}
             cnfPassword={cnfPassword}
             handleInput={handleInput}

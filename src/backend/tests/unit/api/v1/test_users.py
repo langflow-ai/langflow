@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from fastapi import status
 from httpx import AsyncClient
 
@@ -198,7 +200,7 @@ async def test_patch_user(client: AsyncClient, logged_in_headers_super_user):
 
 async def test_reset_password(client: AsyncClient, logged_in_headers, active_user):
     id_ = str(active_user.id)
-    basic_case = {"username": "string", "password": "new_password"}
+    basic_case = {"current_password": "testpassword", "password": "new_password"}
     response = await client.patch(f"api/v1/users/{id_}/reset-password", json=basic_case, headers=logged_in_headers)
     result = response.json()
 
@@ -212,6 +214,63 @@ async def test_reset_password(client: AsyncClient, logged_in_headers, active_use
     assert "store_api_key" in result, "The result must have an 'store_api_key' key"
     assert "updated_at" in result, "The result must have an 'updated_at' key"
     assert "username" in result, "The result must have an 'username' key"
+
+    login_response = await client.post(
+        "api/v1/login",
+        data={"username": active_user.username, "password": "new_password"},
+    )
+    assert login_response.status_code == status.HTTP_200_OK
+
+
+async def test_reset_password_rejects_incorrect_current_password(client: AsyncClient, logged_in_headers, active_user):
+    response = await client.patch(
+        f"api/v1/users/{active_user.id}/reset-password",
+        json={"current_password": "incorrect", "password": "new_password"},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {"detail": "Current password is incorrect"}
+
+    login_response = await client.post(
+        "api/v1/login",
+        data={"username": active_user.username, "password": "testpassword"},
+    )
+    assert login_response.status_code == status.HTTP_200_OK
+
+
+async def test_reset_password_requires_current_password(client: AsyncClient, logged_in_headers, active_user):
+    response = await client.patch(
+        f"api/v1/users/{active_user.id}/reset-password",
+        json={"password": "new_password"},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+async def test_reset_password_rejects_current_password_as_new_password(
+    client: AsyncClient, logged_in_headers, active_user
+):
+    response = await client.patch(
+        f"api/v1/users/{active_user.id}/reset-password",
+        json={"current_password": "testpassword", "password": "testpassword"},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {"detail": "You can't use your current password"}
+
+
+async def test_reset_password_cannot_target_another_user(client: AsyncClient, logged_in_headers):
+    response = await client.patch(
+        f"api/v1/users/{uuid4()}/reset-password",
+        json={"current_password": "testpassword", "password": "new_password"},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "You can't change another user's password"}
 
 
 async def test_delete_user(client: AsyncClient, logged_in_headers_super_user):

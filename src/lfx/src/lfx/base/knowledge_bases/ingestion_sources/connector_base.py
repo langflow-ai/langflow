@@ -23,12 +23,12 @@ subclass with token-refresh logic once the first OAuth provider lands.
 
 from __future__ import annotations
 
-import os
 from typing import Any
 from uuid import UUID
 
 from lfx.base.knowledge_bases.ingestion_sources.base import KBIngestionSource
 from lfx.log.logger import logger
+from lfx.utils.env_var_security import safe_getenv
 
 # HTTP-status threshold cloud-connector helpers treat as "request failed".
 # Shared so every connector checks the same boundary.
@@ -66,7 +66,7 @@ class KBConnectorSource(KBIngestionSource):
             if value:
                 return value
 
-        env_value = os.environ.get(variable_name)
+        env_value = safe_getenv(variable_name)
         return env_value or None
 
     async def resolve_required_secret(self, variable_name: str) -> str:
