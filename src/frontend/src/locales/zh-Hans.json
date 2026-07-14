@@ -2139,5 +2139,18 @@
   "mcp.servers.actionsMenu": "{{name}} 的操作",
   "assistant.modelNotice.fallback": "模型 {{failed}} 失败（{{reason}}），改用 {{used}}。",
   "assistant.modelNotice.remediation": "模型 {{failed}} 需要调整才能运行（{{reason}}）。",
-  "assistant.modelNotice.ariaLabel": "模型提示"
+  "assistant.modelNotice.ariaLabel": "模型提示",
+  "inspectionPanel.title": "组件参数",
+  "inspectionPanel.subtitle": "调整组件参数的可见性并定义 API 输入。",
+  "inspectionPanel.apiEnable": "使其可通过 API 编辑",
+  "inspectionPanel.apiDisable": "禁用 API 编辑",
+  "inspectionPanel.apiDisabledField": "已禁用的字段无法通过 API 调用",
+  "inspectionPanel.add": "添加",
+  "inspectionPanel.remove": "移除",
+  "inspectionPanel.defaultLabel": "默认",
+  "inspectionPanel.noParameters": "无参数",
+  "inspectionPanel.default.empty": "空",
+  "inspectionPanel.default.enabled": "已启用",
+  "inspectionPanel.default.disabled": "已禁用",
+  "inspectionPanel.default.none": "无"
 }

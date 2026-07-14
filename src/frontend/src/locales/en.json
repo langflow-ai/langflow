@@ -2136,5 +2136,18 @@
   "mcp.servers.actionsMenu": "Actions for {{name}}",
   "assistant.modelNotice.fallback": "Model {{failed}} failed ({{reason}}); used {{used}} instead.",
   "assistant.modelNotice.remediation": "Model {{failed}} needed an adjustment to run ({{reason}}).",
-  "assistant.modelNotice.ariaLabel": "Model notice"
+  "assistant.modelNotice.ariaLabel": "Model notice",
+  "inspectionPanel.title": "Component Parameters",
+  "inspectionPanel.subtitle": "Adjust component parameter visibility and define API inputs.",
+  "inspectionPanel.apiEnable": "Make editable through the API",
+  "inspectionPanel.apiDisable": "Disable API editing",
+  "inspectionPanel.apiDisabledField": "Disabled fields can't be called via API",
+  "inspectionPanel.add": "Add",
+  "inspectionPanel.remove": "Remove",
+  "inspectionPanel.defaultLabel": "Default",
+  "inspectionPanel.noParameters": "No parameters",
+  "inspectionPanel.default.empty": "Empty",
+  "inspectionPanel.default.enabled": "Enabled",
+  "inspectionPanel.default.disabled": "Disabled",
+  "inspectionPanel.default.none": "None"
 }

@@ -2139,5 +2139,18 @@
   "mcp.servers.actionsMenu": "Aktionen für {{name}}",
   "assistant.modelNotice.fallback": "Modell {{failed}} ist fehlgeschlagen ({{reason}}); stattdessen wurde {{used}} verwendet.",
   "assistant.modelNotice.remediation": "Modell {{failed}} benötigte eine Anpassung zur Ausführung ({{reason}}).",
-  "assistant.modelNotice.ariaLabel": "Modellhinweis"
+  "assistant.modelNotice.ariaLabel": "Modellhinweis",
+  "inspectionPanel.title": "Komponentenparameter",
+  "inspectionPanel.subtitle": "Passen Sie die Sichtbarkeit der Komponentenparameter an und definieren Sie API-Eingaben.",
+  "inspectionPanel.apiEnable": "Über die API bearbeitbar machen",
+  "inspectionPanel.apiDisable": "API-Bearbeitung deaktivieren",
+  "inspectionPanel.apiDisabledField": "Deaktivierte Felder können nicht über die API aufgerufen werden",
+  "inspectionPanel.add": "Hinzufügen",
+  "inspectionPanel.remove": "Entfernen",
+  "inspectionPanel.defaultLabel": "Standard",
+  "inspectionPanel.noParameters": "Keine Parameter",
+  "inspectionPanel.default.empty": "Leer",
+  "inspectionPanel.default.enabled": "Aktiviert",
+  "inspectionPanel.default.disabled": "Deaktiviert",
+  "inspectionPanel.default.none": "Keine"
 }

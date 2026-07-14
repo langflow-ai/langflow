@@ -2139,5 +2139,18 @@
   "mcp.servers.actionsMenu": "{{name}} の操作",
   "assistant.modelNotice.fallback": "モデル {{failed}} が失敗しました（{{reason}}）。代わりに {{used}} を使用しました。",
   "assistant.modelNotice.remediation": "モデル {{failed}} は実行のために調整が必要でした（{{reason}}）。",
-  "assistant.modelNotice.ariaLabel": "モデルの通知"
+  "assistant.modelNotice.ariaLabel": "モデルの通知",
+  "inspectionPanel.title": "コンポーネントパラメータ",
+  "inspectionPanel.subtitle": "コンポーネントパラメータの表示を調整し、API入力を定義します。",
+  "inspectionPanel.apiEnable": "APIで編集可能にする",
+  "inspectionPanel.apiDisable": "API編集を無効にする",
+  "inspectionPanel.apiDisabledField": "無効なフィールドはAPIから呼び出せません",
+  "inspectionPanel.add": "追加",
+  "inspectionPanel.remove": "削除",
+  "inspectionPanel.defaultLabel": "デフォルト",
+  "inspectionPanel.noParameters": "パラメータなし",
+  "inspectionPanel.default.empty": "空",
+  "inspectionPanel.default.enabled": "有効",
+  "inspectionPanel.default.disabled": "無効",
+  "inspectionPanel.default.none": "なし"
 }

@@ -2139,5 +2139,18 @@
   "mcp.servers.actionsMenu": "Ações para {{name}}",
   "assistant.modelNotice.fallback": "O modelo {{failed}} falhou ({{reason}}); usei {{used}} no lugar.",
   "assistant.modelNotice.remediation": "O modelo {{failed}} precisou de um ajuste para rodar ({{reason}}).",
-  "assistant.modelNotice.ariaLabel": "Aviso do modelo"
+  "assistant.modelNotice.ariaLabel": "Aviso do modelo",
+  "inspectionPanel.title": "Parâmetros do Componente",
+  "inspectionPanel.subtitle": "Ajuste a visibilidade dos parâmetros do componente e defina entradas de API.",
+  "inspectionPanel.apiEnable": "Tornar editável pela API",
+  "inspectionPanel.apiDisable": "Desativar edição pela API",
+  "inspectionPanel.apiDisabledField": "Campos desabilitados não podem ser chamados pela API",
+  "inspectionPanel.add": "Adicionar",
+  "inspectionPanel.remove": "Remover",
+  "inspectionPanel.defaultLabel": "Padrão",
+  "inspectionPanel.noParameters": "Sem parâmetros",
+  "inspectionPanel.default.empty": "Vazio",
+  "inspectionPanel.default.enabled": "Ativado",
+  "inspectionPanel.default.disabled": "Desativado",
+  "inspectionPanel.default.none": "Nenhum"
 }
