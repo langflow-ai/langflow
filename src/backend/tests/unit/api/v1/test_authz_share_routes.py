@@ -743,3 +743,32 @@ async def test_list_shares_filters_by_visibility_for_non_superuser(patch_authz, 
     ids = {r.id for r in results}
     assert visible.id in ids
     assert hidden.id not in ids
+
+
+@pytest.mark.asyncio
+async def test_list_shares_includes_user_and_team_target_names(patch_authz, silence_audit):  # noqa: ARG001
+    """Share responses expose display names without dropping UUID compatibility."""
+    patch_authz(cross_user=False, enabled=False)
+
+    admin = _make_user(is_superuser=True)
+    owner = _make_user()
+    user_id = uuid4()
+    team_id = uuid4()
+    user_share = _share(scope=ShareScope.USER.value, target_id=user_id, created_by=owner.id)
+    team_share = _share(scope=ShareScope.TEAM.value, target_id=team_id, created_by=owner.id)
+    public_share = _share(scope=ShareScope.PUBLIC.value, target_id=None, created_by=owner.id)
+    session = _QueueSession(
+        exec_queue=[
+            [user_share, team_share, public_share],
+            [(user_id, "alice")],
+            [(team_id, "Platform")],
+        ]
+    )
+
+    results = await shares_module.list_shares(current_user=admin, session=session)
+    by_id = {result.id: result for result in results}
+
+    assert by_id[user_share.id].target_id == user_id
+    assert by_id[user_share.id].target_name == "alice"
+    assert by_id[team_share.id].target_name == "Platform"
+    assert by_id[public_share.id].target_name is None
