@@ -98,7 +98,7 @@ name = "a2wsgi"
 version = "1.10.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11' and sys_platform != 'win32'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9a/cb/822c56fbea97e9eee201a2e434a80437f6750ebcb1ed307ee3a0a7505b14/a2wsgi-1.10.10.tar.gz", hash = "sha256:a5bcffb52081ba39df0d5e9a884fc6f819d92e3a42389343ba77cbf809fe1f45", size = 18799, upload-time = "2025-06-18T09:00:10.843Z" }
 wheels = [
@@ -8129,7 +8129,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.11.0"
+version = "1.11.0.dev42"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
@@ -8311,7 +8311,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.11.0"
+version = "1.11.0.dev42"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "ag-ui-protocol" },
@@ -9102,7 +9102,7 @@ dev = [
 
 [[package]]
 name = "langflow-sdk"
-version = "0.3.0"
+version = "0.3.0.dev25"
 source = { editable = "src/sdk" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
@@ -9376,7 +9376,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "1.11.0"
+version = "1.11.0.dev42"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "a2wsgi", marker = "sys_platform != 'win32'" },
