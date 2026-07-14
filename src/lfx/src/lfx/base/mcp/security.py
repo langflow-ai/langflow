@@ -5,6 +5,8 @@ Keeping the policy in ``lfx`` lets both the REST schema and the execution bounda
 same validation without requiring the full Langflow package in standalone LFX deployments.
 """
 
+import re
+import shlex
 from pathlib import Path
 
 from lfx.base.mcp.source_policy import (
@@ -56,6 +58,11 @@ COMMAND_SAFE_FLAGS: dict[str, frozenset[str]] = {
     "uvx": frozenset({"-y", "--yes"}),
 }
 
+# Historical public constants retained for patch-release import compatibility. Runtime Docker
+# validation is implemented by ``lfx.base.mcp.source_policy``.
+DOCKER_DANGEROUS_ARGS = frozenset({"--privileged", "--cap-add"})
+DOCKER_DANGEROUS_ARG_PREFIXES = ("--net=", "--network=", "--pid=", "--cap-add=", "--privileged=")
+
 # Environment variables that can make an allowlisted executable load attacker-controlled code
 # or configuration. Comparisons are case-insensitive.
 DANGEROUS_ENV_VARS = frozenset(
@@ -99,6 +106,13 @@ DANGEROUS_MCP_ENV_VARS = DANGEROUS_ENV_VARS
 SHELL_WRAPPERS = frozenset({"cmd", "sh", "bash"})
 SHELL_EXEC_FLAGS = frozenset({"-c", "/c"})
 MAX_SHELL_WRAPPER_DEPTH = 4
+
+
+def _is_shell_exec_flag(arg: str) -> bool:
+    arg_lower = arg.lower()
+    if arg_lower in SHELL_EXEC_FLAGS:
+        return True
+    return arg_lower.startswith("-") and not arg_lower.startswith("--") and "c" in arg_lower[1:]
 
 
 class MCPStdioSecurityError(ValueError):
@@ -185,10 +199,25 @@ def _validate_mcp_stdio_config(
 
     if executable and combined_args:
         base_command = extract_base_command(executable)
-        has_shell_exec_flag = any(arg in SHELL_EXEC_FLAGS for arg in combined_args)
+        has_shell_exec_flag = any(_is_shell_exec_flag(arg) for arg in combined_args)
         if has_shell_exec_flag and base_command not in SHELL_WRAPPERS:
             msg = f"Flag -c or /c is only allowed with shell wrappers (cmd/sh/bash), not with '{base_command}'"
             raise MCPStdioSecurityError(msg)
+
+    shell_payload_indexes: set[int] = set()
+    if executable and combined_args and extract_base_command(executable) in SHELL_WRAPPERS:
+        base_command = extract_base_command(executable)
+        for index, arg in enumerate(combined_args):
+            if not _is_shell_exec_flag(arg):
+                continue
+            if base_command == "cmd":
+                shell_payload_indexes.update(range(index + 1, len(combined_args)))
+            else:
+                option_cluster = arg[1:]
+                attached_command = option_cluster[option_cluster.lower().index("c") + 1 :]
+                if not attached_command and index + 1 < len(combined_args):
+                    shell_payload_indexes.add(index + 1)
+            break
 
     if combined_args:
         for arg in combined_args:
@@ -197,12 +226,25 @@ def _validate_mcp_stdio_config(
                     msg = f"Argument contains dangerous shell metacharacter '{char}': {arg}"
                     raise MCPStdioSecurityError(msg)
 
-        for arg in combined_args:
+        for index, arg in enumerate(combined_args):
             arg_lower = arg.lower()
             safe_flags = COMMAND_SAFE_FLAGS.get(extract_base_command(executable or ""), frozenset())
-            if arg_lower in DANGEROUS_KEYWORDS and arg_lower not in SHELL_EXEC_FLAGS | safe_flags:
-                msg = f"Argument '{arg}' is not allowed for security reasons"
-                raise MCPStdioSecurityError(msg)
+            if index in shell_payload_indexes or _is_shell_exec_flag(arg) or arg_lower in safe_flags:
+                continue
+
+            try:
+                tokens = shlex.split(arg)
+            except ValueError:
+                tokens = arg.split()
+
+            expanded_tokens = [subtoken for token in tokens for subtoken in re.split(r"[,;|&]+", token) if subtoken]
+            for token in expanded_tokens:
+                if token.lower() in DANGEROUS_KEYWORDS:
+                    if len(expanded_tokens) == 1 and token.lower() == arg_lower:
+                        msg = f"Argument '{arg}' is not allowed for security reasons"
+                    else:
+                        msg = f"Argument '{arg}' contains dangerous keyword '{token}' and is not allowed"
+                    raise MCPStdioSecurityError(msg)
 
     if env:
         for key in env:

@@ -313,10 +313,13 @@ def _find_code_execution_components(nodes: list[dict]) -> list[str]:
     for node in nodes:
         node_data = node.get("data", {})
         node_info = node_data.get("node", {})
+        display_name = node_info.get("display_name") if isinstance(node_info, dict) else None
 
         component_type = node_data.get("type")
-        if isinstance(component_type, str) and component_type in CODE_EXECUTION_COMPONENT_TYPES:
-            display_name = node_info.get("display_name") or component_type
+        type_matches = isinstance(component_type, str) and component_type in CODE_EXECUTION_COMPONENT_TYPES
+        display_name_matches = isinstance(display_name, str) and display_name in CODE_EXECUTION_COMPONENT_TYPES
+        if type_matches or display_name_matches:
+            display_name = display_name or component_type
             node_id = node_data.get("id") or node.get("id", "unknown")
             found.append(f"{display_name} ({node_id})")
 
@@ -471,8 +474,9 @@ def validate_flow_for_current_settings(target: Mapping[str, Any] | Any | None) -
     if settings_service is None:
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
-    allow_custom_components = settings_service.settings.allow_custom_components
-    block_code_interpreter_components = getattr(settings_service.settings, "block_code_interpreter_components", False)
+    settings = settings_service.settings
+    allow_custom_components = getattr(settings, "allow_custom_components", True)
+    block_code_interpreter_components = getattr(settings, "block_code_interpreter_components", False)
     normalized_flow_data = _extract_flow_data(target)
 
     # If a blocking policy is active and we received a target but couldn't extract any flow
@@ -738,12 +742,11 @@ def _collect_blocked_components(
             continue
 
         node_info = node_data.get("node", {})
-        matched_by_type = node_data.get("type") in blocked_types
+        display_name = node_info.get("display_name") if isinstance(node_info, dict) else None
+        matched_by_type = node_data.get("type") in blocked_types or display_name in blocked_types
         matched_by_hash = bool(blocked_hashes) and _node_code_hash(node_info) in blocked_hashes
         if matched_by_type or matched_by_hash:
-            display_name = (node_info.get("display_name") if isinstance(node_info, dict) else None) or node_data.get(
-                "type", "unknown"
-            )
+            display_name = display_name or node_data.get("type", "unknown")
             node_id = node_data.get("id") or node.get("id", "unknown")
             found.append(f"{display_name} ({node_id})")
 

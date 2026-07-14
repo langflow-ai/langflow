@@ -304,7 +304,13 @@ def _validate_interpreter_invocation(base_command: str, args: list[str], *, hard
     if not hardened:
         return
     if base_command in {"sh", "bash", "cmd"}:
-        if parse_mcp_shell_wrapper(base_command, args) is not None:
+        first_arg = args[0].lower() if args else ""
+        has_leading_exec_flag = (
+            first_arg == "/c"
+            if base_command == "cmd"
+            else first_arg.startswith("-") and not first_arg.startswith("--") and "c" in first_arg[1:]
+        )
+        if has_leading_exec_flag and parse_mcp_shell_wrapper(base_command, args) is not None:
             return
         msg = f"Direct shell scripts are not allowed for MCP command '{base_command}'"
         raise ValueError(msg)

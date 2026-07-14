@@ -4,6 +4,7 @@ import shlex
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from lfx.base.mcp import util as mcp_util
 from lfx.base.mcp.security import MAX_SHELL_WRAPPER_DEPTH, MCPStdioSecurityError, validate_mcp_stdio_config
 from lfx.base.mcp.util import MCPStdioClient, update_tools
 from lfx.components.deactivated.mcp_stdio import MCPStdio
@@ -164,11 +165,12 @@ async def test_update_tools_preserves_executable_path_with_spaces():
     stdio_client.connect_to_server.assert_awaited_once_with(shlex.join([command, "server.js"]), {})
 
 
-async def test_update_tools_does_not_apply_stdio_policy_to_streamable_http():
+async def test_update_tools_does_not_apply_stdio_policy_to_streamable_http(monkeypatch):
     """A safe Streamable HTTP config must remain on the HTTP transport path."""
     stdio_client = AsyncMock()
     http_client = AsyncMock()
     http_client.connect_to_server.return_value = []
+    monkeypatch.setattr(mcp_util, "validate_connector_url_for_ssrf", lambda _url: None)
 
     await update_tools(
         "safe-http",
@@ -183,6 +185,28 @@ async def test_update_tools_does_not_apply_stdio_policy_to_streamable_http():
         headers={},
         verify_ssl=True,
     )
+
+
+async def test_update_tools_validates_streamable_http_url_before_connecting(monkeypatch):
+    """Flow-embedded HTTP configs must pass connector SSRF policy before network access."""
+    metadata_url = "http://169.254.169.254/latest/meta-data/"
+    http_client = AsyncMock()
+
+    def reject_metadata_url(url):
+        assert url == metadata_url
+        msg = "blocked by connector SSRF policy"
+        raise ValueError(msg)
+
+    monkeypatch.setattr(mcp_util, "validate_connector_url_for_ssrf", reject_metadata_url)
+
+    with pytest.raises(ValueError, match="blocked by connector SSRF policy"):
+        await update_tools(
+            "unsafe-http",
+            {"mode": "Streamable_HTTP", "url": metadata_url},
+            mcp_streamable_http_client=http_client,
+        )
+
+    http_client.connect_to_server.assert_not_awaited()
 
 
 @pytest.mark.parametrize(

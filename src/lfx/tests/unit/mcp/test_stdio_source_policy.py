@@ -137,6 +137,8 @@ def test_npx_noninteractive_flag_remains_allowed_by_shared_policy():
         ("python3", ["-m", "tenant.module"]),
         ("node", ["/tmp/tenant.js"]),
         ("bash", ["/tmp/tenant.sh"]),
+        ("sh", ["/tmp/tenant.sh", "-c", "uvx mcp-proxy"]),
+        ("cmd", [r"C:\tenant\evil.bat", "/c", "uvx", "mcp-proxy"]),
     ],
 )
 def test_interpreter_hardening_rejects_tenant_selected_code(command, args):

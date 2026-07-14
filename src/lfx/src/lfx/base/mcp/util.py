@@ -30,6 +30,7 @@ from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
@@ -2236,6 +2237,7 @@ async def update_tools(
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:
         # Streamable HTTP connection with SSE fallback
+        validate_connector_url_for_ssrf(url)
         verify_ssl = server_config.get("verify_ssl", True)
         tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
         client = mcp_streamable_http_client

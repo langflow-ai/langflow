@@ -12,7 +12,13 @@ in MCPServerConfig schema.
 """
 
 import pytest
-from langflow.api.v2.schemas import ALLOWED_MCP_COMMANDS, DANGEROUS_ENV_VARS, MCPServerConfig
+from langflow.api.v2.schemas import (
+    ALLOWED_MCP_COMMANDS,
+    DANGEROUS_ENV_VARS,
+    DOCKER_DANGEROUS_ARG_PREFIXES,
+    DOCKER_DANGEROUS_ARGS,
+    MCPServerConfig,
+)
 from pydantic import ValidationError
 
 
@@ -20,6 +26,16 @@ class TestMCPCommandInjectionSecurity:
     """Test suite for MCP command injection security fixes."""
 
     # ==================== Command Validation Tests ====================
+
+    def test_historical_docker_policy_constants_remain_importable(self):
+        assert frozenset({"--privileged", "--cap-add"}) == DOCKER_DANGEROUS_ARGS
+        assert DOCKER_DANGEROUS_ARG_PREFIXES == (
+            "--net=",
+            "--network=",
+            "--pid=",
+            "--cap-add=",
+            "--privileged=",
+        )
 
     def test_allowed_commands_accepted(self):
         """Test that all allowed commands are accepted."""
@@ -69,9 +85,9 @@ class TestMCPCommandInjectionSecurity:
         """Test that shell wrappers (cmd/sh/bash) are allowed when wrapping safe commands."""
         # These should all pass validation
         valid_configs = [
-            MCPServerConfig(command="cmd", args=["/c", "uvx", "mcp-server"]),
+            MCPServerConfig(command="cmd", args=["/C", "uvx", "mcp-server"]),
             MCPServerConfig(command="sh", args=["-c", "npx @modelcontextprotocol/server"]),
-            MCPServerConfig(command="bash", args=["-c", "python -m mcp_server"]),
+            MCPServerConfig(command="bash", args=["-lc", "python -m mcp_server"]),
             MCPServerConfig(command="cmd", args=["/c", "node", "server.js"]),
         ]
 
@@ -106,6 +122,7 @@ class TestMCPCommandInjectionSecurity:
             ("python", ["-c", "import os; os.system('rm -rf /')"]),
             ("python3", ["-c", "malicious code"]),
             ("node", ["-c", "require('child_process').exec('evil')"]),
+            ("python", ["-Lc", "import os"]),
         ]
 
         for cmd, args in dangerous_c_usage:
@@ -132,6 +149,20 @@ class TestMCPCommandInjectionSecurity:
         """The command field is one executable; all options belong in validated args."""
         with pytest.raises(ValidationError, match="single executable"):
             MCPServerConfig(command=command, args=[])
+        with pytest.raises(ValidationError, match="single executable"):
+            MCPServerConfig(command=command, args=None)
+
+    @pytest.mark.parametrize(
+        ("command", "args"),
+        [
+            ("python3", ["pip install requests"]),
+            ("node", ["npm install evil"]),
+            ("python3", ["pip,install,requests"]),
+        ],
+    )
+    def test_dangerous_keywords_cannot_be_packed_into_one_argument(self, command, args):
+        with pytest.raises(ValidationError, match="dangerous keyword"):
+            MCPServerConfig(command=command, args=args)
 
     def test_command_injection_via_semicolon_rejected(self):
         """Test that command injection via semicolon is rejected."""
@@ -404,21 +435,19 @@ class TestMCPCommandInjectionSecurity:
 
     # ==================== Npx/Uvx Auto-Install Prevention ====================
 
-    def test_npx_auto_install_flag_rejected(self):
-        """Test that npx -y (auto-install) flag is rejected."""
-        with pytest.raises(ValidationError) as exc_info:
-            MCPServerConfig(command="npx", args=["-y", "@malicious/package"])
+    def test_npx_auto_install_flag_accepted(self):
+        """Test that npx -y is accepted as a package-manager safe flag."""
+        config = MCPServerConfig(command="npx", args=["-y", "@modelcontextprotocol/server-everything"])
 
-        error_msg = str(exc_info.value)
-        assert "not allowed" in error_msg.lower()
+        assert config.command == "npx"
+        assert config.args == ["-y", "@modelcontextprotocol/server-everything"]
 
-    def test_npx_yes_flag_rejected(self):
-        """Test that npx --yes (auto-install) flag is rejected."""
-        with pytest.raises(ValidationError) as exc_info:
-            MCPServerConfig(command="npx", args=["--yes", "@malicious/package"])
+    def test_npx_yes_flag_accepted(self):
+        """Test that npx --yes is accepted as a package-manager safe flag."""
+        config = MCPServerConfig(command="npx", args=["--yes", "@modelcontextprotocol/server-filesystem"])
 
-        error_msg = str(exc_info.value)
-        assert "not allowed" in error_msg.lower()
+        assert config.command == "npx"
+        assert config.args == ["--yes", "@modelcontextprotocol/server-filesystem"]
 
     # ==================== Subshell Metacharacter Tests ====================
 
