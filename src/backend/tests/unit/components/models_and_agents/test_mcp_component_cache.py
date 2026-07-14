@@ -90,6 +90,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
         component.use_cache = True
         server_name = "test_server"
+        cache_key = component._mcp_servers_cache_key(server_name)
 
         # Directly test caching by setting up expected data and calling the method
         # Simulate successful tool fetching by manually populating the result
@@ -105,7 +106,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
             "config": mock_server_config,
         }
         current_servers_cache = safe_cache_get(component._shared_component_cache, "servers", {})
-        current_servers_cache[server_name] = cache_data
+        current_servers_cache[cache_key] = cache_data
         safe_cache_set(component._shared_component_cache, "servers", current_servers_cache)
 
         # Now call update_tool_list which should use the cache
@@ -119,8 +120,8 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
 
         # Verify tools are still cached
         servers_cache = safe_cache_get(component._shared_component_cache, "servers", {})
-        assert server_name in servers_cache
-        cached_data = servers_cache[server_name]
+        assert cache_key in servers_cache
+        cached_data = servers_cache[cache_key]
         assert len(cached_data["tools"]) == 2
         assert cached_data["tool_names"] == ["test_tool", "second_tool"]
 
@@ -132,6 +133,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
         component.use_cache = True
         server_name = "test_server"
+        cache_key = component._mcp_servers_cache_key(server_name)
 
         # Pre-populate cache
         cache_data = {
@@ -140,7 +142,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
             "tool_cache": {"test_tool": mock_tools_list[0]},
             "config": mock_server_config,
         }
-        safe_cache_set(component._shared_component_cache, "servers", {server_name: cache_data})
+        safe_cache_set(component._shared_component_cache, "servers", {cache_key: cache_data})
 
         with patch("lfx.base.mcp.util.update_tools") as mock_update_tools:
             # This should NOT be called if cache is working
@@ -405,7 +407,9 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
 
         # First component instance
         component1 = await self.component_setup(component_class, default_kwargs)
+        component1._user_id = "shared-tenant"
         component1.use_cache = True
+        cache_key = component1._mcp_servers_cache_key(server_name)
 
         # Cache some data
         cache_data = {
@@ -414,10 +418,11 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
             "tool_cache": {"test_tool": mock_tools_list[0]},
             "config": mock_server_config,
         }
-        safe_cache_set(component1._shared_component_cache, "servers", {server_name: cache_data})
+        safe_cache_set(component1._shared_component_cache, "servers", {cache_key: cache_data})
 
         # Second component instance
         component2 = await self.component_setup(component_class, default_kwargs)
+        component2._user_id = "shared-tenant"
         component2.use_cache = True
 
         # Should access the same cache
@@ -437,6 +442,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
         component.use_cache = True
         server_name = "test_server"
+        cache_key = component._mcp_servers_cache_key(server_name)
 
         # Pre-populate cache
         cache_data = {
@@ -445,7 +451,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
             "tool_cache": {"test_tool": mock_tools_list[0]},
             "config": {"command": "test"},
         }
-        safe_cache_set(component._shared_component_cache, "servers", {server_name: cache_data})
+        safe_cache_set(component._shared_component_cache, "servers", {cache_key: cache_data})
 
         build_config = {
             "mcp_server": {"value": {"name": server_name}},
@@ -462,6 +468,49 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         assert len(updated_config["tool"]["options"]) == 2
         assert "test_tool" in updated_config["tool"]["options"]
         assert "second_tool" in updated_config["tool"]["options"]
+
+    @pytest.mark.asyncio
+    async def test_unauthenticated_build_config_skips_shared_servers_cache(self, component_class, default_kwargs):
+        component = await self.component_setup(component_class, default_kwargs)
+        component._user_id = None
+        component._vertex = None
+        component.use_cache = True
+        assert component._mcp_cache_user_id() is None
+
+        server_name = "test_server"
+        cache_key = component._mcp_servers_cache_key(server_name)
+        cached_tool = MagicMock()
+        cached_tool.name = "cached_tool"
+        cached_entry = {
+            "tools": [cached_tool],
+            "tool_names": [cached_tool.name],
+            "tool_cache": {cached_tool.name: cached_tool},
+            "config": {"command": "cached"},
+        }
+        servers_cache = {cache_key: cached_entry}
+        safe_cache_set(component._shared_component_cache, "servers", servers_cache)
+        safe_cache_set(component._shared_component_cache, "last_selected_server", "")
+
+        fresh_tool = MagicMock()
+        fresh_tool.name = "fresh_tool"
+        fresh_server = {"name": server_name, "config": {"command": "fresh"}}
+        build_config = {
+            "mcp_server": {"value": {"name": server_name}},
+            "tool": {"show": False, "options": [], "placeholder": ""},
+            "tool_placeholder": {"tool_mode": False},
+            "tools_metadata": {"show": False},
+        }
+
+        with patch.object(
+            component,
+            "update_tool_list",
+            AsyncMock(return_value=([fresh_tool], fresh_server)),
+        ) as update:
+            updated_config = await component.update_build_config(build_config, {"name": server_name}, "mcp_server")
+
+        update.assert_awaited_once_with(mcp_server_value={"name": server_name})
+        assert updated_config["tool"]["options"] == [fresh_tool.name]
+        assert safe_cache_get(component._shared_component_cache, "servers", {}) == servers_cache
 
     # ========================================
     # Integration Tests

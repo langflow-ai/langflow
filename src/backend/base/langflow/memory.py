@@ -12,7 +12,11 @@ from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.schema.message import Message
-from langflow.services.database.models.message.model import MessageRead, MessageTable
+from langflow.services.database.models.message.model import (
+    ALLOWED_MESSAGE_ORDER_FIELDS,
+    MessageRead,
+    MessageTable,
+)
 from langflow.services.deps import session_scope
 
 
@@ -38,6 +42,9 @@ def _get_variable_query(
     if flow_id:
         stmt = stmt.where(MessageTable.flow_id == flow_id)
     if order_by:
+        if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
+            msg = f"Invalid order_by field: {order_by}"
+            raise ValueError(msg)
         col = getattr(MessageTable, order_by).desc() if order == "DESC" else getattr(MessageTable, order_by).asc()
         stmt = stmt.order_by(col)
     if limit:
