@@ -620,6 +620,18 @@ module.system('not the os module')
         result = scan_code_security("import os\ndef use_safe_object(os):\n    os.system('not the os module')")
         assert result.is_safe is True
 
+    def test_should_detect_alias_after_zero_iteration_for_loop(self):
+        code = """
+import os
+module = os
+for _ in ():
+    module = object()
+module.system('id')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
     @pytest.mark.parametrize(
         "code",
         [
@@ -636,6 +648,20 @@ module.system('not the os module')
         assert result.is_safe is False
         assert any("os.system()" in violation for violation in result.violations)
 
+    def test_should_detect_alias_after_zero_iteration_async_for_loop(self):
+        code = """
+import os
+
+async def run():
+    module = os
+    async for _ in empty():
+        module = object()
+    module.system('id')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
     def test_should_detect_destructured_loop_target_alias_call(self):
         result = scan_code_security("import os\nfor (module,) in ((os,),):\n    module.system('id')")
         assert result.is_safe is False
@@ -648,32 +674,6 @@ module.system('not the os module')
 
     def test_should_preserve_named_expression_alias_from_comprehension(self):
         code = "import os\n[(module := os) for _ in (None,)]\nmodule.system('id')"
-        result = scan_code_security(code)
-        assert result.is_safe is False
-        assert any("os.system()" in violation for violation in result.violations)
-
-    def test_should_detect_alias_after_zero_iteration_for_loop(self):
-        code = """
-import os
-module = os
-for _ in ():
-    module = object()
-module.system('id')
-"""
-        result = scan_code_security(code)
-        assert result.is_safe is False
-        assert any("os.system()" in violation for violation in result.violations)
-
-    def test_should_detect_alias_after_zero_iteration_async_for_loop(self):
-        code = """
-import os
-
-async def run():
-    module = os
-    async for _ in empty():
-        module = object()
-    module.system('id')
-"""
         result = scan_code_security(code)
         assert result.is_safe is False
         assert any("os.system()" in violation for violation in result.violations)

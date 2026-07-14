@@ -208,7 +208,10 @@ async def test_get_ollama_models_cache_keyed_by_base_url_and_capability():
     }
     client = _build_async_client(tags_payload=tags, show_results=show)
 
-    with patch.object(model_utils.httpx, "AsyncClient", return_value=client):
+    with (
+        patch.object(model_utils.httpx, "AsyncClient", return_value=client),
+        patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+    ):
         llms = await model_utils.get_ollama_models(
             base_url_value="http://localhost:11434",
             desired_capability="completion",

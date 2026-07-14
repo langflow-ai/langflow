@@ -8,6 +8,7 @@ from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vec
 from lfx.helpers.data import docs_to_data
 from lfx.io import BoolInput, HandleInput, IntInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 
 
 class FaissVectorStoreComponent(LCVectorStoreComponent):
@@ -87,7 +88,14 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
 
     def get_persist_directory(self) -> Path:
         """Returns the resolved, user-scoped persist directory path."""
-        path = Path(self.resolve_path(self.persist_directory)) if self.persist_directory else Path()
+        path = (
+            enforce_local_file_access(
+                self.resolve_path(self.persist_directory),
+                scope_ids=component_file_access_scopes(self),
+            )
+            if self.persist_directory
+            else Path()
+        )
         if user_scope := self._user_scope(self.user_id):
             return path / ".langflow_faiss" / "users" / user_scope
         return path

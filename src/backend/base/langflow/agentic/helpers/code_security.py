@@ -449,37 +449,45 @@ class _SecurityChecker(ast.NodeVisitor):
             branch_states.append(self._snapshot_alias_state())
         self._merge_alias_states(branch_states)
 
-    def _visit_loop(self, node: ast.For | ast.AsyncFor | ast.While) -> None:
-        """Merge zero-iteration and loop-body alias states conservatively."""
+    def _visit_iterating_loop(self, node: ast.For | ast.AsyncFor) -> None:
+        """Bind the loop target and merge zero-iteration and body states."""
+        self.visit(node.iter)
         before_loop = self._snapshot_alias_state()
-        if isinstance(node, ast.While):
-            self.visit(node.test)
-        else:
-            self.visit(node.iter)
-            self.visit(node.target)
-            self._bind_iterated_target(node.target, node.iter)
-
+        self.visit(node.target)
+        self._bind_iterated_target(node.target, node.iter)
         for statement in node.body:
             self.visit(statement)
-        after_body = self._snapshot_alias_state()
-        self._merge_alias_states([before_loop, after_body])
+        self._merge_alias_states([before_loop, self._snapshot_alias_state()])
 
         if node.orelse:
             before_else = self._snapshot_alias_state()
             for statement in node.orelse:
                 self.visit(statement)
-            after_else = self._snapshot_alias_state()
+            self._merge_alias_states([before_else, self._snapshot_alias_state()])
+
+    def _visit_while_loop(self, node: ast.While) -> None:
+        """Merge zero-iteration and loop-body alias states conservatively."""
+        before_loop = self._snapshot_alias_state()
+        self.visit(node.test)
+        for statement in node.body:
+            self.visit(statement)
+        self._merge_alias_states([before_loop, self._snapshot_alias_state()])
+
+        if node.orelse:
+            before_else = self._snapshot_alias_state()
+            for statement in node.orelse:
+                self.visit(statement)
             # The else suite is skipped when a loop exits through break.
-            self._merge_alias_states([before_else, after_else])
+            self._merge_alias_states([before_else, self._snapshot_alias_state()])
 
     def visit_For(self, node: ast.For):
-        self._visit_loop(node)
+        self._visit_iterating_loop(node)
 
     def visit_AsyncFor(self, node: ast.AsyncFor):
-        self._visit_loop(node)
+        self._visit_iterating_loop(node)
 
     def visit_While(self, node: ast.While):
-        self._visit_loop(node)
+        self._visit_while_loop(node)
 
     def _visit_comprehension_expression(
         self, generators: list[ast.comprehension], expressions: tuple[ast.AST, ...]

@@ -72,6 +72,20 @@ class McpSettings(BaseModel):
     explicitly when you want to lock MCP server management.
     """
 
+    mcp_server_allowed_packages: str | None = None
+    """Comma-separated package allowlist for MCP ``npx``/``uvx`` stdio servers.
+
+    When set, package runners may execute only these package identities. Leave unset to
+    preserve legacy single-tenant behavior; an empty value blocks every package runner.
+    """
+
+    mcp_server_interpreter_hardening: bool = False
+    """Block tenant-controlled Python, Node.js, and direct shell-script MCP entrypoints.
+
+    Validated package wrappers and Langflow's authenticated internal agentic MCP module remain
+    available. The default is disabled for compatibility; multi-tenant images enable it.
+    """
+
     @field_validator("mcp_composer_version", mode="before")
     @classmethod
     def validate_mcp_composer_version(cls, value):

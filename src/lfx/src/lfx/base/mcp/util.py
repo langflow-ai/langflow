@@ -30,6 +30,7 @@ from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
@@ -2107,6 +2108,7 @@ async def update_tools(
     mcp_sse_client: MCPStreamableHttpClient | None = None,  # Backward compatibility
     request_variables: dict[str, str] | None = None,
     tool_execution_timeout: float | None = None,
+    current_user_id: str | UUID | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools.
 
@@ -2118,6 +2120,9 @@ async def update_tools(
         mcp_sse_client: Optional SSE client instance (backward compatibility)
         request_variables: Optional dict of global variables to resolve in headers
         tool_execution_timeout: Optional timeout in seconds for tool execution (int or float)
+        current_user_id: Authenticated user id of the caller. Injected into the env of the
+            internal agentic MCP server (``langflow.agentic.mcp``) at spawn time so its tools are
+            scoped to this user. Never sourced from the (tenant-controlled) server config.
     """
     if server_config is None:
         server_config = {}
@@ -2172,6 +2177,18 @@ async def update_tools(
         # Configs embedded in flows/tweaks bypass the REST MCPServerConfig model. Enforce
         # the same policy on every resolved stdio config immediately before it is used.
         validate_mcp_stdio_config(command, args, env)
+
+        # SECURITY: the internal agentic MCP server (`python -m langflow.agentic.mcp`) reads the
+        # owning user's id from AGENTIC_USER_ID_ENV_VAR and fails closed without it. Inject it here
+        # from the AUTHENTICATED caller (never from the tenant-controlled config -- that env key is
+        # in the stdio denylist above, so a tenant cannot supply it). This runs for ANY stdio config
+        # targeting the agentic module -- the auto-provisioned server AND a tenant-authored config --
+        # so a tenant only ever gets their own id bound and cannot read/write another tenant's flows.
+        if mcp_security.AGENTIC_MCP_MODULE in command or any(mcp_security.AGENTIC_MCP_MODULE in arg for arg in args):
+            if not current_user_id:
+                msg = "The Langflow agentic MCP server requires an authenticated user context and cannot be used here."
+                raise ValueError(msg)
+            env = {**(env or {}), mcp_security.AGENTIC_USER_ID_ENV_VAR: str(current_user_id)}
         # For stdio mode, inject component headers as --headers CLI args.
         # This enables passing headers through proxy tools like mcp-proxy
         # that forward them to the upstream HTTP server.
@@ -2220,6 +2237,7 @@ async def update_tools(
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:
         # Streamable HTTP connection with SSE fallback
+        validate_connector_url_for_ssrf(url)
         verify_ssl = server_config.get("verify_ssl", True)
         tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
         client = mcp_streamable_http_client

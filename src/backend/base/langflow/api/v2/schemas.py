@@ -7,6 +7,8 @@ from lfx.base.mcp.security import (  # noqa: F401 - compatibility re-exports
     DANGEROUS_ENV_VARS,
     DANGEROUS_KEYWORDS,
     DANGEROUS_SHELL_CHARS,
+    DOCKER_DANGEROUS_ARG_PREFIXES,
+    DOCKER_DANGEROUS_ARGS,
     SHELL_EXEC_FLAGS,
     SHELL_WRAPPERS,
     validate_mcp_stdio_config,

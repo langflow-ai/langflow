@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pytest
 from lfx.components.git import GitLoaderComponent
+from lfx.components.git import git as git_module
+from lfx.utils.file_path_security import LocalFileAccessError
 
 
 @pytest.fixture
@@ -132,3 +134,28 @@ def test_combined_filter(git_component, test_files):
     )
     assert not filter_func(str(temp_dir / "nonexistent.txt"))  # Non-existent file
     assert not filter_func(str(temp_dir / "no_access" / "secret.txt"))  # No permission
+
+
+@pytest.mark.asyncio
+async def test_local_repo_path_is_confined_before_loader_access(git_component, monkeypatch):
+    requested_path = "/tenant/supplied/repository"
+    checked_paths = []
+
+    def confine(path, *, scope_ids):
+        checked_paths.append((path, scope_ids))
+        msg = "outside allowed storage"
+        raise LocalFileAccessError(msg)
+
+    def fail_if_loader_runs(**_kwargs):
+        msg = "GitLoader must not access a rejected local path"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(git_module, "component_file_access_scopes", lambda _component: ["user-id", "flow-id"])
+    monkeypatch.setattr(git_module, "enforce_local_file_access", confine)
+    monkeypatch.setattr(git_module, "GitLoader", fail_if_loader_runs)
+    git_component._attributes.update({"repo_source": "Local", "repo_path": requested_path, "branch": "main"})
+
+    with pytest.raises(LocalFileAccessError, match="outside allowed storage"):
+        await git_component.build_gitloader()
+
+    assert checked_paths == [(requested_path, ["user-id", "flow-id"])]

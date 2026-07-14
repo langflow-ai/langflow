@@ -108,9 +108,13 @@ EXPECTED_FIELDS = {
     "cors_allow_headers",
     "ssrf_protection_enabled",
     "ssrf_allowed_hosts",
+    "connector_ssrf_validation_enabled",
+    "connector_ssrf_allow_loopback",
     "disable_track_apikey_usage",
     "remove_api_keys",
     "allow_custom_components",
+    "block_code_interpreter_components",
+    "restrict_local_file_access",
     # ComponentsSettings
     "components_path",
     "components_index_path",
@@ -147,15 +151,19 @@ EXPECTED_FIELDS = {
     "variables_to_get_from_environment",
     "agentic_experience",
     "developer_api_enabled",
-    # ---- Added in 1.10.0, folded into the mixins during the release back-merge ----
+    # ---- Added after the original Settings split and folded into the mixins ----
     # PathSettings
     "kb_allowed_folder_roots",
+    "kb_folder_max_file_size_bytes",
     "directory_component_allowed_roots",
     # McpSettings
     "mcp_tool_execution_timeout",
     "mcp_servers_locked",
+    "mcp_server_allowed_packages",
+    "mcp_server_interpreter_hardening",
     # ComponentsSettings
     "load_flows_overwrite_on_name_match",
+    "load_flows_preserve_variable_bindings",
     "enable_extension_reload",
     # SecuritySettings
     "rate_limit_enabled",
@@ -164,6 +172,7 @@ EXPECTED_FIELDS = {
     "rate_limit_trust_proxy",
     "custom_component_admin_only",
     "allow_components_paths_override",
+    "mcp_server_docker_hardening",
     # RuntimeSettings
     "job_queue_type",
     "redis_queue_host",
@@ -229,9 +238,17 @@ def test_critical_defaults_unchanged():
     assert settings.cors_origins == "*"
     assert settings.cors_allow_credentials is True
     assert settings.ssrf_protection_enabled is True
+    assert settings.connector_ssrf_validation_enabled is True
+    assert settings.connector_ssrf_allow_loopback is True
     assert settings.allow_custom_components is True
+    assert settings.block_code_interpreter_components is False
+    assert settings.restrict_local_file_access is False
     assert settings.mcp_server_enabled is True
     assert settings.mcp_composer_enabled is True
+    assert settings.load_flows_preserve_variable_bindings is True
+    assert settings.mcp_server_allowed_packages is None
+    assert settings.mcp_server_interpreter_hardening is False
+    assert settings.mcp_server_docker_hardening is False
     assert settings.do_not_track is False
     assert settings.dev is False
     assert settings.agentic_experience is False
@@ -358,11 +375,20 @@ def test_yaml_round_trip():
         ("LANGFLOW_PROMETHEUS_ENABLED", "true", "prometheus_enabled", True),
         ("LANGFLOW_PROMETHEUS_PORT", "9999", "prometheus_port", 9999),
         ("LANGFLOW_MCP_SERVER_ENABLED", "false", "mcp_server_enabled", False),
+        ("LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES", "mcp-proxy,lfx", "mcp_server_allowed_packages", "mcp-proxy,lfx"),
+        ("LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING", "true", "mcp_server_interpreter_hardening", True),
+        ("LANGFLOW_MCP_SERVER_DOCKER_HARDENING", "true", "mcp_server_docker_hardening", True),
         ("LANGFLOW_DO_NOT_TRACK", "true", "do_not_track", True),
         ("LANGFLOW_DEV", "true", "dev", True),
         ("LANGFLOW_BACKEND_ONLY", "true", "backend_only", True),
         ("LANGFLOW_AUTO_SAVING", "false", "auto_saving", False),
         ("LANGFLOW_FALLBACK_TO_ENV_VAR", "false", "fallback_to_env_var", False),
+        (
+            "LANGFLOW_LOAD_FLOWS_PRESERVE_VARIABLE_BINDINGS",
+            "false",
+            "load_flows_preserve_variable_bindings",
+            False,
+        ),
         ("LANGFLOW_VARIABLE_STORE", "kubernetes", "variable_store", "kubernetes"),
     ],
 )

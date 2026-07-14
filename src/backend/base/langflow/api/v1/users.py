@@ -2,6 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from lfx.utils.util_strings import escape_like_pattern
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
@@ -85,7 +86,7 @@ async def read_all_users(
     count_query = select(func.count()).select_from(User)
 
     if search:
-        search_filter = User.username.ilike(f"%{search}%")  # type: ignore[attr-defined]
+        search_filter = User.username.ilike(f"%{escape_like_pattern(search)}%", escape="\\")  # type: ignore[attr-defined]
         query = query.where(search_filter)
         count_query = count_query.where(search_filter)
 

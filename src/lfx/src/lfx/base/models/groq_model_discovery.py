@@ -13,6 +13,7 @@ from typing import Any
 import requests
 
 from lfx.log.logger import logger
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 
 class GroqModelDiscovery:
@@ -139,7 +140,8 @@ class GroqModelDiscovery:
         url = f"{self.base_url}/openai/v1/models"
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
-        response = requests.get(url, headers=headers, timeout=10)
+        validate_connector_url_for_ssrf(url)
+        response = requests.get(url, headers=headers, timeout=10, allow_redirects=False)
         response.raise_for_status()
 
         model_list = response.json()

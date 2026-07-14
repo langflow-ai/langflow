@@ -4,6 +4,7 @@ import shlex
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from lfx.base.mcp import util as mcp_util
 from lfx.base.mcp.security import MAX_SHELL_WRAPPER_DEPTH, MCPStdioSecurityError, validate_mcp_stdio_config
 from lfx.base.mcp.util import MCPStdioClient, update_tools
 from lfx.components.deactivated.mcp_stdio import MCPStdio
@@ -37,6 +38,15 @@ from lfx.components.deactivated.mcp_stdio import MCPStdio
                 "env": {"UV_DEFAULT_INDEX": "https://packages.example.invalid/simple"},
             },
             "Environment variable 'UV_DEFAULT_INDEX' is not allowed",
+        ),
+        (
+            {
+                "mode": "Stdio",
+                "command": "python",
+                "args": ["-m", "langflow.agentic.mcp"],
+                "env": {"LANGFLOW_AGENTIC_USER_ID": "victim"},
+            },
+            "Environment variable 'LANGFLOW_AGENTIC_USER_ID' is not allowed",
         ),
         (
             {
@@ -108,6 +118,38 @@ async def test_update_tools_allows_safe_stdio_config():
     )
 
 
+async def test_update_tools_requires_user_for_agentic_server():
+    """The internal agentic MCP server must fail closed without an authenticated user id."""
+    stdio_client = AsyncMock()
+    config = {"mode": "Stdio", "command": "python", "args": ["-m", "langflow.agentic.mcp"]}
+
+    with pytest.raises(ValueError, match="authenticated user"):
+        await update_tools("langflow-agentic", config, mcp_stdio_client=stdio_client)
+
+    stdio_client.connect_to_server.assert_not_awaited()
+
+
+async def test_update_tools_injects_bound_user_for_agentic_server():
+    """The authenticated caller, rather than the tenant config, supplies the agentic identity."""
+    from lfx.base.mcp.security import AGENTIC_USER_ID_ENV_VAR
+
+    stdio_client = AsyncMock()
+    stdio_client.connect_to_server.return_value = []
+    config = {"mode": "Stdio", "command": "python", "args": ["-m", "langflow.agentic.mcp"]}
+    user_id = "11111111-1111-1111-1111-111111111111"
+
+    await update_tools(
+        "langflow-agentic",
+        config,
+        mcp_stdio_client=stdio_client,
+        current_user_id=user_id,
+    )
+
+    stdio_client.connect_to_server.assert_awaited_once()
+    _command, env_arg = stdio_client.connect_to_server.call_args.args
+    assert env_arg[AGENTIC_USER_ID_ENV_VAR] == user_id
+
+
 async def test_update_tools_preserves_executable_path_with_spaces():
     """An executable path remains one argv entry when the command is serialized."""
     stdio_client = AsyncMock()
@@ -123,11 +165,12 @@ async def test_update_tools_preserves_executable_path_with_spaces():
     stdio_client.connect_to_server.assert_awaited_once_with(shlex.join([command, "server.js"]), {})
 
 
-async def test_update_tools_does_not_apply_stdio_policy_to_streamable_http():
+async def test_update_tools_does_not_apply_stdio_policy_to_streamable_http(monkeypatch):
     """A safe Streamable HTTP config must remain on the HTTP transport path."""
     stdio_client = AsyncMock()
     http_client = AsyncMock()
     http_client.connect_to_server.return_value = []
+    monkeypatch.setattr(mcp_util, "validate_connector_url_for_ssrf", lambda _url: None)
 
     await update_tools(
         "safe-http",
@@ -142,6 +185,28 @@ async def test_update_tools_does_not_apply_stdio_policy_to_streamable_http():
         headers={},
         verify_ssl=True,
     )
+
+
+async def test_update_tools_validates_streamable_http_url_before_connecting(monkeypatch):
+    """Flow-embedded HTTP configs must pass connector SSRF policy before network access."""
+    metadata_url = "http://169.254.169.254/latest/meta-data/"
+    http_client = AsyncMock()
+
+    def reject_metadata_url(url):
+        assert url == metadata_url
+        msg = "blocked by connector SSRF policy"
+        raise ValueError(msg)
+
+    monkeypatch.setattr(mcp_util, "validate_connector_url_for_ssrf", reject_metadata_url)
+
+    with pytest.raises(ValueError, match="blocked by connector SSRF policy"):
+        await update_tools(
+            "unsafe-http",
+            {"mode": "Streamable_HTTP", "url": metadata_url},
+            mcp_streamable_http_client=http_client,
+        )
+
+    http_client.connect_to_server.assert_not_awaited()
 
 
 @pytest.mark.parametrize(

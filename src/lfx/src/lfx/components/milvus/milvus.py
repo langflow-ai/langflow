@@ -11,6 +11,7 @@ from lfx.io import (
     StrInput,
 )
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 
 class MilvusVectorStoreComponent(LCVectorStoreComponent):
@@ -68,6 +69,7 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
         except ImportError as e:
             msg = "Could not import Milvus integration package. Please install it with `pip install langchain-milvus`."
             raise ImportError(msg) from e
+        validate_connector_url_for_ssrf(self.uri)
         self.connection_args.update(uri=self.uri, token=self.password)
         milvus_store = LangchainMilvus(
             embedding_function=self.embedding,

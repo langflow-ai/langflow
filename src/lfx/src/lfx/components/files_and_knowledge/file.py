@@ -608,6 +608,10 @@ class FileComponent(BaseFileComponent):
             else:
                 resolved_path = Path(self.resolve_path(path_str))
 
+            from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
+
+            resolved_path = enforce_local_file_access(resolved_path, scope_ids=component_file_access_scopes(self))
+
             if not resolved_path.exists():
                 msg = f"File or directory not found: {file_path_str}"
                 self.log(msg)

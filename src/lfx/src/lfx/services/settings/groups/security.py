@@ -32,6 +32,21 @@ class SecuritySettings(BaseModel):
 
     Note: This setting only takes effect when ssrf_protection_enabled is True.
     When protection is disabled, all hosts are allowed regardless of this setting."""
+    connector_ssrf_validation_enabled: bool = True
+    """SSRF validation for connector components that take a tenant-controlled host or URL.
+
+    Default True: connector host validation follows ssrf_protection_enabled and
+    ssrf_allowed_hosts so tenant-controlled URLs cannot reach internal or cloud-metadata
+    hosts by default. Single-tenant operators who intentionally target private networks can
+    allowlist those hosts or disable this setting. Database local-file dialects remain governed
+    independently by restrict_local_file_access."""
+    connector_ssrf_allow_loopback: bool = True
+    """Allow literal loopback hosts for HTTP connector and model-provider URLs.
+
+    Default True preserves local Ollama, LM Studio, and vector-store deployments. Cloud metadata
+    and private-network ranges remain blocked. Multi-tenant deployments can set this to False.
+    Hostnames that merely resolve to loopback are not exempt, and this setting does not affect
+    API Request, database, or git URL validation."""
 
     # API key handling
     disable_track_apikey_usage: bool = False
@@ -81,6 +96,38 @@ class SecuritySettings(BaseModel):
     intentionally not extended to the unauthenticated public path, which builds flows as their
     owner (report H1-3754930 follow-up). Enable this only if you knowingly want public flows to
     run custom component code permitted by allow_custom_components."""
+
+    block_code_interpreter_components: bool = False
+    """If set to True, blocks execution of any flow that contains a built-in
+    arbitrary-code-execution component (Python Interpreter, Python REPL/Code tools, and the
+    Smart Transform / lambda evaluator).
+
+    These components are official, so their class-code hash is valid and they pass the
+    ``allow_custom_components=False`` policy — yet they execute arbitrary Python supplied
+    through their *input fields*, which is equivalent to letting users author custom code.
+
+    Defaults to False to preserve existing behavior. Multi-tenant / untrusted-user
+    deployments that disallow user-authored components should set this to True (alongside
+    ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``) so these code-execution primitives cannot be
+    used to break out of the component allow-list."""
+
+    mcp_server_docker_hardening: bool = False
+    """Apply the strict Docker-argument policy to MCP stdio servers.
+
+    Strict mode permits only ``docker run`` with isolated/default networking and blocks host
+    mounts, Docker API/device access, published ports, persistence, custom runtimes, and sandbox
+    downgrades. Disabled by default for compatibility; multi-tenant images enable it.
+    """
+
+    restrict_local_file_access: bool = False
+    """If True, built-in local-file components may access only the authenticated user's or
+    executing flow's storage directory under ``config_dir``.
+
+    Tenant-controlled paths can otherwise target arbitrary server files, the Langflow database,
+    server secrets, or another tenant's uploads. Multi-tenant deployments that disallow custom
+    components should enable this alongside ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``.
+
+    Defaults to False to preserve existing single-tenant local-file behavior."""
 
     # Rate Limiting
     rate_limit_enabled: bool = True

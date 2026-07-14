@@ -124,6 +124,35 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             assert upload_file.filename == "test_output.csv"
 
     @pytest.mark.asyncio
+    async def test_restricted_local_save_writes_inside_user_scope(self, tmp_path):
+        settings_service = MagicMock()
+        settings_service.settings.restrict_local_file_access = True
+        settings_service.settings.config_dir = str(tmp_path)
+        settings_service.settings.database_url = ""
+
+        component = SaveToFileComponent(_user_id="user-id")
+        component.set_attributes(
+            {
+                "input": Message(text="scoped"),
+                "file_name": "report",
+                "local_format": "txt",
+                "storage_location": [{"name": "Local"}],
+            }
+        )
+        component._upload_file = AsyncMock()
+
+        with (
+            patch("lfx.components.files_and_knowledge.save_file.get_settings_service", return_value=settings_service),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service),
+        ):
+            result = await component._save_to_local()
+
+        scoped_path = tmp_path / "user-id" / "report.txt"
+        assert scoped_path.read_text() == "scoped"
+        component._upload_file.assert_awaited_once_with(scoped_path.resolve())
+        assert str(scoped_path.resolve()) in result.text
+
+    @pytest.mark.asyncio
     async def test_save_data_to_json(self, component_class):
         """Test saving Data to JSON format - only mock upload."""
         component = component_class(_user_id=str(uuid4()))
