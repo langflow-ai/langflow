@@ -5,6 +5,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
 import UpdateComponentModal from "@/modals/updateComponentModal";
@@ -100,6 +101,8 @@ function GenericNode({
   const removeDismissedNodes = useFlowStore(
     (state) => state.removeDismissedNodes,
   );
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isReadOnly = useIsFlowReadOnly(currentFlowId);
 
   const allowCustomComponents = useUtilityStore(
     (state) => state.allowCustomComponents,
@@ -132,6 +135,13 @@ function GenericNode({
 
   const [editNameDescription, toggleEditNameDescription, set] =
     useAlternate(false);
+
+  useEffect(() => {
+    if (isReadOnly) {
+      set(false);
+      setOpenUpdateModal(false);
+    }
+  }, [isReadOnly, set]);
 
   const componentUpdate = useFlowStore(
     useShallow((state: FlowStoreType) =>
@@ -176,6 +186,7 @@ function GenericNode({
 
   const handleUpdateCode = useCallback(
     (confirmed: boolean = false) => {
+      if (isReadOnly) return;
       if (!confirmed && hasBreakingChange) {
         setOpenUpdateModal(true);
         return;
@@ -230,6 +241,7 @@ function GenericNode({
       validateComponentCode,
       setErrorData,
       takeSnapshot,
+      isReadOnly,
     ],
   );
 
@@ -291,6 +303,7 @@ function GenericNode({
 
   const handleSelectOutput = useCallback(
     (output) => {
+      if (isReadOnly) return;
       setSelectedOutput(output);
 
       setEdges((eds) => {
@@ -346,7 +359,7 @@ function GenericNode({
       });
       updateNodeInternals(data.id);
     },
-    [data.id, setNode, setEdges, updateNodeInternals],
+    [data.id, isReadOnly, setNode, setEdges, updateNodeInternals],
   );
 
   useEffect(() => {
@@ -415,7 +428,8 @@ function GenericNode({
   const memoizedNodeToolbarComponent = useMemo(() => {
     const isRightClicked = rightClickedNodeId === data.id;
     const isSelectedSingle = selected && selectedNodesCount === 1;
-    const shouldShowToolbar = isSelectedSingle || isRightClicked;
+    const shouldShowToolbar =
+      !isReadOnly && (isSelectedSingle || isRightClicked);
 
     return shouldShowToolbar ? (
       <>
@@ -508,6 +522,7 @@ function GenericNode({
     toggleEditNameDescription,
     selectedNodesCount,
     rightClickedNodeId,
+    isReadOnly,
   ]);
   useEffect(() => {
     if (hiddenOutputs && hiddenOutputs.length === 0) {
@@ -520,18 +535,18 @@ function GenericNode({
     [handleUpdateCode],
   );
   const memoizedSetDismissAll = useCallback(() => {
+    if (isReadOnly) return;
     addDismissedNodes([data.id]);
     setNode(data.id, (old) => {
       const newNode = cloneDeep(old);
       (newNode.data as NodeDataType).node!.edited = true;
       return newNode;
     });
-  }, [addDismissedNodes, data.id, setNode]);
+  }, [addDismissedNodes, data.id, isReadOnly, setNode]);
 
-  const memoizedSetDismissAllLegacy = useCallback(
-    () => addDismissedNodesLegacy([data.id]),
-    [addDismissedNodesLegacy, data.id],
-  );
+  const memoizedSetDismissAllLegacy = useCallback(() => {
+    if (!isReadOnly) addDismissedNodesLegacy([data.id]);
+  }, [addDismissedNodesLegacy, data.id, isReadOnly]);
 
   return (
     <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
@@ -543,7 +558,7 @@ function GenericNode({
           !hasOutputs && "pb-4",
         )}
       >
-        {openUpdateModal && (
+        {openUpdateModal && !isReadOnly && (
           <UpdateComponentModal
             open={openUpdateModal}
             setOpen={setOpenUpdateModal}
@@ -562,12 +577,14 @@ function GenericNode({
             setDismissAll={memoizedSetDismissAll}
             dismissed={dismissAll}
             isRequired={!allowCustomComponents}
+            disabled={isReadOnly}
           />
         ) : shouldShowLegacyComponent ? (
           <NodeLegacyComponent
             legacy={data.node?.legacy}
             replacement={data.node?.replacement}
             setDismissAll={memoizedSetDismissAllLegacy}
+            disabled={isReadOnly}
           />
         ) : (
           <></>
@@ -666,6 +683,7 @@ function GenericNode({
                 editNameDescription={editNameDescription}
                 setEditNameDescription={set}
                 setHasChangedNodeDescription={setHasChangedNodeDescription}
+                readOnly={isReadOnly}
               />
             </div>
           )}
