@@ -99,6 +99,16 @@ CODE_EXECUTION_FIELD_NAMES: frozenset[str] = frozenset(
     }
 )
 
+# Component inputs that cross a privileged sink boundary and therefore must retain
+# the value stored by the flow author. SQLComponent uses these fields to select a
+# database and execute SQL with the server's filesystem access and database
+# credentials; allowing the Tweaks API to replace them would let a run caller
+# repoint that authority without editing the flow. Other SQLComponent options
+# remain tweakable.
+PROTECTED_TWEAK_FIELDS_BY_COMPONENT: Mapping[str, frozenset[str]] = {
+    "SQLComponent": frozenset({"database_url", "query"}),
+}
+
 # Component node ``type`` values that load and execute *another* saved flow by
 # id or name at build/run time. On the unauthenticated public path these are an
 # indirect code-execution primitive: a public wrapper flow with none of the
