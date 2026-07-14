@@ -239,6 +239,14 @@ describe("EditShortcutButton", () => {
       expect(status).toHaveTextContent("A");
     });
 
+    it("is reachable via Tab and receives focus automatically when opened", () => {
+      renderModal();
+
+      const status = screen.getByRole("status");
+
+      expect(status).toHaveAttribute("tabIndex", "0");
+    });
+
     it("exposes Apply and Reset actions as named, focusable buttons", () => {
       renderModal();
 

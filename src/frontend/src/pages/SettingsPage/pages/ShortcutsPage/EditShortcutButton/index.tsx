@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import RenderKey from "@/components/common/renderIconComponent/components/renderKey";
 import ForwardedIconComponent from "../../../../../components/common/genericIconComponent";
@@ -48,6 +48,7 @@ export default function EditShortcutButton({
     shortcut[0],
   )?.shortcut;
   const [key, setKey] = useState<string | null>(null);
+  const recordingRef = useRef<HTMLDivElement>(null);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setShortcuts = useShortcutsStore((state) => state.setShortcuts);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -199,8 +200,9 @@ export default function EditShortcutButton({
       <BaseModal.Content>
         <div className="align-center flex h-full w-full justify-center gap-4 rounded-md border border-border py-2">
           <div
-            className="flex items-center justify-center gap-0.5 text-center text-lg font-bold"
+            className="flex items-center justify-center gap-0.5 text-center text-lg font-bold outline-none focus-visible:ring-1 focus-visible:ring-ring"
             role="status"
+            tabIndex={0}
             aria-live="polite"
             aria-label={t("settings.recordingKeyboard")}
           >
