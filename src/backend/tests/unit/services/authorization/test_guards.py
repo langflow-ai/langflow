@@ -633,20 +633,23 @@ async def test_kb_permission_denied_raises_403(monkeypatch, fake_user):
 
 
 @pytest.mark.anyio
-async def test_kb_permission_create_uses_wildcard_slug(monkeypatch, fake_user):
-    """Without a kb_id (create flow) the owner override fires; no enforce call."""
+async def test_kb_create_permission_ignores_prospective_owner(monkeypatch, fake_user):
+    """CREATE has no existing owner, so a prospective owner cannot bypass policy."""
     install_settings(monkeypatch, authz_enabled=True)
-    service = _StubAuthorizationService(allow=True)
+    service = _StubAuthorizationService(allow=False)
     install_authz(monkeypatch, service)
     install_audit_recorder(monkeypatch)
 
-    await authz_guards.ensure_knowledge_base_permission(
-        fake_user,
-        KnowledgeBaseAction.CREATE,
-        kb_user_id=fake_user.id,
-    )
+    with pytest.raises(HTTPException) as exc:
+        await authz_guards.ensure_knowledge_base_permission(
+            fake_user,
+            KnowledgeBaseAction.CREATE,
+            kb_user_id=fake_user.id,
+        )
 
-    assert service.calls == []
+    assert exc.value.status_code == 403
+    assert service.calls[0]["obj"] == "knowledge_base:*"
+    assert service.calls[0]["act"] == "create"
 
 
 # ----------------------------------------------------------------------------- #
@@ -729,6 +732,26 @@ async def test_file_permission_owner_override(monkeypatch, fake_user):
 
     assert service.calls == []
     assert audit_calls[0]["result"] == "owner_override"
+
+
+@pytest.mark.anyio
+async def test_file_create_permission_ignores_prospective_owner(monkeypatch, fake_user):
+    """CREATE has no existing owner, so a prospective owner cannot bypass policy."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException) as exc:
+        await authz_guards.ensure_file_permission(
+            fake_user,
+            FileAction.CREATE,
+            file_user_id=fake_user.id,
+        )
+
+    assert exc.value.status_code == 403
+    assert service.calls[0]["obj"] == "file:*"
+    assert service.calls[0]["act"] == "create"
 
 
 # ----------------------------------------------------------------------------- #
