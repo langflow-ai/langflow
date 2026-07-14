@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax check_base_services_wheel
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -343,6 +343,9 @@ endif
 
 build_langflow_base:
 	cd src/backend/base && uv build $(args)
+
+check_base_services_wheel: ## build base/lfx/sdk wheels and prove [services] + bare installs
+	@uv run python scripts/ci/check_base_services_wheel.py
 
 build_langflow_backup:
 	uv lock && uv build

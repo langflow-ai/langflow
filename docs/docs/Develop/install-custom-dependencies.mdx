@@ -76,11 +76,26 @@ To install multiple extras, use commas to separate each dependency group:
 uv pip install "langflow-base[postgresql,openai]"
 ```
 
-To install all optional dependencies for `langflow-base`, use the `complete` extra:
+`langflow-base` exposes these aggregate extras for host and service dependencies:
+
+| Extra | What it installs | When to use it |
+| --- | --- | --- |
+| `complete` | Default host feature set (Redis, Chroma, tracing providers, MCP, Kubernetes variables, S3 storage, Watsonx clients, LiteLLM, and related host extras). **Does not** include PostgreSQL or Celery. | Default path. `pip install langflow` already installs `langflow-base[complete]`. |
+| `all` | Alias for `complete` (backward compatible). **Does not** include PostgreSQL or Celery. | Same as `complete`. |
+| `services` | Every concrete service backend and provider: PostgreSQL drivers, Celery, Redis, Chroma, S3, Kubernetes variables, all tracing providers, Watsonx deployment clients, plus runtime packages service code imports directly (`anyio`, `tenacity`, `dill`). | When you need the full service dependency surface without the host-only extras that live only in `complete`. |
 
 ```bash
+# Default host feature set (no PostgreSQL / Celery)
 uv pip install "langflow-base[complete]"
+
+# Every concrete service backend/provider (includes PostgreSQL + Celery)
+uv pip install "langflow-base[services]"
+
+# Host features + every service backend
+uv pip install "langflow-base[complete,services]"
 ```
+
+PostgreSQL and Celery stay opt-in relative to a normal Langflow install. Install them explicitly with `langflow-base[postgresql]`, `langflow-base[celery]`, `langflow-base[services]`, or `langflow-base[complete,services]`.
 
 ### Use a virtual environment to test custom dependencies
 

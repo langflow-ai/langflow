@@ -239,6 +239,12 @@ jobs:
             echo "Server terminated successfully"
           fi
 
+      - name: Test Langflow Base services extra wheel
+        run: |
+          # Clean-venv proof that [services] installs PostgreSQL/Celery/backends
+          # and that a bare langflow-base wheel keeps those extras opt-in.
+          make check_base_services_wheel
+
       # PyPI publishing moved to after cross-platform testing
 
       - name: Upload Artifact

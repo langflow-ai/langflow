@@ -415,6 +415,13 @@ fastmcp = ["fastmcp>=3.2.0"]
 # AWS extras
 aioboto3 = ["aioboto3>=15.2.0,<16.0.0"]
 
+# Celery task backend (langflow.services.task) plus the asgiref bridge used by
+# langflow.worker to run async vertex builds inside Celery tasks.
+celery = [
+    "celery>=5.3.0,<6.0.0",
+    "asgiref>=3.8.0",
+]
+
 # Astra
 astrapy = ["astrapy>=2.1.0,<3.0.0"]
 
@@ -428,6 +435,34 @@ ibm-watsonx-clients = [
     "ibm-watsonx-orchestrate-clients~=2.12.0; python_version >= '3.11'",
 ]
 
+# Exhaustive concrete-service dependency surface: every backend/provider that
+# langflow.services.* may select at runtime. Opt-in -- not pulled by
+# langflow-base[complete] or by ``pip install langflow``. Use this when you need
+# PostgreSQL, Celery, and the full set of service backends without the host-only
+# extras that live only in [complete] (mcp, litellm, cassandra, toolguard).
+# Direct packages below are imported by service code but were previously only
+# transitive; keep them explicit so a clean wheel install cannot drop them.
+services = [
+    "anyio>=4.0.0",
+    "tenacity>=8.0.0",
+    "dill>=0.3.8",
+    "langflow-base[postgresql]",
+    "langflow-base[redis]",
+    "langflow-base[chroma]",
+    "langflow-base[aioboto3]",
+    "langflow-base[celery]",
+    "langflow-base[kubernetes]",
+    "langflow-base[langfuse]",
+    "langflow-base[langwatch]",
+    "langflow-base[langsmith]",
+    "langflow-base[arize]",
+    "langflow-base[openinference]",
+    "langflow-base[opik]",
+    "langflow-base[traceloop]",
+    "langflow-base[openlayer]",
+    "langflow-base[ibm-watsonx-clients]",
+]
+
 complete = [
     # langflow-base[complete] pulls the third-party libraries that
     # langflow-base's OWN code imports -- service backends (cache, knowledge
@@ -438,6 +473,11 @@ complete = [
     # re-declared here -- doing so re-pulled large, already-bundled stacks (and
     # torch) into every install. When adding a base extra, only list it here if
     # langflow-base itself imports it.
+    #
+    # Intentionally independent of [services]: complete does NOT include
+    # PostgreSQL or Celery so the default ``pip install langflow`` (which pins
+    # langflow-base[complete]) stays lean. Install langflow-base[services] or
+    # langflow-base[complete,services] when those backends are required.
 
     # Cache / state
     "langflow-base[redis]",
@@ -475,6 +515,8 @@ complete = [
     "langflow-base[litellm]",
 ]
 
+# Backward-compatible alias for [complete]. Does NOT include [services]
+# (PostgreSQL / Celery); install langflow-base[complete,services] for that union.
 all = [
     "langflow-base[complete]",
 ]
