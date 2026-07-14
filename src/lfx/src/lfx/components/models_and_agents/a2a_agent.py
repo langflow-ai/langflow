@@ -210,8 +210,6 @@ async def _resolve_card_bounded(httpx_client: httpx.AsyncClient, base_url: str) 
     but this raises on failure/oversize instead of degrading to no preview, because a runtime call
     with no card can't proceed. Returns the parsed SDK ``AgentCard`` for ``create_client`` to reuse.
     """
-    from a2a.client.card_resolver import parse_agent_card
-
     async with httpx_client.stream("GET", f"{base_url}{_CARD_SUFFIX}") as response:
         response.raise_for_status()
         # Trust neither the declared length nor the actual stream.
@@ -225,6 +223,8 @@ async def _resolve_card_bounded(httpx_client: httpx.AsyncClient, base_url: str) 
             if len(body) > _MAX_CARD_BYTES:
                 msg = f"Agent card at {base_url} exceeds {_MAX_CARD_BYTES} bytes"
                 raise ValueError(msg)
+    from a2a.client.card_resolver import parse_agent_card
+
     return parse_agent_card(json.loads(bytes(body)))
 
 
