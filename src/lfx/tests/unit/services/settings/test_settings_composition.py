@@ -205,6 +205,7 @@ EXPECTED_FIELDS = {
     # Background execution
     "background_max_concurrency",
     "background_job_timeout",
+    "background_input_deadline_s",
     "background_lease_ttl_s",
     "background_heartbeat_interval_s",
     "background_watchdog_interval_s",
@@ -215,6 +216,8 @@ EXPECTED_FIELDS = {
     "block_code_interpreter_components",
     "restrict_local_file_access",
     "mcp_server_docker_hardening",
+    "mcp_server_allowed_packages",
+    "mcp_server_interpreter_hardening",
 }
 
 
@@ -250,6 +253,8 @@ def test_critical_defaults_unchanged():
     assert settings.block_code_interpreter_components is False
     assert settings.restrict_local_file_access is False
     assert settings.mcp_server_docker_hardening is False
+    assert settings.mcp_server_interpreter_hardening is False
+    assert settings.mcp_server_allowed_packages is None
     assert settings.mcp_server_enabled is True
     assert settings.mcp_composer_enabled is True
     assert settings.do_not_track is False

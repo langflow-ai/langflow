@@ -180,6 +180,8 @@ async def _stream_event_frames(
     current_user: UserRead,
     source_flow_id: UUID | None = None,
     run_id: str | None = None,
+    job_id: UUID | None = None,
+    resume: dict | None = None,
     track_job_status: bool = True,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
@@ -248,6 +250,8 @@ async def _stream_event_frames(
                     flow_name=flow_name,
                     source_flow_id=source_flow_id,
                     run_id=run_id,
+                    job_id=job_id,
+                    resume=resume,
                     track_job_status=track_job_status,
                     # The sync path applies tweaks before Graph construction; this loop
                     # builds from the DB (or request data), so without this the streaming
@@ -318,7 +322,11 @@ async def _stream_event_frames(
             for event in adapter.translate(event_type, event_data):
                 if terminal_error_type is not None and event.type == terminal_error_type:
                     terminal_error_seen = True
-                yield _frame(event, seq)
+                frame_bytes, frame_type = _frame(event, seq)
+                # Runner detects a pause by the langflow-side type; agui maps it to CUSTOM.
+                if event_type == "human_input_required":
+                    frame_type = "human_input_required"
+                yield (frame_bytes, frame_type)
                 seq += 1
         for event in adapter.final_events():
             if terminal_error_type is not None and event.type == terminal_error_type:

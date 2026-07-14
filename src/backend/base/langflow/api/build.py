@@ -6,6 +6,7 @@ import uuid
 from collections.abc import AsyncIterator
 
 from fastapi import BackgroundTasks, HTTPException, Response
+from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
 from lfx.graph.vertex.base import Vertex
@@ -109,6 +110,39 @@ def _output_meta_for_vertex(graph: Graph, vertex_id: str) -> dict:
         "is_terminal": vertex_id in terminal_ids,
         "output_types": output_types,
     }
+
+
+def _rerun_non_input_predecessors(graph: Graph, vertex_id: str) -> None:
+    """Un-build only the upstream producers whose live output was dropped from the checkpoint.
+
+    A checkpoint cannot serialize non-JSON outputs (Tools, model clients), so a producer of one of
+    those must re-run on resume to regenerate it. Producers whose output round-tripped (e.g. an
+    Agent's ``Message``) keep their restored result — re-running them would re-bill the LLM call and
+    re-fire side-effecting tools. The dropped set is computed at restore; if it's empty (no live
+    objects were dropped) nothing re-runs. Input vertices (e.g. Chat Input) are never re-run.
+    The whole predecessor chain is still walked so a dropped producer behind a restored one is found.
+    """
+    dropped: set[str] = getattr(graph, "checkpoint_opaque_dropped_ids", set())
+    visited: set[str] = set()
+    stack = list(graph.predecessor_map.get(vertex_id, []))
+    while stack:
+        pred_id = stack.pop()
+        if pred_id in visited:
+            continue
+        visited.add(pred_id)
+        try:
+            pred = graph.get_vertex(pred_id)
+        except ValueError:
+            continue
+        if pred.is_input:
+            continue
+        # Stop at a built, round-tripped producer: its output is valid, so re-running its producers is
+        # wasted work and, for an Agent, re-bills the LLM and re-emits its message on every later resume.
+        will_run = pred_id in dropped or not pred.built
+        if pred_id in dropped:
+            pred.built = False
+        if will_run:
+            stack.extend(graph.predecessor_map.get(pred_id, []))
 
 
 def _log_component_input_telemetry(
@@ -393,6 +427,8 @@ async def generate_flow_events(
     current_user: CurrentActiveUser,
     flow_name: str | None = None,
     source_flow_id: uuid.UUID | None = None,
+    job_id: uuid.UUID | str | None = None,
+    resume: dict | None = None,
     run_id: str | None = None,
     track_job_status: bool = True,
     tweaks: dict | None = None,
@@ -413,11 +449,64 @@ async def generate_flow_events(
     if not inputs:
         inputs = InputValueRequest(session=str(flow_id))
 
+    async def build_resumed_graph_and_get_order() -> tuple[list[str], list[str], Graph]:
+        """Resume a suspended HITL run from its durable checkpoint instead of building fresh.
+
+        Hydrates the graph, injects the human decision keyed by request_id, and un-builds
+        the paused node so it re-runs and routes (its first-run output was a placeholder).
+        """
+        from lfx.graph.graph.base import Graph as LfxGraph
+        from lfx.run.hitl import request_id_targets_vertex
+        from lfx.services.deps import get_checkpoint_service
+
+        from langflow.api.v2.hitl import reroute_decision_on_timeout
+
+        run_id = str(job_id)
+        store = get_checkpoint_service()
+        checkpoint = await store.load_by_run_id(run_id)
+        if checkpoint is None:
+            # Why: re-dispatching here (resume/job_id still set) recurses to RecursionError; a missing
+            # or expired checkpoint is unrecoverable, so surface a clean 404 instead.
+            raise HTTPException(status_code=404, detail="Checkpoint expired or not found; cannot resume this run.")
+        graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+        # Resume skips the initial run's trace setup (trace_context_var stays unset → post-pause
+        # vertices like Chat Output never trace); re-init so the resumed vertices trace.
+        graph.flow_name = graph.flow_name or flow_name
+        await graph.initialize_run()
+        pending = await get_job_service().get_pending_human_request(job_id)
+        decision = reroute_decision_on_timeout(pending, resume["decision"])
+        # Merge with checkpoint-restored decisions so a re-run HITL keeps its answer (no multi-HITL loop).
+        graph.human_input_decisions = {
+            **(getattr(graph, "human_input_decisions", {}) or {}),
+            resume["request_id"]: decision,
+        }
+        action_id = str((decision or {}).get("action_id", ""))
+        gate_label = "Rejected" if "reject" in action_id.lower() else "Approved"
+        if graph.tracing_service:
+            graph.tracing_service.record_event_span(
+                span_id=f"hitl-{resume['request_id']}",
+                name=f"Human In The Loop — {gate_label}",
+                outputs={"decision": action_id},
+            )
+        for vertex in graph.vertices:
+            if request_id_targets_vertex(str(resume["request_id"]), vertex.id, run_id):
+                vertex.built = False
+                _rerun_non_input_predecessors(graph, vertex.id)
+        first_layer = graph.resume_first_layer()
+        for vertex_id in first_layer:
+            graph.run_manager.add_to_vertices_being_run(vertex_id)
+        await chat_service.set_cache(str(flow_id), graph)
+        return first_layer, list(graph.vertices_to_run), graph
+
     async def build_graph_and_get_order() -> tuple[list[str], list[str], Graph]:
+        if resume is not None and job_id is not None:
+            return await build_resumed_graph_and_get_order()
         start_time = time.perf_counter()
         components_count = 0
         graph = None
-        build_run_id = run_id or str(uuid.uuid4())
+        # The durable HITL path keys the checkpoint by job_id, so run_id MUST equal job_id when set;
+        # otherwise honor an explicit run_id (background path) or mint a fresh uuid (foreground).
+        build_run_id = str(job_id) if job_id is not None else (run_id or str(uuid.uuid4()))
         try:
             flow_id_str = str(flow_id)
             # Create a fresh session for database operations
@@ -441,6 +530,12 @@ async def generate_flow_events(
                         vertex.update_raw_params(node_tweaks, overwrite=True)
 
             graph.set_run_id(build_run_id)
+            if job_id is not None:
+                from lfx.services.deps import get_checkpoint_service
+
+                graph.job_id = str(job_id)  # the checkpoint is keyed by job_id
+                graph.checkpointing_enabled = True  # arm the pause seam for producers
+                graph.checkpoint_store = get_checkpoint_service()
             first_layer = sort_vertices(graph)
 
             for vertex_id in first_layer:
@@ -505,6 +600,7 @@ async def generate_flow_events(
                 chat_service=chat_service,
                 user_id=str(current_user.id),
                 session_id=effective_session_id,
+                run_id=str(job_id) if job_id is not None else run_id,
             )
             if source_flow_id is not None:
                 graph.flow_id = str(flow_id)
@@ -520,6 +616,7 @@ async def generate_flow_events(
             user_id=str(current_user.id),
             flow_name=flow_name,
             session_id=effective_session_id,
+            run_id=str(job_id) if job_id is not None else run_id,
         )
 
     def sort_vertices(graph: Graph) -> list[str]:
@@ -557,6 +654,10 @@ async def generate_flow_events(
                 top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
 
                 result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
+            except GraphPausedException:
+                # A pause is control flow, not a failure: converting it to an
+                # error output would terminalize a suspendable run.
+                raise
             except Exception as exc:  # noqa: BLE001
                 if isinstance(exc, ComponentBuildError):
                     params = exc.message
@@ -646,6 +747,8 @@ async def generate_flow_events(
                     component_run_id=graph.run_id,
                 ),
             )
+        except GraphPausedException:
+            raise
         except Exception as exc:
             if "vertex" in locals():
                 # Extract and send component input telemetry even on error (separate payload)
@@ -683,6 +786,8 @@ async def generate_flow_events(
             event_manager: Manager for handling events
             vertex_timedeltas: Shared list to accumulate each vertex's timedelta
         """
+        # Why: the background path never enters Graph.process(), so the pause boundary must live in this driver.
+        await graph.check_and_handle_pause()
         try:
             vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
         except asyncio.CancelledError:
@@ -738,12 +843,14 @@ async def generate_flow_events(
         _build_run_id = uuid.UUID(graph.run_id) if graph.run_id else None
         if track_job_status and _build_run_id is not None:
             _build_job_svc = get_job_service()
-            await _build_job_svc.create_job(
-                job_id=_build_run_id,
-                flow_id=flow_id,
-                user_id=current_user.id,
-                job_type=JobType.WORKFLOW,
-            )
+            # Background path already created the job; re-creating it = UNIQUE violation.
+            if await _build_job_svc.get_job_by_job_id(_build_run_id) is None:
+                await _build_job_svc.create_job(
+                    job_id=_build_run_id,
+                    flow_id=flow_id,
+                    user_id=current_user.id,
+                    job_type=JobType.WORKFLOW,
+                )
     except Exception:  # noqa: BLE001
         await logger.awarning(
             "Failed to create workflow job for /build — memory base tracking disabled for flow %s",
@@ -777,6 +884,10 @@ async def generate_flow_events(
             cleanup_tasks.add(cleanup_task)
             cleanup_task.add_done_callback(cleanup_tasks.discard)
             raise
+        except GraphPausedException:
+            # Suspension must reach the runtime unwrapped — emitting on_error
+            # here would terminalize the run in every client.
+            raise
         except Exception as e:
             await logger.aerror(f"Error building vertices: {e}")
             custom_component = graph.get_vertex(vertex_id).custom_component
@@ -790,10 +901,25 @@ async def generate_flow_events(
             event_manager.on_error(data=error_message.data)
             raise
 
-    if _build_job_svc and _build_run_id:
-        await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
-    else:
-        await _run_vertex_build()
+    try:
+        runner_owns_status = job_id is not None  # background path: JobRunner already wraps execute_with_status
+        if _build_job_svc and _build_run_id and not runner_owns_status:
+            await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
+        else:
+            await _run_vertex_build()
+    except GraphPausedException as exc:
+        # Non-terminal: persist the card to history, emit the pause event, end without on_end.
+        from langflow.api.v2.hitl import persist_human_input_card
+
+        await persist_human_input_card(exc.data or {}, flow_id, graph.session_id or str(flow_id), job_id)
+        # Why: persist spans that ran before the pause so the trace detail isn't empty (merge is idempotent on resume).
+        try:
+            await graph.end_all_traces()
+        except Exception:  # noqa: BLE001
+            await logger.awarning("Failed to flush partial trace on pause for flow %s", flow_id, exc_info=True)
+        event_manager.send_event(event_type="human_input_required", data=exc.data or {})
+        await event_manager.queue.put((None, None, time.time()))
+        return
 
     build_duration = sum(vertex_timedeltas)
     event_manager.on_end(data={"build_duration": build_duration})
