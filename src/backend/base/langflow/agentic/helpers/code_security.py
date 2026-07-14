@@ -206,7 +206,7 @@ def _collect_imports(tree: ast.AST) -> tuple[dict[str, str], set[str]]:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 if alias.asname:
-                    aliases[alias.asname] = alias.name.split(".")[0]
+                    aliases[alias.asname] = alias.name
                 else:
                     top = alias.name.split(".")[0]
                     aliases[top] = top
@@ -269,12 +269,42 @@ class _SecurityChecker(ast.NodeVisitor):
         elif isinstance(target, ast.Starred):
             self._bind_assignment_target(target.value, value)
         elif isinstance(target, (ast.Tuple, ast.List)):
-            if isinstance(value, (ast.Tuple, ast.List)) and len(target.elts) == len(value.elts):
-                for target_element, value_element in zip(target.elts, value.elts, strict=True):
-                    self._bind_assignment_target(target_element, value_element)
-            else:
-                for target_element in target.elts:
-                    self._bind_assignment_target(target_element, value)
+            if isinstance(value, (ast.Tuple, ast.List)):
+                starred_index = next(
+                    (
+                        index
+                        for index, target_element in enumerate(target.elts)
+                        if isinstance(target_element, ast.Starred)
+                    ),
+                    None,
+                )
+                if starred_index is None and len(target.elts) == len(value.elts):
+                    for target_element, value_element in zip(target.elts, value.elts, strict=True):
+                        self._bind_assignment_target(target_element, value_element)
+                    return
+                if starred_index is not None and len(value.elts) >= len(target.elts) - 1:
+                    for target_element, value_element in zip(
+                        target.elts[:starred_index], value.elts[:starred_index], strict=True
+                    ):
+                        self._bind_assignment_target(target_element, value_element)
+
+                    trailing_count = len(target.elts) - starred_index - 1
+                    if trailing_count:
+                        for target_element, value_element in zip(
+                            target.elts[-trailing_count:], value.elts[-trailing_count:], strict=True
+                        ):
+                            self._bind_assignment_target(target_element, value_element)
+
+                    remaining_end = len(value.elts) - trailing_count if trailing_count else len(value.elts)
+                    remaining_values = ast.List(
+                        elts=value.elts[starred_index:remaining_end],
+                        ctx=ast.Load(),
+                    )
+                    self._bind_assignment_target(target.elts[starred_index], remaining_values)
+                    return
+
+            for target_element in target.elts:
+                self._bind_assignment_target(target_element, value)
 
     def _snapshot_alias_state(self) -> _AliasState:
         return self.module_aliases.copy(), self.shadowed_aliases.copy()
@@ -309,7 +339,8 @@ class _SecurityChecker(ast.NodeVisitor):
             if module in DANGEROUS_IMPORTS or _is_dangerous_submodule(alias.name):
                 self.violations.append(f"Import of '{alias.name}' is forbidden in components")
             binding = alias.asname or module
-            self._bind_name(binding, frozenset({module}))
+            imported_name = alias.name if alias.asname else module
+            self._bind_name(binding, frozenset({imported_name}))
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom):
@@ -374,6 +405,37 @@ class _SecurityChecker(ast.NodeVisitor):
                 self.visit(statement)
             branch_states.append(self._snapshot_alias_state())
         self._merge_alias_states(branch_states)
+
+    def _visit_loop(self, node: ast.For | ast.AsyncFor | ast.While) -> None:
+        """Merge zero-iteration and loop-body alias states conservatively."""
+        before_loop = self._snapshot_alias_state()
+        if isinstance(node, ast.While):
+            self.visit(node.test)
+        else:
+            self.visit(node.iter)
+            self.visit(node.target)
+
+        for statement in node.body:
+            self.visit(statement)
+        after_body = self._snapshot_alias_state()
+        self._merge_alias_states([before_loop, after_body])
+
+        if node.orelse:
+            before_else = self._snapshot_alias_state()
+            for statement in node.orelse:
+                self.visit(statement)
+            after_else = self._snapshot_alias_state()
+            # The else suite is skipped when a loop exits through break.
+            self._merge_alias_states([before_else, after_else])
+
+    def visit_For(self, node: ast.For):
+        self._visit_loop(node)
+
+    def visit_AsyncFor(self, node: ast.AsyncFor):
+        self._visit_loop(node)
+
+    def visit_While(self, node: ast.While):
+        self._visit_loop(node)
 
     def _shadow_arguments(self, arguments: ast.arguments) -> None:
         positional = [*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs]
@@ -527,7 +589,7 @@ class _SecurityChecker(ast.NodeVisitor):
         """
         if not (
             isinstance(node.func, ast.Name)
-            and node.func.id == "getattr"
+            and "getattr" in self._resolved_names(node.func.id)
             and node.args
             and isinstance(node.args[0], ast.Name)
         ):
