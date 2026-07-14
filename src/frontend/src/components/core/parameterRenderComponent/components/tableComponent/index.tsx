@@ -538,6 +538,10 @@ const TableComponent = forwardRef<
         );
 
       if (!textModalTrigger) return;
+      // A focused trigger already receives native Enter/Space button
+      // activation. Synthesizing another click would toggle the dialog twice,
+      // so only proxy keyboard activation when focus is on the grid cell.
+      if (keyboardEvent.target === textModalTrigger) return;
 
       keyboardEvent.preventDefault();
       textModalTrigger.click();
