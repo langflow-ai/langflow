@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from contextlib import suppress
 from importlib import import_module
 from pathlib import Path
 from types import SimpleNamespace
@@ -10,21 +11,40 @@ from unittest.mock import MagicMock
 import pytest
 from lfx.services.storage.local import LocalStorageService
 
-_previous_assemblyai = sys.modules.get("assemblyai")
-sys.modules["assemblyai"] = MagicMock()
-try:
-    assemblyai_start_transcript = import_module("lfx_bundles.assemblyai.assemblyai_start_transcript")
-finally:
-    if _previous_assemblyai is None:
-        sys.modules.pop("assemblyai", None)
-    else:
-        sys.modules["assemblyai"] = _previous_assemblyai
-
-AssemblyAITranscriptionJobCreator = assemblyai_start_transcript.AssemblyAITranscriptionJobCreator
+_COMPONENT_MODULE = "lfx_bundles.assemblyai.assemblyai_start_transcript"
+_PARENT_MODULE = "lfx_bundles.assemblyai"
+_COMPONENT_ATTRIBUTE = "assemblyai_start_transcript"
+_MISSING = object()
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from types import ModuleType
     from typing import Any, BinaryIO
+
+
+@pytest.fixture
+def assemblyai_module() -> ModuleType:
+    parent_module = import_module(_PARENT_MODULE)
+    previous_assemblyai = sys.modules.get("assemblyai")
+    previous_component_module = sys.modules.pop(_COMPONENT_MODULE, None)
+    previous_component_attribute = getattr(parent_module, _COMPONENT_ATTRIBUTE, _MISSING)
+    sys.modules["assemblyai"] = MagicMock()
+    try:
+        yield import_module(_COMPONENT_MODULE)
+    finally:
+        if previous_assemblyai is None:
+            sys.modules.pop("assemblyai", None)
+        else:
+            sys.modules["assemblyai"] = previous_assemblyai
+        if previous_component_module is None:
+            sys.modules.pop(_COMPONENT_MODULE, None)
+        else:
+            sys.modules[_COMPONENT_MODULE] = previous_component_module
+        if previous_component_attribute is _MISSING:
+            with suppress(AttributeError):
+                delattr(parent_module, _COMPONENT_ATTRIBUTE)
+        else:
+            setattr(parent_module, _COMPONENT_ATTRIBUTE, previous_component_attribute)
 
 
 class _Transcript:
@@ -32,8 +52,8 @@ class _Transcript:
     id = "transcript-123"
 
 
-def _component(audio_file: Path, flow_id: str, user_id: str) -> AssemblyAITranscriptionJobCreator:
-    component = AssemblyAITranscriptionJobCreator()
+def _component(component_class: type[Any], audio_file: Path, flow_id: str, user_id: str) -> Any:
+    component = component_class()
     component._flow_id = flow_id
     component._user_id = user_id
     component._attributes.update(
@@ -60,10 +80,11 @@ def _storage_service(root: Path) -> LocalStorageService:
 
 def _patch_assemblyai(
     monkeypatch: pytest.MonkeyPatch,
+    assemblyai_module: ModuleType,
     submitted_audio: list[bytes],
     submitted_handles: list[BinaryIO] | None = None,
 ) -> None:
-    monkeypatch.setattr(assemblyai_start_transcript.aai, "TranscriptionConfig", lambda **_kwargs: object())
+    monkeypatch.setattr(assemblyai_module.aai, "TranscriptionConfig", lambda **_kwargs: object())
 
     class _Transcriber:
         def submit(self, audio: str | BinaryIO, *, config: Any) -> _Transcript:
@@ -76,7 +97,7 @@ def _patch_assemblyai(
                     submitted_handles.append(audio)
             return _Transcript()
 
-    monkeypatch.setattr(assemblyai_start_transcript.aai, "Transcriber", _Transcriber)
+    monkeypatch.setattr(assemblyai_module.aai, "Transcriber", _Transcriber)
 
 
 @pytest.mark.parametrize(
@@ -93,6 +114,7 @@ def _patch_assemblyai(
 def test_rejects_untrusted_audio_paths_before_provider_submission(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    assemblyai_module: ModuleType,
     untrusted_path: Callable[[Path, str, Path], Path],
 ) -> None:
     flow_id = "flow-123"
@@ -111,15 +133,20 @@ def test_rejects_untrusted_audio_paths_before_provider_submission(
 
     audio_file = untrusted_path(storage_root, flow_id, outside_file)
     submitted_audio: list[bytes] = []
-    _patch_assemblyai(monkeypatch, submitted_audio)
+    _patch_assemblyai(monkeypatch, assemblyai_module, submitted_audio)
     monkeypatch.setattr(
-        assemblyai_start_transcript,
+        assemblyai_module,
         "get_storage_service",
         lambda: _storage_service(storage_root),
         raising=False,
     )
 
-    result = _component(audio_file, flow_id, user_id).create_transcription_job()
+    result = _component(
+        assemblyai_module.AssemblyAITranscriptionJobCreator,
+        audio_file,
+        flow_id,
+        user_id,
+    ).create_transcription_job()
 
     assert submitted_audio == []
     assert result.data == {"error": "Error: Audio file not found"}
@@ -129,6 +156,7 @@ def test_rejects_untrusted_audio_paths_before_provider_submission(
 def test_rejects_unsafe_namespace_ids(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    assemblyai_module: ModuleType,
     namespace_kind: str,
 ) -> None:
     storage_root = tmp_path / "storage"
@@ -146,15 +174,20 @@ def test_rejects_unsafe_namespace_ids(
     audio_file.parent.mkdir(parents=True)
     audio_file.write_bytes(b"controlled test fixture")
     submitted_audio: list[bytes] = []
-    _patch_assemblyai(monkeypatch, submitted_audio)
+    _patch_assemblyai(monkeypatch, assemblyai_module, submitted_audio)
     monkeypatch.setattr(
-        assemblyai_start_transcript,
+        assemblyai_module,
         "get_storage_service",
         lambda: _storage_service(storage_root),
         raising=False,
     )
 
-    result = _component(audio_file, flow_id, "user-456").create_transcription_job()
+    result = _component(
+        assemblyai_module.AssemblyAITranscriptionJobCreator,
+        audio_file,
+        flow_id,
+        "user-456",
+    ).create_transcription_job()
 
     assert submitted_audio == []
     assert result.data == {"error": "Error: Audio file not found"}
@@ -164,6 +197,7 @@ def test_rejects_unsafe_namespace_ids(
 def test_submits_uploaded_audio_from_open_handle(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    assemblyai_module: ModuleType,
     namespace_id: str,
 ) -> None:
     flow_id = "flow-123"
@@ -175,15 +209,20 @@ def test_submits_uploaded_audio_from_open_handle(
 
     submitted_audio: list[bytes] = []
     submitted_handles: list[BinaryIO] = []
-    _patch_assemblyai(monkeypatch, submitted_audio, submitted_handles)
+    _patch_assemblyai(monkeypatch, assemblyai_module, submitted_audio, submitted_handles)
     monkeypatch.setattr(
-        assemblyai_start_transcript,
+        assemblyai_module,
         "get_storage_service",
         lambda: _storage_service(storage_root),
         raising=False,
     )
 
-    result = _component(audio_file, flow_id, user_id).create_transcription_job()
+    result = _component(
+        assemblyai_module.AssemblyAITranscriptionJobCreator,
+        audio_file,
+        flow_id,
+        user_id,
+    ).create_transcription_job()
 
     assert submitted_audio == [b"controlled test fixture"]
     assert len(submitted_handles) == 1

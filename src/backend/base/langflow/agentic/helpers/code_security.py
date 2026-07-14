@@ -41,6 +41,7 @@ DANGEROUS_DUNDER_ATTRS: set[str] = {
 # Langflow's variable/secret service, never raw process env.
 DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
+    ("os.path", "os", "os.path.os is forbidden in components"),
     ("sys", "modules", "sys.modules is forbidden in components"),
 ]
 
@@ -238,6 +239,10 @@ class _SecurityChecker(ast.NodeVisitor):
         self.shadowed_aliases: set[str] = set()
         # modules pulled in via ``from <mod> import *``.
         self.wildcard_modules: set[str] = wildcard_modules or set()
+        # Active try-suite collectors retain transient bindings from nested
+        # control flow so a later finally sees every state that can reach it.
+        self._alias_scope_depth = 0
+        self._alias_state_collectors: list[tuple[int, list[_AliasState]]] = []
 
     def _resolved_names(self, name: str) -> frozenset[str]:
         """Return possible canonical values for a local name."""
@@ -261,6 +266,11 @@ class _SecurityChecker(ast.NodeVisitor):
         else:
             self.module_aliases.pop(name, None)
             self.shadowed_aliases.add(name)
+        if self._alias_state_collectors:
+            state = self._snapshot_alias_state()
+            for scope_depth, states in self._alias_state_collectors:
+                if scope_depth == self._alias_scope_depth:
+                    states.append(state)
 
     def _bind_assignment_target(self, target: ast.AST, value: ast.AST) -> None:
         """Apply assignment aliasing, including matching tuple/list unpacking."""
@@ -489,6 +499,68 @@ class _SecurityChecker(ast.NodeVisitor):
     def visit_While(self, node: ast.While):
         self._visit_while_loop(node)
 
+    def _visit_alias_suite(self, statements: list[ast.stmt], entry_state: _AliasState) -> list[_AliasState]:
+        """Visit a statement suite and retain every state that can reach a later finally."""
+        self._restore_alias_state(entry_state)
+        states = [entry_state]
+        collector = (self._alias_scope_depth, states)
+        self._alias_state_collectors.append(collector)
+        try:
+            for statement in statements:
+                self.visit(statement)
+                states.append(self._snapshot_alias_state())
+        finally:
+            self._alias_state_collectors.pop()
+        return states
+
+    def _visit_try(self, node: ast.Try, *, sequential_handlers: bool = False) -> None:
+        """Merge every alias state that can reach a try continuation or finally."""
+        before_try = self._snapshot_alias_state()
+        body_states = self._visit_alias_suite(node.body, before_try)
+
+        # The else suite runs only after the whole try body succeeds.
+        else_states = self._visit_alias_suite(node.orelse, body_states[-1])
+        success_state = else_states[-1]
+
+        # A handler can observe bindings made before any statement that raises.
+        self._merge_alias_states(body_states)
+        handler_entry_state = self._snapshot_alias_state()
+        handler_states: list[_AliasState] = []
+        partial_handler_states: list[_AliasState] = []
+        for handler in node.handlers:
+            self._restore_alias_state(handler_entry_state)
+            if handler.type is not None:
+                self.visit(handler.type)
+            if handler.name:
+                self._bind_name(handler.name, frozenset())
+            handler_states_for_suite = self._visit_alias_suite(handler.body, self._snapshot_alias_state())
+            handler_states.append(handler_states_for_suite[-1])
+            partial_handler_states.extend(handler_states_for_suite)
+            if sequential_handlers:
+                # Multiple except* clauses can run for disjoint subgroups, and
+                # later handlers can observe bindings from earlier handlers.
+                self._merge_alias_states([handler_entry_state, *handler_states_for_suite])
+                handler_entry_state = self._snapshot_alias_state()
+
+        continuation_states = (
+            [success_state, handler_entry_state] if sequential_handlers else [success_state, *handler_states]
+        )
+        if node.finalbody:
+            # Finally also runs for exceptions raised partway through the body,
+            # else suite, or a handler, so preserve every partial suite state.
+            self._merge_alias_states([*continuation_states, *body_states, *else_states, *partial_handler_states])
+            for statement in node.finalbody:
+                self.visit(statement)
+        else:
+            self._merge_alias_states(continuation_states)
+
+    def visit_Try(self, node: ast.Try):
+        self._visit_try(node)
+
+    # Keep this unannotated because ast.TryStar does not exist on Python 3.10.
+    def visit_TryStar(self, node):
+        self._visit_try(node, sequential_handlers=True)
+
     def _visit_comprehension_expression(
         self, generators: list[ast.comprehension], expressions: tuple[ast.AST, ...]
     ) -> None:
@@ -539,11 +611,15 @@ class _SecurityChecker(ast.NodeVisitor):
             self.visit(type_parameter)
 
         enclosing_state = self._snapshot_alias_state()
-        self._bind_name(node.name, frozenset())
-        self._shadow_arguments(node.args)
-        for statement in node.body:
-            self.visit(statement)
-        self._restore_alias_state(enclosing_state)
+        self._alias_scope_depth += 1
+        try:
+            self._bind_name(node.name, frozenset())
+            self._shadow_arguments(node.args)
+            for statement in node.body:
+                self.visit(statement)
+        finally:
+            self._alias_scope_depth -= 1
+            self._restore_alias_state(enclosing_state)
         self._bind_name(node.name, frozenset())
 
     def visit_FunctionDef(self, node: ast.FunctionDef):
@@ -555,9 +631,13 @@ class _SecurityChecker(ast.NodeVisitor):
     def visit_Lambda(self, node: ast.Lambda):
         self.visit(node.args)
         enclosing_state = self._snapshot_alias_state()
-        self._shadow_arguments(node.args)
-        self.visit(node.body)
-        self._restore_alias_state(enclosing_state)
+        self._alias_scope_depth += 1
+        try:
+            self._shadow_arguments(node.args)
+            self.visit(node.body)
+        finally:
+            self._alias_scope_depth -= 1
+            self._restore_alias_state(enclosing_state)
 
     def visit_ClassDef(self, node: ast.ClassDef):
         for decorator in node.decorator_list:
@@ -570,17 +650,21 @@ class _SecurityChecker(ast.NodeVisitor):
             self.visit(type_parameter)
 
         enclosing_state = self._snapshot_alias_state()
-        for statement in node.body:
-            self.visit(statement)
-        self._restore_alias_state(enclosing_state)
+        self._alias_scope_depth += 1
+        try:
+            for statement in node.body:
+                self.visit(statement)
+        finally:
+            self._alias_scope_depth -= 1
+            self._restore_alias_state(enclosing_state)
         self._bind_name(node.name, frozenset())
 
     def visit_Attribute(self, node: ast.Attribute):
         """Check attribute access: dunder escapes, os.environ, urllib.request, ..."""
         if node.attr in DANGEROUS_DUNDER_ATTRS:
             self.violations.append(f"Access to '{node.attr}' is forbidden in components (sandbox escape)")
-        elif isinstance(node.value, ast.Name):
-            for module_name in self._resolved_names(node.value.id):
+        elif isinstance(node.value, (ast.Name, ast.Attribute)):
+            for module_name in self._resolved_receiver_names(node.value):
                 violation = next(
                     (
                         message
@@ -605,6 +689,10 @@ class _SecurityChecker(ast.NodeVisitor):
         if not parts:
             return frozenset()
         return frozenset(".".join([root, *parts[1:]]) for root in self._resolved_names(parts[0]))
+
+    def _resolved_receiver_names(self, node: ast.Name | ast.Attribute) -> frozenset[str]:
+        """Resolve a direct or dotted module receiver to its canonical names."""
+        return self._resolved_names(node.id) if isinstance(node, ast.Name) else self._resolved_dotted(node)
 
     def _dangerous_submodule_access(self, node: ast.Attribute) -> str | None:
         # Exact match (not prefix): the ``urllib.request`` node itself is visited
@@ -668,15 +756,21 @@ class _SecurityChecker(ast.NodeVisitor):
         members, a dynamic attribute name is rejected because it could resolve to
         one of those members at runtime.
         """
+        if isinstance(node.func, ast.Name):
+            function_names = self._resolved_names(node.func.id)
+        elif isinstance(node.func, ast.Attribute):
+            function_names = self._resolved_dotted(node.func)
+        else:
+            function_names = frozenset()
+
         if not (
-            isinstance(node.func, ast.Name)
-            and "getattr" in self._resolved_names(node.func.id)
+            {"getattr", "builtins.getattr"} & function_names
             and node.args
-            and isinstance(node.args[0], ast.Name)
+            and isinstance(node.args[0], (ast.Name, ast.Attribute))
         ):
             return
 
-        module_names = self._resolved_names(node.args[0].id)
+        module_names = self._resolved_receiver_names(node.args[0])
         try:
             attr_node = node.args[1]
         except IndexError:

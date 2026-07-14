@@ -478,7 +478,7 @@ SSRF protection prevents requests to internal or private network resources, such
 | `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK` | Boolean | `True` | Preserve literal `localhost`, `127.0.0.0/8`, and `::1` connector targets for common local deployments. Set to `false` when mutually-untrusted tenants must not reach services bound to loopback. Hostnames that merely resolve to loopback are still validated. |
 
 :::note Multi-tenant recommendation
-In a multi-tenant deployment where mutually-untrusted users build flows, keep `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED=true` and `LANGFLOW_SSRF_PROTECTION_ENABLED=true` so a tenant cannot point a vector store, SQL database, model-provider proxy, Ollama/LM Studio/Home Assistant URL, or Glean/AstraDB tool at an internal service or the cloud-metadata endpoint. Allowlist your own internal hosts with `LANGFLOW_SSRF_ALLOWED_HOSTS`.
+In a multi-tenant deployment where mutually-untrusted users build flows, keep `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED=true` and `LANGFLOW_SSRF_PROTECTION_ENABLED=true`, and set `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK=false`, so a tenant cannot point a vector store, SQL database, model-provider proxy, Ollama/LM Studio/Home Assistant URL, or Glean/AstraDB tool at a loopback or internal service or the cloud-metadata endpoint. Allowlist your own internal hosts with `LANGFLOW_SSRF_ALLOWED_HOSTS`.
 :::
 
 ### Multi-tenant component hardening {#multi-tenant-component-hardening}

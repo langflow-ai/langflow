@@ -116,6 +116,7 @@ def test_operator_package_allowlist_and_uvx_entrypoints_are_enforced(command, ar
     [
         ("uvx", ["mcp-proxy"]),
         ("uvx", ["--from", "lfx", "lfx-mcp"]),
+        ("uvx", ["--with", "lfx", "mcp-proxy"]),
     ],
 )
 def test_operator_package_allowlist_preserves_approved_packages(command, args):
@@ -124,6 +125,145 @@ def test_operator_package_allowlist_preserves_approved_packages(command, args):
         args,
         allowed_packages=frozenset({"lfx", "mcp-proxy"}),
     )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--package", "mcp-proxy", "--package", "attacker-package", "mcp-proxy"],
+        ["--package=mcp-proxy", "--package=attacker-package", "mcp-proxy"],
+        ["-p", "attacker-package", "mcp-proxy"],
+    ],
+)
+def test_npx_allowlist_checks_every_explicit_package(args):
+    with pytest.raises(ValueError, match="Package 'attacker-package' is not allowed"):
+        validate_mcp_stdio_source_policy(
+            "npx",
+            args,
+            allowed_packages=frozenset({"mcp-proxy"}),
+        )
+
+
+def test_npx_allowlist_rejects_unrelated_explicit_package_entrypoint():
+    with pytest.raises(ValueError, match="Entrypoint 'python' is not allowed for MCP npx"):
+        validate_mcp_stdio_source_policy(
+            "npx",
+            ["--package", "mcp-proxy", "python", "-c", "print('not executed')"],
+            allowed_packages=frozenset({"mcp-proxy"}),
+        )
+
+
+def test_npx_explicit_package_rejects_unverified_same_name_path_entrypoint():
+    with pytest.raises(ValueError, match="Package 'lfx' has no verified entrypoint"):
+        validate_mcp_stdio_config(
+            "npx",
+            ["--package", "lfx", "lfx"],
+            {},
+            allowed_packages={"lfx"},
+        )
+
+
+def test_npx_explicit_package_rejects_unverified_secondary_package():
+    with pytest.raises(ValueError, match="Package 'lfx' has no verified entrypoint"):
+        validate_mcp_stdio_config(
+            "npx",
+            ["--package", "lfx", "--package", "mcp-proxy", "mcp-proxy"],
+            {},
+            allowed_packages={"lfx", "mcp-proxy"},
+        )
+
+
+def test_npx_allowlist_rejects_shell_call_mode():
+    with pytest.raises(ValueError, match="Argument '--call' is not allowed"):
+        validate_mcp_stdio_source_policy(
+            "npx",
+            ["--call", "mcp-proxy", "--package", "attacker-package"],
+            allowed_packages=frozenset({"mcp-proxy"}),
+        )
+
+
+def test_npx_allowlist_preserves_matching_explicit_package_entrypoint():
+    validate_mcp_stdio_config(
+        "npx",
+        ["--package", "mcp-proxy", "mcp-proxy", "--transport", "stdio"],
+        {},
+        allowed_packages={"mcp-proxy"},
+    )
+
+
+def test_npx_double_dash_keeps_following_package_flag_as_command_argument():
+    validate_mcp_stdio_config(
+        "npx",
+        ["--package", "mcp-proxy", "--", "mcp-proxy", "--package", "command-argument"],
+        {},
+        allowed_packages=frozenset({"mcp-proxy"}),
+    )
+
+
+def test_npx_first_positional_keeps_following_package_flag_as_command_argument():
+    validate_mcp_stdio_config(
+        "npx",
+        ["--package", "mcp-proxy", "mcp-proxy", "--package", "command-argument"],
+        {},
+        allowed_packages=frozenset({"mcp-proxy"}),
+    )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--with=mcp-proxy", "--with=attacker-package", "mcp-proxy"],
+        ["--with", "mcp-proxy", "--with", "attacker-package", "mcp-proxy"],
+        ["-wmcp-proxy", "-wattacker-package", "mcp-proxy"],
+    ],
+)
+def test_uvx_allowlist_checks_every_additional_package(args):
+    with pytest.raises(ValueError, match="Package 'attacker-package' is not allowed for MCP uvx"):
+        validate_mcp_stdio_config(
+            "uvx",
+            args,
+            {},
+            allowed_packages={"mcp-proxy"},
+        )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--with", "mcp-proxy", "attacker-package"],
+        ["--no-sources-package", "mcp-proxy", "attacker-package"],
+    ],
+)
+def test_uvx_option_value_cannot_mask_unapproved_primary_target(args):
+    with pytest.raises(ValueError, match="Package 'attacker-package' is not allowed for MCP uvx"):
+        validate_mcp_stdio_config(
+            "uvx",
+            args,
+            {},
+            allowed_packages={"mcp-proxy"},
+        )
+
+
+@pytest.mark.parametrize(
+    ("args", "allowed_packages"),
+    [
+        (["--python-preference", "system", "attacker-package"], {"system"}),
+        (["--future-value-option", "mcp-proxy", "attacker-package"], {"mcp-proxy"}),
+    ],
+)
+def test_uvx_unknown_option_cannot_mask_primary_target(args, allowed_packages):
+    with pytest.raises(ValueError, match=r"Argument '--[^']+' is not allowed for MCP stdio command 'uvx'"):
+        validate_mcp_stdio_config("uvx", args, {}, allowed_packages=allowed_packages)
+
+
+@pytest.mark.parametrize("flag", ["--isolated", "--no-config", "-qq", "-vv", "-qU", "-Un", "-qvU"])
+def test_uvx_known_boolean_options_preserve_primary_target(flag):
+    validate_mcp_stdio_config("uvx", [flag, "mcp-proxy"], {}, allowed_packages={"mcp-proxy"})
+
+
+@pytest.mark.parametrize("option", ["-p3.12", "-Pfoo", "-Cfoo=bar"])
+def test_uvx_attached_known_value_options_preserve_primary_target(option):
+    validate_mcp_stdio_config("uvx", [option, "mcp-proxy"], {}, allowed_packages={"mcp-proxy"})
 
 
 def test_npx_noninteractive_flag_remains_allowed_by_shared_policy():
@@ -158,7 +298,7 @@ def test_windows_forward_slash_executable_path_preserves_source_policy():
     with pytest.raises(ValueError, match=r"not allowed"):
         validate_mcp_stdio_config(
             "C:/Program Files/uv/uvx.exe",
-            ["mcp-proxy", "--index-url", "https://packages.example.invalid/simple"],
+            ["--index-url", "https://packages.example.invalid/simple", "mcp-proxy"],
             None,
             allowed_packages=frozenset({"mcp-proxy"}),
             interpreter_hardening=True,

@@ -7,6 +7,8 @@ Tests cover:
 - Edge cases (syntax errors, empty code)
 """
 
+import sys
+
 import pytest
 from langflow.agentic.helpers.code_security import scan_code_security
 
@@ -497,8 +499,23 @@ class TestScanCodeSecurityAliasAndWildcardBypass:
         assert result.is_safe is False
 
     def test_should_allow_dotted_import_alias_safe_attribute(self):
-        result = scan_code_security("import os.path as path_module\ngetattr(path_module, attribute_name, None)")
+        result = scan_code_security("import os.path as path_module\ngetattr(path_module, 'join')('a', 'b')")
         assert result.is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import os.path as path_module\ngetattr(path_module, 'os').getenv('SECRET')",
+            "import os.path as path_module\npath_module.os.getenv('SECRET')",
+            "import os.path\ngetattr(os.path, 'os').system('id')",
+            "import os.path\nos.path.os.system('id')",
+            "import os.path\nos.path.os.getenv('SECRET')",
+        ],
+    )
+    def test_should_detect_os_module_escape_through_os_path(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.path.os" in violation for violation in result.violations)
 
     # --- wildcard import bypass: `from os import *; <restricted>()` ---
 
@@ -713,6 +730,136 @@ module.system('id')
         assert result.is_safe is False
         assert any("os.system()" in violation for violation in result.violations)
 
+    def test_should_detect_alias_from_try_body_after_handler_rebinds(self):
+        code = """
+import os
+module = object()
+try:
+    module = os
+except Exception:
+    module = object()
+module.getenv('SECRET')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.getenv()" in violation for violation in result.violations)
+
+    def test_should_detect_alias_from_try_else_after_handler_rebinds(self):
+        code = """
+import os
+module = object()
+try:
+    pass
+except Exception:
+    module = object()
+else:
+    module = os
+module.getenv('SECRET')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.getenv()" in violation for violation in result.violations)
+
+    def test_should_scan_finally_with_partial_try_alias_state(self):
+        code = """
+import os
+module = object()
+try:
+    module = os
+    may_raise()
+finally:
+    module.getenv('SECRET')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.getenv()" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize("suite", ["handler", "else"])
+    @pytest.mark.parametrize("nested", [False, True], ids=["direct", "nested-if"])
+    def test_should_scan_finally_with_partial_handler_or_else_alias_state(self, suite, nested):
+        statements = (
+            "    if condition:\n        module = os\n        may_raise()\n        module = object()"
+            if nested
+            else "    module = os\n    may_raise()\n    module = object()"
+        )
+        branch = (
+            f"except Exception:\n{statements}"
+            if suite == "handler"
+            else f"except Exception:\n    pass\nelse:\n{statements}"
+        )
+        code = f"""
+import os
+module = object()
+try:
+    may_raise()
+{branch}
+finally:
+    module.getenv('SECRET')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.getenv()" in violation for violation in result.violations)
+
+    def test_should_apply_finally_rebinding_to_all_continuing_paths(self):
+        code = """
+import os
+module = os
+try:
+    may_raise()
+except Exception:
+    pass
+finally:
+    module = object()
+module.getenv('not the os module')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is True
+
+    def test_should_not_leak_deferred_function_aliases_into_finally(self):
+        code = """
+import os
+module = object()
+try:
+    def deferred():
+        module = os
+        return module
+finally:
+    module.getenv('not the os module')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is True
+
+    @pytest.mark.skipif(sys.version_info < (3, 11), reason="except* syntax requires Python 3.11")
+    def test_should_detect_alias_from_try_star_body_after_handler_rebinds(self):
+        code = """
+import os
+module = object()
+try:
+    module = os
+except* Exception:
+    module = object()
+module.getenv('SECRET')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.getenv()" in violation for violation in result.violations)
+
+    @pytest.mark.skipif(sys.version_info < (3, 11), reason="except* syntax requires Python 3.11")
+    def test_should_preserve_alias_between_try_star_handlers(self):
+        code = """
+import os
+module = object()
+try:
+    may_raise()
+except* ValueError:
+    module = os
+except* TypeError:
+    module.getenv('SECRET')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.getenv()" in violation for violation in result.violations)
+
 
 class TestScanCodeSecurityRuntimeModuleBypass:
     """Runtime module lookup and reflection must not bypass dangerous calls."""
@@ -740,6 +887,23 @@ class TestScanCodeSecurityRuntimeModuleBypass:
     def test_should_detect_reflective_dangerous_call_through_getattr_alias(self):
         result = scan_code_security("import os\nreflect = getattr\nreflect(os, 'system')('id')")
         assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import builtins\nimport os\nbuiltins.getattr(os, 'system')('id')",
+            "import builtins as b\nimport os\nb.getattr(os, 'system')('id')",
+            "from builtins import getattr as reflect\nimport os\nreflect(os, 'system')('id')",
+        ],
+    )
+    def test_should_detect_qualified_or_imported_builtin_getattr(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_allow_qualified_builtin_getattr_on_ordinary_object(self):
+        result = scan_code_security("import builtins\nvalue = builtins.getattr(self, 'field', None)")
+        assert result.is_safe is True
 
     def test_should_detect_dynamic_reflective_module_access(self):
         result = scan_code_security("import os\nvalue = getattr(os, self.method_name)")

@@ -37,9 +37,68 @@ UVX_BLOCKED_SOURCE_FLAGS = frozenset(
 )
 UVX_BLOCKED_SHORT_SOURCE_FLAGS = frozenset({"-i", "-f", "-c", "-b"})
 UVX_TRUSTED_PACKAGE_FLAGS = frozenset({"--from", "--with", "-w"})
+UVX_ATTACHED_VALUE_SHORT_FLAGS = frozenset({"-C", "-P", "-p"})
+UVX_CLUSTERABLE_BOOLEAN_SHORT_FLAGS = frozenset({"U", "V", "h", "n", "q", "v"})
+UVX_SAFE_BOOLEAN_FLAGS = frozenset(
+    {
+        "-U",
+        "-V",
+        "-h",
+        "-n",
+        "-q",
+        "-v",
+        "-y",
+        "--compile-bytecode",
+        "--help",
+        "--isolated",
+        "--lfs",
+        "--managed-python",
+        "--native-tls",
+        "--no-binary",
+        "--no-build",
+        "--no-build-isolation",
+        "--no-cache",
+        "--no-config",
+        "--no-env-file",
+        "--no-managed-python",
+        "--no-progress",
+        "--no-python-downloads",
+        "--no-sources",
+        "--offline",
+        "--quiet",
+        "--refresh",
+        "--reinstall",
+        "--upgrade",
+        "--verbose",
+        "--version",
+        "--yes",
+    }
+)
 
-NPX_BLOCKED_SOURCE_FLAGS = frozenset({"--registry", "--userconfig", "--globalconfig"})
-NPX_TRUSTED_PACKAGE_FLAGS = frozenset({"--package"})
+NPX_BLOCKED_SOURCE_FLAGS = frozenset(
+    {
+        "--registry",
+        "--userconfig",
+        "--globalconfig",
+        "--call",
+        "-c",
+        "--shell",
+        "--script-shell",
+        "--dangerously-allow-all-scripts",
+    }
+)
+NPX_TRUSTED_PACKAGE_FLAGS = frozenset({"--package", "-p"})
+NPX_SAFE_BOOLEAN_FLAGS = frozenset(
+    {"-y", "--yes", "--workspaces", "--include-workspace-root", "--strict-allow-scripts"}
+)
+
+# Explicit ``--package`` mode decouples installation from command selection, so
+# only package-owned executables verified by Langflow may be selected. Packages
+# without an entry here remain usable through the safer direct ``npx PACKAGE``
+# form, where npx derives the executable from that package's metadata.
+NPX_SAFE_PACKAGE_ENTRYPOINTS: dict[str, frozenset[str]] = {
+    "mcp-proxy": frozenset({"mcp-proxy"}),
+}
 
 # ``uvx --from PACKAGE COMMAND`` decouples the package from the executable that
 # uvx launches. Only known package-owned entrypoints may be selected.
@@ -108,6 +167,7 @@ UVX_VALUE_OPTIONS = frozenset(
         "--fork-strategy",
         "--exclude-newer",
         "--exclude-newer-package",
+        "--no-sources-package",
         "--upgrade-package",
         "-P",
         "--reinstall-package",
@@ -241,7 +301,72 @@ def _validate_npm_index_package(value: str, command: str) -> None:
 
 
 def _matches_short_option(arg: str, options: frozenset[str]) -> bool:
-    return any(arg.startswith(option) for option in options)
+    return not arg.startswith("--") and any(arg.startswith(option) for option in options)
+
+
+def _is_uvx_safe_boolean_flag(arg: str) -> bool:
+    """Accept known uvx booleans, including clap-compatible short clusters."""
+    return arg in UVX_SAFE_BOOLEAN_FLAGS or (
+        arg.startswith("-")
+        and not arg.startswith("--")
+        and len(arg) > 1
+        and set(arg[1:]) <= UVX_CLUSTERABLE_BOOLEAN_SHORT_FLAGS
+    )
+
+
+def _uvx_package_selection(args: list[str]) -> tuple[list[str], list[str], str | None]:
+    """Return all --from/--with packages and the selected uvx command."""
+    from_packages: list[str] = []
+    with_packages: list[str] = []
+    command: str | None = None
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == "--":
+            if index + 1 < len(args):
+                command = args[index + 1]
+            break
+
+        flag = arg.split("=", 1)[0]
+        if flag in UVX_BLOCKED_SOURCE_FLAGS or _matches_short_option(arg, UVX_BLOCKED_SHORT_SOURCE_FLAGS):
+            _raise_disallowed("uvx", arg)
+
+        if arg.startswith("-w") and not arg.startswith("--") and arg != "-w":
+            package = arg[2:].removeprefix("=")
+            if not package:
+                _raise_disallowed("uvx", arg)
+            with_packages.append(package)
+            index += 1
+            continue
+        if flag in UVX_TRUSTED_PACKAGE_FLAGS:
+            package, index = _option_value(args, index, "uvx")
+            if flag == "--from":
+                from_packages.append(package)
+            else:
+                with_packages.append(package)
+            continue
+        if flag in UVX_VALUE_OPTIONS:
+            _, index = _option_value(args, index, "uvx")
+            continue
+        attached_value_flag = next(
+            (option for option in UVX_ATTACHED_VALUE_SHORT_FLAGS if arg.startswith(option) and arg != option), None
+        )
+        if attached_value_flag is not None:
+            if not arg[len(attached_value_flag) :].removeprefix("="):
+                _raise_disallowed("uvx", arg)
+            index += 1
+            continue
+        if _is_uvx_safe_boolean_flag(arg):
+            index += 1
+            continue
+        if arg.startswith("-"):
+            # Fail closed: uvx can add value-taking options without exposing
+            # them in concise help. Skipping an unknown flag could mistake its
+            # value for the package while uvx executes the following operand.
+            _raise_disallowed("uvx", arg)
+        command = arg
+        break
+    return from_packages, with_packages, command
 
 
 def _package_runner_target(base_command: str, args: list[str]) -> tuple[str | None, str | None]:
@@ -276,8 +401,106 @@ def _package_runner_target(base_command: str, args: list[str]) -> tuple[str | No
     return None, None
 
 
+def _npx_package_selection(args: list[str]) -> tuple[list[str], str | None]:
+    """Return every explicit npx package and the command selected from them."""
+    packages: list[str] = []
+    entrypoint: str | None = None
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == "--":
+            if entrypoint is None and index + 1 < len(args):
+                entrypoint = args[index + 1]
+            break
+
+        flag = arg.split("=", 1)[0]
+        if flag in NPX_TRUSTED_PACKAGE_FLAGS:
+            package, index = _option_value(args, index, "npx")
+            packages.append(package)
+            continue
+        if flag in NPX_VALUE_OPTIONS:
+            _, index = _option_value(args, index, "npx")
+            continue
+        if flag in NPX_SAFE_BOOLEAN_FLAGS:
+            index += 1
+            continue
+        if arg.startswith("-"):
+            _raise_disallowed("npx", arg)
+        entrypoint = arg
+        break
+    return packages, entrypoint
+
+
+def _validate_npx_package_selection(args: list[str], allowed_packages: frozenset[str]) -> bool:
+    """Validate all explicit packages and their selected npx executable."""
+    packages, entrypoint = _npx_package_selection(args)
+    if not packages:
+        return False
+
+    normalized_packages: list[str] = []
+    for package in packages:
+        normalized_package = _normalize_package_name(package)
+        if not normalized_package or normalized_package not in allowed_packages:
+            allowed = ", ".join(sorted(allowed_packages)) or "<none>"
+            msg = f"Package '{package or '<missing>'}' is not allowed for MCP npx. Server-approved packages: {allowed}"
+            raise ValueError(msg)
+        normalized_packages.append(normalized_package)
+
+    # An explicit --package decouples installation from command selection. Keep
+    # the command tied to one of those packages instead of letting npx launch an
+    # arbitrary executable already present on PATH.
+    unverified_packages = [package for package in normalized_packages if package not in NPX_SAFE_PACKAGE_ENTRYPOINTS]
+    if unverified_packages:
+        msg = (
+            f"Package '{unverified_packages[0]}' has no verified entrypoint for explicit MCP npx package selection; "
+            "use the direct npx package form"
+        )
+        raise ValueError(msg)
+    allowed_entrypoints = set().union(
+        *(NPX_SAFE_PACKAGE_ENTRYPOINTS.get(package, frozenset()) for package in normalized_packages)
+    )
+    if entrypoint not in allowed_entrypoints:
+        allowed = ", ".join(sorted(allowed_entrypoints)) or "<none>"
+        msg = (
+            f"Entrypoint '{entrypoint or '<missing>'}' is not allowed for MCP npx packages "
+            f"'{', '.join(normalized_packages)}'. Allowed entrypoints: {allowed}"
+        )
+        raise ValueError(msg)
+    return True
+
+
 def _validate_allowed_package(base_command: str, args: list[str], allowed_packages: frozenset[str] | None) -> None:
     if allowed_packages is None or base_command not in {"npx", "uvx"}:
+        return
+
+    if base_command == "uvx":
+        from_packages, with_packages, command = _uvx_package_selection(args)
+        selected_packages = [*from_packages, *with_packages]
+        if not from_packages:
+            selected_packages.append(command or "<missing>")
+
+        for package in selected_packages:
+            normalized_package = _normalize_package_name(package)
+            if not normalized_package or normalized_package not in allowed_packages:
+                allowed = ", ".join(sorted(allowed_packages)) or "<none>"
+                msg = f"Package '{package}' is not allowed for MCP uvx. Server-approved packages: {allowed}"
+                raise ValueError(msg)
+
+        if from_packages:
+            if len(from_packages) != 1:
+                msg = "Multiple --from packages are not allowed for MCP uvx"
+                raise ValueError(msg)
+            primary_package = _normalize_package_name(from_packages[0])
+            allowed_entrypoints = UVX_SAFE_FROM_ENTRYPOINTS.get(primary_package, frozenset({primary_package}))
+            if command not in allowed_entrypoints:
+                msg = (
+                    f"Entrypoint '{command or '<missing>'}' is not allowed for MCP uvx package '{primary_package}'. "
+                    f"Allowed entrypoints: {', '.join(sorted(allowed_entrypoints))}"
+                )
+                raise ValueError(msg)
+        return
+
+    if base_command == "npx" and _validate_npx_package_selection(args, allowed_packages):
         return
 
     target, entrypoint = _package_runner_target(base_command, args)
@@ -328,65 +551,22 @@ def _validate_interpreter_invocation(base_command: str, args: list[str], *, hard
 
 
 def _validate_uvx_args(args: list[str]) -> None:
-    has_from = False
-    consumed_value_indexes: set[int] = set()
-    index = 0
-    while index < len(args):
-        arg = args[index]
-        if arg == "--":
-            break
-
-        flag = arg.split("=", 1)[0]
-        if flag in UVX_BLOCKED_SOURCE_FLAGS or _matches_short_option(arg, UVX_BLOCKED_SHORT_SOURCE_FLAGS):
-            _raise_disallowed("uvx", arg)
-
-        if flag in UVX_TRUSTED_PACKAGE_FLAGS:
-            value, next_index = _option_value(args, index, "uvx")
-            _validate_python_index_requirement(value, "uvx")
-            has_from = has_from or flag == "--from"
-            if next_index == index + 2:
-                consumed_value_indexes.add(index + 1)
-            index = next_index
-            continue
-        if arg.startswith("-w") and not arg.startswith("--"):
-            value = arg[2:].removeprefix("=")
-            _validate_python_index_requirement(value, "uvx")
-        index += 1
-
-    # Without --from, uvx's first positional is the package source. With a
-    # trusted --from package it is merely the console-script name.
-    if has_from:
-        return
-
-    index = 0
-    while index < len(args):
-        if index in consumed_value_indexes:
-            index += 1
-            continue
-        arg = args[index]
-        if arg == "--":
-            if index + 1 < len(args):
-                _validate_python_index_requirement(args[index + 1], "uvx")
-            return
-        flag = arg.split("=", 1)[0]
-        if flag in UVX_VALUE_OPTIONS and "=" not in arg:
-            index += 2
-            continue
-        if arg.startswith("-"):
-            index += 1
-            continue
-        _validate_python_index_requirement(arg, "uvx")
-        return
+    from_packages, with_packages, command = _uvx_package_selection(args)
+    for package in [*from_packages, *with_packages]:
+        _validate_python_index_requirement(package, "uvx")
+    if not from_packages and command is not None:
+        _validate_python_index_requirement(command, "uvx")
 
 
 def _validate_npx_args(args: list[str]) -> None:
     has_package_option = False
-    consumed_value_indexes: set[int] = set()
     index = 0
     while index < len(args):
         arg = args[index]
         if arg == "--":
-            break
+            if not has_package_option and index + 1 < len(args):
+                _validate_npm_index_package(args[index + 1], "npx")
+            return
         flag = arg.split("=", 1)[0]
         if flag in NPX_BLOCKED_SOURCE_FLAGS:
             _raise_disallowed("npx", arg)
@@ -394,35 +574,18 @@ def _validate_npx_args(args: list[str]) -> None:
             value, next_index = _option_value(args, index, "npx")
             _validate_npm_index_package(value, "npx")
             has_package_option = True
-            if next_index == index + 2:
-                consumed_value_indexes.add(index + 1)
             index = next_index
             continue
-        index += 1
-
-    # --package pins the installed package; the first positional is then its
-    # console command. Otherwise the first positional is the package source.
-    if has_package_option:
-        return
-
-    index = 0
-    while index < len(args):
-        if index in consumed_value_indexes:
-            index += 1
+        if flag in NPX_VALUE_OPTIONS:
+            _, index = _option_value(args, index, "npx")
             continue
-        arg = args[index]
-        if arg == "--":
-            if index + 1 < len(args):
-                _validate_npm_index_package(args[index + 1], "npx")
-            return
-        flag = arg.split("=", 1)[0]
-        if flag in NPX_VALUE_OPTIONS and "=" not in arg:
-            index += 2
+        if flag in NPX_SAFE_BOOLEAN_FLAGS:
+            index += 1
             continue
         if arg.startswith("-"):
-            index += 1
-            continue
-        _validate_npm_index_package(arg, "npx")
+            _raise_disallowed("npx", arg)
+        if not has_package_option:
+            _validate_npm_index_package(arg, "npx")
         return
 
 
