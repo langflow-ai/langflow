@@ -297,7 +297,7 @@ class TestUpdateBuildConfigRefresh:
     @staticmethod
     def _build_config(**overrides):
         config = {
-            "mcp_server": {"value": {"name": "srv", "config": {"command": "uvx test"}}},
+            "mcp_server": {"value": {"name": "srv", "config": {"command": "uvx", "args": ["test"]}}},
             "tool": {"show": True, "options": ["stale"], "value": "", "placeholder": "Select a tool"},
             "tool_placeholder": {"tool_mode": False},
             "tools_metadata": {"show": False},
@@ -318,11 +318,11 @@ class TestUpdateBuildConfigRefresh:
         with patch.object(
             component,
             "update_tool_list",
-            new=AsyncMock(return_value=([tool], {"name": "srv", "config": {"command": "uvx test"}})),
+            new=AsyncMock(return_value=([tool], {"name": "srv", "config": {"command": "uvx", "args": ["test"]}})),
         ) as mocked_update:
             build_config = await component.update_build_config(
                 self._build_config(is_refresh=True),
-                {"name": "srv", "config": {"command": "uvx test"}},
+                {"name": "srv", "config": {"command": "uvx", "args": ["test"]}},
                 "mcp_server",
             )
 
@@ -342,7 +342,7 @@ class TestUpdateBuildConfigRefresh:
         ):
             build_config = await component.update_build_config(
                 self._build_config(),
-                {"name": "srv", "config": {"command": "uvx test"}},
+                {"name": "srv", "config": {"command": "uvx", "args": ["test"]}},
                 "mcp_server",
             )
 
