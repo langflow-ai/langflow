@@ -7,8 +7,10 @@ already-built predecessors instead of a full re-sort.
 
 from __future__ import annotations
 
+import pytest
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
+from lfx.graph.checkpoint.resume import resume_graph_with_decision
 from lfx.graph.checkpoint.store import InMemoryCheckpointStore
 
 
@@ -41,6 +43,19 @@ async def test_resume_recomputes_next_runnable_layer_from_built_predecessors():
     _, checkpoint = await _paused_checkpoint()
     resumed = Graph.resume_from_checkpoint(checkpoint)
     assert resumed.resume_first_layer() == ["chat_output"]
+
+
+async def test_resume_graph_with_decision_rejects_missing_request_id():
+    """A resume with no request_id can't be routed to a paused vertex, so it fails loud.
+
+    The decision map would key on None/"" and match no vertex (silently dropping the human's
+    answer), and the vertex-matching startswith() would crash on None. Guard before either.
+    """
+    _, checkpoint = await _paused_checkpoint()
+    store = InMemoryCheckpointStore()
+    for bad in (None, ""):
+        with pytest.raises(RuntimeError, match="missing request_id"):
+            resume_graph_with_decision(checkpoint, store, bad, {"action_id": "approve"})
 
 
 async def test_resumed_process_completes_without_rerunning_built_vertices():

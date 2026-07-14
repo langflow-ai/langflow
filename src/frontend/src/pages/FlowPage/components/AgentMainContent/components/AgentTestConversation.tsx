@@ -44,7 +44,9 @@ function StateChip({ state }: { state: A2ATaskState | "working" }) {
         ? t("agentTab.stateInputRequired")
         : state === "failed"
           ? t("agentTab.stateFailed")
-          : t("agentTab.stateWorking");
+          : state === "canceled"
+            ? t("agentTab.stateCanceled")
+            : t("agentTab.stateWorking");
   return (
     <span
       className={cn(

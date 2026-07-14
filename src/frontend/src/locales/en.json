@@ -692,6 +692,7 @@
   "agentTab.stateInputRequired": "needs input",
   "agentTab.stateCompleted": "completed",
   "agentTab.stateFailed": "failed",
+  "agentTab.stateCanceled": "canceled",
   "agentTab.inputRequiredHint": "The agent is waiting on your input to continue.",
   "agentTab.viewExchange": "View JSON-RPC exchange",
   "agentTab.turns_one": "{{count}} turn",

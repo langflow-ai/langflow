@@ -35,17 +35,22 @@ type DataDisplayPayload = {
   sections?: Section[];
 };
 
+function isPlainObject(v: unknown): v is DataDisplayPayload {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
 function parsePayload(value: unknown): DataDisplayPayload {
-  if (!value) return {};
+  // JSON.parse("null"/"42"/"[...]") succeeds without throwing but isn't a payload object,
+  // so validate the result rather than casting it and crashing on payload.sections later.
   if (typeof value === "string") {
     try {
-      return JSON.parse(value);
+      const parsed = JSON.parse(value);
+      return isPlainObject(parsed) ? parsed : {};
     } catch {
       return {};
     }
   }
-  if (typeof value === "object") return value as DataDisplayPayload;
-  return {};
+  return isPlainObject(value) ? value : {};
 }
 
 // Deterministic hue from a string so each subject gets its own, stable accent color.
@@ -255,7 +260,10 @@ export default function DataDisplayComponent({
   const hasData = sections.length > 0 || !!payload.title;
   const isDisabled = disabled || !hasData;
 
-  const title = payload.title ?? buttonText;
+  const title =
+    typeof payload.title === "string" && payload.title
+      ? payload.title
+      : buttonText;
   const hue = payload.accent ?? hueFromString(title);
   const monogram = monogramOf(title);
 

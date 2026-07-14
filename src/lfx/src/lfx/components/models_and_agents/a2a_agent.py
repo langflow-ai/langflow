@@ -408,7 +408,8 @@ class A2AAgentComponent(Component):
         """
         base = _agent_base_url(url)
         try:
-            _validated_url, validated_ips = validate_and_resolve_url(base)
+            # to_thread: validate_and_resolve_url does blocking DNS; keep it off the event loop.
+            _validated_url, validated_ips = await asyncio.to_thread(validate_and_resolve_url, base)
         except SSRFProtectionError:
             return None
         try:
@@ -571,7 +572,8 @@ class A2AAgentComponent(Component):
         # Validate + DNS-pin the agent URL before any outbound call (blocks loopback, RFC1918,
         # link-local / cloud metadata, etc.); mirrors the API Request component.
         try:
-            _validated_url, validated_ips = validate_and_resolve_url(agent_url)
+            # to_thread: validate_and_resolve_url does blocking DNS; keep it off the event loop.
+            _validated_url, validated_ips = await asyncio.to_thread(validate_and_resolve_url, agent_url)
         except SSRFProtectionError as e:
             msg = f"SSRF Protection: {e}"
             raise ValueError(msg) from e

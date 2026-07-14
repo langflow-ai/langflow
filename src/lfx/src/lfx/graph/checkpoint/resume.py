@@ -98,7 +98,7 @@ def _unbuild_needed_dropped_producers(graph: Graph) -> None:
 
 
 def resume_graph_with_decision(
-    checkpoint: GraphCheckpoint, store: CheckpointStore, request_id: str, decision: dict
+    checkpoint: GraphCheckpoint, store: CheckpointStore, request_id: str | None, decision: dict
 ) -> Graph:
     """Restore a paused graph and inject a HITL decision for ``request_id``.
 
@@ -109,6 +109,12 @@ def resume_graph_with_decision(
     variant (it adds tracing + predecessor re-run on top).
     """
     from lfx.graph.graph.base import Graph
+
+    if not request_id:
+        # No request_id means the decision can't be routed to a paused vertex: it would silently
+        # vanish (no vertex matches) or crash on the startswith below. Fail loud instead.
+        msg = "Cannot resume: pause request is missing request_id"
+        raise RuntimeError(msg)
 
     graph = Graph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
     graph.checkpointing_enabled = True

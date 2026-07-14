@@ -170,6 +170,17 @@ async def test_flag_off_returns_404(client: AsyncClient, active_user, flow_data)
     assert response.status_code == 404
 
 
+async def test_a2a_routes_are_hidden_from_openapi(client: AsyncClient):
+    """The A2A paths stay out of /openapi.json so a flag-off route is invisible in the docs too.
+
+    The routes are mounted unconditionally and only 404 at request time; leaking their paths in
+    the schema would contradict the "indistinguishable from not mounted" guarantee.
+    """
+    schema = (await client.get("openapi.json")).json()
+
+    assert not [path for path in schema["paths"] if "/a2a/" in path]
+
+
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_card_overrides_merged(client: AsyncClient, active_user, flow_data):
     """a2a_card_overrides override the editable bits of the card."""
@@ -1553,6 +1564,7 @@ async def a2a_migrated_db(request, tmp_path, monkeypatch):
     manager = get_service_manager()
     settings_service = get_settings_service()
     original_db = manager.services.pop(ServiceType.DATABASE_SERVICE, None)
+    original_db_url = settings_service.settings.database_url
 
     monkeypatch.setenv("LANGFLOW_DATABASE_URL", url)  # the validator honors this over the attribute
     settings_service.settings.database_url = url  # re-runs the validator, now picking up the env
@@ -1565,6 +1577,8 @@ async def a2a_migrated_db(request, tmp_path, monkeypatch):
         manager.services.pop(ServiceType.DATABASE_SERVICE, None)
         with contextlib.suppress(Exception):
             await db_service.teardown()
+        # Restore the shared settings singleton so a later test doesn't inherit this temp DB URL.
+        settings_service.settings.database_url = original_db_url
         if original_db is not None:
             manager.services[ServiceType.DATABASE_SERVICE] = original_db
 

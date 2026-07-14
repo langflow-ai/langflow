@@ -81,11 +81,12 @@ export default function AgentCardPanel({
     overridesToForm(currentFlow?.a2a_card_overrides),
   );
 
-  // Re-seed whenever the saved flow changes, so the panel reflects persisted state.
+  // Re-seed only when the persisted A2A state changes, so unrelated flow updates
+  // (graph edits, autosave) don't clobber in-progress card edits.
   useEffect(() => {
     setEnabled(!!currentFlow?.a2a_enabled);
     setForm(overridesToForm(currentFlow?.a2a_card_overrides));
-  }, [currentFlow]);
+  }, [currentFlow?.a2a_enabled, currentFlow?.a2a_card_overrides]);
 
   const savedForm = overridesToForm(currentFlow?.a2a_card_overrides);
   const isDirty =
@@ -111,8 +112,8 @@ export default function AgentCardPanel({
       });
       if (flows) {
         setFlows(flows.map((f) => (f.id === updatedFlow.id ? updatedFlow : f)));
-        setCurrentFlow(updatedFlow);
       }
+      setCurrentFlow(updatedFlow);
       setSuccessData({ title: t("agentTab.saved") });
     } catch (e) {
       setErrorData({
