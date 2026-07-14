@@ -181,8 +181,11 @@ class TestMCPTimeoutConfiguration:
             mock_client_class.assert_called_once_with(tool_execution_timeout=250)
 
     @pytest.mark.asyncio
-    async def test_update_tools_passes_timeout_to_http_client(self):
+    async def test_update_tools_passes_timeout_to_http_client(self, monkeypatch):
         """Test that update_tools passes timeout when creating MCPStreamableHttpClient."""
+        # The placeholder host is not resolvable; this test exercises timeout plumbing, not URL
+        # safety (which has its own SSRF tests), so disable SSRF validation here.
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")
         server_config = {
             "mode": "Streamable_HTTP",
             "url": "http://test-server",
@@ -336,9 +339,13 @@ class TestMCPTimeoutBehavior:
             assert initial_client._tool_execution_timeout == 250
 
     @pytest.mark.asyncio
-    async def test_mcp_sse_client_receives_timeout(self):
+    async def test_mcp_sse_client_receives_timeout(self, monkeypatch):
         """Test that mcp_sse_client (backward compatibility alias) receives timeout."""
         from lfx.base.mcp.util import update_tools
+
+        # The placeholder host is not resolvable; this test exercises timeout plumbing, not URL
+        # safety (which has its own SSRF tests), so disable SSRF validation here.
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")
 
         # Create an SSE client (which is actually a StreamableHttpClient)
         sse_client = MCPStreamableHttpClient(tool_execution_timeout=100)
