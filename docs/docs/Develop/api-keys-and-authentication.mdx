@@ -475,6 +475,7 @@ When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` h
 | `LANGFLOW_RATE_LIMIT_STORAGE_URI` | String | `memory://` | Storage backend for rate limit counters. Use `memory://` for single-server deployments or `redis://host:port` for multi-server deployments where the limit should be shared across instances. |
 | `LANGFLOW_RATE_LIMIT_TRUST_PROXY` | Boolean | `False` | When `true`, Langflow reads the client IP from the rightmost `X-Forwarded-For` header entry instead of the direct connection IP. Enable only when Langflow is behind a trusted reverse proxy or load balancer. Do not enable if users can reach Langflow directly, as this allows header spoofing. |
 | `LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE` | Integer | `20` | Maximum number of unauthenticated public-flow runs allowed per minute from a single IP address. Public flows run as the flow owner and consume resources, so anonymous callers are rate-limited separately from the `/login` endpoint. |
+
 ### LANGFLOW_SSRF_* and LANGFLOW_CONNECTOR_SSRF_* {#ssrf-protection}
 
 The following environment variables configure Server-Side Request Forgery (SSRF) protection for the [**API Request** component](/api-request) and for connector components that take a tenant-controlled host or URL.
@@ -501,21 +502,21 @@ As of Langflow 1.11.x, Langflow application defaults remain permissive for trust
 | `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `False` | When `true`, built-in file-reading components, including the [**File**](/read-file), [**Directory**](/legacy-core-components#legacy-data-components), [**JSON/CSV-to-Data**](/legacy-core-components#legacy-data-components), and the [**CSV Agent**](/bundles-langchain#csv-agent), [**JSON Agent**](/bundles-langchain#legacy-langchain-components), and [**OpenAPI Agent**](/bundles-langchain#openapi-agent) can only read and write paths inside the [`LANGFLOW_CONFIG_DIR`](/memory) storage directory. This also blocks `sqlite` and `duckdb` dialects in the [**SQL Database**](/sql-database) components and local-filesystem Git clones. |
 | `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | Boolean | `False` | When `true`, applies a strict Docker-argument policy to MCP stdio servers that use the `docker` transport. Rejects host filesystem or device mounts, `host/another-container` namespaces, non-default networks, privilege flags, and sandbox-disabling `--security-opt` values. Forms such as `--network none` / `bridge` and `--security-opt no-new-privileges` remain allowed. |
 
-:::note When to enable these flags
-If untrusted users can build flows on this server, set the following together:
+Enable these flags when untrusted users can build flows on this server.
+To enable these flags, set the following:
 
 * `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` — blocks user-authored component code. See [Block custom components](/deployment-block-custom-components).
 * `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true` — blocks built-in code-execution components.
 * `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true` — confines built-in file access to the upload sandbox.
 * `LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true` — tightens Docker MCP server arguments.
 
-Pair these with the SSRF settings above to reduce common escape hatches; they are not full user isolation. See [Security](/security).
-:::
+Pair these settings with the [SSRF settings](#ssrf-protection) to reduce common escape hatches.
 
-:::warning Shared tracing backends
-External tracing integrations (LangSmith, Langfuse, Phoenix, Arize, Opik, and similar) are process-wide, not per user.
-On a shared server, every user's flow inputs and outputs go to the same tracing project.
-Do not enable a shared SaaS tracer when users are untrusted; use built-in local tracing instead.
+These settings **do not** provide full user isolation. For more information, see [Security](/security).
+
+:::tip
+Do not enable a shared tracer when users are untrusted. Instead, use [built-in local tracing](/tracing).
+External tracing integrations such as Langfuse and Arize are _process-wide_, not per user, so on a shared server, every user's flow inputs and outputs will go to the same tracing project.
 :::
 
 ### LANGFLOW_WEBHOOK_AUTH_ENABLE {#langflow-webhook-auth-enable}

@@ -160,7 +160,8 @@ class MCPToolsComponent(ComponentWithCache):
     def _mcp_servers_cache_key(self, server_name: str) -> str:
         """Cache key for shared servers map.
 
-        Includes headers and timeout so auth/tweak/timeout changes get distinct entries.
+        Includes the authenticated user, headers, and timeout so tenant/auth/tweak/timeout
+        changes get distinct entries.
         """
         if not server_name:
             return ""
@@ -176,13 +177,32 @@ class MCPToolsComponent(ComponentWithCache):
             "timeout": normalized_timeout,
         }
 
-        # If no headers and default timeout, just use server name
-        if not hdrs and normalized_timeout == 0.0:
+        user_id = self._mcp_cache_user_id()
+        if user_id:
+            cache_data["user_id"] = user_id
+
+        # Preserve the compact per-instance TTL key when there is no authenticated user.
+        # Shared caching is disabled for that case in ``update_tool_list`` below.
+        if not hdrs and normalized_timeout == 0.0 and not user_id:
             return server_name
 
         payload = json.dumps(cache_data, sort_keys=True)
         digest = hashlib.sha256(payload.encode()).hexdigest()[:16]
         return f"{server_name}:{digest}"
+
+    def _mcp_cache_user_id(self) -> str | None:
+        """Return the authenticated user id without requiring a fully attached graph.
+
+        Components are also instantiated without a vertex while the UI builds component
+        metadata. Accessing ``self.user_id`` in that state raises, so inspect the backing
+        fields directly and fail closed by returning ``None`` when no authenticated scope
+        is available.
+        """
+        user_id = getattr(self, "_user_id", None)
+        if not user_id:
+            graph = getattr(getattr(self, "_vertex", None), "graph", None)
+            user_id = getattr(graph, "user_id", None)
+        return str(user_id) if user_id else None
 
     def _build_tool_output(self) -> Output:
         # Do not cache Toolset output. This is separate from the MCP "Use Cached Server" (use_cache)
@@ -346,13 +366,17 @@ class MCPToolsComponent(ComponentWithCache):
 
         servers_cache_key = self._mcp_servers_cache_key(server_name)
 
-        # Check if caching is enabled, default to False
+        # Check if caching is enabled, default to False. The cross-request cache must never
+        # be used without an authenticated tenant scope; the per-instance TTL cache remains
+        # available in standalone/UI contexts.
         use_cache = getattr(self, "use_cache", False)
+        use_shared_cache = use_cache and self._mcp_cache_user_id() is not None
         header_keys = sorted(self._normalized_headers_for_cache().keys())
         await logger.adebug(
-            "MCP update_tool_list: start server=%r use_cache=%s shared_cache_key=%r header_keys=%s",
+            "MCP update_tool_list: start server=%r use_cache=%s use_shared_cache=%s shared_cache_key=%r header_keys=%s",
             server_name,
             use_cache,
+            use_shared_cache,
             servers_cache_key,
             header_keys,
         )
@@ -360,7 +384,7 @@ class MCPToolsComponent(ComponentWithCache):
         async with self._update_tool_list_lock:
             # Use shared cache if available and caching is enabled
             cached = None
-            if use_cache:
+            if use_shared_cache:
                 servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
                 cached = servers_cache.get(servers_cache_key) if isinstance(servers_cache, dict) else None
 
@@ -493,7 +517,10 @@ class MCPToolsComponent(ComponentWithCache):
                         from lfx.services.deps import get_variable_service
 
                         variable_service = get_variable_service()
-                        if variable_service:
+                        # ``get_all_decrypted_variables`` is DB-service-only; the minimal
+                        # lfx VariableService (now registered by ``lfx serve``) lacks it, so
+                        # skip cleanly rather than raising into the broad except below.
+                        if variable_service and hasattr(variable_service, "get_all_decrypted_variables"):
                             async with session_scope() as db:
                                 request_variables = await variable_service.get_all_decrypted_variables(
                                     user_id=self.user_id, session=db
@@ -518,6 +545,7 @@ class MCPToolsComponent(ComponentWithCache):
                     mcp_streamable_http_client=self.streamable_http_client,
                     request_variables=request_variables,
                     tool_execution_timeout=timeout,
+                    current_user_id=self.user_id,
                 )
 
                 self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
@@ -531,7 +559,7 @@ class MCPToolsComponent(ComponentWithCache):
                 )
 
                 # Cache the result only if caching is enabled
-                if use_cache:
+                if use_shared_cache:
                     cache_data = {
                         "tools": tool_list,
                         "tool_names": self.tool_names,
@@ -663,6 +691,8 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # Get use_cache setting to determine if we should use cached data
                 use_cache = getattr(self, "use_cache", False)
+                has_shared_cache_scope = self._mcp_cache_user_id() is not None
+                use_shared_cache = use_cache and has_shared_cache_scope
 
                 # Fast path: if server didn't change and we already have options, keep them as-is
                 # BUT only if caching is enabled, we're in tool mode, or it's the initial load
@@ -684,7 +714,7 @@ class MCPToolsComponent(ComponentWithCache):
                     not is_refresh
                     and (_last_selected_server in (current_server_name, ""))
                     and build_config["tool"]["show"]
-                    and use_cache
+                    and use_shared_cache
                 ):
                     if current_server_name:
                         servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
@@ -701,7 +731,7 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # When cache is disabled, clear any cached data for this server
                 # This ensures we always fetch fresh data from the database
-                if (is_refresh or not use_cache) and current_server_name:
+                if (is_refresh or not use_cache) and current_server_name and has_shared_cache_scope:
                     servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
                     if isinstance(servers_cache, dict) and servers_cache_key_ui in servers_cache:
                         servers_cache.pop(servers_cache_key_ui)
@@ -709,7 +739,7 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # Check if tools are already cached for this server before clearing
                 cached_tools = None
-                if current_server_name and use_cache and not is_refresh:
+                if current_server_name and use_shared_cache and not is_refresh:
                     servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
                     if isinstance(servers_cache, dict):
                         cached = servers_cache.get(servers_cache_key_ui)
@@ -979,6 +1009,11 @@ class MCPToolsComponent(ComponentWithCache):
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)
 
                 output = await exec_tool.coroutine(**unflattened_kwargs)
+                if getattr(output, "isError", False):
+                    # isError=True is a FAILED call; treating its content as data makes it look successful.
+                    error_text = " ".join(str(item.model_dump().get("text") or "") for item in output.content).strip()
+                    msg = f"MCP tool '{self.tool}' failed: {error_text or 'no error detail provided'}"
+                    raise ValueError(msg)
                 tool_content = []
                 for item in output.content:
                     item_dict = item.model_dump()

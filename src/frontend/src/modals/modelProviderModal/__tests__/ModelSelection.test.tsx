@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ModelSelection from "../components/ModelSelection";
 import { Model } from "../components/types";
@@ -57,8 +57,18 @@ describe("ModelSelection", () => {
     isEnabledModel: true,
   };
 
+  const { useGetEnabledModels } = jest.requireMock(
+    "@/controllers/API/queries/models/use-get-enabled-models",
+  ) as {
+    useGetEnabledModels: jest.Mock;
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    useGetEnabledModels.mockReturnValue({
+      data: mockEnabledModels,
+      isLoading: false,
+    });
   });
 
   describe("Rendering", () => {
@@ -145,7 +155,11 @@ describe("ModelSelection", () => {
       const toggle = screen.getByTestId("llm-toggle-gpt-4");
       await user.click(toggle);
 
-      expect(onModelToggle).toHaveBeenCalledWith("gpt-4", expect.any(Boolean));
+      expect(onModelToggle).toHaveBeenCalledWith(
+        "gpt-4",
+        expect.any(Boolean),
+        "llm",
+      );
     });
 
     it("should not bubble toggle clicks to parent containers", async () => {
@@ -167,6 +181,7 @@ describe("ModelSelection", () => {
       expect(onModelToggle).toHaveBeenCalledWith(
         "text-embedding-ada-002",
         expect.any(Boolean),
+        "embeddings",
       );
       expect(onParentClick).not.toHaveBeenCalled();
     });
@@ -280,6 +295,203 @@ describe("ModelSelection", () => {
       expect(
         screen.queryByTestId("model-search-input"),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Azure AI Foundry custom deployments", () => {
+    const foundryModels: Model[] = [
+      { model_name: "gpt-4o", metadata: { model_type: "llm", icon: "Azure" } },
+    ];
+
+    beforeEach(() => {
+      useGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: {
+            "Azure AI Foundry": {
+              "gpt-4o": true,
+              "team-chat": true,
+              "team-embed": true,
+            },
+          },
+          enabled_models_by_type: {
+            "Azure AI Foundry": {
+              llm: {
+                "gpt-4o": true,
+                "team-chat": true,
+              },
+              embeddings: {
+                "team-embed": true,
+              },
+            },
+          },
+        },
+        isLoading: false,
+      });
+    });
+
+    it("shows explicit LLM and embeddings actions when adding from the all view", async () => {
+      const user = userEvent.setup();
+      const onModelToggle = jest.fn();
+      render(
+        <ModelSelection
+          {...defaultProps}
+          providerName="Azure AI Foundry"
+          availableModels={foundryModels}
+          onModelToggle={onModelToggle}
+        />,
+      );
+
+      expect(screen.getByTestId("custom-deployment-hint")).toBeInTheDocument();
+
+      const input = screen.getByTestId("model-search-input");
+      await user.clear(input);
+      await user.type(input, "new-deployment");
+
+      const addLlmButton = screen.getByTestId(
+        "add-custom-llm-deployment-button",
+      );
+      expect(
+        screen.getByTestId("add-custom-embeddings-deployment-button"),
+      ).toBeInTheDocument();
+
+      await user.click(addLlmButton);
+      expect(onModelToggle).toHaveBeenLastCalledWith(
+        "new-deployment",
+        true,
+        "llm",
+      );
+
+      await user.type(input, "new-deployment");
+      await user.click(
+        screen.getByTestId("add-custom-embeddings-deployment-button"),
+      );
+      expect(onModelToggle).toHaveBeenLastCalledWith(
+        "new-deployment",
+        true,
+        "embeddings",
+      );
+    });
+
+    it("offers only the missing type when a deployment name exists as an LLM", async () => {
+      const user = userEvent.setup();
+      render(
+        <ModelSelection
+          {...defaultProps}
+          providerName="Azure AI Foundry"
+          availableModels={foundryModels}
+        />,
+      );
+
+      await user.type(screen.getByTestId("model-search-input"), "gpt-4o");
+      expect(
+        screen.queryByTestId("add-custom-llm-deployment-button"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByTestId("add-custom-embeddings-deployment-button"),
+      ).toBeInTheDocument();
+    });
+
+    it("renders typed custom deployments only in their stored section", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          modelType="all"
+          providerName="Azure AI Foundry"
+          availableModels={foundryModels}
+        />,
+      );
+
+      expect(screen.getByTestId("llm-models-section")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("embeddings-models-section"),
+      ).toBeInTheDocument();
+
+      const llmSection = within(screen.getByTestId("llm-models-section"));
+      const embeddingsSection = within(
+        screen.getByTestId("embeddings-models-section"),
+      );
+      expect(llmSection.getByText("team-chat")).toBeInTheDocument();
+      expect(llmSection.queryByText("team-embed")).not.toBeInTheDocument();
+      expect(embeddingsSection.getByText("team-embed")).toBeInTheDocument();
+      expect(
+        embeddingsSection.queryByText("team-chat"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("uses the flat fallback when only another provider has typed status", () => {
+      useGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: {
+            "Azure AI Foundry": { "legacy-custom": true },
+            OpenAI: { "gpt-4": true },
+          },
+          enabled_models_by_type: {
+            OpenAI: { llm: { "gpt-4": true } },
+          },
+        },
+        isLoading: false,
+      });
+
+      render(
+        <ModelSelection
+          {...defaultProps}
+          modelType="all"
+          providerName="Azure AI Foundry"
+          availableModels={[]}
+        />,
+      );
+
+      expect(
+        within(screen.getByTestId("llm-models-section")).getByText(
+          "legacy-custom",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("embeddings-models-section"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("keeps identical deployment names independently typed and toggleable", async () => {
+      const user = userEvent.setup();
+      const onModelToggle = jest.fn();
+      useGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: {
+            "Azure AI Foundry": {
+              shared: true,
+            },
+          },
+          enabled_models_by_type: {
+            "Azure AI Foundry": {
+              llm: { shared: true },
+              embeddings: { shared: true },
+            },
+          },
+        },
+        isLoading: false,
+      });
+
+      render(
+        <ModelSelection
+          {...defaultProps}
+          modelType="all"
+          providerName="Azure AI Foundry"
+          availableModels={[]}
+          onModelToggle={onModelToggle}
+        />,
+      );
+
+      expect(screen.getAllByText("shared")).toHaveLength(2);
+
+      await user.click(screen.getByTestId("llm-toggle-shared"));
+      expect(onModelToggle).toHaveBeenLastCalledWith("shared", false, "llm");
+
+      await user.click(screen.getByTestId("embeddings-toggle-shared"));
+      expect(onModelToggle).toHaveBeenLastCalledWith(
+        "shared",
+        false,
+        "embeddings",
+      );
     });
   });
 

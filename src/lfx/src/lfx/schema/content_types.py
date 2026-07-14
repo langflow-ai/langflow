@@ -87,6 +87,9 @@ class BaseContent(BaseModel):
     def serialize_model(self, nxt) -> dict[str, Any]:
         try:
             dump = nxt(self)
+            # Keep the discriminator through exclude_unset/defaults (else reload fails union_tag_not_found).
+            if isinstance(dump, dict):
+                dump.setdefault("type", self.type)
             return jsonable_encoder(dump, custom_encoder=CUSTOM_ENCODERS)
         except Exception:  # noqa: BLE001
             return nxt(self)
@@ -133,6 +136,24 @@ class CodeContent(BaseContent):
     code: str
     language: str
     title: str | None = None
+
+
+class HumanInputContent(BaseContent):
+    """Content type for a human-in-the-loop pause persisted in the chat history.
+
+    Carries the pending decision so the interactive card survives reload: the
+    request_id and job_id let the card resume the suspended run after an F5.
+    """
+
+    type: Literal["human_input"] = Field(default="human_input")
+    request_id: str
+    job_id: str | None = None
+    kind: str = "node_input"
+    prompt: str | None = None
+    options: list[dict[str, Any]] = Field(default_factory=list)
+    fields: list[dict[str, Any]] = Field(default_factory=list)
+    allowed_decisions: list[str] = Field(default_factory=list)
+    submitted_action: str | None = None
 
 
 class ToolContent(BaseContent):
@@ -331,6 +352,7 @@ ContentType = Annotated[
     | Annotated[ReasoningContent, Tag("reasoning")]
     | Annotated[UsageContent, Tag("usage")]
     | Annotated[CitationContent, Tag("citation")]
+    | Annotated[HumanInputContent, Tag("human_input")]
     | Annotated[ContentBlock, Tag("group")],
     Discriminator(_get_content_type),
 ]

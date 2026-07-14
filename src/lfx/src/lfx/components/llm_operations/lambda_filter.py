@@ -16,6 +16,7 @@ from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.schema.token_usage import extract_usage_from_message
 from lfx.utils.constants import MESSAGE_SENDER_AI
+from lfx.utils.python_repl_security import safe_builtins, validate_code_safety
 
 TEXT_TRANSFORM_PROMPT = (
     "Given this text, create a Python lambda function that transforms it "
@@ -239,7 +240,18 @@ class LambdaFilterComponent(Component):
             msg = f"Invalid lambda format: {lambda_text}"
             raise ValueError(msg)
 
-        return eval(lambda_text)  # noqa: S307
+        # The lambda text is produced by an LLM from the user-controlled `filter_instruction`,
+        # so it is untrusted: a prompt-injection can steer it to "lambda x: __import__('os')...".
+        # Reject sandbox-escape gadgets (dunder/frame attribute access, inline imports) via the
+        # shared AST check, then eval with a curated builtins mapping so __import__/open/eval/exec
+        # are unreachable. Defense-in-depth, not a guaranteed sandbox.
+        try:
+            validate_code_safety(lambda_text)
+        except (ValueError, SyntaxError) as exc:
+            msg = f"Refusing to evaluate unsafe lambda: {exc}"
+            raise ValueError(msg) from exc
+
+        return eval(lambda_text, {"__builtins__": safe_builtins()})  # noqa: S307
 
     async def _execute_lambda(self) -> Any:
         """Generate and execute a lambda function based on input type."""

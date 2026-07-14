@@ -436,6 +436,21 @@ class TestChainCallbacks:
         handler.on_chain_error(RuntimeError("err"), run_id=run_id)
         assert run_id not in handler._spans
 
+    def test_graph_interrupt_closes_span_without_error(self):
+        """A LangGraph interrupt (HITL pause) closes the span with error=None so the trace stays ok."""
+
+        class GraphInterrupt(Exception):  # noqa: N818  # mirrors LangGraph's real class name (detected by name)
+            pass
+
+        handler, mock_tracer = _make_handler()
+        run_id = uuid4()
+        handler._get_span_id(run_id)
+        handler.on_chain_error(GraphInterrupt("paused for human input"), run_id=run_id)
+
+        call_kwargs = mock_tracer.end_langchain_span.call_args[1]
+        assert call_kwargs["error"] is None
+        assert run_id not in handler._spans
+
 
 # ---------------------------------------------------------------------------
 # Tool callbacks

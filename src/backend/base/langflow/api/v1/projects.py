@@ -7,6 +7,7 @@ from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
+from lfx.utils.util_strings import escape_like_pattern
 from sqlalchemy import or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
@@ -63,10 +64,9 @@ from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
-
-def _escape_like(value: str) -> str:
-    """Escape LIKE wildcards and the escape character itself."""
-    return value.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+# Backwards-compatible local alias; the implementation now lives in lfx.utils.util_strings so the
+# same LIKE-escaping is shared across the API endpoints + the tracing repository.
+_escape_like = escape_like_pattern
 
 
 @router.post("/", response_model=FolderRead, status_code=201)
@@ -506,6 +506,15 @@ async def update_project(
             existing_project.description = project.description
 
         if project.parent_id is not None:
+            # Validate the supplied parent references a folder owned by the project owner, so
+            # shared-project writes cannot create cross-owner folder hierarchies.
+            parent = (
+                await session.exec(
+                    select(Folder).where(Folder.id == project.parent_id, Folder.user_id == project_owner_id)
+                )
+            ).first()
+            if parent is None:
+                raise HTTPException(status_code=404, detail="Parent project not found")
             existing_project.parent_id = project.parent_id
 
         session.add(existing_project)

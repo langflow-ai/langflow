@@ -273,7 +273,20 @@ async def validate_component_runtime(code: str, user_id: str | None = None) -> s
     reasons. Only pydantic-schema errors — which are almost always LLM-coding
     mistakes — are surfaced so the retry loop can recover before the component
     is handed to the user.
+
+    SECURITY: this "sandbox" only swallows exceptions; it does not constrain what the code can do
+    (it compiles+execs the module/class body and runs output methods in-process). When the operator
+    has disabled custom components (``allow_custom_components=false``), we must NOT execute
+    tenant-influenced generated code — otherwise the assistant becomes a code-execution path that
+    bypasses the platform-wide policy. Refuse before any instantiation in that case.
     """
+    from lfx.services.deps import get_settings_service
+
+    if not get_settings_service().settings.allow_custom_components:
+        return (
+            "Custom component execution is disabled on this server "
+            "(allow_custom_components=false); generated components cannot be validated or run."
+        )
     try:
         from lfx.custom.custom_component.component import Component as ComponentClass
         from lfx.custom.utils import build_custom_component_template

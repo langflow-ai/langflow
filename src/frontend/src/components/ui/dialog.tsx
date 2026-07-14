@@ -82,6 +82,7 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     hideTitle?: boolean;
+    hideDescription?: boolean;
     hideCloseButton?: boolean;
     closeButtonClassName?: string;
     overlayClassName?: string;
@@ -92,6 +93,7 @@ const DialogContent = React.forwardRef<
       className,
       children,
       hideTitle = false,
+      hideDescription = false,
       hideCloseButton = false,
       closeButtonClassName,
       overlayClassName,
@@ -101,8 +103,9 @@ const DialogContent = React.forwardRef<
     ref,
   ) => {
     // Check if DialogTitle is included in children
-    const hasDialogTitle = hasChildOfType(children, DialogTitle);
-    const hasDialogDescription = hasChildOfType(children, DialogDescription);
+    const hasDialogTitle = hideTitle || hasChildOfType(children, DialogTitle);
+    const hasDialogDescription =
+      hideDescription || hasChildOfType(children, DialogDescription);
 
     useInertForAriaHiddenElements();
 

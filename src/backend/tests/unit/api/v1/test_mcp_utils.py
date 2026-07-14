@@ -393,8 +393,15 @@ async def _invoke_handle_call_tool(monkeypatch, arguments: dict) -> AsyncMock:
     """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock."""
     # ``user_id`` matches the current user (see ``current_user_ctx`` below) so the
     # owner-override path in ``ensure_flow_permission`` is exercised; ``workspace_id``
-    # is read by the same guard.
-    flow = SimpleNamespace(id="flow-id-1", name="my_flow", folder_id=None, user_id="user-1", workspace_id=None)
+    # is read by the same guard. ``data`` feeds the HITL support gate.
+    flow = SimpleNamespace(
+        id="flow-id-1",
+        name="my_flow",
+        folder_id=None,
+        user_id="user-1",
+        workspace_id=None,
+        data={"nodes": [], "edges": []},
+    )
 
     async def fake_get_flow_snake_case(*_args, **_kwargs):
         return flow
@@ -532,3 +539,53 @@ def test_json_schema_from_flow_preserves_flow_defined_session_id(monkeypatch):
     # The flow's own definition wins — the reserved injection must not clobber it.
     assert schema["properties"]["session_id"]["description"] == custom_session_id_property["description"]
     assert "session_id" in schema["required"]
+
+
+@pytest.mark.asyncio
+async def test_handle_call_tool_blocks_hitl_flow(monkeypatch):
+    """A HITL flow invoked as an MCP tool must raise so the MCP result is isError, pointing to the v2 API."""
+    hitl_flow = SimpleNamespace(
+        id="flow-hitl",
+        name="HITL Tools",
+        folder_id=None,
+        # Owner of the flow (matches current_user_ctx below) so ensure_flow_permission's
+        # owner-override path passes and the run reaches the HITL support gate.
+        user_id="user-1",
+        workspace_id=None,
+        data={
+            "nodes": [
+                {
+                    "id": "url",
+                    "data": {
+                        "id": "url",
+                        "type": "URLComponent",
+                        "node": {
+                            "template": {
+                                "tools_metadata": {
+                                    "value": [{"name": "fetch", "approval_actions": ["approve", "reject"]}]
+                                }
+                            }
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    )
+
+    async def fake_get_flow(*_args, **_kwargs):
+        return hitl_flow
+
+    async def fake_with_db_session(operation):
+        return await operation(object())
+
+    monkeypatch.setattr(mcp_utils, "get_flow_snake_case", fake_get_flow)
+    monkeypatch.setattr(mcp_utils, "with_db_session", fake_with_db_session)
+    monkeypatch.setattr(mcp_utils, "get_mcp_config", lambda: SimpleNamespace(enable_progress_notifications=False))
+
+    token = mcp_utils.current_user_ctx.set(SimpleNamespace(id="user-1"))
+    try:
+        with pytest.raises(RuntimeError, match="Human-in-the-Loop"):
+            await mcp_utils.handle_call_tool("hitl_tools", {"input_value": "hi"}, server=SimpleNamespace())
+    finally:
+        mcp_utils.current_user_ctx.reset(token)

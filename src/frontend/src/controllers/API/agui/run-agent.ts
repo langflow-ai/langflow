@@ -194,3 +194,36 @@ export function createWorkflowAgent(
   };
   return agent;
 }
+
+/**
+ * Agent that reattaches to a background run's durable event stream via
+ * `GET /api/v2/workflows/{job_id}/events` (LE-1442/1450). HITL runs are submitted
+ * in background mode (a separate JSON POST) and consumed here; `lastEventId` is the
+ * SSE `Last-Event-ID` so a resume continues gap-free past the suspend boundary.
+ */
+export function createEventsAgent(opts: {
+  jobId: string;
+  lastEventId?: string;
+  headers?: Record<string, string>;
+}): HttpAgent {
+  const config: HttpAgentConfig = {
+    url: `${WORKFLOWS_ENDPOINT}/${encodeURIComponent(opts.jobId)}/events`,
+    headers: opts.headers,
+  };
+  const agent = new HttpAgent(config);
+  (
+    agent as unknown as { requestInit: (input: RunAgentInput) => RequestInit }
+  ).requestInit = function requestInit(_input: RunAgentInput): RequestInit {
+    const headers: Record<string, string> = {
+      ...agent.headers,
+      Accept: "text/event-stream",
+    };
+    if (opts.lastEventId) headers["Last-Event-ID"] = opts.lastEventId;
+    return {
+      method: "GET",
+      headers,
+      signal: agent.abortController.signal,
+    };
+  };
+  return agent;
+}

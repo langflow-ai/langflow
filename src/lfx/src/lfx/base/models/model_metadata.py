@@ -60,6 +60,9 @@ LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter"]
 # Live only with a custom endpoint configured; empty live fetch keeps the static catalog.
 CONDITIONAL_LIVE_MODEL_PROVIDERS: list[str] = ["OpenAI", "Azure AI Foundry"]
 
+# Catalog defaults are suggestions only; users must explicitly enable deployment names.
+EXPLICIT_ENABLE_ONLY_PROVIDERS: frozenset[str] = frozenset({"Azure AI Foundry"})
+
 # Provider metadata configuration
 # Defines the variables (credentials, URLs, etc.) required for each model provider
 #
@@ -281,7 +284,8 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                 "variable_key": "AZURE_AI_FOUNDRY_ENDPOINT",
                 "description": (
                     "OpenAI-compatible endpoint from the Foundry portal (Get endpoint). "
-                    "Example: https://<resource>.services.ai.azure.com/openai/v1"
+                    "Example: https://<resource>.services.ai.azure.com/openai/v1. "
+                    "Enable models using your portal deployment names (not catalog model IDs)."
                 ),
                 "required": True,
                 "is_secret": False,
