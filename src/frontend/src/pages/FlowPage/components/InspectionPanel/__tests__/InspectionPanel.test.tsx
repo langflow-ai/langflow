@@ -19,7 +19,9 @@ jest.mock("@xyflow/react", () => ({
 
 jest.mock("../components/InspectionPanelHeader", () => {
   return function MockInspectionPanelHeader() {
-    return <div data-testid="inspection-panel-header">Component Parameters</div>;
+    return (
+      <div data-testid="inspection-panel-header">Component Parameters</div>
+    );
   };
 });
 

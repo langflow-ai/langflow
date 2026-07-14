@@ -52,4 +52,3 @@ export function isManageableParameter(
   if (template.readonly) return false;
   return true;
 }
-

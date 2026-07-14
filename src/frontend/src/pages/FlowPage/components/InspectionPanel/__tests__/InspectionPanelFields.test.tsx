@@ -11,11 +11,7 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 
 jest.mock("../components/InspectionPanelParameterRow", () => {
   return function MockParameterRow({ name, title }: any) {
-    return (
-      <div data-testid={`row-${name}`}>
-        {title}
-      </div>
-    );
+    return <div data-testid={`row-${name}`}>{title}</div>;
   };
 });
 

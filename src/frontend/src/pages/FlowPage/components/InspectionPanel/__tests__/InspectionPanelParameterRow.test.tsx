@@ -53,7 +53,10 @@ const renderWithProviders = (component: React.ReactNode) => {
 };
 
 describe("InspectionPanelParameterRow", () => {
-  const createMockData = (fieldOverrides = {}, nodeOverrides = {}): NodeDataType =>
+  const createMockData = (
+    fieldOverrides = {},
+    nodeOverrides = {},
+  ): NodeDataType =>
     ({
       id: "test-node-123",
       type: "TestComponent",
@@ -109,28 +112,46 @@ describe("InspectionPanelParameterRow", () => {
     it("shows Remove for on-canvas parameters", () => {
       renderWithProviders(<InspectionPanelParameterRow {...defaultProps} />);
 
-      expect(screen.getByTestId("inspector-remove-test_field")).toBeInTheDocument();
-      expect(screen.queryByTestId("inspector-add-test_field")).not.toBeInTheDocument();
+      expect(
+        screen.getByTestId("inspector-remove-test_field"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("inspector-add-test_field"),
+      ).not.toBeInTheDocument();
     });
 
     it("shows Add for off-canvas (advanced) parameters", () => {
-      const props = { ...defaultProps, data: createMockData({ advanced: true }) };
+      const props = {
+        ...defaultProps,
+        data: createMockData({ advanced: true }),
+      };
       renderWithProviders(<InspectionPanelParameterRow {...props} />);
 
-      expect(screen.getByTestId("inspector-add-test_field")).toBeInTheDocument();
-      expect(screen.queryByTestId("inspector-remove-test_field")).not.toBeInTheDocument();
+      expect(
+        screen.getByTestId("inspector-add-test_field"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("inspector-remove-test_field"),
+      ).not.toBeInTheDocument();
     });
 
     it("renders the API toggle on every row, including off-canvas ones", () => {
-      const props = { ...defaultProps, data: createMockData({ advanced: true }) };
+      const props = {
+        ...defaultProps,
+        data: createMockData({ advanced: true }),
+      };
       renderWithProviders(<InspectionPanelParameterRow {...props} />);
 
-      expect(screen.getByTestId("inspector-api-test_field")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("inspector-api-test_field"),
+      ).toBeInTheDocument();
     });
 
     it("prefers the factory default from the types store over the current value", () => {
       mockFactoryTemplates = {
-        TestComponent: { template: { test_field: { value: "factory default" } } },
+        TestComponent: {
+          template: { test_field: { value: "factory default" } },
+        },
       };
       renderWithProviders(<InspectionPanelParameterRow {...defaultProps} />);
 
@@ -168,7 +189,10 @@ describe("InspectionPanelParameterRow", () => {
 
     it("adds an off-canvas parameter by setting advanced=false", async () => {
       const user = userEvent.setup();
-      const props = { ...defaultProps, data: createMockData({ advanced: true }) };
+      const props = {
+        ...defaultProps,
+        data: createMockData({ advanced: true }),
+      };
       renderWithProviders(<InspectionPanelParameterRow {...props} />);
 
       await user.click(screen.getByTestId("inspector-add-test_field"));
@@ -215,7 +239,9 @@ describe("InspectionPanelParameterRow", () => {
       expect(apiButton).toHaveAttribute("aria-pressed", "true");
       await user.click(apiButton);
 
-      expect(mockHandleOnNewValue).toHaveBeenCalledWith({ api_editable: false });
+      expect(mockHandleOnNewValue).toHaveBeenCalledWith({
+        api_editable: false,
+      });
     });
 
     it("blocks API exposure for connected (disabled) fields", async () => {

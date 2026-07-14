@@ -75,7 +75,10 @@ export default function useShortcuts({
   }
 
   function handleAdvancedWShortcut(e: KeyboardEvent) {
-    if ((isWrappedWithClass(e, "noflow") && !advancedSurfaceOpen) || !showAdvance)
+    if (
+      (isWrappedWithClass(e, "noflow") && !advancedSurfaceOpen) ||
+      !showAdvance
+    )
       return;
     e.preventDefault();
     showAdvance();

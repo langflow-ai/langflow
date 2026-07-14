@@ -59,7 +59,11 @@ describe("useMinimizeAllAndAlign (LE-1810 T9)", () => {
   });
 
   it("reports allMinimized=true when every generic node is collapsed", () => {
-    mockNodes = [genericNode("a", false), genericNode("b", false), noteNode("n")];
+    mockNodes = [
+      genericNode("a", false),
+      genericNode("b", false),
+      noteNode("n"),
+    ];
     const { result } = renderHook(() => useMinimizeAllAndAlign());
 
     expect(result.current.allMinimized).toBe(true);
@@ -76,8 +80,7 @@ describe("useMinimizeAllAndAlign (LE-1810 T9)", () => {
     expect(mockTakeSnapshot).toHaveBeenCalled();
     await waitFor(() => expect(mockGetLayoutedNodes).toHaveBeenCalled());
 
-    const [collapsedNodes, , sizeOverride] =
-      mockGetLayoutedNodes.mock.calls[0];
+    const [collapsedNodes, , sizeOverride] = mockGetLayoutedNodes.mock.calls[0];
     const generics = collapsedNodes.filter(
       (node: any) => node.type === "genericNode",
     );

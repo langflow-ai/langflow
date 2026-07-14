@@ -19,7 +19,11 @@ describe("NodeToolbar minimize contract (LE-1810)", () => {
   });
 
   const scenarios: Array<{ name: string; outputs: any[]; edges: number }> = [
-    { name: "single output, no connections", outputs: [{ name: "o1" }], edges: 0 },
+    {
+      name: "single output, no connections",
+      outputs: [{ name: "o1" }],
+      edges: 0,
+    },
     {
       name: "multiple outputs without group outputs",
       outputs: [
