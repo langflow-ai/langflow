@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { axe } from "jest-axe";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import EditShortcutButton from "../EditShortcutButton";
 
@@ -183,5 +184,91 @@ describe("EditShortcutButton", () => {
         { name: "Code", display_name: "Code", shortcut: "space" },
       ]),
     );
+  });
+
+  describe("accessibility", () => {
+    const shortcuts = [
+      { name: "Docs", display_name: "Docs", shortcut: "mod+shift+d" },
+      { name: "Code", display_name: "Code", shortcut: "mod+." },
+    ];
+    const defaultShortcuts = [
+      { name: "Docs", display_name: "Docs", shortcut: "mod+shift+d" },
+      { name: "Code", display_name: "Code", shortcut: "space" },
+    ];
+
+    function renderModal() {
+      return render(
+        <EditShortcutButton
+          open={true}
+          setOpen={jest.fn()}
+          shortcut={["Code"]}
+          shortcuts={shortcuts}
+          defaultShortcuts={defaultShortcuts}
+          setSelected={jest.fn()}
+        >
+          <div />
+        </EditShortcutButton>,
+      );
+    }
+
+    it("has no detectable axe violations while open", async () => {
+      const { container } = renderModal();
+
+      const results = await axe(container);
+
+      expect(results).toHaveNoViolations();
+    });
+
+    it("exposes the recorded key combination in a live region for screen readers", () => {
+      renderModal();
+
+      const status = screen.getByRole("status");
+
+      expect(status).toHaveAttribute("aria-live", "polite");
+      expect(status).toHaveTextContent("."); // shortcutInitialValue "mod+." renders the "." key
+    });
+
+    it("updates the accessible live region as new keys are recorded", async () => {
+      renderModal();
+
+      const status = screen.getByRole("status");
+      expect(status).toHaveTextContent(".");
+
+      fireEvent.keyDown(document, { key: "a" });
+
+      expect(status).toHaveTextContent("A");
+    });
+
+    it("exposes Apply and Reset actions as named, focusable buttons", () => {
+      renderModal();
+
+      const applyButton = screen.getByRole("button", { name: "Apply" });
+      const resetButton = screen.getByRole("button", { name: "Reset" });
+
+      expect(applyButton).toBeInTheDocument();
+      expect(resetButton).toBeInTheDocument();
+      applyButton.focus();
+      expect(applyButton).toHaveFocus();
+    });
+
+    it("ignores recorded keydowns once the modal is closed (no violations on closed state)", async () => {
+      const { container } = render(
+        <EditShortcutButton
+          open={false}
+          setOpen={jest.fn()}
+          shortcut={["Code"]}
+          shortcuts={shortcuts}
+          defaultShortcuts={defaultShortcuts}
+          setSelected={jest.fn()}
+        >
+          <div />
+        </EditShortcutButton>,
+      );
+
+      const results = await axe(container);
+
+      expect(results).toHaveNoViolations();
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
   });
 });
