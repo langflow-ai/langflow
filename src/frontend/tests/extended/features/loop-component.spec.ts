@@ -210,7 +210,7 @@ test(
 
     await page.getByTestId("more-options-modal").click();
 
-    await page.getByText(TEXTS.delete).first().click();
+    await page.getByText(TEXTS.delete, { exact: true }).first().click();
 
     // Update Data -> Loop Item (left side)
 
