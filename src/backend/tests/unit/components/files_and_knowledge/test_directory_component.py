@@ -1,6 +1,6 @@
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from lfx.components.files_and_knowledge.directory import DirectoryComponent
@@ -88,6 +88,46 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             max_concurrency=max_concurrency,
             silent_errors=silent_errors,
         )
+
+    def test_directory_is_confined_to_current_scope_when_restricted(self, tmp_path):
+        settings_service = MagicMock()
+        settings_service.settings.restrict_local_file_access = True
+        settings_service.settings.config_dir = str(tmp_path)
+        settings_service.settings.database_url = ""
+
+        allowed_dir = tmp_path / "flow-id"
+        allowed_dir.mkdir()
+        (allowed_dir / "ok.txt").write_text("ok", encoding="utf-8")
+        other_dir = tmp_path / "other-flow"
+        other_dir.mkdir()
+        settings_service.settings.directory_component_allowed_roots = [str(allowed_dir), str(other_dir)]
+
+        with (
+            patch("lfx.components.files_and_knowledge.directory.get_settings_service", return_value=settings_service),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service),
+        ):
+            allowed = DirectoryComponent(_user_id="flow-id")
+            allowed.set_attributes(
+                {
+                    "path": str(allowed_dir),
+                    "use_multithreading": False,
+                    "silent_errors": False,
+                    "types": ["txt"],
+                }
+            )
+            assert len(allowed.load_directory()) == 1
+
+            blocked = DirectoryComponent(_user_id="flow-id")
+            blocked.set_attributes(
+                {
+                    "path": str(other_dir),
+                    "use_multithreading": False,
+                    "silent_errors": False,
+                    "types": ["txt"],
+                }
+            )
+            with pytest.raises(ValueError, match="outside the authenticated user's storage scope"):
+                blocked.load_directory()
 
     def test_directory_without_mocks(self, monkeypatch):
         directory_component = DirectoryComponent()

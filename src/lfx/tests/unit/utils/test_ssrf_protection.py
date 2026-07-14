@@ -11,12 +11,13 @@ from lfx.utils.ssrf_protection import (
     is_ip_blocked,
     is_ssrf_protection_enabled,
     resolve_hostname,
+    validate_database_url_for_ssrf,
     validate_url_for_ssrf,
 )
 
 
 @contextmanager
-def mock_ssrf_settings(*, enabled=False, allowed_hosts=None):
+def mock_ssrf_settings(*, enabled=False, allowed_hosts=None, restrict_files=False):
     """Context manager to mock SSRF settings."""
     if allowed_hosts is None:
         allowed_hosts = []
@@ -25,6 +26,7 @@ def mock_ssrf_settings(*, enabled=False, allowed_hosts=None):
         mock_settings = MagicMock()
         mock_settings.settings.ssrf_protection_enabled = enabled
         mock_settings.settings.ssrf_allowed_hosts = allowed_hosts
+        mock_settings.settings.restrict_local_file_access = restrict_files
         mock_get_settings.return_value = mock_settings
         yield
 
@@ -433,3 +435,53 @@ class TestIntegrationScenarios:
 
             validate_url_for_ssrf("http://database:5432", warn_only=False)
             validate_url_for_ssrf("http://api.internal.local", warn_only=False)
+
+
+class TestDatabaseURLValidation:
+    def test_disabled_allows_local_and_internal_urls(self):
+        with mock_ssrf_settings(enabled=False, restrict_files=False):
+            validate_database_url_for_ssrf("sqlite:////etc/passwd")
+            validate_database_url_for_ssrf("postgresql://127.0.0.1:5432/db")
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "sqlite:////etc/passwd",
+            "sqlite+aiosqlite:///local.db",
+            "duckdb:///data.duckdb",
+            "access:///data.accdb",
+        ],
+    )
+    def test_local_file_dialects_blocked_when_restricted(self, url):
+        with (
+            mock_ssrf_settings(enabled=True, restrict_files=True),
+            pytest.raises(SSRFProtectionError, match="local filesystem"),
+        ):
+            validate_database_url_for_ssrf(url)
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "postgresql://127.0.0.1:5432/db",
+            "postgresql://localhost/db",
+            "mysql://10.0.0.5:3306/db",
+        ],
+    )
+    def test_internal_database_hosts_blocked(self, url):
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError):
+            validate_database_url_for_ssrf(url)
+
+    def test_public_database_host_allowed(self):
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+        ):
+            validate_database_url_for_ssrf("postgresql://db.example.com:5432/app")
+
+    def test_missing_network_host_blocked(self):
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError, match="network host"):
+            validate_database_url_for_ssrf("postgresql:///db")
+
+    def test_allowlisted_database_host_allowed(self):
+        with mock_ssrf_settings(enabled=True, allowed_hosts=["database"]):
+            validate_database_url_for_ssrf("postgresql://database:5432/app")

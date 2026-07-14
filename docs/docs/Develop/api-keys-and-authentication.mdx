@@ -460,6 +460,15 @@ SSRF protection prevents requests to internal or private network resources, such
 | `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `False` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
 | `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
 
+### Local file access restriction {#local-file-access-restriction}
+
+For multi-tenant deployments, enable the following setting together with
+`LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`:
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `False` | When `true`, built-in file components may read and write only within the authenticated user's or executing flow's storage directory. Other tenants' storage, server secrets, the Langflow SQLite database, traversal paths, and escaping symlinks are rejected. This setting also blocks local-file database dialects such as `sqlite` and `duckdb` in the SQL Database components. |
+
 ### Login rate limiting {#login-rate-limiting}
 
 The following environment variables configure IP-based rate limiting on the `/login` endpoint to protect against brute-force attacks.
