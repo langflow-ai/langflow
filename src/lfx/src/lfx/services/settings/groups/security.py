@@ -82,6 +82,20 @@ class SecuritySettings(BaseModel):
     owner (report H1-3754930 follow-up). Enable this only if you knowingly want public flows to
     run custom component code permitted by allow_custom_components."""
 
+    block_code_interpreter_components: bool = False
+    """If set to True, blocks execution of any flow that contains a built-in
+    arbitrary-code-execution component (Python Interpreter, Python REPL/Code tools, and the
+    Smart Transform / lambda evaluator).
+
+    These components are official, so their class-code hash is valid and they pass the
+    ``allow_custom_components=False`` policy — yet they execute arbitrary Python supplied
+    through their *input fields*, which is equivalent to letting users author custom code.
+
+    Defaults to False to preserve existing behavior. Multi-tenant / untrusted-user
+    deployments that disallow user-authored components should set this to True (alongside
+    ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``) so these code-execution primitives cannot be
+    used to break out of the component allow-list."""
+
     # Rate Limiting
     rate_limit_enabled: bool = True
     """Enable rate limiting for login endpoint. Set to False to disable (useful for testing)."""

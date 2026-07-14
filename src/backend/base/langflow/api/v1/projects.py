@@ -7,6 +7,7 @@ from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
+from lfx.utils.util_strings import escape_like_pattern
 from sqlalchemy import or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
@@ -61,10 +62,9 @@ from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
-
-def _escape_like(value: str) -> str:
-    """Escape LIKE wildcards and the escape character itself."""
-    return value.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+# Backwards-compatible local alias; the implementation now lives in lfx.utils.util_strings so the
+# same LIKE-escaping is shared across the API endpoints + the tracing repository.
+_escape_like = escape_like_pattern
 
 
 @router.post("/", response_model=FolderRead, status_code=201)
