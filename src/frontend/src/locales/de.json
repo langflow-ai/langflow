@@ -948,9 +948,6 @@
   "input.typeKey": "Geben Sie einen Schlüssel ein...",
   "input.typeValue": "Geben Sie einen Wert ein...",
   "inspection.cannotChangeVisibility": "Die Sichtbarkeit verbundener Griffe kann nicht geändert werden",
-  "inspectionPanel.noAdvancedSettings": "Keine erweiterten Einstellungen",
-  "inspectionPanel.noEditableFields": "Keine bearbeitbaren Felder",
-  "inspectionPanel.noOutputData": "Es sind keine Ausgabedaten verfügbar. Bitte erstellen Sie die Komponente zunächst.",
   "instructions.checkSettings": "Überprüfen Sie die Einstellungen der Komponente",
   "instructions.fillRequiredFields": "Stellen Sie sicher, dass alle Pflichtfelder ausgefüllt sind",
   "instructions.rerunFlow": "Führen Sie Ihren Ablauf erneut aus",
@@ -1488,7 +1485,6 @@
   "nav.myCollection": "Meine Sammlung",
   "nav.myCollectionDesc": "Verwalten Sie Ihre Projekte. Ganze Sammlungen herunterladen und hochladen.",
   "nav.notifications": "Keine neuen Benachrichtigungen",
-  "node.addToCanvas": "Zur Leinwand hinzufügen",
   "node.approved": "Genehmigt",
   "node.betaComponent": "Beta-Komponente",
   "node.buildComponentFirst": "Bitte erstellen Sie zuerst die Komponente",
@@ -2152,5 +2148,6 @@
   "inspectionPanel.default.empty": "Leer",
   "inspectionPanel.default.enabled": "Aktiviert",
   "inspectionPanel.default.disabled": "Deaktiviert",
-  "inspectionPanel.default.none": "Keine"
+  "inspectionPanel.default.none": "Keine",
+  "inspectionPanel.close": "Schließen"
 }

@@ -948,9 +948,6 @@
   "input.typeKey": "Tapez une clé...",
   "input.typeValue": "Entrez une valeur...",
   "inspection.cannotChangeVisibility": "Impossible de modifier la visibilité des poignées connectées",
-  "inspectionPanel.noAdvancedSettings": "Pas de paramètres avancés",
-  "inspectionPanel.noEditableFields": "Aucun champ modifiable",
-  "inspectionPanel.noOutputData": "Aucune donnée de sortie n'est disponible. Veuillez d'abord compiler le composant.",
   "instructions.checkSettings": "Vérifiez les paramètres du composant",
   "instructions.fillRequiredFields": "Assurez-vous que tous les champs obligatoires sont remplis",
   "instructions.rerunFlow": "Relancez votre flux",
@@ -1488,7 +1485,6 @@
   "nav.myCollection": "Ma collection",
   "nav.myCollectionDesc": "Gérez vos projets. Télécharger et mettre en ligne des collections entières.",
   "nav.notifications": "Aucune nouvelle notification",
-  "node.addToCanvas": "Ajouter au canevas",
   "node.approved": "Approuvé",
   "node.betaComponent": "Composante bêta",
   "node.buildComponentFirst": "Veuillez d'abord compiler le composant",
@@ -2152,5 +2148,6 @@
   "inspectionPanel.default.empty": "Vide",
   "inspectionPanel.default.enabled": "Activé",
   "inspectionPanel.default.disabled": "Désactivé",
-  "inspectionPanel.default.none": "Aucun"
+  "inspectionPanel.default.none": "Aucun",
+  "inspectionPanel.close": "Fermer"
 }

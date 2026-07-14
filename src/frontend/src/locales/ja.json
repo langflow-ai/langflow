@@ -948,9 +948,6 @@
   "input.typeKey": "キーを入力してください...",
   "input.typeValue": "値を入力してください...",
   "inspection.cannotChangeVisibility": "接続されたハンドルの表示設定を変更できません",
-  "inspectionPanel.noAdvancedSettings": "詳細設定はありません",
-  "inspectionPanel.noEditableFields": "編集可能なフィールドはありません",
-  "inspectionPanel.noOutputData": "出力データはありません。 まずコンポーネントをビルドしてください。",
   "instructions.checkSettings": "コンポーネントの設定を確認してください",
   "instructions.fillRequiredFields": "必須項目をすべて入力してください",
   "instructions.rerunFlow": "フローを再実行してください",
@@ -1488,7 +1485,6 @@
   "nav.myCollection": "私のコレクション",
   "nav.myCollectionDesc": "プロジェクトを管理しましょう。 コレクション全体をダウンロードおよびアップロードします。",
   "nav.notifications": "新しい通知はありません",
-  "node.addToCanvas": "キャンバスに追加",
   "node.approved": "承認済み",
   "node.betaComponent": "ベータ成分",
   "node.buildComponentFirst": "まずコンポーネントを構築してください",
@@ -2152,5 +2148,6 @@
   "inspectionPanel.default.empty": "空",
   "inspectionPanel.default.enabled": "有効",
   "inspectionPanel.default.disabled": "無効",
-  "inspectionPanel.default.none": "なし"
+  "inspectionPanel.default.none": "なし",
+  "inspectionPanel.close": "閉じる"
 }

@@ -1536,7 +1536,6 @@
   "table.previousPage": "Previous Page",
   "noteNode.pickColor": "Pick Color",
   "node.clickToCopyFullId": "Click to copy full ID",
-  "node.addToCanvas": "Add to canvas",
   "table.paginationInfo": "Pagination Info",
   "header.goToGithub": "Go to GitHub repo",
   "header.goToDiscord": "Go to Discord server",
@@ -1674,9 +1673,6 @@
   "updateComponents.successCount_other": "Successfully updated {{count}} components",
   "deployments.testDeploymentAriaLabel": "Test {{name}}",
   "flowVersion.noSavedVersions": "No saved versions yet",
-  "inspectionPanel.noAdvancedSettings": "No advanced settings",
-  "inspectionPanel.noEditableFields": "No editable fields",
-  "inspectionPanel.noOutputData": "No output data available. Please build the component first.",
   "io.enterText": "Enter text...",
   "io.noNodeFound": "No node found!",
   "knowledge.couldNotGeneratePreview": "Could not generate preview. Try adjusting your settings.",
@@ -2149,5 +2145,6 @@
   "inspectionPanel.default.empty": "Empty",
   "inspectionPanel.default.enabled": "Enabled",
   "inspectionPanel.default.disabled": "Disabled",
-  "inspectionPanel.default.none": "None"
+  "inspectionPanel.default.none": "None",
+  "inspectionPanel.close": "Close"
 }

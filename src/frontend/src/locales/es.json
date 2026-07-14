@@ -948,9 +948,6 @@
   "input.typeKey": "Escribe una clave...",
   "input.typeValue": "Escribe un valor...",
   "inspection.cannotChangeVisibility": "No se puede cambiar la visibilidad de los controles conectados",
-  "inspectionPanel.noAdvancedSettings": "Sin opciones avanzadas",
-  "inspectionPanel.noEditableFields": "No hay campos editables",
-  "inspectionPanel.noOutputData": "No hay datos de salida disponibles. Por favor, compila primero el componente.",
   "instructions.checkSettings": "Comprueba la configuración de los componentes",
   "instructions.fillRequiredFields": "Asegúrate de rellenar todos los campos obligatorios",
   "instructions.rerunFlow": "Vuelve a ejecutar el flujo",
@@ -1488,7 +1485,6 @@
   "nav.myCollection": "Mi colección",
   "nav.myCollectionDesc": "Gestiona tus proyectos. Descarga y sube colecciones completas.",
   "nav.notifications": "No hay nuevas notificaciones",
-  "node.addToCanvas": "Añadir al lienzo",
   "node.approved": "Aprobado",
   "node.betaComponent": "Componente beta",
   "node.buildComponentFirst": "Por favor, compila primero el componente",
@@ -2152,5 +2148,6 @@
   "inspectionPanel.default.empty": "Vacío",
   "inspectionPanel.default.enabled": "Activado",
   "inspectionPanel.default.disabled": "Desactivado",
-  "inspectionPanel.default.none": "Ninguno"
+  "inspectionPanel.default.none": "Ninguno",
+  "inspectionPanel.close": "Cerrar"
 }

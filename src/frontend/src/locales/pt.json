@@ -948,9 +948,6 @@
   "input.typeKey": "Digite a tecla...",
   "input.typeValue": "Digite um valor...",
   "inspection.cannotChangeVisibility": "Não é possível alterar a visibilidade das alças conectadas",
-  "inspectionPanel.noAdvancedSettings": "Sem configurações avançadas",
-  "inspectionPanel.noEditableFields": "Sem campos editáveis",
-  "inspectionPanel.noOutputData": "Não há dados de saída disponíveis. Por favor, compile o componente primeiro.",
   "instructions.checkSettings": "Verifique as configurações do componente",
   "instructions.fillRequiredFields": "Certifique-se de que todos os campos obrigatórios estejam preenchidos",
   "instructions.rerunFlow": "Execute novamente o seu fluxo",
@@ -1488,7 +1485,6 @@
   "nav.myCollection": "Minha coleção",
   "nav.myCollectionDesc": "Gerencie seus projetos. Baixe e envie coleções inteiras.",
   "nav.notifications": "Não há novas notificações",
-  "node.addToCanvas": "Adicionar à tela",
   "node.approved": "Aprovado",
   "node.betaComponent": "Componente beta",
   "node.buildComponentFirst": "Por favor, compile o componente primeiro",
@@ -2152,5 +2148,6 @@
   "inspectionPanel.default.empty": "Vazio",
   "inspectionPanel.default.enabled": "Ativado",
   "inspectionPanel.default.disabled": "Desativado",
-  "inspectionPanel.default.none": "Nenhum"
+  "inspectionPanel.default.none": "Nenhum",
+  "inspectionPanel.close": "Fechar"
 }

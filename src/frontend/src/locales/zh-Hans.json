@@ -948,9 +948,6 @@
   "input.typeKey": "请输入键...",
   "input.typeValue": "请输入一个值...",
   "inspection.cannotChangeVisibility": "无法更改已连接控件的可见性",
-  "inspectionPanel.noAdvancedSettings": "无高级设置",
-  "inspectionPanel.noEditableFields": "无可编辑字段",
-  "inspectionPanel.noOutputData": "没有可用输出数据。 请先构建该组件。",
   "instructions.checkSettings": "检查组件设置",
   "instructions.fillRequiredFields": "请确保所有必填字段均已填写",
   "instructions.rerunFlow": "重新运行您的流程",
@@ -1488,7 +1485,6 @@
   "nav.myCollection": "我的收藏",
   "nav.myCollectionDesc": "管理您的项目。 下载和上传整个收藏集。",
   "nav.notifications": "没有新通知",
-  "node.addToCanvas": "添加到画布",
   "node.approved": "已批准",
   "node.betaComponent": "β成分",
   "node.buildComponentFirst": "请先构建该组件",
@@ -2152,5 +2148,6 @@
   "inspectionPanel.default.empty": "空",
   "inspectionPanel.default.enabled": "已启用",
   "inspectionPanel.default.disabled": "已禁用",
-  "inspectionPanel.default.none": "无"
+  "inspectionPanel.default.none": "无",
+  "inspectionPanel.close": "关闭"
 }

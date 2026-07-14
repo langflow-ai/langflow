@@ -34,21 +34,22 @@ export function isCanvasVisible(template: InputFieldType, isToolMode: boolean) {
 }
 
 /**
- * Determines if a field should be shown in the InspectionPanel.
+ * Determines if a parameter is manageable in the Inspector Panel (LE-1810).
+ * The panel lists every manageable parameter regardless of canvas visibility —
+ * `advanced` is the add/remove axis, not a listing filter. Connected fields
+ * stay listed (their actions are disabled by the row).
  */
-export function shouldRenderInspectionPanelField(
+export function isManageableParameter(
   templateField: string,
-  template: InputFieldType,
+  template: InputFieldType | undefined,
   isToolMode: boolean | undefined,
 ) {
+  if (!template) return false;
   if (isInternalField(templateField)) return false;
-  if (!template?.show) return false;
+  if (!template.show) return false;
   if (isCodeField(templateField, template)) return false;
   if (isToolModeEnabled(template) && isToolMode) return false;
-  // Only show advanced fields in the inspector panel
-  if (!template?.advanced) return false;
-  // Hide readonly fields
-  if (template?.readonly) return false;
-
+  if (template.readonly) return false;
   return true;
 }
+
