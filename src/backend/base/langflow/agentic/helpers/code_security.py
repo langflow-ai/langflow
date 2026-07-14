@@ -306,6 +306,27 @@ class _SecurityChecker(ast.NodeVisitor):
             for target_element in target.elts:
                 self._bind_assignment_target(target_element, value)
 
+    def _bind_iterated_target(self, target: ast.AST, iterable: ast.AST) -> None:
+        """Bind a loop target to every statically visible iterable value."""
+        if isinstance(iterable, (ast.List, ast.Tuple, ast.Set)):
+            values = iterable.elts
+        elif isinstance(iterable, ast.Dict):
+            values = [key for key in iterable.keys if key is not None]
+        else:
+            values = [iterable]
+
+        before_iteration = self._snapshot_alias_state()
+        iteration_states: list[_AliasState] = []
+        for value in values:
+            self._restore_alias_state(before_iteration)
+            self._bind_assignment_target(target, value)
+            iteration_states.append(self._snapshot_alias_state())
+
+        if iteration_states:
+            self._merge_alias_states(iteration_states)
+        else:
+            self._bind_assignment_target(target, iterable)
+
     def _snapshot_alias_state(self) -> _AliasState:
         return self.module_aliases.copy(), self.shadowed_aliases.copy()
 
@@ -313,6 +334,28 @@ class _SecurityChecker(ast.NodeVisitor):
         aliases, shadowed = state
         self.module_aliases = aliases.copy()
         self.shadowed_aliases = shadowed.copy()
+
+    def _restore_target_names(self, target_names: set[str], state: _AliasState) -> None:
+        aliases, shadowed = state
+        for name in target_names:
+            if name in aliases:
+                self.module_aliases[name] = aliases[name]
+                self.shadowed_aliases.discard(name)
+            elif name in shadowed:
+                self.module_aliases.pop(name, None)
+                self.shadowed_aliases.add(name)
+            else:
+                self.module_aliases.pop(name, None)
+                self.shadowed_aliases.discard(name)
+
+    def _assignment_target_names(self, target: ast.AST) -> set[str]:
+        if isinstance(target, ast.Name):
+            return {target.id}
+        if isinstance(target, ast.Starred):
+            return self._assignment_target_names(target.value)
+        if isinstance(target, (ast.Tuple, ast.List)):
+            return set().union(*(self._assignment_target_names(element) for element in target.elts))
+        return set()
 
     def _merge_alias_states(self, states: list[_AliasState]) -> None:
         """Conservatively retain every module value reachable from a branch."""
@@ -414,6 +457,7 @@ class _SecurityChecker(ast.NodeVisitor):
         else:
             self.visit(node.iter)
             self.visit(node.target)
+            self._bind_iterated_target(node.target, node.iter)
 
         for statement in node.body:
             self.visit(statement)
@@ -436,6 +480,35 @@ class _SecurityChecker(ast.NodeVisitor):
 
     def visit_While(self, node: ast.While):
         self._visit_loop(node)
+
+    def _visit_comprehension_expression(
+        self, generators: list[ast.comprehension], expressions: tuple[ast.AST, ...]
+    ) -> None:
+        """Visit comprehensions in evaluation order with isolated target bindings."""
+        enclosing_state = self._snapshot_alias_state()
+        target_names: set[str] = set()
+        for generator in generators:
+            self.visit(generator.iter)
+            self.visit(generator.target)
+            self._bind_iterated_target(generator.target, generator.iter)
+            target_names.update(self._assignment_target_names(generator.target))
+            for condition in generator.ifs:
+                self.visit(condition)
+        for expression in expressions:
+            self.visit(expression)
+        self._restore_target_names(target_names, enclosing_state)
+
+    def visit_ListComp(self, node: ast.ListComp):
+        self._visit_comprehension_expression(node.generators, (node.elt,))
+
+    def visit_SetComp(self, node: ast.SetComp):
+        self._visit_comprehension_expression(node.generators, (node.elt,))
+
+    def visit_DictComp(self, node: ast.DictComp):
+        self._visit_comprehension_expression(node.generators, (node.key, node.value))
+
+    def visit_GeneratorExp(self, node: ast.GeneratorExp):
+        self._visit_comprehension_expression(node.generators, (node.elt,))
 
     def _shadow_arguments(self, arguments: ast.arguments) -> None:
         positional = [*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs]

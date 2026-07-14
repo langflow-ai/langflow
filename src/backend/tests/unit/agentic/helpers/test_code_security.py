@@ -620,6 +620,38 @@ module.system('not the os module')
         result = scan_code_security("import os\ndef use_safe_object(os):\n    os.system('not the os module')")
         assert result.is_safe is True
 
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import os\nfor module in (os,):\n    module.system('id')",
+            "import os\nasync def run():\n    async for module in (os,):\n        module.system('id')",
+            "import os\n[module.system('id') for module in (os,)]",
+            "import os\n{module.system('id') for module in (os,)}",
+            "import os\n{module: module.system('id') for module in (os,)}",
+            "import os\n(module.system('id') for module in (os,))",
+        ],
+    )
+    def test_should_detect_iterated_module_alias_call(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_detect_destructured_loop_target_alias_call(self):
+        result = scan_code_security("import os\nfor (module,) in ((os,),):\n    module.system('id')")
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_not_leak_comprehension_target_alias(self):
+        code = "import os\nmodule = object()\n[module for module in (os,)]\nmodule.system('not the os module')"
+        result = scan_code_security(code)
+        assert result.is_safe is True
+
+    def test_should_preserve_named_expression_alias_from_comprehension(self):
+        code = "import os\n[(module := os) for _ in (None,)]\nmodule.system('id')"
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
     def test_should_detect_alias_after_zero_iteration_for_loop(self):
         code = """
 import os
