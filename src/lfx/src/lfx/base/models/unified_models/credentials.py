@@ -13,6 +13,7 @@ from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.env_var_security import safe_getenv
 from lfx.utils.secrets import secret_value_to_str
 from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
@@ -65,7 +66,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
         # Honor the request's no-env-fallback contract: skip os.environ when disabled so a
         # served flow stays isolated from process-wide credentials (matches VariableService).
         if not is_env_fallback_disabled():
-            env_value = os.environ.get(var_name)
+            env_value = safe_getenv(var_name)
             if env_value and env_value.strip():
                 return env_value.strip()
         return None
@@ -122,7 +123,8 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
 
     if is_env_fallback_disabled():
         return None
-    return os.getenv(variable_name)
+    env_value = safe_getenv(variable_name)
+    return env_value.strip() if env_value and env_value.strip() else None
 
 
 def _env_value_for(var_key: str) -> str | None:

@@ -10,6 +10,7 @@ from lfx.base.vectorstores.user_scoping import runtime_user_id, scoped_collectio
 from lfx.base.vectorstores.utils import chroma_collection_to_data
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 if TYPE_CHECKING:
@@ -115,8 +116,18 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
                 ssl=bool(self.chroma_server_ssl_enabled),
             )
 
-        # Check persist_directory and expand it if it is a relative path
-        persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None
+        # Check persist_directory and confine it to the current user's or flow's storage scope
+        # when local-file restriction is enabled.
+        persist_directory = (
+            str(
+                enforce_local_file_access(
+                    self.resolve_path(self.persist_directory),
+                    scope_ids=component_file_access_scopes(self),
+                )
+            )
+            if self.persist_directory is not None
+            else None
+        )
 
         # Scope the collection name by runtime user for local stores so two users
         # sharing the same persist_directory + collection_name cannot read each

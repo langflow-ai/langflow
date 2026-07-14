@@ -14,6 +14,7 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
 disable_component_in_astra_cloud_msg = (
@@ -217,7 +218,12 @@ class LocalDBComponent(LCVectorStoreComponent):
         # Use user-provided directory or default cache directory
         if self.persist_directory:
             base_dir = self.resolve_path(self.persist_directory)
-            persist_directory = str(self.get_vector_store_directory(base_dir))
+            safe_dir = enforce_local_file_access(
+                Path(base_dir) / "vector_stores" / self.collection_name,
+                scope_ids=component_file_access_scopes(self),
+            )
+            safe_dir.mkdir(parents=True, exist_ok=True)
+            persist_directory = str(safe_dir)
             logger.debug(f"Using custom persist directory: {persist_directory}")
         else:
             persist_directory = self.get_default_persist_dir()

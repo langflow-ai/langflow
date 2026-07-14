@@ -7628,8 +7628,8 @@ async def test_get_agent_run_falls_back_to_param_run_id(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_build_orchestrate_run_payload_uses_message_directly():
-    """build_orchestrate_run_payload passes message from provider_data when present."""
+def test_build_orchestrate_run_payload_pins_agent_to_deployment():
+    """Caller-provided agent_id cannot retarget a run to a different deployment."""
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import build_orchestrate_run_payload
 
     message = {"role": "user", "content": "direct message"}
@@ -7638,7 +7638,7 @@ def test_build_orchestrate_run_payload_uses_message_directly():
         deployment_id="dep-fallback",
     )
     assert result["message"] is message
-    assert result["agent_id"] == "a-1"
+    assert result["agent_id"] == "dep-fallback"
     assert len(result) == 2
 
 
