@@ -7,6 +7,7 @@ import {
 } from "@xyflow/react";
 import { ArrowRight, Check, GitBranch, Undo2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import type { FlowProposalStatus } from "../assistant-panel.types";
 import {
@@ -152,6 +153,9 @@ export function AssistantFlowPreview({
       { nodes: data.nodes as never[], edges: (data.edges ?? []) as never[] },
       { x: 100, y: 100 },
     );
+    // Same reveal rule as the gated apply path: once the flow lands on the canvas,
+    // get the panel out of the way so the user can see it.
+    useAssistantManagerStore.getState().setAssistantSidebarOpen(false);
     setShowApproved(true);
     setTimeout(() => setShowApproved(false), APPROVED_DISPLAY_DURATION_MS);
   }, [flowPreview.flow, paste]);

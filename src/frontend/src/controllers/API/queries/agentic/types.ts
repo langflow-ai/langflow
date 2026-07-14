@@ -62,24 +62,11 @@ export interface AgenticCompleteData {
    * point restorable via the flow versions API/UI. Absent for question
    * turns, empty canvases, or when snapshotting failed. */
   restore_version_id?: string;
-  /** Non-fatal model errors this turn RECOVERED from (the user's model failed
+  /** Non-fatal model errors this turn recovered from (the chosen model failed
    * silently in the background and the assistant fell back / retried). Rendered
    * as an (i) next to the message so the swap is not hidden. Absent when the
    * chosen model worked. */
   notices?: AssistantModelNotice[];
-}
-
-/** A silent, recovered model failure surfaced to the user. */
-export interface AssistantModelNotice {
-  /** ``model_fallback`` (swapped to another model) or ``model_remediation``
-   * (retried the same model with adjusted params). */
-  type: "model_fallback" | "model_remediation" | string;
-  /** User-facing friendly reason (e.g. "requires a subscription"). */
-  reason: string;
-  /** The model the user selected that failed. */
-  failed_model?: string;
-  /** The model that actually produced the answer (fallback only). */
-  used_model?: string;
 }
 
 export interface AgenticFlowPreviewEvent {
@@ -158,6 +145,19 @@ export interface FlowAction {
   status: "pending" | "applied" | "dismissed";
 }
 
+/** A silent, recovered model failure surfaced to the user. */
+export interface AssistantModelNotice {
+  /** ``model_fallback`` (swapped to another model) or ``model_remediation``
+   * (retried the same model with adjusted params). */
+  type: "model_fallback" | "model_remediation" | string;
+  /** User-facing friendly reason (e.g. "requires a subscription"). */
+  reason: string;
+  /** The model the user selected that failed. */
+  failed_model?: string;
+  /** The model that actually produced the answer (fallback only). */
+  used_model?: string;
+}
+
 export interface AgenticCompleteEvent {
   event: "complete";
   data: AgenticCompleteData;
@@ -208,6 +208,8 @@ export interface AgenticAssistRequest {
   max_retries?: number;
   session_id?: string;
   history_limit?: number;
+  /** Agent step budget for this turn (`/iterations N`); the backend clamps to
+   * 1–200 and falls back to the flow default when absent. */
   iterations_limit?: number;
 }
 

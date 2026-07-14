@@ -1,5 +1,10 @@
 import { render, screen } from "@testing-library/react";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import BaseModal from "../index";
+
+const renderWithProviders = (ui: React.ReactElement) => {
+  return render(<TooltipProvider>{ui}</TooltipProvider>);
+};
 
 describe("BaseModal full-screen accessibility", () => {
   it("should_render_full_screen_content", () => {
@@ -29,5 +34,25 @@ describe("BaseModal full-screen accessibility", () => {
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(dialog).toHaveAccessibleName();
+  });
+});
+
+describe("BaseModal dialog accessible name", () => {
+  it("should_use_header_title_as_dialog_name", () => {
+    renderWithProviders(
+      <BaseModal open={true} setOpen={() => {}} size="x-small">
+        <BaseModal.Header description="Available across your flows.">
+          Create Variable
+        </BaseModal.Header>
+        <BaseModal.Content>
+          <p>Form fields</p>
+        </BaseModal.Content>
+      </BaseModal>,
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "Create Variable" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Dialog")).not.toBeInTheDocument();
   });
 });

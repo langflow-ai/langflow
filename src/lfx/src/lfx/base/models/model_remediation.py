@@ -85,8 +85,23 @@ def cached_overrides(provider: str | None, model_name: str | None) -> dict[str, 
 
 
 def remember(provider: str | None, model_name: str | None, overrides: dict[str, Any]) -> None:
-    """Merge ``overrides`` into the remembered set for this model."""
+    """Merge ``overrides`` into the remembered set for this model.
+
+    The write is PROVISIONAL until the retry it enables actually succeeds: the cache is
+    process-global, so a remembered override that did not fix anything would silently
+    poison every later request for that model. Callers must snapshot with
+    ``cached_overrides`` first and call ``restore_overrides`` if the retry still fails.
+    """
     _REMEDIATION_CACHE.setdefault(_model_key(provider, model_name), {}).update(overrides)
+
+
+def restore_overrides(provider: str | None, model_name: str | None, snapshot: dict[str, Any]) -> None:
+    """Put this model's remembered set back to ``snapshot``, undoing a provisional ``remember``."""
+    key = _model_key(provider, model_name)
+    if snapshot:
+        _REMEDIATION_CACHE[key] = dict(snapshot)
+    else:
+        _REMEDIATION_CACHE.pop(key, None)
 
 
 def reset_remediation_cache() -> None:

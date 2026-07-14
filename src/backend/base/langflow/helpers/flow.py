@@ -297,6 +297,11 @@ async def run_flow(
 
     fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
 
+    from lfx.run.hitl import raise_if_nested_hitl_unsupported
+
+    # A nested run cannot pause: a Human Input in here would silently not pause. Fail loud instead.
+    raise_if_nested_hitl_unsupported(graph)
+
     return await graph.arun(
         inputs_list,
         outputs=outputs,
@@ -466,6 +471,15 @@ async def get_flow_by_id_or_endpoint_name(
     a subsequent permission check (e.g. agentic MCP tools) must leave the
     default, otherwise widening leaks graph metadata for another user's flow
     before any policy decision runs.
+
+    SECURITY — ``user_id``: passing ``user_id=None`` disables owner scoping and
+    resolves the flow by id/endpoint_name ALONE (any user's flow). This is an
+    intentional contract for trusted internal callers, but it means every caller
+    MUST pass the authenticated user's id. Never wire this as a FastAPI
+    ``Depends`` whose ``user_id`` comes from a request-controlled (and possibly
+    unset) query param, and never forward a caller-supplied ``user_id`` that was
+    not derived from the authenticated identity — either reintroduces a flow
+    IDOR.
     """
     from langflow.services.deps import get_authorization_service
 

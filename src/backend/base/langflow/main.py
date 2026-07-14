@@ -17,7 +17,6 @@ import sqlalchemy
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
 from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
@@ -912,11 +911,22 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
         app (FastAPI): FastAPI app.
         static_files_dir (str): Path to the static files directory.
     """
-    app.mount(
-        "/",
-        StaticFiles(directory=static_files_dir, html=True),
-        name="static",
-    )
+
+    # app.frontend() serves index.html for any unmatched GET, so an unknown
+    # /api/* GET would otherwise return the SPA shell instead of a JSON 404.
+    # Reserve /api GET/HEAD to force a 404 that the handler below shapes as JSON.
+    # Only GET/HEAD are claimed: wrong-method requests to real endpoints still
+    # get a native 405, and real API routes are registered earlier so they win.
+    @app.api_route("/api/{_path:path}", include_in_schema=False, methods=["GET", "HEAD"])
+    async def api_not_found(_path: str):
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    # FastAPI >=0.138 serves the frontend build as low-priority routes: path
+    # operations are matched first, static files only if nothing else matched.
+    # fallback="index.html" returns the SPA entrypoint for extensionless
+    # client-side routes; the handler below covers the rest (e.g. deep links
+    # whose last segment contains a dot).
+    app.frontend("/", directory=str(static_files_dir), fallback="index.html")
 
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):

@@ -72,13 +72,12 @@ MAX_ASSISTANT_ITERATIONS = 200
 def inject_iterations_into_flow(flow_data: dict, limit: int | None) -> dict:
     """Set the step budget (``max_iterations``) on the flow's Agent components.
 
-    Runtime override for the ``/iterations N`` command. ``max_iterations`` caps
-    the Agent's model-call loop and derives LangGraph's ``recursion_limit``
-    (``max_iterations * 2 + 5``), so raising it lets compound build+run+report
-    turns finish instead of hitting the recursion limit. Best-effort: ``None``
-    is a no-op (the flow default stands); values are clamped to
-    ``[1, MAX_ASSISTANT_ITERATIONS]`` so a bad input can neither disable the cap
-    nor run away.
+    ``max_iterations`` caps the Agent's model-call loop and derives LangGraph's
+    ``recursion_limit`` (``max_iterations * 2 + 5``), so a low pin makes even a
+    small compound turn (build a 4-component flow, then report it) die on
+    "Recursion limit reached". Best-effort: ``None`` is a no-op (the flow default
+    stands); values are clamped to ``[1, MAX_ASSISTANT_ITERATIONS]`` so a bad input
+    can neither disable the cap nor run away.
     """
     if limit is None:
         return flow_data
@@ -322,7 +321,7 @@ def load_and_prepare_flow(
                 history_limit = None
     flow_data = inject_history_limit_into_flow(flow_data, history_limit)
 
-    # The /iterations command's step budget rides in provider_vars as ITERATIONS_LIMIT.
+    # The runtime step budget rides in provider_vars as ITERATIONS_LIMIT.
     if provider_vars:
         raw_iterations = provider_vars.get("ITERATIONS_LIMIT")
         if raw_iterations not in (None, ""):
