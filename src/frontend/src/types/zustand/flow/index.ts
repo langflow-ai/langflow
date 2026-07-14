@@ -1,3 +1,4 @@
+// biome-ignore-all lint/suspicious/noExplicitAny: pre-existing legacy flow-store types predate this rule; the HITL change only added typed fields
 import type {
   Connection,
   Node,
@@ -118,7 +119,9 @@ export type FlowStoreType = {
   buildingFlowId: string | null;
   buildingSessionId: string | null;
   isPending: boolean;
+  awaitingInput: boolean;
   setIsBuilding: (isBuilding: boolean) => void;
+  setAwaitingInput: (awaitingInput: boolean) => void;
   setBuildStartTime: (time: number) => void;
   setBuildDuration: (duration: number) => void;
   setBuildingSession: (flowId: string | null, sessionId: string | null) => void;

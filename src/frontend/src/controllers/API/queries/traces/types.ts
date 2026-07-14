@@ -1,3 +1,4 @@
+import type { PendingHumanRequest } from "@/controllers/API/queries/workflows/use-get-pending-workflows";
 import { Span } from "@/pages/FlowPage/components/TraceComponent/types";
 
 export interface TracesQueryParams {
@@ -19,6 +20,10 @@ export interface TraceListItem {
   sessionId?: string;
   input: Record<string, unknown> | null;
   output: Record<string, unknown> | null;
+  pendingRequest?: PendingHumanRequest;
+  // Synthetic row for a paused run that has no TraceTable row yet (the pause path
+  // returns before traces flush), so the detail view must skip the trace fetch.
+  isPending?: boolean;
 }
 
 export interface TracesResponse {
