@@ -204,6 +204,7 @@ async def _ensure_resource_permission(
     resource_type: str,
     resource_id: UUID | str | None,
     owner_id: UUID | None,
+    owner_override_allowed: bool,
     act_str: str,
     resolved_domain: str,
     extra_context: dict[str, Any],
@@ -229,7 +230,12 @@ async def _ensure_resource_permission(
             detail="External credentials do not allow this action",
         )
 
-    if owner_id is not None and getattr(user, "id", None) == owner_id and await should_apply_owner_override():
+    if (
+        owner_override_allowed
+        and owner_id is not None
+        and getattr(user, "id", None) == owner_id
+        and await should_apply_owner_override()
+    ):
         await _audit.audit_decision(
             user_id=user.id,
             action=f"{resource_type}:{act_str}",
@@ -269,6 +275,10 @@ class _ResourceSpec:
     scope_kw: str | None
     # Extra kwargs forwarded verbatim into ``extra_context`` (no domain effect).
     extra_context_kws: tuple[str, ...] = ()
+    # CREATE normally has no existing resource owner, so caller-supplied owner
+    # ids must not trigger the owner override. Resource families whose CREATE
+    # action targets an existing owned resource may opt in explicitly.
+    owner_override_on_create: bool = False
 
 
 _RESOURCE_SPECS: dict[str, _ResourceSpec] = {
@@ -321,6 +331,9 @@ _RESOURCE_SPECS: dict[str, _ResourceSpec] = {
         id_kw="share_id",
         workspace_kw=None,
         scope_kw=None,
+        # Creating a share authorizes against the already-existing target
+        # resource owner, not the prospective share-row owner.
+        owner_override_on_create=True,
     ),
 }
 
@@ -375,6 +388,7 @@ async def _ensure_typed(
         resource_type=spec.resource_type,
         resource_id=resource_id,
         owner_id=owner_id,
+        owner_override_allowed=act_str != "create" or spec.owner_override_on_create,
         act_str=act_str,
         resolved_domain=resolved_domain,
         extra_context=extra_context,
