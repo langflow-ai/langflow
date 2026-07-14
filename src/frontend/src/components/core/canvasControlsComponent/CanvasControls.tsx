@@ -161,10 +161,10 @@ const CanvasControls = ({
                   // pinned open; otherwise it falls back to the hover-only
                   // behavior so power users still see it as a hint without
                   // it being intrusive.
-                  className={`absolute -top-4 -left-1 z-10 flex items-center gap-0.5 rounded bg-accent-assistant-brand px-1 py-0.5 text-[9px] font-medium leading-none text-white transition-all duration-200 ${
+                  className={`absolute -top-4 -left-1 z-10 flex items-center gap-0.5 rounded bg-accent-assistant-brand px-1 py-0.5 text-[9px] font-medium leading-none text-white transition-opacity duration-200 ${
                     onboardingActive
-                      ? "opacity-100 scale-100"
-                      : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100"
+                      ? "opacity-100"
+                      : "opacity-0 group-hover:opacity-100"
                   }`}
                 >
                   <ForwardedIconComponent
