@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import { useTranslation } from "react-i18next";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
 import type { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
@@ -44,36 +45,46 @@ export function CustomParameterComponent({
   nodeInformationMetadata?: NodeInfoType;
   proxy: { field: string; id: string } | undefined;
 }) {
+  const { t } = useTranslation();
   const edges = useFlowStore((state) => state.edges);
   const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
   const isReadOnly = useIsFlowReadOnly(currentFlowId);
 
   const disabled =
-    isReadOnly ||
     edges.some(
       (edge) =>
         edge.targetHandle ===
         scapedJSONStringfy(proxy ? { ...inputId, proxy } : inputId),
-    ) ||
-    isToolMode;
+    ) || isToolMode;
 
   return (
-    <ParameterRenderComponent
-      handleOnNewValue={handleOnNewValue}
-      name={name}
-      nodeId={nodeId}
-      templateData={templateData}
-      templateValue={templateValue}
-      editNode={editNode}
-      showParameter={showParameter}
-      inspectionPanel={inspectionPanel}
-      handleNodeClass={handleNodeClass}
-      nodeClass={nodeClass}
-      disabled={disabled}
-      placeholder={placeholder}
-      isToolMode={isToolMode}
-      nodeInformationMetadata={nodeInformationMetadata}
-    />
+    <div
+      data-testid="parameter-permission-gate"
+      className={cn(
+        "w-full min-w-0",
+        isReadOnly && "pointer-events-none opacity-60",
+      )}
+      inert={isReadOnly}
+      aria-disabled={isReadOnly}
+      title={isReadOnly ? t("version.readOnly") : undefined}
+    >
+      <ParameterRenderComponent
+        handleOnNewValue={handleOnNewValue}
+        name={name}
+        nodeId={nodeId}
+        templateData={templateData}
+        templateValue={templateValue}
+        editNode={editNode}
+        showParameter={showParameter}
+        inspectionPanel={inspectionPanel}
+        handleNodeClass={handleNodeClass}
+        nodeClass={nodeClass}
+        disabled={disabled}
+        placeholder={placeholder}
+        isToolMode={isToolMode}
+        nodeInformationMetadata={nodeInformationMetadata}
+      />
+    </div>
   );
 }
 

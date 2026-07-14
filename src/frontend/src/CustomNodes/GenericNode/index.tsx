@@ -172,17 +172,30 @@ function GenericNode({
     updateNodeInternals(data.id);
   }, [data.node.template]);
 
-  if (!data.node!.template) {
+  useEffect(() => {
+    if (data.node?.template) return;
+
     setErrorData({
-      title: t("node.errorNoTemplate", { name: data.node!.display_name }),
+      title: t("node.errorNoTemplate", { name: data.node?.display_name }),
       list: [
-        t("node.errorNoTemplateDetail", { name: data.node!.display_name }),
+        t("node.errorNoTemplateDetail", { name: data.node?.display_name }),
         t("node.errorNoTemplateContact"),
       ],
     });
-    takeSnapshot();
-    deleteNode(data.id);
-  }
+    if (!isReadOnly) {
+      takeSnapshot();
+      deleteNode(data.id);
+    }
+  }, [
+    data.id,
+    data.node?.display_name,
+    data.node?.template,
+    deleteNode,
+    isReadOnly,
+    setErrorData,
+    t,
+    takeSnapshot,
+  ]);
 
   const handleUpdateCode = useCallback(
     (confirmed: boolean = false) => {
@@ -688,7 +701,7 @@ function GenericNode({
             </div>
           )}
         </div>
-        {showNode && (
+        {showNode && data.node?.template && (
           <div
             className="nopan nodelete nodrag noflow relative cursor-auto"
             onMouseDown={(e) => e.stopPropagation()}
@@ -704,7 +717,7 @@ function GenericNode({
               />{" "}
               <div
                 className={classNames(
-                  Object.keys(data.node!.template).length < 1 ? "hidden" : "",
+                  Object.keys(data.node.template).length < 1 ? "hidden" : "",
                   "flex-max-width justify-center",
                 )}
               >

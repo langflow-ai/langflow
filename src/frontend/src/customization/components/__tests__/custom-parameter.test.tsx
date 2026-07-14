@@ -60,13 +60,17 @@ describe("CustomParameterComponent", () => {
     );
   });
 
-  it("disables the parameter when the flow is read-only", () => {
+  it("makes the parameter inert without triggering legacy disabled cleanup", () => {
     mockUseIsFlowReadOnly.mockReturnValue(true);
 
     render(<CustomParameterComponent {...defaultProps} />);
 
     expect(screen.getByTestId("parameter")).toHaveAttribute(
       "data-disabled",
+      "false",
+    );
+    expect(screen.getByTestId("parameter-permission-gate")).toHaveAttribute(
+      "aria-disabled",
       "true",
     );
   });
