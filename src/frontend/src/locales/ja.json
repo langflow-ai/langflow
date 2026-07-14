@@ -918,7 +918,6 @@
   "help.getLangflowDesktop": "Langflow Desktopを入手する",
   "help.reportBug": "バグを報告する",
   "help.shortcuts": "ショートカット",
-  "help.showInspectorPanel": "インスペクタパネルを表示",
   "help.title": "ヘルプ",
   "home.dragFlowType": "{{flowType}} をこちらに投稿してください",
   "home.dragFlowsOrComponents": "フローやコンポーネントをここにドロップしてください",
@@ -1521,7 +1520,6 @@
   "node.upgradeRequiredMessage": "フローを実行するにはアップグレードが必要です",
   "node.viewCode": "コードの表示",
   "nodeToolbar.code": "コード",
-  "nodeToolbar.controls": "コントロール",
   "nodeToolbar.copy": "コピー",
   "nodeToolbar.delete": "削除",
   "nodeToolbar.docs": "文書",
@@ -2149,5 +2147,6 @@
   "inspectionPanel.default.enabled": "有効",
   "inspectionPanel.default.disabled": "無効",
   "inspectionPanel.default.none": "なし",
-  "inspectionPanel.close": "閉じる"
+  "inspectionPanel.close": "閉じる",
+  "nodeToolbar.parameters": "パラメータ"
 }

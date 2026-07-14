@@ -918,7 +918,6 @@
   "help.getLangflowDesktop": "Langflow Desktop herunterladen",
   "help.reportBug": "Fehler melden",
   "help.shortcuts": "Direktaufrufe",
-  "help.showInspectorPanel": "Inspektorfenster anzeigen",
   "help.title": "Hilfe",
   "home.dragFlowType": "Lade hier dein „ {{flowType}} “ hoch",
   "home.dragFlowsOrComponents": "Lade deine Flows oder Komponenten hier hoch",
@@ -1521,7 +1520,6 @@
   "node.upgradeRequiredMessage": "Zur Ausführung des Ablaufs ist ein Upgrade erforderlich",
   "node.viewCode": "Code anzeigen",
   "nodeToolbar.code": "Code erstellen",
-  "nodeToolbar.controls": "Kontrollmechanismen",
   "nodeToolbar.copy": "Kopieren",
   "nodeToolbar.delete": "Löschen",
   "nodeToolbar.docs": "Dokumente",
@@ -2149,5 +2147,6 @@
   "inspectionPanel.default.enabled": "Aktiviert",
   "inspectionPanel.default.disabled": "Deaktiviert",
   "inspectionPanel.default.none": "Keine",
-  "inspectionPanel.close": "Schließen"
+  "inspectionPanel.close": "Schließen",
+  "nodeToolbar.parameters": "Parameter"
 }

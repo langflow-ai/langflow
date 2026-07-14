@@ -51,7 +51,6 @@ const NodeToolbarComponent = memo(
     numberOfOutputHandles,
     showNode,
     name = "code",
-    onCloseAdvancedModal,
     updateNode,
     isOutdated,
     isUserEdited,
@@ -63,7 +62,6 @@ const NodeToolbarComponent = memo(
   }): JSX.Element => {
     const { t } = useTranslation();
     const version = useDarkStore((state) => state.version);
-    const [showModalAdvanced, setShowModalAdvanced] = useState(false);
     const [showconfirmShare, setShowconfirmShare] = useState(false);
     const [showOverrideModal, setShowOverrideModal] = useState(false);
     const [flowComponent, setFlowComponent] = useState<FlowType>(
@@ -292,9 +290,20 @@ const NodeToolbarComponent = memo(
       }
     }, [flowComponent]);
 
+    const inspectionPanelVisible = useFlowStore(
+      (state) => state.inspectionPanelVisible,
+    );
+    const setInspectionPanelVisible = useFlowStore(
+      (state) => state.setInspectionPanelVisible,
+    );
+
+    const handleToggleInspectionPanel = useCallback(() => {
+      setInspectionPanelVisible(!inspectionPanelVisible);
+    }, [inspectionPanelVisible, setInspectionPanelVisible]);
+
     useShortcuts({
       showOverrideModal,
-      showModalAdvanced,
+      showModalAdvanced: inspectionPanelVisible,
       openModal,
       showconfirmShare,
       FreezeAllVertices: () => {
@@ -303,7 +312,7 @@ const NodeToolbarComponent = memo(
       downloadFunction: () => downloadNode(flowComponent!),
       displayDocs: openDocs,
       saveComponent,
-      showAdvance: () => setShowModalAdvanced((state) => !state),
+      showAdvance: handleToggleInspectionPanel,
       handleCodeModal,
       shareComponent,
       ungroup: handleungroup,
@@ -311,12 +320,6 @@ const NodeToolbarComponent = memo(
       activateToolMode: handleActivateToolMode,
       hasToolMode,
     });
-
-    useEffect(() => {
-      if (!showModalAdvanced) {
-        onCloseAdvancedModal!(false);
-      }
-    }, [showModalAdvanced]);
 
     // Open dropdown when right-clicked
     useEffect(() => {
@@ -343,7 +346,6 @@ const NodeToolbarComponent = memo(
       data.node?.display_name,
       data.node?.description,
       data.node?.template,
-      showModalAdvanced,
       showconfirmShare,
     ]);
 
@@ -371,9 +373,6 @@ const NodeToolbarComponent = memo(
             break;
           case "code":
             handleCodeModal();
-            break;
-          case "advanced":
-            setShowModalAdvanced(true);
             break;
           case "show":
             takeSnapshot();
@@ -440,7 +439,6 @@ const NodeToolbarComponent = memo(
         saveComponent,
         FreezeAllVertices,
         setOpenModal,
-        setShowModalAdvanced,
         handleMinimize,
         shareComponent,
         downloadNode,
@@ -466,10 +464,6 @@ const NodeToolbarComponent = memo(
     const handleOnNewValue = (value: string | string[]) => {
       handleOnNewValueHook({ value });
     };
-
-    const inspectionPanelVisible = useFlowStore(
-      (state) => state.inspectionPanelVisible,
-    );
 
     const selectTriggerRef = useRef(null);
 
@@ -512,18 +506,17 @@ const NodeToolbarComponent = memo(
               dataTestId="code-button-modal"
             />
           )}
-          {nodeLength > 0 && !inspectionPanelVisible && (
-            <ToolbarButton
-              icon="SlidersHorizontal"
-              label={t("nodeToolbar.controls")}
-              onClick={() => setShowModalAdvanced(true)}
-              shortcut={shortcuts.find((s) =>
-                s.name.toLowerCase().startsWith("advanced"),
-              )}
-              dataTestId="edit-button-modal"
-            />
-          )}
-          {(!hasToolMode || inspectionPanelVisible) && (
+          <ToolbarButton
+            icon="SlidersHorizontal"
+            label={t("nodeToolbar.parameters")}
+            onClick={handleToggleInspectionPanel}
+            shortcut={shortcuts.find((s) =>
+              s.name.toLowerCase().startsWith("advanced"),
+            )}
+            className={cn(inspectionPanelVisible && "text-primary")}
+            dataTestId="parameters-button"
+          />
+          {!hasToolMode && (
             <ToolbarButton
               icon="FreezeAll"
               label={t("nodeToolbar.freeze")}
@@ -772,7 +765,7 @@ const NodeToolbarComponent = memo(
                     />
                   </SelectItem>
                 )}
-                {hasToolMode && !inspectionPanelVisible && (
+                {hasToolMode && (
                   <SelectItem
                     value="freezeAll"
                     data-testid="freeze-all-button-modal"
@@ -826,12 +819,10 @@ const NodeToolbarComponent = memo(
           </div>
 
           <ToolbarModals
-            showModalAdvanced={showModalAdvanced}
             showconfirmShare={showconfirmShare}
             showOverrideModal={showOverrideModal}
             openModal={openModal}
             hasCode={hasCode}
-            setShowModalAdvanced={setShowModalAdvanced}
             setShowconfirmShare={setShowconfirmShare}
             setShowOverrideModal={setShowOverrideModal}
             setOpenModal={setOpenModal}

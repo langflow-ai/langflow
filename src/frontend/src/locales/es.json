@@ -918,7 +918,6 @@
   "help.getLangflowDesktop": "Descargar Langflow Desktop",
   "help.reportBug": "Informar de un error",
   "help.shortcuts": "Atajos",
-  "help.showInspectorPanel": "Mostrar el panel del inspector",
   "help.title": "Ayuda",
   "home.dragFlowType": "Deja aquí tu « {{flowType}} »",
   "home.dragFlowsOrComponents": "Suelta aquí tus flujos o componentes",
@@ -1521,7 +1520,6 @@
   "node.upgradeRequiredMessage": "Es necesario actualizar para ejecutar el flujo",
   "node.viewCode": "Ver código",
   "nodeToolbar.code": "Código",
-  "nodeToolbar.controls": "Controles",
   "nodeToolbar.copy": "Copiar",
   "nodeToolbar.delete": "Suprimir",
   "nodeToolbar.docs": "Documentos",
@@ -2149,5 +2147,6 @@
   "inspectionPanel.default.enabled": "Activado",
   "inspectionPanel.default.disabled": "Desactivado",
   "inspectionPanel.default.none": "Ninguno",
-  "inspectionPanel.close": "Cerrar"
+  "inspectionPanel.close": "Cerrar",
+  "nodeToolbar.parameters": "Parámetros"
 }

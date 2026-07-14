@@ -918,7 +918,6 @@
   "help.getLangflowDesktop": "获取 Langflow 桌面版",
   "help.reportBug": "报告错误",
   "help.shortcuts": "快捷方式",
-  "help.showInspectorPanel": "显示检查器面板",
   "help.title": "帮助",
   "home.dragFlowType": "请在此处上传您的 {{flowType}}",
   "home.dragFlowsOrComponents": "请将您的流程或组件拖放到此处",
@@ -1521,7 +1520,6 @@
   "node.upgradeRequiredMessage": "执行该流程需要进行升级",
   "node.viewCode": "查看代码",
   "nodeToolbar.code": "代码",
-  "nodeToolbar.controls": "控件",
   "nodeToolbar.copy": "副本",
   "nodeToolbar.delete": "删除",
   "nodeToolbar.docs": "文档",
@@ -2149,5 +2147,6 @@
   "inspectionPanel.default.enabled": "已启用",
   "inspectionPanel.default.disabled": "已禁用",
   "inspectionPanel.default.none": "无",
-  "inspectionPanel.close": "关闭"
+  "inspectionPanel.close": "关闭",
+  "nodeToolbar.parameters": "参数"
 }
