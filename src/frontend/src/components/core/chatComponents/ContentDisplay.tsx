@@ -4,11 +4,16 @@ import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import remarkGfm from "remark-gfm";
 import { formatSeconds } from "@/components/core/playgroundComponent/chat-view/chat-messages/utils/format";
-import type { ContentBlockItem, JSONValue } from "@/types/chat";
+import type {
+  ContentBlockItem,
+  InteractiveContent,
+  JSONValue,
+} from "@/types/chat";
 import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
+import HumanInputCard, { type HumanInputDecision } from "./HumanInputCard";
 import {
   AudioContentDisplay,
   FileContentDisplay,
@@ -24,12 +29,19 @@ export default function ContentDisplay({
   content,
   chatId,
   playgroundPage,
+  humanInputSubmitted,
+  onHumanInputSubmit,
 }: {
   // Accept any ContentBlockItem so nested ContentBlock groups land in the
   // `case "group"` branch below instead of falling through to no rendering.
   content: ContentBlockItem;
   chatId: string;
   playgroundPage?: boolean;
+  humanInputSubmitted?: boolean;
+  onHumanInputSubmit?: (
+    content: InteractiveContent,
+    decision: HumanInputDecision,
+  ) => void;
 }) {
   // Reasoning blocks surface their own duration inline via ReasoningDisplay's
   // "Thought for Xs" label, so skip the absolute top-right DurationDisplay
@@ -291,6 +303,19 @@ export default function ContentDisplay({
             />
           ))}
         </div>
+      );
+      break;
+    case "human_input":
+      contentData = (
+        <HumanInputCard
+          content={content}
+          submitted={humanInputSubmitted}
+          onSubmit={
+            onHumanInputSubmit
+              ? (decision) => onHumanInputSubmit(content, decision)
+              : undefined
+          }
+        />
       );
       break;
   }

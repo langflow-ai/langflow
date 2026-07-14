@@ -440,6 +440,11 @@ class ComponentToolkit:
                         if tool_metadata.get("status", True):
                             tool.name = tool_metadata.get("name", tool.name)
                             tool.description = tool_metadata.get("description", tool.description)
+                            # Carry the per-action HITL decisions onto the tool so the
+                            # agent gates exactly what the user selected (LE-1447).
+                            if tool.metadata is None:
+                                tool.metadata = {}
+                            tool.metadata["approval_actions"] = tool_metadata.get("approval_actions") or []
                             if tool_metadata.get("commands"):
                                 tool.description = _add_commands_to_tool_description(
                                     tool.description, tool_metadata.get("commands")

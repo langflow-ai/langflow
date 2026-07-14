@@ -524,6 +524,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         exec_tool = MagicMock()
         exec_tool.coroutine = AsyncMock()
         mock_result = MagicMock()
+        mock_result.isError = False
         mock_result.content = [MagicMock()]
         mock_result.content[0].model_dump.return_value = {"result": "test_output"}
         exec_tool.coroutine.return_value = mock_result
