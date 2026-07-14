@@ -515,7 +515,7 @@ Pair these settings with the [SSRF settings](#ssrf-protection) to reduce common 
 These settings **do not** provide full user isolation. For more information, see [Security](/security).
 
 :::tip
-Do not enable a shared tracer when users are untrusted. Instead, use [built-in local tracing](/tracing).
+Do not enable a shared tracer when users are untrusted. Instead, use [built-in local tracing](/traces).
 External tracing integrations such as Langfuse and Arize are _process-wide_, not per user, so on a shared server, every user's flow inputs and outputs will go to the same tracing project.
 :::
 
