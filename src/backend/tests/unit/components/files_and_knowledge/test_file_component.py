@@ -247,6 +247,28 @@ class TestFileComponentDynamicOutputs:
 
         assert result.text == test_content, f"Expected '{test_content}', got '{result.text}'"
 
+    def test_tool_mode_file_is_confined_to_current_scope_when_restricted(self, tmp_path):
+        settings_service = MagicMock()
+        settings_service.settings.restrict_local_file_access = True
+        settings_service.settings.config_dir = str(tmp_path)
+        settings_service.settings.database_url = ""
+
+        allowed = tmp_path / "flow-id" / "allowed.txt"
+        allowed.parent.mkdir()
+        allowed.write_text("ok")
+        blocked = tmp_path / "other-flow" / "secret.txt"
+        blocked.parent.mkdir()
+        blocked.write_text("secret")
+
+        with patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service):
+            component = FileComponent(_user_id="flow-id")
+            component.file_path_str = str(allowed)
+            assert component._validate_and_resolve_paths()[0].path == allowed.resolve()
+
+            component.file_path_str = str(blocked)
+            with pytest.raises(ValueError, match="outside the authenticated user's storage scope"):
+                component._validate_and_resolve_paths()
+
     def test_read_file_using_path_when_file_path_str_not_provided(self, tmp_path):
         """Test that component falls back to uploaded file when file_path_str is not provided.
 

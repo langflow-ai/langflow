@@ -395,6 +395,54 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = False) -> None:
         raise
 
 
+_LOCAL_FILE_DB_DIALECTS = frozenset({"sqlite", "duckdb", "access", "shell"})
+
+
+def _local_file_access_restricted() -> bool:
+    """Return whether local-file-backed database URLs must be blocked."""
+    try:
+        return bool(get_settings_service().settings.restrict_local_file_access)
+    except Exception:  # noqa: BLE001 - settings may be unavailable; preserve the disabled default
+        return False
+
+
+def validate_database_url_for_ssrf(url: str) -> None:
+    """Validate a tenant-controlled SQLAlchemy URL for network SSRF and local-file access."""
+    ssrf_on = is_ssrf_protection_enabled()
+    file_restricted = _local_file_access_restricted()
+    if not ssrf_on and not file_restricted:
+        return
+
+    try:
+        parsed = urlparse(url)
+    except Exception as e:
+        msg = f"Invalid database URL format: {e}"
+        raise ValueError(msg) from e
+
+    dialect = (parsed.scheme or "").lower().split("+", 1)[0]
+    if dialect in _LOCAL_FILE_DB_DIALECTS:
+        if file_restricted:
+            msg = (
+                f"Database dialect '{dialect}' accesses the local filesystem and is not permitted "
+                "(LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true). Use a network database (e.g. postgresql, mysql)."
+            )
+            raise SSRFProtectionError(msg)
+        return
+
+    if not ssrf_on:
+        return
+
+    hostname = parsed.hostname
+    if not hostname:
+        msg = "Database URL must contain a network host."
+        raise SSRFProtectionError(msg)
+    if is_host_allowed(hostname):
+        return
+    if _validate_direct_ip_address(hostname):
+        return
+    _validate_hostname_resolution(hostname)
+
+
 def validate_and_resolve_url(url: str) -> tuple[str, list[str]]:
     """Validate URL for SSRF and return validated IP addresses for DNS pinning.
 

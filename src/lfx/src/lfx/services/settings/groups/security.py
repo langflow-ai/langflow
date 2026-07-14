@@ -104,6 +104,16 @@ class SecuritySettings(BaseModel):
     downgrades. Disabled by default for compatibility; multi-tenant images enable it.
     """
 
+    restrict_local_file_access: bool = False
+    """If True, built-in local-file components may access only the authenticated user's or
+    executing flow's storage directory under ``config_dir``.
+
+    Tenant-controlled paths can otherwise target arbitrary server files, the Langflow database,
+    server secrets, or another tenant's uploads. Multi-tenant deployments that disallow custom
+    components should enable this alongside ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``.
+
+    Defaults to False to preserve existing single-tenant local-file behavior."""
+
     # Rate Limiting
     rate_limit_enabled: bool = True
     """Enable rate limiting for login endpoint. Set to False to disable (useful for testing)."""

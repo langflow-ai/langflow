@@ -204,6 +204,8 @@ EXPECTED_FIELDS = {
     # ---- Added in 1.10.1 ----
     # SecuritySettings
     "allow_public_custom_components",
+    # Backported security hardening
+    "restrict_local_file_access",
 }
 
 
