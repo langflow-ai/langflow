@@ -2144,5 +2144,7 @@
   "inspectionPanel.default.disabled": "Disabled",
   "inspectionPanel.default.none": "None",
   "inspectionPanel.close": "Close",
-  "nodeToolbar.parameters": "Parameters"
+  "nodeToolbar.parameters": "Parameters",
+  "canvasControls.minimizeAllAlign": "Minimize all & align",
+  "canvasControls.expandAll": "Expand all"
 }

@@ -2147,5 +2147,7 @@
   "inspectionPanel.default.disabled": "已禁用",
   "inspectionPanel.default.none": "无",
   "inspectionPanel.close": "关闭",
-  "nodeToolbar.parameters": "参数"
+  "nodeToolbar.parameters": "参数",
+  "canvasControls.minimizeAllAlign": "全部最小化并对齐",
+  "canvasControls.expandAll": "全部展开"
 }

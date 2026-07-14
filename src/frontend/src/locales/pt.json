@@ -2147,5 +2147,7 @@
   "inspectionPanel.default.disabled": "Desativado",
   "inspectionPanel.default.none": "Nenhum",
   "inspectionPanel.close": "Fechar",
-  "nodeToolbar.parameters": "Parâmetros"
+  "nodeToolbar.parameters": "Parâmetros",
+  "canvasControls.minimizeAllAlign": "Minimizar tudo e alinhar",
+  "canvasControls.expandAll": "Expandir tudo"
 }

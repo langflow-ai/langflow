@@ -19,6 +19,7 @@ import { usePlaygroundStore } from "@/stores/playgroundStore";
 import type { AllNodeType } from "@/types/flow";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
 import HelpDropdown from "./HelpDropdown";
+import useMinimizeAllAndAlign from "./hooks/use-minimize-all-and-align";
 import { useDismissOnTabBoundary } from "./utils/use-dismiss-on-tab-boundary";
 
 // Delay before the "Try the new Langflow Assistant!" tooltip surfaces, in ms.
@@ -37,6 +38,8 @@ const CanvasControls = ({
 }) => {
   const { t } = useTranslation();
   const reactFlowStoreApi = useStoreApi();
+  const { allMinimized, hasGenericNodes, toggleMinimizeAllAndAlign } =
+    useMinimizeAllAndAlign();
   const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
   );
@@ -263,6 +266,31 @@ const CanvasControls = ({
             name="sticky-note"
             className={`h-[18px] w-[18px] transition-colors ${
               isAddNoteActive
+                ? "text-foreground"
+                : "text-muted-foreground group-hover:text-foreground"
+            }`}
+          />
+        </Button>
+        <Button
+          unstyled
+          size="icon"
+          data-testid="canvas_controls_minimize_all"
+          aria-pressed={allMinimized}
+          disabled={!hasGenericNodes}
+          className={`group flex h-8 w-8 items-center justify-center rounded-md ${
+            allMinimized ? "bg-muted text-foreground" : "hover:bg-muted"
+          } ${!hasGenericNodes ? "cursor-not-allowed opacity-50" : ""}`}
+          title={
+            allMinimized
+              ? t("canvasControls.expandAll")
+              : t("canvasControls.minimizeAllAlign")
+          }
+          onClick={toggleMinimizeAllAndAlign}
+        >
+          <ForwardedIconComponent
+            name={allMinimized ? "Maximize2" : "Minimize2"}
+            className={`h-[18px] w-[18px] transition-colors ${
+              allMinimized
                 ? "text-foreground"
                 : "text-muted-foreground group-hover:text-foreground"
             }`}
