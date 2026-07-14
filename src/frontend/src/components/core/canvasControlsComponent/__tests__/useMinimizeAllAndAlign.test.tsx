@@ -95,7 +95,7 @@ describe("useMinimizeAllAndAlign (LE-1810 T9)", () => {
     expect(mockUpdateNodeInternals).toHaveBeenCalledWith(["a", "b"]);
   });
 
-  it("expands every generic node without re-layouting when all are minimized", async () => {
+  it("expands every generic node and re-aligns with expanded dimensions", async () => {
     mockNodes = [genericNode("a", false), genericNode("b", false)];
     const { result } = renderHook(() => useMinimizeAllAndAlign());
 
@@ -104,16 +104,17 @@ describe("useMinimizeAllAndAlign (LE-1810 T9)", () => {
     });
 
     expect(mockTakeSnapshot).toHaveBeenCalled();
-    expect(mockGetLayoutedNodes).not.toHaveBeenCalled();
-    expect(mockSetNodes).toHaveBeenCalledWith(expect.any(Function));
+    await waitFor(() => expect(mockGetLayoutedNodes).toHaveBeenCalled());
 
-    const updater = mockSetNodes.mock.calls[0][0];
-    const expanded = updater(mockNodes);
+    const [expandedNodes, , sizeOverride] = mockGetLayoutedNodes.mock.calls[0];
     expect(
-      expanded
+      expandedNodes
         .filter((node: any) => node.type === "genericNode")
         .every((node: any) => node.data.showNode === true),
     ).toBe(true);
+    expect(sizeOverride).toBeUndefined();
+
+    await waitFor(() => expect(mockSetNodes).toHaveBeenCalled());
     expect(mockUpdateNodeInternals).toHaveBeenCalledWith(["a", "b"]);
   });
 });

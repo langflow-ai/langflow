@@ -64,24 +64,37 @@ export default function useMinimizeAllAndAlign() {
     fitView,
   ]);
 
-  const expandAll = useCallback(() => {
+  const expandAll = useCallback(async () => {
     takeSnapshot();
-    setNodes((oldNodes) =>
-      oldNodes.map((node) =>
-        node.type === "genericNode"
-          ? ({
-              ...node,
-              data: { ...node.data, showNode: true },
-            } as AllNodeType)
-          : node,
-      ),
+    const expanded = nodes.map((node) =>
+      node.type === "genericNode"
+        ? ({
+            ...node,
+            data: { ...node.data, showNode: true },
+          } as AllNodeType)
+        : node,
     );
+    // Re-align with expanded dimensions so cards don't overlap when they
+    // grow back from the collapsed layout.
+    const layouted = await getLayoutedNodes(expanded, edges);
+    setNodes(layouted);
     updateNodeInternals(genericNodeIds);
-  }, [genericNodeIds, setNodes, takeSnapshot, updateNodeInternals]);
+    requestAnimationFrame(() => {
+      fitView({ padding: 0.2 });
+    });
+  }, [
+    nodes,
+    edges,
+    genericNodeIds,
+    setNodes,
+    takeSnapshot,
+    updateNodeInternals,
+    fitView,
+  ]);
 
   const toggleMinimizeAllAndAlign = useCallback(() => {
     if (allMinimized) {
-      expandAll();
+      void expandAll();
       return;
     }
     void minimizeAllAndAlign();
