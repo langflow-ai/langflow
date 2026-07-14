@@ -13,6 +13,12 @@ from lfx.base.mcp.source_policy import (
     validate_mcp_stdio_source_policy,
 )
 
+# Env var through which Langflow binds the agentic MCP server to an authenticated user's id.
+# Langflow injects it at spawn time from the request identity; tenant-authored configs may not
+# set it because the agentic MCP tools use it as their authorization identity.
+AGENTIC_USER_ID_ENV_VAR = "LANGFLOW_AGENTIC_USER_ID"
+AGENTIC_MCP_MODULE = "langflow.agentic.mcp"
+
 # Shell wrappers remain supported for existing cross-platform configurations, but may only
 # wrap another command from this allowlist.
 ALLOWED_MCP_COMMANDS = frozenset(
@@ -45,6 +51,10 @@ DANGEROUS_KEYWORDS = frozenset(
         "exec",
     }
 )
+COMMAND_SAFE_FLAGS: dict[str, frozenset[str]] = {
+    "npx": frozenset({"-y", "--yes"}),
+    "uvx": frozenset({"-y", "--yes"}),
+}
 
 # Environment variables that can make an allowlisted executable load attacker-controlled code
 # or configuration. Comparisons are case-insensitive.
@@ -79,6 +89,7 @@ DANGEROUS_ENV_VARS = frozenset(
         "ps4",
         "ifs",
         "cdpath",
+        "langflow_agentic_user_id",
     }
 )
 
@@ -188,7 +199,8 @@ def _validate_mcp_stdio_config(
 
         for arg in combined_args:
             arg_lower = arg.lower()
-            if arg_lower in DANGEROUS_KEYWORDS and arg_lower not in SHELL_EXEC_FLAGS:
+            safe_flags = COMMAND_SAFE_FLAGS.get(extract_base_command(executable or ""), frozenset())
+            if arg_lower in DANGEROUS_KEYWORDS and arg_lower not in SHELL_EXEC_FLAGS | safe_flags:
                 msg = f"Argument '{arg}' is not allowed for security reasons"
                 raise MCPStdioSecurityError(msg)
 

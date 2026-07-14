@@ -41,6 +41,15 @@ from lfx.components.deactivated.mcp_stdio import MCPStdio
         (
             {
                 "mode": "Stdio",
+                "command": "python",
+                "args": ["-m", "langflow.agentic.mcp"],
+                "env": {"LANGFLOW_AGENTIC_USER_ID": "victim"},
+            },
+            "Environment variable 'LANGFLOW_AGENTIC_USER_ID' is not allowed",
+        ),
+        (
+            {
+                "mode": "Stdio",
                 "command": "npx",
                 "args": ["--registry=https://packages.example.invalid", "@example/mcp-server"],
             },
@@ -106,6 +115,38 @@ async def test_update_tools_allows_safe_stdio_config():
         "uvx mcp-server-fetch",
         {"API_KEY": "test-value"},  # pragma: allowlist secret
     )
+
+
+async def test_update_tools_requires_user_for_agentic_server():
+    """The internal agentic MCP server must fail closed without an authenticated user id."""
+    stdio_client = AsyncMock()
+    config = {"mode": "Stdio", "command": "python", "args": ["-m", "langflow.agentic.mcp"]}
+
+    with pytest.raises(ValueError, match="authenticated user"):
+        await update_tools("langflow-agentic", config, mcp_stdio_client=stdio_client)
+
+    stdio_client.connect_to_server.assert_not_awaited()
+
+
+async def test_update_tools_injects_bound_user_for_agentic_server():
+    """The authenticated caller, rather than the tenant config, supplies the agentic identity."""
+    from lfx.base.mcp.security import AGENTIC_USER_ID_ENV_VAR
+
+    stdio_client = AsyncMock()
+    stdio_client.connect_to_server.return_value = []
+    config = {"mode": "Stdio", "command": "python", "args": ["-m", "langflow.agentic.mcp"]}
+    user_id = "11111111-1111-1111-1111-111111111111"
+
+    await update_tools(
+        "langflow-agentic",
+        config,
+        mcp_stdio_client=stdio_client,
+        current_user_id=user_id,
+    )
+
+    stdio_client.connect_to_server.assert_awaited_once()
+    _command, env_arg = stdio_client.connect_to_server.call_args.args
+    assert env_arg[AGENTIC_USER_ID_ENV_VAR] == user_id
 
 
 async def test_update_tools_preserves_executable_path_with_spaces():

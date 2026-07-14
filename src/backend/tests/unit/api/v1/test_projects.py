@@ -137,6 +137,21 @@ async def test_update_project(client: AsyncClient, logged_in_headers, basic_case
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
 
 
+async def test_update_project_rejects_unowned_parent_id(client: AsyncClient, logged_in_headers, basic_case):
+    """Reparenting under a folder the caller does not own (or that doesn't exist) returns 404.
+
+    Regression for an IDOR footgun: a tenant-supplied parent_id was assigned without verifying
+    the parent folder belongs to the caller.
+    """
+    create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    proj_id = create_resp.json()["id"]
+
+    update_case = basic_case.copy()
+    update_case["parent_id"] = str(uuid4())  # a folder id the caller does not own
+    response = await client.patch(f"api/v1/projects/{proj_id}", json=update_case, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
 async def test_create_project_validation_error(client: AsyncClient, logged_in_headers, basic_case):
     invalid_case = basic_case.copy()
     invalid_case.pop("name")

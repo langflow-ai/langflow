@@ -92,3 +92,86 @@ def test_source_redirects_and_docker_host_access_are_rejected(command, args):
 )
 def test_trusted_registry_packages_and_isolated_docker_args_are_allowed(command, args):
     _validate_policy(command, args)
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("uvx", ["unapproved-server"]),
+        ("npx", ["@example/unapproved-server"]),
+        ("uvx", ["--from", "lfx", "python"]),
+    ],
+)
+def test_operator_package_allowlist_and_uvx_entrypoints_are_enforced(command, args):
+    with pytest.raises(ValueError, match=r"not allowed"):
+        validate_mcp_stdio_source_policy(
+            command,
+            args,
+            allowed_packages=frozenset({"lfx", "mcp-proxy"}),
+        )
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("uvx", ["mcp-proxy"]),
+        ("uvx", ["--from", "lfx", "lfx-mcp"]),
+    ],
+)
+def test_operator_package_allowlist_preserves_approved_packages(command, args):
+    validate_mcp_stdio_source_policy(
+        command,
+        args,
+        allowed_packages=frozenset({"lfx", "mcp-proxy"}),
+    )
+
+
+def test_npx_noninteractive_flag_remains_allowed_by_shared_policy():
+    validate_mcp_stdio_config("npx", ["-y", "@modelcontextprotocol/server-filesystem"], None)
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("python", ["/tmp/tenant.py"]),
+        ("python3", ["-m", "tenant.module"]),
+        ("node", ["/tmp/tenant.js"]),
+        ("bash", ["/tmp/tenant.sh"]),
+    ],
+)
+def test_interpreter_hardening_rejects_tenant_selected_code(command, args):
+    with pytest.raises(ValueError, match=r"not allowed"):
+        validate_mcp_stdio_source_policy(command, args, interpreter_hardening=True)
+
+
+def test_interpreter_hardening_preserves_authenticated_agentic_module():
+    validate_mcp_stdio_source_policy(
+        "python",
+        ["-m", "langflow.agentic.mcp"],
+        interpreter_hardening=True,
+    )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["exec", "running-container", "sh"],
+        ["run", "--env-file", "/etc/secrets", "mcp-image"],
+        ["run", "--use-api-socket", "mcp-image"],
+        ["run", "--network", "internal-control-plane", "mcp-image"],
+        ["run", "-itp8080:80", "mcp-image"],
+        ["run", "--runtime", "host-runtime", "mcp-image"],
+        ["run", "--restart", "always", "mcp-image"],
+    ],
+)
+def test_docker_hardening_rejects_remaining_host_access_bypasses(args):
+    with pytest.raises(ValueError, match=r"not allowed"):
+        validate_mcp_stdio_source_policy("docker", args, docker_hardening=True)
+
+
+def test_docker_hardening_preserves_isolated_run():
+    validate_mcp_stdio_source_policy(
+        "docker",
+        ["run", "--rm", "--network", "bridge", "--security-opt", "no-new-privileges", "mcp-image"],
+        docker_hardening=True,
+    )

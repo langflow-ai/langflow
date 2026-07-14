@@ -41,6 +41,12 @@ UVX_TRUSTED_PACKAGE_FLAGS = frozenset({"--from", "--with", "-w"})
 NPX_BLOCKED_SOURCE_FLAGS = frozenset({"--registry", "--userconfig", "--globalconfig"})
 NPX_TRUSTED_PACKAGE_FLAGS = frozenset({"--package"})
 
+# ``uvx --from PACKAGE COMMAND`` decouples the package from the executable that
+# uvx launches. Only known package-owned entrypoints may be selected.
+UVX_SAFE_FROM_ENTRYPOINTS: dict[str, frozenset[str]] = {
+    "lfx": frozenset({"lfx-mcp"}),
+}
+
 DOCKER_BLOCKED_HOST_ACCESS_FLAGS = frozenset(
     {
         "--privileged",
@@ -56,7 +62,37 @@ DOCKER_BLOCKED_HOST_ACCESS_FLAGS = frozenset(
 DOCKER_CLUSTERABLE_SHORT_FLAGS = frozenset({"d", "i", "P", "q", "t"})
 DOCKER_NAMESPACE_FLAGS = frozenset({"--pid", "--ipc", "--uts", "--net", "--network"})
 DOCKER_DANGEROUS_SECURITY_OPT_SUBSTRINGS = ("unconfined", "disable")
+DOCKER_HARDENED_BLOCKED_FLAGS = frozenset(
+    {
+        "--privileged",
+        "--cap-add",
+        "-v",
+        "--volume",
+        "--volumes-from",
+        "--mount",
+        "--device",
+        "--device-cgroup-rule",
+        "--env-file",
+        "--label-file",
+        "--cidfile",
+        "--gpus",
+        "--use-api-socket",
+        "--link",
+        "--runtime",
+        "-p",
+        "-P",
+        "--publish",
+        "--publish-all",
+        "--restart",
+    }
+)
+DOCKER_HARDENED_NAMESPACE_FLAGS = frozenset({"--pid", "--ipc", "--uts", "--cgroupns", "--userns"})
+DOCKER_HARDENED_NETWORK_FLAGS = frozenset({"--net", "--network"})
+DOCKER_SAFE_NETWORK_VALUES = frozenset({"none", "bridge", "default"})
 SHELL_CONTROL_CHARS = frozenset({";", "|", "&", "$", "`", "<", ">", "\n", "\r"})
+
+HARDENED_ALLOWED_PYTHON_MODULES = frozenset({"langflow.agentic.mcp", "langflow.agentic.mcp.server"})
+PYTHON_MODULE_MIN_ARGS = 2
 
 # Options whose following token is a value, not uvx's package/command. Source-
 # selecting options are handled separately above. This lets a later URL remain
@@ -109,6 +145,38 @@ _LOCAL_ARCHIVE_SUFFIXES = (".whl", ".zip", ".tar.gz", ".tar.bz2", ".tgz")
 def is_package_manager_config_env_var(key: str) -> bool:
     """Return whether *key* can reconfigure an approved package launcher."""
     return key.lower().startswith(PACKAGE_MANAGER_CONFIG_ENV_PREFIXES)
+
+
+def _setting(name: str, *, default):
+    """Read an MCP/security setting lazily without making this module import-heavy."""
+    try:
+        from lfx.services.deps import get_settings_service
+
+        return getattr(get_settings_service().settings, name, default)
+    except Exception:  # noqa: BLE001 - settings can be unavailable during early imports
+        return default
+
+
+def _configured_allowed_packages() -> frozenset[str] | None:
+    configured = _setting("mcp_server_allowed_packages", default=None)
+    if not isinstance(configured, str):
+        return None
+    return frozenset(_normalize_package_name(item) for item in configured.split(",") if item.strip())
+
+
+def _normalize_package_name(package_spec: str) -> str:
+    package = package_spec.strip().lower()
+    if package.startswith("@"):
+        slash_index = package.find("/")
+        version_index = package.rfind("@")
+        if slash_index >= 0 and version_index > slash_index:
+            package = package[:version_index]
+    else:
+        package = package.split("@", 1)[0]
+
+    for separator in ("==", "~=", ">=", "<=", "!=", ">", "<", "["):
+        package = package.split(separator, 1)[0]
+    return package.strip()
 
 
 def _base_command(command: str) -> str:
@@ -174,6 +242,83 @@ def _validate_npm_index_package(value: str, command: str) -> None:
 
 def _matches_short_option(arg: str, options: frozenset[str]) -> bool:
     return any(arg.startswith(option) for option in options)
+
+
+def _package_runner_target(base_command: str, args: list[str]) -> tuple[str | None, str | None]:
+    """Extract the installed package and an explicit uvx entrypoint."""
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg in {"-y", "--yes"}:
+            index += 1
+            continue
+        if base_command == "uvx" and (arg == "--from" or arg.startswith("--from=")):
+            if arg == "--from":
+                if index + 2 >= len(args):
+                    _raise_disallowed(base_command, arg)
+                package = args[index + 1]
+                entrypoint = args[index + 2]
+            else:
+                package = arg.split("=", 1)[1]
+                if not package or index + 1 >= len(args):
+                    _raise_disallowed(base_command, arg)
+                entrypoint = args[index + 1]
+            if entrypoint.startswith("-"):
+                _raise_disallowed(base_command, entrypoint)
+            return package, entrypoint
+        if base_command == "npx" and (arg == "--package" or arg.startswith("--package=")):
+            package, _ = _option_value(args, index, base_command)
+            return package, None
+        if arg.startswith("-"):
+            index += 2 if arg in UVX_VALUE_OPTIONS | NPX_VALUE_OPTIONS and "=" not in arg else 1
+            continue
+        return arg, None
+    return None, None
+
+
+def _validate_allowed_package(base_command: str, args: list[str], allowed_packages: frozenset[str] | None) -> None:
+    if allowed_packages is None or base_command not in {"npx", "uvx"}:
+        return
+
+    target, entrypoint = _package_runner_target(base_command, args)
+    normalized_target = _normalize_package_name(target or "")
+    if not normalized_target or normalized_target not in allowed_packages:
+        allowed = ", ".join(sorted(allowed_packages)) or "<none>"
+        msg = (
+            f"Package '{target or '<missing>'}' is not allowed for MCP {base_command}. "
+            f"Server-approved packages: {allowed}"
+        )
+        raise ValueError(msg)
+
+    if base_command == "uvx" and entrypoint is not None:
+        allowed_entrypoints = UVX_SAFE_FROM_ENTRYPOINTS.get(normalized_target, frozenset({normalized_target}))
+        if entrypoint not in allowed_entrypoints:
+            msg = (
+                f"Entrypoint '{entrypoint}' is not allowed for MCP uvx package '{normalized_target}'. "
+                f"Allowed entrypoints: {', '.join(sorted(allowed_entrypoints))}"
+            )
+            raise ValueError(msg)
+
+
+def _validate_interpreter_invocation(base_command: str, args: list[str], *, hardened: bool) -> None:
+    if not hardened:
+        return
+    if base_command in {"sh", "bash", "cmd"}:
+        if parse_mcp_shell_wrapper(base_command, args) is not None:
+            return
+        msg = f"Direct shell scripts are not allowed for MCP command '{base_command}'"
+        raise ValueError(msg)
+    if base_command not in {"node", "python", "python3"}:
+        return
+    if (
+        base_command in {"python", "python3"}
+        and len(args) >= PYTHON_MODULE_MIN_ARGS
+        and args[0] == "-m"
+        and args[1] in HARDENED_ALLOWED_PYTHON_MODULES
+    ):
+        return
+    msg = f"Interpreter command '{base_command}' is not allowed by MCP interpreter hardening"
+    raise ValueError(msg)
 
 
 def _validate_uvx_args(args: list[str]) -> None:
@@ -275,14 +420,21 @@ def _validate_npx_args(args: list[str]) -> None:
         return
 
 
-def _validate_docker_args(args: list[str]) -> None:
+def _is_clustered_short_flag(flag: str, target: str, allowed_prefixes: frozenset[str]) -> bool:
+    if not flag.startswith("-") or flag.startswith("--"):
+        return False
+    cluster = flag[1:].split("=", 1)[0]
+    index = cluster.find(target)
+    return index >= 0 and all(short_flag in allowed_prefixes for short_flag in cluster[:index])
+
+
+def _validate_docker_args(args: list[str], *, hardened: bool) -> None:
+    if hardened and (not args or args[0].lower() != "run"):
+        _raise_disallowed("docker", args[0] if args else "<missing run subcommand>")
+
     for index, arg in enumerate(args):
         flag = arg.split("=", 1)[0]
-        short_flag_cluster = flag[1:] if flag.startswith("-") and not flag.startswith("--") else ""
-        volume_index = short_flag_cluster.find("v")
-        has_volume_short_flag = volume_index >= 0 and all(
-            short_flag in DOCKER_CLUSTERABLE_SHORT_FLAGS for short_flag in short_flag_cluster[:volume_index]
-        )
+        has_volume_short_flag = _is_clustered_short_flag(flag, "v", DOCKER_CLUSTERABLE_SHORT_FLAGS)
         if flag in DOCKER_BLOCKED_HOST_ACCESS_FLAGS or has_volume_short_flag:
             _raise_disallowed("docker", arg)
         if flag in DOCKER_NAMESPACE_FLAGS:
@@ -293,6 +445,21 @@ def _validate_docker_args(args: list[str]) -> None:
         if flag == "--security-opt":
             value, _ = _option_value(args, index, "docker")
             if any(part in value.lower() for part in DOCKER_DANGEROUS_SECURITY_OPT_SUBSTRINGS):
+                _raise_disallowed("docker", arg)
+
+        if not hardened:
+            continue
+        if flag in DOCKER_HARDENED_BLOCKED_FLAGS or any(
+            _is_clustered_short_flag(flag, publish_flag, frozenset({"d", "i", "t"})) for publish_flag in ("p", "P")
+        ):
+            _raise_disallowed("docker", arg)
+        if flag in DOCKER_HARDENED_NAMESPACE_FLAGS:
+            value, _ = _option_value(args, index, "docker")
+            if value.lower() == "host" or value.lower().startswith("container:"):
+                _raise_disallowed("docker", arg)
+        if flag in DOCKER_HARDENED_NETWORK_FLAGS:
+            value, _ = _option_value(args, index, "docker")
+            if value.lower() not in DOCKER_SAFE_NETWORK_VALUES:
                 _raise_disallowed("docker", arg)
 
 
@@ -337,7 +504,14 @@ def parse_mcp_shell_wrapper(command: str, args: list[str]) -> tuple[str, list[st
     return None
 
 
-def validate_mcp_stdio_source_policy(command: str | None, args: list[str] | None) -> None:
+def validate_mcp_stdio_source_policy(
+    command: str | None,
+    args: list[str] | None,
+    *,
+    allowed_packages: frozenset[str] | None = None,
+    docker_hardening: bool | None = None,
+    interpreter_hardening: bool | None = None,
+) -> None:
     """Reject package-source redirection and Docker host access.
 
     ``uvx --from`` and package-addition flags remain available only for plain
@@ -347,9 +521,22 @@ def validate_mcp_stdio_source_policy(command: str | None, args: list[str] | None
     if not command:
         return
     base_command, combined_args = _split_command(command, args)
+    configured_packages = _configured_allowed_packages() if allowed_packages is None else allowed_packages
+    use_docker_hardening = (
+        bool(_setting("mcp_server_docker_hardening", default=False)) if docker_hardening is None else docker_hardening
+    )
+    use_interpreter_hardening = (
+        bool(_setting("mcp_server_interpreter_hardening", default=False))
+        if interpreter_hardening is None
+        else interpreter_hardening
+    )
+
+    _validate_interpreter_invocation(base_command, combined_args, hardened=use_interpreter_hardening)
     if base_command == "uvx":
         _validate_uvx_args(combined_args)
     elif base_command == "npx":
         _validate_npx_args(combined_args)
     elif base_command == "docker":
-        _validate_docker_args(combined_args)
+        _validate_docker_args(combined_args, hardened=use_docker_hardening)
+
+    _validate_allowed_package(base_command, combined_args, configured_packages)

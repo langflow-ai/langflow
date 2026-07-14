@@ -155,6 +155,8 @@ EXPECTED_FIELDS = {
     # McpSettings
     "mcp_tool_execution_timeout",
     "mcp_servers_locked",
+    "mcp_server_allowed_packages",
+    "mcp_server_interpreter_hardening",
     # ComponentsSettings
     "load_flows_overwrite_on_name_match",
     "enable_extension_reload",
@@ -165,6 +167,7 @@ EXPECTED_FIELDS = {
     "rate_limit_trust_proxy",
     "custom_component_admin_only",
     "allow_components_paths_override",
+    "mcp_server_docker_hardening",
     # RuntimeSettings
     "job_queue_type",
     "redis_queue_host",
@@ -233,6 +236,9 @@ def test_critical_defaults_unchanged():
     assert settings.allow_custom_components is True
     assert settings.mcp_server_enabled is True
     assert settings.mcp_composer_enabled is True
+    assert settings.mcp_server_allowed_packages is None
+    assert settings.mcp_server_interpreter_hardening is False
+    assert settings.mcp_server_docker_hardening is False
     assert settings.do_not_track is False
     assert settings.dev is False
     assert settings.agentic_experience is False
@@ -359,6 +365,9 @@ def test_yaml_round_trip():
         ("LANGFLOW_PROMETHEUS_ENABLED", "true", "prometheus_enabled", True),
         ("LANGFLOW_PROMETHEUS_PORT", "9999", "prometheus_port", 9999),
         ("LANGFLOW_MCP_SERVER_ENABLED", "false", "mcp_server_enabled", False),
+        ("LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES", "mcp-proxy,lfx", "mcp_server_allowed_packages", "mcp-proxy,lfx"),
+        ("LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING", "true", "mcp_server_interpreter_hardening", True),
+        ("LANGFLOW_MCP_SERVER_DOCKER_HARDENING", "true", "mcp_server_docker_hardening", True),
         ("LANGFLOW_DO_NOT_TRACK", "true", "do_not_track", True),
         ("LANGFLOW_DEV", "true", "dev", True),
         ("LANGFLOW_BACKEND_ONLY", "true", "backend_only", True),
