@@ -7115,11 +7115,11 @@ wheels = [
 
 [[package]]
 name = "json-repair"
-version = "0.30.3"
+version = "0.61.4"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2f/7a/7745d0d908563a478421c7520649dfd6a5c551858e2233ff7caf20cb8df7/json_repair-0.30.3.tar.gz", hash = "sha256:0ac56e7ae9253ee9c507a7e1a3a26799c9b0bbe5e2bec1b2cc5053e90d5b05e3", size = 27803, upload-time = "2024-12-04T19:53:02.278Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/f5/68b92610453eae5087a05a6f4123f0477dc2f3e84250c2d7de05552fa12a/json_repair-0.61.4.tar.gz", hash = "sha256:d78c212c1d72606bee30a7886820c9d6f7dbd659883dc2397304735a59f7bf86", size = 51069, upload-time = "2026-07-12T16:51:11.036Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/2d/79a46330c4b97ee90dd403fb0d267da7b25b24d7db604c5294e5c57d5f7c/json_repair-0.30.3-py3-none-any.whl", hash = "sha256:63bb588162b0958ae93d85356ecbe54c06b8c33f8a4834f93fa2719ea669804e", size = 18951, upload-time = "2024-12-04T19:53:00.612Z" },
+    { url = "https://files.pythonhosted.org/packages/f2/be/5b65e61de2c820e6e24837311249a98465d9b100db8da89f65068ad9e799/json_repair-0.61.4-py3-none-any.whl", hash = "sha256:1056d5468a6d4e8bb4498b3244f996c795e2d457fbb30465d71249d3ef7b481a", size = 49604, upload-time = "2026-07-12T16:51:09.735Z" },
 ]
 
 [[package]]
@@ -7519,16 +7519,16 @@ wheels = [
 
 [[package]]
 name = "langchain-anthropic"
-version = "1.3.5"
+version = "1.4.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anthropic" },
     { name = "langchain-core" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7b/ef/a096793dd880423254ddeaa92909342f9b04a11ef9000c0d121d45605800/langchain_anthropic-1.3.5.tar.gz", hash = "sha256:0745f181b8696b03f7b66a95ed97f43cc90b1b086850ebbf17804f605e640f6e", size = 674070, upload-time = "2026-03-14T03:12:33.418Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/98/22/40ab129b08329ca295b391aa1d48267692b42594757084c6918e22b655ac/langchain_anthropic-1.4.8.tar.gz", hash = "sha256:c76891b2044d56105ff13c106ed12650637b53bd598a4bdf15b4796eefa2a4ec", size = 708524, upload-time = "2026-06-26T21:28:46.916Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/22/d967f55651f6a1d9157ecefd335f6c6232f4826b637a7e89c92495288524/langchain_anthropic-1.3.5-py3-none-any.whl", hash = "sha256:1666f83ddef74d9fa844ff3d1f9d23dd12004b0799d1ca1ff329cbaf3944d3c6", size = 48250, upload-time = "2026-03-14T03:12:32.165Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/14/746235c4da89d9bc6a608c5f489f628e03feb8f697195c146e452c8f23c8/langchain_anthropic-1.4.8-py3-none-any.whl", hash = "sha256:778e9301b6fd517824f76ec1776975ce8add97a1f6a36c50ae3c2f4b03a66f7f", size = 52366, upload-time = "2026-06-26T21:28:45.535Z" },
 ]
 
 [[package]]
@@ -8955,7 +8955,7 @@ requires-dist = [
     { name = "jigsawstack", marker = "extra == 'jigsawstack'", specifier = "==0.2.7" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
     { name = "json-repair", specifier = ">=0.30.3,<1.0.0" },
-    { name = "json-repair", marker = "extra == 'json-repair'", specifier = "==0.30.3" },
+    { name = "json-repair", marker = "extra == 'json-repair'", specifier = ">=0.60.1" },
     { name = "jsonquerylang", specifier = ">=1.1.1,<2.0.0" },
     { name = "kubernetes", marker = "extra == 'kubernetes'", specifier = "==31.0.0" },
     { name = "langchain", specifier = "~=1.3.0" },
@@ -9080,7 +9080,7 @@ requires-dist = [
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.0.0" },
     { name = "sentence-transformers", marker = "extra == 'sentence-transformers'", specifier = ">=2.3.1" },
     { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1,<3.0.0" },
-    { name = "setuptools", specifier = ">=80.0.0,<81.0.0" },
+    { name = "setuptools", specifier = ">=83.0.0,<84.0.0" },
     { name = "slowapi", specifier = ">=0.1.9,<1.0.0" },
     { name = "smolagents", marker = "extra == 'smolagents'", specifier = ">=1.8.0" },
     { name = "spider-client", specifier = ">=0.0.27,<1.0.0" },
@@ -9559,7 +9559,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0,<2.0.0" },
     { name = "pyyaml", specifier = ">=6.0.0,<7.0.0" },
     { name = "rich", specifier = ">=13.0.0,<14.0.0" },
-    { name = "setuptools", specifier = ">=80.0.0,<81.0.0" },
+    { name = "setuptools", specifier = ">=83.0.0,<84.0.0" },
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
     { name = "tomli", specifier = ">=2.2.1,<3.0.0" },
     { name = "toolguard", marker = "python_full_version < '3.14' and extra == 'toolguard'", specifier = ">=0.2.20,<1.0.0" },
@@ -9622,7 +9622,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "langchain-anthropic", specifier = "~=1.3.0" },
+    { name = "langchain-anthropic", specifier = "~=1.4.6" },
     { name = "lfx", editable = "src/lfx" },
     { name = "requests", specifier = ">=2.32.0" },
 ]
@@ -18421,11 +18421,11 @@ loguru = [
 
 [[package]]
 name = "setuptools"
-version = "80.10.2"
+version = "83.0.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/76/95/faf61eb8363f26aa7e1d762267a8d602a1b26d4f3a1e758e92cb3cb8b054/setuptools-80.10.2.tar.gz", hash = "sha256:8b0e9d10c784bf7d262c4e5ec5d4ec94127ce206e8738f29a437945fbc219b70", size = 1200343, upload-time = "2026-01-25T22:38:17.252Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/34/26/f5d29e25ffdb535afef2d35cdb55b325298f96debd670da4c325e08d70f4/setuptools-83.0.0.tar.gz", hash = "sha256:025bccbbf0fa05b6192bc64ae1e7b16e001fd6d6d4d5de03c97b1c1ade523bef", size = 1154254, upload-time = "2026-07-04T15:31:22.699Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/b8/f1f62a5e3c0ad2ff1d189590bfa4c46b4f3b6e49cef6f26c6ee4e575394d/setuptools-80.10.2-py3-none-any.whl", hash = "sha256:95b30ddfb717250edb492926c92b5221f7ef3fbcc2b07579bcd4a27da21d0173", size = 1064234, upload-time = "2026-01-25T22:38:15.216Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/40/e1e72872c6354b306daef1703549e8e83b4d43cfea356311bf722a043752/setuptools-83.0.0-py3-none-any.whl", hash = "sha256:29b23c360f22f414dc7336bb39178cc7bcbf6021ed2733cde173f09dba19abb3", size = 1008090, upload-time = "2026-07-04T15:31:20.885Z" },
 ]
 
 [[package]]
