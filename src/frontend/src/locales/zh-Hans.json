@@ -2167,5 +2167,21 @@
   "voiceAssistant.apiKeyError": "请检查您的 API 密钥，然后重试",
   "voiceAssistant.connected": "已连接",
   "voiceAssistant.connectionError": "连接错误",
-  "voiceAssistant.connectionFailed": "连接失败"
+  "voiceAssistant.connectionFailed": "连接失败",
+  "teamTemplates.browse": "浏览模板",
+  "teamTemplates.category": "分类",
+  "teamTemplates.delete": "删除模板",
+  "teamTemplates.deleteDescription": "团队模板“{{name}}”",
+  "teamTemplates.deleteFailed": "删除团队模板失败",
+  "teamTemplates.deleted": "团队模板已删除",
+  "teamTemplates.description": "描述",
+  "teamTemplates.name": "模板名称",
+  "teamTemplates.saveAs": "保存为模板",
+  "teamTemplates.saveFailed": "保存团队模板失败",
+  "teamTemplates.saved": "模板已保存，已清除 {{count}} 个敏感字段。",
+  "teamTemplates.securityNotice": "模板共享前会清除密码、变量、隐藏字段值和文件引用。",
+  "teamTemplates.tags": "标签",
+  "teamTemplates.tagsPlaceholder": "智能体, 客服, 内部",
+  "teamTemplates.team": "团队",
+  "teamTemplates.teamTemplates": "团队模板"
 }

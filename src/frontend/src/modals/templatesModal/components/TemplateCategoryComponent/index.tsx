@@ -3,11 +3,15 @@ import TemplateExampleCard from "../TemplateCardComponent";
 
 interface TemplateCategoryComponentProps extends TemplateCategoryProps {
   loading: boolean;
+  onDelete?: (example: TemplateCategoryProps["examples"][number]) => void;
+  canDelete?: (example: TemplateCategoryProps["examples"][number]) => boolean;
 }
 
 export function TemplateCategoryComponent({
   examples,
   onCardClick,
+  onDelete,
+  canDelete,
   loading,
 }: TemplateCategoryComponentProps) {
   return (
@@ -18,6 +22,11 @@ export function TemplateCategoryComponent({
             key={index}
             example={example}
             onClick={() => onCardClick(example)}
+            onDelete={
+              onDelete && canDelete?.(example)
+                ? () => onDelete(example)
+                : undefined
+            }
             disabled={loading}
           />
         ))}

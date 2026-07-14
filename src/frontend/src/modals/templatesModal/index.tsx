@@ -75,6 +75,11 @@ export default function TemplatesModal({
           icon: "LayoutPanelTop",
           id: "all-templates",
         },
+        {
+          title: t("teamTemplates.teamTemplates"),
+          icon: "Users",
+          id: "team-templates",
+        },
       ],
     },
     {
@@ -139,6 +144,7 @@ export default function TemplatesModal({
                 <TemplateContentComponent
                   currentTab={effectiveTab}
                   categories={categories.flatMap((category) => category.items)}
+                  enabled={open}
                   loading={loading}
                   onFlowCreating={handleFlowCreating}
                 />

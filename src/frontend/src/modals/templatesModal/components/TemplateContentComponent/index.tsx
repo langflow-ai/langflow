@@ -1,20 +1,35 @@
+import { isAxiosError } from "axios";
 import Fuse from "fuse.js";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { cloneDeep } from "lodash";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
+import { AuthContext } from "@/contexts/authContext";
+import {
+  useDeleteTeamTemplate,
+  useGetTeamTemplate,
+  useGetTeamTemplates,
+} from "@/controllers/API/queries/team-templates";
 import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
+import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import type { FlowType } from "@/types/flow";
 import { ForwardedIconComponent } from "../../../../components/common/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { useFolderStore } from "../../../../stores/foldersStore";
-import type { TemplateContentProps } from "../../../../types/templates/types";
+import type {
+  TemplateContentProps,
+  TemplateExample,
+} from "../../../../types/templates/types";
 import { updateIds } from "../../../../utils/reactflowUtils";
+import { canDeleteTeamTemplate } from "../../helpers/team-template-permissions";
 import { TemplateCategoryComponent } from "../TemplateCategoryComponent";
 
 interface TemplateContentComponentProps extends TemplateContentProps {
+  enabled: boolean;
   loading: boolean;
   onFlowCreating: (loading: boolean) => void;
 }
@@ -22,14 +37,36 @@ interface TemplateContentComponentProps extends TemplateContentProps {
 export default function TemplateContentComponent({
   currentTab,
   categories,
+  enabled,
   loading,
   onFlowCreating,
 }: TemplateContentComponentProps) {
   const { t } = useTranslation();
   const allExamples = useFlowsManagerStore((state) => state.examples);
+  const { data: teamTemplatePage } = useGetTeamTemplates(
+    { page_size: 100 },
+    { enabled },
+  );
+  const { mutate: getTeamTemplate } = useGetTeamTemplate();
+  const { mutate: deleteTeamTemplate, isPending: isDeletingTemplate } =
+    useDeleteTeamTemplate();
+  const { userData } = useContext(AuthContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const examples = useMemo(() => {
-    return allExamples
+    const systemExamples = allExamples.map((example) => ({
+      ...example,
+      source: "system" as const,
+    }));
+    const teamExamples = (teamTemplatePage?.items ?? []).map((template) => ({
+      ...template,
+      description: template.description ?? "",
+      icon: template.icon ?? undefined,
+      gradient: template.gradient ?? undefined,
+      data: null,
+    }));
+    return [...systemExamples, ...teamExamples]
       .filter((example) => {
         if (!ENABLE_KNOWLEDGE_BASES && example.name?.includes("Knowledge")) {
           return false;
@@ -38,10 +75,12 @@ export default function TemplateContentComponent({
       })
       .filter(
         (example) =>
+          currentTab === "all-templates" ||
+          (currentTab === "team-templates" && example.source === "team") ||
           example.tags?.includes(currentTab ?? "") ||
-          currentTab === "all-templates",
+          ("category" in example && example.category === currentTab),
       );
-  }, [allExamples, currentTab]);
+  }, [allExamples, currentTab, teamTemplatePage]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredExamples, setFilteredExamples] = useState(examples);
@@ -76,18 +115,64 @@ export default function TemplateContentComponent({
     }
   }, [searchQuery, currentTab, examples, fuse]);
 
-  const handleCardClick = (example) => {
+  const handleCardClick = (example: TemplateExample) => {
     if (loading) return;
     onFlowCreating(true);
-    updateIds(example.data);
-    addFlow({ flow: example })
-      .then((id) => {
-        navigate(`/flow/${id}/folder/${folderIdUrl}`);
-      })
-      .finally(() => {
+    const createFromTemplate = (flow: FlowType) => {
+      const clonedFlow = cloneDeep(flow);
+      if (!clonedFlow.data) {
         onFlowCreating(false);
+        return;
+      }
+      updateIds(clonedFlow.data);
+      return addFlow({ flow: clonedFlow })
+        .then((id) => {
+          navigate(`/flow/${id}/folder/${folderIdUrl}`);
+        })
+        .finally(() => {
+          onFlowCreating(false);
+        });
+    };
+
+    if (example.source === "team") {
+      getTeamTemplate(example.id, {
+        onSuccess: (template) => {
+          createFromTemplate({
+            ...template,
+            data: template.flow_data,
+            description: template.description ?? "",
+            icon: template.icon ?? undefined,
+            gradient: template.gradient ?? undefined,
+          });
+        },
+        onError: () => onFlowCreating(false),
       });
+    } else {
+      createFromTemplate(example);
+    }
     track("New Flow Created", { template: `${example.name} Template` });
+  };
+
+  const canDeleteTemplate = (example: TemplateExample) =>
+    canDeleteTeamTemplate(example, userData);
+
+  const handleDeleteTemplate = (example: TemplateExample) => {
+    deleteTeamTemplate(example.id, {
+      onSuccess: () => {
+        setSuccessData({ title: t("teamTemplates.deleted") });
+      },
+      onError: (error: unknown) => {
+        const detail = isAxiosError<{ detail?: string }>(error)
+          ? (error.response?.data?.detail ?? error.message)
+          : error instanceof Error
+            ? error.message
+            : t("teamTemplates.deleteFailed");
+        setErrorData({
+          title: t("teamTemplates.deleteFailed"),
+          list: [detail],
+        });
+      },
+    });
   };
 
   const handleClearSearch = () => {
@@ -127,18 +212,21 @@ export default function TemplateContentComponent({
           <TemplateCategoryComponent
             examples={filteredExamples}
             onCardClick={handleCardClick}
-            loading={loading}
+            onDelete={handleDeleteTemplate}
+            canDelete={canDeleteTemplate}
+            loading={loading || isDeletingTemplate}
           />
         ) : (
           <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
             <p className="text-sm text-secondary-foreground">
               {t("templatesModal.noTemplatesFound")}{" "}
-              <a
+              <button
+                type="button"
                 className="cursor-pointer underline underline-offset-4"
                 onClick={handleClearSearch}
               >
                 {t("templatesModal.clearSearch")}
-              </a>{" "}
+              </button>{" "}
               {t("templatesModal.tryDifferentQuery")}
             </p>
           </div>

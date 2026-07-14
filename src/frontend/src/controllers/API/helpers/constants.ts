@@ -20,6 +20,7 @@ export const URLs = {
   BUILD: `build`,
   CUSTOM_COMPONENT: `custom_component`,
   FLOWS: `flows`,
+  TEAM_TEMPLATES: `team-templates`,
   FOLDERS: `projects`,
   PROJECTS: `projects`,
   VARIABLES: `variables`,
