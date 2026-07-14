@@ -142,7 +142,11 @@ PROVIDER_DEPS: dict[str, list[str]] = {
         "google-auth-oauthlib>=1.2.0,<2.0.0",
     ],
     "vertexai": ["langchain-google-vertexai>=3.2.0"],
-    "altk": ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"],
+    # ALTK depends on litellm, whose current Rust extension does not build on Python 3.14.
+    "altk": [
+        "agent-lifecycle-toolkit>=0.10.1,<1.0; "
+        "(sys_platform != 'darwin' or platform_machine != 'x86_64') and python_version < '3.14'",
+    ],
     "codeagents": [
         "smolagents>=1.8.0",
         "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",  # noqa: E501
