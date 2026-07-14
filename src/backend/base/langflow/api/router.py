@@ -30,6 +30,7 @@ from langflow.api.v1 import (
     projects_router,
     starter_projects_router,
     store_router,
+    team_templates_router,
     traces_router,
     triton_servers_router,
     users_router,
@@ -64,6 +65,7 @@ router_v1.include_router(endpoints_router)
 router_v1.include_router(validate_router)
 router_v1.include_router(store_router)
 router_v1.include_router(flows_router)
+router_v1.include_router(team_templates_router)
 router_v1.include_router(flow_events_router)
 router_v1.include_router(flow_version_router)
 router_v1.include_router(users_router)

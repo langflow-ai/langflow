@@ -23,6 +23,7 @@ from .jobs import Job
 from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
+from .team_template import TeamTemplate, TeamTemplateStatus
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
 from .triton_server import TritonServer
@@ -59,6 +60,8 @@ __all__ = [
     "SSOConfig",
     "SSOUserProfile",
     "SpanTable",
+    "TeamTemplate",
+    "TeamTemplateStatus",
     "TraceTable",
     "TransactionTable",
     "TritonServer",

@@ -25,6 +25,7 @@ from langflow.api.v1.openai_responses import router as openai_responses_router
 from langflow.api.v1.projects import router as projects_router
 from langflow.api.v1.starter_projects import router as starter_projects_router
 from langflow.api.v1.store import router as store_router
+from langflow.api.v1.team_templates import router as team_templates_router
 from langflow.api.v1.traces import router as traces_router
 from langflow.api.v1.triton_servers import router as triton_servers_router
 from langflow.api.v1.users import router as users_router
@@ -60,6 +61,7 @@ __all__ = [
     "projects_router",
     "starter_projects_router",
     "store_router",
+    "team_templates_router",
     "traces_router",
     "triton_servers_router",
     "users_router",

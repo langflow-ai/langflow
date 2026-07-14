@@ -2167,5 +2167,21 @@
   "flow.defaultDescription.57": "Beyond Text Generation - Unleashing Business Opportunities.",
   "flow.defaultDescription.58": "Unlock the Power of AI in Your Business Conversations.",
   "flow.defaultDescription.59": "Crafting Dialogues that Drive Business Success.",
-  "flow.defaultDescription.60": "Engineered for Excellence, Built for Business."
+  "flow.defaultDescription.60": "Engineered for Excellence, Built for Business.",
+  "teamTemplates.browse": "Browse templates",
+  "teamTemplates.category": "Category",
+  "teamTemplates.delete": "Delete template",
+  "teamTemplates.deleteDescription": "team template \"{{name}}\"",
+  "teamTemplates.deleteFailed": "Failed to delete team template",
+  "teamTemplates.deleted": "Team template deleted",
+  "teamTemplates.description": "Description",
+  "teamTemplates.name": "Template name",
+  "teamTemplates.saveAs": "Save as template",
+  "teamTemplates.saveFailed": "Failed to save team template",
+  "teamTemplates.saved": "Template saved. {{count}} sensitive fields were cleared.",
+  "teamTemplates.securityNotice": "Passwords, variables, hidden values, and file references are removed before the template is shared.",
+  "teamTemplates.tags": "Tags",
+  "teamTemplates.tagsPlaceholder": "agent, support, internal",
+  "teamTemplates.team": "Team",
+  "teamTemplates.teamTemplates": "Team templates"
 }

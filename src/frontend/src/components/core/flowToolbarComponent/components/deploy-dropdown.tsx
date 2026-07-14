@@ -18,6 +18,8 @@ import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
 import ApiModal from "@/modals/apiModal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
 import ExportModal from "@/modals/exportModal";
+import SaveTeamTemplateModal from "@/modals/saveTeamTemplateModal";
+import TemplatesModal from "@/modals/templatesModal";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
@@ -51,6 +53,8 @@ export default function PublishDropdown({
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
   const [openExportModal, setOpenExportModal] = useState(false);
+  const [openSaveTemplateModal, setOpenSaveTemplateModal] = useState(false);
+  const [openTemplatesModal, setOpenTemplatesModal] = useState(false);
   const { t } = useTranslation();
 
   const handlePublishedSwitch = async (checked: boolean) => {
@@ -126,6 +130,22 @@ export default function PublishDropdown({
           >
             <IconComponent name="Download" className={`icon-size mr-2`} />
             <span>{t("misc.export")}</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="deploy-dropdown-item group"
+            onClick={() => setOpenSaveTemplateModal(true)}
+            data-testid="save-team-template-item"
+          >
+            <IconComponent name="Save" className="icon-size mr-2" />
+            <span>{t("teamTemplates.saveAs")}</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="deploy-dropdown-item group"
+            onClick={() => setOpenTemplatesModal(true)}
+            data-testid="browse-templates-item"
+          >
+            <IconComponent name="LayoutTemplate" className="icon-size mr-2" />
+            <span>{t("teamTemplates.browse")}</span>
           </DropdownMenuItem>
           <CustomLink
             className={cn("flex-1")}
@@ -229,6 +249,14 @@ export default function PublishDropdown({
         activeTweaks={false}
       ></EmbedModal>
       <ExportModal open={openExportModal} setOpen={setOpenExportModal} />
+      <SaveTeamTemplateModal
+        open={openSaveTemplateModal}
+        setOpen={setOpenSaveTemplateModal}
+      />
+      <TemplatesModal
+        open={openTemplatesModal}
+        setOpen={setOpenTemplatesModal}
+      />
     </>
   );
 }

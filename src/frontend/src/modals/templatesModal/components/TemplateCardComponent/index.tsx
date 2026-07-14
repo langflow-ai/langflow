@@ -1,9 +1,13 @@
+import type { KeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../components/common/genericIconComponent";
+import { Badge } from "../../../../components/ui/badge";
 import type { TemplateCardComponentProps } from "../../../../types/templates/types";
 
 interface TemplateCardComponentExtendedProps
@@ -14,18 +18,20 @@ interface TemplateCardComponentExtendedProps
 export default function TemplateCardComponent({
   example,
   onClick,
+  onDelete,
   disabled = false,
 }: TemplateCardComponentExtendedProps) {
+  const { t } = useTranslation();
   const swatchIndex =
     (example.gradient && !isNaN(parseInt(example.gradient))
       ? parseInt(example.gradient)
       : getNumberFromString(example.gradient ?? example.name)) %
     swatchColors.length;
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.currentTarget !== e.target) return;
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      onClick();
       if (!disabled) onClick();
     }
   };
@@ -37,6 +43,8 @@ export default function TemplateCardComponent({
         "group flex gap-3 overflow-hidden rounded-md p-3 hover:bg-muted focus-visible:bg-muted",
         disabled ? "cursor-default opacity-80" : "cursor-pointer",
       )}
+      role="button"
+      aria-disabled={disabled}
       tabIndex={disabled ? -1 : 0}
       onKeyDown={handleKeyDown}
       onClick={() => !disabled && onClick()}
@@ -64,6 +72,35 @@ export default function TemplateCardComponent({
             >
               {example.name}
             </h3>
+            {example.source === "team" && (
+              <Badge variant="secondary" className="ml-2 shrink-0">
+                {t("teamTemplates.team")}
+              </Badge>
+            )}
+            {example.source === "team" && onDelete && (
+              <DeleteConfirmationModal
+                description={t("teamTemplates.deleteDescription", {
+                  name: example.name,
+                })}
+                asChild
+                onConfirm={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onDelete();
+                }}
+              >
+                <button
+                  type="button"
+                  className="ml-auto rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  aria-label={t("teamTemplates.delete")}
+                  data-testid={`delete-team-template-${example.id}`}
+                  onClick={(event) => event.stopPropagation()}
+                  disabled={disabled}
+                >
+                  <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
+                </button>
+              </DeleteConfirmationModal>
+            )}
             <ForwardedIconComponent
               name="ArrowRight"
               className="mr-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-3 group-hover:opacity-100 group-focus-visible:translate-x-3 group-focus-visible:opacity-100"
