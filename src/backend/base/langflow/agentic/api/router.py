@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from lfx.base.models.unified_models import (
     get_all_variables_for_provider,
@@ -19,6 +19,7 @@ from lfx.base.models.unified_models import (
 from lfx.log.logger import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from langflow.agentic.api.deps import require_agentic_experience
 from langflow.agentic.api.schemas import AssistantRequest
 from langflow.agentic.services.assistant_service import (
     execute_flow_with_validation,
@@ -154,7 +155,7 @@ async def _validate_flow_access(flow_id: str | None, user_id: UUID, session: Asy
         raise HTTPException(status_code=404, detail="Flow not found.")
 
 
-@router.post("/execute/{flow_name}")
+@router.post("/execute/{flow_name}", dependencies=[Depends(require_agentic_experience)])
 async def execute_named_flow(
     flow_name: str,
     request: AssistantRequest,
@@ -276,7 +277,7 @@ async def check_assistant_config(
     }
 
 
-@router.post("/assist")
+@router.post("/assist", dependencies=[Depends(require_agentic_experience)])
 async def assist(
     request: AssistantRequest,
     current_user: CurrentActiveUser,
@@ -301,7 +302,7 @@ async def assist(
     )
 
 
-@router.post("/assist/stream")
+@router.post("/assist/stream", dependencies=[Depends(require_agentic_experience)])
 async def assist_stream(
     request: AssistantRequest,
     http_request: Request,
@@ -324,6 +325,7 @@ async def assist_stream(
             model_name=ctx.model_name,
             api_key_var=ctx.api_key_name,
             is_disconnected=http_request.is_disconnected,
+            iterations_limit=request.iterations_limit,
         ),
         media_type="text/event-stream",
         headers={

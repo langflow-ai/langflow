@@ -11,6 +11,7 @@ import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/us
 import { BASE_URL_API } from "@/customization/config-constants";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { APIClassType } from "@/types/api";
@@ -24,6 +25,11 @@ import {
   buildTaskFromEvent,
 } from "../helpers/assistant-event-mappers";
 import { mergeFlowIntoCanvas } from "../helpers/merge-flow-into-canvas";
+import {
+  parseIterationsCommand,
+  readIterationsLimit,
+  writeIterationsLimit,
+} from "./iterations-storage";
 import { readSkipAll, writeSkipAll } from "./skip-all-storage";
 
 const uid = new ShortUniqueId();
@@ -138,6 +144,8 @@ export function useAssistantChat(): UseAssistantChatReturn {
   // event-handler closures that captured the initial state.
   const [skipAll, setSkipAll] = useState<boolean>(() => readSkipAll());
   const skipAllRef = useRef<boolean>(skipAll);
+  // `/iterations N` step budget for this session; null = the flow default.
+  const iterationsLimitRef = useRef<number | null>(readIterationsLimit());
   skipAllRef.current = skipAll;
   // Queues an assistant-message id that needs auto-approve once the
   // current stream's onComplete drains. Using a ref (not state) keeps
@@ -260,6 +268,37 @@ export function useAssistantChat(): UseAssistantChatReturn {
         return;
       }
 
+      // `/iterations N` sets the Agent step budget (and so the recursion limit).
+      // Local command — parsed here, never sent to the backend as a prompt.
+      const iterationsCmd = parseIterationsCommand(
+        content,
+        iterationsLimitRef.current,
+      );
+      if (iterationsCmd) {
+        if (iterationsCmd.changed) {
+          iterationsLimitRef.current = iterationsCmd.limit;
+          writeIterationsLimit(iterationsCmd.limit);
+        }
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: uid.randomUUID(10),
+            role: "user",
+            content,
+            timestamp: new Date(),
+            status: "complete",
+          },
+          {
+            id: uid.randomUUID(10),
+            role: "assistant",
+            content: iterationsCmd.announcement,
+            timestamp: new Date(),
+            status: "complete",
+          },
+        ]);
+        return;
+      }
+
       if (!model?.provider || !model?.name) {
         return;
       }
@@ -334,6 +373,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
             provider: model?.provider,
             model_name: model?.name,
             session_id: sessionIdRef.current,
+            iterations_limit: iterationsLimitRef.current ?? undefined,
           },
           {
             onProgress: (event) => {
@@ -577,6 +617,9 @@ export function useAssistantChat(): UseAssistantChatReturn {
                   typeof event.data.duration_seconds === "number"
                     ? event.data.duration_seconds * 1000
                     : undefined,
+                // Silent model failures the turn recovered from — shown as an (i)
+                // so a background swap/retry is never invisible to the user.
+                notices: event.data.notices,
               }));
               setCurrentStep(null);
               setIsProcessing(false);
@@ -773,6 +816,10 @@ export function useAssistantChat(): UseAssistantChatReturn {
       updateMessage(messageId, () => ({
         flowProposalStatus: "applied" as const,
       }));
+
+      // Applying is the reveal moment: minimize the panel so the canvas the user
+      // just accepted is visible immediately instead of sitting behind the panel.
+      useAssistantManagerStore.getState().setAssistantSidebarOpen(false);
 
       // Revert to ``pending`` after the success badge has been on screen
       // long enough to register — lets the user re-apply the same proposal

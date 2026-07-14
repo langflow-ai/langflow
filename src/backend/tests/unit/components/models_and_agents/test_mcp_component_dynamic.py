@@ -87,6 +87,22 @@ class TestCacheKey:
 
         assert a._mcp_servers_cache_key("srv") != b._mcp_servers_cache_key("srv")
 
+    def test_different_users_produce_different_keys(self) -> None:
+        a = MCPToolsComponent()
+        a._user_id = "tenant-a"
+        b = MCPToolsComponent()
+        b._user_id = "tenant-b"
+
+        assert a._mcp_servers_cache_key("srv") != b._mcp_servers_cache_key("srv")
+
+    def test_same_user_produces_identical_keys(self) -> None:
+        a = MCPToolsComponent()
+        a._user_id = "tenant-a"
+        b = MCPToolsComponent()
+        b._user_id = "tenant-a"
+
+        assert a._mcp_servers_cache_key("srv") == b._mcp_servers_cache_key("srv")
+
     def test_same_headers_produce_identical_keys(self) -> None:
         a = MCPToolsComponent()
         a.headers = [{"key": "Authorization", "value": "Bearer same"}]
@@ -340,8 +356,12 @@ class TestUpdateBuildConfigRefresh:
             "update_tool_list",
             new=AsyncMock(side_effect=ValueError("Connection refused")),
         ):
+            # is_refresh forces a fresh connection attempt (per this class's contract) so the
+            # error surfaces deterministically. Without it, the cold-cache fast path preserves
+            # the saved ("stale") options and never calls update_tool_list, which made this test
+            # depend on shared-cache state left by a sibling test (order-dependent under xdist).
             build_config = await component.update_build_config(
-                self._build_config(),
+                self._build_config(is_refresh=True),
                 {"name": "srv", "config": {"command": "uvx test"}},
                 "mcp_server",
             )

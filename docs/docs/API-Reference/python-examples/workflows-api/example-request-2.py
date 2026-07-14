@@ -11,7 +11,11 @@ headers = {"Content-Type": "application/json", "x-api-key": api_key}
 start = requests.post(
     f"{base}/api/v2/workflows",
     headers=headers,
-    json={"flow_id": flow_id, "background": True, "stream": False, "inputs": {}},
+    json={
+        "flow_id": flow_id,
+        "input_value": "Process this in the background",
+        "mode": "background",
+    },
     timeout=60,
 )
 start.raise_for_status()

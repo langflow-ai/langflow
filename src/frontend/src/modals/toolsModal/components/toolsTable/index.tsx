@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
+import { RequiresApprovalToggle } from "./RequiresApprovalToggle";
 
 export default function ToolsTable({
   rows,
@@ -61,8 +62,9 @@ export default function ToolsTable({
   const { setOpen: setSidebarOpen } = useSidebar();
 
   const getRowId = useMemo(() => {
-    // biome-ignore lint/suspicious/noExplicitAny: legacy
-    return (params: any) =>
+    return (params: {
+      data: { _uniqueId?: string; name?: string; display_name?: string };
+    }) =>
       params.data._uniqueId ||
       `${params.data.name}_${params.data.display_name}`;
   }, []);
@@ -239,6 +241,27 @@ export default function ToolsTable({
       cellClass: "text-muted-foreground",
     },
     {
+      field: "approval_actions",
+      headerName: t("toolsModal.columnApproval", "Requires approval"),
+      width: 150,
+      flex: 0,
+      resizable: false,
+      sortable: false,
+      cellRenderer: (params: {
+        data: { _uniqueId?: string; approval_actions?: string[] } & Record<
+          string,
+          unknown
+        >;
+      }) => (
+        <div data-hitl-cell className="flex h-full items-center">
+          <RequiresApprovalToggle
+            selected={params.data?.approval_actions ?? []}
+            onChange={(next) => handleApprovalChange(params.data, next)}
+          />
+        </div>
+      ),
+    },
+    {
       field: "tags",
       headerName: "Tags",
       flex: 1,
@@ -293,6 +316,17 @@ export default function ToolsTable({
     }
   };
 
+  const handleApprovalChange = (
+    row: { _uniqueId?: string } & Record<string, unknown>,
+    actions: string[],
+  ) => {
+    if (!row?._uniqueId) return;
+    skipSelectionReapply.current++;
+    const updatedRow = { ...row, approval_actions: actions };
+    agGrid.current?.api.applyTransaction({ update: [updatedRow] });
+    setData(data.map((r) => (r._uniqueId === row._uniqueId ? updatedRow : r)));
+  };
+
   const actionArgs = useMemo(() => {
     return Object.entries(focusedRow?.args ?? {}).map(
       // biome-ignore lint/suspicious/noExplicitAny: legacy
@@ -324,6 +358,10 @@ export default function ToolsTable({
   };
 
   const handleRowClicked = (event) => {
+    // Clicking the HITL cell opens its own popover; don't also open the row sidebar
+    // (that re-render would close the popover).
+    const target = event.event?.target as HTMLElement | undefined;
+    if (target?.closest("[data-hitl-cell]")) return;
     setFocusedRow(event.data);
     setSidebarOpen(true);
   };

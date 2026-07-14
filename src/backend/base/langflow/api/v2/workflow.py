@@ -6,12 +6,14 @@ The execution machinery itself lives in sibling modules:
 
     - ``workflow_validation``: request/permission guards.
     - ``workflow_execution``: sync + streaming run-driving.
-    - ``workflow_background``: durable, re-attachable background runs.
+    - ``services/background_execution``: durable, re-attachable background runs.
 
 Endpoints:
     POST /workflows: Execute a workflow (sync, stream, or background modes)
     GET /workflows: Get workflow job status by job_id
     POST /workflows/stop: Stop a running workflow execution
+    GET /workflows/pending: List suspended HITL jobs for a flow
+    POST /workflows/{job_id}/resume: Resume a suspended (HITL) workflow
     GET /workflows/{job_id}/events: Re-attach to a background run's event stream
 
 Features:
@@ -37,6 +39,9 @@ from lfx.schema.workflow import (
     JobStatus,
     WorkflowExecutionResponse,
     WorkflowJobResponse,
+    WorkflowResumeRequest,
+    WorkflowResumeResponse,
+    WorkflowRunRequest,
     WorkflowStopRequest,
     WorkflowStopResponse,
 )
@@ -47,18 +52,18 @@ from lfx.workflow.adapters import (
     UnknownStreamProtocolError,
     get_stream_adapter,
 )
+from lfx.workflow.converters import (
+    ParsedWorkflowRun,
+    parse_workflow_run_request,
+    workflow_response_from_output_events,
+)
 from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
-from langflow.api.v2.workflow_background import (
-    _BACKGROUND_RUNS,
-    _cancel_workflow_queue_job,
-    _finish_cancelled_background_run,
-    execute_workflow_background,
-)
 from langflow.api.v2.workflow_execution import (
     _execute_streaming_workflow,
     _resolve_execution_timeout,
+    _stream_event_frames,
     execute_sync_workflow_with_timeout,
 )
 from langflow.api.v2.workflow_reconstruction import reconstruct_workflow_response_from_job_id
@@ -78,15 +83,27 @@ from langflow.exceptions.api import (
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.services.auth.utils import get_current_user_for_workflow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.deps import get_job_service
+from langflow.services.deps import (
+    get_background_execution_service,
+    get_job_service,
+    get_memory_base_service,
+    get_task_service,
+)
+from langflow.services.jobs.exceptions import DuplicateJobError
 
-# The langflow durable background routes (GET status, POST /stop, GET
-# /{job_id}/events). The POST run path is contributed by the shared lfx router
-# (``lfx.workflow.router.create_workflow_router``) bound to ``LangflowWorkflowHost``;
-# only these durable, behaviorally-rich routes stay langflow-owned. Both are
-# mounted on the same ``/workflows`` prefix in ``langflow.api.router``.
+# Finished states a late /stop must not rewrite (CANCELLED is handled separately
+# with its own idempotent early return).
+_TERMINAL_JOB_STATUSES = frozenset({JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.TIMED_OUT})
+
+# The langflow durable background routes (GET status, POST /stop, GET /pending,
+# POST /{job_id}/resume, GET /{job_id}/events). The POST run path is contributed
+# by the shared lfx router (``lfx.workflow.router.create_workflow_router``)
+# bound to ``LangflowWorkflowHost``; only these durable, behaviorally-rich
+# routes stay langflow-owned. Both are mounted on the same ``/workflows``
+# prefix in ``langflow.api.router``.
 router = APIRouter(prefix="/workflows", tags=["Workflow"])
 
 
@@ -336,6 +353,7 @@ async def submit_background_with_mapping(
             current_user=current_user,
             http_request=None,
             stream_protocol=stream_protocol,
+            idempotency_key=getattr(parsed, "idempotency_key", None),
         )
     except WorkflowServiceUnavailableError as err:
         raise HTTPException(
@@ -399,6 +417,129 @@ def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPExc
             "available": exc.available,
         },
     )
+
+
+def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
+    """Bind the v1 build loop (``_stream_event_frames``) as the runner's source.
+
+    Returns a zero-extra-kwargs async-generator callable so the runner can call
+    it with ``**source_kwargs``. The flow row is re-fetched lazily inside the
+    closure so ``submit()`` stays cheap and the build happens on the worker.
+
+    The memory-base ``on_flow_output`` hook is fired on a clean run (no terminal
+    error event) so background mode keeps the auto-capture wiring sync mode and
+    the v1 build pipeline have; without it every background run would silently
+    miss it.
+    """
+    parsed = parse_workflow_run_request(WorkflowRunRequest(**request))
+    terminal_error_type = adapter.terminal_error_type
+
+    async def _source(*, job_id=None, resume=None, **_kwargs):
+        flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id, widen_for_shares=True)
+        fresh_background_tasks = BackgroundTasks()
+        errored = False
+        try:
+            async for frame, event_type in _stream_event_frames(
+                adapter=adapter,
+                flow_id=flow.id,
+                flow_name=flow.name,
+                background_tasks=fresh_background_tasks,
+                parsed=parsed,
+                current_user=user,
+                job_id=job_id,
+                resume=resume,
+                # Key the persisted vertex builds by the durable job_id so a completed run's GET
+                # status can reconstruct its outputs (and recover the session_id it ran under)
+                # instead of falling back to the leaner Job.result rebuild.
+                run_id=str(job_id) if job_id else None,
+                # The durable runner already owns this run's WORKFLOW job row (keyed by the durable
+                # job_id) and fires the memory-base hook below with that id, so the build pipeline
+                # must not mint its own run_id-keyed WORKFLOW row + hook (it would double both).
+                track_job_status=False,
+            ):
+                if terminal_error_type is not None and event_type == terminal_error_type:
+                    errored = True
+                yield frame, event_type
+        finally:
+            # ``generate_flow_events`` queues telemetry / tracing teardown on
+            # this ``BackgroundTasks``; the background path has no response to
+            # carry them, so drain explicitly. Suppressed so one failing
+            # callback cannot derail the run.
+            with contextlib.suppress(Exception):
+                await fresh_background_tasks()
+            if not errored:
+                try:
+                    await get_task_service().fire_and_forget_task(
+                        get_memory_base_service().on_flow_output,
+                        flow_id=flow.id,
+                        session_id=parsed.session_id or str(flow.id),
+                        job_id=job_id,
+                    )
+                except (RuntimeError, ValueError, OSError):
+                    await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
+
+    return _source
+
+
+async def execute_workflow_background(
+    parsed: ParsedWorkflowRun,
+    flow: FlowRead,
+    job_id: JobId,  # noqa: ARG001
+    current_user: UserRead,
+    http_request: Request,  # noqa: ARG001
+    stream_protocol: str,
+    idempotency_key: str | None = None,
+) -> WorkflowJobResponse:
+    """Queue a background run through the BackgroundExecutionService facade.
+
+    The facade owns job-row creation, durable event persistence, the live bus,
+    and terminal-state finalization. We pass the original request fields so the
+    runner re-parses them on the worker (the build happens off the request
+    path) and replays durable milestones from ``job_events`` on re-attach.
+
+    An optional ``idempotency_key`` dedupes submits: a retried POST with the
+    same key returns the existing job_id rather than queuing duplicate work.
+    """
+    try:
+        service = get_background_execution_service()
+        if service._frame_source_factory is None:  # noqa: SLF001
+            service._frame_source_factory = _default_frame_source_factory  # noqa: SLF001
+        request_dict = {
+            "flow_id": str(flow.id),
+            "mode": "background",
+            "stream_protocol": stream_protocol,
+            "input_value": parsed.input_value,
+            "session_id": parsed.session_id,
+            "tweaks": parsed.tweaks,
+            "globals": parsed.globals,
+            "output_ids": parsed.output_ids,
+            "data": parsed.data,
+            "files": parsed.files,
+            "start_component_id": parsed.start_component_id,
+            "stop_component_id": parsed.stop_component_id,
+            "idempotency_key": idempotency_key,
+        }
+        job_id_new = await service.submit(flow_id=flow.id, request=request_dict, user=current_user)
+        return WorkflowJobResponse(job_id=str(job_id_new), flow_id=parsed.flow_id, status=JobStatus.QUEUED)
+
+    except (WorkflowResourceError, WorkflowServiceUnavailableError, WorkflowQueueFullError):
+        raise
+    except MemoryError as exc:
+        raise WorkflowResourceError from exc
+    except DuplicateJobError as exc:
+        # Defense-in-depth for the residual create/lookup race: a still-active
+        # job already exists for this user's idempotency_key. Map to a 409 with a
+        # generic body so the key is not echoed back (no existence leak) instead
+        # of bubbling to the outer 500 handler.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Duplicate request",
+                "code": "DUPLICATE_REQUEST",
+                "message": "A job with this idempotency_key is already in progress.",
+                "flow_id": parsed.flow_id,
+            },
+        ) from exc
 
 
 @router.get(
@@ -501,15 +642,34 @@ async def get_workflow_status(
                 folder_id=getattr(flow, "folder_id", None),
             )
 
-            # Reconstruct response from vertex_build table
-            return await reconstruct_workflow_response_from_job_id(
-                session=session,
-                flow=flow,
-                job_id=job_id_str,
-                user_id=str(current_user.id),
-            )
+            # Reconstruct response from vertex_build table (sync path persists
+            # those keyed by job_id). Background runs do not write vertex_builds
+            # keyed by job_id, so reconstruction finds nothing and raises
+            # ValueError — fall back to the durable Job.result the runner wrote
+            # so a completed background run reports completed instead of 500ing.
+            try:
+                return await reconstruct_workflow_response_from_job_id(
+                    session=session,
+                    flow=flow,
+                    job_id=job_id_str,
+                    user_id=str(current_user.id),
+                )
+            except ValueError:
+                # Rebuild the result from the ``output`` events the runner
+                # captured into ``Job.result`` (langflow-protocol runs). Falls
+                # back to a bare COMPLETED when none were captured (e.g. an
+                # agui-protocol run, where the result lives only on /events).
+                result = job.result if isinstance(job.result, dict) else {}
+                return workflow_response_from_output_events(
+                    result.get("outputs") or [],
+                    flow_id=flow_id_str,
+                    job_id=job_id_str,
+                )
 
         if job.status == JobStatus.FAILED:
+            # Surface the durable error JSON the runner persisted, additively.
+            # The error column is nullable (a crash before the runner could write
+            # one leaves it None); the static detail still applies in that case.
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail={
@@ -517,6 +677,7 @@ async def get_workflow_status(
                     "code": "JOB_FAILED",
                     "message": f"Job {job_id_str} has failed execution.",
                     "job_id": job_id_str,
+                    "error_detail": job.error,
                 },
             )
 
@@ -594,6 +755,7 @@ async def stop_workflow(
     """
     job_id = request.job_id
     job_service = get_job_service()
+    task_service = get_task_service()
 
     try:
         # 1. Fetch Job
@@ -634,41 +796,43 @@ async def stop_workflow(
 
     if job.status == JobStatus.CANCELLED:
         return WorkflowStopResponse(job_id=str(job_id), message=f"Job {job_id} is already cancelled.")
+    # A late stop on a job that already finished must not rewrite its terminal
+    # status: flipping a COMPLETED/FAILED/TIMED_OUT row to CANCELLED would strand
+    # the result/error blob the run already wrote. Report the existing state.
+    if job.status in _TERMINAL_JOB_STATUSES:
+        return WorkflowStopResponse(job_id=str(job_id), message=f"Job {job_id} already finished ({job.status.value}).")
 
     try:
+        revoked = await task_service.revoke_task(job_id)
+        # Write the durable STOP signal + cancel the in-flight executor task
+        # BEFORE flipping the row to CANCELLED. The signal is the marker the
+        # runner's terminal reconcile keys off, so persisting it first means an
+        # in-flight runner racing to a terminal state reliably observes the stop
+        # and finalizes CANCELLED rather than overwriting it with COMPLETED/FAILED.
+        # Best-effort: a backend that cannot take the signal must not block the
+        # cancel, but swallowing it silently would hide the one failure that lets
+        # a run keep going after we report CANCELLED. Log, do not suppress quietly.
         try:
-            cancelled = await _cancel_workflow_queue_job(str(job_id))
-        except asyncio.CancelledError as exc:
-            message_code = exc.args[0] if exc.args else "UNKNOWN"
-            if message_code != "LANGFLOW_USER_CANCELLED":
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail={
-                        "error": "Task cancellation error",
-                        "code": message_code,
-                        "message": f"Job {job_id} was cancelled unexpectedly by the system",
-                        "job_id": str(job_id),
-                    },
-                ) from exc
-            cancelled = True
-        if not cancelled:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail={
-                    "error": "Cancellation unavailable",
-                    "code": "WORKFLOW_CANCEL_UNAVAILABLE",
-                    "message": f"Unable to confirm cancellation for job {job_id}",
-                    "job_id": str(job_id),
-                },
-            )
+            await get_background_execution_service().stop_job(job_id, current_user)
+        except Exception:  # noqa: BLE001
+            await logger.aexception("Failed to signal stop for workflow job %s; cancelling row anyway", job_id)
         await job_service.update_job_status(job_id, JobStatus.CANCELLED)
-        # The owning buffer task appends the protocol-native cancellation
-        # terminal event before marking replay done. This is only a fallback
-        # for races where a local buffer exists but no owner task is running.
-        await _finish_cancelled_background_run(str(job_id))
 
-        message = f"Job {job_id} cancelled successfully."
+        message = f"Job {job_id} cancelled successfully." if revoked else f"Job {job_id} is already cancelled."
         return WorkflowStopResponse(job_id=str(job_id), message=message)
+    except asyncio.CancelledError as exc:
+        # Handle system-initiated cancellations that were re-raised
+        # The job status has already been updated to FAILED in jobs/service.py
+        message_code = exc.args[0] if exc.args else "UNKNOWN"
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "Task cancellation error",
+                "code": message_code,
+                "message": f"Job {job_id} was cancelled unexpectedly by the system",
+                "job_id": str(job_id),
+            },
+        ) from exc
     except HTTPException:
         raise
     except Exception as exc:
@@ -684,84 +848,135 @@ async def stop_workflow(
 
 
 @router.get(
+    "/pending",
+    summary="List pending human-input requests",
+    description="Suspended HITL jobs for a flow plus their pending request, for the Traces overlay.",
+)
+async def list_pending_workflows(
+    current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
+    flow_id: Annotated[UUID, Query(description="Flow ID to list pending HITL requests for")],
+) -> list[dict]:
+    from langflow.api.v2.hitl import list_pending_human_requests
+
+    return await list_pending_human_requests(flow_id, current_user.id)
+
+
+@router.post(
+    "/{job_id}/resume",
+    summary="Resume Workflow",
+    description="Resume a suspended (human-in-the-loop) workflow with a decision.",
+)
+async def resume_workflow(
+    job_id: str,
+    request: WorkflowResumeRequest,
+    current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
+) -> WorkflowResumeResponse:
+    """Resume a SUSPENDED workflow run with a human decision.
+
+    Owner-or-superuser; a non-owner non-superuser (or unknown/non-workflow job)
+    maps to 404 to avoid leaking other users' runs. A stale/duplicate request_id
+    or a non-suspended job maps to 409 (single-use enforced behind ``resume_job``).
+    Resuming executes the remainder of the flow, so flow:execute is re-enforced —
+    access revoked while the run was suspended must not let the decision through.
+    """
+
+    def _not_found() -> HTTPException:
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "Workflow job not found", "code": "JOB_NOT_FOUND", "job_id": job_id},
+        )
+
+    try:
+        parsed_job_id = UUID(job_id)
+    except ValueError as exc:
+        raise _not_found() from exc
+
+    job = await get_job_service().get_job_by_job_id(parsed_job_id)
+    is_owner = job is not None and job.user_id is not None and job.user_id == current_user.id
+    if job is None or job.type != JobType.WORKFLOW or not (is_owner or current_user.is_superuser):
+        raise _not_found()
+
+    from langflow.api.v2.hitl import ensure_resume_execute_permission, is_decision_allowed, mark_card_answered
+
+    await ensure_resume_execute_permission(current_user, job.flow_id)
+
+    if not await is_decision_allowed(parsed_job_id, request.decision or {}):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error": "Invalid decision",
+                "code": "INVALID_DECISION",
+                "message": "decision.action_id is not one of the pending request's allowed_decisions.",
+                "job_id": job_id,
+            },
+        )
+
+    service = get_background_execution_service()
+    if service._frame_source_factory is None:  # noqa: SLF001
+        service._frame_source_factory = _default_frame_source_factory  # noqa: SLF001
+    # Snapshot the card id before the continuation runs: it may reach another pause and
+    # overwrite job metadata, and this decision must never stamp that later card.
+    card_message_id = (job.job_metadata or {}).get("card_message_id")
+    accepted = await service.resume_job(
+        parsed_job_id,
+        current_user,
+        request_id=request.request_id,
+        decision=request.decision or {},
+    )
+    if not accepted:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Job is not resumable",
+                "code": "NOT_RESUMABLE",
+                "message": "Job is not suspended, already resumed, or the request_id is stale.",
+                "job_id": job_id,
+            },
+        )
+    await mark_card_answered(parsed_job_id, request.request_id, request.decision or {}, card_message_id=card_message_id)
+    return WorkflowResumeResponse(job_id=job_id, status="resuming", message="Resume accepted")
+
+
+@router.get(
     "/{job_id}/events",
     response_model=None,
     summary="Re-attach to a background run",
-    description="Replay the buffered protocol-native events for a background run and tail until it ends.",
+    description="Replay durable events for a background run from Last-Event-ID and tail until it ends.",
 )
 async def reattach_workflow_events(
     job_id: str,
     http_request: Request,
     current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
 ) -> EventSourceResponse:
-    """Stream a background run's buffered events, replaying from ``Last-Event-ID``.
+    """Re-attach to a background run.
 
-    The buffer is process-local and frames are already serialized in the
-    protocol the original POST requested via ``stream_protocol``; this handler
-    replays them as-is. Cross-user access is rejected with 404 to avoid
-    leaking the existence of other users' runs.
+    Replays durable milestones from the ``job_events`` log (after
+    ``Last-Event-ID``) then tails the live bus until the run ends.
+
+    Ownership is enforced by the facade; a cross-user or unknown job maps to a
+    404 to avoid leaking the existence of other users' runs. The pre-check runs
+    before streaming starts so the error body is a clean JSON 404 rather than a
+    half-open SSE stream.
     """
-    bg_run = _BACKGROUND_RUNS.get(job_id)
-    # Live stream re-attach is intentionally owner-only and does not consult the
-    # authorization plugin: the replay buffer is process-local and keyed by the
-    # originating user, matching stop_workflow and the active-status path. Only
-    # the COMPLETED-status reconstruction branch is share-aware (it reloads the
-    # flow); a share-holder tails via the status endpoint, not this live stream.
-    if bg_run is not None and bg_run.user_id != str(current_user.id):
+    service = get_background_execution_service()
+    last_event_id = http_request.headers.get("Last-Event-ID")
+
+    try:
+        # Pre-validate ownership/existence so a deny surfaces as a 404 before
+        # the SSE stream opens. ``events`` re-validates as defense-in-depth.
+        await service.status(UUID(job_id), current_user)
+    except (PermissionError, ValueError) as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "error": "Background run not found",
                 "code": "JOB_NOT_FOUND",
-                "message": f"No buffered events for job {job_id}.",
+                "message": f"No background run for job {job_id}.",
                 "job_id": job_id,
             },
-        )
-
-    if bg_run is None:
-        try:
-            job_uuid = UUID(job_id)
-        except ValueError:
-            job_uuid = None
-
-        job = None
-        if job_uuid is not None:
-            with contextlib.suppress(Exception):
-                job = await get_job_service().get_job_by_job_id(job_uuid, user_id=current_user.id)
-
-        if job is None or job.type != JobType.WORKFLOW:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={
-                    "error": "Background run not found",
-                    "code": "JOB_NOT_FOUND",
-                    "message": f"No buffered events for job {job_id}.",
-                    "job_id": job_id,
-                },
-            )
-
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "error": "Background event buffer unavailable",
-                "code": "BACKGROUND_EVENTS_UNAVAILABLE",
-                "message": (
-                    f"Buffered events for job {job_id} are not available here. "
-                    "Use the workflow status endpoint for this job."
-                ),
-                "job_id": job_id,
-            },
-        )
-
-    last_event_id = http_request.headers.get("Last-Event-ID")
-    start_index = 0
-    if last_event_id:
-        try:
-            start_index = int(last_event_id) + 1
-        except ValueError:
-            start_index = 0
+        ) from exc
 
     return EventSourceResponse(
-        bg_run.replay(start_index),
+        service.events(UUID(job_id), last_event_id=last_event_id, user=current_user),
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

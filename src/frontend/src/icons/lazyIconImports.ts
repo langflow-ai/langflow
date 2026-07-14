@@ -274,6 +274,10 @@ export const lazyIconsMapping = {
       default: mod.HackerNewsIcon,
     })),
   HCD: () => import("@/icons/HCD").then((mod) => ({ default: mod.HCDIcon })),
+  HumanInput: () =>
+    import("@/icons/HumanInput").then((mod) => ({
+      default: mod.HumanInputIcon,
+    })),
   HomeAssistant: () =>
     import("@/icons/HomeAssistant").then((mod) => ({
       default: mod.HomeAssistantIcon,
@@ -491,6 +495,7 @@ export const lazyIconsMapping = {
     import("@/icons/Upstash").then((mod) => ({ default: mod.UpstashSvgIcon })),
   Vectara: () =>
     import("@/icons/VectaraIcon").then((mod) => ({ default: mod.VectaraIcon })),
+  vLLM: () => import("@/icons/vLLM").then((mod) => ({ default: mod.VllmIcon })),
   VectorStores: () =>
     import("@/icons/vectorstores").then((mod) => ({
       default: mod.VectorStoresIcon,
