@@ -161,7 +161,7 @@ class TestMCPTimeoutConfiguration:
         """Test that update_tools passes timeout when creating MCPStdioClient."""
         server_config = {
             "mode": "Stdio",
-            "command": "test-command",
+            "command": "python",
             "args": [],
         }
 
@@ -316,7 +316,7 @@ class TestMCPTimeoutBehavior:
 
         server_config = {
             "mode": "Stdio",
-            "command": "test-command",
+            "command": "python",
             "args": [],
         }
 
