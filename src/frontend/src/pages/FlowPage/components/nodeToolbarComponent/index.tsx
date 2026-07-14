@@ -278,7 +278,7 @@ const NodeToolbarComponent = memo(
 
     useShortcuts({
       showOverrideModal,
-      showModalAdvanced: inspectionPanelVisible,
+      advancedSurfaceOpen: inspectionPanelVisible,
       openModal,
       showconfirmShare,
       FreezeAllVertices: () => {

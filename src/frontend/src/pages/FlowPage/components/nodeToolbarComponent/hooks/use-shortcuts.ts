@@ -4,7 +4,7 @@ import isWrappedWithClass from "../../PageComponent/utils/is-wrapped-with-class"
 
 export default function useShortcuts({
   showOverrideModal,
-  showModalAdvanced,
+  advancedSurfaceOpen,
   openModal,
   showconfirmShare,
   FreezeAllVertices,
@@ -20,7 +20,7 @@ export default function useShortcuts({
   hasToolMode,
 }: {
   showOverrideModal?: boolean;
-  showModalAdvanced?: boolean;
+  advancedSurfaceOpen?: boolean;
   openModal?: boolean;
   showconfirmShare?: boolean;
   FreezeAllVertices?: () => void;
@@ -75,7 +75,7 @@ export default function useShortcuts({
   }
 
   function handleAdvancedWShortcut(e: KeyboardEvent) {
-    if ((isWrappedWithClass(e, "noflow") && !showModalAdvanced) || !showAdvance)
+    if ((isWrappedWithClass(e, "noflow") && !advancedSurfaceOpen) || !showAdvance)
       return;
     e.preventDefault();
     showAdvance();
