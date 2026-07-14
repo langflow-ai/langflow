@@ -99,12 +99,23 @@ const RenderInputParameters = ({
     );
   }, [shownTemplateFields, data.node?.template, isToolMode, data.id, edges]);
 
+  // LE-1810 (T8): a minimized node still shows ALL its input handles —
+  // each one gets a distinct vertical offset on the collapsed card.
+  const handleFields = useMemo(
+    () =>
+      shownTemplateFields.filter(
+        (templateField) => displayHandleMap.get(templateField) ?? false,
+      ),
+    [shownTemplateFields, displayHandleMap],
+  );
+
   const renderInputParameter = shownTemplateFields.map(
     (templateField: string, idx: number) => {
       const template = data.node?.template[templateField];
 
       const memoizedColor = memoizedColors.get(templateField);
       const memoizedKey = memoizedKeys.get(templateField);
+      const handleIdx = handleFields.indexOf(templateField);
 
       return (
         <NodeInputField
@@ -134,6 +145,11 @@ const RenderInputParameters = ({
           isToolMode={isToolMode && template.tool_mode}
           isPrimaryInput={templateField === primaryInputFieldName}
           displayHandle={displayHandleMap.get(templateField) ?? false}
+          minimizedHandleTop={
+            handleIdx === -1
+              ? undefined
+              : `${(((handleIdx + 1) / (handleFields.length + 1)) * 100).toFixed(2)}%`
+          }
         />
       );
     },

@@ -174,6 +174,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   testIdComplement,
   nodeId,
   colorName,
+  minimizedHandleTop,
 }: {
   left: boolean;
   tooltipTitle?: string;
@@ -187,6 +188,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   testIdComplement?: string;
   nodeId: string;
   colorName?: string[];
+  minimizedHandleTop?: string;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
@@ -470,6 +472,11 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           )}
           style={{
             ...BASE_HANDLE_STYLES,
+            // LE-1810 (T8): distribute the handles of a minimized node
+            // vertically so they don't overlap at the card center.
+            ...(!showNode && minimizedHandleTop
+              ? { top: minimizedHandleTop }
+              : {}),
             pointerEvents: isLocked ? "none" : "auto",
           }}
           onClick={handleClick}
