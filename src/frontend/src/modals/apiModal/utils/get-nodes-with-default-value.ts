@@ -2,14 +2,7 @@ import { cloneDeep } from "lodash";
 import type { AllNodeType } from "@/types/flow";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../../constants/constants";
 
-export const getNodesWithDefaultValue = (
-  nodes: AllNodeType[],
-  oldTweaks: {
-    [key: string]: {
-      [key: string]: any;
-    };
-  },
-) => {
+export const getNodesWithDefaultValue = (nodes: AllNodeType[]) => {
   const filteredNodes: AllNodeType[] = [];
 
   nodes.forEach((node) => {
@@ -25,10 +18,10 @@ export const getNodesWithDefaultValue = (
       );
       const newNode = cloneDeep(node);
       if (newNode?.data?.node?.template) {
+        // API exposure is the persisted per-field api_editable flag on the
+        // real node (LE-1810) — the tweaks copy carries it verbatim.
         newNode.data.node.template = templateKeys.reduce((acc, key) => {
           acc[key] = cloneDeep(node?.data?.node?.template[key]);
-          acc[key].advanced =
-            node.id in oldTweaks && key in oldTweaks[node.id] ? false : true;
           return acc;
         }, {});
       }
