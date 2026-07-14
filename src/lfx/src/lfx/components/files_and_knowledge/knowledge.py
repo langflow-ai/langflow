@@ -543,7 +543,9 @@ class KnowledgeComponent(Component):
                     msg = f"Embedding validation failed: {e!s}"
                     raise ValueError(msg) from e
 
-                kb_path = _get_knowledge_bases_root_path() / kb_user / field_value["01_new_kb_name"]
+                kb_path = self._resolve_kb_path(
+                    _get_knowledge_bases_root_path(), kb_user, field_value["01_new_kb_name"]
+                )
                 kb_path.mkdir(parents=True, exist_ok=True)
 
                 build_config["knowledge_base"]["value"] = field_value["01_new_kb_name"]
@@ -593,6 +595,19 @@ class KnowledgeComponent(Component):
     def _get_kb_root(self) -> Path:
         """Return the root directory for knowledge bases."""
         return _get_knowledge_bases_root_path()
+
+    @staticmethod
+    def _resolve_kb_path(kb_root: Path, kb_user: str, kb_name: str) -> Path:
+        """Resolve the selected KB inside the authenticated user's directory."""
+        # Lazy import keeps lfx importable without langflow's DB services.
+        from langflow.services.memory_base.kb_path_helpers import validate_kb_path
+
+        user_root = kb_root / kb_user
+        validate_kb_path(kb_root, user_root)
+
+        kb_path = user_root / kb_name
+        validate_kb_path(user_root, kb_path)
+        return kb_path
 
     @staticmethod
     def _scalar_notna(value) -> bool:
@@ -1119,7 +1134,7 @@ class KnowledgeComponent(Component):
 
         kb_root = self._get_kb_root()
 
-        self._cached_kb_path = kb_root / kb_user / self.knowledge_base
+        self._cached_kb_path = self._resolve_kb_path(kb_root, kb_user, self.knowledge_base)
 
         return self._cached_kb_path
 
@@ -1625,7 +1640,7 @@ class KnowledgeComponent(Component):
                 msg = f"User with ID {self.user_id} not found."
                 raise ValueError(msg)
             kb_user = current_user.username
-        kb_path = _get_knowledge_bases_root_path() / kb_user / self.knowledge_base
+        kb_path = self._resolve_kb_path(_get_knowledge_bases_root_path(), kb_user, self.knowledge_base)
 
         metadata = self._get_kb_metadata(kb_path)
         if not metadata:
