@@ -153,11 +153,12 @@ const CanvasControls = ({
           <PopoverPrimitive.Anchor asChild>
             <div className="group relative">
               {/* "New" discovery pill — surfaces ONLY on hover, hidden when
-                  the panel is open (active state shouldn't carry the nudge).
-                  The pill keeps appearing on hover indefinitely; only the
-                  lateral tooltip respects the persisted ``discovered`` flag.
+                  the panel is open (active state shouldn't carry the nudge)
+                  and gone for good once the user has opened the assistant
+                  (persisted ``discovered`` flag) — a feature the user already
+                  found isn't "new" to them anymore.
                   Uses the brand token from index.css. */}
-              {!assistantSidebarOpen && (
+              {!assistantSidebarOpen && !discovered && (
                 <span
                   data-testid="assistant-button-new-pill"
                   // Visibility logic: stays in lock-step with the onboarding
@@ -165,11 +166,10 @@ const CanvasControls = ({
                   // pinned open; otherwise it falls back to the hover-only
                   // behavior so power users still see it as a hint without
                   // it being intrusive.
-                  className={`absolute -top-4 -left-1 z-10 flex items-center gap-0.5 rounded bg-accent-assistant-brand px-1 py-0.5 text-[9px] font-medium leading-none text-white transition-all duration-200 ${
-                    onboardingActive
+                  className={`absolute -top-4 -left-1 z-10 flex items-center gap-0.5 rounded bg-accent-assistant-brand px-1 py-0.5 text-[9px] font-medium leading-none text-white transition-all duration-200 ${onboardingActive
                       ? "opacity-100 scale-100"
                       : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100"
-                  }`}
+                    }`}
                 >
                   <ForwardedIconComponent
                     name="Sparkles"
@@ -192,9 +192,8 @@ const CanvasControls = ({
                 <img
                   src={langflowAssistantIdleIcon}
                   alt="Langflow Assistant"
-                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${
-                    assistantSidebarOpen ? "opacity-0" : "group-hover:opacity-0"
-                  }`}
+                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${assistantSidebarOpen ? "opacity-0" : "group-hover:opacity-0"
+                    }`}
                 />
                 {/* Brand-lit icon — surfaces on hover AND while the panel is
                     open; both states share the same active brand identity. */}
@@ -202,11 +201,10 @@ const CanvasControls = ({
                   src={langflowAssistantIcon}
                   alt=""
                   aria-hidden="true"
-                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${
-                    assistantSidebarOpen
+                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${assistantSidebarOpen
                       ? "opacity-100"
                       : "opacity-0 group-hover:opacity-100"
-                  }`}
+                    }`}
                 />
               </Button>
             </div>
@@ -268,11 +266,10 @@ const CanvasControls = ({
         >
           <ForwardedIconComponent
             name="sticky-note"
-            className={`h-[18px] w-[18px] transition-colors ${
-              isAddNoteActive
+            className={`h-[18px] w-[18px] transition-colors ${isAddNoteActive
                 ? "text-foreground"
                 : "text-muted-foreground group-hover:text-foreground"
-            }`}
+              }`}
           />
         </Button>
         <HelpDropdown />
@@ -283,11 +280,10 @@ const CanvasControls = ({
             size="icon"
             data-testid="canvas_controls_toggle_inspector"
             aria-pressed={inspectionPanelVisible}
-            className={`group flex h-8 w-8 items-center justify-center rounded-md ${
-              inspectionPanelVisible
+            className={`group flex h-8 w-8 items-center justify-center rounded-md ${inspectionPanelVisible
                 ? "bg-muted text-foreground"
                 : "hover:bg-muted"
-            }`}
+              }`}
             title={
               !selectedNode
                 ? "Select a node to open the Inspector Panel"
@@ -299,11 +295,10 @@ const CanvasControls = ({
           >
             <ForwardedIconComponent
               name="SlidersHorizontal"
-              className={`!h-5 !w-5 ${
-                inspectionPanelVisible
+              className={`!h-5 !w-5 ${inspectionPanelVisible
                   ? "text-foreground"
                   : "text-muted-foreground group-hover:text-foreground"
-              }`}
+                }`}
             />
           </Button>
         )}
