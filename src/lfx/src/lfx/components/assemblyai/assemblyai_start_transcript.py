@@ -1,4 +1,7 @@
+import os
+import stat
 from pathlib import Path
+from typing import BinaryIO
 
 import assemblyai as aai
 
@@ -134,24 +137,63 @@ class AssemblyAITranscriptionJobCreator(Component):
         Output(display_name="Transcript ID", name="transcript_id", method="create_transcription_job"),
     ]
 
-    def _resolve_uploaded_audio_file(self) -> str | None:
-        """Return the canonical path only for audio in the current flow or user's storage namespace."""
+    @staticmethod
+    def _is_safe_namespace_id(namespace_id: str) -> bool:
+        """Return whether a storage namespace is a single safe path segment."""
+        return (
+            bool(namespace_id)
+            and namespace_id not in {".", ".."}
+            and not any(token in namespace_id for token in ("/", "\\", "..", "\x00", ":"))
+        )
+
+    def _open_uploaded_audio_file(self) -> BinaryIO | None:
+        """Open audio only when its file descriptor resolves inside a trusted storage namespace."""
         storage_service = get_storage_service()
-        namespace_ids = {str(namespace_id) for namespace_id in (self.flow_id, self.user_id) if namespace_id}
+        namespace_ids = set()
+        for namespace_id in (self.flow_id, self.user_id):
+            normalized_id = str(namespace_id) if namespace_id else ""
+            if self._is_safe_namespace_id(normalized_id):
+                namespace_ids.add(normalized_id)
         if storage_service is None or not namespace_ids:
             return None
 
         try:
-            trusted_roots = [
-                Path(storage_service.build_full_path(namespace_id, "")).resolve() for namespace_id in namespace_ids
-            ]
-            audio_path = Path(self.audio_file).resolve(strict=True)
+            trusted_roots = []
+            for namespace_id in namespace_ids:
+                namespace_path = Path(storage_service.build_full_path(namespace_id, ""))
+                storage_root = namespace_path.parent.resolve()
+                trusted_root = namespace_path.resolve()
+                if trusted_root.is_relative_to(storage_root):
+                    trusted_roots.append(trusted_root)
+
+            requested_path = Path(self.audio_file)
+            audio_path = requested_path.resolve(strict=True)
         except (OSError, RuntimeError, TypeError, ValueError):
             return None
 
-        if not audio_path.is_file() or not any(audio_path.is_relative_to(root) for root in trusted_roots):
+        if not any(audio_path.is_relative_to(root) for root in trusted_roots):
             return None
-        return str(audio_path)
+
+        audio_file = None
+        try:
+            audio_file = requested_path.open("rb")
+            opened_stat = os.fstat(audio_file.fileno())
+            current_path = requested_path.resolve(strict=True)
+            current_stat = current_path.stat()
+        except (OSError, RuntimeError, TypeError, ValueError):
+            if audio_file is not None:
+                audio_file.close()
+            return None
+
+        if (
+            not stat.S_ISREG(opened_stat.st_mode)
+            or not os.path.samestat(opened_stat, current_stat)
+            or not any(current_path.is_relative_to(root) for root in trusted_roots)
+        ):
+            audio_file.close()
+            return None
+
+        return audio_file
 
     def create_transcription_job(self) -> Data:
         aai.settings.api_key = self.api_key
@@ -178,12 +220,13 @@ class AssemblyAITranscriptionJobCreator(Component):
         )
 
         audio = None
+        uploaded_audio = None
         if self.audio_file:
             if self.audio_file_url:
                 logger.warning("Both an audio file an audio URL were specified. The audio URL was ignored.")
 
-            audio = self._resolve_uploaded_audio_file()
-            if audio is None:
+            uploaded_audio = self._open_uploaded_audio_file()
+            if uploaded_audio is None:
                 self.status = "Error: Audio file not found"
                 return Data(data={"error": "Error: Audio file not found"})
         elif self.audio_file_url:
@@ -193,7 +236,11 @@ class AssemblyAITranscriptionJobCreator(Component):
             return Data(data={"error": "Error: Either an audio file or an audio URL must be specified"})
 
         try:
-            transcript = aai.Transcriber().submit(audio, config=config)
+            if uploaded_audio is not None:
+                with uploaded_audio:
+                    transcript = aai.Transcriber().submit(uploaded_audio, config=config)
+            else:
+                transcript = aai.Transcriber().submit(audio, config=config)
         except Exception as e:  # noqa: BLE001
             logger.debug("Error submitting transcription job", exc_info=True)
             self.status = f"An error occurred: {e}"
