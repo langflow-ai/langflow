@@ -602,6 +602,18 @@ Install dependencies and set your OpenAI API key, then run:
 uv run lfx run simple_agent.py "How are you?" --verbose
 ```
 
+### Human-in-the-loop with `lfx run`
+
+When a flow contains a pausing node (such as **Human Input**) and the terminal is interactive, `lfx run` automatically pauses at each decision point and prompts on the terminal; the run then continues down the chosen branch. Use `--human-input` / `--no-human-input` to force the behavior either way.
+
+CLI HITL is **interactive-session only**:
+
+- Checkpoints are held **in memory** — if the process exits while paused, the run is lost.
+- There is **no durable resume**: a paused run cannot be resumed later, from another terminal, or after a restart (no `--resume <id>`).
+- A **non-interactive** run (piped stdin, CI, or `--no-human-input`) does **not** pause: the pausing node is passed through and the run continues; the CLI prints a warning so this is never silent.
+
+For durable pause/resume that survives restarts, run the flow through the Langflow server's v2 workflows API instead.
+
 ## lfx-mcp
 
 `lfx-mcp` is a separate binary installed with `lfx`. It starts an MCP server that gives any MCP-compatible client programmatic control over a Langflow instance for building flows, managing components, and running executions.

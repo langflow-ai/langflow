@@ -138,6 +138,24 @@ class CodeContent(BaseContent):
     title: str | None = None
 
 
+class HumanInputContent(BaseContent):
+    """Content type for a human-in-the-loop pause persisted in the chat history.
+
+    Carries the pending decision so the interactive card survives reload: the
+    request_id and job_id let the card resume the suspended run after an F5.
+    """
+
+    type: Literal["human_input"] = Field(default="human_input")
+    request_id: str
+    job_id: str | None = None
+    kind: str = "node_input"
+    prompt: str | None = None
+    options: list[dict[str, Any]] = Field(default_factory=list)
+    fields: list[dict[str, Any]] = Field(default_factory=list)
+    allowed_decisions: list[str] = Field(default_factory=list)
+    submitted_action: str | None = None
+
+
 class ToolContent(BaseContent):
     """Content type for a tool invocation.
 
@@ -334,6 +352,7 @@ ContentType = Annotated[
     | Annotated[ReasoningContent, Tag("reasoning")]
     | Annotated[UsageContent, Tag("usage")]
     | Annotated[CitationContent, Tag("citation")]
+    | Annotated[HumanInputContent, Tag("human_input")]
     | Annotated[ContentBlock, Tag("group")],
     Discriminator(_get_content_type),
 ]

@@ -206,6 +206,7 @@ EXPECTED_FIELDS = {
     # Background execution
     "background_max_concurrency",
     "background_job_timeout",
+    "background_input_deadline_s",
     "background_lease_ttl_s",
     "background_heartbeat_interval_s",
     "background_watchdog_interval_s",
