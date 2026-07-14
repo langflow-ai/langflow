@@ -460,6 +460,18 @@ SSRF protection prevents requests to internal or private network resources, such
 | `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `False` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
 | `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
 
+### Session cookie hardening {#session-cookie-hardening}
+
+For a multi-tenant deployment served over HTTPS, harden the access-token cookie. These default to permissive values for local/HTTP development and for the current frontend, which reads the access token in JavaScript.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_ACCESS_SECURE` | Boolean | `False` | When `true`, the `access_token_lf` cookie is sent only over HTTPS. Recommended `true` for any HTTPS deployment. Leave `false` for plain-HTTP/localhost development, where a `Secure` cookie would not be sent. |
+| `LANGFLOW_ACCESS_HTTPONLY` | Boolean | `False` | When `true`, the `access_token_lf` cookie is not readable by JavaScript (mitigates token theft via XSS). The default is `false` because the bundled frontend currently reads this cookie in JavaScript; enabling `HttpOnly` requires a frontend that does not read the token directly. |
+| `LANGFLOW_ACCESS_SAME_SITE` | String | `lax` | The `SameSite` attribute of the access-token cookie (`lax`, `strict`, or `none`). |
+
+The refresh-token cookie is already `HttpOnly` + `Secure` + `SameSite` by default.
+
 ### Login rate limiting {#login-rate-limiting}
 
 The following environment variables configure IP-based rate limiting on the `/login` endpoint to protect against brute-force attacks.

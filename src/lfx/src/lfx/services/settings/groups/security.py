@@ -96,6 +96,14 @@ class SecuritySettings(BaseModel):
     ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``) so these code-execution primitives cannot be
     used to break out of the component allow-list."""
 
+    mcp_server_docker_hardening: bool = False
+    """Apply the strict Docker-argument policy to MCP stdio servers.
+
+    Strict mode permits only ``docker run`` with isolated/default networking and blocks host
+    mounts, Docker API/device access, published ports, persistence, custom runtimes, and sandbox
+    downgrades. Disabled by default for compatibility; multi-tenant images enable it.
+    """
+
     # Rate Limiting
     rate_limit_enabled: bool = True
     """Enable rate limiting for login endpoint. Set to False to disable (useful for testing)."""
