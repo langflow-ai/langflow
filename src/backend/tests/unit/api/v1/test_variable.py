@@ -1,3 +1,4 @@
+import socket
 from types import SimpleNamespace
 from unittest import mock
 from uuid import uuid4
@@ -410,8 +411,12 @@ async def test_create_variable__ollama_base_url_validation_failure(client: Async
         "default_fields": [],
     }
 
-    # Mock failed Ollama API call
-    with mock.patch("requests.get") as mock_get:
+    # Keep DNS deterministic so SSRF validation reaches the mocked Ollama API call.
+    public_address = [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("93.184.216.34", 0))]
+    with (
+        mock.patch("socket.getaddrinfo", return_value=public_address),
+        mock.patch("requests.get") as mock_get,
+    ):
         mock_get.return_value.status_code = 404
         response = await client.post("api/v1/variables/", json=ollama_variable, headers=logged_in_headers)
         result = response.json()
