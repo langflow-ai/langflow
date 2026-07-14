@@ -2136,5 +2136,11 @@
   "mcp.servers.actionsMenu": "Actions for {{name}}",
   "assistant.modelNotice.fallback": "Model {{failed}} failed ({{reason}}); used {{used}} instead.",
   "assistant.modelNotice.remediation": "Model {{failed}} needed an adjustment to run ({{reason}}).",
-  "assistant.modelNotice.ariaLabel": "Model notice"
+  "assistant.modelNotice.ariaLabel": "Model notice",
+  "input.addRow": "Add row",
+  "input.removeRow": "Remove row {{index}}",
+  "paramRender.removeItem": "Remove item {{index}}",
+  "mcp.servers.statusErrorDetail": "{{name}} error: {{error}}",
+  "mcp.servers.loadingServers": "Loading MCP servers",
+  "input.selectOption": "Select input option"
 }

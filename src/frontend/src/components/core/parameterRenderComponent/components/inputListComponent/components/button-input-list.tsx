@@ -42,6 +42,7 @@ export const ButtonInputList = ({
             )}
             data-testid={getTestId("plus", index, editNode, componentName)}
             disabled={disabled}
+            aria-label={listAddLabel}
           >
             <IconComponent
               name="Plus"

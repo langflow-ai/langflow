@@ -2139,5 +2139,10 @@
   "mcp.servers.actionsMenu": "{{name}} の操作",
   "assistant.modelNotice.fallback": "モデル {{failed}} が失敗しました（{{reason}}）。代わりに {{used}} を使用しました。",
   "assistant.modelNotice.remediation": "モデル {{failed}} は実行のために調整が必要でした（{{reason}}）。",
-  "assistant.modelNotice.ariaLabel": "モデルの通知"
+  "assistant.modelNotice.ariaLabel": "モデルの通知",
+  "input.addRow": "行を追加",
+  "input.removeRow": "行 {{index}} を削除",
+  "paramRender.removeItem": "項目 {{index}} を削除",
+  "mcp.servers.statusErrorDetail": "{{name}} のエラー: {{error}}",
+  "mcp.servers.loadingServers": "MCP サーバーを読み込み中"
 }

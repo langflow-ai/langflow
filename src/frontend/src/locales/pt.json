@@ -2139,5 +2139,10 @@
   "mcp.servers.actionsMenu": "Ações para {{name}}",
   "assistant.modelNotice.fallback": "O modelo {{failed}} falhou ({{reason}}); usei {{used}} no lugar.",
   "assistant.modelNotice.remediation": "O modelo {{failed}} precisou de um ajuste para rodar ({{reason}}).",
-  "assistant.modelNotice.ariaLabel": "Aviso do modelo"
+  "assistant.modelNotice.ariaLabel": "Aviso do modelo",
+  "input.addRow": "Adicionar linha",
+  "input.removeRow": "Remover linha {{index}}",
+  "paramRender.removeItem": "Remover item {{index}}",
+  "mcp.servers.statusErrorDetail": "Erro em {{name}}: {{error}}",
+  "mcp.servers.loadingServers": "Carregando servidores MCP"
 }

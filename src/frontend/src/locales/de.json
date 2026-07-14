@@ -2139,5 +2139,10 @@
   "mcp.servers.actionsMenu": "Aktionen für {{name}}",
   "assistant.modelNotice.fallback": "Modell {{failed}} ist fehlgeschlagen ({{reason}}); stattdessen wurde {{used}} verwendet.",
   "assistant.modelNotice.remediation": "Modell {{failed}} benötigte eine Anpassung zur Ausführung ({{reason}}).",
-  "assistant.modelNotice.ariaLabel": "Modellhinweis"
+  "assistant.modelNotice.ariaLabel": "Modellhinweis",
+  "input.addRow": "Zeile hinzufügen",
+  "input.removeRow": "Zeile {{index}} entfernen",
+  "paramRender.removeItem": "Element {{index}} entfernen",
+  "mcp.servers.statusErrorDetail": "Fehler bei {{name}}: {{error}}",
+  "mcp.servers.loadingServers": "MCP-Server werden geladen"
 }
