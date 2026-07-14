@@ -981,6 +981,31 @@ async def test_unmatched_decision_re_parks_task(client: AsyncClient, active_user
     assert done["artifacts"][0]["parts"][0]["text"] == "Approve this?"
 
 
+@pytest.mark.usefixtures("client")
+async def test_checkpoint_claim_is_exclusive():
+    """Two resumers race for one parked checkpoint; the atomic claim lets exactly one win.
+
+    Models the cross-worker double-resume: both workers loaded the same checkpoint, both try to
+    claim, but only the DELETE that removes the row (rowcount 1) wins and may run the approved
+    branch. The loser gets False and backs off, so a duplicated message/send can't fire the gated
+    action twice. Deterministic proxy for the race (true concurrency would be flaky).
+    """
+    from langflow.api.v1.a2a import A2ACheckpointStore
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+
+    store = A2ACheckpointStore()
+    run_id = uuid.uuid4().hex
+    await store.save(GraphCheckpoint(run_id=run_id, flow_id=str(uuid.uuid4()), session_id="s"))
+
+    first = await store.claim_by_run_id(run_id)
+    second = await store.claim_by_run_id(run_id)
+
+    assert first is True
+    assert second is False
+    # The winning claim removed the row, so it can't be resumed again.
+    assert await store.load_by_run_id(run_id) is None
+
+
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_resume_via_other_flow_is_rejected(client: AsyncClient, active_user, human_input_flow_data):
     """A task parked under one flow can't be resumed or completed through a different flow's endpoint."""
@@ -1782,12 +1807,32 @@ async def test_cancel_wont_flip_a_completed_task(client: AsyncClient, active_use
         resp = (await _jsonrpc(client, flow_id, "tasks/cancel", {"id": task_id})).json()
         assert "error" in resp
         assert "result" not in resp
+        # And with its spec code (TaskNotCancelableError = -32002), not the adapter's generic -32603.
+        assert resp["error"]["code"] == -32002
 
         # The durable terminal state is untouched.
         got = (await _jsonrpc(client, flow_id, "tasks/get", {"id": task_id})).json()["result"]
         assert got["status"]["state"] == "completed"
     finally:
         registry._active_tasks.pop(task_id, None)
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_error_responses_carry_spec_codes(client: AsyncClient, active_user, echo_flow_data):
+    """Deliberate A2A errors reach the wire with their spec JSON-RPC codes, not a generic -32603.
+
+    The v0.3 compat adapter's catch-all wraps every exception in InternalError; _SpecErrorAdapter
+    maps the A2AError subclasses back to their spec codes on the non-streaming methods.
+    """
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+
+    # tasks/get on an unknown id -> TaskNotFoundError (-32001).
+    unknown_get = (await _jsonrpc(client, flow_id, "tasks/get", {"id": uuid.uuid4().hex})).json()
+    assert unknown_get["error"]["code"] == -32001
+
+    # tasks/cancel on an unknown id -> also TaskNotFoundError (-32001) via the flow-scoped gate.
+    unknown_cancel = (await _jsonrpc(client, flow_id, "tasks/cancel", {"id": uuid.uuid4().hex})).json()
+    assert unknown_cancel["error"]["code"] == -32001
 
 
 @pytest.mark.usefixtures("client")

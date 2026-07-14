@@ -28,13 +28,18 @@ from uuid import UUID, uuid4
 import httpx
 from a2a.server.agent_execution.active_task import TERMINAL_TASK_STATES
 from a2a.server.context import ServerCallContext
+from a2a.server.jsonrpc_models import JSONRPCError as CoreJSONRPCError
 from a2a.server.owner_resolver import resolve_user_scope
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.routes.common import DefaultServerCallContextBuilder
-from a2a.server.routes.jsonrpc_dispatcher import JsonRpcDispatcher
+from a2a.server.routes.jsonrpc_dispatcher import JSONRPC03Adapter, JsonRpcDispatcher
 from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, TaskStore
 from a2a.types import a2a_pb2 as pb
 from a2a.utils.errors import (
+    JSON_RPC_ERROR_CODE_MAP as _A2A_ERROR_CODES,
+)
+from a2a.utils.errors import (
+    A2AError,
     InvalidParamsError,
     TaskNotCancelableError,
     TaskNotFoundError,
@@ -57,6 +62,7 @@ from lfx.schema.workflow import (
 from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
 from lfx.utils.ssrf_transport import create_ssrf_protected_client
 from lfx.workflow.converters import parse_workflow_run_request, run_response_to_workflow_response
+from sqlalchemy import delete
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -272,6 +278,16 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
     from langflow.api.v2.workflow_execution import _resolve_execution_timeout
     from langflow.processing.process import run_graph_internal
 
+    # Atomic claim before executing: exactly one caller may run a given parked task's approved branch.
+    # Two workers handling a duplicated message/send both loaded and rebuilt the graph above (both
+    # side-effect-free); the DELETE picks the single winner, and a loser bails before run_graph_internal
+    # so the gated action can't fire twice (the SDK's task lock is per-process, not cross-worker). Claim
+    # here, not before the build, so a build failure leaves the checkpoint recoverable. A re-pause saves
+    # a fresh checkpoint under this run_id.
+    if not await store.claim_by_run_id(task_id):
+        msg = f"A2A task {task_id} is already being resumed"
+        raise RuntimeError(msg)
+
     try:
         run_outputs, session_id = await asyncio.wait_for(
             run_graph_internal(
@@ -396,6 +412,20 @@ class A2ACheckpointStore(CheckpointStore):
             row = await session.get(A2ACheckpoint, run_id)
             if row is not None:
                 await session.delete(row)
+
+    async def claim_by_run_id(self, run_id: str) -> bool:
+        """Atomically claim the parked checkpoint so exactly one caller may resume the task.
+
+        A single conditional ``DELETE ... WHERE run_id = ?`` (not the read-then-delete of
+        ``delete_by_run_id``): two workers handling a duplicated ``message/send`` both loaded this
+        checkpoint, but only the one whose DELETE removes the row (rowcount 1) wins and runs the
+        approved branch; the loser backs off, so the gated action can't fire twice. Atomic on both
+        SQLite (writer-serialized) and Postgres (row lock), unlike ``SELECT ... FOR UPDATE`` which is
+        a no-op on SQLite.
+        """
+        async with session_scope() as session:
+            result = await session.execute(delete(A2ACheckpoint).where(A2ACheckpoint.run_id == run_id))
+            return (result.rowcount or 0) == 1
 
     async def load(self, checkpoint_id: str) -> GraphCheckpoint | None:
         # A2A resolves by run_id (== task id); a by-checkpoint-id lookup isn't mounted.
@@ -580,6 +610,34 @@ _HANDLER = _DurableCancelHandler(
     push_config_store=_PUSH_CONFIG_STORE,
     push_sender=_PUSH_SENDER,
 )
+
+
+class _SpecErrorAdapter(JSONRPC03Adapter):
+    """Preserve spec JSON-RPC error codes on the v0.3 compat surface.
+
+    The base adapter's ``handle_request`` has a catch-all that wraps every exception in
+    ``InternalError`` (-32603), so a deliberately-raised ``A2AError`` (``TaskNotFoundError`` -32001,
+    ``TaskNotCancelableError`` -32002, ``UnsupportedOperationError`` -32004, ``InvalidParamsError``
+    -32602) reaches the wire as a generic internal error and a conforming client can't distinguish
+    "no such task" from "the agent broke". Catch ``A2AError`` in the non-streaming path and map it
+    through the SDK's own ``JSON_RPC_ERROR_CODE_MAP`` before the catch-all sees it. Unknown
+    ``A2AError`` subclasses fall through to the base -32603. The streaming path (``message/stream`` /
+    ``tasks/resubscribe``) still collapses its error frame to -32603 in the SDK's stream generator;
+    fixing that means reimplementing that generator, tracked separately.
+    """
+
+    async def _process_non_streaming_request(self, request_id, request_obj, context):
+        try:
+            return await super()._process_non_streaming_request(request_id, request_obj, context)
+        except A2AError as exc:
+            code = _A2A_ERROR_CODES.get(type(exc))
+            if code is None:
+                raise  # unknown A2AError: let the base catch-all map it to -32603
+            return self._generate_error_response(
+                request_id, CoreJSONRPCError(code=code, message=str(exc) or type(exc).__name__)
+            )
+
+
 _DISPATCHER = JsonRpcDispatcher(
     request_handler=_HANDLER,
     context_builder=_FlowContextBuilder(),
@@ -587,6 +645,10 @@ _DISPATCHER = JsonRpcDispatcher(
     # tasks/resubscribe, tasks/pushNotificationConfig/{set,get,list,delete}
     enable_v0_3_compat=True,
 )
+# enable_v0_3_compat builds the compat adapter internally with no injection hook, so re-tag the
+# built instance to preserve spec error codes (keeps its constructed handler/context state intact).
+if _DISPATCHER._v03_adapter is not None:  # noqa: SLF001 - no public accessor for the compat adapter
+    _DISPATCHER._v03_adapter.__class__ = _SpecErrorAdapter  # noqa: SLF001
 
 
 # The flag guard is a route dependency so it runs BEFORE the CurrentActiveUser auth dependency
