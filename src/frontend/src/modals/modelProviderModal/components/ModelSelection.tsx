@@ -146,6 +146,10 @@ const ModelRow = ({
       {isEnabledModel && (
         <Switch
           checked={enabled}
+          disabled={
+            model.metadata?.deprecated === true ||
+            model.metadata?.not_supported === true
+          }
           onCheckedChange={(checked) => onToggle(model.model_name, checked)}
           data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
           aria-label={
