@@ -316,16 +316,10 @@ jobs:
 
           SDK_WHEELS=(./sdk-dist/*.whl)
           LFX_WHEELS=(./lfx-dist/*.whl)
-          if [ ${#SDK_WHEELS[@]} -gt 0 ] || [ ${#LFX_WHEELS[@]} -gt 0 ]; then
-            install_wheels "SDK/LFX" "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}"
-          fi
-
           BASE_WHEELS=(./base-dist/*.whl)
-          install_wheels "base" "${BASE_WHEELS[@]}"
-
+          BUNDLE_WHEELS=()
           if [ -d ./bundles-dist ]; then
             BUNDLE_WHEELS=(./bundles-dist/*.whl)
-            install_wheels "bundle" "${BUNDLE_WHEELS[@]}"
           fi
 
           MAIN_WHEELS=()
@@ -337,7 +331,24 @@ jobs:
             find ./main-dist -name "*.whl" -type f | sort
             exit 1
           fi
-          install_wheels "main" "${MAIN_WHEELS[@]}"
+
+          if [ "${{ inputs.pre_release }}" = "true" ]; then
+            # Every local pre-release must be explicit in one resolution. Installing
+            # them sequentially makes the next wheel's RC dependencies transitive,
+            # so uv's explicit-only policy can replace them with older stable wheels.
+            install_wheels "pre-release package set" \
+              "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BASE_WHEELS[@]}" \
+              "${BUNDLE_WHEELS[@]}" "${MAIN_WHEELS[@]}"
+          else
+            if [ ${#SDK_WHEELS[@]} -gt 0 ] || [ ${#LFX_WHEELS[@]} -gt 0 ]; then
+              install_wheels "SDK/LFX" "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}"
+            fi
+            install_wheels "base" "${BASE_WHEELS[@]}"
+            if [ ${#BUNDLE_WHEELS[@]} -gt 0 ]; then
+              install_wheels "bundle" "${BUNDLE_WHEELS[@]}"
+            fi
+            install_wheels "main" "${MAIN_WHEELS[@]}"
+          fi
         shell: bash
 
       # PyPI installation steps
@@ -608,16 +619,10 @@ jobs:
 
           SDK_WHEELS=(./sdk-dist/*.whl)
           LFX_WHEELS=(./lfx-dist/*.whl)
-          if [ ${#SDK_WHEELS[@]} -gt 0 ] || [ ${#LFX_WHEELS[@]} -gt 0 ]; then
-            install_wheels "SDK/LFX" "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}"
-          fi
-
           BASE_WHEELS=(./base-dist/*.whl)
-          install_wheels "base" "${BASE_WHEELS[@]}"
-
+          BUNDLE_WHEELS=()
           if [ -d ./bundles-dist ]; then
             BUNDLE_WHEELS=(./bundles-dist/*.whl)
-            install_wheels "bundle" "${BUNDLE_WHEELS[@]}"
           fi
 
           MAIN_WHEELS=()
@@ -629,24 +634,31 @@ jobs:
             find ./main-dist -name "*.whl" -type f | sort
             exit 1
           fi
-          install_wheels "main" "${MAIN_WHEELS[@]}"
+
+          if [ "${{ inputs.pre_release }}" = "true" ]; then
+            # Every local pre-release must be explicit in one resolution. See the
+            # stable job above for why sequential installation is unsafe for RCs.
+            install_wheels "pre-release package set" \
+              "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BASE_WHEELS[@]}" \
+              "${BUNDLE_WHEELS[@]}" "${MAIN_WHEELS[@]}"
+          else
+            if [ ${#SDK_WHEELS[@]} -gt 0 ] || [ ${#LFX_WHEELS[@]} -gt 0 ]; then
+              install_wheels "SDK/LFX" "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}"
+            fi
+            install_wheels "base" "${BASE_WHEELS[@]}"
+            if [ ${#BUNDLE_WHEELS[@]} -gt 0 ]; then
+              install_wheels "bundle" "${BUNDLE_WHEELS[@]}"
+            fi
+            install_wheels "main" "${MAIN_WHEELS[@]}"
+          fi
         shell: bash
 
       - name: Force reinstall local wheels to prevent downgrades (Windows)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows'
         run: |
-          # Expose the local wheel dirs so dependency re-resolution (the
-          # pre-release path below drops --no-deps) can find the local
-          # pre-release lfx/base wheels. Without these, uv re-resolves
-          # langflow-base's `lfx>=X.Y.Zrc0` constraint against PyPI only, where
-          # the matching rc/dev wheel is not published yet, and fails with
-          # "No solution found when resolving dependencies".
-          FIND_LINKS=()
-          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
-            if [ -d "$wheel_dir" ]; then
-              FIND_LINKS+=(--find-links "$wheel_dir")
-            fi
-          done
+          # Dependencies were resolved together in the install step. Reinstall
+          # the exact local core wheels without giving uv another opportunity to
+          # replace an RC with an older stable package from PyPI.
 
           # Reinstall LFX if it was provided
           if [ -n "${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name }}" ]; then
@@ -662,11 +674,7 @@ jobs:
                 echo "Force reinstalling langflow-sdk with LFX: $SDK_WHEEL"
                 INSTALL_WHEELS=("$SDK_WHEEL" "$LFX_WHEEL")
               fi
-              NO_DEPS="--no-deps"
-              if [ "${{ inputs.pre_release }}" = "true" ]; then
-                NO_DEPS=""
-              fi
-              uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/Scripts/python.exe "${INSTALL_WHEELS[@]}"
+              uv pip install --force-reinstall --no-deps --python ./test-env/Scripts/python.exe "${INSTALL_WHEELS[@]}"
             fi
           fi
 
@@ -674,29 +682,16 @@ jobs:
           BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$BASE_WHEEL" ]; then
             echo "Force reinstalling langflow-base: $BASE_WHEEL"
-            NO_DEPS="--no-deps"
-            if [ "${{ inputs.pre_release }}" = "true" ]; then
-              NO_DEPS=""
-            fi
-            uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/Scripts/python.exe "$BASE_WHEEL"
+            uv pip install --force-reinstall --no-deps --python ./test-env/Scripts/python.exe "$BASE_WHEEL"
           fi
         shell: bash
 
       - name: Force reinstall local wheels to prevent downgrades (Unix)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows'
         run: |
-          # Expose the local wheel dirs so dependency re-resolution (the
-          # pre-release path below drops --no-deps) can find the local
-          # pre-release lfx/base wheels. Without these, uv re-resolves
-          # langflow-base's `lfx>=X.Y.Zrc0` constraint against PyPI only, where
-          # the matching rc/dev wheel is not published yet, and fails with
-          # "No solution found when resolving dependencies".
-          FIND_LINKS=()
-          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
-            if [ -d "$wheel_dir" ]; then
-              FIND_LINKS+=(--find-links "$wheel_dir")
-            fi
-          done
+          # Dependencies were resolved together in the install step. Reinstall
+          # the exact local core wheels without giving uv another opportunity to
+          # replace an RC with an older stable package from PyPI.
 
           # Reinstall LFX if it was provided
           if [ -n "${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name }}" ]; then
@@ -712,11 +707,7 @@ jobs:
                 echo "Force reinstalling langflow-sdk with LFX: $SDK_WHEEL"
                 INSTALL_WHEELS=("$SDK_WHEEL" "$LFX_WHEEL")
               fi
-              NO_DEPS="--no-deps"
-              if [ "${{ inputs.pre_release }}" = "true" ]; then
-                NO_DEPS=""
-              fi
-              uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/bin/python "${INSTALL_WHEELS[@]}"
+              uv pip install --force-reinstall --no-deps --python ./test-env/bin/python "${INSTALL_WHEELS[@]}"
             fi
           fi
 
@@ -724,11 +715,7 @@ jobs:
           BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$BASE_WHEEL" ]; then
             echo "Force reinstalling langflow-base: $BASE_WHEEL"
-            NO_DEPS="--no-deps"
-            if [ "${{ inputs.pre_release }}" = "true" ]; then
-              NO_DEPS=""
-            fi
-            uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/bin/python "$BASE_WHEEL"
+            uv pip install --force-reinstall --no-deps --python ./test-env/bin/python "$BASE_WHEEL"
           fi
         shell: bash
 
