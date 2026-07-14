@@ -25,6 +25,7 @@ from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.secrets import unwrap_secret_value
+from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
@@ -164,8 +165,13 @@ async def is_valid_ollama_url(url: str) -> bool:
         url = url.rstrip("/").removesuffix("/v1")
         if not url.endswith("/"):
             url = url + "/"
+        tags_url = urljoin(url, "api/tags")
+        validate_connector_url_for_ssrf(tags_url)
         async with httpx.AsyncClient() as client:
-            return (await client.get(url=urljoin(url, "api/tags"))).status_code == HTTP_STATUS_OK
+            return (await client.get(url=tags_url)).status_code == HTTP_STATUS_OK
+    except SSRFProtectionError:
+        logger.warning("Ollama URL blocked by SSRF protection: %s", url)
+        return False
     except httpx.RequestError:
         logger.debug(f"Invalid Ollama URL: {url}")
         return False
@@ -208,6 +214,8 @@ async def get_ollama_models(
 
         # Ollama REST API to return model capabilities
         show_url = urljoin(base_url, "api/show")
+
+        validate_connector_url_for_ssrf(tags_url)
 
         async with httpx.AsyncClient() as client:
             # Fetch available models
@@ -357,7 +365,8 @@ def get_watsonx_llm_models(
             "version": "2024-09-16",
             "filters": "function_text_chat,!lifecycle_withdrawn",
         }
-        response = requests.get(endpoint, params=params, timeout=10)
+        validate_connector_url_for_ssrf(endpoint)
+        response = requests.get(endpoint, params=params, timeout=10, allow_redirects=False)
         response.raise_for_status()
         data = response.json()
         models = [model["model_id"] for model in data.get("resources", [])]
@@ -389,7 +398,8 @@ def get_watsonx_embedding_models(
             "version": "2024-09-16",
             "filters": "function_embedding,!lifecycle_withdrawn:and",
         }
-        response = requests.get(endpoint, params=params, timeout=10)
+        validate_connector_url_for_ssrf(endpoint)
+        response = requests.get(endpoint, params=params, timeout=10, allow_redirects=False)
         response.raise_for_status()
         data = response.json()
         models = [model["model_id"] for model in data.get("resources", [])]
