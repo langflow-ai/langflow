@@ -147,9 +147,10 @@ EXPECTED_FIELDS = {
     "variables_to_get_from_environment",
     "agentic_experience",
     "developer_api_enabled",
-    # ---- Added in 1.10.0, folded into the mixins during the release back-merge ----
+    # ---- Added after the original Settings split and folded into the mixins ----
     # PathSettings
     "kb_allowed_folder_roots",
+    "kb_folder_max_file_size_bytes",
     "directory_component_allowed_roots",
     # McpSettings
     "mcp_tool_execution_timeout",
