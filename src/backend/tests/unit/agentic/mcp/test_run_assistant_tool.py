@@ -26,6 +26,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
+from lfx.base.mcp.security import AGENTIC_USER_ID_ENV_VAR
 
 RUNNER_MODULE = "langflow.agentic.utils.assistant_runner"
 
@@ -495,10 +496,10 @@ class TestRunAssistantToolContextBridge:
             patch.object(mcp_server, "_ensure_services", new_callable=AsyncMock),
             patch.object(mcp_server, "session_scope", return_value=session_ctx),
             patch.object(mcp_server, "run_assistant_and_persist", side_effect=capture),
+            patch.dict("os.environ", {AGENTIC_USER_ID_ENV_VAR: str(uuid4())}),
         ):
             await mcp_server.run_assistant(
                 instruction="Build a chat flow",
-                user_id=str(uuid4()),
                 ctx=self._ctx_stub(),
             )
 
@@ -524,8 +525,9 @@ class TestRunAssistantToolContextBridge:
             patch.object(mcp_server, "_ensure_services", new_callable=AsyncMock),
             patch.object(mcp_server, "session_scope", return_value=session_ctx),
             patch.object(mcp_server, "run_assistant_and_persist", side_effect=capture),
+            patch.dict("os.environ", {AGENTIC_USER_ID_ENV_VAR: str(uuid4())}),
         ):
-            await mcp_server.run_assistant(instruction="Build a chat flow", user_id=str(uuid4()))
+            await mcp_server.run_assistant(instruction="Build a chat flow")
 
         assert captured_kwargs.get("on_progress") is None
 
