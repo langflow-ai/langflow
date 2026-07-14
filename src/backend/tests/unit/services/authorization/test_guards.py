@@ -41,14 +41,15 @@ from ._common import (
 
 @pytest.mark.anyio
 async def test_ensure_permission_noop_when_disabled(monkeypatch, fake_user):
-    """When AUTHZ_ENABLED=False, the helper returns without consulting the service."""
-    install_settings(monkeypatch, authz_enabled=False)
+    """Disabled enforcement allows without consulting the service but still audits."""
+    install_settings(monkeypatch, authz_enabled=False, audit_enabled=True)
     service = _StubAuthorizationService(allow=False)
     install_authz(monkeypatch, service)
-    install_audit_recorder(monkeypatch)
+    audit_calls = install_audit_recorder(monkeypatch)
 
     await authz_guards.ensure_permission(fake_user, domain="*", obj="flow:abc", act="read")
     assert service.calls == []
+    assert audit_calls[0]["result"] == "allow"
 
 
 @pytest.mark.anyio
@@ -711,6 +712,26 @@ async def test_variable_create_permission_ignores_prospective_owner(monkeypatch,
     assert exc.value.status_code == 403
     assert service.calls[0]["obj"] == "variable:*"
     assert service.calls[0]["act"] == "create"
+
+
+@pytest.mark.anyio
+async def test_create_audits_allow_when_enforcement_is_disabled(monkeypatch, fake_user):
+    """Prospective ownership must not suppress audit-only CREATE visibility."""
+    install_settings(monkeypatch, authz_enabled=False, audit_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_file_permission(
+        fake_user,
+        FileAction.CREATE,
+        file_user_id=fake_user.id,
+    )
+
+    assert service.calls == []
+    assert len(audit_calls) == 1
+    assert audit_calls[0]["result"] == "allow"
+    assert audit_calls[0]["action"] == "file:create"
 
 
 # ----------------------------------------------------------------------------- #

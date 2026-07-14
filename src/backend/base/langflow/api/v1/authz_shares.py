@@ -76,11 +76,11 @@ async def _serialize_shares(session: DbSession, rows: list[AuthzShare]) -> list[
     user_names: dict[UUID, str] = {}
     if user_ids:
         user_rows = await session.exec(select(User.id, User.username).where(User.id.in_(user_ids)))
-        user_names.update(dict(user_rows))
+        user_names.update(dict(user_rows.all()))
     team_names: dict[UUID, str] = {}
     if team_ids:
         team_rows = await session.exec(select(AuthzTeam.id, AuthzTeam.team_name).where(AuthzTeam.id.in_(team_ids)))
-        team_names.update(dict(team_rows))
+        team_names.update(dict(team_rows.all()))
 
     def target_name(row: AuthzShare) -> str | None:
         if row.scope == ShareScope.USER.value:

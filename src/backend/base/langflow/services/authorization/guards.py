@@ -147,19 +147,29 @@ async def ensure_permission(
     intentionally generic so a missing ``deny_to_404`` wrap cannot leak the
     resource UUID — see review item I2 on PR #13153.
     """
-    settings = get_settings_service()
-    if not settings.auth_settings.AUTHZ_ENABLED:
-        return
-
-    authz = get_authorization_service()
     # Caller context first; user auth fields cannot be overwritten.
     merged_context = {**(context or {}), **_auth_context(user)}
-    # Fail closed when enforce() raises (deny + audit, not HTTP 500).
     audit_action = f"{obj.split(':', 1)[0]}:{act}" if ":" in obj else act
     audit_details: dict[str, Any] = {"domain": domain, **_auth_audit_details()}
     for owner_key in _OWNER_CONTEXT_KEYS:
         if owner_key in merged_context and merged_context[owner_key] is not None:
             audit_details[owner_key] = str(merged_context[owner_key])
+
+    settings = get_settings_service()
+    if not settings.auth_settings.AUTHZ_ENABLED:
+        # Auditing is independently configurable so operators can observe the
+        # allow-by-disabled-enforcement path before turning RBAC on.
+        await _audit.audit_decision(
+            user_id=user.id,
+            action=audit_action,
+            obj=obj,
+            result=_audit.AUDIT_ALLOW,
+            details=audit_details,
+        )
+        return
+
+    authz = get_authorization_service()
+    # Fail closed when enforce() raises (deny + audit, not HTTP 500).
     deny_detail = detail if detail is not None else _DEFAULT_DENY_DETAIL
     try:
         allowed = await authz.enforce(
