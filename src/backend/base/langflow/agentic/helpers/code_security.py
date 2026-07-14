@@ -41,6 +41,7 @@ DANGEROUS_DUNDER_ATTRS: set[str] = {
 # Langflow's variable/secret service, never raw process env.
 DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
+    ("sys", "modules", "sys.modules is forbidden in components"),
 ]
 
 # Dangerous attribute calls: (module, method, violation_message)
@@ -139,6 +140,7 @@ RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
         "dup2",
         "dup",
     },
+    "sys": {"modules"},
 }
 
 
@@ -478,6 +480,7 @@ class _SecurityChecker(ast.NodeVisitor):
     def visit_Call(self, node: ast.Call):
         self._check_name_call(node)
         self._check_attribute_call(node)
+        self._check_getattr_access(node)
         self.generic_visit(node)
 
     def _check_name_call(self, node: ast.Call):
@@ -513,6 +516,49 @@ class _SecurityChecker(ast.NodeVisitor):
                 if module_name == mod and method_name == method:
                     self.violations.append(message)
                     return
+
+    def _check_getattr_access(self, node: ast.Call):
+        """Check reflective access to restricted module members.
+
+        ``getattr`` is common in legitimate components, so it stays allowed for
+        ordinary objects and safe module attributes. On modules with restricted
+        members, a dynamic attribute name is rejected because it could resolve to
+        one of those members at runtime.
+        """
+        if not (
+            isinstance(node.func, ast.Name)
+            and node.func.id == "getattr"
+            and node.args
+            and isinstance(node.args[0], ast.Name)
+        ):
+            return
+
+        module_names = self._resolved_names(node.args[0].id)
+        try:
+            attr_node = node.args[1]
+        except IndexError:
+            return
+        if not (isinstance(attr_node, ast.Constant) and isinstance(attr_node.value, str)):
+            dangerous_modules = sorted(
+                module_name
+                for module_name in module_names
+                if module_name in _DANGEROUS_CALL_MEMBERS or module_name in _DANGEROUS_READ_MEMBERS
+            )
+            if dangerous_modules:
+                self.violations.append(
+                    f"Dynamic getattr() access on module '{dangerous_modules[0]}' is forbidden in components"
+                )
+            return
+
+        attr_name = attr_node.value
+        for mod, attr, message in DANGEROUS_ATTRIBUTE_READS:
+            if mod in module_names and attr_name == attr:
+                self.violations.append(message)
+                return
+        for mod, method, message in DANGEROUS_ATTR_CALLS:
+            if mod in module_names and attr_name == method:
+                self.violations.append(message)
+                return
 
 
 def scan_code_security(code: str) -> SecurityScanResult:
