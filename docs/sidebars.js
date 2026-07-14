@@ -379,12 +379,9 @@ module.exports = {
               label: "Processing",
               items: [
                 "Components/operations",
-                "Components/data-operations",
-                "Components/dataframe-operations",
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
-                "Components/text-operations",
                 "Components/type-convert",
               ]
             },
