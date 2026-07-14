@@ -97,16 +97,22 @@ def convert_params_to_sets(params):
 
 
 def convert_kwargs(params):
-    # Loop through items to avoid repeated lookups
     items_to_remove = []
+
     for key, value in params.items():
-        if ("kwargs" in key or "config" in key) and isinstance(value, str):
+        # Only parse actual kwargs/config fields.
+        # Avoid matching names like "tube_config_name".
+        should_parse_json = key in {
+            "kwargs",
+            "config",
+        } or key.endswith(("_kwargs", "_config"))
+
+        if should_parse_json and isinstance(value, str):
             try:
                 params[key] = orjson.loads(value)
             except orjson.JSONDecodeError:
                 items_to_remove.append(key)
 
-    # Remove invalid keys outside the loop to avoid modifying dict during iteration
     for key in items_to_remove:
         params.pop(key, None)
 
