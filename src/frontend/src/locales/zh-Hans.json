@@ -2144,6 +2144,7 @@
   "inspectionPanel.add": "添加",
   "inspectionPanel.remove": "移除",
   "inspectionPanel.defaultLabel": "默认",
+  "inspectionPanel.valueLabel": "值",
   "inspectionPanel.noParameters": "无参数",
   "inspectionPanel.default.empty": "空",
   "inspectionPanel.default.enabled": "已启用",

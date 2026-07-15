@@ -2144,6 +2144,7 @@
   "inspectionPanel.add": "Ajouter",
   "inspectionPanel.remove": "Retirer",
   "inspectionPanel.defaultLabel": "Défaut",
+  "inspectionPanel.valueLabel": "Valeur",
   "inspectionPanel.noParameters": "Aucun paramètre",
   "inspectionPanel.default.empty": "Vide",
   "inspectionPanel.default.enabled": "Activé",

@@ -100,12 +100,27 @@ describe("InspectionPanelParameterRow", () => {
   });
 
   describe("rendering", () => {
-    it("renders title and default preview line", () => {
+    it("renders title and preview line labeled Value when no factory default exists", () => {
       renderWithProviders(<InspectionPanelParameterRow {...defaultProps} />);
 
       expect(screen.getByText("Test Field")).toBeInTheDocument();
-      expect(screen.getByText(/Default/)).toBeInTheDocument();
+      // Without a factory template the preview shows the LIVE value — it must
+      // not be labeled "Default".
+      expect(screen.getByText(/Value/)).toBeInTheDocument();
+      expect(screen.queryByText(/Default/)).not.toBeInTheDocument();
       expect(screen.getByText(/test value/)).toBeInTheDocument();
+    });
+
+    it("labels the preview Default when the factory template declares one", () => {
+      mockFactoryTemplates = {
+        TestComponent: {
+          template: { test_field: { value: "factory default" } },
+        },
+      };
+      renderWithProviders(<InspectionPanelParameterRow {...defaultProps} />);
+
+      expect(screen.getByText(/Default/)).toBeInTheDocument();
+      expect(screen.getByText(/factory default/)).toBeInTheDocument();
     });
 
     it("renders no value editor of any kind", () => {

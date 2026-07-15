@@ -84,6 +84,12 @@ export default function InspectionPanelParameterRow({
     "token" in defaultDisplay
       ? t(`inspectionPanel.default.${defaultDisplay.token}`)
       : defaultDisplay.text;
+  // Without a factory template for this field the preview falls back to the
+  // LIVE value — label it "Value" instead of claiming it is the default.
+  const previewLabel =
+    factoryValue !== undefined
+      ? t("inspectionPanel.defaultLabel")
+      : t("inspectionPanel.valueLabel");
 
   return (
     <div
@@ -117,7 +123,7 @@ export default function InspectionPanelParameterRow({
           )}
         </div>
         <span className="truncate text-xs text-muted-foreground">
-          {t("inspectionPanel.defaultLabel")}: {defaultText}
+          {previewLabel}: {defaultText}
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">

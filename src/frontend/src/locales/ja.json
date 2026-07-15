@@ -2144,6 +2144,7 @@
   "inspectionPanel.add": "追加",
   "inspectionPanel.remove": "削除",
   "inspectionPanel.defaultLabel": "デフォルト",
+  "inspectionPanel.valueLabel": "値",
   "inspectionPanel.noParameters": "パラメータなし",
   "inspectionPanel.default.empty": "空",
   "inspectionPanel.default.enabled": "有効",
