@@ -9597,7 +9597,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-docling"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/docling" }
 dependencies = [
     { name = "docling-core", version = "2.78.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.13.*' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.12' and sys_platform == 'darwin')" },
