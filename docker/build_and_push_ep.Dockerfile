@@ -47,6 +47,11 @@ COPY ./src/lfx/README.md /app/src/lfx/README.md
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
+# Copy langflow-core metadata since it is a workspace member. The EP image does
+# not install this sibling distribution, but uv still validates all workspace
+# members during dependency resolution.
+COPY ./src/langflow-core/README.md /app/src/langflow-core/README.md
+COPY ./src/langflow-core/pyproject.toml /app/src/langflow-core/pyproject.toml
 # Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
 # is a uv workspace member, so each bundle's pyproject.toml must be present
 # for ``uv sync --no-install-project`` to resolve the workspace.  Copy the

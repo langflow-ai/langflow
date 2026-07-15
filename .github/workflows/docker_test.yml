@@ -82,6 +82,84 @@ jobs:
           echo "=== Disk usage after cleanup ==="
           df -h /
 
+      - name: Build core image
+        run: |
+          ${{ env.CONTAINER_RUNTIME }} build -t langflowai/langflow:core-latest-dev \
+            -f docker/build_and_push_core.Dockerfile \
+            .
+
+      - name: Test core image
+        run: |
+          expected_version=$(grep '^version = ' src/langflow-core/pyproject.toml | head -n 1 | cut -d '"' -f 2)
+          version=$(${{ env.CONTAINER_RUNTIME }} run --rm --entrypoint python langflowai/langflow:core-latest-dev -c 'from importlib.metadata import version; print(version("langflow-core"))')
+          if [ "$expected_version" != "$version" ]; then
+            echo "Expected core version: $expected_version"
+            echo "Actual core version: $version"
+            exit 1
+          fi
+
+          ${{ env.CONTAINER_RUNTIME }} run --rm --entrypoint python langflowai/langflow:core-latest-dev -c '
+          import importlib.metadata as metadata
+          names = {dist.metadata["Name"].lower() for dist in metadata.distributions()}
+          required = {"langflow-core", "langflow-base", "lfx", "langflow-sdk"}
+          missing = sorted(required - names)
+          forbidden = sorted(name for name in names if name.startswith("lfx-"))
+          assert not missing, f"missing core distributions: {missing}"
+          assert not forbidden, f"extension distributions installed: {forbidden}"
+          '
+
+          ${{ env.CONTAINER_RUNTIME }} run --rm --entrypoint bash langflowai/langflow:core-latest-dev -c '
+          command -v langflow >/dev/null
+          command -v langflow-core >/dev/null
+          '
+
+          container_id=$(${{ env.CONTAINER_RUNTIME }} run -d \
+            -e LANGFLOW_SUPERUSER_PASSWORD=CoreImageTest-2026! \
+            langflowai/langflow:core-latest-dev)
+          cleanup_core_container() {
+            ${{ env.CONTAINER_RUNTIME }} rm -f "$container_id" >/dev/null 2>&1 || true
+          }
+          trap cleanup_core_container EXIT
+
+          healthy=false
+          for _ in $(seq 1 60); do
+            if ${{ env.CONTAINER_RUNTIME }} exec "$container_id" curl -fsS http://127.0.0.1:7860/health_check >/dev/null; then
+              healthy=true
+              break
+            fi
+            if [ "$(${{ env.CONTAINER_RUNTIME }} inspect -f '{{.State.Running}}' "$container_id" 2>/dev/null)" != "true" ]; then
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$healthy" != "true" ]; then
+            echo "Core image did not become healthy"
+            ${{ env.CONTAINER_RUNTIME }} logs "$container_id" || true
+            exit 1
+          fi
+
+          cleanup_core_container
+          trap - EXIT
+
+      - name: Cleanup after core image
+        if: always()
+        run: |
+          echo "=== Disk usage before cleanup ==="
+          df -h /
+          while read -r container_id; do
+            if [ -n "$container_id" ]; then
+              ${{ env.CONTAINER_RUNTIME }} rm -f "$container_id" 2>/dev/null || true
+            fi
+          done < <(${{ env.CONTAINER_RUNTIME }} ps -aq --filter ancestor=langflowai/langflow:core-latest-dev)
+          ${{ env.CONTAINER_RUNTIME }} rmi langflowai/langflow:core-latest-dev || true
+          ${{ env.CONTAINER_RUNTIME }} system prune -af || true
+          if command -v docker &> /dev/null; then
+            docker buildx prune -af || true
+          fi
+          echo "=== Disk usage after cleanup ==="
+          df -h /
+
       - name: Build backend image
         run: |
           ${{ env.CONTAINER_RUNTIME }} build -t langflowai/langflow-backend:latest-dev \
