@@ -608,17 +608,17 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     async def _resolve_provider_payload_from_create_api(
         self,
         *,
-        user_id: UUID,
         project_id: UUID,
         db: AsyncSession,
         api_provider_payload: WatsonxApiDeploymentCreatePayload,
+        authorized_flow_version_ids: frozenset[UUID] = frozenset(),
     ) -> AdapterPayload:
         flow_version_ids = list(dict.fromkeys(item.flow_version_id for item in api_provider_payload.add_flows))
         flow_artifacts = await build_project_scoped_flow_artifacts_from_flow_versions(
             db=db,
-            user_id=user_id,
             project_id=project_id,
             reference_ids=flow_version_ids,
+            authorized_flow_version_ids=authorized_flow_version_ids,
         )
         # Start with flow names as display labels, then let user-provided
         # tool_display_name overrides replace them. The adapter provider-data
@@ -658,16 +658,18 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         project_id: UUID,
         db: AsyncSession,
         payload: DeploymentCreateRequest,
+        authorized_flow_version_ids: frozenset[UUID] = frozenset(),
     ) -> AdapterDeploymentCreate:
+        _ = user_id
         api_provider_payload = self._parse_deployment_create_request(payload)
         if api_provider_payload.llm is None:
             msg = "provider_data.llm is required for wxO deployment create."
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
         provider_payload = await self._resolve_provider_payload_from_create_api(
-            user_id=user_id,
             project_id=project_id,
             db=db,
             api_provider_payload=api_provider_payload,
+            authorized_flow_version_ids=authorized_flow_version_ids,
         )
         if api_provider_payload.display_name is None:
             msg = "provider_data.display_name is required for wxO deployment create."
@@ -687,6 +689,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         deployment_db_id: UUID,
         db: AsyncSession,
         payload: DeploymentUpdateRequest,
+        authorized_flow_version_ids: frozenset[UUID] = frozenset(),
     ) -> AdapterDeploymentUpdate:
         description = payload.description
         has_description = "description" in payload.model_fields_set
@@ -714,9 +717,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         flow_artifacts = await build_flow_artifacts_from_flow_versions(
             db=db,
-            user_id=user_id,
+            deployment_user_id=user_id,
             deployment_db_id=deployment_db_id,
             flow_version_ids=ordered_flow_version_ids,
+            authorized_flow_version_ids=authorized_flow_version_ids,
         )
         # Start with flow names as display labels, then let user-provided
         # tool_display_name overrides replace them. The adapter provider-data
@@ -1182,6 +1186,21 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         return FlowVersionPatch(
             add_flow_version_ids=add_ids,
             remove_flow_version_ids=remove_ids,
+        )
+
+    def util_update_flow_version_ids(self, payload: DeploymentUpdateRequest) -> list[UUID]:
+        if "provider_data" not in payload.model_fields_set:
+            return []
+        api_provider_payload: WatsonxApiDeploymentUpdatePayload = self.parse_api_request_slot(
+            slot=self.api_payloads.deployment_update,
+            slot_name="deployment_update",
+            raw=payload.provider_data,
+        )
+        return list(
+            dict.fromkeys(
+                [item.flow_version_id for item in api_provider_payload.upsert_flows]
+                + list(api_provider_payload.remove_flows)
+            )
         )
 
     def shape_execution_create_result(

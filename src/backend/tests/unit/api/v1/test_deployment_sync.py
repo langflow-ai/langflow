@@ -1219,6 +1219,37 @@ def test_resolve_flow_version_patch_for_update_watsonx_operations():
     assert remove_ids == [remove_id]
 
 
+def test_util_update_flow_version_ids_includes_unbind_only_references():
+    """Authorization covers every flow UUID named by the update payload."""
+    add_id = uuid4()
+    unbind_only_id = uuid4()
+    remove_id = uuid4()
+    payload = DeploymentUpdateRequest(
+        provider_data={
+            "llm": "test-llm",
+            "upsert_flows": [
+                {
+                    "flow_version_id": str(add_id),
+                    "add_app_ids": ["app-one"],
+                    "remove_app_ids": [],
+                },
+                {
+                    "flow_version_id": str(unbind_only_id),
+                    "add_app_ids": [],
+                    "remove_app_ids": ["app-one"],
+                },
+            ],
+            "remove_flows": [str(remove_id)],
+        }
+    )
+
+    assert WatsonxOrchestrateDeploymentMapper().util_update_flow_version_ids(payload) == [
+        add_id,
+        unbind_only_id,
+        remove_id,
+    ]
+
+
 class _FakeCountExecResult:
     def __init__(self, count_value: int):
         self._count_value = count_value

@@ -136,7 +136,7 @@ class TestCreateDeploymentRollback:
     @patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_snapshot_map_for_create", return_value={})
     @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.authorize_flow_versions_for_deployment", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -197,7 +197,7 @@ class TestCreateDeploymentRollback:
     @patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_snapshot_map_for_create", return_value={})
     @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.authorize_flow_versions_for_deployment", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -258,7 +258,7 @@ class TestCreateDeploymentExistingAgent:
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.authorize_flow_versions_for_deployment", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -330,7 +330,7 @@ class TestCreateDeploymentExistingAgent:
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.authorize_flow_versions_for_deployment", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -2158,7 +2158,7 @@ class TestUpdateDeploymentRollback:
     @patch(f"{ROUTES_MODULE}.update_deployment_db", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
-    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.authorize_flow_versions_for_deployment", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update", return_value=([], []))
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_rollback_called_on_commit_failure(
@@ -2212,7 +2212,7 @@ class TestUpdateDeploymentRollback:
     @patch(f"{ROUTES_MODULE}.update_deployment_db", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
-    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.authorize_flow_versions_for_deployment", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update", return_value=([], []))
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_no_rollback_on_success(
@@ -2267,7 +2267,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
     @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
     @patch(f"{ROUTES_MODULE}.list_deployment_attachments_for_flow_version_ids", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.authorize_flow_versions_for_deployment", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update")
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_already_attached_flow_versions_excluded_from_snapshot_resolution(
@@ -2327,7 +2327,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
     @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
     @patch(f"{ROUTES_MODULE}.list_deployment_attachments_for_flow_version_ids", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.authorize_flow_versions_for_deployment", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update")
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_all_flow_versions_already_attached_passes_empty_list(
@@ -2387,7 +2387,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
     @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
     @patch(f"{ROUTES_MODULE}.list_deployment_attachments_for_flow_version_ids", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.authorize_flow_versions_for_deployment", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update")
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_no_existing_attachments_passes_all_flow_versions(
@@ -2442,7 +2442,7 @@ class TestUpdateDeploymentMetadataPersistence:
     @patch(f"{ROUTES_MODULE}.update_deployment_db", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
-    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.authorize_flow_versions_for_deployment", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update", return_value=([], []))
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_provider_update_metadata_is_persisted_from_adapter_result(
@@ -3180,7 +3180,7 @@ class TestCreateDeploymentFlowAuthorization:
         adapter.create.assert_not_awaited()
 
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.authorize_flow_versions_for_deployment", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -3233,7 +3233,7 @@ class TestCreateDeploymentFlowAuthorization:
 
 class TestCreateDeploymentSchemaValidation:
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.authorize_flow_versions_for_deployment", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -3304,8 +3304,11 @@ class TestUpdateDeploymentFlowAuthorization:
         mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
         add_ids = [uuid4()]
+        unbind_only_id = uuid4()
         remove_ids = [uuid4()]
         mock_resolve_fvp.return_value = (add_ids, remove_ids)
+        referenced_ids = [*add_ids, unbind_only_id, *remove_ids]
+        mapper.util_update_flow_version_ids.return_value = referenced_ids
 
         mock_authorize_fv.side_effect = HTTPException(status_code=404, detail="out of project")
 
@@ -3325,6 +3328,7 @@ class TestUpdateDeploymentFlowAuthorization:
         mock_authorize_fv.assert_awaited_once()
         assert mock_authorize_fv.call_args.kwargs["project_id"] == dep_row.project_id
         assert mock_authorize_fv.call_args.kwargs["current_user"] is current_user
+        assert mock_authorize_fv.call_args.kwargs["flow_version_ids"] == referenced_ids
         adapter.update.assert_not_awaited()
 
 

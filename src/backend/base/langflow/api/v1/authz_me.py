@@ -21,6 +21,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.api.utils import CurrentActiveUser, DbSessionReadOnly
 from langflow.services.auth.context import current_auth_context_for_authz
 from langflow.services.authorization.access_ceiling import filter_actions_by_external_access_ceiling
+from langflow.services.authorization.actions import FlowAction
 from langflow.services.authorization.guards import should_apply_owner_override
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.file.model import File as UserFile
@@ -44,11 +45,11 @@ ResourceTypeLiteral = Literal[
 ]
 
 # Default action vocabulary aligned with the authorization plugin's known actions.
-_DEFAULT_ACTIONS: tuple[str, ...] = ("read", "write", "execute", "delete", "create")
+_DEFAULT_ACTIONS: tuple[str, ...] = ("read", "write", "execute", "delete", "create", "deploy")
 _MAX_RESOURCE_IDS = 500
 # Cap actions per request to bound the batch_enforce cartesian product
-# (resource_ids x actions). Headroom over the 6 known actions
-# (read/write/execute/delete/create/manage) covers future additions without
+# (resource_ids x actions). Headroom over the 7 known actions
+# (read/write/execute/delete/create/deploy/manage) covers future additions without
 # letting a client request `["read"] * 100000` to flood the enforcer.
 _MAX_ACTIONS = 10
 
@@ -74,7 +75,7 @@ class EffectivePermissionsRequest(BaseModel):
         default=None,
         description=(
             "Actions to check. Each entry is lowercased and de-duplicated; the list is "
-            f"capped at {_MAX_ACTIONS}. Defaults to read/write/execute/delete/create."
+            f"capped at {_MAX_ACTIONS}. Defaults to read/write/execute/delete/create/deploy."
         ),
     )
     domain: str = Field(
@@ -159,9 +160,12 @@ async def _apply_owner_permissions(
         resource_ids=resource_ids,
         user_id=user_id,
     )
+    owner_override_actions = (
+        tuple(action for action in actions if action != FlowAction.DEPLOY.value) if resource_type == "flow" else actions
+    )
     for resource_id in owned_ids:
         allowed = dict.fromkeys(normalized.get(resource_id, []))
-        allowed.update(dict.fromkeys(actions))
+        allowed.update(dict.fromkeys(owner_override_actions))
         normalized[resource_id] = list(allowed)
     return normalized
 

@@ -47,13 +47,14 @@ describe("PermissionsProvider gating", () => {
 
   it("keeps every action enabled when the pass-through returns all actions", () => {
     setMockedPermissions({
-      "flow-1": ["read", "write", "execute", "delete", "create"],
+      "flow-1": ["read", "write", "execute", "delete", "create", "deploy"],
     });
     const { result } = renderHook(() => usePermissions(), {
       wrapper: flowWrapper(["flow-1"]),
     });
     expect(result.current.can("flow-1", "delete")).toBe(true);
     expect(result.current.can("flow-1", "write")).toBe(true);
+    expect(result.current.can("flow-1", "deploy")).toBe(true);
   });
 
   it("gates actions that the response omits for a resource", () => {

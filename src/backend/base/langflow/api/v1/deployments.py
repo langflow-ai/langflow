@@ -37,7 +37,6 @@ from langflow.api.v1.mappers.deployments.helpers import (
     resolve_added_snapshot_bindings_for_update,
     resolve_deployment_adapter,
     resolve_flow_version_patch_for_update,
-    resolve_project_id_for_deployment_create,
     resolve_snapshot_map_for_create,
     rollback_provider_create,
     rollback_provider_update,
@@ -73,6 +72,10 @@ from langflow.services.authorization import (
     ensure_deployment_permission,
     filter_visible_resources,
     visible_id_prefilter,
+)
+from langflow.services.authorization.deployment import (
+    authorize_flow_versions_for_deployment,
+    resolve_project_id_for_deployment_create,
 )
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import _resolve_authz_domain
@@ -510,14 +513,17 @@ async def create_deployment(
                 db=session,
             )
     should_create_provider_resource = existing_resource_key is None
-    project_id = await resolve_project_id_for_deployment_create(payload=payload, user_id=current_user.id, db=session)
-    await ensure_deployment_permission(current_user, DeploymentAction.CREATE, project_id=project_id)
+    project_id = await resolve_project_id_for_deployment_create(
+        session=session,
+        current_user=current_user,
+        requested_project_id=payload.project_id,
+    )
     flow_version_ids = deployment_mapper.util_create_flow_version_ids(payload)
-    await validate_project_scoped_flow_version_ids(
+    authorized_flow_version_ids = await authorize_flow_versions_for_deployment(
         flow_version_ids=flow_version_ids,
-        user_id=current_user.id,
+        current_user=current_user,
         project_id=project_id,
-        db=session,
+        session=session,
     )
     if should_create_provider_resource:
         adapter_payload = await deployment_mapper.resolve_deployment_create(
@@ -525,6 +531,7 @@ async def create_deployment(
             project_id=project_id,
             db=session,
             payload=payload,
+            authorized_flow_version_ids=authorized_flow_version_ids,
         )
         with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
             provider_create_result = await deployment_adapter.create(
@@ -1496,26 +1503,27 @@ async def update_deployment(
     deployment_row_id = deployment_row.id
     deployment_resource_key = deployment_row.resource_key
     deployment_provider_account_id = deployment_row.deployment_provider_account_id
-    # Owner-namespaced operations use ``deployment_row.user_id`` — the
-    # deployment, its flow versions, and its attachments all live in the
-    # owner's scope. ``current_user`` is still the actor for authorization
-    # and audit, but the data plane operates in the owner's namespace.
+    # Deployment/provider operations and attachment rows use the deployment
+    # owner's namespace. Referenced flow versions may belong to another user;
+    # ``current_user`` remains the actor for their authorization and audit.
     owner_id = deployment_row.user_id
+    referenced_flow_version_ids = deployment_mapper.util_update_flow_version_ids(payload)
+    added_flow_version_ids, remove_flow_version_ids = resolve_flow_version_patch_for_update(
+        deployment_mapper=deployment_mapper,
+        payload=payload,
+    )
+    authorized_flow_version_ids = await authorize_flow_versions_for_deployment(
+        flow_version_ids=referenced_flow_version_ids,
+        current_user=current_user,
+        project_id=deployment_row.project_id,
+        session=session,
+    )
     adapter_payload = await deployment_mapper.resolve_deployment_update(
         user_id=owner_id,
         deployment_db_id=deployment_row_id,
         db=session,
         payload=payload,
-    )
-    added_flow_version_ids, remove_flow_version_ids = resolve_flow_version_patch_for_update(
-        deployment_mapper=deployment_mapper,
-        payload=payload,
-    )
-    await validate_project_scoped_flow_version_ids(
-        flow_version_ids=list(dict.fromkeys([*added_flow_version_ids, *remove_flow_version_ids])),
-        user_id=owner_id,
-        project_id=deployment_row.project_id,
-        db=session,
+        authorized_flow_version_ids=authorized_flow_version_ids,
     )
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(deployment_provider_account_id):
         update_result: DeploymentUpdateResult = await deployment_adapter.update(

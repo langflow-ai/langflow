@@ -27,6 +27,7 @@ export const DEFAULT_PERMISSION_ACTIONS = [
   "execute",
   "delete",
   "create",
+  "deploy",
 ] as const;
 
 export type PermissionAction = (typeof DEFAULT_PERMISSION_ACTIONS)[number];

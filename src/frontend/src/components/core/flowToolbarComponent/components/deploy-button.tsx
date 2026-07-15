@@ -30,8 +30,7 @@ function DeployButtonInner() {
   const navigateToTest = useNavigateToTest();
 
   const { can } = usePermissions();
-  // Deploying provisions and runs the flow on an environment → gate on execute.
-  const canDeploy = can(currentFlowId, "execute");
+  const canDeploy = can(currentFlowId, "deploy");
 
   return (
     <>

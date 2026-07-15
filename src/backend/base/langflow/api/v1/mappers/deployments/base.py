@@ -184,8 +184,9 @@ class BaseDeploymentMapper:
         project_id: UUID,
         db: AsyncSession,
         payload: DeploymentCreateRequest,
+        authorized_flow_version_ids: frozenset[UUID] = frozenset(),
     ) -> AdapterDeploymentCreate:
-        _ = (user_id, project_id, db, payload)
+        _ = (user_id, project_id, db, payload, authorized_flow_version_ids)
         msg = "This deployment provider is not configured for creating deployments."
         raise NotImplementedError(msg)
 
@@ -196,8 +197,9 @@ class BaseDeploymentMapper:
         deployment_db_id: UUID,
         db: AsyncSession,
         payload: DeploymentUpdateRequest,
+        authorized_flow_version_ids: frozenset[UUID] = frozenset(),
     ) -> AdapterDeploymentUpdate:
-        _ = (user_id, deployment_db_id, db, payload)
+        _ = (user_id, deployment_db_id, db, payload, authorized_flow_version_ids)
         msg = "This deployment provider is not configured for updating deployments."
         raise NotImplementedError(msg)
 
@@ -641,6 +643,16 @@ class BaseDeploymentMapper:
         """
         _ = payload
         return FlowVersionPatch()
+
+    def util_update_flow_version_ids(self, payload: DeploymentUpdateRequest) -> list[UUID]:
+        """Resolve every flow-version id referenced by an update payload.
+
+        The default contract derives references from the attachment patch.
+        Providers with flow operations that do not change attachments must
+        override this method so those references are authorized as well.
+        """
+        patch = self.util_flow_version_patch(payload)
+        return list(dict.fromkeys([*patch.add_flow_version_ids, *patch.remove_flow_version_ids]))
 
     def extract_snapshot_bindings(
         self,

@@ -43,6 +43,18 @@ class _DeploymentPolicyAuthz(_StubAuthorizationService):
         return kwargs["act"] == "deploy" and UUID(kwargs["obj"].split(":", 1)[1]) in self.allowed_flow_ids
 
 
+class _AdminDeploymentAuthz(_DeploymentPolicyAuthz):
+    def __init__(self, *, allowed_project_ids: set[UUID]) -> None:
+        super().__init__(allowed_flow_ids=set())
+        self.allowed_project_ids = allowed_project_ids
+
+    async def enforce(self, **kwargs) -> bool:
+        self.calls.append(kwargs)
+        if kwargs["act"] == "read" and kwargs["obj"].startswith("project:"):
+            return UUID(kwargs["obj"].split(":", 1)[1]) in self.allowed_project_ids
+        return kwargs["act"] == "create" and kwargs["obj"] == "deployment:*"
+
+
 def _flow_version_row(*, project_id: UUID, owner_id: UUID | None = None) -> SimpleNamespace:
     return SimpleNamespace(
         flow_version_id=uuid4(),
@@ -60,6 +72,122 @@ def _install_deployment_authz(monkeypatch, service: _DeploymentPolicyAuthz) -> N
     install_authz(monkeypatch, service)
     install_audit_recorder(monkeypatch)
     monkeypatch.setattr(deployment_authz, "get_authorization_service", lambda: service)
+
+
+@pytest.mark.anyio
+async def test_shared_project_resolution_uses_real_owner_and_domain(monkeypatch, async_session):
+    """An admin can target a foreign project without losing its authorization context."""
+    from langflow.services.authorization.deployment import resolve_project_id_for_deployment_create
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.database.models.user.model import User
+
+    actor = User(username=f"actor-{uuid4()}", password="not-a-secret", is_active=True)  # noqa: S106
+    owner = User(username=f"owner-{uuid4()}", password="not-a-secret", is_active=True)  # noqa: S106
+    async_session.add(actor)
+    async_session.add(owner)
+    await async_session.flush()
+    project = Folder(name=f"project-{uuid4()}", user_id=owner.id, workspace_id=uuid4())
+    async_session.add(project)
+    await async_session.flush()
+
+    service = _AdminDeploymentAuthz(allowed_project_ids={project.id})
+    _install_deployment_authz(monkeypatch, service)
+
+    resolved = await resolve_project_id_for_deployment_create(
+        session=async_session,
+        current_user=actor,
+        requested_project_id=project.id,
+    )
+
+    assert resolved == project.id
+    project_call, deployment_call = service.calls
+    assert project_call["domain"] == f"workspace:{project.workspace_id}"
+    assert project_call["obj"] == f"project:{project.id}"
+    assert project_call["context"]["project_user_id"] == owner.id
+    assert deployment_call["domain"] == f"project:{project.id}"
+    assert deployment_call["obj"] == "deployment:*"
+    assert deployment_call["act"] == "create"
+    assert deployment_call["context"]["deployment_user_id"] == actor.id
+
+
+@pytest.mark.anyio
+async def test_shared_project_resolution_maps_permission_denial_to_404(monkeypatch, async_session):
+    """A denied foreign project is indistinguishable from an unknown UUID."""
+    from langflow.services.authorization.deployment import resolve_project_id_for_deployment_create
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.database.models.user.model import User
+
+    actor = User(username=f"actor-{uuid4()}", password="not-a-secret", is_active=True)  # noqa: S106
+    owner = User(username=f"owner-{uuid4()}", password="not-a-secret", is_active=True)  # noqa: S106
+    async_session.add(actor)
+    async_session.add(owner)
+    await async_session.flush()
+    project = Folder(name=f"project-{uuid4()}", user_id=owner.id)
+    async_session.add(project)
+    await async_session.flush()
+
+    service = _AdminDeploymentAuthz(allowed_project_ids=set())
+    _install_deployment_authz(monkeypatch, service)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await resolve_project_id_for_deployment_create(
+            session=async_session,
+            current_user=actor,
+            requested_project_id=project.id,
+        )
+
+    assert exc_info.value.status_code == 404
+    assert str(project.id) not in str(exc_info.value.detail)
+    assert len(service.calls) == 1
+
+
+@pytest.mark.anyio
+async def test_share_aware_lookup_loads_foreign_owned_flow_version(monkeypatch, async_session):
+    """The real lookup query crosses owners only after the plugin opts in."""
+    from langflow.services.authorization.deployment import authorize_flow_versions_for_deployment
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.database.models.flow_version.model import FlowVersion
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.database.models.user.model import User
+
+    actor = User(username=f"actor-{uuid4()}", password="not-a-secret", is_active=True)  # noqa: S106
+    owner = User(username=f"owner-{uuid4()}", password="not-a-secret", is_active=True)  # noqa: S106
+    async_session.add(actor)
+    async_session.add(owner)
+    await async_session.flush()
+
+    project = Folder(name=f"project-{uuid4()}", user_id=owner.id)
+    async_session.add(project)
+    await async_session.flush()
+    flow = Flow(
+        name="shared-flow",
+        user_id=owner.id,
+        folder_id=project.id,
+        data={"nodes": [], "edges": []},
+    )
+    async_session.add(flow)
+    await async_session.flush()
+    version = FlowVersion(
+        flow_id=flow.id,
+        user_id=owner.id,
+        version_number=1,
+        data={"nodes": [], "edges": []},
+    )
+    async_session.add(version)
+    await async_session.flush()
+
+    service = _DeploymentPolicyAuthz(allowed_flow_ids={flow.id})
+    _install_deployment_authz(monkeypatch, service)
+
+    authorized = await authorize_flow_versions_for_deployment(
+        session=async_session,
+        current_user=actor,
+        project_id=project.id,
+        flow_version_ids=[version.id],
+    )
+
+    assert authorized == frozenset({version.id})
+    assert service.calls[0]["obj"] == f"flow:{flow.id}"
 
 
 @pytest.mark.anyio

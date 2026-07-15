@@ -1971,6 +1971,7 @@ async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> 
         project_id=project_id,
         db=_FakeDb([row]),
         payload=payload,
+        authorized_flow_version_ids=frozenset({flow_version_id}),
     )
     provider_data = resolved.provider_data or {}
 
@@ -2025,6 +2026,7 @@ async def test_watsonx_mapper_translates_create_bind_with_tool_display_name_over
         project_id=project_id,
         db=_FakeDb([row]),
         payload=payload,
+        authorized_flow_version_ids=frozenset({flow_version_id}),
     )
     provider_data = resolved.provider_data or {}
 
@@ -2090,6 +2092,7 @@ async def test_watsonx_mapper_maps_create_adapter_payload_validation_errors_to_5
             project_id=uuid4(),
             db=_FakeDb([row]),
             payload=payload,
+            authorized_flow_version_ids=frozenset({flow_version_id}),
         )
     assert exc_info.value.status_code == 500
     assert (
@@ -2202,6 +2205,7 @@ async def test_watsonx_mapper_create_skips_empty_bind_operations_but_keeps_raw_t
         project_id=project_id,
         db=_FakeDb([row]),
         payload=payload,
+        authorized_flow_version_ids=frozenset({flow_version_id}),
     )
     provider_data = resolved.provider_data or {}
 
@@ -2254,6 +2258,7 @@ async def test_watsonx_mapper_translates_flow_version_bind_into_raw_tool_payload
         deployment_db_id=uuid4(),
         db=db,
         payload=payload,
+        authorized_flow_version_ids=frozenset({flow_version_id}),
     )
     provider_data = resolved.provider_data or {}
 
@@ -2319,6 +2324,7 @@ async def test_watsonx_mapper_skips_empty_bind_operations_but_keeps_raw_tools() 
         deployment_db_id=uuid4(),
         db=db,
         payload=payload,
+        authorized_flow_version_ids=frozenset({flow_version_id_unbound, flow_version_id_bound}),
     )
     provider_data = resolved.provider_data or {}
 
@@ -3034,6 +3040,7 @@ async def test_watsonx_mapper_create_preserves_env_var_source_in_connection_payl
         project_id=project_id,
         db=_FakeDb([row]),
         payload=payload,
+        authorized_flow_version_ids=frozenset({flow_version_id}),
     )
     provider_data = resolved.provider_data or {}
 
@@ -3115,6 +3122,7 @@ async def test_watsonx_mapper_bind_reuses_existing_tool_when_attachment_exists()
         deployment_db_id=uuid4(),
         db=db,
         payload=payload,
+        authorized_flow_version_ids=frozenset({flow_version_id}),
     )
     provider_data = resolved.provider_data or {}
 
@@ -3163,6 +3171,7 @@ async def test_watsonx_mapper_bind_creates_new_tool_when_no_attachment() -> None
         deployment_db_id=uuid4(),
         db=db,
         payload=payload,
+        authorized_flow_version_ids=frozenset({flow_version_id}),
     )
     provider_data = resolved.provider_data or {}
 
@@ -3213,6 +3222,7 @@ async def test_watsonx_mapper_bind_reuse_with_empty_app_ids_emits_attach_tool() 
         deployment_db_id=uuid4(),
         db=db,
         payload=payload,
+        authorized_flow_version_ids=frozenset({flow_version_id}),
     )
     provider_data = resolved.provider_data or {}
 
@@ -3263,6 +3273,7 @@ async def test_watsonx_mapper_upsert_flow_with_tool_display_name_emits_rename_fo
         deployment_db_id=uuid4(),
         db=db,
         payload=payload,
+        authorized_flow_version_ids=frozenset({flow_version_id}),
     )
     provider_data = resolved.provider_data or {}
 
@@ -3315,6 +3326,7 @@ async def test_watsonx_mapper_upsert_flow_with_add_remove_and_tool_display_name_
         deployment_db_id=uuid4(),
         db=db,
         payload=payload,
+        authorized_flow_version_ids=frozenset({flow_version_id}),
     )
     provider_data = resolved.provider_data or {}
 
@@ -3393,6 +3405,7 @@ async def test_watsonx_mapper_tool_display_name_rename_compatible_with_all_updat
         deployment_db_id=uuid4(),
         db=db,
         payload=payload,
+        authorized_flow_version_ids=frozenset({flow_version_id_upsert, flow_version_id_remove}),
     )
     provider_data = resolved.provider_data or {}
 
@@ -3462,6 +3475,7 @@ async def test_watsonx_mapper_tool_display_name_override_generates_valid_technic
         deployment_db_id=uuid4(),
         db=db,
         payload=payload,
+        authorized_flow_version_ids=frozenset({flow_version_id}),
     )
     provider_data = resolved.provider_data or {}
 

@@ -38,11 +38,7 @@ from langflow.api.v1.mappers.deployments.sync import (
     fetch_provider_resource_keys,
     sync_attachment_snapshot_ids,
 )
-from langflow.api.v1.schemas.deployments import (
-    DeploymentCreateRequest,
-    DeploymentUpdateRequest,
-)
-from langflow.initial_setup.setup import get_or_create_default_folder
+from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.database.models.deployment.crud import (
     DeploymentMetadataUpdate,
@@ -76,7 +72,6 @@ from langflow.services.database.models.flow_version_deployment_attachment.crud i
     list_deployment_attachments_with_versions,
     update_deployment_attachment_provider_snapshot_id,
 )
-from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.utils import require_non_empty
 
 if TYPE_CHECKING:
@@ -116,16 +111,31 @@ def _build_indexed_flow_version_ids_cte(*, flow_version_ids: list[UUID]):
     )
 
 
+def _require_authorized_flow_version_ids(
+    *,
+    flow_version_ids: list[UUID],
+    authorized_flow_version_ids: frozenset[UUID],
+) -> None:
+    """Reject artifact resolution that lacks authorization evidence."""
+    if not set(flow_version_ids).issubset(authorized_flow_version_ids):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow version not found.")
+
+
 async def build_flow_artifacts_from_flow_versions(
     *,
     db,
-    user_id: UUID,
+    deployment_user_id: UUID,
     deployment_db_id: UUID,
     flow_version_ids: list[UUID],
+    authorized_flow_version_ids: frozenset[UUID],
 ) -> list[tuple[UUID, int, UUID, BaseFlowArtifact]]:
     """Resolve deployment-scoped flow version ids into artifacts preserving input order."""
     if not flow_version_ids:
         return []
+    _require_authorized_flow_version_ids(
+        flow_version_ids=flow_version_ids,
+        authorized_flow_version_ids=authorized_flow_version_ids,
+    )
 
     indexed_flow_version_ids_cte = _build_indexed_flow_version_ids_cte(flow_version_ids=flow_version_ids)
 
@@ -144,23 +154,17 @@ async def build_flow_artifacts_from_flow_versions(
         .select_from(indexed_flow_version_ids_cte)
         .join(
             FlowVersion,
-            and_(
-                FlowVersion.id == indexed_flow_version_ids_cte.c.flow_version_id,
-                FlowVersion.user_id == user_id,
-            ),
+            FlowVersion.id == indexed_flow_version_ids_cte.c.flow_version_id,
         )
         .join(
             Flow,
-            and_(
-                Flow.id == FlowVersion.flow_id,
-                Flow.user_id == user_id,
-            ),
+            Flow.id == FlowVersion.flow_id,
         )
         .join(
             Deployment,
             and_(
                 Deployment.id == deployment_db_id,
-                Deployment.user_id == user_id,
+                Deployment.user_id == deployment_user_id,
                 Deployment.project_id == Flow.folder_id,
             ),
         )
@@ -199,14 +203,18 @@ async def build_flow_artifacts_from_flow_versions(
 async def build_project_scoped_flow_artifacts_from_flow_versions(
     *,
     db,
-    user_id: UUID,
     project_id: UUID,
     reference_ids: Sequence[UUID | str],
+    authorized_flow_version_ids: frozenset[UUID],
 ) -> list[tuple[UUID, BaseFlowArtifact]]:
     """Resolve project-scoped flow version references preserving input order."""
     flow_version_ids = parse_flow_version_reference_ids(reference_ids)
     if not flow_version_ids:
         return []
+    _require_authorized_flow_version_ids(
+        flow_version_ids=flow_version_ids,
+        authorized_flow_version_ids=authorized_flow_version_ids,
+    )
     indexed_flow_version_ids_cte = _build_indexed_flow_version_ids_cte(flow_version_ids=flow_version_ids)
 
     statement = (
@@ -222,16 +230,12 @@ async def build_project_scoped_flow_artifacts_from_flow_versions(
         .select_from(indexed_flow_version_ids_cte)
         .join(
             FlowVersion,
-            and_(
-                FlowVersion.user_id == user_id,
-                FlowVersion.id == indexed_flow_version_ids_cte.c.flow_version_id,
-            ),
+            FlowVersion.id == indexed_flow_version_ids_cte.c.flow_version_id,
         )
         .join(
             Flow,
             and_(
                 Flow.id == FlowVersion.flow_id,
-                Flow.user_id == user_id,
                 Flow.folder_id == project_id,
             ),
         )
@@ -517,29 +521,6 @@ async def resolve_adapter_mapper_from_deployment(
         provider_account.provider_key,
         provider_account.provider_tenant_id,
     )
-
-
-async def resolve_project_id_for_deployment_create(
-    *,
-    payload: DeploymentCreateRequest,
-    user_id: UUID,
-    db: DbSession,
-) -> UUID:
-    if payload.project_id is not None:
-        project = (
-            await db.exec(
-                select(Folder).where(
-                    Folder.user_id == user_id,
-                    Folder.id == payload.project_id,
-                )
-            )
-        ).first()
-        if project is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
-        return project.id
-
-    default_folder = await get_or_create_default_folder(db, user_id)
-    return default_folder.id
 
 
 def resolve_snapshot_map_for_create(

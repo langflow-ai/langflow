@@ -96,7 +96,7 @@ def mock_db_crud(mock_mapper, active_user):
         mock_res_am = stack.enter_context(patch("langflow.api.v1.deployments.resolve_adapter_mapper_from_deployment"))
         mock_res_patch = stack.enter_context(patch("langflow.api.v1.deployments.resolve_flow_version_patch_for_update"))
         _mock_val_proj = stack.enter_context(
-            patch("langflow.api.v1.deployments.validate_project_scoped_flow_version_ids")
+            patch("langflow.api.v1.deployments.authorize_flow_versions_for_deployment")
         )
         mock_list_att = stack.enter_context(
             patch("langflow.api.v1.deployments.list_deployment_attachments_for_flow_version_ids")

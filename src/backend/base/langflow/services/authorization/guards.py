@@ -398,7 +398,8 @@ async def _ensure_typed(
         resource_type=spec.resource_type,
         resource_id=resource_id,
         owner_id=owner_id,
-        owner_override_allowed=act_str != "create" or spec.owner_override_on_create,
+        owner_override_allowed=(act_str != "create" or spec.owner_override_on_create)
+        and not (spec_key == "flow" and act_str == FlowAction.DEPLOY.value),
         act_str=act_str,
         resolved_domain=resolved_domain,
         extra_context=extra_context,
