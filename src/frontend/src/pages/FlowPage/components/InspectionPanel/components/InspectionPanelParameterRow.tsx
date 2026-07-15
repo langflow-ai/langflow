@@ -112,13 +112,19 @@ export default function InspectionPanelParameterRow({
           {required && <span className="text-destructive">*</span>}
           {info !== "" && (
             <ShadTooltip content={<NodeInputInfo info={info} />}>
-              <div className="cursor-help">
+              {/* Focusable so keyboard users can reach the help text —
+                  Radix tooltips open on focus as well as hover. */}
+              <button
+                type="button"
+                className="cursor-help rounded-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                aria-label={`${title} info`}
+              >
                 <IconComponent
                   name="Info"
                   strokeWidth={ICON_STROKE_WIDTH}
                   className="ml-0.5 h-3 w-3 text-placeholder"
                 />
-              </div>
+              </button>
             </ShadTooltip>
           )}
         </div>

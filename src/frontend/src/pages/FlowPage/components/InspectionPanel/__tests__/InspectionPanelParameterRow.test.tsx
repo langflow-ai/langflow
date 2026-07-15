@@ -123,6 +123,18 @@ describe("InspectionPanelParameterRow", () => {
       expect(screen.getByText(/factory default/)).toBeInTheDocument();
     });
 
+    it("renders the info icon as a keyboard-focusable element", () => {
+      const props = {
+        ...defaultProps,
+        data: createMockData({ info: "helpful text" }),
+      };
+      renderWithProviders(<InspectionPanelParameterRow {...props} />);
+
+      const trigger = screen.getByRole("button", { name: "Test Field info" });
+      trigger.focus();
+      expect(trigger).toHaveFocus();
+    });
+
     it("renders no value editor of any kind", () => {
       renderWithProviders(<InspectionPanelParameterRow {...defaultProps} />);
 
