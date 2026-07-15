@@ -13,6 +13,7 @@ import {
 import Loading from "@/components/ui/loading";
 import { useDeleteTritonServer } from "@/controllers/API/queries/triton/use-delete-triton-server";
 import { useGetTritonServers } from "@/controllers/API/queries/triton/use-get-triton-servers";
+import AddTritonModelsToVariablesModal from "@/modals/addTritonModelsToVariablesModal";
 import AddTritonServerModal from "@/modals/addTritonServerModal";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
@@ -32,6 +33,10 @@ export default function TritonServersPage() {
     useState<TritonServerType | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [serverToDelete, setServerToDelete] = useState<TritonServerType | null>(
+    null,
+  );
+  const [modelsToVarsOpen, setModelsToVarsOpen] = useState(false);
+  const [serverForVars, setServerForVars] = useState<TritonServerType | null>(
     null,
   );
 
@@ -58,6 +63,11 @@ export default function TritonServersPage() {
   const openDeleteModal = (server: TritonServerType) => {
     setServerToDelete(server);
     setDeleteModalOpen(true);
+  };
+
+  const openModelsToVars = (server: TritonServerType) => {
+    setServerForVars(server);
+    setModelsToVarsOpen(true);
   };
 
   return (
@@ -172,6 +182,15 @@ export default function TritonServersPage() {
                           {t("triton.servers.editMenuItem")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          onClick={() => openModelsToVars(server)}
+                        >
+                          <ForwardedIconComponent
+                            name="Boxes"
+                            className="mr-2 h-4 w-4"
+                          />
+                          {t("triton.servers.addToVariablesItem")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           onClick={() => openDeleteModal(server)}
                           className="text-destructive"
                         >
@@ -204,6 +223,13 @@ export default function TritonServersPage() {
               }}
               description={"Triton Server"}
             />
+            {modelsToVarsOpen && serverForVars && (
+              <AddTritonModelsToVariablesModal
+                open={modelsToVarsOpen}
+                setOpen={setModelsToVarsOpen}
+                server={serverForVars}
+              />
+            )}
           </>
         ) : isError ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-4 py-8">
