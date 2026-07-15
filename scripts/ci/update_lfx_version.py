@@ -14,6 +14,7 @@ import re
 import sys
 from pathlib import Path
 
+from update_component_index_version import update_component_index_version
 from update_pyproject_version import update_pyproject_version
 
 # Add the current directory to the path so we can import the other scripts
@@ -21,6 +22,7 @@ current_dir = Path(__file__).resolve().parent
 sys.path.append(str(current_dir))
 
 BASE_DIR = Path(__file__).parent.parent.parent
+COMPONENT_INDEX_PATH = Path("src/lfx/src/lfx/_assets/component_index.json")
 
 
 def update_sdk_dependency_in_lfx(pyproject_path: str, sdk_version: str) -> None:
@@ -60,6 +62,11 @@ def update_lfx_for_nightly(lfx_tag: str, sdk_tag: str):
     # Re-pin lfx's SDK dependency to the exact canonical dev version.
     sdk_version = sdk_tag.lstrip("v")
     update_sdk_dependency_in_lfx(lfx_pyproject_path, sdk_version)
+
+    # The runtime rejects a prebuilt index whose version differs from the
+    # installed LFX distribution. Nightly version rewrites must therefore keep
+    # the bundled index and its integrity hash in lockstep with pyproject.toml.
+    update_component_index_version(BASE_DIR / COMPONENT_INDEX_PATH, version)
 
     print(f"Updated lfx to nightly version {version}")
 

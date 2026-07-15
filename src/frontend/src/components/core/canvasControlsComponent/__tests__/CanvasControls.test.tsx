@@ -176,6 +176,20 @@ describe("CanvasControls", () => {
     );
   });
 
+  it("should_disable_canvas_mutation_controls_when_read_only", () => {
+    render(<CanvasControls selectedNode={null} effectiveLocked />);
+
+    expect(screen.getByTestId("assistant-button")).toBeDisabled();
+    expect(screen.getByTestId("canvas-add-note-button")).toBeDisabled();
+    expect(screen.getByTestId("canvas-add-note-button")).toHaveAttribute(
+      "title",
+      "(Read-Only)",
+    );
+
+    fireEvent.click(screen.getByTestId("canvas-add-note-button"));
+    expect(mockDispatchEvent).not.toHaveBeenCalled();
+  });
+
   it("should_render_children_when_provided", () => {
     render(
       <CanvasControls selectedNode={null}>
