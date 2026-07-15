@@ -162,6 +162,37 @@ class BackgroundExecutionService(Service):
 
     # ------------------------------------------------------------------ submit
 
+    async def supersede_suspended_runs(self, *, flow_id: UUID, user_id: UUID) -> list[UUID]:
+        """Cancel this user's SUSPENDED runs of the flow so a rerun replaces the stale pause.
+
+        A suspended run holds a pause nobody will answer once its owner reruns the flow;
+        left alive it piles up in every pending surface (badge, cards, trace bar). Scope is
+        flow + user: another user's pause on the same flow is never touched, and running
+        jobs are untouched so parallel runs stay supported.
+        """
+        from sqlmodel import select
+
+        from langflow.services.database.models.jobs.model import Job
+        from langflow.services.deps import session_scope
+
+        job_service = get_job_service()
+        async with session_scope() as session:
+            result = await session.exec(
+                select(Job.job_id).where(
+                    Job.flow_id == flow_id,
+                    Job.user_id == user_id,
+                    Job.status == JobStatus.SUSPENDED,
+                    Job.type == JobType.WORKFLOW,
+                )
+            )
+            stale_job_ids = list(result.all())
+        for stale_job_id in stale_job_ids:
+            if self._scaled:
+                await self._backend.stop(str(stale_job_id))
+            else:
+                await self._cancel_suspended(stale_job_id, job_service)
+        return stale_job_ids
+
     async def submit(self, *, flow_id: UUID, request: dict[str, Any], user: UserRead) -> UUID:
         # Lazy-start the executor so the facade works whether or not the app
         # lifespan called start() first. start() is idempotent.
@@ -199,6 +230,9 @@ class BackgroundExecutionService(Service):
         # variables by name for background runs rather than passing secrets inline.
         # The live in-memory run below still uses the full ``request``.
         await job_service.update_job_metadata(job_id, {"request": self._redact_request(request)})
+        # After create_job so an idempotent retry returns the existing job instead of
+        # cancelling it; the new job is QUEUED, so the suspended-only query skips it.
+        await self.supersede_suspended_runs(flow_id=flow_id, user_id=user.id)
         if self._scaled:
             # Scaled mode: hand the QUEUED job id to a worker via the redis claim
             # queue; the worker hydrates the request from the job row.

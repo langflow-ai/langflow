@@ -24,6 +24,9 @@ import { formatTokenCount } from "@/utils/format-token-count";
 import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames, cn } from "@/utils/utils";
 import IconComponent from "../../../../components/common/genericIconComponent";
+import HumanInputNodeBadge, {
+  useAwaitingHumanInput,
+} from "../HumanInputNodeBadge";
 import BuildStatusDisplay from "./components/build-status-display";
 import { normalizeTimeString } from "./utils/format-run-time";
 
@@ -67,6 +70,7 @@ export default function NodeStatus({
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
   const [isPolling, setIsPolling] = useState(false);
+  const awaitingHumanInput = useAwaitingHumanInput(nodeId);
 
   const nodeAuth = Object.values(data.node?.template ?? {}).find(
     (value) => value.type === "auth",
@@ -513,25 +517,29 @@ export default function NodeStatus({
           )}
         </div>
       )}
-      {showNode && (
-        <ShadTooltip content={getTooltipContent()}>
-          <div
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onClick={handleClickRun}
-            className="-m-0.5"
-          >
-            <Button unstyled className="nodrag button-run-bg group">
-              <div data-testid={`button_run_` + display_name.toLowerCase()}>
-                <IconComponent
-                  name={iconName}
-                  className={iconClasses}
-                  strokeWidth={ICON_STROKE_WIDTH}
-                />
-              </div>
-            </Button>
-          </div>
-        </ShadTooltip>
+      {awaitingHumanInput ? (
+        <HumanInputNodeBadge nodeId={nodeId} />
+      ) : (
+        showNode && (
+          <ShadTooltip content={getTooltipContent()}>
+            <div
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              onClick={handleClickRun}
+              className="-m-0.5"
+            >
+              <Button unstyled className="nodrag button-run-bg group">
+                <div data-testid={`button_run_` + display_name.toLowerCase()}>
+                  <IconComponent
+                    name={iconName}
+                    className={iconClasses}
+                    strokeWidth={ICON_STROKE_WIDTH}
+                  />
+                </div>
+              </Button>
+            </div>
+          </ShadTooltip>
+        )
       )}
     </div>
   );

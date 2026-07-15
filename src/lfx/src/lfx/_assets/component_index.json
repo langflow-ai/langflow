@@ -4824,7 +4824,7 @@
               "dependencies": [
                 {
                   "name": "json_repair",
-                  "version": "0.30.3"
+                  "version": "0.61.4"
                 },
                 {
                   "name": "lfx",
@@ -6893,7 +6893,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -7575,7 +7575,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -7735,7 +7735,7 @@
                 },
                 {
                   "name": "cryptography",
-                  "version": "48.0.1"
+                  "version": "49.0.0"
                 },
                 {
                   "name": "langchain_chroma",
@@ -11095,7 +11095,7 @@
           "icon": "HumanInput",
           "legacy": false,
           "metadata": {
-            "code_hash": "3fdb76ae0eda",
+            "code_hash": "d09de09e12a8",
             "dependencies": {
               "dependencies": [
                 {
@@ -11158,15 +11158,15 @@
               "show": true,
               "title_case": false,
               "type": "code",
-              "value": "\"\"\"Human Input node: pause a flow for a human decision, then route on the pick (LE-1449).\n\nThe User Actions picker chooses which actions the human can take (presets like\nApprove/Reject/Escalate, or custom); each becomes a branch output. On first execution\nthe node requests a pause carrying a ``node_input`` request; on resume the injected\ndecision selects exactly one branch (the others are stopped). With Enable Fallback on,\na ``fallback`` branch is added for when no user action is answered (e.g. after timeout).\n\"\"\"\n\nfrom __future__ import annotations\n\nfrom datetime import datetime, timezone\nfrom typing import Any\n\nfrom lfx.custom import Component\nfrom lfx.inputs.inputs import ActionPickerInput, BoolInput, DurationInput\nfrom lfx.io import MultilineInput, Output\nfrom lfx.schema.message import Message\n\nHUMAN_INPUT_REQUIRED = \"human_input_required\"\n_KIND_NODE_INPUT = \"node_input\"\n_FALLBACK_ACTION = \"fallback\"\n_UNIT_SECONDS = {\"Minutes\": 60, \"Hours\": 3600, \"Days\": 86400}\n\n\ndef _action_id(label: str) -> str:\n    \"\"\"Stable branch id for a human-facing action label (e.g. 'Request Changes' -> 'request_changes').\"\"\"\n    return str(label).strip().lower().replace(\" \", \"_\")\n\n\nclass HumanInput(Component):\n    display_name = \"Human Input\"\n    description = \"Pause the flow to collect a human decision and route on the chosen action.\"\n    icon = \"HumanInput\"\n    name = \"HumanInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"prompt\",\n            display_name=\"Form Content\",\n            info=\"Content shown to the human for review.\",\n            value=\"\",\n        ),\n        ActionPickerInput(\n            name=\"decisions\",\n            display_name=\"User Actions\",\n            info=\"Actions the human can choose; each becomes a branch output. Pick from the list or type a custom one.\",\n            value=[\"Approve\", \"Reject\"],\n            real_time_refresh=True,\n            required=True,\n        ),\n        DurationInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"A response received after this window is rerouted to the fallback path (when enabled) \"\n            \"instead of the chosen action. The run stays paused until a response arrives or the \"\n            \"server's suspended-run deadline expires it. Set to 0 to wait indefinitely.\",\n            options=[\"Minutes\", \"Hours\", \"Days\"],\n            value={\"value\": 3, \"unit\": \"Days\"},\n        ),\n        BoolInput(\n            name=\"enable_fallback\",\n            display_name=\"Enable Fallback\",\n            info=\"Add a 'fallback' output taken when the answer arrives after the timeout window.\",\n            value=False,\n            advanced=True,\n            real_time_refresh=True,\n        ),\n    ]\n\n    # Default branch outputs mirror the default ``decisions`` so a freshly dragged\n    # node shows handles immediately (update_outputs only fires on a field change).\n    outputs: list[Output] = [\n        Output(display_name=\"Approve\", name=\"branch_approve\", method=\"route_branch\", group_outputs=True),\n        Output(display_name=\"Reject\", name=\"branch_reject\", method=\"route_branch\", group_outputs=True),\n    ]\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict) -> dict:\n        \"\"\"Rebuild branch outputs from the saved User Actions so loaded/refreshed flows keep their handles.\"\"\"\n        new_frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        decisions = (new_frontend_node.get(\"template\", {}).get(\"decisions\") or {}).get(\"value\")\n        self.update_outputs(new_frontend_node, \"decisions\", decisions if decisions is not None else [])\n        return new_frontend_node\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n        \"\"\"One branch output per selected action (+ optional fallback) + a stable action output.\"\"\"\n        if field_name not in (\"decisions\", \"enable_fallback\"):\n            return frontend_node\n        template = frontend_node.get(\"template\", {})\n\n        def _other(field: str, attr_default):\n            if field in template:\n                return (template.get(field) or {}).get(\"value\")\n            return getattr(self, attr_default[0], attr_default[1])\n\n        actions = field_value if field_name == \"decisions\" else _other(\"decisions\", (\"decisions\", []))\n        fallback_on = (\n            field_value if field_name == \"enable_fallback\" else _other(\"enable_fallback\", (\"enable_fallback\", False))\n        )\n        outputs: list[Output] = []\n        seen: set[str] = set()\n        for label in actions or []:\n            action_id = _action_id(label)\n            if not action_id or action_id in seen:\n                continue\n            seen.add(action_id)\n            outputs.append(\n                Output(\n                    display_name=str(label).strip(),\n                    name=f\"branch_{action_id}\",\n                    method=\"route_branch\",\n                    group_outputs=True,\n                )\n            )\n        if fallback_on:\n            outputs.append(\n                Output(\n                    display_name=\"Fallback\",\n                    name=f\"branch_{_FALLBACK_ACTION}\",\n                    method=\"route_branch\",\n                    group_outputs=True,\n                )\n            )\n        frontend_node[\"outputs\"] = outputs\n        return frontend_node\n\n    def _actions(self) -> list[tuple[str, str]]:\n        \"\"\"Selected actions as (action_id, label) pairs, de-duplicated by id.\"\"\"\n        seen: set[str] = set()\n        actions: list[tuple[str, str]] = []\n        for label in getattr(self, \"decisions\", []) or []:\n            action_id = _action_id(label)\n            if not action_id or action_id in seen:\n                continue\n            seen.add(action_id)\n            actions.append((action_id, str(label).strip()))\n        return actions\n\n    def _rendered_prompt(self) -> str:\n        return str(getattr(self, \"prompt\", \"\") or \"\")\n\n    def _timeout_seconds(self) -> int:\n        timeout = getattr(self, \"timeout\", None) or {}\n        if not isinstance(timeout, dict):\n            return 0\n        unit = timeout.get(\"unit\", \"Days\") or \"Days\"\n        return int(timeout.get(\"value\", 0) or 0) * _UNIT_SECONDS.get(unit, _UNIT_SECONDS[\"Days\"])\n\n    def _request_id(self) -> str:\n        run_id = str(getattr(self.graph, \"run_id\", \"\") or \"\")\n        return f\"{self._id}:{run_id}\"\n\n    def _injected_decision(self) -> dict | None:\n        decisions = getattr(self.graph, \"human_input_decisions\", None) if self.graph is not None else None\n        if not isinstance(decisions, dict):\n            return None\n        return decisions.get(self._request_id())\n\n    def _allowed_decisions(self) -> list[str]:\n        ids = [action_id for action_id, _ in self._actions()]\n        if getattr(self, \"enable_fallback\", False):\n            ids.append(_FALLBACK_ACTION)\n        return ids\n\n    def _pause_request(self) -> dict[str, Any]:\n        return {\n            \"request_id\": self._request_id(),\n            \"kind\": _KIND_NODE_INPUT,\n            \"prompt\": self._rendered_prompt(),\n            \"options\": [{\"action_id\": action_id, \"label\": label} for action_id, label in self._actions()],\n            \"allowed_decisions\": self._allowed_decisions(),\n            \"timeout_seconds\": self._timeout_seconds(),\n            \"fallback_action\": _FALLBACK_ACTION if getattr(self, \"enable_fallback\", False) else None,\n            \"paused_at\": datetime.now(timezone.utc).isoformat(),\n        }\n\n    def _has_downstream_consumer(self) -> bool:\n        \"\"\"True if any branch output feeds a downstream node.\n\n        A node with no outgoing edges runs as an isolated start vertex; pausing it would\n        suspend the whole run for a decision that routes nowhere (and, alongside an Agent's\n        own tool-approval pause, leave that pause unresolved on resume). The successor_map is\n        absent only outside a prepared graph (standalone/tests), where the old behavior holds.\n        \"\"\"\n        graph = getattr(self, \"graph\", None)\n        successor_map = getattr(graph, \"successor_map\", None)\n        if not isinstance(successor_map, dict):\n            return True\n        return bool(successor_map.get(self._id))\n\n    def _suspend(self) -> None:\n        self.graph.request_pause(reason=HUMAN_INPUT_REQUIRED, data=self._pause_request())\n        self.status = \"Awaiting human input\"\n\n    def route_branch(self) -> Message:\n        decision = self._injected_decision()\n        if decision is None:\n            if not self._has_downstream_consumer():\n                self.status = \"Skipped: no connected outputs\"\n                return Message(text=self._rendered_prompt())\n            self._suspend()\n            return Message(text=\"\")\n        chosen = decision.get(\"action_id\")\n        non_chosen = [action_id for action_id in self._allowed_decisions() if action_id != chosen]\n        for action_id in non_chosen:\n            self.stop(f\"branch_{action_id}\")\n        return Message(text=self._rendered_prompt())\n"
+              "value": "\"\"\"Human Input node: pause a flow for a human decision, then route on the pick (LE-1449).\n\nThe User Choices picker chooses which actions the human can take (presets like\nApprove/Reject/Escalate, or custom); each becomes a branch output. On first execution\nthe node requests a pause carrying a ``node_input`` request; on resume the injected\ndecision selects exactly one branch (the others are stopped). With Enable Fallback on,\na ``fallback`` branch is added for when no user action is answered (e.g. after timeout).\n\"\"\"\n\nfrom __future__ import annotations\n\nfrom datetime import datetime, timezone\nfrom typing import Any\n\nfrom lfx.custom import Component\nfrom lfx.inputs.inputs import ActionPickerInput, BoolInput, DurationInput\nfrom lfx.io import MultilineInput, Output\nfrom lfx.schema.message import Message\n\nHUMAN_INPUT_REQUIRED = \"human_input_required\"\n_KIND_NODE_INPUT = \"node_input\"\n_FALLBACK_ACTION = \"fallback\"\n_UNIT_SECONDS = {\"Minutes\": 60, \"Hours\": 3600, \"Days\": 86400}\n\n\ndef _action_id(label: str) -> str:\n    \"\"\"Stable branch id for a human-facing action label (e.g. 'Request Changes' -> 'request_changes').\"\"\"\n    return str(label).strip().lower().replace(\" \", \"_\")\n\n\nclass HumanInput(Component):\n    display_name = \"Human Input\"\n    description = \"Pause the flow to collect a human decision and route on the chosen action.\"\n    icon = \"HumanInput\"\n    name = \"HumanInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"prompt\",\n            display_name=\"Input\",\n            info=\"Content shown to the human for review.\",\n            value=\"\",\n        ),\n        ActionPickerInput(\n            name=\"decisions\",\n            display_name=\"User Choices\",\n            info=\"Choices the human can pick; each becomes a branch output. Pick from the list or type a custom one.\",\n            value=[\"Approve\", \"Reject\"],\n            real_time_refresh=True,\n            required=True,\n        ),\n        DurationInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"A response received after this window is rerouted to the fallback path (when enabled) \"\n            \"instead of the chosen action. The run stays paused until a response arrives or the \"\n            \"server's suspended-run deadline expires it. Set to 0 to wait indefinitely.\",\n            options=[\"Minutes\", \"Hours\", \"Days\"],\n            value={\"value\": 3, \"unit\": \"Days\"},\n            advanced=True,\n            show=False,\n        ),\n        BoolInput(\n            name=\"enable_fallback\",\n            display_name=\"Enable Fallback\",\n            info=\"Add a 'fallback' output taken when the answer arrives after the timeout window.\",\n            value=False,\n            advanced=True,\n            real_time_refresh=True,\n        ),\n    ]\n\n    # Default branch outputs mirror the default ``decisions`` so a freshly dragged\n    # node shows handles immediately (update_outputs only fires on a field change).\n    outputs: list[Output] = [\n        Output(display_name=\"Approve\", name=\"branch_approve\", method=\"route_branch\", group_outputs=True),\n        Output(display_name=\"Reject\", name=\"branch_reject\", method=\"route_branch\", group_outputs=True),\n    ]\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict) -> dict:\n        \"\"\"Rebuild branch outputs from the saved User Choices so loaded/refreshed flows keep their handles.\"\"\"\n        new_frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = new_frontend_node.get(\"template\", {})\n        decisions = (template.get(\"decisions\") or {}).get(\"value\")\n        self.update_outputs(new_frontend_node, \"decisions\", decisions if decisions is not None else [])\n        self._sync_timeout_visibility(template)\n        return new_frontend_node\n\n    @staticmethod\n    def _sync_timeout_visibility(template: dict) -> None:\n        \"\"\"Timeout only matters when the fallback branch exists to reroute to.\"\"\"\n        if \"timeout\" in template:\n            template[\"timeout\"][\"show\"] = bool((template.get(\"enable_fallback\") or {}).get(\"value\"))\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:\n        if field_name == \"enable_fallback\" and \"timeout\" in build_config:\n            build_config[\"timeout\"][\"show\"] = bool(field_value)\n        return build_config\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n        \"\"\"One branch output per selected action (+ optional fallback) + a stable action output.\"\"\"\n        if field_name not in (\"decisions\", \"enable_fallback\"):\n            return frontend_node\n        template = frontend_node.get(\"template\", {})\n\n        def _other(field: str, attr_default):\n            if field in template:\n                return (template.get(field) or {}).get(\"value\")\n            return getattr(self, attr_default[0], attr_default[1])\n\n        actions = field_value if field_name == \"decisions\" else _other(\"decisions\", (\"decisions\", []))\n        fallback_on = (\n            field_value if field_name == \"enable_fallback\" else _other(\"enable_fallback\", (\"enable_fallback\", False))\n        )\n        outputs: list[Output] = []\n        seen: set[str] = set()\n        for label in actions or []:\n            action_id = _action_id(label)\n            if not action_id or action_id in seen:\n                continue\n            seen.add(action_id)\n            outputs.append(\n                Output(\n                    display_name=str(label).strip(),\n                    name=f\"branch_{action_id}\",\n                    method=\"route_branch\",\n                    group_outputs=True,\n                )\n            )\n        if fallback_on:\n            outputs.append(\n                Output(\n                    display_name=\"Fallback\",\n                    name=f\"branch_{_FALLBACK_ACTION}\",\n                    method=\"route_branch\",\n                    group_outputs=True,\n                )\n            )\n        frontend_node[\"outputs\"] = outputs\n        return frontend_node\n\n    def _actions(self) -> list[tuple[str, str]]:\n        \"\"\"Selected actions as (action_id, label) pairs, de-duplicated by id.\"\"\"\n        seen: set[str] = set()\n        actions: list[tuple[str, str]] = []\n        for label in getattr(self, \"decisions\", []) or []:\n            action_id = _action_id(label)\n            if not action_id or action_id in seen:\n                continue\n            seen.add(action_id)\n            actions.append((action_id, str(label).strip()))\n        return actions\n\n    def _rendered_prompt(self) -> str:\n        return str(getattr(self, \"prompt\", \"\") or \"\")\n\n    def _timeout_seconds(self) -> int:\n        timeout = getattr(self, \"timeout\", None) or {}\n        if not isinstance(timeout, dict):\n            return 0\n        unit = timeout.get(\"unit\", \"Days\") or \"Days\"\n        return int(timeout.get(\"value\", 0) or 0) * _UNIT_SECONDS.get(unit, _UNIT_SECONDS[\"Days\"])\n\n    def _request_id(self) -> str:\n        run_id = str(getattr(self.graph, \"run_id\", \"\") or \"\")\n        return f\"{self._id}:{run_id}\"\n\n    def _injected_decision(self) -> dict | None:\n        decisions = getattr(self.graph, \"human_input_decisions\", None) if self.graph is not None else None\n        if not isinstance(decisions, dict):\n            return None\n        return decisions.get(self._request_id())\n\n    def _allowed_decisions(self) -> list[str]:\n        ids = [action_id for action_id, _ in self._actions()]\n        if getattr(self, \"enable_fallback\", False):\n            ids.append(_FALLBACK_ACTION)\n        return ids\n\n    def _pause_request(self) -> dict[str, Any]:\n        return {\n            \"request_id\": self._request_id(),\n            \"kind\": _KIND_NODE_INPUT,\n            \"prompt\": self._rendered_prompt(),\n            \"options\": [{\"action_id\": action_id, \"label\": label} for action_id, label in self._actions()],\n            \"allowed_decisions\": self._allowed_decisions(),\n            \"timeout_seconds\": self._timeout_seconds(),\n            \"fallback_action\": _FALLBACK_ACTION if getattr(self, \"enable_fallback\", False) else None,\n            \"paused_at\": datetime.now(timezone.utc).isoformat(),\n        }\n\n    def _has_downstream_consumer(self) -> bool:\n        \"\"\"True if any branch output feeds a downstream node.\n\n        A node with no outgoing edges runs as an isolated start vertex; pausing it would\n        suspend the whole run for a decision that routes nowhere (and, alongside an Agent's\n        own tool-approval pause, leave that pause unresolved on resume). The successor_map is\n        absent only outside a prepared graph (standalone/tests), where the old behavior holds.\n        \"\"\"\n        graph = getattr(self, \"graph\", None)\n        successor_map = getattr(graph, \"successor_map\", None)\n        if not isinstance(successor_map, dict):\n            return True\n        return bool(successor_map.get(self._id))\n\n    def _suspend(self) -> None:\n        self.graph.request_pause(reason=HUMAN_INPUT_REQUIRED, data=self._pause_request())\n        self.status = \"Awaiting human input\"\n\n    def route_branch(self) -> Message:\n        decision = self._injected_decision()\n        if decision is None:\n            if not self._has_downstream_consumer():\n                self.status = \"Skipped: no connected outputs\"\n                return Message(text=self._rendered_prompt())\n            self._suspend()\n            return Message(text=\"\")\n        chosen = decision.get(\"action_id\")\n        non_chosen = [action_id for action_id in self._allowed_decisions() if action_id != chosen]\n        for action_id in non_chosen:\n            self.stop(f\"branch_{action_id}\")\n        return Message(text=self._rendered_prompt())\n"
             },
             "decisions": {
               "_input_type": "ActionPickerInput",
               "advanced": false,
               "combobox": true,
-              "display_name": "User Actions",
+              "display_name": "User Choices",
               "dynamic": false,
-              "info": "Actions the human can choose; each becomes a branch output. Pick from the list or type a custom one.",
+              "info": "Choices the human can pick; each becomes a branch output. Pick from the list or type a custom one.",
               "list": true,
               "list_add_label": "Add More",
               "name": "decisions",
@@ -11213,7 +11213,7 @@
               "advanced": false,
               "ai_enabled": false,
               "copy_field": false,
-              "display_name": "Form Content",
+              "display_name": "Input",
               "dynamic": false,
               "info": "Content shown to the human for review.",
               "input_types": [
@@ -11239,7 +11239,7 @@
             },
             "timeout": {
               "_input_type": "DurationInput",
-              "advanced": false,
+              "advanced": true,
               "display_name": "Timeout",
               "dynamic": false,
               "info": "A response received after this window is rerouted to the fallback path (when enabled) instead of the chosen action. The run stays paused until a response arrives or the server's suspended-run deadline expires it. Set to 0 to wait indefinitely.",
@@ -11252,7 +11252,7 @@
               "override_skip": false,
               "placeholder": "",
               "required": false,
-              "show": true,
+              "show": false,
               "title_case": false,
               "tool_mode": false,
               "trace_as_metadata": true,
@@ -13693,7 +13693,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -14330,7 +14330,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -14338,7 +14338,7 @@
                 },
                 {
                   "name": "langchain",
-                  "version": "1.3.11"
+                  "version": "1.3.13"
                 }
               ],
               "total_dependencies": 3
@@ -14957,7 +14957,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -16747,7 +16747,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -17145,7 +17145,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -17398,7 +17398,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -18149,7 +18149,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -20326,11 +20326,11 @@
               "dependencies": [
                 {
                   "name": "langchain",
-                  "version": "1.3.11"
+                  "version": "1.3.13"
                 },
                 {
                   "name": "langgraph",
-                  "version": "1.2.8"
+                  "version": "1.2.9"
                 },
                 {
                   "name": "lfx",
@@ -20338,7 +20338,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 }
               ],
               "total_dependencies": 4
@@ -21752,7 +21752,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -23911,7 +23911,7 @@
               "dependencies": [
                 {
                   "name": "json_repair",
-                  "version": "0.30.3"
+                  "version": "0.61.4"
                 },
                 {
                   "name": "lfx",
@@ -23919,7 +23919,7 @@
                 },
                 {
                   "name": "jq",
-                  "version": "1.11.0"
+                  "version": "1.12.0"
                 }
               ],
               "total_dependencies": 3
@@ -24966,7 +24966,7 @@
                 },
                 {
                   "name": "json_repair",
-                  "version": "0.30.3"
+                  "version": "0.61.4"
                 }
               ],
               "total_dependencies": 2
@@ -25404,7 +25404,7 @@
                 },
                 {
                   "name": "json_repair",
-                  "version": "0.30.3"
+                  "version": "0.61.4"
                 },
                 {
                   "name": "lfx",
@@ -25412,7 +25412,7 @@
                 },
                 {
                   "name": "jq",
-                  "version": "1.11.0"
+                  "version": "1.12.0"
                 }
               ],
               "total_dependencies": 4
@@ -26626,7 +26626,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -27069,7 +27069,7 @@
               "dependencies": [
                 {
                   "name": "json_repair",
-                  "version": "0.30.3"
+                  "version": "0.61.4"
                 },
                 {
                   "name": "lfx",
@@ -27077,7 +27077,7 @@
                 },
                 {
                   "name": "jq",
-                  "version": "1.11.0"
+                  "version": "1.12.0"
                 }
               ],
               "total_dependencies": 3
@@ -29180,7 +29180,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -29306,7 +29306,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -29496,7 +29496,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -29712,7 +29712,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -29882,7 +29882,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -30065,7 +30065,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -30304,7 +30304,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -30514,7 +30514,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -30855,7 +30855,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -31463,6 +31463,6 @@
     "num_components": 130,
     "num_modules": 17
   },
-  "sha256": "407dd854fc80584f0f213f9c190b977ae91ec0c7b7075df799db663c0c6aa24c",
+  "sha256": "77a883ef30948721b3c73f23047488baac0765ee51de132f4aa8f2c0ff6252c4",
   "version": "1.11.0"
 }

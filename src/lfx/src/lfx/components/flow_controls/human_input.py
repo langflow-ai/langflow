@@ -1,6 +1,6 @@
 """Human Input node: pause a flow for a human decision, then route on the pick (LE-1449).
 
-The User Actions picker chooses which actions the human can take (presets like
+The User Choices picker chooses which actions the human can take (presets like
 Approve/Reject/Escalate, or custom); each becomes a branch output. On first execution
 the node requests a pause carrying a ``node_input`` request; on resume the injected
 decision selects exactly one branch (the others are stopped). With Enable Fallback on,
@@ -37,14 +37,14 @@ class HumanInput(Component):
     inputs = [
         MultilineInput(
             name="prompt",
-            display_name="Form Content",
+            display_name="Input",
             info="Content shown to the human for review.",
             value="",
         ),
         ActionPickerInput(
             name="decisions",
-            display_name="User Actions",
-            info="Actions the human can choose; each becomes a branch output. Pick from the list or type a custom one.",
+            display_name="User Choices",
+            info="Choices the human can pick; each becomes a branch output. Pick from the list or type a custom one.",
             value=["Approve", "Reject"],
             real_time_refresh=True,
             required=True,
@@ -57,6 +57,8 @@ class HumanInput(Component):
             "server's suspended-run deadline expires it. Set to 0 to wait indefinitely.",
             options=["Minutes", "Hours", "Days"],
             value={"value": 3, "unit": "Days"},
+            advanced=True,
+            show=False,
         ),
         BoolInput(
             name="enable_fallback",
@@ -76,11 +78,24 @@ class HumanInput(Component):
     ]
 
     async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict) -> dict:
-        """Rebuild branch outputs from the saved User Actions so loaded/refreshed flows keep their handles."""
+        """Rebuild branch outputs from the saved User Choices so loaded/refreshed flows keep their handles."""
         new_frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
-        decisions = (new_frontend_node.get("template", {}).get("decisions") or {}).get("value")
+        template = new_frontend_node.get("template", {})
+        decisions = (template.get("decisions") or {}).get("value")
         self.update_outputs(new_frontend_node, "decisions", decisions if decisions is not None else [])
+        self._sync_timeout_visibility(template)
         return new_frontend_node
+
+    @staticmethod
+    def _sync_timeout_visibility(template: dict) -> None:
+        """Timeout only matters when the fallback branch exists to reroute to."""
+        if "timeout" in template:
+            template["timeout"]["show"] = bool((template.get("enable_fallback") or {}).get("value"))
+
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        if field_name == "enable_fallback" and "timeout" in build_config:
+            build_config["timeout"]["show"] = bool(field_value)
+        return build_config
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """One branch output per selected action (+ optional fallback) + a stable action output."""

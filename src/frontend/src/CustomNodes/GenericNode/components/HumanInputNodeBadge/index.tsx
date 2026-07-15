@@ -1,37 +1,51 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import IconComponent from "@/components/common/genericIconComponent";
 import HumanInputCard from "@/components/core/chatComponents/HumanInputCard";
 import {
   Popover,
   PopoverAnchor,
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useHitlStore } from "@/stores/hitlStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
-import { cn } from "@/utils/utils";
 
 /**
- * Canvas affordance for a paused Human Input node (LE-1603): a circular indigo "awaiting
- * input" badge that doubles as the anchor for a decision popover. The popover reuses the chat
- * `HumanInputCard` (which self-resumes), so the human can resolve the pause from the
- * canvas. Only the node whose id matches the pending request renders anything.
+ * Whether this node is awaiting a human decision on the canvas. The Playground renders
+ * its own card, so the canvas affordance only shows while the Playground is closed.
+ */
+export function useAwaitingHumanInput(nodeId: string): boolean {
+  const pending = useHitlStore((state) =>
+    state.pending?.nodeId === nodeId ? state.pending : null,
+  );
+  const playgroundOpen = usePlaygroundStore((state) => state.isOpen);
+  return Boolean(pending) && !playgroundOpen;
+}
+
+/**
+ * Canvas affordance for a paused Human Input node (LE-1603): a pause icon rendered in the
+ * node's run-button slot (same size/style as the play icon) that anchors a decision popover.
+ * The popover reuses the chat `HumanInputCard` (which self-resumes), so the human can
+ * resolve the pause from the canvas. Only the node whose id matches the pending request
+ * renders anything.
  */
 export default function HumanInputNodeBadge({ nodeId }: { nodeId: string }) {
   const { t } = useTranslation();
   const pending = useHitlStore((state) =>
     state.pending?.nodeId === nodeId ? state.pending : null,
   );
-  // The Playground renders its own card; its anchored popover would otherwise portal
-  // over the open Playground. Only surface the canvas affordance when it is closed.
-  const playgroundOpen = usePlaygroundStore((state) => state.isOpen);
+  const awaiting = useAwaitingHumanInput(nodeId);
   const [open, setOpen] = useState(false);
 
-  // Auto-open when this node starts awaiting; dismissing keeps the badge to reopen.
+  // Auto-open on every NEW pause (keyed by request_id): a rerun supersedes the old
+  // pause, and its popover must resurface even if the previous one was dismissed.
+  const requestId = pending?.content.request_id;
   useEffect(() => {
-    if (pending && !playgroundOpen) setOpen(true);
-  }, [pending, playgroundOpen]);
+    if (awaiting && requestId) setOpen(true);
+  }, [awaiting, requestId]);
 
-  if (!pending || playgroundOpen) return null;
+  if (!pending || !awaiting) return null;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -42,15 +56,13 @@ export default function HumanInputNodeBadge({ nodeId }: { nodeId: string }) {
           onClick={() => setOpen(true)}
           title={t("humanInput.awaitingInput")}
           aria-label={t("humanInput.awaitingInput")}
-          className={cn(
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
-            "border-2 border-accent-indigo-foreground text-accent-indigo-foreground",
-          )}
+          className="nodrag flex items-center justify-center"
         >
-          <span className="flex items-center gap-[2px]">
-            <span className="h-2 w-0.5 rounded-[1px] bg-accent-indigo-foreground" />
-            <span className="h-2 w-0.5 rounded-[1px] bg-accent-indigo-foreground" />
-          </span>
+          <IconComponent
+            name="Pause"
+            className="h-3.5 w-3.5 text-accent-indigo-foreground"
+            strokeWidth={ICON_STROKE_WIDTH}
+          />
         </button>
       </PopoverAnchor>
       {/* Non-portaled so the card lives inside the node subtree and inherits the canvas

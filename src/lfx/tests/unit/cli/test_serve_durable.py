@@ -177,6 +177,35 @@ def test_background_hitl_suspends_and_exposes_pending_request(client):
     assert any(option.get("action_id") == "approve" for option in pending.get("options", []))
 
 
+def test_resubmit_supersedes_the_stale_suspended_run(client):
+    """Re-running a paused flow cancels the stale pause and tracks only the new one."""
+    stale_job_id = _submit(client, _HITL_FLOW_ID)
+    _wait_for_status(client, stale_job_id, "suspended")
+    stale_request_id = _pending_request(client, stale_job_id)["request_id"]
+
+    new_job_id = _submit(client, _HITL_FLOW_ID)
+    _wait_for_status(client, new_job_id, "suspended")
+
+    stale = _get_status(client, stale_job_id)
+    assert stale["status"] == "cancelled"
+    resp = client.get(f"/api/v2/workflows/{stale_job_id}/pending", headers=_HEADERS)
+    assert resp.status_code == 404
+    pending = _pending_request(client, new_job_id)
+    assert pending["request_id"]
+    assert pending["request_id"] != stale_request_id
+
+
+def test_resubmit_of_a_different_flow_leaves_the_pause_alone(client):
+    suspended_job_id = _submit(client, _HITL_FLOW_ID)
+    _wait_for_status(client, suspended_job_id, "suspended")
+
+    other_job_id = _submit(client, _ECHO_FLOW_ID)
+    _wait_for_status(client, other_job_id, "completed")
+
+    assert _get_status(client, suspended_job_id)["status"] == "suspended"
+    assert _pending_request(client, suspended_job_id)["request_id"]
+
+
 def test_resume_completes_only_the_chosen_branch(client):
     job_id = _submit(client, _HITL_FLOW_ID)
     _wait_for_status(client, job_id, "suspended")

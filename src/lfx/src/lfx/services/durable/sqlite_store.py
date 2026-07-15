@@ -242,6 +242,16 @@ class SqliteDurableJobStore:
 
         return await self._run(op)
 
+    async def suspended_job_ids_for_flow(self, flow_id: str) -> list[str]:
+        def op(conn: sqlite3.Connection) -> list[str]:
+            rows = conn.execute(
+                "SELECT job_id FROM jobs WHERE flow_id = ? AND status = ? AND job_type = ? ORDER BY created_at",
+                (flow_id, JobStatus.SUSPENDED.value, JobType.WORKFLOW.value),
+            ).fetchall()
+            return [row["job_id"] for row in rows]
+
+        return await self._run(op)
+
     async def queued_workflow_job_ids(self) -> list[str]:
         def op(conn: sqlite3.Connection) -> list[str]:
             rows = conn.execute(

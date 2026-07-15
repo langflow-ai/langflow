@@ -127,6 +127,12 @@ The pause probe is a no-op unless a component requests it, so normal flows are b
 - **Then** the run finalizes once — no loop back to the first node
 - **And** only the chosen branch of each node runs (the first node's non-chosen branches stay dead across the second pause's resume, not just within the build that answered them)
 
+### Scenario: Rerunning a paused flow supersedes the stale pause
+- **Given** a flow with a `SUSPENDED` run awaiting a decision
+- **When** the same user submits a new background run of that flow
+- **Then** the stale suspended run is cancelled (`CANCELLED`, pending request cleared) before the new run starts, so only the new pause is offered on every surface
+- **And** the scope is flow + user on the langflow backend (another user's pause on the same flow is untouched) and flow on `lfx serve` (single API-key identity); running jobs are never superseded, so parallel runs stay supported
+
 ### Scenario: Single-flight resume
 - **Given** two resume requests for the same `SUSPENDED` job
 - **When** both arrive
@@ -225,12 +231,17 @@ Drain the queue **inline** after cancelling the worker (`service.py::_stop`), an
 
 ## 6. Technical Specification
 
-### 6.1 Pause → suspend (initial run)
+### 6.1 Submit supersedes stale pauses
+- `BackgroundExecutionService.submit` calls `supersede_suspended_runs(flow_id, user_id)` after `create_job` (so idempotent retries still return the existing job) and before enqueue: every `SUSPENDED` workflow job of the same flow + user is cancelled through the existing `_cancel_suspended` path (status `CANCELLED`, checkpoint deleted, pending cleared, `run_cancelled` event, bus closed).
+- `DurableServeWorkflowHost.submit_background` mirrors it flow-scoped via `SqliteDurableJobStore.suspended_job_ids_for_flow` (STOP signal, task cancel, `CANCELLED`, pending metadata cleared).
+- Frontend: the canvas badge auto-open is keyed by `request_id`, so the superseding run's new pause reopens a dismissed popover; the 5s pending poll converges every surface onto the single remaining pause.
+
+### 6.2 Pause → suspend (initial run)
 - The graph consults a pause probe at each layer boundary; on a pending pause it snapshots itself, writes a `checkpoint` row (always-writable schema), and raises `GraphPausedException`.
 - The build seam (`api/build.py`) catches it, persists the human-input card to history, emits `human_input_required`, and ends the stream without `on_end`.
 - The runner marks the job `SUSPENDED` (`services/background_execution/runner.py`).
 
-### 6.2 Resume (single-flight)
+### 6.3 Resume (single-flight)
 - `POST /api/v2/workflows/{job_id}/resume` with `{request_id, decision}`.
 - The route re-enforces `FlowAction.EXECUTE` (`ensure_resume_execute_permission`) before applying the decision — job ownership alone is not enough once shared access has been revoked.
 - `claim_suspended_for_resume` performs the atomic status claim; failure → `NOT_RESUMABLE`.
@@ -253,7 +264,7 @@ Drain the queue **inline** after cancelling the worker (`service.py::_stop`), an
   # restore built vertices; re-run only non-input predecessors of the gated vertex
   ```
 
-### 6.3 Trace continuity (initial run)
+### 6.4 Trace continuity (initial run)
 - `build_graph_from_data` (`api/utils/flow_utils.py`) pins the run id before tracing starts:
   ```python
   if (caller_run_id := kwargs.get("run_id")) is not None:
@@ -262,15 +273,15 @@ Drain the queue **inline** after cancelling the worker (`service.py::_stop`), an
   ```
 - `create_graph` forwards `run_id=str(job_id) if job_id is not None else run_id` to both `build_graph_from_data` and `build_graph_from_db`.
 
-### 6.4 Gate span recording
+### 6.5 Gate span recording
 - `TracingService.record_event_span(span_id, name, outputs, span_type="chain")` writes a standalone start+end span into the active trace for every ready tracer; deactivated/contextless calls are no-ops.
 
-### 6.5 Frontend (reads backend spans)
+### 6.6 Frontend (reads backend spans)
 - `useGetTraceQuery` → `GET /api/v1/monitor/traces/{id}` returns the span tree.
 - `TraceDetailView.tsx`: renders the backend gate span; `backendHasGate` dedup prevents a duplicate synthetic node; `executedOutputSpans` bridges Chat Output from live `flowPool` only during the resume window (deduped by name).
 - `hitlStore.ts`: in-memory only (`pending` slot); `localStorage`/`persist` removed.
 
-### 6.6 lfx serve durable mode (LE-1695)
+### 6.7 lfx serve durable mode (LE-1695)
 
 Bare `lfx serve` gains the same background + HITL contract without a database, backed by the single-node SQLite substrate:
 
@@ -282,7 +293,7 @@ Bare `lfx serve` gains the same background + HITL contract without a database, b
 - **Opt-in**: `LFX_SERVE_DURABLE_DB=<path>`. Unset → serve stays stateless and `mode: background` keeps its 422; workers in multi-worker mode inherit the env var and share the DB file (a stop cancels the run only in the worker executing it).
 - **Proof**: `src/lfx/tests/unit/cli/test_serve_durable.py` — background echo completes with the sync-shaped response; a HITL flow suspends, exposes its pending request, resumes only the approved branch, and resumes to completion on a fresh app instance over the same DB file (restart equivalence). The `{job_id}/events` SSE stream replays a completed run, surfaces the `human_input_request` on a suspend, and — reconnected with `Last-Event-ID` after a resume — delivers only the post-resume `human_input_decision` + `end` frames.
 
-### 6.7 Component map (quick index)
+### 6.8 Component map (quick index)
 
 | Concern | Where | Key symbols |
 |---------|-------|-------------|

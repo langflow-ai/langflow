@@ -15,7 +15,6 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useHitlStore } from "@/stores/hitlStore";
 import type { InteractiveContent } from "@/types/chat";
-import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 
 export interface HumanInputDecision {
@@ -23,16 +22,14 @@ export interface HumanInputDecision {
   values: Record<string, string>;
 }
 
-// Map an action to its Figma style: Approve is the filled primary, Reject is the
-// red outline; everything else stays a neutral outline.
-function decisionButtonClass(actionId: string): string {
-  if (actionId === "approve") {
-    return "border border-accent-indigo-foreground bg-accent-indigo-foreground text-white hover:bg-accent-indigo-foreground/90";
-  }
-  if (actionId === "reject") {
-    return "border border-accent-red-foreground/40 bg-transparent text-accent-red-foreground hover:bg-accent-red-foreground/10";
-  }
-  return "border border-border bg-transparent text-foreground hover:bg-muted";
+// Standard Langflow button variants: Approve is the primary action, Reject the
+// destructive one; everything else stays a neutral outline.
+function decisionVariant(
+  actionId: string,
+): "default" | "destructive" | "outline" {
+  if (actionId === "approve") return "default";
+  if (actionId === "reject") return "destructive";
+  return "outline";
 }
 
 /**
@@ -127,10 +124,13 @@ export default function HumanInputCard({
   return (
     <div
       data-testid="human-input-card"
-      className="flex flex-col overflow-hidden rounded-xl border border-accent-indigo-foreground/40"
+      className="flex flex-col overflow-hidden rounded-xl border border-border bg-background"
     >
-      <div className="flex items-center gap-2 border-b border-accent-indigo-foreground/20 bg-accent-indigo-foreground/5 px-4 py-3 text-base font-semibold text-accent-indigo-foreground">
-        <ForwardedIconComponent name="CirclePause" className="h-5 w-5" />
+      <div className="flex items-center gap-2 border-b border-border bg-muted px-4 py-3 text-base font-semibold text-primary">
+        <ForwardedIconComponent
+          name="Pause"
+          className="h-5 w-5 text-accent-indigo-foreground"
+        />
         <span>{t("humanInput.waitingForInput")}</span>
       </div>
 
@@ -174,13 +174,10 @@ export default function HumanInputCard({
               <Button
                 key={option.action_id}
                 data-testid={`human-input-decision-${option.action_id}`}
-                unstyled
+                variant={decisionVariant(option.action_id)}
+                size="md"
                 disabled={isSubmitted || isPending}
                 onClick={() => handleDecision(option.action_id)}
-                className={cn(
-                  "inline-flex items-center justify-center rounded-[10px] px-3 py-1.5 text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-70",
-                  decisionButtonClass(option.action_id),
-                )}
               >
                 {chosen === option.action_id && (
                   <ForwardedIconComponent
