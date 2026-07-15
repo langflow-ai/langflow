@@ -92,8 +92,8 @@
     "nodes": [
       {
         "data": {
-          "description": "Define the agent's instructions, then enter a task to complete using tools.",
-          "display_name": "Finance Agent",
+          "description": "Review a delegation plan and tighten its boundaries, evidence, and completion criteria.",
+          "display_name": "Boundary Reviewer",
           "id": "Agent-EQcU8",
           "node": {
             "base_classes": [
@@ -1104,8 +1104,8 @@
       },
       {
         "data": {
-          "description": "Define the agent's instructions, then enter a task to complete using tools.",
-          "display_name": "Researcher Agent",
+          "description": "Turn a user's goal into a concise delegation plan without performing the task.",
+          "display_name": "Delegation Planner",
           "id": "Agent-b7nmW",
           "node": {
             "base_classes": [

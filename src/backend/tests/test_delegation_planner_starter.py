@@ -41,10 +41,16 @@ def test_delegation_planner_has_minimal_review_flow():
 def test_delegation_planner_keeps_plain_language_boundaries():
     template = load_template()
     nodes = {node["id"]: node for node in template["data"]["nodes"]}
-    planner = nodes["Agent-b7nmW"]["data"]["node"]["template"]
-    reviewer = nodes["Agent-EQcU8"]["data"]["node"]["template"]
+    planner_data = nodes["Agent-b7nmW"]["data"]
+    reviewer_data = nodes["Agent-EQcU8"]["data"]
+    planner = planner_data["node"]["template"]
+    reviewer = reviewer_data["node"]["template"]
     note = nodes["note-seq"]["data"]["node"]["description"]
 
+    assert planner_data["display_name"] == "Delegation Planner"
+    assert "without performing the task" in planner_data["description"]
+    assert reviewer_data["display_name"] == "Boundary Reviewer"
+    assert "tighten its boundaries" in reviewer_data["description"]
     assert "Do not perform the task" in planner["system_prompt"]["value"]
     assert "Check with me first" in planner["system_prompt"]["value"]
     assert "Evidence to bring back" in planner["system_prompt"]["value"]
