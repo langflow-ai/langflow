@@ -944,7 +944,7 @@ jobs:
           uv venv core-test-env --seed --python 3.14
           uv pip install --python core-test-env/bin/python \
             --prerelease=if-necessary-or-explicit \
-            "${FIND_LINKS[@]}" "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BASE_WHEELS[0]}[complete]"
+            "${FIND_LINKS[@]}" "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BASE_WHEELS[0]}"
           uv pip check --python core-test-env/bin/python
 
       - name: Verify core boundary and indexed imports
