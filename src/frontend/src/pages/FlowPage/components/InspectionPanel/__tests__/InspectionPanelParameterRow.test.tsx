@@ -276,5 +276,53 @@ describe("InspectionPanelParameterRow", () => {
 
       expect(screen.getByTestId("inspector-api-test_field")).toBeDisabled();
     });
+
+    it("blocks API exposure for off-node parameters (exposure coupled to on-node)", async () => {
+      const user = userEvent.setup();
+      const props = {
+        ...defaultProps,
+        data: createMockData({ advanced: true }),
+      };
+      renderWithProviders(<InspectionPanelParameterRow {...props} />);
+
+      const apiButton = screen.getByTestId("inspector-api-test_field");
+      expect(apiButton).toBeDisabled();
+      await user.click(apiButton);
+      expect(mockHandleOnNewValue).not.toHaveBeenCalled();
+    });
+
+    it("shows a lingering flag on an off-node parameter as NOT exposed", () => {
+      const props = {
+        ...defaultProps,
+        data: createMockData({ advanced: true, api_editable: true }),
+      };
+      renderWithProviders(<InspectionPanelParameterRow {...props} />);
+
+      // The persisted flag stays inert off-node: pressed state mirrors
+      // effective exposure, not the raw flag.
+      expect(screen.getByTestId("inspector-api-test_field")).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      );
+    });
+
+    it("shows a lingering flag on a connected parameter as NOT exposed", () => {
+      mockEdges = [
+        {
+          target: "test-node-123",
+          targetHandle: JSON.stringify({ fieldName: "test_field" }),
+        },
+      ];
+      const props = {
+        ...defaultProps,
+        data: createMockData({ api_editable: true }),
+      };
+      renderWithProviders(<InspectionPanelParameterRow {...props} />);
+
+      expect(screen.getByTestId("inspector-api-test_field")).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      );
+    });
   });
 });

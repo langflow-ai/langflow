@@ -2139,6 +2139,7 @@
   "inspectionPanel.apiEnable": "Über die API bearbeitbar machen",
   "inspectionPanel.apiDisable": "API-Bearbeitung deaktivieren",
   "inspectionPanel.apiDisabledField": "Deaktivierte Felder können nicht über die API aufgerufen werden",
+  "inspectionPanel.apiNeedsOnNode": "Fügen Sie den Parameter dem Node hinzu, um ihn über die API freizugeben",
   "inspectionPanel.add": "Hinzufügen",
   "inspectionPanel.remove": "Entfernen",
   "inspectionPanel.defaultLabel": "Standard",

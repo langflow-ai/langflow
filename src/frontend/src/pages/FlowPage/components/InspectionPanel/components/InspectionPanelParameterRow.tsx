@@ -57,8 +57,10 @@ export default function InspectionPanelParameterRow({
   );
 
   // Ticket LE-1810: disabled fields (connected handles / tool mode) can't be
-  // called via the API, so exposing them is blocked.
-  const isDisabledField = isConnected || isToolModeActive;
+  // called via the API, so exposing them is blocked. Exposure is also coupled
+  // to being on the node — an off-node field isn't callable, so the API
+  // toggle only unlocks once the parameter is added to the node.
+  const isDisabledField = isConnected || isToolModeActive || !isOnCanvas;
 
   const handleToggleVisibility = useCallback(() => {
     handleOnNewValue({ advanced: isOnCanvas });
@@ -67,6 +69,11 @@ export default function InspectionPanelParameterRow({
   const handleToggleApiEditable = useCallback(() => {
     handleOnNewValue({ api_editable: !isApiEditable });
   }, [handleOnNewValue, isApiEditable]);
+
+  // The green "on" state mirrors EFFECTIVE exposure (what the snippets
+  // advertise), not the raw persisted flag — a flag lingering on an off-node
+  // or connected field stays inert and must not read as exposed.
+  const isEffectivelyExposed = isApiEditable && !isDisabledField;
 
   const defaultDisplay = getDefaultDisplay(template, factoryValue);
   const defaultText =
@@ -112,11 +119,13 @@ export default function InspectionPanelParameterRow({
       <div className="flex shrink-0 items-center gap-1.5">
         <ShadTooltip
           content={
-            isDisabledField
-              ? t("inspectionPanel.apiDisabledField")
-              : isApiEditable
-                ? t("inspectionPanel.apiDisable")
-                : t("inspectionPanel.apiEnable")
+            !isOnCanvas
+              ? t("inspectionPanel.apiNeedsOnNode")
+              : isDisabledField
+                ? t("inspectionPanel.apiDisabledField")
+                : isApiEditable
+                  ? t("inspectionPanel.apiDisable")
+                  : t("inspectionPanel.apiEnable")
           }
           avoidCollisions
         >
@@ -127,13 +136,13 @@ export default function InspectionPanelParameterRow({
             disabled={isDisabledField}
             className={cn(
               "flex h-6 items-center justify-center rounded-md border px-2 text-[10px] font-semibold transition-colors",
-              isApiEditable
+              isEffectivelyExposed
                 ? "border-accent-emerald bg-accent-emerald/10 text-accent-emerald-foreground"
                 : "border-border text-muted-foreground hover:text-foreground",
               isDisabledField && "cursor-not-allowed opacity-50",
             )}
             data-testid={`inspector-api-${name}`}
-            aria-pressed={isApiEditable}
+            aria-pressed={isEffectivelyExposed}
             aria-label={`${title} API`}
           >
             API

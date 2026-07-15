@@ -2139,6 +2139,7 @@
   "inspectionPanel.apiEnable": "APIで編集可能にする",
   "inspectionPanel.apiDisable": "API編集を無効にする",
   "inspectionPanel.apiDisabledField": "無効なフィールドはAPIから呼び出せません",
+  "inspectionPanel.apiNeedsOnNode": "APIで公開するにはパラメータをノードに追加してください",
   "inspectionPanel.add": "追加",
   "inspectionPanel.remove": "削除",
   "inspectionPanel.defaultLabel": "デフォルト",
