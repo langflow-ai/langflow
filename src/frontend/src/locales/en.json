@@ -505,6 +505,7 @@
   "sidebar.uploadSuccess": "Uploaded successfully",
   "sidebar.projectUploadSuccess": "Project uploaded successfully.",
   "sidebar.projectUploadError": "Error on uploading your project, try dragging it into an existing project.",
+  "sidebar.projectCreateError": "Unable to create project.",
   "sidebar.downloadError": "An error occurred while downloading your project.",
   "sidebar.emptyMessage": "Start creating a project or flow",
   "sidebar.knowledge": "Knowledge",

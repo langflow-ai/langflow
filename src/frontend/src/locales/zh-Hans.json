@@ -1817,6 +1817,7 @@
   "sidebar.newCustomComponent": "新建自定义组件",
   "sidebar.noComponentsFound": "未找到任何组件。",
   "sidebar.projectUploadError": "上传项目时发生错误，请尝试将其拖放到现有项目中。",
+  "sidebar.projectCreateError": "无法创建项目。",
   "sidebar.projectUploadSuccess": "项目已成功上传。",
   "sidebar.projects": "项目",
   "sidebar.removeFilter": "移除过滤器",
