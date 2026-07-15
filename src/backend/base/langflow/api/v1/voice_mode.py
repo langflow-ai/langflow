@@ -22,7 +22,7 @@ from lfx.log import logger
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.secrets import secret_value_to_str
 from openai import OpenAI
-from sqlalchemy import select
+from sqlmodel import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 from websockets.asyncio.client import ClientConnection
 
