@@ -45,6 +45,10 @@ VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "OPENROUTER_API_KEY",
     "OPENROUTER_SITE_URL",
     "OPENROUTER_APP_NAME",
+    # OrcaRouter variables
+    "ORCAROUTER_API_KEY",
+    "ORCAROUTER_SITE_URL",
+    "ORCAROUTER_APP_NAME",
 ]
 
 # Agentic experience specific variables

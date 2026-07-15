@@ -599,6 +599,36 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 logger.warning(msg)
                 raise ValueError(msg) from e
 
+        elif provider == "OrcaRouter":
+            from http import HTTPStatus
+
+            import requests
+
+            api_key = variables.get("ORCAROUTER_API_KEY")
+            if not api_key:
+                return
+
+            # OrcaRouter's ``/v1/models`` returns 200 for a valid key (and for no
+            # auth) but 401 for an invalid one, so it doubles as a cheap key
+            # validation endpoint.
+            try:
+                response = requests.get(
+                    "https://api.orcarouter.ai/v1/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=5,
+                )
+                if response.status_code == HTTPStatus.UNAUTHORIZED:
+                    msg = "Invalid OrcaRouter API key"
+                    logger.error(msg)
+                    raise ValueError(msg)
+                response.raise_for_status()
+            except ValueError:
+                raise
+            except requests.RequestException as e:
+                msg = f"Could not reach OrcaRouter to validate the API key: {e}"
+                logger.warning(msg)
+                raise ValueError(msg) from e
+
         elif provider == "Azure AI Foundry":
             try:
                 from langchain_azure_ai.chat_models import AzureAIOpenAIApiChatModel

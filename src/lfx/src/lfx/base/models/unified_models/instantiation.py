@@ -275,13 +275,9 @@ def get_llm(
         provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
 
         # Priority: component value > database value > env var
-        watsonx_url_value = (
-            watsonx_url if watsonx_url else provider_vars.get("WATSONX_URL") or _env_if_allowed("WATSONX_URL")
-        )
+        watsonx_url_value = watsonx_url or provider_vars.get("WATSONX_URL") or _env_if_allowed("WATSONX_URL")
         watsonx_project_id_value = (
-            watsonx_project_id
-            if watsonx_project_id
-            else provider_vars.get("WATSONX_PROJECT_ID") or _env_if_allowed("WATSONX_PROJECT_ID")
+            watsonx_project_id or provider_vars.get("WATSONX_PROJECT_ID") or _env_if_allowed("WATSONX_PROJECT_ID")
         )
 
         has_url = bool(watsonx_url_value)
@@ -311,9 +307,7 @@ def get_llm(
 
         # Priority: component value > database value > env var
         ollama_base_url_value = (
-            ollama_base_url
-            if ollama_base_url
-            else provider_vars.get("OLLAMA_BASE_URL") or _env_if_allowed("OLLAMA_BASE_URL")
+            ollama_base_url or provider_vars.get("OLLAMA_BASE_URL") or _env_if_allowed("OLLAMA_BASE_URL")
         )
         if ollama_base_url_value:
             kwargs[base_url_param] = ollama_base_url_value
@@ -324,11 +318,11 @@ def get_llm(
         openai_base_url_value = provider_vars.get("OPENAI_BASE_URL") or _env_if_allowed("OPENAI_BASE_URL")
         if openai_base_url_value:
             kwargs["base_url"] = transform_localhost_url(openai_base_url_value)
-    elif provider == "OpenRouter":
-        # OpenRouter speaks the OpenAI wire format. Point ChatOpenAI at the
-        # OpenRouter base URL (declared in MODEL_PROVIDER_METADATA) and forward
-        # any configured attribution headers (HTTP-Referer, X-Title) so usage
-        # shows up correctly in the OpenRouter dashboard.
+    elif provider in ("OpenRouter", "OrcaRouter"):
+        # OpenRouter and OrcaRouter both speak the OpenAI wire format. Point
+        # ChatOpenAI at the provider base URL (declared in MODEL_PROVIDER_METADATA)
+        # and forward any configured attribution headers (HTTP-Referer, X-Title)
+        # so usage shows up correctly in the provider dashboard.
         provider_meta = model_provider_metadata.get(provider, {})
         base_url_value = provider_meta.get("base_url")
         if base_url_value:
@@ -841,7 +835,7 @@ def get_embeddings(
         request_timeout=float(request_timeout) if request_timeout else None,
         max_retries=int(max_retries) if max_retries else None,
         show_progress_bar=show_progress_bar,
-        model_kwargs=model_kwargs if model_kwargs else None,
+        model_kwargs=model_kwargs or None,
         watsonx_url=watsonx_url,
         watsonx_project_id=watsonx_project_id,
         watsonx_truncate_input_tokens=watsonx_truncate_input_tokens,
@@ -895,7 +889,7 @@ def get_embeddings(
         request_timeout=float(request_timeout) if request_timeout else None,
         max_retries=int(max_retries) if max_retries else None,
         show_progress_bar=show_progress_bar,
-        model_kwargs=model_kwargs if model_kwargs else None,
+        model_kwargs=model_kwargs or None,
         watsonx_url=watsonx_url,
         watsonx_project_id=watsonx_project_id,
         watsonx_truncate_input_tokens=watsonx_truncate_input_tokens,
