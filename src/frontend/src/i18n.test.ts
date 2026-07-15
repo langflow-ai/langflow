@@ -7,12 +7,13 @@
 
 // Import the real i18n instance and loadLanguage (not the mock from jest.setup.js)
 jest.unmock("react-i18next");
+
 import i18n, { loadLanguage } from "./i18n";
 
 describe("loadLanguage", () => {
   beforeEach(() => {
     // Clear cached non-English bundles between tests
-    ["fr", "ja", "es", "de", "pt", "zh-Hans"].forEach((lang) => {
+    ["fr", "ja", "es", "de", "pl", "pt", "zh-Hans"].forEach((lang) => {
       if (i18n.hasResourceBundle(lang, "translation")) {
         i18n.removeResourceBundle(lang, "translation");
       }
@@ -49,5 +50,11 @@ describe("loadLanguage", () => {
     await loadLanguage("ja");
     expect(i18n.hasResourceBundle("fr", "translation")).toBe(true);
     expect(i18n.hasResourceBundle("ja", "translation")).toBe(true);
+  });
+
+  it("loads and registers the Polish language bundle", async () => {
+    expect(i18n.hasResourceBundle("pl", "translation")).toBe(false);
+    await loadLanguage("pl");
+    expect(i18n.hasResourceBundle("pl", "translation")).toBe(true);
   });
 });
