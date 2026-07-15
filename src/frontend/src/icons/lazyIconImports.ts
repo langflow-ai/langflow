@@ -383,6 +383,10 @@ export const lazyIconsMapping = {
     import("@/icons/OpenRouter").then((mod) => ({
       default: mod.OpenRouterIcon,
     })),
+  OrcaRouter: () =>
+    import("@/icons/OrcaRouter").then((mod) => ({
+      default: mod.OrcaRouterIcon,
+    })),
   OpenSearch: () =>
     import("@/icons/OpenSearch").then((mod) => ({ default: mod.OpenSearch })),
   Oracle: () =>
