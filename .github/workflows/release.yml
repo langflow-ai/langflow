@@ -667,6 +667,10 @@ jobs:
           # Update version in lfx pyproject.toml
           sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
 
+          # Keep the bundled component index version/hash aligned with the RC wheel.
+          uv run --no-sync python ../../scripts/ci/update_component_index_version.py \
+            src/lfx/_assets/component_index.json "$VERSION"
+
           # Verify the change
           echo "Updated pyproject.toml version:"
           grep "^version" pyproject.toml
