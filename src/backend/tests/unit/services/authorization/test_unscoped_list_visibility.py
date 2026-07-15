@@ -39,7 +39,12 @@ async def test_file_list_uses_global_structured_visibility(monkeypatch):
     monkeypatch.setattr(files_api, "ensure_file_permission", AsyncMock())
     monkeypatch.setattr(files_api, "get_mcp_file", AsyncMock(return_value="_mcp_servers"))
     monkeypatch.setattr(files_api, "visible_scope_prefilter", AsyncMock(return_value=visibility), raising=False)
-    monkeypatch.setattr(files_api, "visible_id_prefilter", AsyncMock(return_value=None))
+    monkeypatch.setattr(
+        files_api,
+        "visible_id_prefilter",
+        AsyncMock(side_effect=AssertionError("legacy visibility hook used")),
+        raising=False,
+    )
 
     await files_api.list_files(current_user=actor, session=session)
 
@@ -62,7 +67,12 @@ async def test_knowledge_base_list_forwards_concrete_structured_visibility(monke
         AsyncMock(return_value=visibility),
         raising=False,
     )
-    monkeypatch.setattr(knowledge_bases_api, "visible_id_prefilter", AsyncMock(return_value=None))
+    monkeypatch.setattr(
+        knowledge_bases_api,
+        "visible_id_prefilter",
+        AsyncMock(side_effect=AssertionError("legacy visibility hook used")),
+        raising=False,
+    )
     monkeypatch.setattr(knowledge_bases_api.knowledge_base_service, "list_by_user", list_by_user)
     monkeypatch.setattr(
         knowledge_bases_api.knowledge_base_service,
@@ -96,7 +106,12 @@ async def test_memory_base_list_forwards_structured_visibility(monkeypatch):
     monkeypatch.setattr(memories_api, "get_memory_base_service", lambda: service)
     monkeypatch.setattr(memories_api, "apaginate", AsyncMock(return_value=page))
     monkeypatch.setattr(memories_api, "visible_scope_prefilter", AsyncMock(return_value=visibility), raising=False)
-    monkeypatch.setattr(memories_api, "visible_id_prefilter", AsyncMock(return_value=None))
+    monkeypatch.setattr(
+        memories_api,
+        "visible_id_prefilter",
+        AsyncMock(side_effect=AssertionError("legacy visibility hook used")),
+        raising=False,
+    )
 
     result = await memories_api.list_memory_bases(
         current_user=actor,
@@ -122,7 +137,12 @@ async def test_variable_list_forwards_global_structured_visibility(monkeypatch):
     monkeypatch.setattr(variable_api, "ensure_variable_permission", AsyncMock())
     monkeypatch.setattr(variable_api, "get_variable_service", lambda: service)
     monkeypatch.setattr(variable_api, "visible_scope_prefilter", AsyncMock(return_value=visibility), raising=False)
-    monkeypatch.setattr(variable_api, "visible_id_prefilter", AsyncMock(return_value=None))
+    monkeypatch.setattr(
+        variable_api,
+        "visible_id_prefilter",
+        AsyncMock(side_effect=AssertionError("legacy visibility hook used")),
+        raising=False,
+    )
 
     result = await variable_api.read_variables(
         session=MagicMock(),

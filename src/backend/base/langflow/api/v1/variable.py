@@ -25,7 +25,7 @@ from langflow.api.v1.models import (
 from langflow.api.v1.schemas.deployments import DetectVarsRequest, DetectVarsResponse
 from langflow.services.authorization import VariableAction, ensure_variable_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
-from langflow.services.authorization.listing import visible_id_prefilter
+from langflow.services.authorization.listing import visible_scope_prefilter
 from langflow.services.database.models.flow_version.crud import get_flow_version_entries_by_ids
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
@@ -212,7 +212,7 @@ async def read_variables(
         msg = "Variable service is not an instance of DatabaseVariableService"
         raise TypeError(msg)
     try:
-        visible_ids = await visible_id_prefilter(
+        visibility = await visible_scope_prefilter(
             current_user,
             resource_type="variable",
             act=VariableAction.READ,
@@ -220,7 +220,7 @@ async def read_variables(
         all_variables = await variable_service.get_all(
             user_id=current_user.id,
             session=session,
-            visible_ids=visible_ids,
+            visibility=visibility,
         )
 
         # Filter out internal variables (those starting and ending with __)

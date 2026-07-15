@@ -27,6 +27,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from lfx.log.logger import logger
+from lfx.services.authorization.base import ResourceVisibilityScope
 from sqlmodel import select
 
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
@@ -182,17 +183,19 @@ async def list_by_user(user_id: UUID) -> list[KnowledgeBaseRecord]:
 
 async def list_owned_or_visible(
     user_id: UUID,
-    visible_ids: list[UUID],
+    visibility: ResourceVisibilityScope,
 ) -> list[KnowledgeBaseRecord]:
-    """Return KB rows owned by ``user_id`` or explicitly visible to it."""
-    from langflow.services.authorization.listing import restrict_to_owned_or_visible
+    """Return KB rows owned by ``user_id`` or visible through a supported scope."""
+    from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope
 
     async with session_scope() as session:
-        stmt = restrict_to_owned_or_visible(
+        # KnowledgeBaseRecord has no canonical workspace/project columns, so
+        # domain-only grants intentionally remain owner-scoped.
+        stmt = restrict_to_owned_or_visible_scope(
             select(KnowledgeBaseRecord),
             id_column=KnowledgeBaseRecord.id,
             owner_clause=KnowledgeBaseRecord.user_id == user_id,
-            visible_ids=visible_ids,
+            visibility=visibility,
         ).order_by(KnowledgeBaseRecord.created_at.desc())  # type: ignore[attr-defined]
         result = await session.exec(stmt)
         return list(result.all())

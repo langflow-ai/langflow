@@ -34,7 +34,7 @@ from pydantic import BaseModel
 from langflow.api.utils import CurrentActiveUser
 from langflow.services.authorization import KnowledgeBaseAction, ensure_knowledge_base_permission
 from langflow.services.authorization.fetch import deny_to_404
-from langflow.services.authorization.listing import visible_id_prefilter
+from langflow.services.authorization.listing import visible_scope_prefilter
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
     MemoryBaseCreate,
@@ -169,7 +169,7 @@ async def list_memory_bases(
         page  - 1-based page number (default 1)
         size  - page size (default 50)
     """
-    visible_ids = await visible_id_prefilter(
+    visibility = await visible_scope_prefilter(
         current_user,
         resource_type="knowledge_base",
         act=KnowledgeBaseAction.READ,
@@ -178,7 +178,7 @@ async def list_memory_bases(
         stmt = get_memory_base_service().list_for_user_stmt(
             user_id=current_user.id,
             flow_id=flow_id,
-            visible_ids=visible_ids,
+            visibility=visibility,
         )
         return await apaginate(
             db, stmt, params=params, transformer=lambda items: [MemoryBaseRead.model_validate(m) for m in items]

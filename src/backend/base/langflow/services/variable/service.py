@@ -17,6 +17,7 @@ from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from lfx.services.authorization.base import ResourceVisibilityScope
     from lfx.services.settings.service import SettingsService
     from pydantic import SecretStr
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -282,19 +283,21 @@ class DatabaseVariableService(VariableService, Service):
         user_id: UUID | str,
         session: AsyncSession,
         *,
-        visible_ids: Sequence[UUID] | None = None,
+        visibility: ResourceVisibilityScope | None = None,
     ) -> list[VariableRead]:
         stmt = select(Variable)
-        if visible_ids is None:
+        if visibility is None:
             stmt = stmt.where(Variable.user_id == user_id)
         else:
-            from langflow.services.authorization.listing import restrict_to_owned_or_visible
+            from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope
 
-            stmt = restrict_to_owned_or_visible(
+            # Variable has no canonical workspace/project columns, so
+            # domain-only grants intentionally remain owner-scoped.
+            stmt = restrict_to_owned_or_visible_scope(
                 stmt,
                 id_column=Variable.id,
                 owner_clause=Variable.user_id == user_id,
-                visible_ids=visible_ids,
+                visibility=visibility,
             )
         variables = list((await session.exec(stmt)).all())
         variables_read = []

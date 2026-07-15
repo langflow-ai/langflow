@@ -60,8 +60,7 @@ from langflow.services.memory_base.kb_path_helpers import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
+    from lfx.services.authorization.base import ResourceVisibilityScope
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -188,20 +187,22 @@ class MemoryBaseService(Service):
         user_id: uuid.UUID,
         flow_id: uuid.UUID | None = None,
         *,
-        visible_ids: Sequence[uuid.UUID] | None = None,
+        visibility: ResourceVisibilityScope | None = None,
     ):  # type: ignore[return]
         """Return the SQLModel select statement for pagination at the API layer."""
         stmt = select(MemoryBase)
-        if visible_ids is None:
+        if visibility is None:
             stmt = stmt.where(MemoryBase.user_id == user_id)
         else:
-            from langflow.services.authorization.listing import restrict_to_owned_or_visible
+            from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope
 
-            stmt = restrict_to_owned_or_visible(
+            # MemoryBase has no canonical workspace/project columns, so
+            # domain-only grants intentionally remain owner-scoped.
+            stmt = restrict_to_owned_or_visible_scope(
                 stmt,
                 id_column=MemoryBase.id,
                 owner_clause=MemoryBase.user_id == user_id,
-                visible_ids=visible_ids,
+                visibility=visibility,
             )
         if flow_id is not None:
             stmt = stmt.where(MemoryBase.flow_id == flow_id)

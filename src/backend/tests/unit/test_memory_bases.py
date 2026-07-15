@@ -28,6 +28,7 @@ from langflow.services.database.models.memory_base.model import (
     MemoryBaseUpdate,
 )
 from langflow.services.database.models.message.model import MessageTable
+from lfx.services.authorization.base import ResourceVisibilityScope
 
 # ------------------------------------------------------------------ #
 #  Helpers                                                             #
@@ -724,7 +725,10 @@ class TestMemoryBaseGuardPassesRealKbIdentity:
 
         actor_id = uuid.uuid4()
         shared_id = uuid.uuid4()
-        stmt = MemoryBaseService().list_for_user_stmt(actor_id, visible_ids=[shared_id])
+        stmt = MemoryBaseService().list_for_user_stmt(
+            actor_id,
+            visibility=ResourceVisibilityScope(resource_ids=(shared_id,)),
+        )
         sql = str(stmt.compile(compile_kwargs={"literal_binds": True}))
 
         assert actor_id.hex in sql

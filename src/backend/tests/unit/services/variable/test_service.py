@@ -11,6 +11,7 @@ from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
+from lfx.services.authorization.base import ResourceVisibilityScope
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyContext,
     ModelProviderPolicyPurpose,
@@ -199,7 +200,11 @@ async def test_get_all_redacts_shared_generic_values(service, session: AsyncSess
         session=session,
     )
 
-    rows = await service.get_all(actor_id, session, visible_ids=[shared.id])
+    rows = await service.get_all(
+        actor_id,
+        session,
+        visibility=ResourceVisibilityScope(resource_ids=(shared.id,)),
+    )
     by_id = {row.id: row for row in rows}
 
     assert by_id[owned.id].value == "owned-plaintext"
