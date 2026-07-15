@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import tomllib
 from packaging.requirements import Requirement
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python 3.10 compatibility
+    import tomli as tomllib
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 CORE_ROOT = REPO_ROOT / "src" / "langflow-core"
