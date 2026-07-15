@@ -30,22 +30,33 @@ def test_delegation_planner_has_minimal_review_flow():
     node_types = [node["data"]["type"] for node in nodes]
     assert sorted(node_types) == ["Agent", "Agent", "ChatInput", "ChatOutput", "note"]
 
-    connections = {(edge["source"], edge["target"]) for edge in edges}
-    assert connections == {
-        ("ChatInput-NuUHZ", "Agent-b7nmW"),
-        ("Agent-b7nmW", "Agent-EQcU8"),
-        ("Agent-EQcU8", "ChatOutput-GWGKe"),
+    node_types_by_id = {node["id"]: node["data"]["type"] for node in nodes}
+    connection_types = {
+        (node_types_by_id[edge["source"]], node_types_by_id[edge["target"]]) for edge in edges
+    }
+    assert connection_types == {
+        ("ChatInput", "Agent"),
+        ("Agent", "Agent"),
+        ("Agent", "ChatOutput"),
     }
 
 
 def test_delegation_planner_keeps_plain_language_boundaries():
     template = load_template()
-    nodes = {node["id"]: node for node in template["data"]["nodes"]}
-    planner_data = nodes["Agent-b7nmW"]["data"]
-    reviewer_data = nodes["Agent-EQcU8"]["data"]
+    nodes = template["data"]["nodes"]
+    agents = [node["data"] for node in nodes if node["data"]["type"] == "Agent"]
+    planner_data = next(
+        agent for agent in agents if "Do not perform the task" in agent["node"]["template"]["system_prompt"]["value"]
+    )
+    reviewer_data = next(
+        agent
+        for agent in agents
+        if "planning assistance, not a safety guarantee"
+        in agent["node"]["template"]["system_prompt"]["value"]
+    )
     planner = planner_data["node"]["template"]
     reviewer = reviewer_data["node"]["template"]
-    note = nodes["note-seq"]["data"]["node"]["description"]
+    note = next(node["data"]["node"]["description"] for node in nodes if node["data"]["type"] == "note")
 
     assert planner_data["display_name"] == "Delegation Planner"
     assert "without performing the task" in planner_data["description"]
