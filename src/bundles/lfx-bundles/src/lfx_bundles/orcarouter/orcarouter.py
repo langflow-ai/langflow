@@ -8,15 +8,18 @@ from pydantic.v1 import SecretStr
 
 ORCAROUTER_BASE_URL = "https://api.orcarouter.ai/v1"
 
-# Shown before the user saves an API key or refreshes the live catalog. The
-# ``orcarouter/fusion`` entry is OrcaRouter's adaptive router (routes each
-# request across providers); the rest are namespaced upstream model ids. The
-# authoritative list is fetched live from ``/v1/models``.
+# Curated seed list. ``orcarouter/auto`` is OrcaRouter's virtual adaptive
+# router (routes each request across providers); it is a routing endpoint
+# rather than a catalog entry, so it is NOT returned by ``/v1/models`` and must
+# be pinned into the dropdown. The rest are namespaced upstream model ids. The
+# live catalog from ``/v1/models`` is merged on top of this seed.
 ORCAROUTER_SEED_MODELS = [
-    "orcarouter/fusion",
+    "orcarouter/auto",
     "openai/gpt-5.5",
     "anthropic/claude-opus-4.8",
     "google/gemini-3.5-flash",
+    "deepseek/deepseek-v4-pro",
+    "grok/grok-4.3",
 ]
 
 
@@ -26,7 +29,7 @@ class OrcaRouterComponent(LCModelComponent):
     display_name = "OrcaRouter"
     description = (
         "OrcaRouter provides unified, adaptive access to models from many providers through a single "
-        "OpenAI-compatible API. Use the 'orcarouter/fusion' router for automatic per-request routing."
+        "OpenAI-compatible API. Use the 'orcarouter/auto' router for automatic per-request routing."
     )
     icon = "OrcaRouter"
 
@@ -37,7 +40,7 @@ class OrcaRouterComponent(LCModelComponent):
             name="model_name",
             display_name="Model",
             options=ORCAROUTER_SEED_MODELS,
-            value="orcarouter/fusion",
+            value="orcarouter/auto",
             refresh_button=True,
             real_time_refresh=True,
             required=True,
@@ -85,13 +88,18 @@ class OrcaRouterComponent(LCModelComponent):
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:  # noqa: ARG002
-        """Update model options."""
+        """Update model options, always keeping the pinned seed models available.
+
+        ``orcarouter/auto`` (and any other seed id) is a routing endpoint that
+        the ``/v1/models`` catalog does not list, so the seed list is merged with
+        the live catalog rather than replaced -- the router stays selectable even
+        after a live refresh.
+        """
         models = self.fetch_models()
-        if models:
-            build_config["model_name"]["options"] = [m["id"] for m in models]
-            build_config["model_name"]["tooltips"] = {m["id"]: f"{m['name']} ({m['context']:,} tokens)" for m in models}
-        else:
-            build_config["model_name"]["options"] = ORCAROUTER_SEED_MODELS
+        live_ids = [m["id"] for m in models]
+        pinned = [m for m in ORCAROUTER_SEED_MODELS if m not in live_ids]
+        build_config["model_name"]["options"] = pinned + live_ids
+        build_config["model_name"]["tooltips"] = {m["id"]: f"{m['name']} ({m['context']:,} tokens)" for m in models}
         return build_config
 
     def build_model(self) -> LanguageModel:

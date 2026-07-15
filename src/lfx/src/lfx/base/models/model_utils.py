@@ -500,6 +500,10 @@ OPENROUTER_API_BASE = "https://openrouter.ai/api/v1"
 OPENROUTER_FETCH_TIMEOUT = 10.0
 
 
+ORCAROUTER_API_BASE = "https://api.orcarouter.ai/v1"
+ORCAROUTER_FETCH_TIMEOUT = 10.0
+
+
 OPENAI_COMPATIBLE_FETCH_TIMEOUT = 10.0
 
 AZURE_AI_FOUNDRY_FETCH_TIMEOUT = 10.0
@@ -679,6 +683,98 @@ def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "
     ]
 
 
+def fetch_live_orcarouter_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
+    """Fetch live OrcaRouter models from the OrcaRouter catalog.
+
+    OrcaRouter's ``/v1/models`` is public (200 without auth); a configured
+    ``ORCAROUTER_API_KEY`` is forwarded when available so per-workspace catalog
+    entitlements are reflected. The ``orcarouter/auto`` adaptive router is a
+    routing endpoint that the catalog does not list, so seed-only ids from
+    ``ORCAROUTER_MODELS_DETAILED`` (chiefly ``orcarouter/auto``) are pinned onto
+    the live result and kept selectable after a refresh.
+    """
+    from lfx.base.models.orcarouter_constants import ORCAROUTER_MODELS_DETAILED
+
+    if model_type != "llm":
+        return []
+
+    api_key = get_provider_variable_value(user_id, "ORCAROUTER_API_KEY")
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+
+    url = f"{ORCAROUTER_API_BASE}/models"
+    try:
+        response = httpx.get(url, headers=headers, timeout=ORCAROUTER_FETCH_TIMEOUT)
+        response.raise_for_status()
+        raw_models = response.json().get("data", [])
+    except (httpx.RequestError, httpx.HTTPStatusError) as e:
+        status_code = getattr(getattr(e, "response", None), "status_code", None)
+        logger.warning("Could not fetch live OrcaRouter models from %s (status=%s): %s", url, status_code, e)
+        return []
+    except (ValueError, TypeError) as e:
+        logger.warning("Malformed OrcaRouter /models response from %s: %s", url, e)
+        return []
+
+    if not isinstance(raw_models, list):
+        logger.warning("Unexpected OrcaRouter /models payload (data is %s): %r", type(raw_models).__name__, raw_models)
+        return []
+
+    by_id: dict[str, dict] = {}
+    for raw in raw_models:
+        if not isinstance(raw, dict):
+            continue
+        mid = raw.get("id")
+        if not mid:
+            continue
+        supported = raw.get("supported_parameters") or []
+        is_list = isinstance(supported, list)
+        created_raw = raw.get("created")
+        try:
+            created = int(created_raw) if created_raw is not None else 0
+        except (TypeError, ValueError):
+            created = 0
+        by_id[mid] = {
+            # OrcaRouter routes to chat-capable upstreams; assume tool support
+            # unless the catalog explicitly enumerates supported_parameters.
+            "tool_calling": ("tools" in supported) if (is_list and supported) else True,
+            "reasoning": is_list and "reasoning" in supported,
+            "created": max(created, 0),
+        }
+
+    # Pin seed-only ids (chiefly ``orcarouter/auto``) that the catalog omits so
+    # the adaptive router stays selectable after a live refresh.
+    pinned = [
+        create_model_metadata(
+            provider="OrcaRouter",
+            name=m["name"],
+            icon="OrcaRouter",
+            tool_calling=m.get("tool_calling", True),
+            default=(m["name"] == "orcarouter/auto"),
+        )
+        for m in ORCAROUTER_MODELS_DETAILED
+        if m["name"] not in by_id
+    ]
+    if not by_id:
+        return pinned
+
+    sorted_ids = sorted(by_id)
+    seed_set = {m["name"] for m in ORCAROUTER_MODELS_DETAILED}
+    default_set = seed_set & by_id.keys()
+
+    live = [
+        create_model_metadata(
+            provider="OrcaRouter",
+            name=name,
+            icon="OrcaRouter",
+            tool_calling=by_id[name]["tool_calling"],
+            reasoning=by_id[name]["reasoning"],
+            default=name in default_set,
+            created=by_id[name]["created"],
+        )
+        for name in sorted_ids
+    ]
+    return pinned + live
+
+
 def fetch_live_watsonx_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
     """Fetch live WatsonX models from the configured WatsonX instance.
 
@@ -754,6 +850,8 @@ def get_live_models_for_provider(
         return fetch_live_watsonx_models(user_id, model_type)
     if provider == "OpenRouter":
         return fetch_live_openrouter_models(user_id, model_type)
+    if provider == "OrcaRouter":
+        return fetch_live_orcarouter_models(user_id, model_type)
     if provider == "OpenAI":
         return fetch_live_openai_compatible_models(user_id, model_type)
     if provider == "Azure AI Foundry":

@@ -10,7 +10,7 @@ def test_orcarouter_initialization():
     component = OrcaRouterComponent()
     assert component.display_name == "OrcaRouter"
     assert component.icon == "OrcaRouter"
-    assert "orcarouter/fusion" in component.description or "OrcaRouter" in component.description
+    assert "orcarouter/auto" in component.description or "OrcaRouter" in component.description
 
 
 def test_orcarouter_template():
@@ -35,7 +35,7 @@ def mock_chat_openai(mocker):
 @pytest.mark.parametrize(
     ("temperature", "max_tokens", "model_name"),
     [
-        (0.5, 100, "orcarouter/fusion"),
+        (0.5, 100, "orcarouter/auto"),
         (1.0, 500, "openai/gpt-5.5"),
         (1.5, 1000, "anthropic/claude-opus-4.8"),
     ],
@@ -71,7 +71,7 @@ def test_orcarouter_fetch_models(mocker):
     mock_response = MagicMock()
     mock_response.json.return_value = {
         "data": [
-            {"id": "orcarouter/fusion", "name": "Auto", "context_length": 128000},
+            {"id": "orcarouter/auto", "name": "Auto", "context_length": 128000},
             {"id": "openai/gpt-5.5", "name": "GPT-5.5", "context_length": 400000},
         ]
     }
@@ -79,7 +79,7 @@ def test_orcarouter_fetch_models(mocker):
 
     models = component.fetch_models()
 
-    assert {m["id"] for m in models} == {"orcarouter/fusion", "openai/gpt-5.5"}
+    assert {m["id"] for m in models} == {"orcarouter/auto", "openai/gpt-5.5"}
     mock_get.assert_called_once_with(
         "https://api.orcarouter.ai/v1/models",
         headers={"Authorization": "Bearer sk-orca-test-key"},
@@ -87,9 +87,27 @@ def test_orcarouter_fetch_models(mocker):
     )
 
 
+def test_orcarouter_pins_auto_model(mocker):
+    """`orcarouter/auto` is not returned by /v1/models, so it must be pinned."""
+    component = OrcaRouterComponent()
+    component.api_key = "sk-orca-test-key"
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"data": [{"id": "openai/gpt-5.5", "name": "GPT-5.5", "context_length": 400000}]}
+    mocker.patch("httpx.get", return_value=mock_response)
+
+    build_config = {"model_name": {"options": [], "tooltips": {}}}
+    updated = component.update_build_config(build_config, "", "model_name")
+    options = updated["model_name"]["options"]
+
+    assert "orcarouter/auto" in options
+    assert options[0] == "orcarouter/auto"
+    assert "openai/gpt-5.5" in options
+
+
 def test_orcarouter_missing_api_key():
     component = OrcaRouterComponent()
     component.api_key = ""
-    component.model_name = "orcarouter/fusion"
+    component.model_name = "orcarouter/auto"
     with pytest.raises(ValueError, match="API key is required"):
         component.build_model()

@@ -55,7 +55,7 @@ def create_model_metadata(
     )
 
 
-LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter"]
+LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter", "OrcaRouter"]
 
 # Live only with a custom endpoint configured; empty live fetch keeps the static catalog.
 CONDITIONAL_LIVE_MODEL_PROVIDERS: list[str] = ["OpenAI", "Azure AI Foundry"]
@@ -408,6 +408,55 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
             },
         ],
         "api_docs_url": "https://openrouter.ai/docs",
+        "mapping": {
+            "model_class": "ChatOpenAI",
+            "model_param": "model",
+        },
+    },
+    "OrcaRouter": {
+        "icon": "OrcaRouter",
+        "max_tokens_field_name": "max_tokens",
+        "base_url": "https://api.orcarouter.ai/v1",
+        "variables": [
+            {
+                "variable_name": "OrcaRouter API Key",
+                "variable_key": "ORCAROUTER_API_KEY",
+                "required": True,
+                "is_secret": True,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "api_key",
+                "component_metadata": {
+                    "mapping_field": "api_key",
+                    "required": False,
+                    "advanced": True,
+                    "info": "Falls back to ORCAROUTER_API_KEY environment variable",
+                },
+            },
+            {
+                "variable_name": "Site URL",
+                "variable_key": "ORCAROUTER_SITE_URL",
+                "required": False,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                "is_header": True,
+                "header_name": "HTTP-Referer",
+                "description": "Optional. Sent as the HTTP-Referer header for OrcaRouter attribution.",
+            },
+            {
+                "variable_name": "App Name",
+                "variable_key": "ORCAROUTER_APP_NAME",
+                "required": False,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                "is_header": True,
+                "header_name": "X-Title",
+                "description": "Optional. Sent as the X-Title header for OrcaRouter attribution.",
+            },
+        ],
+        "api_docs_url": "https://docs.orcarouter.ai",
         "mapping": {
             "model_class": "ChatOpenAI",
             "model_param": "model",
