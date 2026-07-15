@@ -29,12 +29,12 @@ The following example uses a language model component in a chatbot flow similar 
 
 
     :::tip My preferred provider or model isn't listed
-    If you want to use a provider or model that isn't built-in to Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models**, you can replace the **Language Model** component with any [additional language model component](#additional-language-models).
+    If you want to use a provider or model that isn't built-in to Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models**, try one of these options:
 
-    Browse <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) or <Icon name="Search" aria-hidden="true" /> **Search** for your preferred provider to find additional language models.
-
-    Alternatively, you can use Ollama to host your preferred model, and then configure your Ollama service in Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models**.
-    Or, create your own custom component to support any provider and model of your choice, and then use your custom component in place of the **Language Model** core component. As a shortcut, use an existing language model component as the basis for your custom component.
+    * Configure the [**OpenAI Compatible**](./bundles-openai-compatible) provider to point at any OpenAI-compatible endpoint.
+    * Use Ollama to host your preferred model, and then configure your Ollama service in Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models**.
+    * Replace the **Language Model** component with any [additional language model component](#additional-language-models). Browse <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) or <Icon name="Search" aria-hidden="true" /> **Search** for your preferred provider.
+    * Create your own custom component to support any provider and model of your choice, and then use your custom component in place of the **Language Model** core component. As a shortcut, use an existing language model component as the basis for your custom component.
     :::
 
 2. Add the **Language Model** core component to your flow, and then select your model from the **Language Model** field.
