@@ -14,6 +14,7 @@ TEMPLATE_PATH = (
 
 
 def load_template() -> dict:
+    """Load the Delegation Planner starter project as parsed JSON."""
     return json.loads(TEMPLATE_PATH.read_text(encoding="utf-8"))
 
 
