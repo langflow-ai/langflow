@@ -22,12 +22,7 @@ export const DISMISS_BUTTON_VARIANTS = {
   exit: { opacity: 0, x: 10 },
 };
 
-export const getTimeVariants = (
-  buttonRef: React.RefObject<HTMLDivElement | null>,
-) => {
-  const errorButtonsWidth = buttonRef.current?.offsetWidth ?? 0;
-  return {
-    single: { x: 0, width: "auto" },
-    double: { x: -errorButtonsWidth - 15, width: "auto" },
-  };
-};
+export const getTimeVariants = (buttonsWidth: number) => ({
+  single: { x: 0, width: "auto" },
+  double: { x: -buttonsWidth - 15, width: "auto" },
+});

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -30,6 +30,7 @@ export default function FlowBuildingComponent() {
   const setBuildInfo = useFlowStore((state) => state.setBuildInfo);
   const [duration, setDuration] = useState(0);
   const [dismissed, setDismissed] = useState(false);
+  const [buttonsWidth, setButtonsWidth] = useState(0);
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const prevIsBuilding = useRef(isBuilding);
   const startTimeRef = useRef<number | null>(null);
@@ -75,6 +76,23 @@ export default function FlowBuildingComponent() {
       }
     };
   }, [isBuilding]);
+
+  // Reading offsetWidth from a ref during render returns 0 on the first paint and
+  // never re-renders, so the width must live in state, measured after commit.
+  useLayoutEffect(() => {
+    const buttons = buildInfo?.error
+      ? errorButtonsRef.current
+      : stopButtonRef.current;
+    if (!buttons) {
+      setButtonsWidth(0);
+      return;
+    }
+    const measure = () => setButtonsWidth(buttons.offsetWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(buttons);
+    return () => observer.disconnect();
+  }, [isBuilding, buildInfo?.error, buildInfo?.success]);
 
   const displayTime = duration ?? 0;
   const secondsValue = displayTime / 1000;
@@ -174,9 +192,7 @@ export default function FlowBuildingComponent() {
                     </AnimatePresence>
                     <div className="relative flex items-center gap-4">
                       <motion.div
-                        variants={getTimeVariants(
-                          buildInfo?.error ? errorButtonsRef : stopButtonRef,
-                        )}
+                        variants={getTimeVariants(buttonsWidth)}
                         animate={!buildInfo?.success ? "double" : "single"}
                         transition={{
                           duration: 0.2,

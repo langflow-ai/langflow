@@ -1,5 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
-import { useEffect } from "react";
+import { act, render, screen } from "@testing-library/react";
 import FlowBuildingComponent from "../index";
 
 // Mock dependencies
@@ -9,8 +8,26 @@ jest.mock("framer-motion", () => {
     AnimatePresence: ({ children }: any) => <div>{children}</div>,
     motion: {
       div: React.forwardRef(
-        ({ children, className, ...props }: any, ref: any) => (
-          <div ref={ref} className={className} {...props}>
+        (
+          {
+            children,
+            className,
+            variants,
+            animate,
+            initial,
+            exit,
+            transition,
+            ...props
+          }: any,
+          ref: any,
+        ) => (
+          <div
+            ref={ref}
+            className={className}
+            data-animate={typeof animate === "string" ? animate : undefined}
+            data-variants={variants ? JSON.stringify(variants) : undefined}
+            {...props}
+          >
             {children}
           </div>
         ),
@@ -321,6 +338,29 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       });
 
       expect(mockSetBuildInfo).toHaveBeenCalledWith(null);
+    });
+  });
+
+  describe("Duration text position", () => {
+    it("should offset duration text by the measured buttons width when error banner first renders", () => {
+      mockIsBuilding = false;
+      mockBuildInfo = { error: ["Test error"] };
+
+      const offsetWidthSpy = jest
+        .spyOn(HTMLElement.prototype, "offsetWidth", "get")
+        .mockReturnValue(160);
+
+      render(<FlowBuildingComponent />);
+
+      const timeElement = screen
+        .getByText(/0\.0seconds/)
+        .closest("[data-variants]");
+      expect(timeElement).toHaveAttribute("data-animate", "double");
+
+      const variants = JSON.parse(timeElement!.getAttribute("data-variants")!);
+      expect(variants.double.x).toBe(-160 - 15);
+
+      offsetWidthSpy.mockRestore();
     });
   });
 
