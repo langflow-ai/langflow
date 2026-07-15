@@ -324,6 +324,7 @@ class A2AAgentComponent(Component):
             display_name="Message",
             info="The message to send to the agent.",
             required=True,
+            tool_mode=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -468,7 +469,12 @@ class A2AAgentComponent(Component):
         properties = properties if isinstance(properties, dict) else {}
         if properties:
             fields = [
-                {"name": _clip(key, 80), "type": _clip((spec or {}).get("type") or "", 40), "required": key in required}
+                {
+                    "name": _clip(key, 80),
+                    # spec is remote-controlled: a non-dict value (e.g. "notastring") would crash .get().
+                    "type": _clip(spec.get("type") or "" if isinstance(spec, dict) else "", 40),
+                    "required": key in required,
+                }
                 for key, spec in properties.items()
             ]
             sections.append({"heading": "Sends", "fields": fields})

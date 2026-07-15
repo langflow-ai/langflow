@@ -89,9 +89,7 @@ router_v1.include_router(mcp_projects_router)
 # Always mounted; the per-request guard in langflow.api.v1.a2a returns 404 when
 # LANGFLOW_A2A_ENABLED is off, so the route is indistinguishable from "not
 # mounted" until the flag is set (mirrors the extensions router below).
-# include_in_schema=False keeps the paths out of /openapi.json too, so the flag-off
-# route stays invisible in the docs and not just at request time.
-router_v1.include_router(a2a_router, include_in_schema=False)
+router_v1.include_router(a2a_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)

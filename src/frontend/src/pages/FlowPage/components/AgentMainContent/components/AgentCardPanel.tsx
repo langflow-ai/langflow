@@ -81,14 +81,19 @@ export default function AgentCardPanel({
     overridesToForm(currentFlow?.a2a_card_overrides),
   );
 
-  // Re-seed only when the persisted A2A state changes, so unrelated flow updates
-  // (graph edits, autosave) don't clobber in-progress card edits.
-  useEffect(() => {
-    setEnabled(!!currentFlow?.a2a_enabled);
-    setForm(overridesToForm(currentFlow?.a2a_card_overrides));
-  }, [currentFlow?.a2a_enabled, currentFlow?.a2a_card_overrides]);
-
+  const savedEnabled = !!currentFlow?.a2a_enabled;
   const savedForm = overridesToForm(currentFlow?.a2a_card_overrides);
+  // Serialize the persisted A2A state so a refetch/autosave that yields a new-but-equal object
+  // doesn't re-seed and wipe in-progress card edits (identity changes, content doesn't).
+  const savedSignature = JSON.stringify([savedEnabled, savedForm]);
+
+  // Re-seed only when the persisted A2A content changes (keyed by savedSignature), not on every
+  // currentFlow object-identity change, so a refetch/autosave doesn't clobber in-progress edits.
+  useEffect(() => {
+    setEnabled(savedEnabled);
+    setForm(savedForm);
+  }, [savedSignature]);
+
   const isDirty =
     enabled !== isPublished ||
     JSON.stringify(form) !== JSON.stringify(savedForm);
@@ -110,10 +115,23 @@ export default function AgentCardPanel({
         a2a_enabled: eligible ? enabled : false,
         a2a_card_overrides: formToOverrides(form),
       });
+      // Apply only the persisted A2A fields, not the whole PATCH response: overwriting the flow
+      // would drop unsaved canvas edits and reset the unsaved-changes guard.
+      const a2aFields = {
+        flow_type: updatedFlow.flow_type,
+        a2a_enabled: updatedFlow.a2a_enabled,
+        a2a_card_overrides: updatedFlow.a2a_card_overrides,
+      };
       if (flows) {
-        setFlows(flows.map((f) => (f.id === updatedFlow.id ? updatedFlow : f)));
+        setFlows(
+          flows.map((f) =>
+            f.id === updatedFlow.id ? { ...f, ...a2aFields } : f,
+          ),
+        );
       }
-      setCurrentFlow(updatedFlow);
+      if (currentFlow) {
+        setCurrentFlow({ ...currentFlow, ...a2aFields });
+      }
       setSuccessData({ title: t("agentTab.saved") });
     } catch (e) {
       setErrorData({

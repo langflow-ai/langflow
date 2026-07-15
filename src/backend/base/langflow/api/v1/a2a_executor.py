@@ -28,6 +28,16 @@ from lfx.schema.workflow import JobStatus, OutputReason, WorkflowExecutionRespon
 
 logger = logging.getLogger(__name__)
 
+
+class ResumeConflictError(RuntimeError):
+    """A duplicate HITL resume lost the atomic checkpoint claim.
+
+    The worker that won the claim owns the task's terminal state, so the loser must bail without
+    emitting a terminal event: a FAILED here would race the winner's COMPLETED and could
+    permanently mask it. Raised by the injected ``resume_flow`` seam, caught in ``execute``.
+    """
+
+
 # (flow_id, task_id, input_text, context_id) -> the v2 sync run result.
 # context_id scopes the run's chat memory (the A2A conversation = the flow session).
 RunFlow = Callable[[UUID, str, str, str | None], Awaitable[WorkflowExecutionResponse]]
@@ -128,6 +138,11 @@ class FlowAgentExecutor(AgentExecutor):
             with contextlib.suppress(Exception):
                 await updater.cancel()
             raise
+        except ResumeConflictError:
+            # A duplicate resume lost the claim: the winning worker drives this task to its terminal
+            # state. Emit nothing here so a stray FAILED can't race and mask the winner's completion.
+            logger.info("A2A resume for task %s ceded to the worker that won the claim", context.task_id)
+            return
         except Exception:
             # Unexpected build/timeout/system failures become a failed Task, not a 500.
             # The endpoint is unauthenticated, so don't hand the caller raw exception

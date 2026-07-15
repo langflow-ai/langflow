@@ -67,7 +67,7 @@ from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
-from langflow.api.v1.a2a_executor import FlowAgentExecutor
+from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError
 from langflow.api.v1.a2a_utils import (
     A2A_APIKEY_HEADER,
     build_agent_card,
@@ -285,8 +285,10 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
     # here, not before the build, so a build failure leaves the checkpoint recoverable. A re-pause saves
     # a fresh checkpoint under this run_id.
     if not await store.claim_by_run_id(task_id):
+        # A concurrent duplicate resume already claimed this task. Signal the executor to bail
+        # quietly rather than emitting a terminal FAILED that could mask the winner's completion.
         msg = f"A2A task {task_id} is already being resumed"
-        raise RuntimeError(msg)
+        raise ResumeConflictError(msg)
 
     try:
         run_outputs, session_id = await asyncio.wait_for(

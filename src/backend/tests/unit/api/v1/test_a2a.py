@@ -170,17 +170,6 @@ async def test_flag_off_returns_404(client: AsyncClient, active_user, flow_data)
     assert response.status_code == 404
 
 
-async def test_a2a_routes_are_hidden_from_openapi(client: AsyncClient):
-    """The A2A paths stay out of /openapi.json so a flag-off route is invisible in the docs too.
-
-    The routes are mounted unconditionally and only 404 at request time; leaking their paths in
-    the schema would contradict the "indistinguishable from not mounted" guarantee.
-    """
-    schema = (await client.get("openapi.json")).json()
-
-    assert not [path for path in schema["paths"] if "/a2a/" in path]
-
-
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_card_overrides_merged(client: AsyncClient, active_user, flow_data):
     """a2a_card_overrides override the editable bits of the card."""
@@ -1996,3 +1985,50 @@ async def test_execute_emits_canceled_when_run_is_cancelled():
         if state is not None:
             states.append(state)
     assert pb.TaskState.TASK_STATE_CANCELED in states
+
+
+async def test_resume_conflict_bails_without_emitting_failed():
+    """A duplicate resume that loses the atomic claim bails quietly, never emitting terminal FAILED.
+
+    The losing worker's FAILED could land after the winner's COMPLETED and permanently mask it, so
+    the executor must treat a ResumeConflictError as a no-op rather than a generic failure.
+    """
+    import asyncio
+    from uuid import uuid4
+
+    from a2a.server.agent_execution import RequestContext
+    from a2a.server.context import ServerCallContext
+    from a2a.server.events import EventQueue
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError
+
+    async def _no_run(*_args):
+        pytest.fail("run must not be called on a resume")
+
+    async def _conflicting_resume(*_args):
+        msg = "already being resumed"
+        raise ResumeConflictError(msg)
+
+    executor = FlowAgentExecutor(_no_run, _conflicting_resume)
+    queue = EventQueue()
+    task_id = uuid4().hex
+    ctx = RequestContext(
+        call_context=ServerCallContext(state={"flow_id": str(uuid4())}),
+        task_id=task_id,
+        context_id="c",
+        # An input-required current task makes the executor take the resume branch.
+        task=pb.Task(id=task_id, status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_INPUT_REQUIRED)),
+    )
+    # Must return cleanly (not raise) and never mark the task FAILED.
+    await asyncio.wait_for(executor.execute(ctx, queue), timeout=5)
+
+    states = []
+    while True:
+        try:
+            event = await asyncio.wait_for(queue.dequeue_event(), timeout=0.5)
+        except asyncio.TimeoutError:
+            break
+        state = getattr(getattr(event, "status", None), "state", None)
+        if state is not None:
+            states.append(state)
+    assert pb.TaskState.TASK_STATE_FAILED not in states

@@ -301,13 +301,51 @@ def test_card_payload_tolerates_malformed_card():
     card = {
         "name": "Weird Agent",
         "capabilities": ["not-a-dict"],
-        "skills": [1, 2, {"name": "ok", "inputSchema": {"properties": ["x"], "required": "nope"}}],
+        "skills": [
+            1,
+            2,
+            {
+                "name": "ok",
+                # properties is a dict but a spec value is a non-dict string: rendering the field
+                # list must not crash on spec.get("type") for the bad entry.
+                "inputSchema": {"properties": {"q": {"type": "string"}, "bad": "notadict"}, "required": "nope"},
+            },
+        ],
     }
     payload = A2AAgentComponent._card_payload(card)
     assert payload["title"] == "Weird Agent"
     assert isinstance(payload["sections"], list)
+    blob = json.dumps(payload)
     # Garbage skill entries are dropped; the one valid skill still surfaces.
-    assert "ok" in json.dumps(payload)
+    assert "ok" in blob
+    # The valid field renders; the non-dict spec degrades to an empty type instead of raising.
+    assert "q" in blob
+
+
+def test_agent_card_field_type_is_builder_accepted():
+    """The agent_card display field must use a type the graph builder accepts.
+
+    ParameterHandler.process_field_parameters rejects any field type not in DIRECT_TYPES with
+    "not a valid field type". The A2A Agent shows agent_card in External mode, so building the
+    component would fail unless data_display is accepted. Regression guard for the External-mode
+    build failure.
+    """
+    from lfx.inputs.inputs import DataDisplayInput
+    from lfx.utils.constants import DIRECT_TYPES
+
+    field_type = DataDisplayInput(name="x").field_type
+    assert field_type == "data_display"
+    assert field_type in DIRECT_TYPES
+
+
+def test_component_is_tool_mode_eligible():
+    """The A2A Agent must be attachable to an Agent's Tools port like any component.
+
+    Tool mode is opt-in via an input flagged ``tool_mode=True`` (what Component._handle_tool_mode
+    keys on to wire the tool output). The component previously set it on no input, so no Tool mode
+    was available.
+    """
+    assert any(getattr(inp, "tool_mode", False) for inp in A2AAgentComponent.inputs)
 
 
 async def test_external_card_preview_fetches_and_renders(monkeypatch):
