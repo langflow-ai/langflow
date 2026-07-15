@@ -180,6 +180,24 @@ async def list_by_user(user_id: UUID) -> list[KnowledgeBaseRecord]:
         return list(result.all())
 
 
+async def list_owned_or_visible(
+    user_id: UUID,
+    visible_ids: list[UUID],
+) -> list[KnowledgeBaseRecord]:
+    """Return KB rows owned by ``user_id`` or explicitly visible to it."""
+    from langflow.services.authorization.listing import restrict_to_owned_or_visible
+
+    async with session_scope() as session:
+        stmt = restrict_to_owned_or_visible(
+            select(KnowledgeBaseRecord),
+            id_column=KnowledgeBaseRecord.id,
+            owner_clause=KnowledgeBaseRecord.user_id == user_id,
+            visible_ids=visible_ids,
+        ).order_by(KnowledgeBaseRecord.created_at.desc())  # type: ignore[attr-defined]
+        result = await session.exec(stmt)
+        return list(result.all())
+
+
 async def backfill_all_users_from_disk(*, kb_root: Path | None = None) -> int:
     """Backfill missing KB rows for every existing user.
 

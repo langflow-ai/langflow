@@ -44,17 +44,19 @@ async def download_project_flows(
     session: DbSession,
     project_id: UUID,
     current_user: CurrentActiveUser,
+    project_owner_id: UUID | None = None,
 ) -> StreamingResponse:
     """Download all flows from project as a zip file."""
     try:
-        query = select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id)
+        owner_id = project_owner_id or current_user.id
+        query = select(Folder).where(Folder.id == project_id, Folder.user_id == owner_id)
         result = await session.exec(query)
         project = result.first()
 
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
 
-        flows_query = select(Flow).where(Flow.folder_id == project_id)
+        flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.user_id == owner_id)
         flows_result = await session.exec(flows_query)
         flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows_result.all()]
 

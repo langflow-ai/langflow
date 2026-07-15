@@ -60,6 +60,8 @@ from langflow.services.memory_base.kb_path_helpers import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -181,9 +183,26 @@ class MemoryBaseService(Service):
             result = await db.exec(stmt)
             return list(result.all())
 
-    def list_for_user_stmt(self, user_id: uuid.UUID, flow_id: uuid.UUID | None = None):  # type: ignore[return]
+    def list_for_user_stmt(
+        self,
+        user_id: uuid.UUID,
+        flow_id: uuid.UUID | None = None,
+        *,
+        visible_ids: Sequence[uuid.UUID] | None = None,
+    ):  # type: ignore[return]
         """Return the SQLModel select statement for pagination at the API layer."""
-        stmt = select(MemoryBase).where(MemoryBase.user_id == user_id)
+        stmt = select(MemoryBase)
+        if visible_ids is None:
+            stmt = stmt.where(MemoryBase.user_id == user_id)
+        else:
+            from langflow.services.authorization.listing import restrict_to_owned_or_visible
+
+            stmt = restrict_to_owned_or_visible(
+                stmt,
+                id_column=MemoryBase.id,
+                owner_clause=MemoryBase.user_id == user_id,
+                visible_ids=visible_ids,
+            )
         if flow_id is not None:
             stmt = stmt.where(MemoryBase.flow_id == flow_id)
         return stmt

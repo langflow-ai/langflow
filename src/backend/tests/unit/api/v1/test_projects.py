@@ -1,7 +1,8 @@
 import io
 import json
 import zipfile
-from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -34,6 +35,38 @@ def basic_case():
         "flows_list": [],
         "components_list": [],
     }
+
+
+@pytest.mark.asyncio
+async def test_project_download_uses_resolved_owner_namespace():
+    from langflow.api.v1.projects_files import download_project_flows
+
+    actor_id = uuid4()
+    owner_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Shared Project", user_id=owner_id)
+    flow = Flow(id=uuid4(), name="Shared Flow", user_id=owner_id, folder_id=project_id, data={})
+
+    project_result = MagicMock()
+    project_result.first.return_value = project
+    flows_result = MagicMock()
+    flows_result.all.return_value = [flow]
+    session = AsyncMock()
+    session.exec.side_effect = [project_result, flows_result]
+
+    response = await download_project_flows(
+        session=session,
+        project_id=project_id,
+        current_user=SimpleNamespace(id=actor_id),
+        project_owner_id=owner_id,
+    )
+
+    assert response.status_code == 200
+    project_sql = str(session.exec.await_args_list[0].args[0].compile(compile_kwargs={"literal_binds": True}))
+    flows_sql = str(session.exec.await_args_list[1].args[0].compile(compile_kwargs={"literal_binds": True}))
+    assert owner_id.hex in project_sql
+    assert owner_id.hex in flows_sql
+    assert actor_id.hex not in project_sql
 
 
 async def test_create_project(client: AsyncClient, logged_in_headers, basic_case):

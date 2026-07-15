@@ -2974,7 +2974,7 @@ class TestDeleteDeployment:
         )
 
         assert response.status_code == 204
-        mock_delete_row.assert_awaited_once_with(session, user_id=user.id, deployment_id=dep_row.id)
+        mock_delete_row.assert_awaited_once_with(session, user_id=dep_row.user_id, deployment_id=dep_row.id)
         session.commit.assert_awaited_once()
         session.rollback.assert_not_awaited()
 

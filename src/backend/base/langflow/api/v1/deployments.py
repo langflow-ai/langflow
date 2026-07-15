@@ -1631,7 +1631,7 @@ async def delete_deployment(
     await _delete_local_deployment_row_with_commit_retry(
         session=session,
         deployment_id=deployment_row.id,
-        user_id=current_user.id,
+        user_id=deployment_row.user_id,
         resource_key=deployment_row.resource_key,
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

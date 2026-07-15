@@ -18,6 +18,7 @@ from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession, build_content_disposition
 from langflow.services.authorization import FileAction, ensure_file_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
+from langflow.services.authorization.listing import restrict_to_owned_or_visible, visible_id_prefilter
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
@@ -486,7 +487,21 @@ async def list_files(
         # TODO: Pending further testing
         # await load_sample_files(current_user, session, get_storage_service())
         # Fetch from the UserFile table
-        stmt = select(UserFile).where(UserFile.user_id == current_user.id)
+        visible_ids = await visible_id_prefilter(
+            current_user,
+            resource_type="file",
+            act=FileAction.READ,
+        )
+        stmt = select(UserFile)
+        if visible_ids is None:
+            stmt = stmt.where(UserFile.user_id == current_user.id)
+        else:
+            stmt = restrict_to_owned_or_visible(
+                stmt,
+                id_column=UserFile.id,
+                owner_clause=UserFile.user_id == current_user.id,
+                visible_ids=visible_ids,
+            )
         results = await session.exec(stmt)
 
         full_list = list(results)

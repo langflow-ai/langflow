@@ -158,6 +158,54 @@ async def test_get_variable__valueerror(service, session: AsyncSession):
         await service.get_variable(user_id, name, field, session=session)
 
 
+async def test_get_variable_resolves_one_explicitly_shared_runtime_value(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    shared = await service.create_variable(
+        owner_id,
+        "SHARED_TOKEN",
+        "shared-secret",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.list_visible_resource_ids = AsyncMock(return_value=[shared.id])
+
+    with patch("langflow.services.deps.get_authorization_service", return_value=authz):
+        result = await service.get_variable(actor_id, "SHARED_TOKEN", "", session=session)
+
+    assert isinstance(result, SecretStr)
+    assert result.get_secret_value() == "shared-secret"
+
+
+async def test_get_all_redacts_shared_generic_values(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    owned = await service.create_variable(
+        actor_id,
+        "OWNED_VALUE",
+        "owned-plaintext",
+        type_=GENERIC_TYPE,
+        session=session,
+    )
+    shared = await service.create_variable(
+        owner_id,
+        "SHARED_VALUE",
+        "shared-plaintext",
+        type_=GENERIC_TYPE,
+        session=session,
+    )
+
+    rows = await service.get_all(actor_id, session, visible_ids=[shared.id])
+    by_id = {row.id: row for row in rows}
+
+    assert by_id[owned.id].value == "owned-plaintext"
+    assert by_id[shared.id].value is None
+
+
 async def test_get_variable__typeerror(service, session: AsyncSession):
     user_id = uuid4()
     name = "name"
