@@ -1810,6 +1810,7 @@
   "sidebar.newCustomComponent": "Neue benutzerdefinierte Komponente",
   "sidebar.noComponentsFound": "Es wurden keine Komponenten gefunden.",
   "sidebar.projectUploadError": "Beim Hochladen deines Projekts ist ein Fehler aufgetreten. Versuche, es in ein bestehendes Projekt zu ziehen.",
+  "sidebar.projectCreateError": "Das Projekt konnte nicht erstellt werden.",
   "sidebar.projectUploadSuccess": "Das Projekt wurde erfolgreich hochgeladen.",
   "sidebar.projects": "Projekte",
   "sidebar.removeFilter": "Filter entfernen",

@@ -70,6 +70,7 @@ from langflow.api.v2.workflow_reconstruction import reconstruct_workflow_respons
 from langflow.api.v2.workflow_validation import (
     _enforce_flow_data_override_owner,
     _flow_not_found_privacy_exception,
+    _reject_sync_only_fields,
     _reject_unsupported_sync_fields,
     _validate_flow_data_for_execution,
 )
@@ -223,6 +224,7 @@ async def authorize_flow_action(
 def _apply_execution_gates(parsed, flow, current_user: UserRead) -> None:
     """The langflow request gates that run before a flow executes."""
     _reject_unsupported_sync_fields(parsed)
+    _reject_sync_only_fields(parsed)
     try:
         _enforce_flow_data_override_owner(parsed, flow, current_user)
     except HTTPException as exc:

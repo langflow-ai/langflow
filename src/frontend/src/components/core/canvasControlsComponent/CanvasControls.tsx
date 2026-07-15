@@ -43,6 +43,7 @@ const CanvasControls = ({
   const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
   );
+  const locked = Boolean(effectiveLocked ?? isFlowLocked);
   const setAssistantSidebarOpen = useAssistantManagerStore(
     (state) => state.setAssistantSidebarOpen,
   );
@@ -82,6 +83,7 @@ const CanvasControls = ({
   }, []);
 
   const handleAssistantClick = () => {
+    if (locked) return;
     if (!discovered) markDiscovered();
     setAssistantSidebarOpen(!assistantSidebarOpen);
   };
@@ -103,17 +105,16 @@ const CanvasControls = ({
   const [isAddNoteActive, setIsAddNoteActive] = useState(false);
 
   const handleAddNote = useCallback(() => {
+    if (locked) return;
     window.dispatchEvent(new Event("lf:start-add-note"));
     setIsAddNoteActive(true);
-  }, []);
+  }, [locked]);
 
   useEffect(() => {
     const onEnd = () => setIsAddNoteActive(false);
     window.addEventListener("lf:end-add-note", onEnd);
     return () => window.removeEventListener("lf:end-add-note", onEnd);
   }, []);
-
-  const locked = effectiveLocked ?? isFlowLocked;
 
   // Single source of truth for the onboarding moment — both the popover
   // tooltip and the "New" pill key off this so they appear together.
@@ -122,6 +123,7 @@ const CanvasControls = ({
     !assistantSidebarOpen &&
     !isWelcomeOpen &&
     !isPlaygroundOpen &&
+    !locked &&
     tooltipVisible;
 
   useEffect(() => {
@@ -149,11 +151,12 @@ const CanvasControls = ({
           <PopoverPrimitive.Anchor asChild>
             <div className="group relative">
               {/* "New" discovery pill — surfaces ONLY on hover, hidden when
-                  the panel is open (active state shouldn't carry the nudge).
-                  The pill keeps appearing on hover indefinitely; only the
-                  lateral tooltip respects the persisted ``discovered`` flag.
+                  the panel is open (active state shouldn't carry the nudge)
+                  and gone for good once the user has opened the assistant
+                  (persisted ``discovered`` flag) — a feature the user already
+                  found isn't "new" to them anymore.
                   Uses the brand token from index.css. */}
-              {!assistantSidebarOpen && (
+              {!assistantSidebarOpen && !discovered && !locked && (
                 <span
                   data-testid="assistant-button-new-pill"
                   // Visibility logic: stays in lock-step with the onboarding
@@ -178,8 +181,10 @@ const CanvasControls = ({
                 unstyled
                 size="icon"
                 data-testid="assistant-button"
-                className="group/btn relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md hover:bg-muted"
+                className="group/btn relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={handleAssistantClick}
+                disabled={locked}
+                title={locked ? t("version.readOnly") : undefined}
               >
                 {/* Idle state — uses the design-tuned
                     ``langflow_assistant_idle.svg`` (noise filter + brand tint
@@ -258,9 +263,10 @@ const CanvasControls = ({
           unstyled
           size="icon"
           data-testid="canvas-add-note-button"
-          className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-          title={t("canvas.addStickyNote")}
+          className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          title={locked ? t("version.readOnly") : t("canvas.addStickyNote")}
           onClick={handleAddNote}
+          disabled={locked}
         >
           <ForwardedIconComponent
             name="sticky-note"
@@ -276,14 +282,16 @@ const CanvasControls = ({
           size="icon"
           data-testid="canvas_controls_minimize_all"
           aria-pressed={allMinimized}
-          disabled={!hasGenericNodes}
+          disabled={locked || !hasGenericNodes}
           className={`group flex h-8 w-8 items-center justify-center rounded-md ${
             allMinimized ? "bg-muted text-foreground" : "hover:bg-muted"
-          } ${!hasGenericNodes ? "cursor-not-allowed opacity-50" : ""}`}
+          } ${locked || !hasGenericNodes ? "cursor-not-allowed opacity-50" : ""}`}
           title={
-            allMinimized
-              ? t("canvasControls.expandAll")
-              : t("canvasControls.minimizeAllAlign")
+            locked
+              ? t("version.readOnly")
+              : allMinimized
+                ? t("canvasControls.expandAll")
+                : t("canvasControls.minimizeAllAlign")
           }
           onClick={toggleMinimizeAllAndAlign}
         >

@@ -1810,6 +1810,7 @@
   "sidebar.newCustomComponent": "Nouveau composant personnalisé",
   "sidebar.noComponentsFound": "Aucun composant trouvé.",
   "sidebar.projectUploadError": "Une erreur s'est produite lors du téléchargement de votre projet. Essayez de le glisser-déposer dans un projet existant.",
+  "sidebar.projectCreateError": "Impossible de créer le projet.",
   "sidebar.projectUploadSuccess": "Le projet a été téléchargé avec succès.",
   "sidebar.projects": "Projets",
   "sidebar.removeFilter": "Retirer le filtre",

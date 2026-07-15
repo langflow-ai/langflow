@@ -271,6 +271,65 @@ def test_apply_overrides_preserves_custom_static_entries_for_covered_provider():
     assert old_one.get("created") is not None  # came through _translate_model_entry
 
 
+def test_apply_overrides_deduplicates_google_embedding_prefix_aliases():
+    """Google ``models/`` aliases collapse to the established static identity."""
+    from lfx.base.models.models_dev_catalog import apply_models_dev_overrides
+
+    static_google_embeddings = [
+        {
+            "provider": "Google Generative AI",
+            "name": "models/gemini-embedding-001",
+            "icon": "GoogleGenerativeAI",
+            "model_type": "embeddings",
+            "deprecated": False,
+        },
+        {
+            "provider": "Google Generative AI",
+            "name": "models/text-embedding-004",
+            "icon": "GoogleGenerativeAI",
+            "model_type": "embeddings",
+            "deprecated": True,
+        },
+        {
+            "provider": "Google Generative AI",
+            "name": "models/custom-embedding",
+            "icon": "GoogleGenerativeAI",
+            "model_type": "embeddings",
+            "deprecated": False,
+        },
+    ]
+    snapshot = {
+        "google": {
+            "id": "google",
+            "models": {
+                "gemini-embedding-001": {
+                    "id": "gemini-embedding-001",
+                    "family": "gemini",
+                    "limit": {"context": 2048},
+                },
+                "text-embedding-004": {
+                    "id": "text-embedding-004",
+                    "family": "text-embedding",
+                },
+            },
+        }
+    }
+
+    result = apply_models_dev_overrides([static_google_embeddings], snapshot)
+    models = [model for group in result for model in group]
+    matching_gemini = [model for model in models if model["name"].removeprefix("models/") == "gemini-embedding-001"]
+    matching_text = [model for model in models if model["name"].removeprefix("models/") == "text-embedding-004"]
+
+    assert len(matching_gemini) == 1
+    assert matching_gemini[0]["name"] == "models/gemini-embedding-001"
+    assert matching_gemini[0]["icon"] == "GoogleGenerativeAI"
+    assert matching_gemini[0]["context_window"] == 2048
+    assert len(matching_text) == 1
+    assert matching_text[0]["name"] == "models/text-embedding-004"
+    assert matching_text[0]["deprecated"] is True
+    assert any(model["name"] == "models/custom-embedding" for model in models)
+
+
 def test_apply_overrides_handles_missing_or_invalid_release_date():
     """release_date is best-effort: ISO YYYY-MM-DD parses, anything else → 0.
 

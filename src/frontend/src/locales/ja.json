@@ -1810,6 +1810,7 @@
   "sidebar.newCustomComponent": "新しいカスタムコンポーネント",
   "sidebar.noComponentsFound": "コンポーネントが見つかりませんでした。",
   "sidebar.projectUploadError": "プロジェクトのアップロード中にエラーが発生しました。既存のプロジェクトにドラッグして追加してみてください。",
+  "sidebar.projectCreateError": "プロジェクトを作成できませんでした。",
   "sidebar.projectUploadSuccess": "プロジェクトのアップロードに成功しました。",
   "sidebar.projects": "プロジェクト",
   "sidebar.removeFilter": "フィルターを削除します。",

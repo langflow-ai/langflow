@@ -142,6 +142,31 @@ describe("CanvasControls", () => {
     expect(screen.getByAltText("Langflow Assistant")).toBeInTheDocument();
   });
 
+  it("should_hide_new_badge_when_assistant_already_discovered", () => {
+    localStorage.setItem("langflow-assistant-discovered", "true");
+    try {
+      render(<CanvasControls selectedNode={null} />);
+
+      expect(screen.queryByText("New")).not.toBeInTheDocument();
+    } finally {
+      localStorage.clear();
+    }
+  });
+
+  it("should_keep_new_badge_hidden_after_assistant_opened_and_closed", () => {
+    localStorage.clear();
+    render(<CanvasControls selectedNode={null} />);
+    expect(screen.getByText("New")).toBeInTheDocument();
+
+    // Open then close the assistant — the panel-open state alone hid the
+    // badge before this fix, so the badge must stay gone once the panel is
+    // closed again for the ``discovered`` gating to be proven.
+    fireEvent.click(screen.getByTestId("assistant-button"));
+    fireEvent.click(screen.getByTestId("assistant-button"));
+
+    expect(screen.queryByText("New")).not.toBeInTheDocument();
+  });
+
   it("should_render_sticky_note_button", () => {
     render(<CanvasControls selectedNode={null} />);
 
@@ -158,6 +183,20 @@ describe("CanvasControls", () => {
     expect(mockDispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({ type: "lf:start-add-note" }),
     );
+  });
+
+  it("should_disable_canvas_mutation_controls_when_read_only", () => {
+    render(<CanvasControls selectedNode={null} effectiveLocked />);
+
+    expect(screen.getByTestId("assistant-button")).toBeDisabled();
+    expect(screen.getByTestId("canvas-add-note-button")).toBeDisabled();
+    expect(screen.getByTestId("canvas-add-note-button")).toHaveAttribute(
+      "title",
+      "(Read-Only)",
+    );
+
+    fireEvent.click(screen.getByTestId("canvas-add-note-button"));
+    expect(mockDispatchEvent).not.toHaveBeenCalled();
   });
 
   it("should_render_children_when_provided", () => {

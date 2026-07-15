@@ -1810,6 +1810,7 @@
   "sidebar.newCustomComponent": "Nuevo componente personalizado",
   "sidebar.noComponentsFound": "No se han encontrado componentes.",
   "sidebar.projectUploadError": "Se ha producido un error al cargar tu proyecto; prueba a arrastrarlo a un proyecto ya existente.",
+  "sidebar.projectCreateError": "No se pudo crear el proyecto.",
   "sidebar.projectUploadSuccess": "El proyecto se ha subido correctamente.",
   "sidebar.projects": "Proyectos",
   "sidebar.removeFilter": "Eliminar filtro",
