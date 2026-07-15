@@ -2114,6 +2114,7 @@
   "humanInput.waitingFallback": "Le flux est en pause et attend votre décision avant de continuer.",
   "humanInput.cannotResumeMissingJobId": "Impossible de reprendre : identifiant de tâche manquant",
   "humanInput.resumeFailed": "Échec de la reprise",
+  "humanInput.superseded": "Remplacé par une nouvelle exécution",
   "humanInput.awaitingInput": "En attente d'une saisie",
   "actionPicker.namePlaceholder": "Nommer ce choix…",
   "actionPicker.nameAction": "Nommer ce choix",

@@ -69,6 +69,18 @@ describe("HumanInputNodeBadge", () => {
     expect(screen.getByTestId("hitl-card")).toBeInTheDocument();
   });
 
+  it("uses the run control's click target, not the bare 14px icon", () => {
+    // PDF item 2: the pause affordance sits in the run-button slot and must
+    // match its size/style — button-run-bg supplies the 24x24 hover target.
+    useHitlStore
+      .getState()
+      .setPending({ nodeId: "HumanInput-abc", content: _content });
+    render(<HumanInputNodeBadge nodeId="HumanInput-abc" />);
+    expect(screen.getByTestId("human-input-node-badge")).toHaveClass(
+      "button-run-bg",
+    );
+  });
+
   it("reopens the dismissed popover when a NEW pause request arrives", () => {
     // Rerunning a paused flow supersedes the old pause with a new request_id;
     // the popover must resurface for it even though the badge never unmounted.

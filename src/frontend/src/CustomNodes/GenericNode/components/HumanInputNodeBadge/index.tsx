@@ -56,7 +56,7 @@ export default function HumanInputNodeBadge({ nodeId }: { nodeId: string }) {
           onClick={() => setOpen(true)}
           title={t("humanInput.awaitingInput")}
           aria-label={t("humanInput.awaitingInput")}
-          className="nodrag flex items-center justify-center"
+          className="nodrag button-run-bg"
         >
           <IconComponent
             name="Pause"

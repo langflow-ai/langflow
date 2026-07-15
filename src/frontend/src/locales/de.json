@@ -2114,6 +2114,7 @@
   "humanInput.waitingFallback": "Der Flow wurde angehalten und wartet auf Ihre Entscheidung, bevor er fortfährt.",
   "humanInput.cannotResumeMissingJobId": "Fortsetzen nicht möglich: Job-ID fehlt",
   "humanInput.resumeFailed": "Fortsetzen fehlgeschlagen",
+  "humanInput.superseded": "Durch eine neue Ausführung ersetzt",
   "humanInput.awaitingInput": "Warte auf Eingabe",
   "actionPicker.namePlaceholder": "Diese Auswahl benennen…",
   "actionPicker.nameAction": "Diese Auswahl benennen",

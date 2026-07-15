@@ -2114,6 +2114,7 @@
   "humanInput.waitingFallback": "フローは一時停止し、続行する前にあなたの判断を待っています。",
   "humanInput.cannotResumeMissingJobId": "再開できません: ジョブ ID がありません",
   "humanInput.resumeFailed": "再開に失敗しました",
+  "humanInput.superseded": "新しい実行に置き換えられました",
   "humanInput.awaitingInput": "入力待ち",
   "actionPicker.namePlaceholder": "この選択肢に名前を付ける…",
   "actionPicker.nameAction": "この選択肢に名前を付ける",

@@ -2122,6 +2122,7 @@
   "humanInput.waitingFallback": "The flow has paused and is waiting for your decision before continuing.",
   "humanInput.cannotResumeMissingJobId": "Cannot resume: missing job id",
   "humanInput.resumeFailed": "Resume failed",
+  "humanInput.superseded": "Superseded by a new run",
   "humanInput.awaitingInput": "Awaiting input",
   "actionPicker.namePlaceholder": "Name this choice…",
   "actionPicker.nameAction": "Name this choice",

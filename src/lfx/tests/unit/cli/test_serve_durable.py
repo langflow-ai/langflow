@@ -195,6 +195,46 @@ def test_resubmit_supersedes_the_stale_suspended_run(client):
     assert pending["request_id"] != stale_request_id
 
 
+def test_supersede_does_not_clobber_a_run_claimed_for_resume(tmp_path):
+    """A resume that wins the flip between supersede's select and cancel keeps its run.
+
+    No CANCELLED write, no lingering STOP signal, pending metadata intact.
+    """
+    import asyncio
+
+    from lfx.cli.serve_durable import DurableServeWorkflowHost
+    from lfx.services.durable.models import JobStatus as DurableJobStatus
+
+    host = DurableServeWorkflowHost(_build_registry(), lambda: None, db_path=tmp_path / "race.db")
+
+    async def scenario():
+        job_id = "job-race-1"
+        await host.jobs.create_job(job_id=job_id, flow_id=_HITL_FLOW_ID, user_id="")
+        await host.jobs.update_status(job_id, DurableJobStatus.SUSPENDED)
+        await host.jobs.update_metadata(job_id, {"pending": {"request_id": "req-1"}})
+
+        # Deterministically lose the race: the resume claims the job AFTER
+        # supersede's select returns it but BEFORE the cancel step runs.
+        original_select = host.jobs.suspended_job_ids_for_flow
+
+        async def select_then_lose_to_resume(flow_id_arg):
+            ids = await original_select(flow_id_arg)
+            assert ids == [job_id]
+            assert await host.jobs.claim_suspended_for_resume(job_id) is True
+            return ids
+
+        host.jobs.suspended_job_ids_for_flow = select_then_lose_to_resume
+
+        await host._supersede_suspended(_HITL_FLOW_ID)
+
+        job = await host.jobs.get_job(job_id)
+        assert job.status == DurableJobStatus.IN_PROGRESS
+        assert (job.job_metadata or {}).get("pending") == {"request_id": "req-1"}
+        assert await host.jobs.unconsumed_signals(job_id) == []
+
+    asyncio.run(scenario())
+
+
 def test_resubmit_of_a_different_flow_leaves_the_pause_alone(client):
     suspended_job_id = _submit(client, _HITL_FLOW_ID)
     _wait_for_status(client, suspended_job_id, "suspended")

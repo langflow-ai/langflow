@@ -56,7 +56,8 @@ export default function HumanInputCard({
   // Derive from the persisted/cached content first so the choice survives re-renders
   // (the resume reattach replays the stream and re-renders the message list).
   const chosen = content.submitted_action ?? localChosen;
-  const isSubmitted = submitted || chosen !== null;
+  const isSuperseded = content.superseded === true && chosen === null;
+  const isSubmitted = submitted || chosen !== null || isSuperseded;
 
   // Resume the suspended run and reattach to its durable event stream so the
   // continued run renders into the same chat session.
@@ -128,10 +129,18 @@ export default function HumanInputCard({
     >
       <div className="flex items-center gap-2 border-b border-border bg-muted px-4 py-3 text-base font-semibold text-primary">
         <ForwardedIconComponent
-          name="Pause"
-          className="h-5 w-5 text-accent-indigo-foreground"
+          name={isSuperseded ? "CircleOff" : "Pause"}
+          className={
+            isSuperseded
+              ? "h-5 w-5 text-muted-foreground"
+              : "h-5 w-5 text-accent-indigo-foreground"
+          }
         />
-        <span>{t("humanInput.waitingForInput")}</span>
+        <span>
+          {isSuperseded
+            ? t("humanInput.superseded")
+            : t("humanInput.waitingForInput")}
+        </span>
       </div>
 
       <div className="flex flex-col gap-3 px-4 py-3">

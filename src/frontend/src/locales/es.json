@@ -2114,6 +2114,7 @@
   "humanInput.waitingFallback": "El flujo se ha pausado y está esperando su decisión antes de continuar.",
   "humanInput.cannotResumeMissingJobId": "No se puede reanudar: falta el id del trabajo",
   "humanInput.resumeFailed": "Error al reanudar",
+  "humanInput.superseded": "Reemplazado por una nueva ejecución",
   "humanInput.awaitingInput": "Esperando entrada",
   "actionPicker.namePlaceholder": "Nombra esta opción…",
   "actionPicker.nameAction": "Nombra esta opción",

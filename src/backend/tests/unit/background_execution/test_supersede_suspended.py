@@ -92,6 +92,88 @@ async def test_supersede_leaves_other_flows_and_users_alone(real_services_job_se
         assert job.status == JobStatus.SUSPENDED
 
 
+async def test_supersede_does_not_clobber_a_run_claimed_for_resume(real_services_job_service):
+    """A resume that wins the flip between supersede's select and cancel keeps its run.
+
+    No CANCELLED write, no checkpoint delete, no metadata clear, no run_cancelled event.
+    """
+    job_service = real_services_job_service
+    flow_id, user_id = uuid4(), uuid4()
+    job_id = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id)
+    await job_service.update_job_metadata(job_id, {"pending_request_id": "req-1"})
+    await job_service.save_checkpoint(job_id, "graph", "{}")
+
+    assert await job_service.claim_suspended_for_resume(job_id) is True
+
+    cancelled = await _service()._cancel_suspended(job_id, job_service)
+
+    assert cancelled is False
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.IN_PROGRESS
+    assert (job.job_metadata or {}).get("pending_request_id") == "req-1"
+    assert await job_service.load_checkpoint(job_id, "graph") is not None
+    events = await job_service.read_events(job_id)
+    assert all(e.event_type != "run_cancelled" for e in events)
+
+
+async def test_supersede_returns_only_jobs_it_actually_cancelled(real_services_job_service):
+    job_service = real_services_job_service
+    flow_id, user_id = uuid4(), uuid4()
+    stale_job_id = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id)
+    resumed_job_id = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id, request_id="req-2")
+    assert await job_service.claim_suspended_for_resume(resumed_job_id) is True
+
+    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id)
+
+    assert superseded == [stale_job_id]
+    resumed = await job_service.get_job_by_job_id(resumed_job_id)
+    assert resumed.status == JobStatus.IN_PROGRESS
+
+
+async def test_supersede_resolves_the_persisted_human_input_card(real_services_job_service):
+    """The chat card persisted for the pause must close when its run is superseded.
+
+    Cancellation used to clear only ``pending_request_id``; after a history reload
+    the card (no ``submitted_action``) turned interactive again and every click
+    409'd against the cancelled job.
+    """
+    from langflow.services.database.models.message.model import MessageTable
+    from lfx.services.deps import session_scope
+
+    job_service = real_services_job_service
+    flow_id, user_id = uuid4(), uuid4()
+    job_id = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id)
+
+    card = MessageTable(
+        text="",
+        sender="Machine",
+        sender_name="AI",
+        session_id="session-1",
+        flow_id=flow_id,
+        files=[],
+        content_blocks=[
+            {
+                "title": "Human input required",
+                "contents": [{"type": "human_input", "request_id": "req-1", "options": [], "allowed_decisions": []}],
+            }
+        ],
+    )
+    async with session_scope() as session:
+        session.add(card)
+        await session.flush()
+        card_id = card.id
+    await job_service.update_job_metadata(job_id, {"card_message_id": str(card_id)})
+
+    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id)
+    assert job_id in superseded
+
+    async with session_scope() as session:
+        reloaded = await session.get(MessageTable, card_id)
+        content = reloaded.content_blocks[0]["contents"][0]
+        assert content.get("superseded") is True
+        assert content.get("submitted_action") is None
+
+
 async def test_submit_supersedes_the_previous_suspended_run(real_services_job_service):
     job_service = real_services_job_service
     flow_id, user_id = uuid4(), uuid4()

@@ -2114,6 +2114,7 @@
   "humanInput.waitingFallback": "流程已暂停，正在等待您的决定后继续。",
   "humanInput.cannotResumeMissingJobId": "无法恢复：缺少作业 ID",
   "humanInput.resumeFailed": "恢复失败",
+  "humanInput.superseded": "已被新的运行取代",
   "humanInput.awaitingInput": "等待输入",
   "actionPicker.namePlaceholder": "为此选项命名…",
   "actionPicker.nameAction": "为此选项命名",

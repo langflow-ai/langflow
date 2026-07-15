@@ -130,6 +130,36 @@ describe("HumanInputCard", () => {
     });
   });
 
+  it("renders closed when the pause was superseded by a new run", () => {
+    const onSubmit = jest.fn();
+    render(
+      <HumanInputCard
+        content={{ ..._approval, superseded: true }}
+        onSubmit={onSubmit}
+      />,
+    );
+    expect(screen.getByTestId("icon-CircleOff")).toBeInTheDocument();
+    const approve = screen.getByTestId("human-input-decision-approve");
+    expect(approve).toBeDisabled();
+    fireEvent.click(approve);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("keeps an answered card rendered as answered even if flagged superseded", () => {
+    render(
+      <HumanInputCard
+        content={{
+          ..._approval,
+          superseded: true,
+          submitted_action: "approve",
+        }}
+      />,
+    );
+    expect(screen.queryByTestId("icon-CircleOff")).not.toBeInTheDocument();
+    expect(screen.getByTestId("icon-Pause")).toBeInTheDocument();
+    expect(screen.getByTestId("human-input-decision-approve")).toBeDisabled();
+  });
+
   it("resumes the run itself when no onSubmit is provided", () => {
     const content: InteractiveContent = { ..._approval, job_id: "job-1" };
     render(<HumanInputCard content={content} />);

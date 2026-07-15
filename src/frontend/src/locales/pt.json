@@ -2114,6 +2114,7 @@
   "humanInput.waitingFallback": "O fluxo foi pausado e está aguardando sua decisão antes de continuar.",
   "humanInput.cannotResumeMissingJobId": "Não é possível retomar: job id ausente",
   "humanInput.resumeFailed": "Falha ao retomar",
+  "humanInput.superseded": "Substituído por uma nova execução",
   "humanInput.awaitingInput": "Aguardando entrada",
   "actionPicker.namePlaceholder": "Nomeie esta opção…",
   "actionPicker.nameAction": "Nomeie esta opção",
