@@ -49,6 +49,19 @@ async def test_visible_scope_prefilter_forwards_structured_scope(monkeypatch, fa
     ]
 
 
+@pytest.mark.anyio
+async def test_visible_scope_prefilter_adapts_legacy_concrete_id_service(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    visible_ids = [uuid4(), uuid4()]
+    service = _StubAuthorizationService(visible_ids=visible_ids)
+    install_authz(monkeypatch, service)
+
+    result = await visible_scope_prefilter(fake_user, resource_type="flow", act="read")
+
+    assert result == ResourceVisibilityScope(resource_ids=tuple(visible_ids))
+    assert len(service.visible_calls) == 1
+
+
 def test_scope_predicate_unions_owner_explicit_workspace_and_project_grants():
     owner_id = uuid4()
     scope = ResourceVisibilityScope(

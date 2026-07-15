@@ -38,8 +38,9 @@ from langflow.services.authorization import (
     ProjectAction,
     ensure_project_permission,
     filter_visible_resources,
-    restrict_to_owned_or_visible,
-    visible_id_prefilter,
+    resource_visible_in_scope,
+    restrict_to_owned_or_visible_scope,
+    visible_scope_prefilter,
 )
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.authorization.utils import _resolve_authz_domain
@@ -229,10 +230,15 @@ async def read_projects(
         # project ids the caller may read, widen the owner-scoped query to
         # (owned ⊕ visible) in SQL and skip the per-row in-memory filter below.
         # OSS pass-through returns None → owner-scoped query + filter unchanged.
-        visible_project_ids = await visible_id_prefilter(current_user, resource_type="project", act=ProjectAction.READ)
-        if visible_project_ids is not None:
-            stmt = restrict_to_owned_or_visible(
-                select(Folder), id_column=Folder.id, owner_clause=owned_clause, visible_ids=visible_project_ids
+        visibility_scope = await visible_scope_prefilter(current_user, resource_type="project", act=ProjectAction.READ)
+        if visibility_scope is not None:
+            stmt = restrict_to_owned_or_visible_scope(
+                select(Folder),
+                id_column=Folder.id,
+                owner_clause=owned_clause,
+                workspace_column=Folder.workspace_id,
+                project_column=Folder.id,
+                visibility=visibility_scope,
             )
         else:
             stmt = select(Folder).where(or_(owned_clause, Folder.user_id == None))  # noqa: E711
@@ -244,7 +250,7 @@ async def read_projects(
         # (projects are the resource itself, so the domain falls back to
         # workspace or ``*``). When the prefilter is active the SQL union is
         # already authoritative — skip the per-row enforce to avoid an N+1.
-        if visible_project_ids is None:
+        if visibility_scope is None:
             projects = await filter_visible_resources(
                 current_user,
                 resource_type="project",
@@ -324,8 +330,8 @@ async def read_project(
         # query / set-filter the eager-loaded collection to (owned ⊕ visible) and
         # skip the per-row enforce; None keeps the in-memory fallback. The flows
         # all live in this project, so a single project-scoped domain applies.
-        visible_flow_ids = (
-            await visible_id_prefilter(
+        visibility_scope = (
+            await visible_scope_prefilter(
                 current_user,
                 resource_type="flow",
                 domain=_resolve_authz_domain(project.workspace_id, project_id),
@@ -340,15 +346,17 @@ async def read_project(
             stmt = select(Flow).where(Flow.folder_id == project_id)
             if not treat_as_shared:
                 stmt = stmt.where(Flow.user_id == current_user.id)
-            elif visible_flow_ids is not None:
+            elif visibility_scope is not None:
                 # Shared project with a concrete prefilter: widen to
                 # (owned ⊕ visible) at the DB layer so ``page.total`` reflects the
                 # prefilter and no per-row enforce runs.
-                stmt = restrict_to_owned_or_visible(
+                stmt = restrict_to_owned_or_visible_scope(
                     stmt,
                     id_column=Flow.id,
                     owner_clause=Flow.user_id == current_user.id,
-                    visible_ids=visible_flow_ids,
+                    workspace_column=Flow.workspace_id,
+                    project_column=Flow.folder_id,
+                    visibility=visibility_scope,
                 )
 
             if Flow.updated_at is not None:
@@ -377,7 +385,7 @@ async def read_project(
             # available the SQL union above already narrowed the page (and
             # ``page.total``); this fallback path's ``page.total`` may overcount
             # when items are dropped — same caveat as ``read_flows``.
-            if treat_as_shared and visible_flow_ids is None:
+            if treat_as_shared and visibility_scope is None:
                 paginated_flows.items = await filter_visible_resources(
                     current_user,
                     resource_type="flow",
@@ -397,14 +405,21 @@ async def read_project(
             # regardless of finer-grained policy engine rules the plugin may
             # have. OSS pass-through returns the input list unchanged, so this
             # has no effect on default OSS installs.
-            if visible_flow_ids is not None:
+            if visibility_scope is not None:
                 # Eager-loaded ``project.flows`` constrained to (owned ⊕ visible)
                 # by set membership — the same union as the SQL prefilter, applied
                 # in memory because the relationship is already materialized
                 # (still no per-row enforce, so no N+1).
-                allowed_flow_ids = set(visible_flow_ids)
                 visible_flows = [
-                    flow for flow in project.flows if flow.id in allowed_flow_ids or flow.user_id == current_user.id
+                    flow
+                    for flow in project.flows
+                    if flow.user_id == current_user.id
+                    or resource_visible_in_scope(
+                        resource_id=flow.id,
+                        workspace_id=flow.workspace_id,
+                        project_id=flow.folder_id,
+                        visibility=visibility_scope,
+                    )
                 ]
             else:
                 visible_flows = await filter_visible_resources(
