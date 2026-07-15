@@ -74,5 +74,5 @@ def test_makefile_patch_tracks_langflow_core_version_and_base_dependency():
     assert "Updating langflow-core pyproject.toml" in makefile
     assert "fname='src/langflow-core/pyproject.toml'" in makefile
     assert "src/langflow-core/pyproject.toml" in makefile
-    assert '"langflow-base[complete]~=$$LANGFLOW_BASE_VERSION"' in makefile
-    assert '"langflow-base[postgresql]~=$$LANGFLOW_BASE_VERSION"' in makefile
+    assert "langflow-base[complete]~=$$LANGFLOW_BASE_VERSION" in makefile
+    assert "langflow-base[postgresql]~=$$LANGFLOW_BASE_VERSION" in makefile

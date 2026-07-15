@@ -132,6 +132,7 @@ members = [
     "src/backend/base",
     ".",
     "src/lfx",
+    "src/langflow-core",
     "src/langflow-stepflow",
     "src/sdk",
     # langflow-extensions:bundle-members-start
