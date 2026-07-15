@@ -435,7 +435,12 @@ class A2AAgentComponent(Component):
 
     @staticmethod
     def _card_payload(card: dict) -> dict:
-        """Build the structured data-display payload (identity + chips + sections) from an agent card."""
+        """Build the structured data-display payload (identity + chips + sections) from an agent card.
+
+        The card is untrusted remote input, so every field is treated as arbitrary: a bad shape
+        degrades to a thinner preview rather than raising.
+        """
+        card = card if isinstance(card, dict) else {}
         name = _clip(card.get("name") or "Agent")
         version = _clip(card.get("version") or "")
 
@@ -460,11 +465,13 @@ class A2AAgentComponent(Component):
             sections.append({"heading": "Description", "text": _clip(description)})
 
         # The card comes from a remote server, so tolerate malformed skill/schema shapes.
-        skills = [skill for skill in (card.get("skills") or []) if isinstance(skill, dict)]
+        raw_skills = card.get("skills")
+        skills = [skill for skill in raw_skills if isinstance(skill, dict)] if isinstance(raw_skills, list) else []
         schema = skills[0].get("inputSchema") if skills else {}
         schema = schema if isinstance(schema, dict) else {}
         required_raw = schema.get("required")
-        required = set(required_raw) if isinstance(required_raw, list) else set()
+        # Keep only string entries: a non-list or a list with unhashable items would break set()/membership.
+        required = {r for r in required_raw if isinstance(r, str)} if isinstance(required_raw, list) else set()
         properties = schema.get("properties")
         properties = properties if isinstance(properties, dict) else {}
         if properties:

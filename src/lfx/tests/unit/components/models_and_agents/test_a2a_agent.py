@@ -322,6 +322,29 @@ def test_card_payload_tolerates_malformed_card():
     assert "q" in blob
 
 
+@pytest.mark.parametrize(
+    "card",
+    [
+        [1, 2, 3],  # not even a dict
+        "a string card",
+        5,
+        {"skills": 5},  # a non-iterable scalar where a list is expected
+        {"skills": True},
+        {"skills": "abc"},  # iterable but not a list of skill dicts
+        {"skills": {"a": 1}},
+        # required carries an unhashable entry; properties carries a non-dict spec.
+        {"skills": [{"inputSchema": {"required": [["x"]], "properties": {"q": {"type": "s"}}}}]},
+        {"skills": [{"inputSchema": {"required": [1, 2], "properties": {"a": "notadict"}}}]},
+        {"capabilities": 5, "security": [], "preferredTransport": {"x": 1}, "protocolVersion": ["a"]},
+    ],
+)
+def test_card_payload_never_raises_on_malformed_card(card):
+    """A remote card is untrusted input: any shape must degrade to a payload, never raise."""
+    payload = A2AAgentComponent._card_payload(card)
+    assert isinstance(payload, dict)
+    assert isinstance(payload["sections"], list)
+
+
 def test_agent_card_field_type_is_builder_accepted():
     """The agent_card display field must use a type the graph builder accepts.
 
