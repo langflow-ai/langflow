@@ -3925,7 +3925,7 @@
   "components.huggingfacemodel.inputs.typical_p.info.ed0e56c7": "Typical Decoding mass.",
   "components.huggingfacemodel.outputs.model_output.display_name.698eabeb": "Language Model",
   "components.huggingfacemodel.outputs.text_output.display_name.2544139a": "Model Response",
-  "components.humaninput.description.e35d40a8": "Pause the flow to collect a human decision and route on the chosen action.",
+  "components.humaninput.description.548359b3": "Pause the flow for a human-in-the-loop (HITL) decision and route on the chosen action.",
   "components.humaninput.display_name.d7c8a913": "Human Input",
   "components.humaninput.inputs.decisions.display_name.8ce3a776": "User Choices",
   "components.humaninput.inputs.decisions.info.ad649edf": "Choices the human can pick; each becomes a branch output. Pick from the list or type a custom one.",

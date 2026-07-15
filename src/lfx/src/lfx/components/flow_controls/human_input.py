@@ -30,9 +30,10 @@ def _action_id(label: str) -> str:
 
 class HumanInput(Component):
     display_name = "Human Input"
-    description = "Pause the flow to collect a human decision and route on the chosen action."
+    description = "Pause the flow for a human-in-the-loop (HITL) decision and route on the chosen action."
     icon = "HumanInput"
     name = "HumanInput"
+    metadata = {"keywords": ["hitl", "human-in-the-loop", "decision"]}
 
     inputs = [
         MultilineInput(

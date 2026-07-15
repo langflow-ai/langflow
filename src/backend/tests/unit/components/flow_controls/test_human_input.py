@@ -57,6 +57,17 @@ class TestHumanInputComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         assert [o.name for o in component.outputs] == ["branch_approve", "branch_reject"]
 
+    def test_hitl_search_keywords_are_registered(self, component_class):
+        """The sidebar's metadata search does substring matching on ``metadata["keywords"]``.
+
+        Fuse alone cannot surface this node for "HITL": its location penalty rejects
+        matches deep inside the description (score ~0.4 > 0.2 threshold), so the
+        keywords list is the mechanism that makes "hitl" find Human Input.
+        """
+        keywords = component_class.metadata["keywords"]
+        assert "hitl" in keywords
+        assert "human-in-the-loop" in keywords
+
     def test_decisions_has_no_options_so_outputs_rebuild_on_load(self, component_class):
         """Decisions must serialize with empty options so the frontend rebuilds outputs on load.
 
