@@ -95,6 +95,40 @@ class TestGenerateComponentTool:
             reset_current_user_id()
             reset_agent_run_model()
 
+    def test_forwards_the_iterations_budget_to_the_nested_subflow(self):
+        """/iterations N must cap the nested JSON assistant too, not just the outer builder."""
+        from langflow.agentic.services.agent_run_context import (
+            reset_agent_run_iterations,
+            set_agent_run_iterations,
+        )
+
+        set_agent_run_iterations(1)
+        try:
+            tool = GenerateComponent()
+            tool.set(spec="a JSON parser component")
+            with patch(
+                EFV,
+                new_callable=AsyncMock,
+                return_value={"validated": True, "class_name": "JsonParser", "component_code": "c"},
+            ) as m:
+                _run(tool)
+        finally:
+            reset_agent_run_iterations()
+
+        assert m.call_args.kwargs["global_variables"]["ITERATIONS_LIMIT"] == "1"
+
+    def test_without_a_bound_budget_the_nested_subflow_keeps_its_default(self):
+        tool = GenerateComponent()
+        tool.set(spec="a JSON parser component")
+        with patch(
+            EFV,
+            new_callable=AsyncMock,
+            return_value={"validated": True, "class_name": "JsonParser", "component_code": "c"},
+        ) as m:
+            _run(tool)
+
+        assert "ITERATIONS_LIMIT" not in m.call_args.kwargs["global_variables"]
+
 
 class TestGenerateComponentContextIsolation:
     """A nested generation run must not touch the parent agent loop's state.
