@@ -41,6 +41,7 @@ const CanvasControls = ({
   const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
   );
+  const locked = Boolean(effectiveLocked ?? isFlowLocked);
   const setAssistantSidebarOpen = useAssistantManagerStore(
     (state) => state.setAssistantSidebarOpen,
   );
@@ -86,6 +87,7 @@ const CanvasControls = ({
   }, []);
 
   const handleAssistantClick = () => {
+    if (locked) return;
     if (!discovered) markDiscovered();
     setAssistantSidebarOpen(!assistantSidebarOpen);
   };
@@ -107,17 +109,16 @@ const CanvasControls = ({
   const [isAddNoteActive, setIsAddNoteActive] = useState(false);
 
   const handleAddNote = useCallback(() => {
+    if (locked) return;
     window.dispatchEvent(new Event("lf:start-add-note"));
     setIsAddNoteActive(true);
-  }, []);
+  }, [locked]);
 
   useEffect(() => {
     const onEnd = () => setIsAddNoteActive(false);
     window.addEventListener("lf:end-add-note", onEnd);
     return () => window.removeEventListener("lf:end-add-note", onEnd);
   }, []);
-
-  const locked = effectiveLocked ?? isFlowLocked;
 
   // Single source of truth for the onboarding moment — both the popover
   // tooltip and the "New" pill key off this so they appear together.
@@ -126,6 +127,7 @@ const CanvasControls = ({
     !assistantSidebarOpen &&
     !isWelcomeOpen &&
     !isPlaygroundOpen &&
+    !locked &&
     tooltipVisible;
 
   useEffect(() => {
@@ -158,7 +160,7 @@ const CanvasControls = ({
                   (persisted ``discovered`` flag) — a feature the user already
                   found isn't "new" to them anymore.
                   Uses the brand token from index.css. */}
-              {!assistantSidebarOpen && !discovered && (
+              {!assistantSidebarOpen && !discovered && !locked && (
                 <span
                   data-testid="assistant-button-new-pill"
                   // Visibility logic: stays in lock-step with the onboarding
@@ -183,8 +185,10 @@ const CanvasControls = ({
                 unstyled
                 size="icon"
                 data-testid="assistant-button"
-                className="group/btn relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md hover:bg-muted"
+                className="group/btn relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={handleAssistantClick}
+                disabled={locked}
+                title={locked ? t("version.readOnly") : undefined}
               >
                 {/* Idle state — uses the design-tuned
                     ``langflow_assistant_idle.svg`` (noise filter + brand tint
@@ -263,9 +267,10 @@ const CanvasControls = ({
           unstyled
           size="icon"
           data-testid="canvas-add-note-button"
-          className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-          title={t("canvas.addStickyNote")}
+          className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          title={locked ? t("version.readOnly") : t("canvas.addStickyNote")}
           onClick={handleAddNote}
+          disabled={locked}
         >
           <ForwardedIconComponent
             name="sticky-note"
@@ -284,6 +289,7 @@ const CanvasControls = ({
             size="icon"
             data-testid="canvas_controls_toggle_inspector"
             aria-pressed={inspectionPanelVisible}
+            disabled={locked}
             className={`group flex h-8 w-8 items-center justify-center rounded-md ${
               inspectionPanelVisible
                 ? "bg-muted text-foreground"
