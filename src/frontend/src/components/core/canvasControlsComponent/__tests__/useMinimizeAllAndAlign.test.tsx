@@ -122,9 +122,9 @@ describe("useMinimizeAllAndAlign (LE-1810 T9 — minimize only, no re-layout)", 
     expect(mockGetLayoutedNodes).not.toHaveBeenCalled();
 
     const [updated] = mockSetNodes.mock.calls[0];
-    expect(
-      updated.every((node: MockNode) => node.data.showNode === true),
-    ).toBe(true);
+    expect(updated.every((node: MockNode) => node.data.showNode === true)).toBe(
+      true,
+    );
     expect(updated.map((node: MockNode) => node.position)).toEqual([
       { x: 5, y: 6 },
       { x: 7, y: 8 },

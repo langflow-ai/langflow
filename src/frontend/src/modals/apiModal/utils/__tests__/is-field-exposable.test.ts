@@ -4,7 +4,7 @@ import { getNodesWithDefaultValue } from "../get-nodes-with-default-value";
 import { isFieldExposable } from "../is-field-exposable";
 
 const makeNode = (
-  template: Record<string, any>,
+  template: Record<string, unknown>,
   overrides: Partial<{ toolMode: boolean; id: string }> = {},
 ): AllNodeType =>
   ({
