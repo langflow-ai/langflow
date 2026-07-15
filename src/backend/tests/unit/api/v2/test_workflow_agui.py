@@ -268,6 +268,29 @@ class TestAGUIModeDispatch:
         assert detail["code"] == "SYNC_MODE_UNSUPPORTED_FIELDS"
         assert detail["fields"] == ["data", "files", "start_component_id", "stop_component_id"]
 
+    @pytest.mark.parametrize("mode", ["stream", "background"])
+    async def test_non_sync_modes_reject_output_ids(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        empty_flow,
+        mode: str,
+    ):
+        """output_ids is sync-only; other modes must 422 instead of silently ignoring it."""
+        body = _agui_body(empty_flow, mode=mode)
+        body["output_ids"] = ["chat-output-1"]
+
+        response = await client.post(
+            "api/v2/workflows",
+            json=body,
+            headers={"x-api-key": created_api_key.api_key},
+        )
+
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert detail["code"] == "MODE_UNSUPPORTED_FIELDS"
+        assert detail["fields"] == ["output_ids"]
+
 
 class TestV2WorkflowAdmission:
     """Route-level admission checks before workflow execution dispatch."""

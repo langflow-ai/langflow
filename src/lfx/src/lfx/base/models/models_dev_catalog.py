@@ -80,6 +80,17 @@ MODELS_DEV_PROVIDER_KEYS: dict[str, str] = {
     # models.dev. OpenRouter is omitted because it's live-fetched per-user.
 }
 
+_GOOGLE_GENERATIVE_AI_PROVIDER = "Google Generative AI"
+_GOOGLE_MODEL_PREFIX = "models/"
+
+
+def _catalog_model_identity(provider: str, model: dict[str, Any]) -> tuple[str | None, str]:
+    """Return a provider-aware identity for matching static and models.dev rows."""
+    name = model.get("name")
+    if provider == _GOOGLE_GENERATIVE_AI_PROVIDER and isinstance(name, str):
+        name = name.removeprefix(_GOOGLE_MODEL_PREFIX)
+    return name, model.get("model_type") or "llm"
+
 
 def _snapshot_dir() -> Path:
     """Return the directory where the disk snapshot lives.
@@ -352,18 +363,18 @@ def apply_models_dev_overrides(
     the fresher metadata (context windows, pricing, capabilities) is preserved.
 
     models.dev exposes no ``deprecated`` field of its own, so this function
-    preserves the static-list curation by name: any model that was already
-    flagged deprecated in the bundled ``*_constants.py`` lists keeps that flag
-    after the override. Dated-snapshot ids
+    preserves the static-list curation by catalog identity: any model that was
+    already flagged deprecated in the bundled ``*_constants.py`` lists keeps
+    that flag after the override. Dated-snapshot ids
     (e.g. ``claude-opus-4-5-20251101``, ``gpt-4o-2024-05-13``) and language
     models whose most recent date is older than :data:`_AGE_DEPRECATION_DAYS` are also
     auto-flagged in :func:`_translate_model_entry`. ``now`` is forwarded for
     testability.
     """
     now = now or datetime.now(tz=timezone.utc)
-    # Build provider_name -> {model_name: deprecated} from the static lists so
-    # we can preserve the static curation through the override.
-    static_deprecated_by_provider: dict[str, set[str]] = {}
+    # Build provider_name -> {model identity} from the static lists so we can
+    # preserve the static curation through the override.
+    static_deprecated_by_provider: dict[str, set[tuple[str | None, str]]] = {}
     for group in static_lists:
         for entry in group:
             if not isinstance(entry, dict):
@@ -373,7 +384,7 @@ def apply_models_dev_overrides(
             if not provider or not name:
                 continue
             if entry.get("deprecated"):
-                static_deprecated_by_provider.setdefault(provider, set()).add(name)
+                static_deprecated_by_provider.setdefault(provider, set()).add(_catalog_model_identity(provider, entry))
 
     # Build provider_name -> translated list once.
     overrides: dict[str, list[dict[str, Any]]] = {}
@@ -382,15 +393,12 @@ def apply_models_dev_overrides(
         if not isinstance(provider_block, dict):
             continue
         static_deprecated = static_deprecated_by_provider.get(provider_name, set())
-        translated = [
-            _translate_model_entry(
-                provider_name,
-                m,
-                deprecated=(m.get("id") in static_deprecated),
-                now=now,
-            )
-            for m in _provider_model_dicts(provider_block)
-        ]
+        translated = []
+        for model in _provider_model_dicts(provider_block):
+            translated_model = _translate_model_entry(provider_name, model, now=now)
+            if _catalog_model_identity(provider_name, translated_model) in static_deprecated:
+                translated_model["deprecated"] = True
+            translated.append(translated_model)
         if translated:
             overrides[provider_name] = translated
 
@@ -403,13 +411,30 @@ def apply_models_dev_overrides(
         models.dev only knows the models it ships, so any model a user added to
         the bundled ``*_constants.py`` lists would otherwise be silently dropped
         when its provider's group is replaced. Carrying those rows over (matched
-        by name) keeps user-added models selectable while models.dev still wins
-        for every model it does cover. The override list is mutated in place so a
-        later same-provider group (e.g. the OpenAI embeddings group) folds its
-        custom rows into the same list already appended to ``replaced``.
+        by provider-aware identity) keeps user-added models selectable while
+        models.dev still wins for every model it does cover. The override list
+        is mutated in place so a later same-provider group (e.g. the OpenAI
+        embeddings group) folds its custom rows into the same list already
+        appended to ``replaced``.
         """
-        override_names = {m.get("name") for m in overrides[provider] if isinstance(m, dict)}
-        custom_entries = [m for m in group if isinstance(m, dict) and m.get("name") not in override_names]
+        overrides_by_identity = {
+            _catalog_model_identity(provider, model): model for model in overrides[provider] if isinstance(model, dict)
+        }
+        custom_entries = []
+        for static_model in group:
+            if not isinstance(static_model, dict):
+                continue
+            override_model = overrides_by_identity.get(_catalog_model_identity(provider, static_model))
+            if override_model is None:
+                custom_entries.append(static_model)
+                continue
+
+            static_name = static_model.get("name")
+            if provider == _GOOGLE_GENERATIVE_AI_PROVIDER and static_name != override_model.get("name"):
+                override_model["name"] = static_name
+                if static_icon := static_model.get("icon"):
+                    override_model["icon"] = static_icon
+
         if custom_entries:
             overrides[provider].extend(custom_entries)
 
