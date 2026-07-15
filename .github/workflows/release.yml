@@ -175,12 +175,6 @@ jobs:
             exit 1
           fi
 
-          if [ "${{ inputs.release_package_core }}" = "true" ] && [ "${{ inputs.release_package_base }}" = "false" ]; then
-            echo "Error: Cannot release Langflow Core without releasing Langflow Base."
-            echo "Langflow Core depends on the matching Langflow Base release. Please enable 'release_package_base' or disable 'release_package_core'."
-            exit 1
-          fi
-
           if [ "${{ inputs.release_package_base }}" = "true" ] && [ "${{ inputs.release_lfx }}" = "false" ]; then
             echo "Error: Cannot release Langflow Base without releasing LFX."
             echo "Langflow Base depends on LFX. Please enable 'release_lfx' or disable 'release_package_base'."

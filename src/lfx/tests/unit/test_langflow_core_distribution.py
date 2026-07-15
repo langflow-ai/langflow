@@ -63,7 +63,7 @@ def test_langflow_core_is_a_sibling_workspace_distribution():
     assert root["project"]["scripts"] == {"langflow": "langflow.langflow_launcher:main"}
 
 
-def test_langflow_core_wheel_contains_a_nonempty_marker_package():
+def test_langflow_core_source_package_marker_is_nonempty():
     marker = CORE_ROOT / "src" / "langflow_core" / "__init__.py"
 
     assert marker.read_text(encoding="utf-8").strip()
