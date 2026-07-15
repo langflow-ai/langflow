@@ -2140,6 +2140,7 @@
   "inspectionPanel.apiDisable": "API-Bearbeitung deaktivieren",
   "inspectionPanel.apiDisabledField": "Deaktivierte Felder können nicht über die API aufgerufen werden",
   "inspectionPanel.apiNeedsOnNode": "Fügen Sie den Parameter dem Node hinzu, um ihn über die API freizugeben",
+  "inspectionPanel.cannotRemoveRequired": "Pflichtparameter ohne Wert können nicht vom Node entfernt werden",
   "inspectionPanel.add": "Hinzufügen",
   "inspectionPanel.remove": "Entfernen",
   "inspectionPanel.defaultLabel": "Standard",

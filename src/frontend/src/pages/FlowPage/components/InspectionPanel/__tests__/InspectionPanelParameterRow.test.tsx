@@ -207,6 +207,32 @@ describe("InspectionPanelParameterRow", () => {
       expect(mockHandleOnNewValue).toHaveBeenCalledWith({ advanced: false });
     });
 
+    it("disables Remove for a required parameter with no value", async () => {
+      const user = userEvent.setup();
+      const props = {
+        ...defaultProps,
+        data: createMockData({ required: true, value: "" }),
+      };
+      renderWithProviders(<InspectionPanelParameterRow {...props} />);
+
+      const removeButton = screen.getByTestId("inspector-remove-test_field");
+      expect(removeButton).toBeDisabled();
+      await user.click(removeButton);
+      expect(mockHandleOnNewValue).not.toHaveBeenCalled();
+    });
+
+    it("keeps Remove enabled for a required parameter that has a value", () => {
+      const props = {
+        ...defaultProps,
+        data: createMockData({ required: true, value: "filled" }),
+      };
+      renderWithProviders(<InspectionPanelParameterRow {...props} />);
+
+      expect(
+        screen.getByTestId("inspector-remove-test_field"),
+      ).not.toBeDisabled();
+    });
+
     it("disables Remove when the field has a connected edge", async () => {
       const user = userEvent.setup();
       mockEdges = [

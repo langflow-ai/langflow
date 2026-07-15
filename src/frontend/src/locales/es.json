@@ -2140,6 +2140,7 @@
   "inspectionPanel.apiDisable": "Desactivar edición por API",
   "inspectionPanel.apiDisabledField": "Los campos deshabilitados no se pueden llamar por API",
   "inspectionPanel.apiNeedsOnNode": "Agrega el parámetro al nodo para exponerlo por API",
+  "inspectionPanel.cannotRemoveRequired": "Los parámetros obligatorios sin valor no se pueden quitar del nodo",
   "inspectionPanel.add": "Agregar",
   "inspectionPanel.remove": "Eliminar",
   "inspectionPanel.defaultLabel": "Predeterminado",

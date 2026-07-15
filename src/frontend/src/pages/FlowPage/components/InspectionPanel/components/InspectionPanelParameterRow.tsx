@@ -11,7 +11,7 @@ import { useTypesStore } from "@/stores/typesStore";
 import type { NodeDataType } from "@/types/flow";
 import { scapeJSONParse } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
-import { getDefaultDisplay } from "../utils";
+import { getDefaultDisplay, isValueEmpty } from "../utils";
 
 interface InspectionPanelParameterRowProps {
   data: NodeDataType;
@@ -74,6 +74,10 @@ export default function InspectionPanelParameterRow({
   // advertise), not the raw persisted flag — a flag lingering on an off-node
   // or connected field stays inert and must not read as exposed.
   const isEffectivelyExposed = isApiEditable && !isDisabledField;
+
+  // Hiding a required field with no value would fail validation at run time
+  // with the culprit no longer visible on the node — block removing it.
+  const isRequiredAndEmpty = required && isValueEmpty(template);
 
   const defaultDisplay = getDefaultDisplay(template, factoryValue);
   const defaultText =
@@ -153,17 +157,20 @@ export default function InspectionPanelParameterRow({
             content={
               isConnected
                 ? t("inspection.cannotChangeVisibility")
-                : t("inspectionPanel.remove")
+                : isRequiredAndEmpty
+                  ? t("inspectionPanel.cannotRemoveRequired")
+                  : t("inspectionPanel.remove")
             }
             avoidCollisions
           >
             <Button
               unstyled
               onClick={handleToggleVisibility}
-              disabled={isConnected}
+              disabled={isConnected || isRequiredAndEmpty}
               className={cn(
                 "flex h-6 items-center justify-center rounded-md bg-muted px-2 text-xs text-foreground transition-colors hover:bg-muted-foreground/20",
-                isConnected && "cursor-not-allowed opacity-50",
+                (isConnected || isRequiredAndEmpty) &&
+                  "cursor-not-allowed opacity-50",
               )}
               data-testid={`inspector-remove-${name}`}
               aria-label={`${t("inspectionPanel.remove")} ${title}`}

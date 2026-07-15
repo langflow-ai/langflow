@@ -2137,6 +2137,7 @@
   "inspectionPanel.apiDisable": "Disable API editing",
   "inspectionPanel.apiDisabledField": "Disabled fields can't be called via API",
   "inspectionPanel.apiNeedsOnNode": "Add the parameter to the node to expose it via the API",
+  "inspectionPanel.cannotRemoveRequired": "Required parameters without a value can't be removed from the node",
   "inspectionPanel.add": "Add",
   "inspectionPanel.remove": "Remove",
   "inspectionPanel.defaultLabel": "Default",

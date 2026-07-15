@@ -2140,6 +2140,7 @@
   "inspectionPanel.apiDisable": "禁用 API 编辑",
   "inspectionPanel.apiDisabledField": "已禁用的字段无法通过 API 调用",
   "inspectionPanel.apiNeedsOnNode": "将参数添加到节点后才能通过 API 公开",
+  "inspectionPanel.cannotRemoveRequired": "没有值的必填参数无法从节点中移除",
   "inspectionPanel.add": "添加",
   "inspectionPanel.remove": "移除",
   "inspectionPanel.defaultLabel": "默认",
