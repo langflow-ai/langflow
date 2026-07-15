@@ -28,6 +28,15 @@ def _patch_langflow_base_pyproject(txt: str, base_version: str, langflow_version
     return re.sub(r'"lfx(?:~=|>=)[^"]*"', f'"lfx~={langflow_version}"', txt)
 
 
+def _patch_langflow_core_pyproject(txt: str, langflow_version: str, base_version: str) -> str:
+    txt = re.sub(r'^version = ".*"', f'version = "{langflow_version}"', txt, flags=re.MULTILINE)
+    return re.sub(
+        r'"langflow-base(\[[^\]]*\])?(?:==|>=|~=)[^"]*"',
+        rf'"langflow-base\1~={base_version}"',
+        txt,
+    )
+
+
 def _patch_lfx_pyproject(txt: str, langflow_version: str) -> str:
     return re.sub(r'^version = ".*"', f'version = "{langflow_version}"', txt, flags=re.MULTILINE)
 
@@ -80,6 +89,35 @@ dependencies = [
         assert 'version = "1.11.0"' in result
         assert '"langflow-base[complete]>=0.11.0"' in result
         assert '"httpx>=0.23.0"' in result  # unrelated dep untouched
+
+
+# ---------------------------------------------------------------------------
+# langflow-base pins and product version in langflow-core pyproject.toml
+# ---------------------------------------------------------------------------
+
+
+class TestLangflowCoreSubstitution:
+    V = "1.11.1"
+    B = "0.11.1"
+
+    def test_updates_product_version(self):
+        txt = 'version = "1.11.0"'
+        assert 'version = "1.11.1"' in _patch_langflow_core_pyproject(txt, self.V, self.B)
+
+    def test_updates_complete_base_dependency(self):
+        txt = '    "langflow-base[complete]~=0.11.0",'
+        result = _patch_langflow_core_pyproject(txt, self.V, self.B)
+        assert '"langflow-base[complete]~=0.11.1"' in result
+
+    def test_updates_postgresql_base_dependency(self):
+        txt = 'postgresql = ["langflow-base[postgresql]>=0.11.0,<0.12.0"]'
+        result = _patch_langflow_core_pyproject(txt, self.V, self.B)
+        assert '"langflow-base[postgresql]~=0.11.1"' in result
+
+    def test_preserves_unrelated_dependencies(self):
+        txt = 'dependencies = ["langflow-base[complete]~=0.11.0", "httpx>=0.28"]'
+        result = _patch_langflow_core_pyproject(txt, self.V, self.B)
+        assert '"httpx>=0.28"' in result
 
 
 # ---------------------------------------------------------------------------
