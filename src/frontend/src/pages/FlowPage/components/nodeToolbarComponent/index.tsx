@@ -493,7 +493,7 @@ const NodeToolbarComponent = memo(
               shortcut={shortcuts.find((s) =>
                 s.name.toLowerCase().startsWith("advanced"),
               )}
-              className={cn(inspectionPanelVisible && "text-primary")}
+              isActive={inspectionPanelVisible}
               dataTestId="parameters-button"
             />
           )}
