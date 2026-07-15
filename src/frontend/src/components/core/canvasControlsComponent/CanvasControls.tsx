@@ -153,11 +153,12 @@ const CanvasControls = ({
           <PopoverPrimitive.Anchor asChild>
             <div className="group relative">
               {/* "New" discovery pill — surfaces ONLY on hover, hidden when
-                  the panel is open (active state shouldn't carry the nudge).
-                  The pill keeps appearing on hover indefinitely; only the
-                  lateral tooltip respects the persisted ``discovered`` flag.
+                  the panel is open (active state shouldn't carry the nudge)
+                  and gone for good once the user has opened the assistant
+                  (persisted ``discovered`` flag) — a feature the user already
+                  found isn't "new" to them anymore.
                   Uses the brand token from index.css. */}
-              {!assistantSidebarOpen && (
+              {!assistantSidebarOpen && !discovered && (
                 <span
                   data-testid="assistant-button-new-pill"
                   // Visibility logic: stays in lock-step with the onboarding
