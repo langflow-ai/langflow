@@ -18,6 +18,7 @@ def load_template() -> dict:
 
 
 def test_delegation_planner_has_minimal_review_flow():
+    """Verify the starter keeps its five-node planning and review topology."""
     template = load_template()
     nodes = template["data"]["nodes"]
     edges = template["data"]["edges"]
@@ -42,6 +43,7 @@ def test_delegation_planner_has_minimal_review_flow():
 
 
 def test_delegation_planner_keeps_plain_language_boundaries():
+    """Verify the starter exposes accurate labels and safe planning boundaries."""
     template = load_template()
     nodes = template["data"]["nodes"]
     agents = [node["data"] for node in nodes if node["data"]["type"] == "Agent"]
