@@ -700,7 +700,7 @@
                   },
                   {
                     "name": "cryptography",
-                    "version": "49.0.0"
+                    "version": "48.0.1"
                   },
                   {
                     "name": "langchain_chroma",
