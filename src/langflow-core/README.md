@@ -17,6 +17,12 @@ The `langflow-core` command is an alias for the same launcher:
 langflow-core run
 ```
 
+For voice mode, install the audio dependencies:
+
+```bash
+python -m pip install "langflow-core[audio]"
+```
+
 For PostgreSQL support, install the optional extra:
 
 ```bash

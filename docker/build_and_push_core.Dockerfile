@@ -25,13 +25,15 @@ RUN microdnf install -y tar xz \
     git npm \
     && microdnf clean all
 
-# Intentionally do not copy the root workspace manifest, lockfile, or
-# src/bundles. Build the four local distributions independently so the image
-# cannot acquire extension packages through the root ``langflow`` project.
-COPY ./src/sdk /app/src/sdk
-COPY ./src/lfx /app/src/lfx
-COPY ./src/backend/base /app/src/backend/base
-COPY ./src/langflow-core /app/src/langflow-core
+# Resolve third-party dependencies from the repository lockfile. The workspace
+# sources are needed by ``uv export`` to read package metadata, but
+# ``--no-emit-workspace`` keeps every local distribution (including bundles)
+# out of the exported requirements.
+COPY ./pyproject.toml ./uv.lock ./README.md /app/
+COPY ./src /app/src
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv export --locked --package langflow-core --extra postgresql --no-dev \
+      --no-emit-workspace --output-file /app/core-requirements.txt
 
 # Release workflows can resolve an RC version without mutating the source tag.
 # Keep the distribution metadata inside the image aligned with its image tag.
@@ -39,18 +41,17 @@ RUN if [ -n "$CORE_VERSION" ]; then \
       sed -i "s/^version = .*/version = \"${CORE_VERSION}\"/" /app/src/langflow-core/pyproject.toml; \
     fi
 
-COPY ./src/frontend /tmp/src/frontend
-WORKDIR /tmp/src/frontend
+WORKDIR /app/src/frontend
 RUN --mount=type=cache,target=/root/.npm \
     PUPPETEER_SKIP_DOWNLOAD=true npm install \
     && ESBUILD_BINARY_PATH="" NODE_OPTIONS="--max-old-space-size=4096" JOBS=1 npm run build \
     && cp -r build /app/src/backend/base/langflow/frontend \
-    && rm -rf /tmp/src/frontend
+    && rm -rf /app/src/frontend
 
 # Build local wheels first, then seed them without dependencies. Installing the
-# core wheel a second time with its PostgreSQL extra resolves third-party
-# dependencies while preserving the exact SDK/LFX/base/core wheels from this
-# checkout. No bundle source or bundle wheel is available to the resolver.
+# locked requirements installs third-party dependencies while preserving the
+# exact SDK/LFX/base/core wheels from this checkout. Bundle sources may be in
+# the builder context, but no bundle distribution is emitted or installed.
 WORKDIR /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     mkdir -p /app/dist \
@@ -68,8 +69,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         /app/dist/lfx-*.whl \
         /app/dist/langflow_base-*.whl \
         /app/dist/langflow_core-*.whl \
-    && CORE_WHEEL=$(find /app/dist -maxdepth 1 -name 'langflow_core-*.whl' -print -quit) \
-    && uv pip install --python /app/.venv/bin/python --prerelease=allow "${CORE_WHEEL}[postgresql]" \
+    && uv pip install --python /app/.venv/bin/python \
+        --prerelease=if-necessary-or-explicit \
+        --requirement /app/core-requirements.txt \
+    && uv pip check --python /app/.venv/bin/python \
     && /app/.venv/bin/python -c 'import importlib.metadata as m; forbidden = sorted(d.metadata["Name"] for d in m.distributions() if d.metadata["Name"].lower().startswith("lfx-")); assert not forbidden, f"extension distributions installed: {forbidden}"'
 
 ################################

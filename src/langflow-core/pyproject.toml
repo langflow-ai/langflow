@@ -32,6 +32,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+audio = [
+    "langflow-base[audio]~=0.11.0",
+]
 postgresql = [
     "langflow-base[postgresql]~=0.11.0",
 ]

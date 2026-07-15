@@ -18,12 +18,19 @@ def _load_pyproject(path: Path) -> dict:
 def test_langflow_core_metadata_contract():
     core = _load_pyproject(CORE_ROOT / "pyproject.toml")
     project = core["project"]
+    root_project = _load_pyproject(REPO_ROOT / "pyproject.toml")["project"]
+    base_project = _load_pyproject(REPO_ROOT / "src" / "backend" / "base" / "pyproject.toml")["project"]
 
     assert project["name"] == "langflow-core"
-    assert project["version"] == "1.11.0"
-    assert project["requires-python"] == ">=3.10,<3.15"
-    assert project["dependencies"] == ["langflow-base[complete]~=0.11.0"]
-    assert project["optional-dependencies"] == {"postgresql": ["langflow-base[postgresql]~=0.11.0"]}
+    assert project["version"] == root_project["version"]
+    assert project["requires-python"] == root_project["requires-python"]
+
+    base_version = base_project["version"]
+    assert project["dependencies"] == [f"langflow-base[complete]~={base_version}"]
+    assert project["optional-dependencies"] == {
+        "audio": [f"langflow-base[audio]~={base_version}"],
+        "postgresql": [f"langflow-base[postgresql]~={base_version}"],
+    }
     assert project["scripts"] == {
         "langflow": "langflow.langflow_launcher:main",
         "langflow-core": "langflow.langflow_launcher:main",
@@ -36,7 +43,7 @@ def test_langflow_core_has_no_extension_distribution_dependencies():
         Requirement(requirement)
         for requirement in [
             *core["project"]["dependencies"],
-            *core["project"]["optional-dependencies"]["postgresql"],
+            *(requirement for extra in core["project"]["optional-dependencies"].values() for requirement in extra),
         ]
     ]
 
@@ -64,7 +71,7 @@ def test_makefile_exposes_langflow_core_distribution_targets():
     assert "build_langflow_core:" in makefile
     assert "publish_core:" in makefile
     assert "publish_core_testpypi:" in makefile
-    assert "cd src/langflow-core && uv build $(args)" in makefile
+    assert "cd src/langflow-core && uv build $(args) --out-dir dist" in makefile
     assert "cd src/langflow-core && uv publish" in makefile
 
 
@@ -75,4 +82,5 @@ def test_makefile_patch_tracks_langflow_core_version_and_base_dependency():
     assert "fname='src/langflow-core/pyproject.toml'" in makefile
     assert "src/langflow-core/pyproject.toml" in makefile
     assert "langflow-base[complete]~=$$LANGFLOW_BASE_VERSION" in makefile
+    assert "langflow-base[audio]~=$$LANGFLOW_BASE_VERSION" in makefile
     assert "langflow-base[postgresql]~=$$LANGFLOW_BASE_VERSION" in makefile

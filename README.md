@@ -62,6 +62,19 @@ That's it! You're ready to build with Langflow! 🎉
 
 ## 📦 Other install options
 
+### Core components only
+
+Install the full Langflow UI and API without provider component bundles:
+
+```shell
+uv pip install langflow-core
+uv run langflow run
+```
+
+This distribution includes Langflow's built-in core components and no `lfx-*` extension distributions. Install provider bundles separately when you need them. Use `langflow` and `langflow-core` as alternative distributions rather than installing both in the same environment, because both provide the `langflow` command.
+
+The matching container image is `langflowai/langflow:core-latest`.
+
 ### Run from source
 If you've cloned this repository and want to contribute, run this command from the repository root:
 ```shell

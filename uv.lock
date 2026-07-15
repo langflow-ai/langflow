@@ -27,6 +27,7 @@ resolution-markers = [
 members = [
     "langflow",
     "langflow-base",
+    "langflow-core",
     "langflow-sdk",
     "langflow-stepflow",
     "lfx",
@@ -9143,6 +9144,30 @@ dev = [
     { name = "types-markdown", specifier = ">=3.7.0.20240822" },
     { name = "vulture", specifier = ">=2.11" },
 ]
+
+[[package]]
+name = "langflow-core"
+version = "1.11.0"
+source = { editable = "src/langflow-core" }
+dependencies = [
+    { name = "langflow-base", extra = ["complete"] },
+]
+
+[package.optional-dependencies]
+audio = [
+    { name = "langflow-base", extra = ["audio"] },
+]
+postgresql = [
+    { name = "langflow-base", extra = ["postgresql"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langflow-base", extras = ["audio"], marker = "extra == 'audio'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "src/backend/base" },
+]
+provides-extras = ["audio", "postgresql"]
 
 [[package]]
 name = "langflow-sdk"

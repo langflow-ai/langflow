@@ -114,6 +114,11 @@ class TestLangflowCoreSubstitution:
         result = _patch_langflow_core_pyproject(txt, self.V, self.B)
         assert '"langflow-base[postgresql]~=0.11.1"' in result
 
+    def test_updates_audio_base_dependency(self):
+        txt = 'audio = ["langflow-base[audio]~=0.11.0"]'
+        result = _patch_langflow_core_pyproject(txt, self.V, self.B)
+        assert '"langflow-base[audio]~=0.11.1"' in result
+
     def test_preserves_unrelated_dependencies(self):
         txt = 'dependencies = ["langflow-base[complete]~=0.11.0", "httpx>=0.28"]'
         result = _patch_langflow_core_pyproject(txt, self.V, self.B)

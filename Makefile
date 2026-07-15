@@ -349,7 +349,7 @@ build_langflow_base:
 	cd src/backend/base && uv build $(args)
 
 build_langflow_core:
-	cd src/langflow-core && uv build $(args)
+	cd src/langflow-core && uv build $(args) --out-dir dist
 
 build_langflow_backup:
 	uv lock && uv build
@@ -618,6 +618,7 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	if ! grep -qF "\"langflow-base[complete]>=$$LANGFLOW_BASE_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base dependency validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core pyproject.toml version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -qF "\"langflow-base[complete]~=$$LANGFLOW_BASE_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core complete dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-base[audio]~=$$LANGFLOW_BASE_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core audio dependency validation failed$(NC)"; exit 1; fi; \
 	if ! grep -qF "\"langflow-base[postgresql]~=$$LANGFLOW_BASE_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core PostgreSQL dependency validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "^version = \"$$LANGFLOW_BASE_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "\"lfx~=$$LANGFLOW_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml lfx pin validation failed$(NC)"; exit 1; fi; \
