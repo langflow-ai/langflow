@@ -163,6 +163,12 @@ jobs:
             exit 1
           fi
 
+          if [ "${{ inputs.release_package_base }}" = "true" ] && [ "${{ inputs.release_lfx }}" = "false" ]; then
+            echo "Error: Cannot release Langflow Base without releasing LFX."
+            echo "Langflow Base depends on LFX. Please enable 'release_lfx' or disable 'release_package_base'."
+            exit 1
+          fi
+
           if [ "${{ inputs.release_lfx }}" = "true" ] && [ "${{ inputs.release_sdk }}" = "false" ]; then
             echo "Error: Cannot release LFX without releasing langflow-sdk."
             echo "LFX depends on langflow-sdk. Please enable 'release_sdk' or disable 'release_lfx'."
@@ -666,6 +672,10 @@ jobs:
 
           # Update version in lfx pyproject.toml
           sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+
+          # Keep the bundled component index version/hash aligned with the RC wheel.
+          uv run --no-sync python ../../scripts/ci/update_component_index_version.py \
+            src/lfx/_assets/component_index.json "$VERSION"
 
           # Verify the change
           echo "Updated pyproject.toml version:"
