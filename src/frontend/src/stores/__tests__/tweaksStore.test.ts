@@ -16,6 +16,7 @@ jest.mock("../flowStore", () => ({
   default: {
     getState: jest.fn(() => ({
       unselectAll: jest.fn(),
+      edges: [],
     })),
   },
 }));
@@ -98,6 +99,7 @@ describe("useTweaksStore", () => {
     mockGetNodesWithDefaultValue.mockImplementation((nodes) => nodes);
     mockFlowStore.getState.mockReturnValue({
       unselectAll: jest.fn(),
+      edges: [],
     });
 
     act(() => {
@@ -292,7 +294,7 @@ describe("useTweaksStore", () => {
         result.current.initialSetup([mockNode], "flow-123");
       });
 
-      expect(mockGetNodesWithDefaultValue).toHaveBeenCalledWith([mockNode]);
+      expect(mockGetNodesWithDefaultValue).toHaveBeenCalledWith([mockNode], []);
     });
 
     it("should call updateTweaks after initial setup", () => {
@@ -410,6 +412,100 @@ describe("useTweaksStore", () => {
 
       expect(result.current.tweaks).toHaveProperty("node-1");
       expect(result.current.tweaks).toHaveProperty("node-2");
+    });
+
+    it("should NOT include an exposed field whose handle is edge-connected (LE-1810 I1)", () => {
+      const { scapedJSONStringfy } = require("@/utils/reactflowUtils");
+      mockFlowStore.getState.mockReturnValue({
+        unselectAll: jest.fn(),
+        edges: [
+          {
+            id: "edge-1",
+            source: "other-node",
+            target: "node-1",
+            targetHandle: scapedJSONStringfy({
+              fieldName: "param1",
+              id: "node-1",
+              inputTypes: ["Message"],
+              type: "str",
+            }),
+          },
+        ],
+      });
+      const { result } = renderHook(() => useTweaksStore());
+
+      act(() => {
+        useTweaksStore.setState({
+          currentFlowId: "test-flow",
+          nodes: [mockNode],
+        });
+        result.current.updateTweaks();
+      });
+
+      // param1 is api_editable but connected — it must not reach the snippet.
+      expect(result.current.tweaks).toEqual({});
+    });
+
+    it("should NOT include an exposed field that is off the node (LE-1810 coupling)", () => {
+      const offNode = {
+        ...mockNode,
+        data: {
+          ...mockNode.data,
+          node: {
+            ...mockNode.data.node,
+            template: {
+              param1: {
+                advanced: true,
+                api_editable: true,
+                value: "hidden-value",
+              },
+            },
+          },
+        } as NodeDataType,
+      };
+      const { result } = renderHook(() => useTweaksStore());
+
+      act(() => {
+        useTweaksStore.setState({
+          currentFlowId: "test-flow",
+          nodes: [offNode],
+        });
+        result.current.updateTweaks();
+      });
+
+      expect(result.current.tweaks).toEqual({});
+    });
+
+    it("should NOT include an exposed field disabled by active tool mode", () => {
+      const toolModeNode = {
+        ...mockNode,
+        data: {
+          ...mockNode.data,
+          node: {
+            ...mockNode.data.node,
+            tool_mode: true,
+            template: {
+              param1: {
+                advanced: false,
+                api_editable: true,
+                tool_mode: true,
+                value: "tool-value",
+              },
+            },
+          },
+        } as NodeDataType,
+      };
+      const { result } = renderHook(() => useTweaksStore());
+
+      act(() => {
+        useTweaksStore.setState({
+          currentFlowId: "test-flow",
+          nodes: [toolModeNode],
+        });
+        result.current.updateTweaks();
+      });
+
+      expect(result.current.tweaks).toEqual({});
     });
   });
 

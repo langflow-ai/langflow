@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { getChangesType } from "@/modals/apiModal/utils/get-changes-types";
 import { getNodesWithDefaultValue } from "@/modals/apiModal/utils/get-nodes-with-default-value";
+import { isFieldExposable } from "@/modals/apiModal/utils/is-field-exposable";
 import type { AllNodeType, NodeDataType } from "@/types/flow";
 import type { TweaksStoreType } from "../types/zustand/tweaks";
 import useFlowStore from "./flowStore";
@@ -44,19 +45,25 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
       currentFlowId: flowId,
     });
     set({
-      nodes: getNodesWithDefaultValue(nodes),
+      nodes: getNodesWithDefaultValue(
+        nodes,
+        useFlowStore.getState().edges ?? [],
+      ),
     });
     get().updateTweaks();
   },
   updateTweaks: () => {
     const nodes = get().nodes;
+    const edges = useFlowStore.getState().edges ?? [];
     const tweak = {};
     nodes.forEach((node) => {
       const nodeTemplate = node.data?.node?.template;
       if (nodeTemplate && node.type === "genericNode") {
         const currentTweak = {};
         Object.keys(nodeTemplate).forEach((name) => {
-          if (nodeTemplate[name].api_editable === true) {
+          // Single exposure predicate (LE-1810): api_editable AND on-node AND
+          // not connected AND not tool-mode-disabled — see is-field-exposable.
+          if (isFieldExposable(node, name, edges)) {
             currentTweak[name] = getChangesType(
               nodeTemplate[name].value,
               nodeTemplate[name],
