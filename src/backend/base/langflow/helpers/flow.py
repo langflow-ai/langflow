@@ -297,6 +297,11 @@ async def run_flow(
 
     fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
 
+    from lfx.run.hitl import raise_if_nested_hitl_unsupported
+
+    # A nested run cannot pause: a Human Input in here would silently not pause. Fail loud instead.
+    raise_if_nested_hitl_unsupported(graph)
+
     return await graph.arun(
         inputs_list,
         outputs=outputs,
@@ -466,6 +471,15 @@ async def get_flow_by_id_or_endpoint_name(
     a subsequent permission check (e.g. agentic MCP tools) must leave the
     default, otherwise widening leaks graph metadata for another user's flow
     before any policy decision runs.
+
+    SECURITY — ``user_id``: passing ``user_id=None`` disables owner scoping and
+    resolves the flow by id/endpoint_name ALONE (any user's flow). This is an
+    intentional contract for trusted internal callers, but it means every caller
+    MUST pass the authenticated user's id. Never wire this as a FastAPI
+    ``Depends`` whose ``user_id`` comes from a request-controlled (and possibly
+    unset) query param, and never forward a caller-supplied ``user_id`` that was
+    not derived from the authenticated identity — either reintroduces a flow
+    IDOR.
     """
     from langflow.services.deps import get_authorization_service
 
@@ -537,24 +551,43 @@ async def generate_unique_flow_name(flow_name, user_id, session):
         n += 1
 
 
-def json_schema_from_flow(flow: Flow) -> dict:
-    """Generate JSON schema from flow input nodes."""
+def _get_flow_input_nodes(flow: Flow) -> list[Vertex]:
     from lfx.graph.graph.base import Graph
 
-    # Get the flow's data which contains the nodes and their configurations
-    flow_data = flow.data or {}
+    graph = Graph.from_payload(flow.data or {})
+    return [vertex for vertex in graph.vertices if vertex.is_input]
 
-    graph = Graph.from_payload(flow_data)
-    input_nodes = [vertex for vertex in graph.vertices if vertex.is_input]
 
+def _is_mcp_input_field(field_data: Any) -> bool:
+    return isinstance(field_data, dict) and field_data.get("show", False) and not field_data.get("advanced", False)
+
+
+def get_flow_input_tweaks(flow: Flow, inputs: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Map advertised MCP inputs to node-scoped flow tweaks."""
+    tweaks: dict[str, dict[str, Any]] = {}
+    for node in _get_flow_input_nodes(flow):
+        template = node.data["node"]["template"]
+        node_tweaks = {
+            field_name: inputs[field_name]
+            for field_name, field_data in template.items()
+            if field_name in inputs and _is_mcp_input_field(field_data)
+        }
+        if node_tweaks:
+            tweaks[node.id] = node_tweaks
+
+    return tweaks
+
+
+def json_schema_from_flow(flow: Flow) -> dict:
+    """Generate JSON schema from flow input nodes."""
     properties = {}
     required = []
-    for node in input_nodes:
+    for node in _get_flow_input_nodes(flow):
         node_data = node.data["node"]
         template = node_data["template"]
 
         for field_name, field_data in template.items():
-            if isinstance(field_data, dict) and field_data.get("show", False) and not field_data.get("advanced", False):
+            if _is_mcp_input_field(field_data):
                 field_type = field_data.get("type", "string")
                 properties[field_name] = {
                     "type": field_type,

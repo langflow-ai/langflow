@@ -17,7 +17,6 @@ import sqlalchemy
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
 from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
@@ -42,6 +41,7 @@ from langflow.plugin_routes import load_plugin_routes
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
+    get_background_execution_service,
     get_queue_service,
     get_service,
     get_settings_service,
@@ -422,6 +422,17 @@ def get_lifespan(*, fix_migration=False, version=None):
                     except Exception as e:  # noqa: BLE001
                         await logger.awarning(f"Failed to configure agentic MCP server: {e}")
 
+            # Backfill MCP servers from the legacy per-user JSON file into the
+            # mcp_server table (idempotent + multi-replica-safe; existing file-based
+            # users are migrated to the DB store automatically on upgrade).
+            try:
+                from langflow.api.utils.mcp.backfill import backfill_mcp_servers_from_files
+
+                async with session_scope() as session:
+                    await backfill_mcp_servers_from_files(session)
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(f"Failed to backfill MCP servers from legacy files: {e}")
+
             # Gate: Load flows from directory
             current_time = asyncio.get_event_loop().time()
             if is_step_complete(PreloadStep.FLOWS):
@@ -437,6 +448,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             queue_service = get_queue_service()
             if not queue_service.is_started():
                 queue_service.start()
+
+            # Reconcile background-execution jobs left behind by a crashed worker:
+            # fail orphaned IN_PROGRESS rows, re-enqueue QUEUED rows. Best-effort
+            # so a reconcile hiccup never blocks boot.
+            with suppress(Exception):
+                await get_background_execution_service().sweep_orphans_on_startup()
 
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
@@ -939,11 +956,22 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
         app (FastAPI): FastAPI app.
         static_files_dir (str): Path to the static files directory.
     """
-    app.mount(
-        "/",
-        StaticFiles(directory=static_files_dir, html=True),
-        name="static",
-    )
+
+    # app.frontend() serves index.html for any unmatched GET, so an unknown
+    # /api/* GET would otherwise return the SPA shell instead of a JSON 404.
+    # Reserve /api GET/HEAD to force a 404 that the handler below shapes as JSON.
+    # Only GET/HEAD are claimed: wrong-method requests to real endpoints still
+    # get a native 405, and real API routes are registered earlier so they win.
+    @app.api_route("/api/{_path:path}", include_in_schema=False, methods=["GET", "HEAD"])
+    async def api_not_found(_path: str):
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    # FastAPI >=0.138 serves the frontend build as low-priority routes: path
+    # operations are matched first, static files only if nothing else matched.
+    # fallback="index.html" returns the SPA entrypoint for extensionless
+    # client-side routes; the handler below covers the rest (e.g. deep links
+    # whose last segment contains a dot).
+    app.frontend("/", directory=str(static_files_dir), fallback="index.html")
 
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):

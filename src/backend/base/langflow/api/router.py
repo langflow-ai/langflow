@@ -1,6 +1,9 @@
 # Router for base api
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from lfx.schema.workflow import WORKFLOW_EXECUTION_RESPONSES
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
+from lfx.workflow.host import WorkflowHost
+from lfx.workflow.router import create_workflow_router
 
 from langflow.api.v1 import (
     api_key_router,
@@ -39,8 +42,9 @@ from langflow.api.v1.voice_mode import router as voice_mode_router
 from langflow.api.v2 import files_router as files_router_v2
 from langflow.api.v2 import mcp_router as mcp_router_v2
 from langflow.api.v2 import registration_router as registration_router_v2
+from langflow.api.v2 import workflow_background_router as workflow_background_router_v2
 from langflow.api.v2 import workflow_public_router as workflow_public_router_v2
-from langflow.api.v2 import workflow_router as workflow_router_v2
+from langflow.api.v2.workflow_host import LangflowWorkflowHost
 
 router_v1 = APIRouter(
     prefix="/v1",
@@ -110,13 +114,19 @@ include_deployment_router(router_v1)
 
 # Agentic flow execution - lazy import to avoid circular dependency
 def _include_agentic_router():
+    from langflow.agentic.api.deps import require_agentic_experience
     from langflow.agentic.api.files_router import router as agentic_files_router
     from langflow.agentic.api.router import router as agentic_router
     from langflow.agentic.api.sessions_router import router as agentic_sessions_router
 
+    # SECURITY (Issue 15): gate the sandbox-management routers on agentic_experience. The
+    # code-exec endpoints inside agentic_router (/assist, /assist/stream, /execute) carry the same
+    # gate per-route (see agentic/api/router.py) so the read-only /agentic/check-config probe stays
+    # reachable for non-agentic deployments.
+    agentic_gate = [Depends(require_agentic_experience)]
     router_v1.include_router(agentic_router)
-    router_v1.include_router(agentic_files_router)
-    router_v1.include_router(agentic_sessions_router)
+    router_v1.include_router(agentic_files_router, dependencies=agentic_gate)
+    router_v1.include_router(agentic_sessions_router, dependencies=agentic_gate)
 
 
 _include_agentic_router()
@@ -124,7 +134,26 @@ _include_agentic_router()
 router_v2.include_router(files_router_v2)
 router_v2.include_router(mcp_router_v2)
 router_v2.include_router(registration_router_v2)
-router_v2.include_router(workflow_router_v2)
+
+# POST /api/v2/workflows runs through the shared lfx router bound to the
+# langflow host. ``supports_background=True`` lets the background-submit branch
+# dispatch to the host; ``auto_register_job_routes=False`` suppresses the lfx
+# generic GET-status/POST-stop routes so the langflow durable router below owns
+# them (one handler per method+path). ``developer_api_guard=False`` because the
+# authenticated langflow v2 router has never carried a developer-api gate; the
+# default-off setting would otherwise 403 every authenticated request.
+_workflow_host = LangflowWorkflowHost()
+assert isinstance(_workflow_host, WorkflowHost)  # noqa: S101
+router_v2.include_router(
+    create_workflow_router(
+        _workflow_host,
+        developer_api_guard=False,
+        auto_register_job_routes=False,
+        responses=WORKFLOW_EXECUTION_RESPONSES,
+    )
+)
+# The langflow-owned durable routes: GET status, POST /stop, GET /{job_id}/events.
+router_v2.include_router(workflow_background_router_v2)
 router_v2.include_router(workflow_public_router_v2)
 
 router = APIRouter(

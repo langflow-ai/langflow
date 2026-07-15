@@ -196,6 +196,12 @@ textarea[class^="ag-"]:focus {
   z-index: -1 !important;
 }
 
+/* A node awaiting human input paints above its neighbors (selected nodes sit at 1000),
+   so the inline decision card is never occluded by an overlapping node. */
+.react-flow__node:has([data-testid="human-input-node-badge"]) {
+  z-index: 1001 !important;
+}
+
 .card-shine-effect {
   --shine-deg: 135deg;
   position: relative;

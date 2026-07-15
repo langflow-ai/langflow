@@ -1,12 +1,13 @@
-import asyncio
 import json
-from collections import defaultdict
+from datetime import datetime, timezone
 from io import BytesIO
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
 from lfx.base.mcp.util import update_tools
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v2.files import (
@@ -19,15 +20,13 @@ from langflow.api.v2.files import (
 )
 from langflow.api.v2.schemas import MCPServerConfig
 from langflow.logging import logger
+from langflow.services.auth.mcp_encryption import decrypt_mcp_config, encrypt_mcp_config
+from langflow.services.database.models import MCPServer
 from langflow.services.deps import get_settings_service, get_shared_component_cache_service, get_storage_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(tags=["MCP"], prefix="/mcp")
-
-# Per-user locks to serialize update_server() calls and prevent lost updates
-# from the non-atomic read-modify-write cycle on the MCP config file.
-_update_server_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
 
 def is_mcp_servers_locked(settings: object) -> bool:
@@ -106,10 +105,43 @@ async def upload_server_config(
 async def get_server_list(
     current_user: CurrentActiveUser,
     session: DbSession,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],  # noqa: ARG001
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],  # noqa: ARG001
+):
+    """Return the user's MCP servers as ``{"mcpServers": {name: config}}``.
+
+    Backed by the ``mcp_server`` table (one row per server), replacing the per-user
+    JSON file. Secret-bearing values are decrypted on the way out so the response
+    stays a runnable ``mcpServers`` map. ``storage_service`` / ``settings_service``
+    are retained for signature compatibility with every caller.
+    """
+    # Order by created_at so the list is stable and preserves insertion order, matching
+    # the legacy file (a dict) that callers and the UI relied on (e.g. the starter
+    # project server stays first).
+    result = await session.exec(
+        select(MCPServer).where(MCPServer.user_id == current_user.id).order_by(MCPServer.created_at)
+    )
+    servers = {row.name: decrypt_mcp_config(row.config or {}) for row in result.all()}
+    return {"mcpServers": servers}
+
+
+async def _read_legacy_mcp_file(
+    current_user: CurrentActiveUser,
+    session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
+    *,
+    create_if_missing: bool = True,
 ):
-    # Backwards compatibilty with old format file name
+    """Read the legacy per-user ``_mcp_servers_<id>.json`` file from storage.
+
+    Preserved for the file→table backfill (and any future file-fallback path); this
+    is the pre-DB ``get_server_list`` body. Works against any storage backend (local
+    disk or S3) because it goes through the storage service. ``create_if_missing=False``
+    (used by the backfill) returns an empty config instead of writing a new empty file
+    for users who never configured MCP.
+    """
+    # Backwards compatibility with old format file name
     mcp_file = await get_mcp_file(current_user)
     old_format_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
     if old_format_config_file:
@@ -139,7 +171,9 @@ async def get_server_list(
             )
             return {"mcpServers": {}}
 
-        # No DB record and no storage file — genuinely first-time use. Create empty config.
+        # No DB record and no storage file — genuinely first-time use.
+        if not create_if_missing:
+            return {"mcpServers": {}}
         await upload_server_config(
             {"mcpServers": {}},
             current_user,
@@ -175,18 +209,21 @@ async def get_server(
     server_name: str,
     current_user: CurrentActiveUser,
     session: DbSession,
-    storage_service: Annotated[StorageService, Depends(get_storage_service)],
-    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],  # noqa: ARG001
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],  # noqa: ARG001
     server_list: dict | None = None,
 ):
-    """Get a specific server configuration."""
-    if server_list is None:
-        server_list = await get_server_list(current_user, session, storage_service, settings_service)
+    """Get a specific server's config (decrypted), or ``None`` if it doesn't exist."""
+    if server_list is not None:
+        return server_list["mcpServers"].get(server_name)
 
-    if server_name not in server_list["mcpServers"]:
+    result = await session.exec(
+        select(MCPServer).where(MCPServer.user_id == current_user.id, MCPServer.name == server_name)
+    )
+    row = result.first()
+    if row is None:
         return None
-
-    return server_list["mcpServers"][server_name]
+    return decrypt_mcp_config(row.config or {})
 
 
 # Define a Get servers endpoint
@@ -251,6 +288,7 @@ async def get_servers(
                 mcp_stdio_client=mcp_stdio_client,
                 mcp_streamable_http_client=mcp_streamable_http_client,
                 request_variables=request_variables,
+                current_user_id=current_user.id,
             )
             server_info["mode"] = mode.lower()
             server_info["toolsCount"] = len(tool_list)
@@ -320,6 +358,30 @@ async def get_server_endpoint(
     return await get_server(server_name, current_user, session, storage_service, settings_service)
 
 
+def _derive_transport(config: dict) -> str | None:
+    """Best-effort transport label stored alongside the row (informational)."""
+    if config.get("command"):
+        return "stdio"
+    return config.get("type") or ("streamable-http" if config.get("url") else None)
+
+
+def _clear_server_cache(server_name: str) -> None:
+    """Drop a server from the shared tool cache after it changes (best-effort).
+
+    Cache keys are ``{server_name}:{hash of headers+timeout}`` (see
+    ``MCPComponent._mcp_servers_cache_key``), so a bare-name delete misses the
+    hashed variants and leaves servers with custom headers/timeouts serving stale
+    config. Clear the bare name and every ``{server_name}:`` variant.
+    """
+    shared_component_cache_service = get_shared_component_cache_service()
+    servers = safe_cache_get(shared_component_cache_service, "servers", {})
+    if isinstance(servers, dict):
+        stale = [key for key in servers if key == server_name or key.startswith(f"{server_name}:")]
+        for key in stale:
+            del servers[key]
+        safe_cache_set(shared_component_cache_service, "servers", servers)
+
+
 async def update_server(
     server_name: str,
     server_config: dict,
@@ -332,47 +394,79 @@ async def update_server(
     delete: bool = False,
     merge_existing: bool = False,
 ):
-    async with _update_server_locks[str(current_user.id)]:
-        server_list = await get_server_list(current_user, session, storage_service, settings_service)
+    """Create, update, or delete one MCP server row for the user.
 
-        # Validate server name
-        if check_existing and server_name in server_list["mcpServers"]:
-            raise HTTPException(status_code=500, detail="Server already exists.")
+    A single-row upsert on ``(user_id, name)`` replaces the file's non-atomic
+    read-modify-write: concurrent edits to *different* servers touch different rows
+    and never contend, so no update is lost at any worker/replica count - without an
+    in-process lock. A concurrent create of the *same* name is caught by the unique
+    constraint and folded into an update.
+    """
+    result = await session.exec(
+        select(MCPServer).where(MCPServer.user_id == current_user.id, MCPServer.name == server_name)
+    )
+    existing = result.first()
 
-        # Handle the delete case
-        if delete:
-            if server_name in server_list["mcpServers"]:
-                del server_list["mcpServers"][server_name]
-            else:
-                raise HTTPException(status_code=500, detail="Server not found.")
-        elif merge_existing:
-            existing_config = server_list["mcpServers"].get(server_name, {})
-            server_list["mcpServers"][server_name] = {**existing_config, **server_config}
+    if delete:
+        if existing is None:
+            raise HTTPException(status_code=500, detail="Server not found.")
+        await session.delete(existing)
+        await session.commit()
+        _clear_server_cache(server_name)
+        return None
+
+    if check_existing and existing is not None:
+        raise HTTPException(status_code=500, detail="Server already exists.")
+
+    if merge_existing and existing is not None:
+        # PATCH semantics: shallow-merge the new (partial) config over the existing
+        # one at the plaintext level, then re-encrypt (mirrors the file store's
+        # {**existing, **new}).
+        new_config = {**decrypt_mcp_config(existing.config or {}), **server_config}
+    else:
+        new_config = server_config
+
+    encrypted_config = encrypt_mcp_config(new_config)
+    transport = _derive_transport(new_config)
+
+    if existing is None:
+        session.add(MCPServer(user_id=current_user.id, name=server_name, config=encrypted_config, transport=transport))
+    else:
+        existing.config = encrypted_config
+        existing.transport = transport
+        existing.version += 1
+        existing.updated_at = datetime.now(timezone.utc)
+        session.add(existing)
+
+    try:
+        await session.commit()
+    except IntegrityError:
+        # A concurrent request created the same (user, name) first (we came in with
+        # existing=None). Re-apply the create/merge rules against the winning row
+        # instead of overwriting it with our pre-race config.
+        await session.rollback()
+        result = await session.exec(
+            select(MCPServer).where(MCPServer.user_id == current_user.id, MCPServer.name == server_name)
+        )
+        existing = result.first()
+        if existing is None:
+            raise
+        if check_existing:
+            raise HTTPException(status_code=500, detail="Server already exists.") from None
+        if merge_existing:
+            merged = {**decrypt_mcp_config(existing.config or {}), **server_config}
+            existing.config = encrypt_mcp_config(merged)
+            existing.transport = _derive_transport(merged)
         else:
-            server_list["mcpServers"][server_name] = server_config
+            existing.config = encrypted_config
+            existing.transport = transport
+        existing.version += 1
+        existing.updated_at = datetime.now(timezone.utc)
+        session.add(existing)
+        await session.commit()
 
-        # Upload the updated server configuration
-        # (upload_user_file handles replacing the existing MCP file atomically)
-        await upload_server_config(
-            server_list, current_user, session, storage_service=storage_service, settings_service=settings_service
-        )
-
-        shared_component_cache_service = get_shared_component_cache_service()
-        # Clear the servers cache
-        servers = safe_cache_get(shared_component_cache_service, "servers", {})
-        if isinstance(servers, dict):
-            if server_name in servers:
-                del servers[server_name]
-            safe_cache_set(shared_component_cache_service, "servers", servers)
-
-        return await get_server(
-            server_name,
-            current_user,
-            session,
-            storage_service,
-            settings_service,
-            server_list=server_list,
-        )
+    _clear_server_cache(server_name)
+    return await get_server(server_name, current_user, session, storage_service, settings_service)
 
 
 @router.post("/servers/{server_name}")

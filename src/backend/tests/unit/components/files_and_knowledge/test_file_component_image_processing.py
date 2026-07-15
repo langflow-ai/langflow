@@ -48,9 +48,7 @@ class TestDoclingEmptyTextExtraction:
             "meta": {"file_path": str(test_file)},
         }
         mock_proc = MagicMock()
-        mock_proc.poll.return_value = 0
-        mock_proc.stdout.read.return_value = json.dumps(mock_result).encode("utf-8")
-        mock_proc.stderr.read.return_value = b""
+        mock_proc.communicate.return_value = (json.dumps(mock_result).encode("utf-8"), b"")
         mock_popen.return_value = mock_proc
 
         result = component._process_docling_in_subprocess(str(test_file))
@@ -89,9 +87,7 @@ class TestDoclingEmptyTextExtraction:
             "meta": {"file_path": str(test_image)},
         }
         mock_proc = MagicMock()
-        mock_proc.poll.return_value = 0
-        mock_proc.stdout.read.return_value = json.dumps(mock_result).encode("utf-8")
-        mock_proc.stderr.read.return_value = b""
+        mock_proc.communicate.return_value = (json.dumps(mock_result).encode("utf-8"), b"")
         mock_popen.return_value = mock_proc
 
         # Create BaseFile mock
@@ -155,9 +151,7 @@ class TestDoclingEmptyTextExtraction:
             "meta": {"file_path": str(test_image)},
         }
         mock_proc = MagicMock()
-        mock_proc.poll.return_value = 0
-        mock_proc.stdout.read.return_value = json.dumps(mock_result).encode("utf-8")
-        mock_proc.stderr.read.return_value = b""
+        mock_proc.communicate.return_value = (json.dumps(mock_result).encode("utf-8"), b"")
         mock_popen.return_value = mock_proc
 
         # This should NOT raise an error
@@ -207,9 +201,7 @@ class TestDoclingEmptyTextExtraction:
             "meta": {"file_path": str(test_image)},
         }
         mock_proc = MagicMock()
-        mock_proc.poll.return_value = 0
-        mock_proc.stdout.read.return_value = json.dumps(mock_result).encode("utf-8")
-        mock_proc.stderr.read.return_value = b""
+        mock_proc.communicate.return_value = (json.dumps(mock_result).encode("utf-8"), b"")
         mock_popen.return_value = mock_proc
 
         # This should NOT raise an error
@@ -248,9 +240,7 @@ class TestDoclingSubprocessErrors:
             "meta": {"file_path": str(test_file)},
         }
         mock_proc = MagicMock()
-        mock_proc.poll.return_value = 0
-        mock_proc.stdout.read.return_value = json.dumps(mock_result).encode("utf-8")
-        mock_proc.stderr.read.return_value = b""
+        mock_proc.communicate.return_value = (json.dumps(mock_result).encode("utf-8"), b"")
         mock_popen.return_value = mock_proc
 
         result = component._process_docling_in_subprocess(str(test_file))
@@ -279,9 +269,7 @@ class TestDoclingSubprocessErrors:
         component.ocr_engine = "easyocr"
 
         mock_proc = MagicMock()
-        mock_proc.poll.return_value = 0
-        mock_proc.stdout.read.return_value = b""  # No output
-        mock_proc.stderr.read.return_value = b"Segmentation fault"
+        mock_proc.communicate.return_value = (b"", b"Segmentation fault")
         mock_popen.return_value = mock_proc
 
         result = component._process_docling_in_subprocess(str(test_file))
@@ -310,9 +298,7 @@ class TestDoclingSubprocessErrors:
         component.ocr_engine = "easyocr"
 
         mock_proc = MagicMock()
-        mock_proc.poll.return_value = 0
-        mock_proc.stdout.read.return_value = b"not valid json {{{"
-        mock_proc.stderr.read.return_value = b""
+        mock_proc.communicate.return_value = (b"not valid json {{{", b"")
         mock_popen.return_value = mock_proc
 
         result = component._process_docling_in_subprocess(str(test_file))
@@ -722,9 +708,7 @@ class TestImageContentTypeValidation:
             "meta": {"file_path": str(mismatched_file)},
         }
         mock_proc = MagicMock()
-        mock_proc.poll.return_value = 0
-        mock_proc.stdout.read.return_value = json.dumps(mock_result).encode("utf-8")
-        mock_proc.stderr.read.return_value = b""
+        mock_proc.communicate.return_value = (json.dumps(mock_result).encode("utf-8"), b"")
         mock_popen.return_value = mock_proc
 
         from lfx.base.data.base_file import BaseFileComponent

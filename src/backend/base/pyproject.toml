@@ -18,7 +18,7 @@ maintainers = [
 
 dependencies = [
     "lfx~=1.11.0",
-    "fastapi>=0.135.0,<1.0.0",
+    "fastapi>=0.139.0,<1.0.0",
     "slowapi>=0.1.9,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
@@ -74,7 +74,7 @@ dependencies = [
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
     "pip>=26.0.0,<27.0.0",
-    "setuptools>=80.0.0,<81.0.0",
+    "setuptools>=83.0.0,<84.0.0",
     "nanoid>=2.0.0,<3.0.0",
     "filelock>=3.20.1,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",
@@ -108,11 +108,6 @@ dependencies = [
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
     "transformers>=5.6.0,<6.0.0",
-]
-
-[tool.uv]
-override-dependencies = [
-    "litellm>=1.85.1,<2.0.0"
 ]
 
 [dependency-groups]
@@ -180,6 +175,7 @@ Documentation = "https://docs.langflow.org"
 # Optional dependencies
 [project.optional-dependencies]
 audio = [
+    "openai>=1.68.2,<3.0.0",
     "webrtcvad>=2.0.10",
 ]
 
@@ -295,7 +291,9 @@ lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
 huggingface = ["huggingface-hub[inference]>=1.0.0,<2.0.0"]
-metaphor = ["metaphor-python==0.1.23"]
+# Backwards-compatible alias: the Exa Search component moved to the lfx-exa
+# bundle and now uses exa-py; metaphor-python is deprecated and unused.
+metaphor = ["exa-py>=1.14,<3"]
 metal = ["metal_sdk==2.5.1"]
 markup = ["MarkupSafe==3.0.2"]
 # Deliberately retained after the lfx-amazon graduation: boto3 also backs
@@ -306,7 +304,12 @@ numexpr = ["numexpr>=2.10.2"]
 qianfan = ["qianfan==0.3.5"]
 pgvector = ["pgvector>=0.4.2"]
 litellm = [
-    "litellm>=1.85.1,<2.0.0",
+    # litellm has no Python 3.14-compatible release: every version from 1.83.8
+    # onward declares Requires-Python <3.14, so nothing satisfying our >=1.85.1
+    # floor installs on 3.14 (the newest 3.14-installable litellm is 1.83.7).
+    # Gate it off on 3.14 so `pip install langflow` resolves there instead of
+    # dead-ending; drop the marker once upstream ships a 3.14-compatible litellm.
+    "litellm>=1.85.1,<2.0.0; python_version < '3.14'",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
     # [proxy] extra pins boto3==1.43.1, which conflicts with our aioboto3
@@ -318,7 +321,7 @@ zep = ["zep-python==2.0.2"]
 youtube = ["youtube-transcript-api>=1.0.0,<2.0.0"]
 markdown = ["Markdown>=3.8.0"]
 kubernetes = ["kubernetes==31.0.0"]
-json-repair = ["json_repair==0.30.3"]
+json-repair = ["json_repair>=0.60.1"]
 composio = [
     "composio==0.16.0",
     "composio-langchain==0.16.0"
@@ -361,7 +364,11 @@ langchain-unstructured = ["langchain-unstructured~=1.0.0"]
 langchain-mcp-adapters = ["langchain-mcp-adapters>=0.1.14,<0.2.0"]
 
 # Additional monitoring
-opik = ["opik>=2.0.0,<3.0.0"]
+# Gated off 3.14: opik depends on litellm unconditionally, and litellm has no
+# 3.14-compatible release (see the litellm extra above), so allowing it on 3.14
+# would drag in an uninstallable / sub-floor litellm. Re-enable once upstream
+# litellm supports 3.14.
+opik = ["opik>=2.0.0,<3.0.0; python_version < '3.14'"]
 traceloop = ["traceloop-sdk>=0.43.1,<1.0.0"]
 openlayer = ["openlayer>=0.9.0,<1.0.0"]
 
@@ -418,8 +425,8 @@ gassist = ["gassist>=0.0.1; sys_platform == 'win32'"]
 # SDKs for IBM watsonx Orchestrate deployment adapter.
 ibm-watsonx-clients = [
     "ibm-cloud-sdk-core~=3.24.4",
-    "ibm-watsonx-orchestrate-core~=2.8.0; python_version >= '3.11' and python_version < '3.14'",
-    "ibm-watsonx-orchestrate-clients~=2.8.0; python_version >= '3.11' and python_version < '3.14'",
+    "ibm-watsonx-orchestrate-core~=2.12.0; python_version >= '3.11'",
+    "ibm-watsonx-orchestrate-clients~=2.12.0; python_version >= '3.11'",
 ]
 
 complete = [
@@ -427,10 +434,11 @@ complete = [
     # langflow-base's OWN code imports -- service backends (cache, knowledge
     # base), the tracing/observability backends in langflow.services.tracing.*,
     # MCP, and deployment adapters. Provider *component* dependencies now live in
-    # the lfx-* bundles (installed via langflow's "lfx-bundles[all]" dependency),
-    # so they are intentionally NOT re-declared here -- doing so re-pulled large,
-    # already-bundled stacks (and torch) into every install. When adding a base
-    # extra, only list it here if langflow-base itself imports it.
+    # the lfx-* bundles (installed via langflow's "lfx-bundles[all-no-torch]"
+    # default plus explicit bundle deps), so they are intentionally NOT
+    # re-declared here -- doing so re-pulled large, already-bundled stacks (and
+    # torch) into every install. When adding a base extra, only list it here if
+    # langflow-base itself imports it.
 
     # Cache / state
     "langflow-base[redis]",
@@ -445,6 +453,11 @@ complete = [
     "langflow-base[opik]",
     "langflow-base[traceloop]",
     "langflow-base[openlayer]",
+    # Document processing / OCR: docling and easyocr are now OPT-IN -- both pull
+    # torch, which is no longer shipped by default. The File component's docling
+    # path degrades gracefully and is enabled with: pip install "langflow[docling]".
+    # Both extra definitions remain, so langflow-base[docling] / [easyocr] still
+    # install on demand.
     # MCP
     "langflow-base[mcp]",
     # Orchestration / deployment adapters
@@ -460,10 +473,7 @@ complete = [
     #   litellm -- langfuse logging via litellm.proxy.proxy_server (#12228);
     #              the lfx-bundles litellm component uses the langchain-openai
     #              client and does not import the litellm package.
-    #   docling -- the File component's optional docling path; this also gates
-    #              torch and is made opt-in by the separate torch change.
     "langflow-base[litellm]",
-    "langflow-base[docling]",
 ]
 
 all = [

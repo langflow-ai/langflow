@@ -708,6 +708,79 @@ def test_add_message_tool_use_emits_tool_call_lifecycle():
     }
 
 
+def test_add_message_flat_tool_use_emits_tool_call_lifecycle():
+    """The agent's flat content_blocks log carries tool_use at the TOP level.
+
+    The content-blocks-as-source-of-truth agent emits an interleaved flat log
+    (top-level TextContent + ToolContent, no wrapping "Agent Steps" group). The
+    translator must surface those top-level tool_use leaves as tool-call events,
+    not only ones nested inside a group's ``contents``.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate(
+        "add_message",
+        {
+            "id": "m1",
+            "text": "",
+            "content_blocks": [
+                {"type": "text", "contents": [], "text": "let me search"},
+                {
+                    "type": "tool_use",
+                    "contents": [],
+                    "name": "search",
+                    "tool_input": {"query": "weather"},
+                    "output": "sunny",
+                    "error": None,
+                },
+            ],
+        },
+    )
+
+    starts = [e for e in out if isinstance(e, ToolCallStartEvent)]
+    args = [e for e in out if isinstance(e, ToolCallArgsEvent)]
+    ends = [e for e in out if isinstance(e, ToolCallEndEvent)]
+    results = [e for e in out if isinstance(e, ToolCallResultEvent)]
+    assert len(starts) == 1
+    assert starts[0].tool_call_name == "search"
+    assert starts[0].parent_message_id == "m1"
+    assert len(args) == 1
+    assert "weather" in args[0].delta
+    assert len(ends) == 1
+    assert len(results) == 1
+    assert "sunny" in results[0].content
+
+
+def test_repeated_add_message_does_not_re_emit_flat_tool_call():
+    """A re-fired add_message for the same flat message must not double-emit.
+
+    ``add_message`` re-fires as the append-only content_blocks grow; the
+    top-level tool_use leaf keeps its index, so its tool-call id is stable and
+    must be emitted exactly once.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+    data = {
+        "id": "m1",
+        "text": "",
+        "content_blocks": [
+            {
+                "type": "tool_use",
+                "contents": [],
+                "name": "search",
+                "tool_input": {"q": "x"},
+                "output": "done",
+                "error": None,
+            }
+        ],
+    }
+    first = t.translate("add_message", data)
+    second = t.translate("add_message", data)
+    assert len([e for e in first if isinstance(e, ToolCallStartEvent)]) == 1
+    assert len([e for e in second if isinstance(e, ToolCallStartEvent)]) == 0
+
+
 def test_tool_use_error_is_reported_via_tool_call_result():
     t = AGUITranslator(run_id="r1", thread_id="t1")
     t.start()
@@ -982,3 +1055,24 @@ def test_full_sequence_ending_in_error_is_well_formed():
     _assert_well_formed(out)
     assert isinstance(out[-1], RunErrorEvent)
     assert "the agent crashed" in out[-1].message
+
+
+def test_user_add_message_emits_no_text_message():
+    """A user-sender add_message must emit no events (else AG-UI shows a stray empty bubble)."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("add_message", {"id": "u1", "text": "fetch google.com", "sender": "User"})
+
+    assert out == []
+
+
+def test_ai_add_message_still_emits_text_message():
+    """Regression guard: the user-sender skip must not suppress assistant messages."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("add_message", {"id": "a1", "text": "done", "sender": "Machine"})
+
+    assert any(isinstance(e, TextMessageStartEvent) for e in out)
+    assert any(isinstance(e, TextMessageContentEvent) and e.delta == "done" for e in out)

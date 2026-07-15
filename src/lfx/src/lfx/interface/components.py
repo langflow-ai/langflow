@@ -240,11 +240,11 @@ def _save_generated_index(modules_dict: dict) -> None:
         # Get version
         from importlib.metadata import version
 
-        langflow_version = version("langflow")
+        lfx_version = version("lfx")
 
         # Build index structure
         index = {
-            "version": langflow_version,
+            "version": lfx_version,
             "metadata": {
                 "num_modules": num_modules,
                 "num_components": num_components,
@@ -653,6 +653,12 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     """
     try:
         module = importlib.import_module(modname)
+    except ModuleNotFoundError as e:
+        # Expected when a component's optional dependency isn't installed (e.g. litellm and
+        # toolguard are excluded on Python 3.14 images), so a one-line warning is enough --
+        # a full traceback per affected module would flood startup logs for a normal condition.
+        logger.warning(f"Skipping component module {modname}: missing optional dependency ({e.name or e})")
+        return None
     except Exception as e:  # noqa: BLE001
         # Catch all exceptions during import to prevent component failures from crashing startup
         # TODO: Surface these errors to the UI in a friendly manner

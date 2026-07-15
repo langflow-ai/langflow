@@ -147,6 +147,15 @@ for file in "${JS_FILES[@]}"; do
   fi
 
   if [[ "$MODE" == "execute" ]]; then
+    # Streaming / long-running examples: skip in local harness (hang, flaky, or need extra setup).
+    case "$(basename "$file")" in
+      example-stream-agui-request.js|example-stream-agui-parse.js|example-stream-langflow-request.js)
+        echo "SKIP  $rel (streaming/long-running; not run in local harness)"
+        ((SKIP+=1))
+        continue
+        ;;
+    esac
+
     if [[ -z "${LANGFLOW_API_KEY:-}" || ( -z "${LANGFLOW_URL:-}" && -z "${LANGFLOW_SERVER_URL:-}" ) ]]; then
       echo "SKIP  $rel (set LANGFLOW_API_KEY and LANGFLOW_URL or LANGFLOW_SERVER_URL to execute)"
       ((SKIP+=1))

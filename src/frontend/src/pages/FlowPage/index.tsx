@@ -9,7 +9,7 @@ import {
   SimpleSidebar,
   SimpleSidebarProvider,
 } from "@/components/ui/simple-sidebar";
-import { PermissionsProvider } from "@/contexts/permissionsContext";
+import { useRestoreCanvasHitl } from "@/controllers/API/agui/use-restore-canvas-hitl";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
@@ -98,6 +98,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const flows = useFlowsManagerStore((state) => state.flows);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+
+  // Restore the Human Input awaiting-input badge after a reload (LE-1603 reconnect).
+  useRestoreCanvasHitl(currentFlowId);
 
   const updatedAt = currentSavedFlow?.updated_at;
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
@@ -347,20 +350,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                       )}
                     >
                       <div className="h-full w-full">
-                        <PermissionsProvider
-                          resourceType="flow"
-                          resourceIds={currentFlow?.id ? [currentFlow.id] : []}
-                          domain={
-                            currentFlow?.folder_id
-                              ? `project:${currentFlow.folder_id}`
-                              : undefined
-                          }
-                        >
-                          <FlowPageMainContent
-                            flowId={id}
-                            setIsLoading={setIsLoading}
-                          />
-                        </PermissionsProvider>
+                        <FlowPageMainContent
+                          flowId={id}
+                          setIsLoading={setIsLoading}
+                        />
                       </div>
                     </main>
                   </FlowSearchProvider>
