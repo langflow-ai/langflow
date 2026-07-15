@@ -39,6 +39,7 @@ import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useAuthStore from "@/stores/authStore";
 import type { FlowType } from "@/types/flow";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import type { FolderType } from "../../../../../pages/MainPage/entities";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
@@ -224,6 +225,12 @@ const SideBarFoldersButtonsComponent = ({
         onSuccess: (folder) => {
           track("Create New Project");
           handleChangeFolder!(folder.id);
+        },
+        onError: (error) => {
+          setErrorData({
+            title: t("sidebar.projectCreateError"),
+            list: extractApiErrorMessages(error),
+          });
         },
       },
     );

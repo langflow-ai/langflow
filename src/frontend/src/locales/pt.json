@@ -1817,6 +1817,7 @@
   "sidebar.newCustomComponent": "Novo componente personalizado",
   "sidebar.noComponentsFound": "Não foram encontrados componentes.",
   "sidebar.projectUploadError": "Ocorreu um erro ao enviar seu projeto. Tente arrastá-lo para dentro de um projeto existente.",
+  "sidebar.projectCreateError": "Não foi possível criar o projeto.",
   "sidebar.projectUploadSuccess": "O projeto foi enviado com sucesso.",
   "sidebar.projects": "Projetos",
   "sidebar.removeFilter": "Remover filtro",
