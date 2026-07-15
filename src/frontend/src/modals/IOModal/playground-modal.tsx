@@ -402,10 +402,12 @@ export default function IOModal({
                       variant="ghost"
                       className="flex h-8 w-8 items-center justify-center !p-0"
                       onClick={() => setSidebarOpen(!sidebarOpen)}
+                      aria-label={t("modal.io.hideSidebar")}
                     >
                       <IconComponent
                         name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
                         className="h-[18px] w-[18px] text-ring"
+                        aria-hidden="true"
                       />
                     </Button>
                   </ShadTooltip>
@@ -433,7 +435,7 @@ export default function IOModal({
                       variant="primary"
                       className="w-full !rounded-xl shadow-lg"
                     >
-                      <LangflowLogoColor />
+                      <LangflowLogoColor aria-hidden="true" />
                       <div className="text-sm">
                         {t("modal.io.builtWithLangflow")}
                       </div>
@@ -453,8 +455,12 @@ export default function IOModal({
                     variant="primary"
                     className="h-12 w-12 !rounded-xl !p-4 shadow-lg"
                     onClick={LangflowButtonClick}
+                    aria-label={t("modal.io.builtWithLangflow")}
                   >
-                    <LangflowLogoColor className="h-[18px] w-[18px] scale-150" />
+                    <LangflowLogoColor
+                      className="h-[18px] w-[18px] scale-150"
+                      aria-hidden="true"
+                    />
                   </Button>
                 </ShadTooltip>
               </div>

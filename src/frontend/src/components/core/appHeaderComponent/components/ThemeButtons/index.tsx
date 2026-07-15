@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import useTheme from "@/customization/hooks/use-custom-theme";
 
 export const ThemeButtons = () => {
+  const { t } = useTranslation();
   const { systemTheme, dark, setThemePreference } = useTheme();
   const [selectedTheme, setSelectedTheme] = useState(
     systemTheme ? "system" : dark ? "dark" : "light",
@@ -59,8 +61,14 @@ export const ThemeButtons = () => {
         onClick={() => handleThemeChange("light")}
         data-testid="menu_light_button"
         id="menu_light_button"
+        aria-label={t("theme.light")}
       >
-        <ForwardedIconComponent strokeWidth={2} name="Sun" className="w-4" />
+        <ForwardedIconComponent
+          strokeWidth={2}
+          name="Sun"
+          className="w-4"
+          aria-hidden="true"
+        />
       </Button>
 
       {/* Dark Theme Button */}
@@ -74,8 +82,14 @@ export const ThemeButtons = () => {
         onClick={() => handleThemeChange("dark")}
         data-testid="menu_dark_button"
         id="menu_dark_button"
+        aria-label={t("theme.dark")}
       >
-        <ForwardedIconComponent strokeWidth={2} name="Moon" className="w-4" />
+        <ForwardedIconComponent
+          strokeWidth={2}
+          name="Moon"
+          className="w-4"
+          aria-hidden="true"
+        />
       </Button>
 
       {/* System Theme Button */}
@@ -89,11 +103,13 @@ export const ThemeButtons = () => {
         onClick={() => handleThemeChange("system")}
         data-testid="menu_system_button"
         id="menu_system_button"
+        aria-label={t("theme.system")}
       >
         <ForwardedIconComponent
           name="Monitor"
           className="w-4"
           strokeWidth={2}
+          aria-hidden="true"
         />
       </Button>
     </div>

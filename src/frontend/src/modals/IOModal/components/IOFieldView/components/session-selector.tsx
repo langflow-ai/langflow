@@ -152,20 +152,31 @@ export default function SessionSelector({
                 onChange={handleInputChange}
                 onBlur={handleOnBlur}
                 autoFocus
+                aria-label={t("chat.renameSessionLabel")}
                 className="h-6 flex-grow px-1 py-0"
               />
               <button
                 onClick={handleCancel}
+                aria-label={t("chat.cancelRename")}
                 className="hover:text-status-red-hover ml-2 text-status-red"
               >
-                <IconComponent name="X" className="h-4 w-4" />
+                <IconComponent
+                  name="X"
+                  className="h-4 w-4"
+                  aria-hidden="true"
+                />
               </button>
               <button
                 onClick={handleConfirm}
                 data-confirm="true"
+                aria-label={t("chat.confirmRename")}
                 className="ml-2 text-accent-emerald-foreground hover:text-accent-emerald-foreground/80"
               >
-                <IconComponent name="Check" className="h-4 w-4" />
+                <IconComponent
+                  name="Check"
+                  className="h-4 w-4"
+                  aria-hidden="true"
+                />
               </button>
             </div>
           ) : (
@@ -211,12 +222,17 @@ export default function SessionSelector({
                 inputRef.current?.focus();
               }}
               data-confirm="true"
+              aria-label={t("chat.options")}
               className={cn(
                 "h-8 w-fit border-none bg-transparent p-2 focus:ring-0",
                 isVisible ? "visible" : "invisible group-hover:visible",
               )}
             >
-              <IconComponent name="MoreHorizontal" className="h-4 w-4" />
+              <IconComponent
+                name="MoreHorizontal"
+                className="h-4 w-4"
+                aria-hidden="true"
+              />
             </SelectTrigger>
           </ShadTooltip>
           <SelectContent side="right" align="start" className="p-0">
