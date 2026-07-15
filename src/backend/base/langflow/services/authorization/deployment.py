@@ -48,8 +48,8 @@ async def resolve_project_id_for_deployment_create(
     if requested_project_id is None:
         default_project = await get_or_create_default_folder(session, current_user.id)
         project_id = default_project.id
-        project_user_id = current_user.id
-        workspace_id = None
+        project_user_id = default_project.user_id
+        workspace_id = default_project.workspace_id
     else:
         authz = get_authorization_service()
         share_aware = await authz.supports_cross_user_fetch() and await authz.is_enabled()

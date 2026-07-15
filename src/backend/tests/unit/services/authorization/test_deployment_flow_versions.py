@@ -75,6 +75,41 @@ def _install_deployment_authz(monkeypatch, service: _DeploymentPolicyAuthz) -> N
 
 
 @pytest.mark.anyio
+async def test_default_project_resolution_uses_real_owner_and_workspace(monkeypatch, fake_user):
+    """The default project follows the same canonical domain path as an explicit project."""
+    from langflow.services.authorization import deployment as deployment_authz
+    from langflow.services.authorization.deployment import resolve_project_id_for_deployment_create
+
+    project = SimpleNamespace(id=uuid4(), user_id=fake_user.id, workspace_id=uuid4())
+    permission_calls: dict[str, dict] = {}
+
+    async def _default_project(_session, _user_id):
+        return project
+
+    async def _project_permission(_user, _action, **kwargs):
+        permission_calls["project"] = kwargs
+
+    async def _deployment_permission(_user, _action, **kwargs):
+        permission_calls["deployment"] = kwargs
+
+    monkeypatch.setattr(deployment_authz, "get_or_create_default_folder", _default_project)
+    monkeypatch.setattr(deployment_authz, "ensure_project_permission", _project_permission)
+    monkeypatch.setattr(deployment_authz, "ensure_deployment_permission", _deployment_permission)
+
+    resolved = await resolve_project_id_for_deployment_create(
+        session=object(),  # type: ignore[arg-type]
+        current_user=fake_user,
+        requested_project_id=None,
+    )
+
+    assert resolved == project.id
+    assert permission_calls["project"]["project_user_id"] == project.user_id
+    assert permission_calls["project"]["workspace_id"] == project.workspace_id
+    assert permission_calls["deployment"]["project_id"] == project.id
+    assert permission_calls["deployment"]["workspace_id"] == project.workspace_id
+
+
+@pytest.mark.anyio
 async def test_shared_project_resolution_uses_real_owner_and_domain(monkeypatch, async_session):
     """An admin can target a foreign project without losing its authorization context."""
     from langflow.services.authorization.deployment import resolve_project_id_for_deployment_create
