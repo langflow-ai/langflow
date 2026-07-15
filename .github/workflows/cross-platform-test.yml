@@ -199,9 +199,11 @@ jobs:
     steps:
       - name: Determine install method
         id: install-method
+        env:
+          LANGFLOW_VERSION: ${{ inputs.langflow-version }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ -n "${{ inputs.langflow-version }}" ]; then
+            if [ -n "$LANGFLOW_VERSION" ]; then
               echo "method=pypi" >> $GITHUB_OUTPUT
             else
               echo "method=wheel" >> $GITHUB_OUTPUT
@@ -343,9 +345,11 @@ jobs:
       # PyPI installation steps
       - name: Install langflow from PyPI (Windows)
         if: steps.install-method.outputs.method == 'pypi' && matrix.os == 'windows'
+        env:
+          LANGFLOW_VERSION: ${{ inputs.langflow-version }}
         run: |
-          if [ -n "${{ inputs.langflow-version }}" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe langflow==${{ inputs.langflow-version }}
+          if [ -n "$LANGFLOW_VERSION" ]; then
+            uv pip install --python ./test-env/Scripts/python.exe "langflow==$LANGFLOW_VERSION"
           else
             uv pip install --python ./test-env/Scripts/python.exe langflow
           fi
@@ -353,9 +357,11 @@ jobs:
 
       - name: Install langflow from PyPI (Unix)
         if: steps.install-method.outputs.method == 'pypi' && matrix.os != 'windows'
+        env:
+          LANGFLOW_VERSION: ${{ inputs.langflow-version }}
         run: |
-          if [ -n "${{ inputs.langflow-version }}" ]; then
-            uv pip install --python ./test-env/bin/python langflow==${{ inputs.langflow-version }}
+          if [ -n "$LANGFLOW_VERSION" ]; then
+            uv pip install --python ./test-env/bin/python "langflow==$LANGFLOW_VERSION"
           else
             uv pip install --python ./test-env/bin/python langflow
           fi
@@ -495,9 +501,11 @@ jobs:
     steps:
       - name: Determine install method
         id: install-method
+        env:
+          LANGFLOW_VERSION: ${{ inputs.langflow-version }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ -n "${{ inputs.langflow-version }}" ]; then
+            if [ -n "$LANGFLOW_VERSION" ]; then
               echo "method=pypi" >> $GITHUB_OUTPUT
             else
               echo "method=wheel" >> $GITHUB_OUTPUT
@@ -771,9 +779,11 @@ jobs:
       # PyPI installation steps
       - name: Install langflow from PyPI (Windows)
         if: steps.install-method.outputs.method == 'pypi' && matrix.os == 'windows'
+        env:
+          LANGFLOW_VERSION: ${{ inputs.langflow-version }}
         run: |
-          if [ -n "${{ inputs.langflow-version }}" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe langflow==${{ inputs.langflow-version }}
+          if [ -n "$LANGFLOW_VERSION" ]; then
+            uv pip install --python ./test-env/Scripts/python.exe "langflow==$LANGFLOW_VERSION"
           else
             uv pip install --python ./test-env/Scripts/python.exe langflow
           fi
@@ -781,9 +791,11 @@ jobs:
 
       - name: Install langflow from PyPI (Unix)
         if: steps.install-method.outputs.method == 'pypi' && matrix.os != 'windows'
+        env:
+          LANGFLOW_VERSION: ${{ inputs.langflow-version }}
         run: |
-          if [ -n "${{ inputs.langflow-version }}" ]; then
-            uv pip install --python ./test-env/bin/python langflow==${{ inputs.langflow-version }}
+          if [ -n "$LANGFLOW_VERSION" ]; then
+            uv pip install --python ./test-env/bin/python "langflow==$LANGFLOW_VERSION"
           else
             uv pip install --python ./test-env/bin/python langflow
           fi
@@ -896,6 +908,8 @@ jobs:
     if: always()
     steps:
       - name: Check test results
+        env:
+          LANGFLOW_VERSION: ${{ inputs.langflow-version }}
         run: |
           stable_result="${{ needs.test-installation-stable.result }}"
           experimental_result="${{ needs.test-installation-experimental.result }}"
@@ -907,7 +921,7 @@ jobs:
           if [ "$stable_result" = "success" ]; then
             if [ "$experimental_result" = "success" ]; then
               if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-                if [ -n "${{ inputs.langflow-version }}" ]; then
+                if [ -n "$LANGFLOW_VERSION" ]; then
                   echo "✅ All PyPI installation tests passed (including Python 3.14)"
                 else
                   echo "✅ All source build and installation tests passed (including Python 3.14)"
@@ -917,7 +931,7 @@ jobs:
               fi
             else
               if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-                if [ -n "${{ inputs.langflow-version }}" ]; then
+                if [ -n "$LANGFLOW_VERSION" ]; then
                   echo "✅ PyPI installation tests passed (Python 3.14 experimental failures are acceptable)"
                 else
                   echo "✅ Source build and installation tests passed (Python 3.14 experimental failures are acceptable)"
