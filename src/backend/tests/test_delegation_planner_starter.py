@@ -32,9 +32,7 @@ def test_delegation_planner_has_minimal_review_flow():
     assert sorted(node_types) == ["Agent", "Agent", "ChatInput", "ChatOutput", "note"]
 
     node_types_by_id = {node["id"]: node["data"]["type"] for node in nodes}
-    connection_types = {
-        (node_types_by_id[edge["source"]], node_types_by_id[edge["target"]]) for edge in edges
-    }
+    connection_types = {(node_types_by_id[edge["source"]], node_types_by_id[edge["target"]]) for edge in edges}
     assert connection_types == {
         ("ChatInput", "Agent"),
         ("Agent", "Agent"),
@@ -53,8 +51,7 @@ def test_delegation_planner_keeps_plain_language_boundaries():
     reviewer_data = next(
         agent
         for agent in agents
-        if "planning assistance, not a safety guarantee"
-        in agent["node"]["template"]["system_prompt"]["value"]
+        if "planning assistance, not a safety guarantee" in agent["node"]["template"]["system_prompt"]["value"]
     )
     planner = planner_data["node"]["template"]
     reviewer = reviewer_data["node"]["template"]
