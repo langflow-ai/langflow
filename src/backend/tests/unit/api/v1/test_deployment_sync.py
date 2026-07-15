@@ -374,7 +374,8 @@ class TestListDeploymentsSynced:
         accepted, total, provider_data_by_resource_key = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=_NoSnapshotBindingMapper(),
-            user_id=uuid4(),
+            user_id=(_uid := uuid4()),
+            row_owner_id=_uid,
             provider_id=uuid4(),
             db=db,
             page=1,
@@ -429,6 +430,7 @@ class TestListDeploymentsSynced:
             deployment_adapter=AsyncMock(),
             deployment_mapper=_NoSnapshotBindingMapper(),
             user_id=uid,
+            row_owner_id=uid,
             provider_id=uuid4(),
             db=db,
             page=1,
@@ -495,7 +497,8 @@ class TestListDeploymentsSynced:
         accepted, total, provider_data_by_resource_key = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=_ProviderDataMapper(),
-            user_id=uuid4(),
+            user_id=(_uid := uuid4()),
+            row_owner_id=_uid,
             provider_id=uuid4(),
             db=db,
             page=1,
@@ -553,7 +556,8 @@ class TestListDeploymentsSynced:
         accepted, total, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=_MetadataMapper(),
-            user_id=uuid4(),
+            user_id=(_uid := uuid4()),
+            row_owner_id=_uid,
             provider_id=uuid4(),
             db=db,
             page=1,
@@ -583,7 +587,8 @@ class TestListDeploymentsSynced:
         accepted, total, provider_data_by_resource_key = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=BaseDeploymentMapper(),
-            user_id=uuid4(),
+            user_id=(_uid := uuid4()),
+            row_owner_id=_uid,
             provider_id=uuid4(),
             db=AsyncMock(),
             page=1,
@@ -634,7 +639,8 @@ class TestListDeploymentsSynced:
         accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=_NoSnapshotBindingMapper(),
-            user_id=uuid4(),
+            user_id=(_uid := uuid4()),
+            row_owner_id=_uid,
             provider_id=uuid4(),
             db=db,
             page=1,
@@ -688,7 +694,8 @@ class TestListDeploymentsSynced:
         accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=_NoSnapshotBindingMapper(),
-            user_id=uuid4(),
+            user_id=(_uid := uuid4()),
+            row_owner_id=_uid,
             provider_id=uuid4(),
             db=db,
             page=1,
@@ -718,7 +725,8 @@ class TestListDeploymentsSynced:
         await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=BaseDeploymentMapper(),
-            user_id=uuid4(),
+            user_id=(_uid := uuid4()),
+            row_owner_id=_uid,
             provider_id=uuid4(),
             db=AsyncMock(),
             page=2,
@@ -747,7 +755,8 @@ class TestListDeploymentsSynced:
         accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=_NoSnapshotBindingMapper(),
-            user_id=uuid4(),
+            user_id=(_uid := uuid4()),
+            row_owner_id=_uid,
             provider_id=uuid4(),
             db=AsyncMock(),
             page=1,
@@ -774,7 +783,8 @@ class TestListDeploymentsSynced:
         await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=BaseDeploymentMapper(),
-            user_id=uuid4(),
+            user_id=(_uid := uuid4()),
+            row_owner_id=_uid,
             provider_id=uuid4(),
             db=AsyncMock(),
             page=1,
@@ -801,7 +811,8 @@ class TestListDeploymentsSynced:
         await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=BaseDeploymentMapper(),
-            user_id=uuid4(),
+            user_id=(_uid := uuid4()),
+            row_owner_id=_uid,
             provider_id=uuid4(),
             db=AsyncMock(),
             page=1,
@@ -2158,7 +2169,8 @@ class TestListDeploymentsSyncedBindingPhase:
         accepted, _, provider_data_by_resource_key = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
-            user_id=uuid4(),
+            user_id=(_uid := uuid4()),
+            row_owner_id=_uid,
             provider_id=uuid4(),
             db=db,
             page=1,
@@ -2212,7 +2224,8 @@ class TestListDeploymentsSyncedBindingPhase:
         accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
-            user_id=uuid4(),
+            user_id=(_uid := uuid4()),
+            row_owner_id=_uid,
             provider_id=provider_id,
             db=db,
             page=1,
@@ -2263,7 +2276,8 @@ class TestListDeploymentsSyncedBindingPhase:
         accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
-            user_id=uuid4(),
+            user_id=(_uid := uuid4()),
+            row_owner_id=_uid,
             provider_id=uuid4(),
             db=db,
             page=1,
@@ -2312,7 +2326,8 @@ class TestListDeploymentsSyncedBindingPhase:
         accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
-            user_id=uuid4(),
+            user_id=(_uid := uuid4()),
+            row_owner_id=_uid,
             provider_id=uuid4(),
             db=db,
             page=1,
@@ -2741,3 +2756,62 @@ class TestFlowVersionDeploymentAttachmentCrud:
         assert "join flow_version" in statement_text
         assert "join flow" in statement_text
         assert "join deployment" in statement_text
+
+
+# ---------------------------------------------------------------------------
+# flow_ids_for_version_ids
+# ---------------------------------------------------------------------------
+
+
+class TestFlowIdsForVersionIds:
+    @pytest.mark.asyncio
+    async def test_empty_input_returns_empty(self):
+        from langflow.api.v1.mappers.deployments.helpers import flow_ids_for_version_ids
+
+        assert (
+            await flow_ids_for_version_ids(
+                flow_version_ids=[],
+                owner_id=uuid4(),
+                db=AsyncMock(),
+            )
+            == []
+        )
+
+    @pytest.mark.asyncio
+    async def test_partial_match_raises_404(self):
+        """Missing versions must fail on matched count, not on an empty distinct set."""
+        from langflow.api.v1.mappers.deployments.helpers import flow_ids_for_version_ids
+
+        flow_a = uuid4()
+        db = AsyncMock()
+        result = MagicMock()
+        result.all.return_value = [flow_a]  # one row for two requested versions
+        db.exec = AsyncMock(return_value=result)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await flow_ids_for_version_ids(
+                flow_version_ids=[uuid4(), uuid4()],
+                owner_id=uuid4(),
+                db=db,
+            )
+
+        assert exc_info.value.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_shared_flow_dedupes_returned_ids(self):
+        from langflow.api.v1.mappers.deployments.helpers import flow_ids_for_version_ids
+
+        flow_a = uuid4()
+        db = AsyncMock()
+        result = MagicMock()
+        # Two versions of the same flow → two match rows, one returned id.
+        result.all.return_value = [flow_a, flow_a]
+        db.exec = AsyncMock(return_value=result)
+
+        flow_ids = await flow_ids_for_version_ids(
+            flow_version_ids=[uuid4(), uuid4()],
+            owner_id=uuid4(),
+            db=db,
+        )
+
+        assert flow_ids == [flow_a]

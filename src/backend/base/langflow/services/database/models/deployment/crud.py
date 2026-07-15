@@ -26,6 +26,39 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
+class UnconfirmedDeleteRowcount:
+    """Sentinel returned when a DELETE's affected-row count cannot be confirmed.
+
+    Identity-compare with ``is UNCONFIRMED_DELETE_ROWCOUNT``. Distinct from
+    ``0`` (driver reported that zero rows matched).
+
+    Emitted when ``result.rowcount`` is not a non-negative ``int``:
+
+    * ``-1`` — PEP 249 / SQLAlchemy signal that rowcount could not be
+      determined (e.g. some RETURNING / executemany shapes).
+    * ``None`` — same undetermined-rowcount meaning (PEP 249 also allows
+      ``None`` instead of ``-1``). Also seen from test doubles that leave the
+      attribute unset. SQLAlchemy's ``CursorResult.rowcount`` is typed as
+      ``int`` and documents ``-1``.
+    """
+
+
+UNCONFIRMED_DELETE_ROWCOUNT = UnconfirmedDeleteRowcount()
+
+
+async def _interpret_delete_rowcount(delete_rowcount: object, *, context: str) -> int | UnconfirmedDeleteRowcount:
+    """Return a confirmed non-negative rowcount, or ``UNCONFIRMED_DELETE_ROWCOUNT``."""
+    if not isinstance(delete_rowcount, int) or delete_rowcount < 0:
+        await logger.aerror(
+            "DELETE rowcount unconfirmed (%r, %s) — expected a non-negative int; "
+            "PEP 249 uses -1 (or None) when rowcount cannot be determined",
+            delete_rowcount,
+            context,
+        )
+        return UNCONFIRMED_DELETE_ROWCOUNT
+    return delete_rowcount
+
+
 # Preserves the concrete statement type (scalar count select vs. multi-column
 # page select) through the authz scoping helper below.
 StmtT = TypeVar("StmtT", bound=Select[Any])
@@ -322,28 +355,34 @@ async def update_deployment_metadata_batch(
     (await db.exec(stmt)).all()
 
 
-def _scope_to_owner_or_allowed(stmt: StmtT, *, user_id: UUID, allowed_ids: list[UUID] | None) -> StmtT:
+async def _scope_to_owner_or_allowed(stmt: StmtT, *, user_id: UUID, allowed_ids: list[UUID] | None) -> StmtT:
     """Scope a deployment query to owner rows, optionally widened by ``allowed_ids``.
 
-    ``allowed_ids is None`` (OSS default) → owner-only (``user_id == user_id``),
-    byte-for-byte the prior behavior. A list → the union of owner rows and
-    ``allowed_ids`` (deployment ids a registered authorization plugin reports
-    the caller may read). Centralized so the page query and its count apply the
-    identical predicate — a drift would make pagination totals disagree with the
-    rows returned.
+    ``allowed_ids`` meanings are distinct — do not treat ``None`` and ``[]`` as
+    interchangeable:
 
-    The list branch delegates to
-    :func:`langflow.services.authorization.restrict_to_owned_or_visible` so the
-    ``(owner ⊕ visible-ids)`` union lives in one place; the import is lazy to
-    match the rest of this module's authorization access and keep import order
-    cycle-free. The ``None`` branch stays here so the OSS default never emits a
-    degenerate ``IN ()`` term.
+    * ``None`` — no SQL prefilter (only from :func:`visible_id_prefilter` when it
+      declines / AUTHZ is off). Always owner-only here, **including** when
+      :func:`~langflow.services.authorization.guards.should_apply_owner_override`
+      is false. Callers that want "visible ids only / show nothing owned" under
+      a scoped API key must pass a concrete list (``[]`` for empty), not ``None``.
+    * A list — concrete prefilter; delegates to
+      :func:`langflow.services.authorization.apply_owned_or_visible_prefilter`,
+      which owns the owner-override vs visible-ids-only decision (``[]`` +
+      override off → no rows).
+
+    Centralized so the page query and its count apply the identical predicate —
+    a drift would make pagination totals disagree with the rows returned. The
+    import is lazy to match the rest of this module's authorization access and
+    keep import order cycle-free. The ``None`` branch stays here so the OSS
+    default never emits a degenerate ``IN ()`` term.
     """
     if allowed_ids is None:
         return stmt.where(Deployment.user_id == user_id)
-    from langflow.services.authorization.listing import restrict_to_owned_or_visible
 
-    return restrict_to_owned_or_visible(
+    from langflow.services.authorization.listing import apply_owned_or_visible_prefilter
+
+    return await apply_owned_or_visible_prefilter(
         stmt,
         id_column=Deployment.id,
         owner_clause=Deployment.user_id == user_id,
@@ -355,6 +394,7 @@ async def list_deployments_page(
     db: AsyncSession,
     *,
     user_id: UUID,
+    row_owner_id: UUID,
     deployment_provider_account_id: UUID,
     offset: int,
     limit: int,
@@ -368,11 +408,15 @@ async def list_deployments_page(
     pairs for attachments that matched the ``flow_version_ids`` filter (empty
     list when no filter is active).
 
-    ``allowed_ids`` is the DB-layer authorization prefilter. When ``None`` (OSS
-    default) the page is owner-scoped exactly as before. When a list, the page
-    is widened to the union of owner rows and ``allowed_ids`` (rows a registered
-    authorization plugin reports the caller may read) — see
-    ``langflow.services.authorization.restrict_to_owned_or_visible``.
+    ``allowed_ids`` is the DB-layer authorization prefilter (see
+    :func:`_scope_to_owner_or_allowed`). ``None`` and ``[]`` are not
+    interchangeable: ``None`` is "no prefilter → owner-scoped"; a list (including
+    empty) goes through
+    :func:`~langflow.services.authorization.apply_owned_or_visible_prefilter`.
+
+    ``user_id`` is the listing actor for the ownership half of ``allowed_ids``.
+    ``row_owner_id`` scopes attachment counts/filters (provider-account owner on
+    shared listing).
     """
     if offset < 0:
         msg = "offset must be greater than or equal to 0"
@@ -391,7 +435,7 @@ async def list_deployments_page(
             FlowVersion,
             FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
         )
-        .where(FlowVersionDeploymentAttachment.user_id == user_id)
+        .where(FlowVersionDeploymentAttachment.user_id == row_owner_id)
         .group_by(FlowVersionDeploymentAttachment.deployment_id)
         .subquery()
     )
@@ -403,14 +447,14 @@ async def list_deployments_page(
         .outerjoin(attachment_counts_subquery, attachment_counts_subquery.c.deployment_id == Deployment.id)
         .where(Deployment.deployment_provider_account_id == deployment_provider_account_id)
     )
-    stmt = _scope_to_owner_or_allowed(stmt, user_id=user_id, allowed_ids=allowed_ids)
+    stmt = await _scope_to_owner_or_allowed(stmt, user_id=user_id, allowed_ids=allowed_ids)
     if project_id is not None:
         stmt = stmt.where(Deployment.project_id == project_id)
     if flow_version_ids:
         matched_deployments_subquery = (
             select(FlowVersionDeploymentAttachment.deployment_id)
             .where(
-                FlowVersionDeploymentAttachment.user_id == user_id,
+                FlowVersionDeploymentAttachment.user_id == row_owner_id,
                 col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
             )
             .group_by(FlowVersionDeploymentAttachment.deployment_id)
@@ -434,7 +478,7 @@ async def list_deployments_page(
                 FlowVersionDeploymentAttachment.flow_version_id,
                 FlowVersionDeploymentAttachment.provider_snapshot_id,
             ).where(
-                FlowVersionDeploymentAttachment.user_id == user_id,
+                FlowVersionDeploymentAttachment.user_id == row_owner_id,
                 col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
                 col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
             )
@@ -539,6 +583,7 @@ async def count_deployments_by_provider(
     db: AsyncSession,
     *,
     user_id: UUID,
+    row_owner_id: UUID,
     deployment_provider_account_id: UUID,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
@@ -546,21 +591,21 @@ async def count_deployments_by_provider(
 ) -> int:
     """Count deployments for a provider account.
 
-    ``allowed_ids`` mirrors ``list_deployments_page``: ``None`` counts owner rows
-    only (OSS default); a list counts the owner ⊕ ``allowed_ids`` union so the
-    pagination total reflects the same authorization prefilter as the page.
+    ``allowed_ids`` mirrors ``list_deployments_page`` / ``_scope_to_owner_or_allowed``
+    so the pagination total reflects the same authorization prefilter as the page.
+    ``row_owner_id`` scopes attachment filters (same role as in ``list_deployments_page``).
     """
     stmt = select(func.count(Deployment.id)).where(
         Deployment.deployment_provider_account_id == deployment_provider_account_id,
     )
-    stmt = _scope_to_owner_or_allowed(stmt, user_id=user_id, allowed_ids=allowed_ids)
+    stmt = await _scope_to_owner_or_allowed(stmt, user_id=user_id, allowed_ids=allowed_ids)
     if project_id is not None:
         stmt = stmt.where(Deployment.project_id == project_id)
     if flow_version_ids:
         matched_deployments_subquery = (
             select(FlowVersionDeploymentAttachment.deployment_id)
             .where(
-                FlowVersionDeploymentAttachment.user_id == user_id,
+                FlowVersionDeploymentAttachment.user_id == row_owner_id,
                 col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
             )
             .group_by(FlowVersionDeploymentAttachment.deployment_id)
@@ -579,7 +624,7 @@ async def delete_deployment_by_resource_key(
     user_id: UUID,
     deployment_provider_account_id: UUID,
     resource_key: str,
-) -> int:
+) -> int | UnconfirmedDeleteRowcount:
     resource_key_s = resource_key.strip()
     # Delete attachment rows explicitly before deleting the deployment.
     # This keeps behavior correct even when DB-level FK cascades are disabled
@@ -607,13 +652,7 @@ async def delete_deployment_by_resource_key(
         Deployment.resource_key == resource_key_s,
     )
     result = await db.exec(stmt)
-    if result.rowcount is None:
-        await logger.aerror(
-            "DELETE rowcount was None for deployment resource_key=%r -- "
-            "database driver may not support rowcount for DELETE statements",
-            resource_key,
-        )
-    return int(result.rowcount or 0)
+    return await _interpret_delete_rowcount(result.rowcount, context=f"resource_key={resource_key_s!r}")
 
 
 async def delete_deployment_by_id(
@@ -621,7 +660,7 @@ async def delete_deployment_by_id(
     *,
     user_id: UUID,
     deployment_id: UUID | str,
-) -> int:
+) -> int | UnconfirmedDeleteRowcount:
     deployment_uuid = parse_uuid(deployment_id, field_name="deployment_id")
     # Delete attachment rows explicitly before deleting the deployment.
     # This keeps behavior correct even when DB-level FK cascades are disabled
@@ -638,13 +677,7 @@ async def delete_deployment_by_id(
         Deployment.id == deployment_uuid,
     )
     result = await db.exec(stmt)
-    if result.rowcount is None:
-        await logger.aerror(
-            "DELETE rowcount was None for deployment id=%s -- "
-            "database driver may not support rowcount for DELETE statements",
-            deployment_uuid,
-        )
-    return int(result.rowcount or 0)
+    return await _interpret_delete_rowcount(result.rowcount, context=f"deployment_id={deployment_uuid}")
 
 
 async def delete_deployments_by_ids(
@@ -652,7 +685,7 @@ async def delete_deployments_by_ids(
     *,
     user_id: UUID,
     deployment_ids: list[UUID],
-) -> int:
+) -> int | UnconfirmedDeleteRowcount:
     """Delete multiple deployments (and their attachments) in two batched statements."""
     if not deployment_ids:
         return 0
@@ -671,10 +704,4 @@ async def delete_deployments_by_ids(
         col(Deployment.id).in_(deployment_ids),
     )
     result = await db.exec(stmt)
-    if result.rowcount is None:
-        await logger.aerror(
-            "DELETE rowcount was None for deployments=%s -- "
-            "database driver may not support rowcount for DELETE statements",
-            deployment_ids,
-        )
-    return int(result.rowcount or 0)
+    return await _interpret_delete_rowcount(result.rowcount, context=f"deployment_ids={deployment_ids}")

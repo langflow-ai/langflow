@@ -12,6 +12,7 @@ from langflow.services.authorization.guards import (
     _api_key_scopes_require_plugin_enforcement,
     _auth_context,
     _coerce_action,
+    should_apply_owner_override,
 )
 from langflow.services.deps import get_authorization_service, get_settings_service
 
@@ -180,3 +181,26 @@ def restrict_to_owned_or_visible(
     only when that returned a concrete list (``None`` keeps today's behavior).
     """
     return stmt.where(or_(col(id_column).in_(list(visible_ids)), owner_clause))
+
+
+async def apply_owned_or_visible_prefilter(
+    stmt: StatementT,
+    *,
+    id_column: InstrumentedAttribute,
+    owner_clause: ColumnElement[bool],
+    visible_ids: Sequence[UUID],
+) -> StatementT:
+    """Apply a concrete visible-id prefilter, respecting owner override.
+
+    When :func:`should_apply_owner_override` is true, delegates to
+    :func:`restrict_to_owned_or_visible` (owner ⊕ ``visible_ids``). When override
+    is off, constrains to ``visible_ids`` alone.
+    """
+    if await should_apply_owner_override():
+        return restrict_to_owned_or_visible(
+            stmt,
+            id_column=id_column,
+            owner_clause=owner_clause,
+            visible_ids=visible_ids,
+        )
+    return stmt.where(col(id_column).in_(list(visible_ids)))

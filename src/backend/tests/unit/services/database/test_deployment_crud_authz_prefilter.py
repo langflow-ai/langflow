@@ -69,6 +69,7 @@ async def test_list_deployments_page_none_allowed_ids_is_owner_only(async_sessio
     rows = await list_deployments_page(
         async_session,
         user_id=owner.id,
+        row_owner_id=owner.id,
         deployment_provider_account_id=provider.id,
         offset=0,
         limit=20,
@@ -88,6 +89,7 @@ async def test_list_deployments_page_allowed_ids_unions_owner_and_visible(async_
     rows = await list_deployments_page(
         async_session,
         user_id=owner.id,
+        row_owner_id=owner.id,
         deployment_provider_account_id=provider.id,
         offset=0,
         limit=20,
@@ -98,6 +100,36 @@ async def test_list_deployments_page_allowed_ids_unions_owner_and_visible(async_
     # Owner row is always present (owner-override); the explicitly-visible
     # foreign row is added; the non-listed foreign row stays hidden.
     assert returned == {owned.id, foreign_visible.id}
+    assert foreign_hidden.id not in returned
+
+
+@pytest.mark.asyncio
+async def test_list_deployments_page_allowed_ids_skips_owner_when_override_disabled(
+    async_session: AsyncSession, monkeypatch
+):
+    """Scoped API keys: concrete allowed_ids must not auto-include owned rows."""
+    from langflow.services.authorization import listing as authz_listing
+
+    async def _override_off() -> bool:
+        return False
+
+    monkeypatch.setattr(authz_listing, "should_apply_owner_override", _override_off)
+
+    owner, provider, owned, foreign_visible, foreign_hidden = await _seed(async_session)
+
+    rows = await list_deployments_page(
+        async_session,
+        user_id=owner.id,
+        row_owner_id=owner.id,
+        deployment_provider_account_id=provider.id,
+        offset=0,
+        limit=20,
+        allowed_ids=[foreign_visible.id],
+    )
+
+    returned = {deployment.id for deployment, _count, _matched in rows}
+    assert returned == {foreign_visible.id}
+    assert owned.id not in returned
     assert foreign_hidden.id not in returned
 
 
@@ -139,17 +171,20 @@ async def test_count_deployments_by_provider_reflects_allowed_ids(async_session:
     owner_only = await count_deployments_by_provider(
         async_session,
         user_id=owner.id,
+        row_owner_id=owner.id,
         deployment_provider_account_id=provider.id,
     )
     widened = await count_deployments_by_provider(
         async_session,
         user_id=owner.id,
+        row_owner_id=owner.id,
         deployment_provider_account_id=provider.id,
         allowed_ids=[foreign_visible.id],
     )
     empty_allowed = await count_deployments_by_provider(
         async_session,
         user_id=owner.id,
+        row_owner_id=owner.id,
         deployment_provider_account_id=provider.id,
         allowed_ids=[],
     )
