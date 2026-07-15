@@ -8301,7 +8301,7 @@ requires-dist = [
     { name = "lfx-paddle", editable = "src/bundles/paddle" },
     { name = "lfx-vllm", editable = "src/bundles/vllm" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
-    { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
+    { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<26.3.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
     { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
     { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
@@ -8511,6 +8511,7 @@ atlassian = [
     { name = "atlassian-python-api" },
 ]
 audio = [
+    { name = "openai" },
     { name = "webrtcvad" },
 ]
 aws = [
@@ -9036,6 +9037,7 @@ requires-dist = [
     { name = "numexpr", marker = "extra == 'numexpr'", specifier = ">=2.10.2" },
     { name = "onnxruntime", marker = "python_full_version < '3.14'", specifier = ">=1.20,<1.24" },
     { name = "onnxruntime", marker = "python_full_version >= '3.14'", specifier = ">=1.26" },
+    { name = "openai", marker = "extra == 'audio'", specifier = ">=1.68.2,<3.0.0" },
     { name = "opendsstar", marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'x86_64' and extra == 'opendsstar') or (python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'opendsstar')", specifier = "==1.0.26" },
     { name = "openinference-instrumentation-langchain", marker = "extra == 'openinference'", specifier = ">=0.1.29" },
     { name = "openlayer", marker = "extra == 'openlayer'", specifier = ">=0.9.0,<1.0.0" },
@@ -9468,6 +9470,7 @@ dependencies = [
     { name = "rich" },
     { name = "setuptools" },
     { name = "structlog" },
+    { name = "toml" },
     { name = "tomli", version = "2.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
     { name = "tomli", version = "2.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
     { name = "typer", version = "0.21.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.13.*' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.12' and sys_platform == 'darwin')" },
@@ -9561,6 +9564,7 @@ requires-dist = [
     { name = "rich", specifier = ">=13.0.0,<14.0.0" },
     { name = "setuptools", specifier = ">=83.0.0,<84.0.0" },
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
+    { name = "toml", specifier = ">=0.10.2,<1.0.0" },
     { name = "tomli", specifier = ">=2.2.1,<3.0.0" },
     { name = "toolguard", marker = "python_full_version < '3.14' and extra == 'toolguard'", specifier = ">=0.2.20,<1.0.0" },
     { name = "typer", specifier = ">=0.16.0,<1.0.0" },
@@ -10253,7 +10257,7 @@ requires-dist = [
     { name = "markdown", marker = "extra == 'notion'", specifier = ">=3.8.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.2,<3.0.0" },
     { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
-    { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nvidia'", specifier = ">=26.1.0,<27.0.0" },
+    { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nvidia'", specifier = ">=26.1.0,<26.3.0" },
     { name = "openai", marker = "extra == 'aiml'", specifier = ">=1.68.2,<3.0.0" },
     { name = "openai", marker = "extra == 'deepseek'", specifier = ">=1.68.2,<3.0.0" },
     { name = "openai", marker = "extra == 'litellm'", specifier = ">=1.68.2,<3.0.0" },
@@ -10330,7 +10334,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-docling"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/docling" }
 dependencies = [
     { name = "docling-core", version = "2.78.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.13.*' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.12' and sys_platform == 'darwin')" },
@@ -12677,7 +12681,7 @@ wheels = [
 
 [[package]]
 name = "nv-ingest-client"
-version = "26.3.0"
+version = "26.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "build", marker = "python_full_version >= '3.12'" },
@@ -12691,11 +12695,10 @@ dependencies = [
     { name = "requests", marker = "python_full_version >= '3.12'" },
     { name = "setuptools", marker = "python_full_version >= '3.12'" },
     { name = "tqdm", marker = "python_full_version >= '3.12'" },
-    { name = "urllib3", marker = "python_full_version >= '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/91/f0/60c4c60ada31375570f79097204494109e99c9d614e107d34217f4f11687/nv_ingest_client-26.3.0.tar.gz", hash = "sha256:2e47ab83dce6853f59569e55556c4c346005ea1e611c747c1c571c79d4f4c908", size = 125360, upload-time = "2026-03-16T18:42:42.706Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b3/62/386bc4a336b91df9c65afc18d905bb1fe3dd44ef1ce038895a701cba6035/nv_ingest_client-26.1.2.tar.gz", hash = "sha256:7ea4a35d4e7051031c273eb2b15170a0555462b702602e5c4fdce947bd39d446", size = 126061, upload-time = "2026-01-21T14:06:31.836Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4c/67/16b97fdc617993085f37f375734afc367971cba66e414dbcf1501fdd669a/nv_ingest_client-26.3.0-py3-none-any.whl", hash = "sha256:8cadbe2990cf0991316449ae424d0d6afb336fecbf46d6ce8ab3b86f047bd497", size = 146742, upload-time = "2026-03-16T18:42:33.647Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/a0/6f082f42ba1ba4e3de751deee98099114405489389d82b840024fa26512e/nv_ingest_client-26.1.2-py3-none-any.whl", hash = "sha256:49ec81c2e2470509fc527d778d886caebe05a7f3012918eef2fd67922ea9b8b4", size = 146091, upload-time = "2026-01-21T14:06:28.586Z" },
 ]
 
 [[package]]
