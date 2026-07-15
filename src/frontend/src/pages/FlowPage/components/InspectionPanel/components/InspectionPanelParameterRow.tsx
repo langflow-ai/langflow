@@ -180,7 +180,9 @@ export default function InspectionPanelParameterRow({
               onClick={handleToggleVisibility}
               disabled={isConnected || isRequiredAndEmpty}
               className={cn(
-                "flex h-6 items-center justify-center rounded-md bg-muted px-2 text-xs text-foreground transition-colors hover:bg-muted-foreground/20",
+                // min-w matches the Add button so the API column stays
+                // aligned across rows regardless of the action label.
+                "flex h-6 min-w-[4.5rem] items-center justify-center rounded-md bg-muted px-2 text-xs text-foreground transition-colors hover:bg-muted-foreground/20",
                 (isConnected || isRequiredAndEmpty) &&
                   "cursor-not-allowed opacity-50",
               )}
@@ -194,7 +196,7 @@ export default function InspectionPanelParameterRow({
           <Button
             unstyled
             onClick={handleToggleVisibility}
-            className="flex h-6 items-center justify-center gap-0.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="flex h-6 min-w-[4.5rem] items-center justify-center gap-0.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             data-testid={`inspector-add-${name}`}
             aria-label={`${t("inspectionPanel.add")} ${title}`}
           >
