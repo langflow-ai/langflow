@@ -240,11 +240,11 @@ def _save_generated_index(modules_dict: dict) -> None:
         # Get version
         from importlib.metadata import version
 
-        langflow_version = version("langflow")
+        lfx_version = version("lfx")
 
         # Build index structure
         index = {
-            "version": langflow_version,
+            "version": lfx_version,
             "metadata": {
                 "num_modules": num_modules,
                 "num_components": num_components,

@@ -42,6 +42,7 @@ dependencies = [
     "defusedxml>=0.7.1,<1.0.0",
     "passlib>=1.7.4,<2.0.0",
     "pydantic-settings>=2.10.1,<3.0.0",
+    "toml>=0.10.2,<1.0.0",
     "tomli>=2.2.1,<3.0.0",
     "pyyaml>=6.0.0,<7.0.0",
     "orjson>=3.11.6,<4.0.0",

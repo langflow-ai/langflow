@@ -163,6 +163,12 @@ jobs:
             exit 1
           fi
 
+          if [ "${{ inputs.release_package_base }}" = "true" ] && [ "${{ inputs.release_lfx }}" = "false" ]; then
+            echo "Error: Cannot release Langflow Base without releasing LFX."
+            echo "Langflow Base depends on LFX. Please enable 'release_lfx' or disable 'release_package_base'."
+            exit 1
+          fi
+
           if [ "${{ inputs.release_lfx }}" = "true" ] && [ "${{ inputs.release_sdk }}" = "false" ]; then
             echo "Error: Cannot release LFX without releasing langflow-sdk."
             echo "LFX depends on langflow-sdk. Please enable 'release_sdk' or disable 'release_lfx'."
@@ -667,6 +673,10 @@ jobs:
           # Update version in lfx pyproject.toml
           sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
 
+          # Keep the bundled component index version/hash aligned with the RC wheel.
+          uv run --no-sync python ../../scripts/ci/update_component_index_version.py \
+            src/lfx/_assets/component_index.json "$VERSION"
+
           # Verify the change
           echo "Updated pyproject.toml version:"
           grep "^version" pyproject.toml
@@ -801,31 +811,11 @@ jobs:
         run: |
           LFX_VERSION="${{ needs.determine-lfx-version.outputs.version }}"
           echo "Updating lfx dependency to allow pre-release version: $LFX_VERSION"
-          cd src/backend/base
+          python3 scripts/ci/update_lfx_pre_release_dependency.py \
+            src/backend/base/pyproject.toml "$LFX_VERSION"
 
-          # Extract current lfx constraint from pyproject.toml
-          CURRENT_CONSTRAINT=$(grep -E '^\s*"lfx' pyproject.toml | head -1)
-          echo "Current constraint: $CURRENT_CONSTRAINT"
-
-          # Extract the major.minor version (e.g., "1.10" from "~=1.10.0", or from the
-          # lower bound of the range form ">=1.10.0,<1.11.dev0"). Anchor to the FIRST
-          # version in the line so a greedy match can't pick up the range's upper bound.
-          MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/^[^0-9]*([0-9]+\.[0-9]+).*/\1/')
-          MAJOR=${MAJOR_MINOR%.*}
-          MINOR=${MAJOR_MINOR#*.}
-          NEXT_MINOR=$((MINOR + 1))
-
-          # Create new constraint: >=LFX_VERSION,<MAJOR.(MINOR+1).dev0
-          NEW_CONSTRAINT="\"lfx>=$LFX_VERSION,<$MAJOR.$NEXT_MINOR.dev0\""
-
-          echo "New constraint: $NEW_CONSTRAINT"
-
-          # Replace the constraint
-          sed -i.bak "s|\"lfx[^\"]*\"|$NEW_CONSTRAINT|" pyproject.toml
-
-          # Verify the change
           echo "Updated lfx dependency:"
-          grep "lfx" pyproject.toml
+          grep "lfx" src/backend/base/pyproject.toml
       - name: Build project for distribution
         run: make build base=true args="--wheel"
       - name: Verify built version
