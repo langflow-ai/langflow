@@ -477,7 +477,7 @@ describe("useTweaksStore", () => {
               },
             },
           },
-        } as NodeDataType,
+        } as unknown as NodeDataType,
       };
       const { result } = renderHook(() => useTweaksStore());
 
@@ -509,7 +509,7 @@ describe("useTweaksStore", () => {
               },
             },
           },
-        } as NodeDataType,
+        } as unknown as NodeDataType,
       };
       const { result } = renderHook(() => useTweaksStore());
 
