@@ -3129,9 +3129,9 @@ class TestDeleteDeployment:
 # ---------------------------------------------------------------------------
 
 
-class TestCreateDeploymentProjectValidation:
+class TestCreateDeploymentFlowAuthorization:
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.authorize_flow_versions_for_deployment", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -3142,9 +3142,9 @@ class TestCreateDeploymentProjectValidation:
         mock_get_mapper,
         mock_resolve_adapter,
         mock_resolve_project,
-        mock_validate_fv,
+        mock_authorize_fv,
     ):
-        """validate_project_scoped_flow_version_ids is called before the adapter create."""
+        """Every create-time flow reference is authorized before the adapter call."""
         from langflow.api.v1.deployments import create_deployment
 
         pa = _fake_provider_account()
@@ -3159,21 +3159,24 @@ class TestCreateDeploymentProjectValidation:
         project_id = uuid4()
         mock_resolve_project.return_value = project_id
 
-        mock_validate_fv.side_effect = HTTPException(status_code=404, detail="invalid")
+        mock_authorize_fv.side_effect = HTTPException(status_code=404, detail="invalid")
 
         payload = MagicMock()
         payload.provider_id = pa.id
+        current_user = _fake_user()
 
         with pytest.raises(HTTPException) as exc_info:
             await create_deployment(
-                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+                session=AsyncMock(), payload=payload, current_user=current_user, telemetry=_fake_telemetry()
             )
 
         assert exc_info.value.status_code == 404
-        mock_validate_fv.assert_awaited_once()
-        call_kwargs = mock_validate_fv.call_args.kwargs
+        mock_authorize_fv.assert_awaited_once()
+        call_kwargs = mock_authorize_fv.call_args.kwargs
         assert call_kwargs["flow_version_ids"] == fv_ids
         assert call_kwargs["project_id"] == project_id
+        assert call_kwargs["current_user"] is current_user
+        mock_get_pa.assert_awaited_once_with(provider_id=pa.id, user_id=current_user.id, db=ANY)
         adapter.create.assert_not_awaited()
 
     @pytest.mark.asyncio
@@ -3280,18 +3283,18 @@ class TestCreateDeploymentSchemaValidation:
 # ---------------------------------------------------------------------------
 
 
-class TestUpdateDeploymentProjectValidation:
+class TestUpdateDeploymentFlowAuthorization:
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.authorize_flow_versions_for_deployment", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update")
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_validation_called_before_adapter(
         self,
         mock_resolve_amm,
         mock_resolve_fvp,
-        mock_validate_fv,
+        mock_authorize_fv,
     ):
-        """validate_project_scoped_flow_version_ids is called before the adapter update."""
+        """Every update-time flow reference is authorized before the adapter update."""
         from langflow.api.v1.deployments import update_deployment
 
         dep_row = _fake_deployment_row()
@@ -3304,22 +3307,24 @@ class TestUpdateDeploymentProjectValidation:
         remove_ids = [uuid4()]
         mock_resolve_fvp.return_value = (add_ids, remove_ids)
 
-        mock_validate_fv.side_effect = HTTPException(status_code=404, detail="out of project")
+        mock_authorize_fv.side_effect = HTTPException(status_code=404, detail="out of project")
 
         payload = MagicMock()
+        current_user = _fake_user()
 
         with pytest.raises(HTTPException) as exc_info:
             await update_deployment(
                 deployment_id=dep_row.id,
                 session=AsyncMock(),
                 payload=payload,
-                current_user=_fake_user(),
+                current_user=current_user,
                 telemetry=_fake_telemetry(),
             )
 
         assert exc_info.value.status_code == 404
-        mock_validate_fv.assert_awaited_once()
-        assert mock_validate_fv.call_args.kwargs["project_id"] == dep_row.project_id
+        mock_authorize_fv.assert_awaited_once()
+        assert mock_authorize_fv.call_args.kwargs["project_id"] == dep_row.project_id
+        assert mock_authorize_fv.call_args.kwargs["current_user"] is current_user
         adapter.update.assert_not_awaited()
 
 

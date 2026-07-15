@@ -12,6 +12,18 @@ let mockDeployModalOpen = false;
 const mockHandleDeploy = jest.fn();
 const mockSetChoiceDialogOpen = jest.fn();
 const mockSetDeployModalOpen = jest.fn();
+const mockCan = jest.fn(
+  (_resourceId: string | undefined, _action: string) => true,
+);
+
+jest.mock("@/contexts/permissionsContext", () => ({
+  usePermissions: () => ({
+    can: mockCan,
+    permissions: undefined,
+    isLoading: false,
+    isError: false,
+  }),
+}));
 
 jest.mock("@/stores/utilityStore", () => ({
   useUtilityStore: (
@@ -79,6 +91,7 @@ beforeEach(() => {
   mockIsPreparingDeploy = false;
   mockChoiceDialogOpen = false;
   mockDeployModalOpen = false;
+  mockCan.mockReturnValue(true);
 });
 
 // ---------------------------------------------------------------------------
@@ -135,6 +148,19 @@ describe("DeployButton — disabled states", () => {
 
   it("is disabled when deployModalOpen is true", () => {
     mockDeployModalOpen = true;
+    render(<DeployButton />);
+
+    expect(screen.getByTestId("deploy-btn-flow")).toBeDisabled();
+  });
+
+  it("checks the flow deploy permission", () => {
+    render(<DeployButton />);
+
+    expect(mockCan).toHaveBeenCalledWith("flow-1", "deploy");
+  });
+
+  it("stays disabled when execute is allowed but deploy is denied", () => {
+    mockCan.mockImplementation((_resourceId, action) => action === "execute");
     render(<DeployButton />);
 
     expect(screen.getByTestId("deploy-btn-flow")).toBeDisabled();

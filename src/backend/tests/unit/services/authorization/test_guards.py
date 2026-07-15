@@ -335,6 +335,30 @@ async def test_owner_override_skips_enforce(monkeypatch, fake_user):
 
 
 @pytest.mark.anyio
+async def test_flow_deploy_never_uses_owner_override(monkeypatch, fake_user):
+    """Deploy remains policy-controlled even when the caller owns the flow."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    flow_id = uuid4()
+    with pytest.raises(HTTPException) as exc_info:
+        await authz_guards.ensure_flow_permission(
+            fake_user,
+            FlowAction.DEPLOY,
+            flow_id=flow_id,
+            flow_user_id=fake_user.id,
+            folder_id=uuid4(),
+        )
+
+    assert exc_info.value.status_code == 403
+    assert len(service.calls) == 1
+    assert service.calls[0]["obj"] == f"flow:{flow_id}"
+    assert service.calls[0]["act"] == "deploy"
+
+
+@pytest.mark.anyio
 async def test_api_key_scope_plugin_sees_owner_resource_instead_of_owner_override(monkeypatch, fake_user):
     """API-key scopes can be narrower than the owning user when a plugin opts in."""
     install_settings(monkeypatch, authz_enabled=True)

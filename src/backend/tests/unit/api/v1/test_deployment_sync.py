@@ -1261,6 +1261,67 @@ async def test_validate_project_scoped_flow_version_ids_rejects_out_of_project_i
         )
 
 
+@pytest.mark.asyncio
+async def test_build_project_scoped_artifacts_loads_authorized_shared_flow(async_session):
+    """Artifact resolution may cross owners only for pre-authorized flow versions."""
+    from langflow.api.v1.mappers.deployments.helpers import build_project_scoped_flow_artifacts_from_flow_versions
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.database.models.flow_version.model import FlowVersion
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.database.models.user.model import User
+
+    actor = User(username=f"actor-{uuid4()}", password="not-a-secret", is_active=True)  # noqa: S106
+    owner = User(username=f"owner-{uuid4()}", password="not-a-secret", is_active=True)  # noqa: S106
+    async_session.add(actor)
+    async_session.add(owner)
+    await async_session.flush()
+
+    project = Folder(name=f"project-{uuid4()}", user_id=actor.id)
+    async_session.add(project)
+    await async_session.flush()
+
+    flow = Flow(
+        name="shared-flow",
+        user_id=owner.id,
+        folder_id=project.id,
+        data={"nodes": [], "edges": []},
+    )
+    async_session.add(flow)
+    await async_session.flush()
+    version = FlowVersion(
+        flow_id=flow.id,
+        user_id=owner.id,
+        version_number=1,
+        data={"nodes": [], "edges": []},
+    )
+    async_session.add(version)
+    await async_session.flush()
+
+    artifacts = await build_project_scoped_flow_artifacts_from_flow_versions(
+        db=async_session,
+        project_id=project.id,
+        reference_ids=[version.id],
+        authorized_flow_version_ids=frozenset({version.id}),
+    )
+
+    assert artifacts[0][0] == version.id
+    assert artifacts[0][1].id == flow.id
+
+
+@pytest.mark.asyncio
+async def test_build_project_scoped_artifacts_rejects_version_missing_from_authorized_set(async_session):
+    """Internal callers cannot widen artifact lookup without authorization evidence."""
+    from langflow.api.v1.mappers.deployments.helpers import build_project_scoped_flow_artifacts_from_flow_versions
+
+    with pytest.raises(HTTPException, match="not found"):
+        await build_project_scoped_flow_artifacts_from_flow_versions(
+            db=async_session,
+            project_id=uuid4(),
+            reference_ids=[uuid4()],
+            authorized_flow_version_ids=frozenset(),
+        )
+
+
 # ---------------------------------------------------------------------------
 # fetch_provider_snapshot_keys
 # ---------------------------------------------------------------------------

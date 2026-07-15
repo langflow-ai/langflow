@@ -1020,12 +1020,36 @@ async def test_me_permissions_adds_owner_override_actions(stub_authz):
     body = EffectivePermissionsRequest(
         resource_type="flow",
         resource_ids=[owned_flow_id, other_flow_id],
-        actions=["read", "write", "execute", "delete"],
+        actions=["read", "write", "execute", "delete", "deploy"],
     )
     result = await authz_me.get_effective_permissions(body=body, current_user=user, session=session)
 
     assert set(result.permissions[owned_flow_id]) == {"read", "write", "execute", "delete"}
     assert result.permissions[other_flow_id] == []
+
+
+@pytest.mark.asyncio
+async def test_me_permissions_default_actions_include_deploy(stub_authz):
+    """The default flow vocabulary exposes the admin-only deploy decision to the UI."""
+    from langflow.api.v1 import authz_me
+    from langflow.api.v1.authz_me import EffectivePermissionsRequest
+
+    authz = stub_authz()
+    captured: dict = {}
+
+    async def _capture(**kwargs):
+        captured.update(kwargs)
+        return {resource_id: [] for resource_id in kwargs["resource_ids"]}
+
+    authz.get_effective_permissions = _capture
+    resource_id = uuid4()
+    await authz_me.get_effective_permissions(
+        body=EffectivePermissionsRequest(resource_type="flow", resource_ids=[resource_id]),
+        current_user=_make_user(),
+        session=_FakeAsyncSession(),
+    )
+
+    assert "deploy" in captured["actions"]
 
 
 @pytest.mark.asyncio
