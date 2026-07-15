@@ -10,22 +10,15 @@ It instead adds a provider through the `providers[]` block in its `extension.jso
 
 Point Langflow's model provider at any OpenAI-compatible endpoint, and Langflow discovers available models live from the `/v1/models` endpoint.
 
-## Install OpenAI compatible bundle
+## Install OpenAI Compatible
 
-The **OpenAI Compatible** bundle installs automatically with `uv pip install langflow`.
-On an engine-only `lfx` installation, to add it to your virtual environment, run:
+The **OpenAI Compatible** provider installs automatically with `uv pip install langflow`.
 
-```bash
-uv pip install lfx-openai-compatible
-uv run langflow run
-```
-
-Langflow discovers the package at server startup and registers the **OpenAI Compatible** provider automatically.
 For more information, see [Langflow Extensions overview](/extensions-overview).
 
 ## Configure the OpenAI Compatible provider
 
-Configure Langflow to connect to your OpenAI compatible provider by providing a **Base URL** and optional **API Key**.
+Configure Langflow to connect to your OpenAI-compatible provider by providing a **Base URL** and optional **API Key**.
 To find your **Base URL**, see your provider's documentation.
 
 1. To open the **Model Providers** pane, click your profile icon, select **Settings**, and then click <Icon name="Brain" aria-hidden="true"/> **Model Providers**.
@@ -34,7 +27,7 @@ To find your **Base URL**, see your provider's documentation.
 
     | Field | Environment variable | Required | Description |
     |-------|----------------------|----------|-------------|
-    | **Base URL** | `OPENAI_COMPATIBLE_BASE_URL` | Yes | Base URL of the OpenAI-compatible endpoint from your provider's documentation, such as `https://openrouter.ai/api/v1` or `http://localhost:8000/v1`. |
+    | **Base URL** | `OPENAI_COMPATIBLE_BASE_URL` | Yes | Base URL of the OpenAI-compatible endpoint from your provider's documentation, such as `https://openrouter.ai/api/v1`. |
     | **API Key** | `OPENAI_COMPATIBLE_API_KEY` | No | Bearer token for the endpoint. Leave empty for local servers that do not require authentication. |
 
 4. Click **Save**.
@@ -42,6 +35,21 @@ To find your **Base URL**, see your provider's documentation.
    Discovered models appear under **Language Models** and **Embedding Models**.
 5. Enable the models you want to use.
 6. In any **Language Model**, **Embedding Model**, or **Agent** field, select **OpenAI Compatible** and a discovered model.
+
+### Local and private endpoints
+
+Langflow enables [SSRF protection](/api-keys-and-authentication#ssrf-protection) by default.
+Loopback and private addresses such as `localhost`, `127.0.0.1`, and `::1` are blocked unless you allow them.
+
+Before you save a Base URL like `http://localhost:8000/v1`, set `LANGFLOW_SSRF_ALLOWED_HOSTS` to include that hostname:
+
+```bash
+export LANGFLOW_SSRF_ALLOWED_HOSTS=localhost
+```
+
+You can also allowlist an IP address or CIDR range, for example `127.0.0.1` or `10.0.0.0/8`.
+
+For more information, see [SSRF protection](/api-keys-and-authentication#ssrf-protection).
 
 ## See also
 
