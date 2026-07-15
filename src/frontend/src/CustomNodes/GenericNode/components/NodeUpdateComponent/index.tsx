@@ -11,6 +11,7 @@ export default function NodeUpdateComponent({
   setDismissAll,
   dismissed = false,
   isRequired = false,
+  disabled = false,
 }: {
   hasBreakingChange: boolean;
   blocked?: boolean;
@@ -20,6 +21,7 @@ export default function NodeUpdateComponent({
   setDismissAll: (value: boolean) => void;
   dismissed?: boolean;
   isRequired?: boolean;
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
   const showUpdateAction = !blocked;
@@ -47,6 +49,7 @@ export default function NodeUpdateComponent({
               handleUpdateCode();
             }}
             loading={loadingUpdate}
+            disabled={disabled}
             data-testid={hasBreakingChange ? "review-button" : "update-button"}
           >
             {hasBreakingChange
@@ -94,6 +97,7 @@ export default function NodeUpdateComponent({
         }}
         aria-label={t("node.dismissWarning")}
         data-testid="dismiss-warning-bar"
+        disabled={disabled}
       >
         {t("node.dismiss")}
       </Button>
@@ -106,6 +110,7 @@ export default function NodeUpdateComponent({
             handleUpdateCode();
           }}
           loading={loadingUpdate}
+          disabled={disabled}
           data-testid={hasBreakingChange ? "review-button" : "update-button"}
         >
           {hasBreakingChange

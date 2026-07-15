@@ -162,6 +162,7 @@ EXPECTED_FIELDS = {
     "mcp_servers_locked",
     # ComponentsSettings
     "load_flows_overwrite_on_name_match",
+    "load_flows_preserve_variable_bindings",
     "enable_extension_reload",
     # SecuritySettings
     "rate_limit_enabled",
@@ -259,6 +260,7 @@ def test_critical_defaults_unchanged():
     assert settings.mcp_server_allowed_packages is None
     assert settings.mcp_server_enabled is True
     assert settings.mcp_composer_enabled is True
+    assert settings.load_flows_preserve_variable_bindings is True
     assert settings.do_not_track is False
     assert settings.dev is False
     assert settings.agentic_experience is False
@@ -391,6 +393,12 @@ def test_yaml_round_trip():
         ("LANGFLOW_BACKEND_ONLY", "true", "backend_only", True),
         ("LANGFLOW_AUTO_SAVING", "false", "auto_saving", False),
         ("LANGFLOW_FALLBACK_TO_ENV_VAR", "false", "fallback_to_env_var", False),
+        (
+            "LANGFLOW_LOAD_FLOWS_PRESERVE_VARIABLE_BINDINGS",
+            "false",
+            "load_flows_preserve_variable_bindings",
+            False,
+        ),
         ("LANGFLOW_VARIABLE_STORE", "kubernetes", "variable_store", "kubernetes"),
     ],
 )

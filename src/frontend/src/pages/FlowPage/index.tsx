@@ -9,7 +9,6 @@ import {
   SimpleSidebar,
   SimpleSidebarProvider,
 } from "@/components/ui/simple-sidebar";
-import { PermissionsProvider } from "@/contexts/permissionsContext";
 import { useRestoreCanvasHitl } from "@/controllers/API/agui/use-restore-canvas-hitl";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
@@ -360,20 +359,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                       )}
                     >
                       <div className="h-full w-full">
-                        <PermissionsProvider
-                          resourceType="flow"
-                          resourceIds={currentFlow?.id ? [currentFlow.id] : []}
-                          domain={
-                            currentFlow?.folder_id
-                              ? `project:${currentFlow.folder_id}`
-                              : undefined
-                          }
-                        >
-                          <FlowPageMainContent
-                            flowId={id}
-                            setIsLoading={setIsLoading}
-                          />
-                        </PermissionsProvider>
+                        <FlowPageMainContent
+                          flowId={id}
+                          setIsLoading={setIsLoading}
+                        />
                       </div>
                     </main>
                   </FlowSearchProvider>

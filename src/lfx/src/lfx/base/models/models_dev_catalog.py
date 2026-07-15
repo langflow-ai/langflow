@@ -57,12 +57,9 @@ _DATED_SNAPSHOT_RE = re.compile(r"-(?:\d{4}-\d{2}-\d{2}|\d{8}|preview-\d{2}-\d{2
 
 # Threshold for auto-deprecating models that haven't shipped a new version in
 # a long time. models.dev has no deprecation field, and providers rarely
-# formally deprecate models even after they ship a successor — but a model
-# that hasn't been touched in 30 months is overwhelmingly legacy in practice
-# (catches gpt-4 / gpt-4-turbo / text-embedding-ada-002 today, leaves
-# gpt-4o / text-embedding-3-small/large active). Tuned conservatively so
-# current embeddings (~28 months old) survive; nudge down only if successor
-# adoption is verified.
+# formally deprecate models even after they ship a successor. Apply this only
+# to language models: embedding release cadences are slower, and age alone
+# does not mean that a provider has deprecated an embedding model.
 _AGE_DEPRECATION_DAYS = 900
 
 MODELS_DEV_URL = "https://models.dev/api.json"
@@ -229,15 +226,16 @@ def _is_embedding_family(model_dict: dict[str, Any]) -> bool:
 
 
 def _is_aged_out(model_dict: dict[str, Any], now: datetime) -> bool:
-    """Return True if the model is older than ``_AGE_DEPRECATION_DAYS`` days.
+    """Return True if a language model is older than ``_AGE_DEPRECATION_DAYS`` days.
 
     Prefers ``release_date`` (when the model functionally shipped) over
     ``last_updated`` (which tracks catalog-curator edits like typo fixes, not
-    new model versions). The combination of preferring release_date and the
-    900-day threshold correctly catches ``gpt-4`` / ``gpt-4-turbo`` (924d from
-    their 2023-11 release) while keeping ``text-embedding-3-large`` (844d
-    from its 2024-01 release) active.
+    new model versions). Embedding models are excluded because their age does
+    not indicate provider deprecation.
     """
+    if _is_embedding_family(model_dict):
+        return False
+
     raw = model_dict.get("release_date") or model_dict.get("last_updated")
     epoch = _release_date_to_epoch(raw)
     if epoch == 0:
@@ -285,7 +283,7 @@ def _translate_model_entry(
     ``deprecated`` kwarg (which lets callers forward the static-list
     curation that models.dev itself doesn't surface):
       * dated-snapshot id (:data:`_DATED_SNAPSHOT_RE`);
-      * stale ``last_updated`` / ``release_date`` per :data:`_AGE_DEPRECATION_DAYS`.
+      * stale LLM ``last_updated`` / ``release_date`` per :data:`_AGE_DEPRECATION_DAYS`.
     ``now`` is injected for testability — defaults to the current UTC time.
     """
     now = now or datetime.now(tz=timezone.utc)
@@ -357,8 +355,8 @@ def apply_models_dev_overrides(
     preserves the static-list curation by name: any model that was already
     flagged deprecated in the bundled ``*_constants.py`` lists keeps that flag
     after the override. Dated-snapshot ids
-    (e.g. ``claude-opus-4-5-20251101``, ``gpt-4o-2024-05-13``) and rows whose
-    most recent date is older than :data:`_AGE_DEPRECATION_DAYS` are also
+    (e.g. ``claude-opus-4-5-20251101``, ``gpt-4o-2024-05-13``) and language
+    models whose most recent date is older than :data:`_AGE_DEPRECATION_DAYS` are also
     auto-flagged in :func:`_translate_model_entry`. ``now`` is forwarded for
     testability.
     """
