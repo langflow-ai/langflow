@@ -133,6 +133,31 @@ describe("CanvasControls", () => {
     expect(screen.getByAltText("Langflow Assistant")).toBeInTheDocument();
   });
 
+  it("should_hide_new_badge_when_assistant_already_discovered", () => {
+    localStorage.setItem("langflow-assistant-discovered", "true");
+    try {
+      render(<CanvasControls selectedNode={null} />);
+
+      expect(screen.queryByText("New")).not.toBeInTheDocument();
+    } finally {
+      localStorage.clear();
+    }
+  });
+
+  it("should_keep_new_badge_hidden_after_assistant_opened_and_closed", () => {
+    localStorage.clear();
+    render(<CanvasControls selectedNode={null} />);
+    expect(screen.getByText("New")).toBeInTheDocument();
+
+    // Open then close the assistant — the panel-open state alone hid the
+    // badge before this fix, so the badge must stay gone once the panel is
+    // closed again for the ``discovered`` gating to be proven.
+    fireEvent.click(screen.getByTestId("assistant-button"));
+    fireEvent.click(screen.getByTestId("assistant-button"));
+
+    expect(screen.queryByText("New")).not.toBeInTheDocument();
+  });
+
   it("should_render_sticky_note_button", () => {
     render(<CanvasControls selectedNode={null} />);
 

@@ -155,11 +155,12 @@ const CanvasControls = ({
           <PopoverPrimitive.Anchor asChild>
             <div className="group relative">
               {/* "New" discovery pill — surfaces ONLY on hover, hidden when
-                  the panel is open (active state shouldn't carry the nudge).
-                  The pill keeps appearing on hover indefinitely; only the
-                  lateral tooltip respects the persisted ``discovered`` flag.
+                  the panel is open (active state shouldn't carry the nudge)
+                  and gone for good once the user has opened the assistant
+                  (persisted ``discovered`` flag) — a feature the user already
+                  found isn't "new" to them anymore.
                   Uses the brand token from index.css. */}
-              {!assistantSidebarOpen && !locked && (
+              {!assistantSidebarOpen && !discovered && !locked && (
                 <span
                   data-testid="assistant-button-new-pill"
                   // Visibility logic: stays in lock-step with the onboarding
@@ -167,10 +168,10 @@ const CanvasControls = ({
                   // pinned open; otherwise it falls back to the hover-only
                   // behavior so power users still see it as a hint without
                   // it being intrusive.
-                  className={`absolute -top-4 -left-1 z-10 flex items-center gap-0.5 rounded bg-accent-assistant-brand px-1 py-0.5 text-[9px] font-medium leading-none text-white transition-all duration-200 ${
+                  className={`absolute -top-4 -left-1 z-10 flex items-center gap-0.5 rounded bg-accent-assistant-brand px-1 py-0.5 text-[9px] font-medium leading-none text-white transition-opacity duration-200 ${
                     onboardingActive
-                      ? "opacity-100 scale-100"
-                      : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100"
+                      ? "opacity-100"
+                      : "opacity-0 group-hover:opacity-100"
                   }`}
                 >
                   <ForwardedIconComponent
