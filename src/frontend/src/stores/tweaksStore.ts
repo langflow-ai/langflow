@@ -40,6 +40,17 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
   },
   currentFlowId: "",
   initialSetup: (nodes: AllNodeType[], flowId: string) => {
+    // LE-1810: the lf_tweaks_* localStorage scratch state was retired in
+    // favor of the persisted per-field api_editable flag. Clear any orphaned
+    // keys left behind by older builds (intentionally no migration — the old
+    // state was per-browser scratch, not flow data).
+    try {
+      Object.keys(window.localStorage)
+        .filter((key) => key.startsWith("lf_tweaks_"))
+        .forEach((key) => window.localStorage.removeItem(key));
+    } catch {
+      // localStorage unavailable (SSR/embedded) — nothing to clean.
+    }
     useFlowStore.getState().unselectAll();
     set({
       currentFlowId: flowId,

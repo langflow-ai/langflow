@@ -306,6 +306,22 @@ describe("useTweaksStore", () => {
 
       expect(result.current.tweaks).toHaveProperty("node-1");
     });
+
+    it("should clean up orphaned lf_tweaks_* localStorage keys (retired state)", () => {
+      window.localStorage.setItem("lf_tweaks_flow-a", "{}");
+      window.localStorage.setItem("lf_tweaks_flow-b", "{}");
+      window.localStorage.setItem("unrelated_key", "keep");
+      const { result } = renderHook(() => useTweaksStore());
+
+      act(() => {
+        result.current.initialSetup([mockNode], "flow-a");
+      });
+
+      expect(window.localStorage.getItem("lf_tweaks_flow-a")).toBeNull();
+      expect(window.localStorage.getItem("lf_tweaks_flow-b")).toBeNull();
+      expect(window.localStorage.getItem("unrelated_key")).toBe("keep");
+      window.localStorage.removeItem("unrelated_key");
+    });
   });
 
   describe("updateTweaks", () => {
