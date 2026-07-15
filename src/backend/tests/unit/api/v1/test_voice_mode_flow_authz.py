@@ -7,6 +7,8 @@ from uuid import uuid4
 import pytest
 from fastapi import BackgroundTasks, HTTPException
 from langflow.api.v1 import voice_mode
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
+from langflow.services.deps import session_scope
 
 
 def _flow(*, owner_id, description="Authorized flow"):
@@ -97,6 +99,22 @@ async def test_authorized_voice_flow_preserves_public_flow_access(monkeypatch):
     assert authorized is public_flow
     session.exec.assert_awaited_once()
     ensure_permission.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_authorized_voice_flow_allows_public_flow_for_non_owner_with_real_session(flow, user_two):
+    async with session_scope() as session:
+        db_flow = await session.get(Flow, flow.id)
+        assert db_flow is not None
+        db_flow.access_type = AccessTypeEnum.PUBLIC
+        session.add(db_flow)
+        await session.flush()
+
+    async with session_scope() as session:
+        authorized = await voice_mode._get_authorized_voice_flow(str(flow.id), user_two, session)
+
+    assert authorized.id == flow.id
+    assert authorized.user_id == flow.user_id
 
 
 @pytest.mark.asyncio
