@@ -529,6 +529,18 @@ wheels = [
 ]
 
 [[package]]
+name = "amqp"
+version = "5.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "vine" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/79/fc/ec94a357dfc6683d8c86f8b4cfa5416a4c36b28052ec8260c77aca96a443/amqp-5.3.1.tar.gz", hash = "sha256:cddc00c725449522023bad949f70fff7b48f0b1ade74d170a6f10ab044739432", size = 129013, upload-time = "2024-11-12T19:55:44.051Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/26/99/fc813cd978842c26c82534010ea849eee9ab3a13ea2b74e95cb9c99e747b/amqp-5.3.1-py3-none-any.whl", hash = "sha256:43b3319e1b4e7d1251833a93d672b4af1e40f3d632d479b98661a95f117880a2", size = 50944, upload-time = "2024-11-12T19:55:41.782Z" },
+]
+
+[[package]]
 name = "annotated-doc"
 version = "0.0.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1160,6 +1172,15 @@ wheels = [
 ]
 
 [[package]]
+name = "billiard"
+version = "4.2.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/58/23/b12ac0bcdfb7360d664f40a00b1bda139cbbbced012c34e375506dbd0143/billiard-4.2.4.tar.gz", hash = "sha256:55f542c371209e03cd5862299b74e52e4fbcba8250ba611ad94276b369b6a85f", size = 156537, upload-time = "2025-11-30T13:28:48.52Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/87/8bab77b323f16d67be364031220069f79159117dd5e43eeb4be2fef1ac9b/billiard-4.2.4-py3-none-any.whl", hash = "sha256:525b42bdec68d2b983347ac312f892db930858495db601b5836ac24e6477cde5", size = 87070, upload-time = "2025-11-30T13:28:47.016Z" },
+]
+
+[[package]]
 name = "black"
 version = "26.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1591,6 +1612,27 @@ wheels = [
 ]
 
 [[package]]
+name = "celery"
+version = "5.6.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "billiard" },
+    { name = "click" },
+    { name = "click-didyoumean" },
+    { name = "click-plugins" },
+    { name = "click-repl" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
+    { name = "kombu" },
+    { name = "python-dateutil" },
+    { name = "tzlocal" },
+    { name = "vine" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e8/b4/a1233943ab5c8ea05fb877a88a0a0622bf47444b99e4991a8045ac37ea1d/celery-5.6.3.tar.gz", hash = "sha256:177006bd2054b882e9f01be59abd8529e88879ef50d7918a7050c5a9f4e12912", size = 1742243, upload-time = "2026-03-26T12:14:51.76Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cf/c9/6eccdda96e098f7ae843162db2d3c149c6931a24fda69fe4ab84d0027eb5/celery-5.6.3-py3-none-any.whl", hash = "sha256:0808f42f80909c4d5833202360ffafb2a4f83f4d8e23e1285d926610e9a7afa6", size = 451235, upload-time = "2026-03-26T12:14:49.491Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.6.17"
 source = { registry = "https://pypi.org/simple" }
@@ -1962,6 +2004,43 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/76/d4/81420972a676e8ffea40450d8c8c92943e7218a78fe9b64359836cc9876b/click-8.4.2.tar.gz", hash = "sha256:9a6cea6e60b17ebe0a44c5cc636d94f09bd66142c1cd7d8b4cd731c4917a15f6", size = 338000, upload-time = "2026-06-24T17:45:15.148Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fb/e2/79c688af8b210d232694e31e59da9f6ec747bae31c3f5946e4e9b98860d5/click-8.4.2-py3-none-any.whl", hash = "sha256:e6f9f66136c816745b9d65817da91d61d957fb16e02e4dcd0552553c5a197b76", size = 119243, upload-time = "2026-06-24T17:45:13.73Z" },
+]
+
+[[package]]
+name = "click-didyoumean"
+version = "0.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/30/ce/217289b77c590ea1e7c24242d9ddd6e249e52c795ff10fac2c50062c48cb/click_didyoumean-0.3.1.tar.gz", hash = "sha256:4f82fdff0dbe64ef8ab2279bd6aa3f6a99c3b28c05aa09cbfc07c9d7fbb5a463", size = 3089, upload-time = "2024-03-24T08:22:07.499Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1b/5b/974430b5ffdb7a4f1941d13d83c64a0395114503cc357c6b9ae4ce5047ed/click_didyoumean-0.3.1-py3-none-any.whl", hash = "sha256:5c4bb6007cfea5f2fd6583a2fb6701a22a41eb98957e63d0fac41c10e7c3117c", size = 3631, upload-time = "2024-03-24T08:22:06.356Z" },
+]
+
+[[package]]
+name = "click-plugins"
+version = "1.1.1.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c3/a4/34847b59150da33690a36da3681d6bbc2ec14ee9a846bc30a6746e5984e4/click_plugins-1.1.1.2.tar.gz", hash = "sha256:d7af3984a99d243c131aa1a828331e7630f4a88a9741fd05c927b204bcf92261", size = 8343, upload-time = "2025-06-25T00:47:37.555Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3d/9a/2abecb28ae875e39c8cad711eb1186d8d14eab564705325e77e4e6ab9ae5/click_plugins-1.1.1.2-py2.py3-none-any.whl", hash = "sha256:008d65743833ffc1f5417bf0e78e8d2c23aab04d9745ba817bd3e71b0feb6aa6", size = 11051, upload-time = "2025-06-25T00:47:36.731Z" },
+]
+
+[[package]]
+name = "click-repl"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "prompt-toolkit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cb/a2/57f4ac79838cfae6912f997b4d1a64a858fb0c86d7fcaae6f7b58d267fca/click-repl-0.3.0.tar.gz", hash = "sha256:17849c23dba3d667247dc4defe1757fff98694e90fe37474f3feebb69ced26a9", size = 10449, upload-time = "2023-06-15T12:43:51.141Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/52/40/9d857001228658f0d59e97ebd4c346fe73e138c6de1bce61dc568a57c7f8/click_repl-0.3.0-py3-none-any.whl", hash = "sha256:fb7e06deb8da8de86180a33a9da97ac316751c094c6899382da7feeeeb51b812", size = 10289, upload-time = "2023-06-15T12:43:48.626Z" },
 ]
 
 [[package]]
@@ -7434,6 +7513,21 @@ wheels = [
 ]
 
 [[package]]
+name = "kombu"
+version = "5.6.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "amqp" },
+    { name = "packaging" },
+    { name = "tzdata" },
+    { name = "vine" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b6/a5/607e533ed6c83ae1a696969b8e1c137dfebd5759a2e9682e26ff1b97740b/kombu-5.6.2.tar.gz", hash = "sha256:8060497058066c6f5aed7c26d7cd0d3b574990b09de842a8c5aaed0b92cc5a55", size = 472594, upload-time = "2025-12-29T20:30:07.779Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fb/0f/834427d8c03ff1d7e867d3db3d176470c64871753252b21b4f4897d1fa45/kombu-5.6.2-py3-none-any.whl", hash = "sha256:efcfc559da324d41d61ca311b0c64965ea35b4c55cc04ee36e55386145dace93", size = 214219, upload-time = "2025-12-29T20:30:05.74Z" },
+]
+
+[[package]]
 name = "kubernetes"
 version = "31.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -8504,6 +8598,12 @@ arize = [
 assemblyai = [
     { name = "assemblyai" },
 ]
+celery = [
+    { name = "asgiref" },
+    { name = "celery" },
+]
+
+
 astrapy = [
     { name = "astrapy" },
 ]
@@ -8532,6 +8632,33 @@ cleanlab = [
 clickhouse = [
     { name = "clickhouse-connect" },
 ]
+services = [
+    { name = "aioboto3" },
+    { name = "anyio" },
+    { name = "arize-phoenix-otel" },
+    { name = "asgiref" },
+    { name = "celery" },
+    { name = "chromadb" },
+    { name = "dill" },
+    { name = "ibm-cloud-sdk-core" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
+    { name = "kubernetes" },
+    { name = "langchain-chroma" },
+    { name = "langfuse" },
+    { name = "langsmith" },
+    { name = "langwatch", marker = "python_full_version < '3.14'" },
+    { name = "openinference-instrumentation-langchain" },
+    { name = "openlayer" },
+    { name = "opik", marker = "python_full_version < '3.14'" },
+    { name = "pydantic" },
+    { name = "redis" },
+    { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
+    { name = "tenacity" },
+    { name = "traceloop-sdk" },
+]
+
+
 complete = [
     { name = "aioboto3" },
     { name = "apscheduler" },
@@ -9111,8 +9238,28 @@ requires-dist = [
     { name = "yfinance", marker = "extra == 'yfinance'", specifier = "==0.2.50" },
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
+    { name = "anyio", marker = "extra == 'services'", specifier = ">=4.0.0" },
+    { name = "asgiref", marker = "extra == 'celery'", specifier = ">=3.8.0" },
+    { name = "celery", marker = "extra == 'celery'", specifier = ">=5.3.0,<6.0.0" },
+    { name = "dill", marker = "extra == 'services'", specifier = ">=0.3.8" },
+    { name = "langflow-base", extras = ["aioboto3"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["arize"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["celery"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["chroma"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["ibm-watsonx-clients"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["kubernetes"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["langfuse"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["langsmith"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["langwatch"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["openinference"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["openlayer"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["opik"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["postgresql"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["redis"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["traceloop"], marker = "extra == 'services'", editable = "src/backend/base" },
+    { name = "tenacity", marker = "extra == 'services'", specifier = ">=8.0.0" },
 ]
-provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "opendsstar", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
+provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "opendsstar", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "celery", "astrapy", "gassist", "ibm-watsonx-clients", "services", "complete", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -20551,6 +20698,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/53/66/a435d9ae49850b2f071f7ebd8119dd4e84872b01630d6736761e6e7fd847/validators-0.35.0.tar.gz", hash = "sha256:992d6c48a4e77c81f1b4daba10d16c3a9bb0dbb79b3a19ea847ff0928e70497a", size = 73399, upload-time = "2025-05-01T05:42:06.7Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/6e/3e955517e22cbdd565f2f8b2e73d52528b14b8bcfdb04f62466b071de847/validators-0.35.0-py3-none-any.whl", hash = "sha256:e8c947097eae7892cb3d26868d637f79f47b4a0554bc6b80065dfe5aac3705dd", size = 44712, upload-time = "2025-05-01T05:42:04.203Z" },
+]
+
+[[package]]
+name = "vine"
+version = "5.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/bd/e4/d07b5f29d283596b9727dd5275ccbceb63c44a1a82aa9e4bfd20426762ac/vine-5.1.0.tar.gz", hash = "sha256:8b62e981d35c41049211cf62a0a1242d8c1ee9bd15bb196ce38aefd6799e61e0", size = 48980, upload-time = "2023-11-05T08:46:53.857Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/03/ff/7c0c86c43b3cbb927e0ccc0255cb4057ceba4799cd44ae95174ce8e8b5b2/vine-5.1.0-py3-none-any.whl", hash = "sha256:40fdf3c48b2cfe1c38a49e9ae2da6fda88e4794c810050a728bd7413811fb1dc", size = 9636, upload-time = "2023-11-05T08:46:51.205Z" },
 ]
 
 [[package]]
