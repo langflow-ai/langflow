@@ -21,10 +21,6 @@ const elk = new ELK();
 export const getLayoutedNodes = async (
   nodes: AllNodeType[],
   edges: EdgeType[],
-  // LE-1810: "Minimize all & align" lays out collapsed cards, which are much
-  // smaller than the default node box — callers can override the size elk
-  // uses for every node.
-  nodeSize?: { width: number; height: number },
 ): Promise<AllNodeType[]> => {
   const graph = {
     id: "root",
@@ -49,8 +45,8 @@ export const getLayoutedNodes = async (
         }));
       return {
         id: n.id,
-        width: nodeSize?.width ?? NODE_WIDTH,
-        height: nodeSize?.height ?? NODE_HEIGHT,
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
         // ⚠️ we need to tell elk that the ports are fixed, in order to reduce edge crossings
         properties: {
           "org.eclipse.elk.portConstraints": "FIXED_ORDER",

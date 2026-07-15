@@ -2152,6 +2152,6 @@
   "inspectionPanel.default.none": "Nenhum",
   "inspectionPanel.close": "Fechar",
   "nodeToolbar.parameters": "Parâmetros",
-  "canvasControls.minimizeAllAlign": "Minimizar tudo e alinhar",
+  "canvasControls.minimizeAll": "Minimizar tudo",
   "canvasControls.expandAll": "Expandir tudo"
 }

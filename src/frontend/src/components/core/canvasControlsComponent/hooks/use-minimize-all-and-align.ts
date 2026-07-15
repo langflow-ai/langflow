@@ -1,22 +1,14 @@
-import { useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
+import { useUpdateNodeInternals } from "@xyflow/react";
 import { useCallback, useMemo } from "react";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { AllNodeType } from "@/types/flow";
-import { getLayoutedNodes } from "@/utils/layoutUtils";
-
-// Collapsed card box (w-48 + header block) used by elk when aligning
-// minimized components (LE-1810 "Minimize all & align").
-export const MINIMIZED_NODE_WIDTH = 192;
-export const MINIMIZED_NODE_HEIGHT = 80;
 
 export default function useMinimizeAllAndAlign() {
   const nodes = useFlowStore((state) => state.nodes);
-  const edges = useFlowStore((state) => state.edges);
   const setNodes = useFlowStore((state) => state.setNodes);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const updateNodeInternals = useUpdateNodeInternals();
-  const { fitView } = useReactFlow();
 
   const genericNodeIds = useMemo(
     () =>
@@ -35,70 +27,29 @@ export default function useMinimizeAllAndAlign() {
     [nodes, genericNodeIds],
   );
 
-  const minimizeAllAndAlign = useCallback(async () => {
-    takeSnapshot();
-    const collapsed = nodes.map((node) =>
-      node.type === "genericNode"
-        ? ({
-            ...node,
-            data: { ...node.data, showNode: false },
-          } as AllNodeType)
-        : node,
-    );
-    const layouted = await getLayoutedNodes(collapsed, edges, {
-      width: MINIMIZED_NODE_WIDTH,
-      height: MINIMIZED_NODE_HEIGHT,
-    });
-    setNodes(layouted);
-    updateNodeInternals(genericNodeIds);
-    requestAnimationFrame(() => {
-      fitView({ padding: 0.2 });
-    });
-  }, [
-    nodes,
-    edges,
-    genericNodeIds,
-    setNodes,
-    takeSnapshot,
-    updateNodeInternals,
-    fitView,
-  ]);
-
-  const expandAll = useCallback(async () => {
-    takeSnapshot();
-    const expanded = nodes.map((node) =>
-      node.type === "genericNode"
-        ? ({
-            ...node,
-            data: { ...node.data, showNode: true },
-          } as AllNodeType)
-        : node,
-    );
-    // Re-align with expanded dimensions so cards don't overlap when they
-    // grow back from the collapsed layout.
-    const layouted = await getLayoutedNodes(expanded, edges);
-    setNodes(layouted);
-    updateNodeInternals(genericNodeIds);
-    requestAnimationFrame(() => {
-      fitView({ padding: 0.2 });
-    });
-  }, [
-    nodes,
-    edges,
-    genericNodeIds,
-    setNodes,
-    takeSnapshot,
-    updateNodeInternals,
-    fitView,
-  ]);
+  // LE-1810 review round (reporter): minimize-all ONLY toggles showNode —
+  // no re-layout, no viewport change. Components keep their positions.
+  const setAllShowNode = useCallback(
+    (showNode: boolean) => {
+      takeSnapshot();
+      setNodes(
+        nodes.map((node) =>
+          node.type === "genericNode"
+            ? ({
+                ...node,
+                data: { ...node.data, showNode },
+              } as AllNodeType)
+            : node,
+        ),
+      );
+      updateNodeInternals(genericNodeIds);
+    },
+    [nodes, genericNodeIds, setNodes, takeSnapshot, updateNodeInternals],
+  );
 
   const toggleMinimizeAllAndAlign = useCallback(() => {
-    if (allMinimized) {
-      void expandAll();
-      return;
-    }
-    void minimizeAllAndAlign();
-  }, [allMinimized, expandAll, minimizeAllAndAlign]);
+    setAllShowNode(allMinimized);
+  }, [allMinimized, setAllShowNode]);
 
   return {
     allMinimized,

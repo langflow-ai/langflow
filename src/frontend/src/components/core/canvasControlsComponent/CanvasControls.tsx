@@ -291,7 +291,7 @@ const CanvasControls = ({
               ? t("version.readOnly")
               : allMinimized
                 ? t("canvasControls.expandAll")
-                : t("canvasControls.minimizeAllAlign")
+                : t("canvasControls.minimizeAll")
           }
           onClick={toggleMinimizeAllAndAlign}
         >

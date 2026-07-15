@@ -2152,6 +2152,6 @@
   "inspectionPanel.default.none": "なし",
   "inspectionPanel.close": "閉じる",
   "nodeToolbar.parameters": "パラメータ",
-  "canvasControls.minimizeAllAlign": "すべて最小化して整列",
+  "canvasControls.minimizeAll": "すべて最小化",
   "canvasControls.expandAll": "すべて展開"
 }

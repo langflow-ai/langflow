@@ -1,14 +1,9 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
-import useMinimizeAllAndAlign, {
-  MINIMIZED_NODE_HEIGHT,
-  MINIMIZED_NODE_WIDTH,
-} from "../hooks/use-minimize-all-and-align";
+import { act, renderHook } from "@testing-library/react";
+import useMinimizeAllAndAlign from "../hooks/use-minimize-all-and-align";
 
 const mockUpdateNodeInternals = jest.fn();
-const mockFitView = jest.fn();
 jest.mock("@xyflow/react", () => ({
   useUpdateNodeInternals: () => mockUpdateNodeInternals,
-  useReactFlow: () => ({ fitView: mockFitView }),
 }));
 
 type MockNode = {
@@ -30,7 +25,7 @@ const mockSetNodes = jest.fn();
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   default: (selector: (state: unknown) => unknown) =>
-    selector({ nodes: mockNodes, edges: [], setNodes: mockSetNodes }),
+    selector({ nodes: mockNodes, setNodes: mockSetNodes }),
 }));
 
 const mockGetLayoutedNodes = jest.fn();
@@ -38,10 +33,14 @@ jest.mock("@/utils/layoutUtils", () => ({
   getLayoutedNodes: (...args: unknown[]) => mockGetLayoutedNodes(...args),
 }));
 
-const genericNode = (id: string, showNode?: boolean) => ({
+const genericNode = (
+  id: string,
+  showNode?: boolean,
+  position = { x: 10, y: 20 },
+) => ({
   id,
   type: "genericNode",
-  position: { x: 0, y: 0 },
+  position,
   data: { id, showNode },
 });
 
@@ -52,10 +51,9 @@ const noteNode = (id: string) => ({
   data: { id },
 });
 
-describe("useMinimizeAllAndAlign (LE-1810 T9)", () => {
+describe("useMinimizeAllAndAlign (LE-1810 T9 — minimize only, no re-layout)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetLayoutedNodes.mockImplementation(async (nodes) => nodes);
   });
 
   it("reports allMinimized=false when any generic node is expanded", () => {
@@ -77,57 +75,60 @@ describe("useMinimizeAllAndAlign (LE-1810 T9)", () => {
     expect(result.current.allMinimized).toBe(true);
   });
 
-  it("minimizes every generic node, aligns with collapsed dimensions and fits the view", async () => {
-    mockNodes = [genericNode("a", true), genericNode("b"), noteNode("n")];
+  it("minimizes every generic node keeping positions — no layout, no viewport change", () => {
+    mockNodes = [
+      genericNode("a", true, { x: 1, y: 2 }),
+      genericNode("b", undefined, { x: 3, y: 4 }),
+      noteNode("n"),
+    ];
     const { result } = renderHook(() => useMinimizeAllAndAlign());
 
-    await act(async () => {
+    act(() => {
       result.current.toggleMinimizeAllAndAlign();
     });
 
     expect(mockTakeSnapshot).toHaveBeenCalled();
-    await waitFor(() => expect(mockGetLayoutedNodes).toHaveBeenCalled());
+    // Reporter call on LE-1810: minimize-all must ONLY minimize.
+    expect(mockGetLayoutedNodes).not.toHaveBeenCalled();
 
-    const [collapsedNodes, , sizeOverride] = mockGetLayoutedNodes.mock.calls[0];
-    const generics = collapsedNodes.filter(
+    const [updated] = mockSetNodes.mock.calls[0];
+    const generics = updated.filter(
       (node: MockNode) => node.type === "genericNode",
     );
     expect(
       generics.every((node: MockNode) => node.data.showNode === false),
     ).toBe(true);
-    const note = collapsedNodes.find(
-      (node: MockNode) => node.type === "noteNode",
-    );
+    expect(generics.map((node: MockNode) => node.position)).toEqual([
+      { x: 1, y: 2 },
+      { x: 3, y: 4 },
+    ]);
+    const note = updated.find((node: MockNode) => node.type === "noteNode");
     expect(note.data.showNode).toBeUndefined();
-    expect(sizeOverride).toEqual({
-      width: MINIMIZED_NODE_WIDTH,
-      height: MINIMIZED_NODE_HEIGHT,
-    });
-
-    await waitFor(() => expect(mockSetNodes).toHaveBeenCalled());
     expect(mockUpdateNodeInternals).toHaveBeenCalledWith(["a", "b"]);
   });
 
-  it("expands every generic node and re-aligns with expanded dimensions", async () => {
-    mockNodes = [genericNode("a", false), genericNode("b", false)];
+  it("expands every generic node keeping positions", () => {
+    mockNodes = [
+      genericNode("a", false, { x: 5, y: 6 }),
+      genericNode("b", false, { x: 7, y: 8 }),
+    ];
     const { result } = renderHook(() => useMinimizeAllAndAlign());
 
-    await act(async () => {
+    act(() => {
       result.current.toggleMinimizeAllAndAlign();
     });
 
     expect(mockTakeSnapshot).toHaveBeenCalled();
-    await waitFor(() => expect(mockGetLayoutedNodes).toHaveBeenCalled());
+    expect(mockGetLayoutedNodes).not.toHaveBeenCalled();
 
-    const [expandedNodes, , sizeOverride] = mockGetLayoutedNodes.mock.calls[0];
+    const [updated] = mockSetNodes.mock.calls[0];
     expect(
-      expandedNodes
-        .filter((node: MockNode) => node.type === "genericNode")
-        .every((node: MockNode) => node.data.showNode === true),
+      updated.every((node: MockNode) => node.data.showNode === true),
     ).toBe(true);
-    expect(sizeOverride).toBeUndefined();
-
-    await waitFor(() => expect(mockSetNodes).toHaveBeenCalled());
+    expect(updated.map((node: MockNode) => node.position)).toEqual([
+      { x: 5, y: 6 },
+      { x: 7, y: 8 },
+    ]);
     expect(mockUpdateNodeInternals).toHaveBeenCalledWith(["a", "b"]);
   });
 });
