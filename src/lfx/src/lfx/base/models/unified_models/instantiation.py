@@ -7,13 +7,13 @@ import os
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
-from lfx.base.models.model_utils import _to_str, replace_with_live_models
+from lfx.base.models.model_utils import _to_str, inject_custom_enabled_models, replace_with_live_models
 from lfx.log.logger import logger
 from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
-from .credentials import _fetch_enabled_providers_for_user, _get_model_status
+from .credentials import _fetch_enabled_providers_for_user, _get_model_status, model_status_contains
 from .model_catalog import get_unified_models_detailed
 from .provider_queries import model_provider_metadata
 
@@ -85,6 +85,7 @@ def get_llm(
     watsonx_url=None,
     watsonx_project_id=None,
     ollama_base_url=None,
+    overrides: dict[str, Any] | None = None,
 ) -> Any:
     # Resolve helpers via package namespace so tests patching
     # lfx.base.models.unified_models.<name> keep working.
@@ -220,9 +221,16 @@ def get_llm(
     # generic ``model``.
     model_name_param = metadata.get("model_name_param") or provider_param_mapping.get("model_param", "model")
 
-    # Check if this is a reasoning model that doesn't support temperature
+    # Reasoning models commonly reject sampling parameters such as
+    # ``temperature``. Catalog metadata marks these with ``reasoning: True``;
+    # enriched UI options also carry ``reasoning_models``. Keep the user's
+    # explicit token cap, though: provider clients either accept the configured
+    # ``max_tokens_field_name`` directly or normalize it to the provider's wire
+    # format (for example, ChatOpenAI maps ``max_tokens`` to
+    # ``max_completion_tokens`` for reasoning models).
     reasoning_models = metadata.get("reasoning_models", [])
-    if model_name in reasoning_models:
+    is_reasoning_model = metadata.get("reasoning", False) is True or model_name in reasoning_models
+    if is_reasoning_model:
         temperature = None
 
     # Build kwargs dynamically
@@ -340,10 +348,32 @@ def get_llm(
                 default_headers[header_name] = value
         if default_headers:
             kwargs["default_headers"] = default_headers
+    elif provider == "Azure AI Foundry":
+        from lfx.base.models.model_utils import AZURE_AI_FOUNDRY_REQUEST_TIMEOUT
+
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        endpoint_value = provider_vars.get("AZURE_AI_FOUNDRY_ENDPOINT") or _env_if_allowed("AZURE_AI_FOUNDRY_ENDPOINT")
+        if not endpoint_value:
+            msg = (
+                "Azure AI Foundry endpoint is required. Configure AZURE_AI_FOUNDRY_ENDPOINT "
+                "in Settings → Model Providers or set the environment variable."
+            )
+            raise ValueError(msg)
+        kwargs["endpoint"] = endpoint_value
+        # Bound hung/blackholed endpoints the same way live discovery does.
+        kwargs["request_timeout"] = AZURE_AI_FOUNDRY_REQUEST_TIMEOUT
     elif is_registered(provider):
         # Bundle-contributed provider: apply its declared connection variables
         # (base_url, attribution headers, etc.) generically from its metadata.
         _apply_registered_provider_connection(provider, user_id, kwargs)
+
+    # Apply overrides discovered from a prior failed call to this model (cache)
+    # plus any the caller passed for this attempt (error-driven remediation).
+    from lfx.base.models.model_remediation import cached_overrides
+
+    kwargs.update(cached_overrides(provider, model_name))
+    if overrides:
+        kwargs.update(overrides)
 
     try:
         return model_class(**kwargs)
@@ -372,6 +402,7 @@ def _get_provider_catalog_models(
         include_unsupported=False,
     )
 
+    explicitly_enabled_models: set[str] = set()
     if user_id:
         with contextlib.suppress(Exception):
             enabled_providers = run_until_complete(_fetch_enabled_providers_for_user(user_id))
@@ -383,6 +414,10 @@ def _get_provider_catalog_models(
                     None,
                     model_provider_metadata,
                 )
+            _, explicitly_enabled_models = run_until_complete(_get_model_status(user_id))
+
+    # Include free-text custom deployments absent from the seed catalog.
+    inject_custom_enabled_models(provider_models, explicitly_enabled_models)
 
     catalog_models: list[dict[str, Any]] = []
     for provider_data in provider_models:
@@ -395,11 +430,13 @@ def _get_provider_catalog_models(
 def _get_provider_enabled_model_names(
     provider: str,
     user_id: UUID | str | None,
+    model_type: str | None = None,
 ) -> list[str]:
     """Return model names enabled for a provider in Model Providers settings.
 
-    Includes both LLM and embedding models (e.g. gpt-5 and text-embedding-3-small).
-    When *user_id* is absent, returns all non-deprecated catalog models for the provider.
+    Includes both LLM and embedding models unless *model_type* restricts the
+    result. When *user_id* is absent, returns all matching non-deprecated
+    catalog models for the provider.
     """
     catalog_models = _get_provider_catalog_models(provider, user_id)
 
@@ -419,23 +456,25 @@ def _get_provider_enabled_model_names(
         model_name = model_data.get("model_name")
         if not model_name:
             continue
+        metadata = model_data.get("metadata", {})
+        row_model_type = metadata.get("model_type") or "llm"
+        if model_type is not None and row_model_type != model_type:
+            continue
 
         if apply_user_prefs:
-            metadata = model_data.get("metadata", {})
             is_default = metadata.get("default", False)
-            if not is_default and model_name not in explicitly_enabled_models:
+            if not is_default and not model_status_contains(
+                explicitly_enabled_models,
+                provider,
+                model_name,
+                model_type=row_model_type,
+            ):
                 continue
-            if model_name in disabled_models:
+            if model_status_contains(disabled_models, provider, model_name, model_type=row_model_type):
                 continue
 
         model_names.append(model_name)
     return model_names
-
-
-def _is_embedding_catalog_model(model_data: dict[str, Any]) -> bool:
-    """Return True when a catalog entry is an embedding model."""
-    model_type = model_data.get("metadata", {}).get("model_type", "llm")
-    return model_type == "embeddings"
 
 
 def _get_configured_embedding_providers(
@@ -461,19 +500,7 @@ def _get_provider_embedding_model_names(
     user_id: UUID | str | None,
 ) -> list[str]:
     """Return enabled embedding model names for a single provider."""
-    catalog_by_name = {
-        model_data.get("model_name"): model_data
-        for model_data in _get_provider_catalog_models(provider, user_id)
-        if model_data.get("model_name")
-    }
-
-    model_names: list[str] = []
-    for model_name in _get_provider_enabled_model_names(provider, user_id):
-        model_data = catalog_by_name.get(model_name)
-        if model_data is None or not _is_embedding_catalog_model(model_data):
-            continue
-        model_names.append(model_name)
-    return model_names
+    return _get_provider_enabled_model_names(provider, user_id, model_type="embeddings")
 
 
 def _compose_embedding_kwargs(
@@ -519,7 +546,10 @@ def _compose_embedding_kwargs(
 
     embedding_class = unified_models_module.get_embedding_class(embedding_class_name)
 
+    # Treat blank MessageTextInput api_base as unset so it cannot wipe provider endpoints.
     api_base_value = _to_str(api_base) if provider == selected_provider else None
+    if isinstance(api_base_value, str) and not api_base_value.strip():
+        api_base_value = None
     if provider == "OpenAI" and not api_base_value:
         api_base_value = _to_str(os.environ.get("OPENAI_EMBEDDINGS_API_BASE")) or _to_str(
             os.environ.get("OPENAI_API_BASE")
@@ -619,15 +649,37 @@ def _compose_embedding_kwargs(
         _apply_registered_provider_connection(provider, user_id, kwargs)
 
     for param_name, param_value in optional_params.items():
-        if param_value is not None and param_name in param_mapping:
-            if (
-                param_name == "request_timeout"
-                and provider == "Google Generative AI"
-                and isinstance(param_value, (int, float))
-            ):
-                kwargs[param_mapping[param_name]] = {"timeout": param_value}
-            else:
-                kwargs[param_mapping[param_name]] = param_value
+        if param_value is None:
+            continue
+        # Skip blank api_base so it does not clobber a provider-resolved base URL.
+        if param_name == "api_base" and isinstance(param_value, str) and not param_value.strip():
+            continue
+        if (
+            param_name == "request_timeout"
+            and provider == "Google Generative AI"
+            and isinstance(param_value, (int, float))
+        ):
+            kwargs[param_mapping[param_name]] = {"timeout": param_value}
+        elif param_name in param_mapping:
+            kwargs[param_mapping[param_name]] = param_value
+
+    # Apply Foundry endpoint last so a blank component api_base cannot wipe it.
+    if provider == "Azure AI Foundry" and "api_base" in param_mapping:
+        foundry_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        endpoint_value = (
+            api_base_value
+            or _to_str(foundry_vars.get("AZURE_AI_FOUNDRY_ENDPOINT"))
+            or _to_str(_env_if_allowed("AZURE_AI_FOUNDRY_ENDPOINT"))
+        )
+        if not endpoint_value:
+            if use_component_overrides:
+                msg = (
+                    "Azure AI Foundry endpoint is required. Configure AZURE_AI_FOUNDRY_ENDPOINT "
+                    "in Settings → Model Providers or set the environment variable."
+                )
+                raise ValueError(msg)
+            return None
+        kwargs[param_mapping["api_base"]] = endpoint_value
 
     return embedding_class, kwargs
 

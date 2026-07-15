@@ -13,12 +13,64 @@ from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.env_var_security import safe_getenv
 from lfx.utils.secrets import secret_value_to_str
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 from .provider_queries import (
     get_model_provider_variable_mapping,
     get_provider_all_variables,
 )
+
+MODEL_STATUS_KEY_SEPARATOR = "::"
+MODEL_STATUS_TYPES = ("llm", "embeddings")
+
+
+def model_status_key(provider: str, model_name: str, model_type: str | None = None) -> str:
+    """Return the stable identity used in persisted model-status variables."""
+    if model_type is not None:
+        if model_type not in MODEL_STATUS_TYPES:
+            msg = f"Unsupported model status type: {model_type}"
+            raise ValueError(msg)
+        return f"{provider}{MODEL_STATUS_KEY_SEPARATOR}{model_type}{MODEL_STATUS_KEY_SEPARATOR}{model_name}"
+    return f"{provider}{MODEL_STATUS_KEY_SEPARATOR}{model_name}"
+
+
+def parse_model_status_key(entry: str) -> tuple[str | None, str, str | None]:
+    """Parse a bare, provider-qualified, or typed model-status identity.
+
+    The split is deliberately bounded so deployment names containing ``::``
+    survive intact. Legacy provider-qualified entries have no type; only the
+    canonical ``llm`` and ``embeddings`` second segments identify typed keys.
+    """
+    parts = entry.split(MODEL_STATUS_KEY_SEPARATOR, 2)
+    match parts:
+        case [bare_name]:
+            return None, bare_name, None
+        case [provider, model_name]:
+            return provider, model_name, None
+        case [provider, possible_type, remainder]:
+            if possible_type in MODEL_STATUS_TYPES:
+                return provider, remainder, possible_type
+            return provider, f"{possible_type}{MODEL_STATUS_KEY_SEPARATOR}{remainder}", None
+    msg = "Model status key could not be parsed"
+    raise ValueError(msg)
+
+
+def model_status_contains(
+    entries: set[str],
+    provider: str,
+    model_name: str,
+    model_type: str | None = None,
+) -> bool:
+    """Check typed status while honoring provider-qualified and bare legacy entries."""
+    if model_status_key(provider, model_name) in entries or model_name in entries:
+        return True
+    if model_type is not None:
+        return model_status_key(provider, model_name, model_type) in entries
+    return any(
+        model_status_key(provider, model_name, candidate_type) in entries for candidate_type in MODEL_STATUS_TYPES
+    )
 
 
 def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
@@ -64,7 +116,10 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
         # Honor the request's no-env-fallback contract: skip os.environ when disabled so a
         # served flow stays isolated from process-wide credentials (matches VariableService).
         if not is_env_fallback_disabled():
-            env_value = os.environ.get(var_name)
+            # safe_getenv denies reserved names (LANGFLOW_SECRET_KEY, DATABASE_URL, ...) so a
+            # tenant-supplied api_key field cannot exfiltrate the server's own secrets via the
+            # env fallback (the resolved value is otherwise used as a live provider key).
+            env_value = safe_getenv(var_name)
             if env_value and env_value.strip():
                 return env_value.strip()
         return None
@@ -121,7 +176,8 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
 
     if is_env_fallback_disabled():
         return None
-    return os.getenv(variable_name)
+    env_value = safe_getenv(variable_name)
+    return env_value.strip() if env_value and env_value.strip() else None
 
 
 def _env_value_for(var_key: str) -> str | None:
@@ -214,6 +270,11 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
     for var_info in provider_vars:
         var_key = var_info.get("variable_key")
         if not var_key or db_values.get(var_key):
+            continue
+        # Honor the request's no-env-fallback contract: a served flow under
+        # no_env_fallback must stay isolated from process-wide credentials even on
+        # this post-DB-miss rotation fallback.
+        if is_env_fallback_disabled():
             continue
         env_value = _env_value_for(var_key)
         if env_value:
@@ -400,16 +461,23 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
         return
 
     first_model = None
+    provider_models: list[dict[str, Any]] = []
     try:
         from .model_catalog import get_unified_models_detailed
 
         models = get_unified_models_detailed(providers=[provider])
         if models and models[0].get("models"):
-            first_model = models[0]["models"][0]["model_name"]
+            provider_models = models[0]["models"]
+            first_model = provider_models[0]["model_name"]
     except Exception as e:  # noqa: BLE001
         logger.error(f"Error getting unified models for provider {provider}: {e}")
 
     validation_model = model_name or first_model
+    validation_metadata = next(
+        (model.get("metadata", {}) for model in provider_models if model.get("model_name") == validation_model),
+        {},
+    )
+    is_reasoning_model = validation_metadata.get("reasoning", False) is True
 
     # Providers contributed by extension bundles validate through their own
     # callable (registered via provider_registry; imported lazily to avoid an
@@ -448,12 +516,16 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("OPENAI_API_KEY")
             if not api_key:
                 return
-            llm_kwargs = {"api_key": api_key, "model_name": validation_model, "max_tokens": 1}
+            llm_kwargs = {"api_key": api_key, "model_name": validation_model}
+            if not is_reasoning_model:
+                llm_kwargs["max_tokens"] = 1
             base_url = variables.get("OPENAI_BASE_URL")
             if base_url:
                 from lfx.utils.util import transform_localhost_url
 
-                llm_kwargs["base_url"] = transform_localhost_url(base_url)
+                transformed_base_url = transform_localhost_url(base_url)
+                validate_connector_url_for_ssrf(transformed_base_url)
+                llm_kwargs["base_url"] = transformed_base_url
             llm = ChatOpenAI(**llm_kwargs)
             llm.invoke("test")
 
@@ -483,6 +555,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             url = variables.get("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
             if not api_key or not project_id:
                 return
+            validate_connector_url_for_ssrf(url)
             llm = ChatWatsonx(
                 apikey=api_key,
                 url=url,
@@ -526,6 +599,34 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 logger.warning(msg)
                 raise ValueError(msg) from e
 
+        elif provider == "Azure AI Foundry":
+            try:
+                from langchain_azure_ai.chat_models import AzureAIOpenAIApiChatModel
+            except ImportError as e:
+                msg = (
+                    "Azure AI Foundry credential validation requires the "
+                    "'langchain-azure-ai' package, but it is not installed."
+                )
+                raise ValueError(msg) from e
+
+            if AzureAIOpenAIApiChatModel is None:
+                msg = "Azure AI Foundry model support is unavailable."
+                raise ValueError(msg)
+
+            from lfx.base.models.model_utils import request_azure_ai_foundry_model_entries
+
+            api_key = variables.get("AZURE_AI_FOUNDRY_API_KEY")
+            endpoint = variables.get("AZURE_AI_FOUNDRY_ENDPOINT")
+            if not api_key or not endpoint:
+                return
+            try:
+                # Validate connection without requiring a seed catalog model name.
+                request_azure_ai_foundry_model_entries(endpoint, api_key)
+            except Exception as e:
+                msg = f"Could not validate Azure AI Foundry credentials: {e!s}"
+                logger.warning(msg)
+                raise ValueError(msg) from e
+
         elif provider == "Ollama":
             import requests
 
@@ -536,7 +637,10 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 raise ValueError(msg)
 
             base_url = base_url.rstrip("/")
-            response = requests.get(f"{base_url}/api/tags", timeout=5)
+            tags_url = f"{base_url}/api/tags"
+            # OLLAMA_BASE_URL is tenant-controlled: block SSRF to internal/cloud-metadata hosts.
+            validate_connector_url_for_ssrf(tags_url)
+            response = requests.get(tags_url, timeout=5, allow_redirects=False)
             response.raise_for_status()
 
             data = response.json()

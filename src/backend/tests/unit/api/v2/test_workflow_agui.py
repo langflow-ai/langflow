@@ -268,6 +268,29 @@ class TestAGUIModeDispatch:
         assert detail["code"] == "SYNC_MODE_UNSUPPORTED_FIELDS"
         assert detail["fields"] == ["data", "files", "start_component_id", "stop_component_id"]
 
+    @pytest.mark.parametrize("mode", ["stream", "background"])
+    async def test_non_sync_modes_reject_output_ids(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        empty_flow,
+        mode: str,
+    ):
+        """output_ids is sync-only; other modes must 422 instead of silently ignoring it."""
+        body = _agui_body(empty_flow, mode=mode)
+        body["output_ids"] = ["chat-output-1"]
+
+        response = await client.post(
+            "api/v2/workflows",
+            json=body,
+            headers={"x-api-key": created_api_key.api_key},
+        )
+
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert detail["code"] == "MODE_UNSUPPORTED_FIELDS"
+        assert detail["fields"] == ["output_ids"]
+
 
 class TestV2WorkflowAdmission:
     """Route-level admission checks before workflow execution dispatch."""
@@ -735,6 +758,63 @@ class TestAGUIStreaming:
                 if flow:
                     await session.delete(flow)
 
+    async def test_stream_applies_request_tweaks(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        json_memory_chatbot_no_llm,
+    ):
+        """Request ``tweaks`` must reach the graph on the streaming path.
+
+        Regression: the stream/background path builds the graph via the v1
+        build-vertex loop (``generate_flow_events``) and previously dropped
+        ``tweaks`` entirely, so only ``mode=sync`` applied them. Here we
+        override the ChatInput's ``input_value`` via tweaks (with no top-level
+        input to override it) and assert the tweaked text drives the run.
+        Stream and background share ``generate_flow_events``, so this covers
+        both non-sync paths.
+        """
+        raw = json.loads(json_memory_chatbot_no_llm)
+        flow_data = raw.get("data", raw)
+        chat_input_id = next(n["id"] for n in flow_data["nodes"] if n.get("data", {}).get("type") == "ChatInput")
+        flow_id = uuid4()
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="AG-UI Tweaks Flow",
+                data=flow_data,
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+
+        tweaked = "TWEAKED_VIA_TWEAKS_123"
+        try:
+            response = await client.post(
+                "api/v2/workflows",
+                json={
+                    "flow_id": str(flow_id),
+                    "mode": "stream",
+                    "stream_protocol": "agui",
+                    # No top-level input_value and no session_id, so the build
+                    # loop receives no chat-input override and the tweak is the
+                    # only source of the ChatInput value. Without the fix the
+                    # flow default is used and the tweaked text never appears.
+                    "tweaks": {chat_input_id: {"input_value": tweaked}},
+                },
+                headers={"x-api-key": created_api_key.api_key},
+            )
+
+            assert response.status_code == 200
+            body = response.text
+            assert "RUN_ERROR" not in body
+            assert tweaked in body
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
 
 class TestAGUISyncExecution:
     """mode=sync runs the flow inline and folds outputs into the response."""
@@ -927,32 +1007,6 @@ class TestAGUICancellation:
 
 class TestAGUIBackgroundReattach:
     """A background run buffers its AG-UI events so a client can re-attach."""
-
-    async def test_reattach_owned_job_without_local_buffer_returns_409(self, monkeypatch: pytest.MonkeyPatch):
-        """If the job exists but this worker has no replay buffer, return an explicit conflict."""
-        from langflow.api.v2 import workflow as workflow_module
-
-        job_id = uuid4()
-        expected_user_id = uuid4()
-        workflow_module._BACKGROUND_RUNS.pop(str(job_id), None)
-
-        class FakeJobService:
-            async def get_job_by_job_id(self, seen_job_id, user_id=None):
-                assert seen_job_id == job_id
-                assert user_id == expected_user_id
-                return SimpleNamespace(type=workflow_module.JobType.WORKFLOW)
-
-        monkeypatch.setattr(workflow_module, "get_job_service", lambda: FakeJobService())
-
-        with pytest.raises(HTTPException) as exc_info:
-            await workflow_module.reattach_workflow_events(
-                str(job_id),
-                http_request=SimpleNamespace(headers={}),
-                current_user=SimpleNamespace(id=expected_user_id),
-            )
-
-        assert exc_info.value.status_code == 409
-        assert exc_info.value.detail["code"] == "BACKGROUND_EVENTS_UNAVAILABLE"
 
     async def test_background_run_events_can_be_reattached(
         self,
@@ -1708,7 +1762,7 @@ class TestAGUIBackgroundTasksLifecycle:
         monkeypatch: pytest.MonkeyPatch,
     ):
         """After a background run ends, the BackgroundTasks queue must be invoked."""
-        from langflow.api.v2 import workflow_background as wf_bg
+        from langflow.api.v2 import workflow as _workflow_module
         from starlette.background import BackgroundTasks as _Real
 
         instances: list[_Real] = []
@@ -1725,7 +1779,7 @@ class TestAGUIBackgroundTasksLifecycle:
                 self.called = True
                 return await super().__call__(*args, **kwargs)
 
-        monkeypatch.setattr(wf_bg, "BackgroundTasks", RecordingBackgroundTasks)
+        monkeypatch.setattr(_workflow_module, "BackgroundTasks", RecordingBackgroundTasks)
 
         headers = {"x-api-key": created_api_key.api_key}
         start = await client.post(
@@ -1770,10 +1824,11 @@ class TestMemoryBaseHookBackgroundMode:
     """The memory-base ``on_flow_output`` hook must fire after a background run.
 
     Sync mode wires the hook directly inside ``execute_workflow_sync`` and the
-    v1 build pipeline wires it after ``end_all_traces`` in ``api/build.py``. The
-    v2 background mode routes through that same build pipeline with the returned
-    background job id, so the hook must fire exactly once for successful
-    background runs.
+    v1 build pipeline wires it after ``end_all_traces`` in ``api/build.py``.
+    The v2 background mode suppresses the build pipeline's own hook
+    (``track_job_status=False``) and must dispatch it once itself, keyed by the
+    durable job id, on successful completion. Without it, MemoryBase
+    auto-capture silently misses every background run.
     """
 
     async def test_background_run_fires_memory_base_hook_on_success(
@@ -1787,7 +1842,7 @@ class TestMemoryBaseHookBackgroundMode:
 
         ``flow_id``, ``session_id``, and ``job_id`` must reach the hook.
         """
-        from langflow.api import build as _build_module
+        from langflow.api.v2 import workflow as _workflow_module
 
         captured: list[dict] = []
 
@@ -1796,7 +1851,7 @@ class TestMemoryBaseHookBackgroundMode:
                 captured.append(kwargs)
 
         monkeypatch.setattr(
-            _build_module,
+            _workflow_module,
             "get_memory_base_service",
             lambda: _RecordingMemoryBaseService(),
         )
@@ -1846,6 +1901,60 @@ class TestMemoryBaseHookBackgroundMode:
         assert call["job_id"] == _UUID(job_id)
 
 
+class TestBackgroundNoDuplicateWorkflowRow:
+    """A v2 background run must create exactly ONE WORKFLOW job row.
+
+    The durable runner owns the run's job row (keyed by ``submit()``'s job_id).
+    Without ``track_job_status=False`` on the background frame source, the build
+    pipeline (``generate_flow_events``) would mint its own run_id-keyed WORKFLOW
+    row, leaving a phantom/orphan row per background run that skews job-table
+    metrics and double-fires the memory-base hook.
+    """
+
+    async def test_background_run_creates_single_workflow_row(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        import asyncio as _asyncio
+        from uuid import UUID as _UUID
+
+        from langflow.services.database.models.jobs.model import Job as _Job
+        from langflow.services.database.models.jobs.model import JobType as _JobType
+        from sqlmodel import select
+
+        headers = {"x-api-key": created_api_key.api_key}
+        start = await client.post(
+            "api/v2/workflows",
+            json=_agui_body(chatbot_flow, message="hi", mode="background"),
+            headers=headers,
+        )
+        assert start.status_code == 200
+        job_id = start.json()["job_id"]
+
+        events = await client.get(f"api/v2/workflows/{job_id}/events", headers=headers)
+        assert events.status_code == 200
+        assert "RUN_FINISHED" in events.text
+
+        # Wait for the durable row to finalize.
+        for _ in range(100):
+            async with session_scope() as session:
+                row = await session.get(_Job, _UUID(job_id))
+                if row is not None and row.status.value in ("completed", "failed"):
+                    break
+            await _asyncio.sleep(0.1)
+
+        # Exactly one WORKFLOW row for this flow: the durable one. No phantom
+        # build-pipeline row keyed by a separately-minted run_id.
+        async with session_scope() as session:
+            rows = (
+                await session.exec(select(_Job).where(_Job.flow_id == chatbot_flow, _Job.type == _JobType.WORKFLOW))
+            ).all()
+        assert len(rows) == 1, f"expected one WORKFLOW row, found {len(rows)}: {[str(r.job_id) for r in rows]}"
+        assert rows[0].job_id == _UUID(job_id)
+
+
 class TestBackgroundFinalizationGuards:
     """Cancellation state + cleanup guarantees for the background path.
 
@@ -1859,12 +1968,14 @@ class TestBackgroundFinalizationGuards:
         created_api_key,
         chatbot_flow,
     ):
-        """A run cancelled mid-flight must stay CANCELLED after the buffer ends.
+        """A stopped run settles on CANCELLED and is not overwritten by completion.
 
-        Race: ``stop_workflow`` sets the job to CANCELLED. The buffer task's
-        ``finally`` block runs shortly after and previously wrote
-        COMPLETED/FAILED unconditionally, silently overwriting the user's
-        stop intent. Guarded by ``_finalize_job_status``.
+        ``stop_workflow`` writes a durable STOP signal (via the facade) and flips
+        the row to CANCELLED. The in-flight runner's terminal finalization
+        observes that signal and reconciles to CANCELLED rather than writing
+        COMPLETED/FAILED over it. CANCELLED is the final, stable state, so we poll
+        for it directly (an intermediate COMPLETED/FAILED may flicker before the
+        STOP-driven reconcile lands).
         """
         import asyncio as _asyncio
         from uuid import UUID as _UUID
@@ -1882,8 +1993,6 @@ class TestBackgroundFinalizationGuards:
         job_id = start.json()["job_id"]
         job_uuid = _UUID(job_id)
 
-        # Stop the run before it gets a chance to complete on its own. The
-        # /stop endpoint flips the row to CANCELLED.
         stop = await client.post(
             "api/v2/workflows/stop",
             json={"job_id": job_id},
@@ -1891,23 +2000,16 @@ class TestBackgroundFinalizationGuards:
         )
         assert stop.status_code == 200
 
-        # Give the buffer task time to reach its finally block and call
-        # _finalize_job_status. Poll the row for stability.
-        for _ in range(60):
+        # Poll until the row settles on CANCELLED (the final stable state).
+        last = None
+        for _ in range(80):
             async with session_scope() as session:
                 row = await session.get(_Job, job_uuid)
-                if row is not None and row.status in (_JobStatus.COMPLETED, _JobStatus.FAILED):
-                    break
+            last = row.status if row is not None else None
+            if last == _JobStatus.CANCELLED:
+                break
             await _asyncio.sleep(0.1)
-
-        async with session_scope() as session:
-            row = await session.get(_Job, job_uuid)
-            assert row is not None
-            assert row.status == _JobStatus.CANCELLED, (
-                f"Buffer task overwrote the user's cancellation: got {row.status} "
-                f"(expected CANCELLED). The finally block in _buffer_background_run "
-                f"is racing with stop_workflow."
-            )
+        assert last == _JobStatus.CANCELLED, f"stop intent was overwritten: settled on {last}"
 
 
 class TestBackgroundModeStreamProtocol:
@@ -2450,24 +2552,28 @@ class TestExecuteWorkflowBackgroundQueueOwnership:
 
 
 class TestStopWorkflowEndToEnd:
-    """The full ``POST /workflows/stop`` HTTP flow terminates the in-memory buffer too.
+    """The ``POST /workflows/stop`` HTTP flow stops a background run.
 
-    ``test_background_run_can_be_stopped`` covers the 200 response. This class
-    pins the side-effects: the in-process ``_BACKGROUND_RUNS`` entry remains
-    replayable, the ``_BackgroundRun.done`` flag flips so re-attach readers
-    unblock, and the Job row is marked ``CANCELLED``.
+    The background path now runs through ``BackgroundExecutionService``: stop
+    writes a durable STOP signal and cancels the in-flight executor task. This
+    test exercises the HTTP contract end-to-end (200 + the run terminalizes).
+    The deterministic CANCELLED outcome of a stop is proven without an
+    HTTP-level race in
+    ``services/background_execution/test_service.py::test_stop_cancels_job`` and
+    ``background_execution/test_facade_real_services.py::test_stop_signal_cancels_run``
+    (sqlite + postgres), so this test deliberately does not assert the exact
+    terminal label under the unsynchronized fast-flow vs stop race.
     """
 
-    async def test_stop_finishes_replay_buffer_and_marks_job_cancelled(
+    async def test_stop_returns_200_and_run_terminalizes(
         self,
         client: AsyncClient,
         created_api_key,
         chatbot_flow,
     ):
+        import asyncio as _asyncio
         from uuid import UUID as _UUID
 
-        from langflow.api.v2 import workflow as workflow_module
-        from langflow.api.v2 import workflow_background as wf_bg
         from langflow.services.database.models.jobs.model import Job, JobStatus
 
         headers = {"x-api-key": created_api_key.api_key}
@@ -2479,164 +2585,20 @@ class TestStopWorkflowEndToEnd:
         assert start.status_code == 200
         job_id = start.json()["job_id"]
 
-        # The registry holds the buffer keyed by job_id so reconnect can replay
-        # the cancellation terminal event after /stop returns.
-        assert job_id in workflow_module._BACKGROUND_RUNS, (
-            "Background run was not registered; the stop assertions below would be vacuous"
+        stop = await client.post(
+            "api/v2/workflows/stop",
+            json={"job_id": job_id},
+            headers=headers,
         )
-        bg_run = workflow_module._BACKGROUND_RUNS[job_id]
+        assert stop.status_code == 200
 
-        try:
-            stop = await client.post(
-                "api/v2/workflows/stop",
-                json={"job_id": job_id},
-                headers=headers,
-            )
-            assert stop.status_code == 200
-
-            # Side-effects: registry remains replayable, buffer finished, job row CANCELLED.
-            assert job_id in workflow_module._BACKGROUND_RUNS
-            assert bg_run.done is True
-
-            events = await client.get(f"api/v2/workflows/{job_id}/events", headers=headers)
-            assert events.status_code == 200
-            # A deliberate stop replays as a CUSTOM cancel marker + RUN_FINISHED, not
-            # RUN_ERROR: a re-attaching client must not read a user-stop as a failure.
-            assert "RUN_ERROR" not in events.text
-            assert "langflow.run.cancelled" in events.text
-            assert "RUN_FINISHED" in events.text
-
+        terminal = {JobStatus.CANCELLED, JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.TIMED_OUT}
+        final = None
+        for _ in range(60):
             async with session_scope() as session:
                 row = await session.get(Job, _UUID(job_id))
-            assert row is not None
-            assert row.status == JobStatus.CANCELLED
-        finally:
-            await wf_bg._clear_background_run(job_id)
-
-    async def test_stop_cancels_queue_owned_background_task_when_task_service_noops(
-        self,
-        client: AsyncClient,
-        created_api_key,
-        chatbot_flow,
-        monkeypatch,
-    ):
-        """The v2 background runner is owned by the queue service, not TaskService."""
-        from langflow.api.v2 import workflow_background as wf_bg
-        from langflow.api.v2 import workflow_execution as wf_exec
-        from langflow.services.deps import get_queue_service
-        from langflow.services.job_queue.service import JobQueueNotFoundError
-
-        started = asyncio.Event()
-        cancelled = asyncio.Event()
-        job_id: str | None = None
-
-        async def _never_finishes(**_kwargs):
-            started.set()
-            try:
-                await asyncio.Event().wait()
-            except asyncio.CancelledError:
-                cancelled.set()
-                raise
-
-        class NoopTaskService:
-            async def revoke_task(self, _task_id):
-                return True
-
-        monkeypatch.setattr(wf_bg, "_buffer_background_run", _never_finishes)
-        monkeypatch.setattr(wf_exec, "get_task_service", lambda: NoopTaskService())
-
-        headers = {"x-api-key": created_api_key.api_key}
-        try:
-            start = await client.post(
-                "api/v2/workflows",
-                json=_agui_body(chatbot_flow, mode="background"),
-                headers=headers,
-            )
-            assert start.status_code == 200
-            job_id = start.json()["job_id"]
-            await asyncio.wait_for(started.wait(), timeout=2)
-
-            stop = await client.post(
-                "api/v2/workflows/stop",
-                json={"job_id": job_id},
-                headers=headers,
-            )
-
-            assert stop.status_code == 200
-            assert cancelled.is_set()
-            try:
-                _, _, task, _ = get_queue_service().get_queue_data(job_id)
-            except JobQueueNotFoundError:
-                task = None
-            assert task is None or task.done()
-        finally:
-            if job_id is not None:
-                with contextlib.suppress(BaseException):
-                    await get_queue_service().cleanup_job(job_id)
-                await wf_bg._clear_background_run(job_id)
-
-    async def test_stop_signals_cross_worker_queue_owner_before_marking_cancelled(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ):
-        """Redis-backed jobs owned by another worker must be cancelled by pub/sub signal."""
-        from langflow.api.v2 import workflow as workflow_module
-        from langflow.api.v2 import workflow_background as wf_bg
-
-        job_id = uuid4()
-        current_user_id = uuid4()
-        events: list[tuple[str, object, object | None]] = []
-
-        class FakeJobService:
-            def __init__(self) -> None:
-                self.updates: list[tuple[object, object]] = []
-
-            async def get_job_by_job_id(self, seen_job_id, user_id=None):
-                assert seen_job_id == job_id
-                assert user_id == current_user_id
-                return SimpleNamespace(
-                    type=workflow_module.JobType.WORKFLOW,
-                    status=workflow_module.JobStatus.IN_PROGRESS,
-                )
-
-            async def update_job_status(self, seen_job_id, status):
-                events.append(("update", seen_job_id, status))
-                self.updates.append((seen_job_id, status))
-
-        class CrossWorkerQueueService:
-            cross_worker_cancel_enabled = True
-
-            def __init__(self) -> None:
-                self.local_cancels: list[str] = []
-                self.signals: list[str] = []
-
-            def get_queue_data(self, seen_job_id):
-                assert seen_job_id == str(job_id)
-                return SimpleNamespace(), SimpleNamespace(), None, None
-
-            async def cancel_job(self, seen_job_id):
-                self.local_cancels.append(seen_job_id)
-
-            async def signal_cancel(self, seen_job_id):
-                events.append(("signal", seen_job_id, None))
-                self.signals.append(seen_job_id)
-                return 0
-
-        job_service = FakeJobService()
-        queue_service = CrossWorkerQueueService()
-        monkeypatch.setattr(workflow_module, "get_job_service", lambda: job_service)
-        monkeypatch.setattr(wf_bg, "get_queue_service", lambda: queue_service)
-
-        response = await workflow_module.stop_workflow(
-            workflow_module.WorkflowStopRequest(job_id=job_id),
-            current_user=SimpleNamespace(id=current_user_id),
-        )
-
-        assert str(response.job_id) == str(job_id)
-        assert queue_service.local_cancels == []
-        assert queue_service.signals == [str(job_id)]
-        assert job_service.updates == [(job_id, workflow_module.JobStatus.CANCELLED)]
-        assert events == [
-            ("signal", str(job_id), None),
-            ("update", job_id, workflow_module.JobStatus.CANCELLED),
-        ]
+            if row is not None and row.status in terminal:
+                final = row.status
+                break
+            await _asyncio.sleep(0.1)
+        assert final in terminal, f"run did not terminalize after stop: got {final}"

@@ -14,6 +14,10 @@ When used with an agent, the `name` and `description` metadata that the agent us
 
 When you select a flow for the **Run Flow** component, it uses the target flow's graph structure to dynamically generate input and output fields on the **Run Flow** component.
 
+:::warning
+The target flow cannot use Human-in-the-Loop: a flow containing a connected **Human Input** node, or an agent tool that requires approval, is rejected with an error because a nested run cannot pause for a decision. Place the approval step in the parent flow instead.
+:::
+
 ## Run Flow parameters
 
 <PartialParams />

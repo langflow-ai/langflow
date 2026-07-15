@@ -13,7 +13,9 @@ import CustomLinkComponent from "@/customization/components/custom-linkComponent
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import type { APIClassType, InputFieldType } from "@/types/api";
 import AccordionPromptComponent from "./components/accordionPromptComponent";
+import ActionPickerComponent from "./components/actionPickerComponent";
 import DictComponent from "./components/dictComponent";
+import DurationComponent from "./components/durationComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
 import InputListComponent from "./components/inputListComponent";
@@ -279,6 +281,27 @@ export function ParameterRenderComponent({
             searchCategory={templateData?.search_category}
             limit={templateData?.limit}
             id={`sortablelist_${id}`}
+          />
+        );
+      case "duration":
+        return (
+          <DurationComponent
+            {...baseInputProps}
+            options={
+              Array.isArray(templateData.options) ? templateData.options : []
+            }
+            id={`duration_${id}`}
+          />
+        );
+      case "actionPicker":
+        return (
+          <ActionPickerComponent
+            {...baseInputProps}
+            options={
+              Array.isArray(templateData.options) ? templateData.options : []
+            }
+            combobox={templateData.combobox}
+            id={`actionpicker_${id}`}
           />
         );
       case "connect": {

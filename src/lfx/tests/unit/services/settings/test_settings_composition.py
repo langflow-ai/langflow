@@ -109,6 +109,8 @@ EXPECTED_FIELDS = {
     "cors_allow_headers",
     "ssrf_protection_enabled",
     "ssrf_allowed_hosts",
+    "connector_ssrf_validation_enabled",
+    "connector_ssrf_allow_loopback",
     "disable_track_apikey_usage",
     "remove_api_keys",
     "allow_custom_components",
@@ -158,6 +160,7 @@ EXPECTED_FIELDS = {
     "mcp_servers_locked",
     # ComponentsSettings
     "load_flows_overwrite_on_name_match",
+    "load_flows_preserve_variable_bindings",
     "enable_extension_reload",
     # SecuritySettings
     "rate_limit_enabled",
@@ -200,9 +203,22 @@ EXPECTED_FIELDS = {
     "telemetry_writer_size_strategy",
     "telemetry_writer_batch_size_bytes",
     "telemetry_writer_max_queue_bytes",
+    # Background execution
+    "background_max_concurrency",
+    "background_job_timeout",
+    "background_input_deadline_s",
+    "background_lease_ttl_s",
+    "background_heartbeat_interval_s",
+    "background_watchdog_interval_s",
+    "test_redis_url",
     # ---- Added in 1.10.1 ----
     # SecuritySettings
     "allow_public_custom_components",
+    "block_code_interpreter_components",
+    "restrict_local_file_access",
+    "mcp_server_docker_hardening",
+    "mcp_server_allowed_packages",
+    "mcp_server_interpreter_hardening",
 }
 
 
@@ -233,9 +249,16 @@ def test_critical_defaults_unchanged():
     assert settings.cors_origins == "*"
     assert settings.cors_allow_credentials is True
     assert settings.ssrf_protection_enabled is True
+    assert settings.connector_ssrf_validation_enabled is True
     assert settings.allow_custom_components is True
+    assert settings.block_code_interpreter_components is False
+    assert settings.restrict_local_file_access is False
+    assert settings.mcp_server_docker_hardening is False
+    assert settings.mcp_server_interpreter_hardening is False
+    assert settings.mcp_server_allowed_packages is None
     assert settings.mcp_server_enabled is True
     assert settings.mcp_composer_enabled is True
+    assert settings.load_flows_preserve_variable_bindings is True
     assert settings.do_not_track is False
     assert settings.dev is False
     assert settings.agentic_experience is False
@@ -368,6 +391,12 @@ def test_yaml_round_trip():
         ("LANGFLOW_BACKEND_ONLY", "true", "backend_only", True),
         ("LANGFLOW_AUTO_SAVING", "false", "auto_saving", False),
         ("LANGFLOW_FALLBACK_TO_ENV_VAR", "false", "fallback_to_env_var", False),
+        (
+            "LANGFLOW_LOAD_FLOWS_PRESERVE_VARIABLE_BINDINGS",
+            "false",
+            "load_flows_preserve_variable_bindings",
+            False,
+        ),
         ("LANGFLOW_VARIABLE_STORE", "kubernetes", "variable_store", "kubernetes"),
     ],
 )

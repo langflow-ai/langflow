@@ -24,6 +24,8 @@ class FieldTypes(str, Enum):
     DICT = "dict"
     NESTED_DICT = "NestedDict"
     SORTABLE_LIST = "sortableList"
+    ACTION_PICKER = "actionPicker"
+    DURATION = "duration"
     CONNECTION = "connect"
     AUTH = "auth"
     FILE = "file"
