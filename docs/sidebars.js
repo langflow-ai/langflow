@@ -485,6 +485,7 @@ module.exports = {
             "Components/bundles-searchapi",
             "Components/bundles-serper",
             "Components/bundles-supabase",
+            "Components/bundles-talordata",
             "Components/bundles-upstash",
             "Components/bundles-vllm",
             "Components/bundles-vectara",

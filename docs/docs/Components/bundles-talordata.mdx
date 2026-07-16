@@ -1,0 +1,42 @@
+---
+title: Talordata
+slug: /bundles-talordata
+---
+
+import Icon from "@site/src/components/icon";
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Talordata** bundle.
+
+For more information, see the [Talordata SERP API documentation](https://docs.talordata.com/serp-api/query-parameters).
+
+## Talordata SERP API
+
+This component calls Talordata SERP API to retrieve structured search engine results from Google, Bing, Yandex, and DuckDuckGo.
+
+It returns search results as a [`Table`](/data-types#table).
+
+### Talordata SERP API parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Talordata API Key** (`api_key`) | SecretString | Input parameter. An API key for Talordata API authentication. |
+| **Input** (`input_value`) | String | Input parameter. The search query input. |
+| **Engine** (`engine`) | String | Input parameter. The search engine to query. Options: `google`, `bing`, `yandex`, and `duckduckgo`. |
+| **Max Results** (`max_results`) | Integer | Advanced parameter. The maximum number of search results to return. |
+| **Country** (`gl`) | String | Advanced parameter. The country code for localized results. |
+| **Language** (`hl`) | String | Advanced parameter. The language code for localized results. |
+| **Location** (`location`) | String | Advanced parameter. The geographic location for the search. |
+| **Device** (`device`) | String | Advanced parameter. The device type for the search. |
+| **Page** (`page`) | Integer | Advanced parameter. The SERP page number. |
+| **Search Parameters** (`search_params`) | Dictionary | Advanced parameter. Additional Talordata query parameters. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**Serper** bundle](/bundles-serper)
+* [**SearchApi** bundle](/bundles-searchapi)
+* [**Google** bundle](/bundles-google)
+* [**Bing** bundle](/bundles-bing)
+* [**DuckDuckGo** bundle](/bundles-duckduckgo)

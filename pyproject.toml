@@ -23,6 +23,7 @@ dependencies = [
     "lfx-arxiv>=0.1.0",
     "lfx-ibm>=0.1.0",
     "lfx-docling>=0.1.0",
+    "lfx-talordata>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -84,6 +85,7 @@ lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
 lfx-ibm = { workspace = true }
 lfx-docling = { workspace = true }
+lfx-talordata = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -100,6 +102,7 @@ members = [
     "src/bundles/arxiv",
     "src/bundles/ibm",
     "src/bundles/docling",
+    "src/bundles/talordata",
     # langflow-extensions:bundle-members-end
 ]
 
