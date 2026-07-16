@@ -97,10 +97,16 @@ def cleanup_telemetry():
 
 
 def test_init(opentelemetry_instance):
+    expected_metrics = {
+        "file_uploads",
+        "num_files_uploaded",
+        "langflow_job_queue_cancel_events_total",
+        "langflow_job_queue_active_jobs",
+    }
+
     assert isinstance(opentelemetry_instance, OpenTelemetry)
-    assert len(opentelemetry_instance._metrics) > 1
-    assert len(opentelemetry_instance._metrics) == len(opentelemetry_instance._metrics_registry) == 2
-    assert "file_uploads" in opentelemetry_instance._metrics
+    assert set(opentelemetry_instance._metrics) == expected_metrics
+    assert set(opentelemetry_instance._metrics_registry) == expected_metrics
 
 
 def test_gauge(opentelemetry_instance):
