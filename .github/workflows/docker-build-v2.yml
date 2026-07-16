@@ -405,7 +405,8 @@ jobs:
           push: ${{ inputs.push_to_registry }}
           build-args: |
             CORE_VERSION=${{ needs.determine-core-version.outputs.version }}
-          file: ./docker/build_and_push_core.Dockerfile
+          file: ./docker/build_and_push.Dockerfile
+          target: core
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
@@ -419,7 +420,8 @@ jobs:
           push: ${{ inputs.push_to_registry }}
           build-args: |
             CORE_VERSION=${{ needs.determine-core-version.outputs.version }}
-          file: ./docker/build_and_push_core.Dockerfile
+          file: ./docker/build_and_push.Dockerfile
+          target: core
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
@@ -480,7 +482,11 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          build-args: |
+            MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
+            CORE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push.Dockerfile
+          target: full
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
@@ -492,7 +498,11 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          build-args: |
+            MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
+            CORE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push.Dockerfile
+          target: full
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
@@ -703,6 +713,9 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          build-args: |
+            MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
+            CORE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push_ep.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -715,6 +728,9 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          build-args: |
+            MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
+            CORE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push_ep.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -776,6 +792,9 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          build-args: |
+            MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
+            CORE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push_with_extras.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -788,6 +807,9 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          build-args: |
+            MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
+            CORE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push_with_extras.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}

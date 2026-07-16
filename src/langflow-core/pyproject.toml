@@ -1,7 +1,7 @@
 [project]
 name = "langflow-core"
 version = "1.11.0"
-description = "Langflow's application server with core components and no provider bundles"
+description = "Langflow's service-complete profile with core components and no provider bundles"
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
 license = "MIT"

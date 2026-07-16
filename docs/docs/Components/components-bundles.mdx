@@ -52,9 +52,16 @@ If all else fails, you can always create your own [custom components](/component
 
 ## Install bundle components {#bundle-install}
 
-`uv pip install langflow` includes most provider bundles automatically.
+`uv pip install langflow` installs the service-complete `langflow-core` profile
+and adds most provider bundles automatically.
 
-For an installation with only built-in core components, use `uv pip install langflow-core`. This distribution does not install any `lfx-*` provider bundle. Add an individual bundle explicitly when a flow needs that provider.
+To use the same application profile without provider bundles, install
+`langflow-core` directly. It does not install any `lfx-*` provider distribution;
+add an individual bundle explicitly when a flow needs that provider.
+
+`langflow-core` is not a replacement for the lower-level `langflow-base`
+package. Use `langflow-base` when you want the smaller modular platform and
+need to select service dependencies as well as provider bundles.
 
 If you install `lfx` directly or need to add bundles to an existing environment, see [Install LFX with bundle components](./lfx-install#install-with-bundle-components).
 

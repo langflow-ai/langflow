@@ -85,7 +85,8 @@ jobs:
       - name: Build core image
         run: |
           ${{ env.CONTAINER_RUNTIME }} build -t langflowai/langflow:core-latest-dev \
-            -f docker/build_and_push_core.Dockerfile \
+            -f docker/build_and_push.Dockerfile \
+            --target core \
             .
 
       - name: Test core image

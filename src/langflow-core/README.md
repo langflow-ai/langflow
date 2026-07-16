@@ -1,8 +1,10 @@
 # Langflow Core
 
-`langflow-core` is the Langflow application server and web UI packaged with
-Langflow's core components only. It does not depend on provider extension
-distributions such as `lfx-openai`, `lfx-ibm`, or `lfx-bundles`.
+`langflow-core` is Langflow's service-complete, provider-bundle-free application
+profile. It combines `langflow-base[complete]`, the Langflow application server
+and web UI, and Langflow's built-in core components. It does not depend on
+provider extension distributions such as `lfx-openai`, `lfx-ibm`, or
+`lfx-bundles`.
 
 Install and run it with:
 
@@ -41,10 +43,13 @@ components to an existing core environment with:
 python -m pip install lfx-openai
 ```
 
-Use `langflow` instead when you want Langflow's curated provider bundle set by
-default. Treat `langflow` and `langflow-core` as alternative distributions;
-both expose the `langflow` command and should not be co-installed.
+The full `langflow` distribution consumes `langflow-core` and adds Langflow's
+curated provider bundle set. `langflow-core` is the sole owner of the
+`langflow` command, so full installations use the same launcher without
+installing a duplicate console script. Install `langflow-core` directly when
+you want to choose provider bundles yourself.
 
-Use `langflow-base` when you need lower-level control over Langflow service
-extras, or `lfx` when you need the headless execution engine without the
-Langflow application server and UI.
+`langflow-core` is not Langflow's smallest package profile. Use the modular
+`langflow-base` package when you need a smaller dependency surface or
+lower-level control over service extras, or use `lfx` when you need the
+headless execution engine without the Langflow application server and UI.

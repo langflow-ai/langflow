@@ -185,7 +185,7 @@ Three edits — all mechanical:
 # 1. Add to [project] dependencies (regular dep so `pip install langflow`
 #    still pulls the component in -- no user-visible change at install time).
 dependencies = [
-    "langflow-base[complete]>=0.10.0",
+    "langflow-core~=1.11.0",
     "lfx-duckduckgo>=0.1.0",
     "lfx-<bundle>>=0.1.0",                 # <-- add this line
 ]
@@ -198,6 +198,7 @@ members = [
     "src/backend/base",
     ".",
     "src/lfx",
+    "src/langflow-core",
     "src/sdk",
     "src/bundles/duckduckgo",
     "src/bundles/<bundle>",                # <-- add this line
