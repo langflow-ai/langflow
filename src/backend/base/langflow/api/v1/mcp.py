@@ -7,6 +7,8 @@ from fastapi.responses import HTMLResponse
 from lfx.log.logger import logger
 from mcp import types
 from mcp.server import NotificationOptions, Server
+from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
+from mcp.server.auth.provider import AccessToken
 from mcp.server.sse import SseServerTransport
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
@@ -85,6 +87,18 @@ def find_validation_error(exc):
 sse = SseServerTransport("/api/v1/mcp/")
 
 
+def _bind_mcp_transport_user(request: Request, current_user: CurrentActiveMCPUser) -> None:
+    """Expose the authenticated Langflow principal to the MCP transport.
+
+    The SSE transport binds each session to ``scope["user"]`` and requires the
+    same principal on subsequent message requests. Langflow performs its own
+    authentication, so adapt the resolved user to the identity type expected by
+    the transport instead of leaving both requests anonymous at the ASGI layer.
+    """
+    user_id = str(current_user.id)
+    request.scope["user"] = AuthenticatedUser(AccessToken(token="", client_id=user_id, scopes=[], subject=user_id))
+
+
 @router.head(
     "/sse",
     response_class=HTMLResponse,
@@ -102,6 +116,7 @@ async def im_alive():
 async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
     msg = f"Starting SSE connection, server name: {server.name}"
     await logger.ainfo(msg)
+    _bind_mcp_transport_user(request, current_user)
     token = current_user_ctx.set(current_user)
     try:
         async with sse.connect_sse(request.scope, request.receive, request._send) as streams:  # noqa: SLF001
@@ -144,7 +159,8 @@ async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
 
 
 @router.post("/", dependencies=[Depends(raise_error_if_astra_cloud_env)])
-async def handle_messages(request: Request):
+async def handle_messages(request: Request, current_user: CurrentActiveMCPUser):
+    _bind_mcp_transport_user(request, current_user)
     try:
         await sse.handle_post_message(request.scope, request.receive, request._send)  # noqa: SLF001
     except (BrokenResourceError, BrokenPipeError) as e:
