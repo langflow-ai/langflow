@@ -304,7 +304,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         SecretStrInput(
             name="jwt_token",
             display_name="JWT Token",
-            value="JWT",
+            value="",
             load_from_db=False,
             show=False,
             info=(
