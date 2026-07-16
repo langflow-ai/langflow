@@ -42,6 +42,20 @@ def test_vertex_getstate_drops_custom_component_runtime_state():
     pickle.dumps(state)
 
 
+def test_update_raw_params_clears_overridden_global_variable_binding():
+    """Explicit runtime input must take precedence over a configured global variable."""
+    vertex = object.__new__(Vertex)
+    vertex.raw_params = {"input_value": "JSON_PAYLOAD", "sender_name": "User"}
+    vertex.params = vertex.raw_params.copy()
+    vertex.load_from_db_fields = ["input_value", "sender_name"]
+    vertex.updated_raw_params = False
+
+    vertex.update_raw_params({"input_value": '{"question": "hello"}'}, overwrite=True)
+
+    assert vertex.raw_params["input_value"] == '{"question": "hello"}'
+    assert vertex.load_from_db_fields == ["sender_name"]
+
+
 @pytest.fixture
 def mock_storage_service() -> Mock:
     """Create a mock storage service for testing."""
