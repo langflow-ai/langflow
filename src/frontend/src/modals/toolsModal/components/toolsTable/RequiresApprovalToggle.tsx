@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Switch } from "@/components/ui/switch";
 
 // Tool approval is binary: on enables the two fixed actions, off clears them.
@@ -13,6 +14,7 @@ export function RequiresApprovalToggle({
   onChange: (next: string[]) => void;
   disabled?: boolean;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [on, setOn] = useState(selected.length > 0);
   const persistTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
@@ -39,7 +41,7 @@ export function RequiresApprovalToggle({
       style={{ transform: "scaleX(0.8) scaleY(0.8)" }}
       onCheckedChange={handleChange}
       data-testid="requires-approval-toggle"
-      aria-label="Requires approval"
+      aria-label={t("toolsModal.columnApproval")}
     />
   );
 }

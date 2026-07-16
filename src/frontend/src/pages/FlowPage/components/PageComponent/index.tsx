@@ -27,6 +27,7 @@ import {
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
@@ -147,11 +148,13 @@ export default function Page({
   const isLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
   );
+  const currentFlowResourceId = useFlowStore((state) => state.currentFlow?.id);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const isPermissionReadOnly = useIsFlowReadOnly(currentFlowResourceId);
 
   const { isAgentWorking, events, lastSettledAt, clearEvents } = useFlowEvents(
     currentFlowId || undefined,
@@ -159,7 +162,8 @@ export default function Page({
   const isAssistantProcessing = useAssistantManagerStore(
     (state) => state.isAssistantProcessing,
   );
-  const effectiveLocked = isLocked || isAgentWorking || isAssistantProcessing;
+  const effectiveLocked =
+    isLocked || isPermissionReadOnly || isAgentWorking || isAssistantProcessing;
 
   // Keep banner mounted during exit animation, preserve last text
   const [bannerVisible, setBannerVisible] = useState(false);
@@ -300,6 +304,7 @@ export default function Page({
   const addComponent = useAddComponent();
 
   const handleGroupNode = useCallback(() => {
+    if (effectiveLocked) return;
     takeSnapshot();
     const edgesState = useFlowStore.getState().edges;
     if (validateSelection(lastSelection!, edgesState).length === 0) {
@@ -331,7 +336,7 @@ export default function Page({
         list: validateSelection(lastSelection!, edgesState),
       });
     }
-  }, [lastSelection, setNodes, setErrorData, takeSnapshot]);
+  }, [effectiveLocked, lastSelection, setNodes, setErrorData, takeSnapshot, t]);
 
   useEffect(() => {
     const handleMouseMove = (event) => {
@@ -524,11 +529,12 @@ export default function Page({
 
   const onConnectMod = useCallback(
     (params: Connection) => {
+      if (effectiveLocked) return;
       takeSnapshot();
       onConnect(params);
       track("New Component Connection Added");
     },
-    [takeSnapshot, onConnect],
+    [effectiveLocked, takeSnapshot, onConnect],
   );
 
   const [helperLines, setHelperLines] = useState<HelperLinesState>({});
@@ -799,6 +805,10 @@ export default function Page({
   // Immediately places the note above the toolbar so the user can drag it right away.
   useEffect(() => {
     const handleStartAddNote = () => {
+      if (effectiveLocked) {
+        window.dispatchEvent(new Event("lf:end-add-note"));
+        return;
+      }
       const toolbar = document.querySelector(
         "[data-testid='main_canvas_controls']",
       );
@@ -836,7 +846,7 @@ export default function Page({
     return () => {
       window.removeEventListener("lf:start-add-note", handleStartAddNote);
     };
-  }, [reactFlowInstance, getNodeId, setNodes]);
+  }, [effectiveLocked, reactFlowInstance, getNodeId, setNodes]);
 
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 2;
@@ -893,16 +903,17 @@ export default function Page({
                 <MemoizedCanvasControls
                   selectedNode={selectedNode}
                   isAgentWorking={isAgentWorking}
+                  isReadOnly={effectiveLocked}
                 />
                 {!isPreviewActive && <FlowToolbar />}
-                {inspectionPanelVisible && (
+                {inspectionPanelVisible && !effectiveLocked && (
                   <InspectionPanel selectedNode={selectedNode} />
                 )}
               </>
             )}
             <SelectionMenu
               lastSelection={lastSelection}
-              isVisible={selectionMenuVisible}
+              isVisible={selectionMenuVisible && !effectiveLocked}
               nodes={lastSelection?.nodes}
               onClick={handleGroupNode}
             />
@@ -933,20 +944,36 @@ export default function Page({
               onReconnectEnd={
                 effectiveLocked || isPreviewActive ? undefined : onEdgeUpdateEnd
               }
-              onNodeDrag={isPreviewActive ? undefined : onNodeDrag}
-              onNodeDragStart={isPreviewActive ? undefined : onNodeDragStart}
+              onNodeDrag={
+                isPreviewActive || effectiveLocked ? undefined : onNodeDrag
+              }
+              onNodeDragStart={
+                isPreviewActive || effectiveLocked ? undefined : onNodeDragStart
+              }
               onSelectionDragStart={
-                isPreviewActive ? undefined : onSelectionDragStart
+                isPreviewActive || effectiveLocked
+                  ? undefined
+                  : onSelectionDragStart
               }
               elevateEdgesOnSelect={false}
-              onSelectionEnd={isPreviewActive ? undefined : onSelectionEnd}
-              onSelectionStart={isPreviewActive ? undefined : onSelectionStart}
+              onSelectionEnd={
+                isPreviewActive || effectiveLocked ? undefined : onSelectionEnd
+              }
+              onSelectionStart={
+                isPreviewActive || effectiveLocked
+                  ? undefined
+                  : onSelectionStart
+              }
               connectionRadius={30}
               edgeTypes={edgeTypes}
               connectionLineComponent={ConnectionLineComponent}
-              onDragOver={isPreviewActive ? undefined : onDragOver}
-              onNodeDragStop={isPreviewActive ? undefined : onNodeDragStop}
-              onDrop={isPreviewActive ? undefined : onDrop}
+              onDragOver={
+                isPreviewActive || effectiveLocked ? undefined : onDragOver
+              }
+              onNodeDragStop={
+                isPreviewActive || effectiveLocked ? undefined : onNodeDragStop
+              }
+              onDrop={isPreviewActive || effectiveLocked ? undefined : onDrop}
               onSelectionChange={onSelectionChange}
               deleteKeyCode={[]}
               fitView={isEmptyFlow.current ? false : true}
@@ -966,7 +993,7 @@ export default function Page({
               onKeyDown={handleKeyDown}
               onNodeContextMenu={onNodeContextMenu}
             >
-              <UpdateAllComponents />
+              {!effectiveLocked && <UpdateAllComponents />}
               <MemoizedBackground />
               {helperLineEnabled && <HelperLines helperLines={helperLines} />}
             </ReactFlow>
@@ -996,7 +1023,7 @@ export default function Page({
                 its visibility is driven entirely by the
                 ``flowBuilderWelcomeStore`` which is primed by the
                 "New Flow" button on the home page. */}
-            <FlowBuilderWelcomeMount />
+            {!effectiveLocked && <FlowBuilderWelcomeMount />}
           </div>
         </>
       ) : (
