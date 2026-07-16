@@ -107,6 +107,8 @@ def test_cli_wheel_gate_checks_published_core() -> None:
 
     assert "src/langflow-core/pyproject.toml" in cli_job
     assert "https://pypi.org/pypi/langflow-core/json" in cli_job
+    assert "ignore-nothing-to-cache: true" in cli_job
+    assert 'if [ "$status" = "404" ]' in cli_job
     assert "langflow-base-nightly" not in cli_job
 
 
