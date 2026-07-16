@@ -280,6 +280,43 @@ class TestGraphExecution:
         assert process_stderr.getvalue() == "outside stderr\n"
 
     @pytest.mark.asyncio
+    async def test_execute_graph_with_capture_deactivates_outliving_child_capture(self):
+        """A child task that outlives its graph writes to the process streams."""
+        child_started = asyncio.Event()
+        release_child = asyncio.Event()
+        child_task = None
+
+        async def write_after_graph_returns():
+            child_started.set()
+            await release_child.wait()
+            sys.stdout.write("late child stdout\n")
+            sys.stderr.write("late child stderr\n")
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            nonlocal child_task
+            child_task = asyncio.create_task(write_after_graph_returns())
+            await child_started.wait()
+            sys.stdout.write("captured stdout\n")
+            sys.stderr.write("captured stderr\n")
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.async_start = mock_async_start
+
+        process_stdout = StringIO()
+        process_stderr = StringIO()
+        with patch.object(sys, "stdout", process_stdout), patch.object(sys, "stderr", process_stderr):
+            _, logs = await execute_graph_with_capture(mock_graph, "test input")
+            release_child.set()
+            assert child_task is not None
+            await child_task
+
+        assert logs == "captured stdout\ncaptured stderr\n"
+        assert process_stdout.getvalue() == "late child stdout\n"
+        assert process_stderr.getvalue() == "late child stderr\n"
+
+    @pytest.mark.asyncio
     async def test_execute_graph_with_capture_success(self):
         """Test successful graph execution with output capture."""
         # Mock graph and async iterator
