@@ -2139,5 +2139,9 @@
   "mcp.servers.actionsMenu": "{{name}} の操作",
   "assistant.modelNotice.fallback": "モデル {{failed}} が失敗しました（{{reason}}）。代わりに {{used}} を使用しました。",
   "assistant.modelNotice.remediation": "モデル {{failed}} は実行のために調整が必要でした（{{reason}}）。",
-  "assistant.modelNotice.ariaLabel": "モデルの通知"
+  "assistant.modelNotice.ariaLabel": "モデルの通知",
+  "settings.mcpClient.agentTablistLabel": "コーディングエージェントを選択",
+  "settings.mcpClient.copyCommand": "コマンドをコピー",
+  "settings.mcpClient.copyConfig": "JSON 設定をコピー",
+  "settings.mcpClient.copied": "コピーしました"
 }

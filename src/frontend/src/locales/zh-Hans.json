@@ -2139,5 +2139,9 @@
   "mcp.servers.actionsMenu": "{{name}} 的操作",
   "assistant.modelNotice.fallback": "模型 {{failed}} 失败（{{reason}}），改用 {{used}}。",
   "assistant.modelNotice.remediation": "模型 {{failed}} 需要调整才能运行（{{reason}}）。",
-  "assistant.modelNotice.ariaLabel": "模型提示"
+  "assistant.modelNotice.ariaLabel": "模型提示",
+  "settings.mcpClient.agentTablistLabel": "选择编码代理",
+  "settings.mcpClient.copyCommand": "复制命令",
+  "settings.mcpClient.copyConfig": "复制 JSON 配置",
+  "settings.mcpClient.copied": "已复制"
 }

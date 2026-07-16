@@ -2136,5 +2136,9 @@
   "mcp.servers.actionsMenu": "Actions for {{name}}",
   "assistant.modelNotice.fallback": "Model {{failed}} failed ({{reason}}); used {{used}} instead.",
   "assistant.modelNotice.remediation": "Model {{failed}} needed an adjustment to run ({{reason}}).",
-  "assistant.modelNotice.ariaLabel": "Model notice"
+  "assistant.modelNotice.ariaLabel": "Model notice",
+  "settings.mcpClient.agentTablistLabel": "Choose a coding agent",
+  "settings.mcpClient.copyCommand": "Copy command",
+  "settings.mcpClient.copyConfig": "Copy JSON config",
+  "settings.mcpClient.copied": "Copied"
 }
