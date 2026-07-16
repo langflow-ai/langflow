@@ -49,7 +49,7 @@ describe("useChatHistory message ordering", () => {
       {
         id: "flow-1",
         mode: "union",
-        params: { limit: 20, order: "DESC" },
+        params: { session_id: "session-1", limit: 20, order: "DESC" },
       },
       { enabled: true },
     );
@@ -73,5 +73,34 @@ describe("useChatHistory message ordering", () => {
       order: "DESC",
       offset: 0,
     });
+  });
+
+  it("stops loading when a source repeats the same page", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const repeatedPage = Array.from({ length: 20 }, (_, index) => ({
+      id: `message-${index}`,
+    }));
+    const sessionCacheKey = [
+      "useGetMessagesQuery",
+      { id: "flow-1", session_id: "session-1" },
+    ];
+    queryClient.setQueryData(sessionCacheKey, repeatedPage);
+    mockGetMessages
+      .mockResolvedValueOnce({ data: repeatedPage })
+      .mockResolvedValueOnce({ data: repeatedPage });
+
+    const { result } = renderHook(() => useChatHistory("session-1"), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    let prepended = -1;
+    await act(async () => {
+      prepended = await result.current.loadMore();
+    });
+
+    expect(prepended).toBe(0);
+    expect(mockGetMessages).toHaveBeenCalledTimes(2);
   });
 });

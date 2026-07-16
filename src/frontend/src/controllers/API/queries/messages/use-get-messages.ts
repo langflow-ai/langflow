@@ -26,6 +26,42 @@ interface MessagesResponse {
   columns: Array<ColDef | ColGroupDef>;
 }
 
+const getStoredMessages = (
+  id: string | undefined,
+  params: Record<string, unknown>,
+): Message[] => {
+  const storedMessages = JSON.parse(
+    window.sessionStorage.getItem(id ?? "") || "[]",
+  ) as Message[];
+  const sessionId =
+    typeof params.session_id === "string" ? params.session_id : undefined;
+  const direction =
+    typeof params.order === "string" && params.order.toUpperCase() === "DESC"
+      ? -1
+      : 1;
+  const offset = typeof params.offset === "number" ? params.offset : 0;
+  const limit = typeof params.limit === "number" ? params.limit : undefined;
+
+  const filteredMessages = sessionId
+    ? storedMessages.filter(
+        (message) =>
+          message.session_id === sessionId ||
+          (sessionId === id && !message.session_id),
+      )
+    : storedMessages;
+  const orderedMessages = [...filteredMessages].sort((a, b) => {
+    const timeA = new Date(a.timestamp).getTime();
+    const timeB = new Date(b.timestamp).getTime();
+    if (Number.isNaN(timeA) || Number.isNaN(timeB)) return 0;
+    return direction * (timeA - timeB);
+  });
+
+  return orderedMessages.slice(
+    offset,
+    limit === undefined ? undefined : offset + limit,
+  );
+};
+
 export const getMessages = async (
   id?: string,
   params: Record<string, unknown> = {},
@@ -61,7 +97,7 @@ export const getMessages = async (
   }
 
   return {
-    data: JSON.parse(window.sessionStorage.getItem(id ?? "") || "[]"),
+    data: getStoredMessages(id, params),
   };
 };
 
@@ -91,10 +127,14 @@ export const useGetMessagesQuery: useQueryFunctionType<
     return { rows: data, columns };
   };
 
-  const queryResult = query(["useGetMessagesQuery", { id }], responseFn, {
-    placeholderData: keepPreviousData,
-    ...options,
-  });
+  const queryResult = query(
+    ["useGetMessagesQuery", { id, mode, excludedFields, params }],
+    responseFn,
+    {
+      placeholderData: keepPreviousData,
+      ...options,
+    },
+  );
 
   return queryResult;
 };

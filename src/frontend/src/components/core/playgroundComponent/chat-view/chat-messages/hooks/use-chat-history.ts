@@ -34,7 +34,11 @@ export const useChatHistory = (visibleSession: string | null) => {
   const messageQueryParams: Parameters<typeof useGetMessagesQuery>[0] = {
     id: currentFlowId,
     mode: "union",
-    params: { limit: 20, order: "DESC" },
+    params: {
+      ...(visibleSession ? { session_id: visibleSession } : {}),
+      limit: 20,
+      order: "DESC",
+    },
   };
   const { data: queryData } = useGetMessagesQuery(messageQueryParams, {
     enabled: isPlaygroundOpen,
@@ -97,6 +101,7 @@ export const useChatHistory = (visibleSession: string | null) => {
       // remount offsetRef restarts at 0 while the cache may already hold the
       // early pages, and dedup would otherwise swallow them and stall.
       let prepended = 0;
+      const seenPageSignatures = new Set<string>();
       while (prepended === 0) {
         const response = await getMessages(currentFlowId, {
           ...(visibleSession ? { session_id: visibleSession } : {}),
@@ -105,6 +110,26 @@ export const useChatHistory = (visibleSession: string | null) => {
           offset: offsetRef.current,
         });
         const olderMessages: Message[] = response.data || [];
+        if (olderMessages.length > 0) {
+          const pageSignature = JSON.stringify(
+            olderMessages.map((message) =>
+              message.id
+                ? message.id
+                : [
+                    message.flow_id,
+                    message.session_id,
+                    message.timestamp,
+                    message.sender,
+                    message.text,
+                  ],
+            ),
+          );
+          if (seenPageSignatures.has(pageSignature)) {
+            setHasMore(false);
+            break;
+          }
+          seenPageSignatures.add(pageSignature);
+        }
         offsetRef.current += olderMessages.length;
 
         const exhausted = olderMessages.length < 20;

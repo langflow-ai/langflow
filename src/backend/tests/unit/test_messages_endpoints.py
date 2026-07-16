@@ -210,7 +210,6 @@ async def test_get_messages_does_not_return_other_users_messages(
     assert str(cross_user_messages["owned_message"].id) not in other_returned_ids
 
 
-@pytest.mark.api_key_required
 @pytest.mark.usefixtures("timestamped_messages")
 async def test_get_messages_defaults_to_timestamp_ascending(client: AsyncClient, logged_in_headers):
     response = await client.get(
@@ -223,7 +222,6 @@ async def test_get_messages_defaults_to_timestamp_ascending(client: AsyncClient,
     assert [message["text"] for message in response.json()] == ["Message 0", "Message 1", "Message 2"]
 
 
-@pytest.mark.api_key_required
 @pytest.mark.usefixtures("timestamped_messages")
 async def test_get_messages_supports_descending_order_with_pagination(client: AsyncClient, logged_in_headers):
     response = await client.get(
@@ -236,7 +234,6 @@ async def test_get_messages_supports_descending_order_with_pagination(client: As
     assert [message["text"] for message in response.json()] == ["Message 1", "Message 0"]
 
 
-@pytest.mark.api_key_required
 @pytest.mark.usefixtures("timestamped_messages")
 async def test_get_messages_rejects_invalid_order_direction(client: AsyncClient, logged_in_headers):
     response = await client.get(
