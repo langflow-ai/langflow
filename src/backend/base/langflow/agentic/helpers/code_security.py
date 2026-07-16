@@ -258,9 +258,23 @@ class _SecurityChecker(ast.NodeVisitor):
         return self.module_aliases.get(name, frozenset({name}))
 
     def _resolved_assignment_value(self, node: ast.AST) -> frozenset[str]:
-        """Resolve a simple Name/Attribute RHS without executing it."""
+        """Resolve a statically identifiable reference RHS without executing it."""
         if isinstance(node, ast.Name):
             return self._resolved_names(node.id)
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and "getattr" in self._resolved_names(node.func.id)
+            and node.args
+        ):
+            try:
+                attr_node = node.args[1]
+            except IndexError:
+                return frozenset()
+            if isinstance(attr_node, ast.Constant) and isinstance(attr_node.value, str):
+                return frozenset(
+                    f"{base_name}.{attr_node.value}" for base_name in self._resolved_assignment_value(node.args[0])
+                )
         parts = _dotted_parts(node)
         if not parts:
             return frozenset()
@@ -300,12 +314,45 @@ class _SecurityChecker(ast.NodeVisitor):
                 None,
             )
 
-        for resolved_name in self._resolved_assignment_value(node):
+        if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            expressions = (node.key, node.value) if isinstance(node, ast.DictComp) else (node.elt,)
+            enclosing_state = self._snapshot_alias_state()
+            try:
+                for generator in node.generators:
+                    if violation := self._opaque_reference_violation(generator.iter):
+                        return violation
+                    self._bind_iterated_target(generator.target, generator.iter)
+                    for condition in generator.ifs:
+                        if violation := self._opaque_reference_violation(condition):
+                            return violation
+                return next(
+                    (
+                        violation
+                        for expression in expressions
+                        if (violation := self._opaque_reference_violation(expression))
+                    ),
+                    None,
+                )
+            finally:
+                self._restore_alias_state(enclosing_state)
+
+        resolved_names = self._resolved_assignment_value(node)
+        for resolved_name in resolved_names:
             if resolved_name in _RESTRICTED_MODULE_REFERENCES:
                 return f"Indirect reference to restricted module '{resolved_name}' is forbidden in components"
             if violation := self._dangerous_callable_message(resolved_name):
                 return violation
-        return None
+        if resolved_names:
+            return None
+
+        return next(
+            (
+                violation
+                for child in ast.iter_child_nodes(node)
+                if (violation := self._opaque_reference_violation(child))
+            ),
+            None,
+        )
 
     def _check_opaque_reference(self, node: ast.AST) -> None:
         if violation := self._opaque_reference_violation(node):
@@ -699,14 +746,14 @@ class _SecurityChecker(ast.NodeVisitor):
     def visit_Call(self, node: ast.Call):
         self._check_name_call(node)
         self._check_attribute_call(node)
-        self._check_getattr_access(node)
+        getattr_arguments_validated = self._check_getattr_access(node)
         resolved_call_names = self._resolved_assignment_value(node.func)
         # getattr is explicitly modeled below, including dynamic access to
         # restricted modules. Passing the module as its first argument is not
         # itself an opaque escape and safe members such as os.path must remain usable.
-        if "getattr" not in resolved_call_names:
-            for argument in (*node.args, *(keyword.value for keyword in node.keywords)):
-                self._check_opaque_reference(argument)
+        exempt_getattr_arguments = 2 if "getattr" in resolved_call_names and getattr_arguments_validated else 0
+        for argument in (*node.args[exempt_getattr_arguments:], *(keyword.value for keyword in node.keywords)):
+            self._check_opaque_reference(argument)
         self.generic_visit(node)
 
     def _check_name_call(self, node: ast.Call):
@@ -747,13 +794,14 @@ class _SecurityChecker(ast.NodeVisitor):
                     self.violations.append(message)
                     return
 
-    def _check_getattr_access(self, node: ast.Call):
+    def _check_getattr_access(self, node: ast.Call) -> bool:
         """Check reflective access to restricted module members.
 
         ``getattr`` is common in legitimate components, so it stays allowed for
         ordinary objects and safe module attributes. On modules with restricted
         members, a dynamic attribute name is rejected because it could resolve to
-        one of those members at runtime.
+        one of those members at runtime. Returns whether the object and attribute
+        arguments were fully validated here.
         """
         if not (
             isinstance(node.func, ast.Name)
@@ -761,13 +809,13 @@ class _SecurityChecker(ast.NodeVisitor):
             and node.args
             and isinstance(node.args[0], ast.Name)
         ):
-            return
+            return False
 
         module_names = self._resolved_names(node.args[0].id)
         try:
             attr_node = node.args[1]
         except IndexError:
-            return
+            return False
         if not (isinstance(attr_node, ast.Constant) and isinstance(attr_node.value, str)):
             dangerous_modules = sorted(
                 module_name for module_name in module_names if module_name in _RESTRICTED_MODULE_REFERENCES
@@ -776,22 +824,23 @@ class _SecurityChecker(ast.NodeVisitor):
                 self.violations.append(
                     f"Dynamic getattr() access on module '{dangerous_modules[0]}' is forbidden in components"
                 )
-            return
+            return True
 
         attr_name = attr_node.value
         if any(module_name in {"builtins", "__builtins__"} for module_name in module_names) and (
             violation := DANGEROUS_CALLS.get(attr_name)
         ):
             self.violations.append(violation)
-            return
+            return True
         for mod, attr, message in DANGEROUS_ATTRIBUTE_READS:
             if mod in module_names and attr_name == attr:
                 self.violations.append(message)
-                return
+                return True
         for mod, method, message in DANGEROUS_ATTR_CALLS:
             if mod in module_names and attr_name == method:
                 self.violations.append(message)
-                return
+                return True
+        return True
 
 
 def scan_code_security(code: str) -> SecurityScanResult:

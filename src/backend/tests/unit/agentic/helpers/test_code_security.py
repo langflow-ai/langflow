@@ -708,6 +708,10 @@ class TestScanCodeSecurityIndirectReferenceBypass:
             "import builtins\nvars(builtins)[\"eval\"](\"__import__('os').system('id')\")",
             "import os\ndangerous = os.system\ndangerous('id')",
             "import os\nmodule = os\ndef run(value):\n    value.system('id')\nrun(module)",
+            "import os\ndef run(module):\n    module.system('id')\nrun(os if True else object())",
+            "import os\ngetattr(os if True else object(), 'system')('id')",
+            "import os\ndef run(module):\n    module.system('id')\nrun([module for module in (os,)][0])",
+            "import os\ndef run(module):\n    module.system('id')\nrun(next(module for module in (os,)))",
         ],
         ids=[
             "function-argument",
@@ -721,6 +725,10 @@ class TestScanCodeSecurityIndirectReferenceBypass:
             "builtins-vars",
             "module-callable-alias",
             "module-alias-as-argument",
+            "conditional-expression-as-argument",
+            "conditional-expression-in-getattr",
+            "list-comprehension-as-argument",
+            "generator-expression-as-argument",
         ],
     )
     def test_should_detect_indirect_dangerous_reference(self, code):
@@ -766,6 +774,8 @@ class IndirectCommandComponent(Component):
             "import os\ndef join(path_module=os.path):\n    return path_module.join('a', 'b')\njoin()",
             "import os\ndef join(path_module):\n    return path_module.join('a', 'b')\njoin(os.path)",
             "dangerous = exec\ndangerous = print\ndangerous('safe')",
+            "import os\nmodule = os\nconsume([module for module in (object(),)])",
+            "import os\nconsume(getattr(os, 'path'))",
         ],
         ids=[
             "ordinary-object-method",
@@ -776,6 +786,8 @@ class IndirectCommandComponent(Component):
             "safe-module-member-default",
             "safe-module-member-argument",
             "dangerous-alias-rebound",
+            "comprehension-target-shadows-restricted-module",
+            "safe-getattr-result-as-argument",
         ],
     )
     def test_should_allow_safe_indirect_reference(self, code):
