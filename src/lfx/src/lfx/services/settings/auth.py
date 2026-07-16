@@ -122,7 +122,7 @@ class AuthSettings(BaseSettings):
     """The SameSite attribute of the access token cookie."""
     ACCESS_SECURE: bool = False
     """The Secure attribute of the access token cookie."""
-    ACCESS_HTTPONLY: bool = False
+    ACCESS_HTTPONLY: bool = True
     """The HttpOnly attribute of the access token cookie."""
 
     COOKIE_DOMAIN: str | None = None

@@ -2589,6 +2589,9 @@ async def test_build_public_tmp_returns_503_when_public_marker_persist_fails(mon
             yield _FakeSession()
 
         class _FakeSettingsService:
+            class settings:  # noqa: N801
+                rate_limit_enabled = False
+
             class auth_settings:  # noqa: N801
                 AUTO_LOGIN = True
 
