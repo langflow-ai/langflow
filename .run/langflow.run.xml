@@ -28,7 +28,7 @@
     <option name="uvArgs">
       <list />
     </option>
-    <option name="uvSdkKey" value="uv (langflow_new)" />
+    <option name="uvSdkKey" value="uv (langflow)" />
     <method v="2" />
   </configuration>
 </component>

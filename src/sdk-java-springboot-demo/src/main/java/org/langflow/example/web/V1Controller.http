@@ -1,0 +1,9 @@
+### 测试
+# @timeout 500000
+POST http://localhost:8080/demo/v1/run
+Content-Type: application/json
+
+{
+  "flowId": "63c58a83-5a1c-4c45-be43-3d38be8d5b29",
+  "inputValue": "{\n    \"target_doc\": \"被检查制度全文\",\n    \"standard_docs\": [\n      {\n        \"doc_name\": \"反洗钱法\",\n        \"content\": \"标准制度全文\"\n      },\n      {\n        \"doc_name\": \"反洗钱法1\",\n        \"content\": \"标准制度全文2\"\n      },\n      {\n        \"doc_name\": \"反洗钱法2\",\n        \"content\": \"标准制度全文2\"\n      }\n    ]\n  }"
+}

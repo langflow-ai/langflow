@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <!-- TODO: 发布前确认是否改为公司的域名倒序，例如 com.yourcompany.langflow。 -->
+    <groupId>org.langflow</groupId>
+    <artifactId>langflow-java-sdk</artifactId>
+    <!-- TODO: 正式发布去掉 -SNAPSHOT，例如 0.1.0；快照版本必须保留 -SNAPSHOT。 -->
+    <version>0.1.0-SNAPSHOT</version>
+    <name>Langflow Java SDK</name>
+    <description>Java SDK for the Langflow v1 and v2 REST APIs</description>
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jackson.version>2.17.2</jackson.version>
+        <junit.version>5.11.0</junit.version>
+        <!-- Nexus 服务根地址。若管理员提供 HTTPS，请务必替换为 HTTPS。 -->
+        <nexus.base-url>http://${nexus.username}:${nexus.password}@61.172.179.72:9025</nexus.base-url>
+        <nexus.username>zhouxuegang</nexus.username>
+        <nexus.password>zhouxuegang</nexus.password>
+    </properties>
+
+    <!-- 用于下载公司 Nexus 中的依赖。maven-public 通常是 group 仓库，不能用于 deploy。 -->
+    <repositories>
+        <repository>
+            <id>public</id>
+            <name>nexus</name>
+            <url>${nexus.base-url}/repository/maven-public/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <!--
+      发布目标。下面使用 Nexus 的常见 hosted 仓库名；发布前必须在 Nexus 管理页面确认名称。
+      settings.xml 中 server/id 必须与这里的 id 完全一致。
+    -->
+    <distributionManagement>
+        <repository>
+            <id>nexus-releases</id>
+            <name>Nexus Maven Releases</name>
+            <!-- TODO: 确认可写的 release hosted 仓库路径，不能填写 maven-public。 -->
+            <url>${nexus.base-url}/repository/maven-releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>nexus-snapshots</id>
+            <name>Nexus Maven Snapshots</name>
+            <!-- TODO: 确认可写的 snapshot hosted 仓库路径，不能填写 maven-public。 -->
+            <url>${nexus.base-url}/repository/maven-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+  <dependencies>
+    <!-- 日志门面：Spring Boot 会自动使用其 Logback 实现。 -->
+    <dependency>
+      <groupId>org.slf4j</groupId><artifactId>slf4j-api</artifactId><version>2.0.16</version>
+    </dependency>
+    <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-sse</artifactId>
+            <version>4.12.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>mockwebserver</artifactId>
+            <version>4.12.0</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <!-- 发布源码包，方便使用方调试和 IDE 查看源码。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- 发布 Javadoc 包。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.11.2</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.0</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
