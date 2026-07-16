@@ -25,6 +25,11 @@ def hash_api_key(api_key: str) -> str:
     return hashlib.sha256(api_key.encode()).hexdigest()
 
 
+def _api_keys_match(provided: str, expected: str) -> bool:
+    """Compare API keys without content-dependent short-circuiting."""
+    return secrets.compare_digest(provided.encode(), expected.encode())
+
+
 def _is_expired(expires_at: datetime.datetime | None) -> bool:
     if expires_at is None:
         return False
@@ -163,11 +168,11 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
             continue
 
         # decrypt_api_key returns "" on failure (never raises for decryption errors)
-        if stored_value == api_key:
+        if _api_keys_match(api_key, stored_value):
             matched = True
         else:
             candidate = auth_utils.decrypt_api_key(stored_value)
-            matched = candidate == api_key
+            matched = _api_keys_match(api_key, candidate)
 
         if matched:
             if _is_expired(api_key_obj.expires_at):
@@ -196,8 +201,7 @@ async def _check_key_from_env(session: AsyncSession, api_key: str, settings_serv
     if not env_api_key:
         return None
 
-    # Compare the provided API key with the environment variable
-    if api_key != env_api_key:
+    if not _api_keys_match(api_key, env_api_key):
         return None
 
     # Return the superuser for authorization purposes

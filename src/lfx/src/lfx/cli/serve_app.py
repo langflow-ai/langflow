@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import secrets
 import time
 import traceback
 import uuid
@@ -69,7 +70,7 @@ def verify_api_key(
 
     try:
         expected_key = get_api_key()
-        if provided_key != expected_key:
+        if not secrets.compare_digest(provided_key.encode(), expected_key.encode()):
             raise HTTPException(status_code=401, detail="Invalid API key")
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
