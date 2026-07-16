@@ -60,6 +60,7 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
+from langflow.services.rate_limit import check_rate_limit
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
@@ -808,6 +809,8 @@ async def build_public_tmp(
     Returns:
         Dict with job_id that can be used to poll for build status
     """
+    check_rate_limit(request, scope=f"public-build:{flow_id}")
+
     try:
         # Reject caller-supplied file references that aren't scoped to this
         # public flow's own storage namespace. Done before any flow lookup so
