@@ -12,7 +12,6 @@ import {
   writeAssistantDiscovered,
 } from "@/components/core/assistantPanel/hooks/assistant-discovery-storage";
 import { Button } from "@/components/ui/button";
-import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import useFlowStore from "@/stores/flowStore";
@@ -20,6 +19,7 @@ import { usePlaygroundStore } from "@/stores/playgroundStore";
 import type { AllNodeType } from "@/types/flow";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
 import HelpDropdown from "./HelpDropdown";
+import useMinimizeAllAndAlign from "./hooks/use-minimize-all-and-align";
 import { useDismissOnTabBoundary } from "./utils/use-dismiss-on-tab-boundary";
 
 // Delay before the "Try the new Langflow Assistant!" tooltip surfaces, in ms.
@@ -38,6 +38,8 @@ const CanvasControls = ({
 }) => {
   const { t } = useTranslation();
   const reactFlowStoreApi = useStoreApi();
+  const { allMinimized, hasGenericNodes, toggleMinimizeAllAndAlign } =
+    useMinimizeAllAndAlign();
   const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
   );
@@ -48,9 +50,6 @@ const CanvasControls = ({
   const assistantSidebarOpen = useAssistantManagerStore(
     (state) => state.assistantSidebarOpen,
   );
-  const inspectionPanelVisible = useFlowStore(
-    (state) => state.inspectionPanelVisible,
-  );
   // While the FlowBuilderWelcome overlay is open, suppress the onboarding
   // tooltip — it renders via Portal and would float over the welcome.
   const isWelcomeOpen = useFlowBuilderWelcomeStore((state) => state.isOpen);
@@ -58,9 +57,6 @@ const CanvasControls = ({
   // renders above the canvas, but the tooltip's Portal escapes that stacking
   // context and would float on top of the playground.
   const isPlaygroundOpen = usePlaygroundStore((state) => state.isOpen);
-  const setInspectionPanelVisible = useFlowStore(
-    (state) => state.setInspectionPanelVisible,
-  );
 
   // Discovery state — once true, the "New" pill + onboarding tooltip never
   // surface again on this browser. Two paths flip it: opening the assistant
@@ -281,39 +277,35 @@ const CanvasControls = ({
             }`}
           />
         </Button>
+        <Button
+          unstyled
+          size="icon"
+          data-testid="canvas_controls_minimize_all"
+          aria-pressed={allMinimized}
+          disabled={locked || !hasGenericNodes}
+          className={`group flex h-8 w-8 items-center justify-center rounded-md ${
+            allMinimized ? "bg-muted text-foreground" : "hover:bg-muted"
+          } ${locked || !hasGenericNodes ? "cursor-not-allowed opacity-50" : ""}`}
+          title={
+            locked
+              ? t("version.readOnly")
+              : allMinimized
+                ? t("canvasControls.expandAll")
+                : t("canvasControls.minimizeAll")
+          }
+          onClick={toggleMinimizeAllAndAlign}
+        >
+          <ForwardedIconComponent
+            name={allMinimized ? "Maximize2" : "Minimize2"}
+            className={`h-[18px] w-[18px] transition-colors ${
+              allMinimized
+                ? "text-foreground"
+                : "text-muted-foreground group-hover:text-foreground"
+            }`}
+          />
+        </Button>
         <HelpDropdown />
         {children}
-        {ENABLE_INSPECTION_PANEL && (
-          <Button
-            unstyled
-            size="icon"
-            data-testid="canvas_controls_toggle_inspector"
-            aria-pressed={inspectionPanelVisible}
-            disabled={locked}
-            className={`group flex h-8 w-8 items-center justify-center rounded-md ${
-              inspectionPanelVisible
-                ? "bg-muted text-foreground"
-                : "hover:bg-muted"
-            }`}
-            title={
-              !selectedNode
-                ? "Select a node to open the Inspector Panel"
-                : inspectionPanelVisible
-                  ? "Hide Inspector Panel"
-                  : "Show Inspector Panel"
-            }
-            onClick={() => setInspectionPanelVisible(!inspectionPanelVisible)}
-          >
-            <ForwardedIconComponent
-              name="SlidersHorizontal"
-              className={`!h-5 !w-5 ${
-                inspectionPanelVisible
-                  ? "text-foreground"
-                  : "text-muted-foreground group-hover:text-foreground"
-              }`}
-            />
-          </Button>
-        )}
       </Panel>
     </>
   );

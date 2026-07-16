@@ -513,7 +513,7 @@ For a multi-tenant deployment served over HTTPS, harden the access-token cookie.
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | `LANGFLOW_ACCESS_SECURE` | Boolean | `False` | When `true`, the `access_token_lf` cookie is sent only over HTTPS. Recommended `true` for any HTTPS deployment. Leave `false` for plain-HTTP/localhost development, where a `Secure` cookie would not be sent. |
-| `LANGFLOW_ACCESS_HTTPONLY` | Boolean | `False` | When `true`, the `access_token_lf` cookie is not readable by JavaScript (mitigates token theft via XSS). The default is `false` because the bundled frontend currently reads this cookie in JavaScript; enabling `HttpOnly` requires a frontend that does not read the token directly. |
+| `LANGFLOW_ACCESS_HTTPONLY` | Boolean | `True` | When `true`, the `access_token_lf` cookie is not readable by JavaScript, mitigating token theft via XSS. The bundled frontend relies on browser-managed cookies and does not persist access or refresh tokens in JavaScript-readable storage. Set this to `false` only for a custom client that must read the cookie directly. |
 | `LANGFLOW_ACCESS_SAME_SITE` | String | `lax` | The `SameSite` attribute of the access-token cookie (`lax`, `strict`, or `none`). |
 
 The refresh-token cookie is already `HttpOnly` + `Secure` + `SameSite` by default.
