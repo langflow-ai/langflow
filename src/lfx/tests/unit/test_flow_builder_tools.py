@@ -755,19 +755,25 @@ class TestConfigureComponentModelProviderPolicy:
 
         return ModelProviderPolicySnapshot(
             context=ModelProviderPolicyContext(user_id="user-1"),
-            purpose=ModelProviderPolicyPurpose.USE,
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
             candidate_provider_ids=frozenset({"openai", "anthropic"}),
             allowed_provider_ids=frozenset(),
         )
 
     def test_denied_provider_returns_generic_error_before_configure_default_or_mirror(self, monkeypatch):
         from lfx.mcp.flow_builder_tools import ConfigureComponent, mutate_tools
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
         agent_id = _make_agent_node_for_model_test()
         original_value = copy.deepcopy(_read_model_field_value(agent_id))
         snapshot = self._deny_all_snapshot()
+        resolver_kwargs = {}
 
-        monkeypatch.setattr(mutate_tools, "resolve_model_provider_policy", lambda **_kwargs: snapshot)
+        def resolve_policy(**kwargs):
+            resolver_kwargs.update(kwargs)
+            return snapshot
+
+        monkeypatch.setattr(mutate_tools, "resolve_model_provider_policy", resolve_policy)
 
         def fail_if_called(*_args, **_kwargs):
             msg = "denied provider reached downstream model configuration work"
@@ -783,6 +789,7 @@ class TestConfigureComponentModelProviderPolicy:
 
         assert result.data == {"error": "The requested model provider is not available"}
         assert _read_model_field_value(agent_id) == original_value
+        assert resolver_kwargs["purpose"] is ModelProviderPolicyPurpose.CONFIGURE
 
     def test_default_resolution_denies_before_catalog_lookup(self, monkeypatch):
         from lfx.base.models import unified_models

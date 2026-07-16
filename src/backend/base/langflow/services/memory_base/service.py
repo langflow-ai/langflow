@@ -17,6 +17,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
+from lfx.base.models.provider_registry import is_api_key_optional
 from lfx.base.models.unified_models import get_api_key_for_provider
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, require_model_provider
 from sqlmodel import col, select
@@ -86,6 +87,8 @@ def _validate_preprocessing_api_key(user_id: uuid.UUID, preproc_model: str | Non
     """Raise PreprocessingValidationError if the preprocessing provider API key is missing."""
     provider = _require_preprocessing_model_provider(user_id, preproc_model)
     if provider is None:
+        return
+    if provider == "Ollama" or is_api_key_optional(provider):
         return
     api_key = get_api_key_for_provider(user_id, provider)
     if not api_key:

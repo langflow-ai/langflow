@@ -76,7 +76,16 @@ def fake_catalog_loader():
     ]
 
 
+def duplicate_whitespace_catalog_loader():
+    """Return duplicate model identities after registry normalization."""
+    return [
+        {"name": "fake-chat-1", "model_type": "llm"},
+        {"name": " fake-chat-1 ", "model_type": "llm"},
+    ]
+
+
 _CATALOG_LOADER_PATH = f"{__name__}:fake_catalog_loader"
+_DUPLICATE_CATALOG_LOADER_PATH = f"{__name__}:duplicate_whitespace_catalog_loader"
 
 
 def _fakeco_metadata() -> dict:
@@ -177,6 +186,18 @@ def test_registered_catalog_loader_contributes_static_models():
     assert len(fakeco_groups) == 1
     assert [row["name"] for row in fakeco_groups[0]] == ["fake-chat-1", "fake-embed-1"]
     assert {row["provider"] for row in fakeco_groups[0]} == {"FakeCo"}
+
+
+def test_registered_catalog_rejects_duplicate_normalized_model_names():
+    register_provider(
+        _fakeco_spec(
+            provider_id="fakeco",
+            catalog_loader=_DUPLICATE_CATALOG_LOADER_PATH,
+        )
+    )
+
+    with pytest.raises(ValueError, match="duplicate model identity"):
+        provider_registry.validate_registered_provider_catalogs()
 
 
 def test_duplicate_provider_id_is_rejected_even_when_names_differ():
@@ -592,6 +613,36 @@ def test_clear_restores_baseline():
     assert "FakeCo" not in EMBEDDING_PROVIDER_CLASS_MAPPING
     assert "FakeCo" not in EMBEDDING_PARAM_MAPPINGS
     assert "FakeCo Embeddings" not in EMBEDDING_PARAM_MAPPINGS
+
+
+def test_unregister_provider_removes_only_the_target_registration():
+    register_provider(
+        _fakeco_spec(
+            provider_id="fakeco",
+            aliases=("FakeCo Legacy",),
+            live=True,
+            live_discovery=_LIVE_DISCOVERY_PATH,
+            catalog_loader=_CATALOG_LOADER_PATH,
+            embedding_class_name="OpenAIEmbeddings",
+            embedding_param_key="FakeCo Embeddings",
+            embedding_param_mapping={"model": "model"},
+        )
+    )
+    register_provider(_fakeco_spec(name="OtherCo", provider_id="otherco"))
+    provider_registry.live_discovery_for("FakeCo")
+    provider_registry.validate_registered_provider_catalogs(["FakeCo"])
+
+    assert provider_registry.unregister_provider("FakeCo") is True
+
+    assert provider_registry.is_registered("FakeCo") is False
+    assert provider_registry.is_registered("OtherCo") is True
+    assert provider_registry.provider_id_for("FakeCo Legacy") is None
+    assert "FakeCo" not in MODEL_PROVIDER_METADATA
+    assert "FakeCo" not in LIVE_MODEL_PROVIDERS
+    assert "FakeCo" not in EMBEDDING_PROVIDER_CLASS_MAPPING
+    assert "FakeCo" not in EMBEDDING_PARAM_MAPPINGS
+    assert "FakeCo Embeddings" not in EMBEDDING_PARAM_MAPPINGS
+    assert provider_registry.unregister_provider("FakeCo") is False
 
 
 def test_zero_registration_is_noop():

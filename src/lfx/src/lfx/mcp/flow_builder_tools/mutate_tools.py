@@ -208,7 +208,7 @@ def _model_providers_in_params(flow: dict, component_id: str, params: dict) -> s
 
 
 def _require_allowed_model_providers(providers: set[str]) -> None:
-    """Require USE policy before model values reach configuration or catalogs."""
+    """Require CONFIGURE policy before model values reach configuration or catalogs."""
     if not providers:
         return
     from lfx.base.models.unified_models import get_model_providers
@@ -216,7 +216,7 @@ def _require_allowed_model_providers(providers: set[str]) -> None:
     policy = resolve_model_provider_policy(
         user_id=_current_policy_user_id(),
         providers=[*get_model_providers(), *providers],
-        purpose=ModelProviderPolicyPurpose.USE,
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
     )
     for provider in providers:
         policy.require(provider)

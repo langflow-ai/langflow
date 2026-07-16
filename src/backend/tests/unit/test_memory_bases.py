@@ -2426,6 +2426,24 @@ class TestPreprocessingApiKeyValidation:
             # Should not raise.
             _validate_preprocessing_api_key(uuid.uuid4(), "gpt-4o")
 
+    def test_passes_for_credentialless_provider_without_key_lookup(self):
+        from langflow.services.memory_base.service import _validate_preprocessing_api_key
+
+        with (
+            patch(
+                "langflow.services.memory_base.service.infer_llm_provider",
+                return_value="AmbientAuthCo",
+            ),
+            patch(
+                "langflow.services.memory_base.service.is_api_key_optional",
+                return_value=True,
+            ),
+            patch("langflow.services.memory_base.service.get_api_key_for_provider") as key_lookup,
+        ):
+            _validate_preprocessing_api_key(uuid.uuid4(), "ambient-chat")
+
+        key_lookup.assert_not_called()
+
     def test_policy_denial_happens_before_api_key_lookup(self):
         from langflow.services.memory_base.service import _validate_preprocessing_api_key
         from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose

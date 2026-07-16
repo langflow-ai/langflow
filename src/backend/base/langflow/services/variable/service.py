@@ -46,15 +46,14 @@ class DatabaseVariableService(VariableService, Service):
                     if var_key:
                         var_to_provider[var_key] = provider
                         var_to_info[var_key] = var
-        except Exception:  # noqa: BLE001
-            await logger.aexception("Could not resolve model-provider metadata; skipping environment variable import")
-            return
-        else:
             provider_policy = resolve_model_provider_policy(
                 user_id=user_id,
                 providers=metadata,
                 purpose=ModelProviderPolicyPurpose.CONFIGURE,
             )
+        except Exception:  # noqa: BLE001
+            await logger.aexception("Could not resolve model-provider metadata; skipping environment variable import")
+            return
 
         for var_name in self.settings_service.settings.variables_to_get_from_environment:
             # Check if session is still usable before processing each variable

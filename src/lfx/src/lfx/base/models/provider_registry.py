@@ -436,6 +436,67 @@ def register_provider(spec: ProviderDescriptor) -> bool:
     return True
 
 
+def unregister_provider(name: str) -> bool:
+    """Remove one extension provider without disturbing other registrations."""
+    global _generation  # noqa: PLW0603 - registry generation advances atomically with removal
+
+    with _lock:
+        spec = _registered.pop(name, None)
+        if spec is None:
+            return False
+
+        provider_id = spec.canonical_id()
+        _registered_ids.pop(provider_id, None)
+        for alias, registered_name in tuple(_registered_aliases.items()):
+            if registered_name == name:
+                _registered_aliases.pop(alias, None)
+
+        MODEL_PROVIDER_METADATA.pop(name, None)
+        _undo.metadata_keys.discard(name)
+
+        class_name = spec.model_class_name()
+        if class_name in _undo.model_class_keys and not any(
+            registered.model_class_name() == class_name for registered in _registered.values()
+        ):
+            _MODEL_CLASS_IMPORTS.pop(class_name, None)
+            _undo.model_class_keys.discard(class_name)
+
+        if spec.embedding_class_name:
+            EMBEDDING_PROVIDER_CLASS_MAPPING.pop(name, None)
+            _undo.embedding_provider_keys.discard(name)
+            if spec.embedding_class_name in _undo.embedding_class_keys and not any(
+                registered.embedding_class_name == spec.embedding_class_name for registered in _registered.values()
+            ):
+                _EMBEDDING_CLASS_IMPORTS.pop(spec.embedding_class_name, None)
+                _undo.embedding_class_keys.discard(spec.embedding_class_name)
+
+        embedding_param_keys = {name}
+        if spec.embedding_param_key:
+            embedding_param_keys.add(spec.embedding_param_key)
+        for key in embedding_param_keys:
+            if key in _undo.embedding_param_keys:
+                EMBEDDING_PARAM_MAPPINGS.pop(key, None)
+                _undo.embedding_param_keys.discard(key)
+
+        if name in _undo.live_names:
+            if name in LIVE_MODEL_PROVIDERS:
+                LIVE_MODEL_PROVIDERS.remove(name)
+            _undo.live_names.discard(name)
+        if name in _undo.conditional_live_names:
+            if name in CONDITIONAL_LIVE_MODEL_PROVIDERS:
+                CONDITIONAL_LIVE_MODEL_PROVIDERS.remove(name)
+            _undo.conditional_live_names.discard(name)
+
+        _live_discovery_cache.pop(name, None)
+        _validator_cache.pop(name, None)
+        _catalog_cache.pop(name, None)
+        _generation += 1
+        _clear_derived_caches()
+
+    logger.debug(f"Unregistered bundle model provider {name!r}")
+    return True
+
+
 def _clear_derived_caches() -> None:
     """Drop ``@lru_cache`` results that derive structures from the metadata.
 
@@ -576,15 +637,16 @@ def get_registry_snapshot(*, validate_catalogs: bool = False) -> ProviderRegistr
     """Return an immutable registry snapshot after optional eager catalog validation."""
     if validate_catalogs:
         validate_registered_provider_catalogs()
-    descriptors = {
-        provider_id: _freeze_descriptor(descriptor)
-        for provider_id in _core_provider_ids() | _registered_ids
-        if (descriptor := get_provider_descriptor(provider_id)) is not None
-    }
-    return ProviderRegistrySnapshot(
-        generation=_generation,
-        descriptors_by_id=MappingProxyType(descriptors),
-    )
+    with _lock:
+        descriptors = {
+            provider_id: _freeze_descriptor(descriptor)
+            for provider_id in _core_provider_ids() | _registered_ids
+            if (descriptor := get_provider_descriptor(provider_id)) is not None
+        }
+        return ProviderRegistrySnapshot(
+            generation=_generation,
+            descriptors_by_id=MappingProxyType(descriptors),
+        )
 
 
 def _freeze_value(value: Any) -> Any:
@@ -635,6 +697,7 @@ def _load_registered_catalog(provider: str) -> tuple[dict[str, Any], ...]:
         if not isinstance(name, str) or not name.strip():
             msg = f"Catalog loader for provider {provider!r} returned row {index} without a model name"
             raise ValueError(msg)
+        normalized_name = name.strip()
         model_type = row.get("model_type", "llm")
         if model_type not in {"llm", "embeddings"}:
             msg = (
@@ -642,7 +705,7 @@ def _load_registered_catalog(provider: str) -> tuple[dict[str, Any], ...]:
                 f"{model_type!r} at row {index}"
             )
             raise ValueError(msg)
-        key = (model_type, name)
+        key = (model_type, normalized_name)
         if key in seen:
             msg = f"Catalog loader for provider {provider!r} returned duplicate model identity {key!r}"
             raise ValueError(msg)
@@ -650,7 +713,7 @@ def _load_registered_catalog(provider: str) -> tuple[dict[str, Any], ...]:
 
         normalized = dict(row)
         normalized["provider"] = provider
-        normalized["name"] = name.strip()
+        normalized["name"] = normalized_name
         normalized["model_type"] = model_type
         normalized.setdefault("icon", provider_metadata.get("icon", "Bot"))
         normalized_rows.append(normalized)

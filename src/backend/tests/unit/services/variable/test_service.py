@@ -108,6 +108,30 @@ async def test_initialize_user_variables_skips_policy_hidden_provider_before_val
     assert await service.list_variables(user_id, session=session) == []
 
 
+async def test_initialize_user_variables_stops_when_policy_resolution_fails(
+    service,
+    session: AsyncSession,
+    monkeypatch,
+):
+    user_id = uuid4()
+    monkeypatch.setattr(
+        service.settings_service.settings,
+        "variables_to_get_from_environment",
+        ["OPENAI_API_KEY"],
+    )
+
+    with (
+        patch.dict("os.environ", {"OPENAI_API_KEY": "must-not-import"}, clear=True),  # pragma: allowlist secret
+        patch(
+            "lfx.services.model_provider_policy.resolve_model_provider_policy",
+            side_effect=RuntimeError("policy unavailable"),
+        ),
+    ):
+        await service.initialize_user_variables(user_id=user_id, session=session)
+
+    assert await service.list_variables(user_id, session=session) == []
+
+
 async def test_get_variable(service, session: AsyncSession):
     user_id = uuid4()
     name = "name"

@@ -71,7 +71,7 @@ The runtime compares `str(BUNDLE_API_VERSION)` against this list. A mismatch fai
 | `name` | string | Bundle name; addressable as `ext:<bundle>:<Class>@<slot>`. Lowercase snake_case, starts with a letter, 2-64 chars. |
 | `path` | string | Path to the bundle directory, relative to the manifest. Must not start with `/` or contain `..`. |
 
-v0 enforces `maxItems: 1`; multi-bundle extensions are rejected with `multi-bundle-deferred-in-this-milestone` and ship in a later epic. The list can be empty when the extension declares at least one model provider.
+v0 enforces `maxItems: 1`; multi-bundle extensions are rejected with `multi-bundle-unsupported` and ship in a later epic. The list can be empty when the extension declares at least one model provider.
 
 ## `providers`
 
@@ -130,7 +130,7 @@ A provider-only extension can add a provider without adding a component bundle:
 
 Providers that use ambient authentication or need no credentials should set `api_key_required` to `false`. They remain eligible for unified model options when `metadata.variables` is empty or contains only optional configuration fields.
 
-Built-in providers take precedence over extension declarations. A colliding provider is skipped without preventing other providers or components in the extension from loading.
+Built-in providers take precedence over extension declarations. A provider-name collision is skipped without preventing other providers or components from loading. Stable-ID or alias collisions are reported as `provider-invalid`.
 
 ## `capabilities`
 

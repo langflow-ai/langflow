@@ -229,7 +229,12 @@ def apply_provider_variable_config_to_build_config(
     return build_config
 
 
-def _filter_model_options_by_policy(user_id: Any, options: list[Any]):
+def _filter_model_options_by_policy(
+    user_id: Any,
+    options: list[Any],
+    *,
+    additional_providers: tuple[str, ...] = (),
+):
     """Filter provider-bearing options and return the decision snapshot used."""
     from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
 
@@ -238,6 +243,7 @@ def _filter_model_options_by_policy(user_id: Any, options: list[Any]):
     option_providers = {
         option.get("provider") for option in options if isinstance(option, dict) and option.get("provider")
     }
+    option_providers.update(additional_providers)
     policy = resolve_model_provider_policy(
         user_id=user_id,
         providers=[*get_model_providers(), *option_providers],
@@ -338,7 +344,16 @@ def update_model_options_in_build_config(
     # Use cached results
     cached = component.cache.get(cache_key, {"options": []})
     cached_options = cached.get("options", [])
-    visible_options, provider_policy = _filter_model_options_by_policy(component.user_id, cached_options)
+    current_value = build_config.get(model_field_name, {}).get("value")
+    saved_provider = ""
+    if isinstance(current_value, list) and current_value and isinstance(current_value[0], dict):
+        saved_provider = current_value[0].get("provider", "")
+    additional_providers = (saved_provider,) if saved_provider else ()
+    visible_options, provider_policy = _filter_model_options_by_policy(
+        component.user_id,
+        cached_options,
+        additional_providers=additional_providers,
+    )
     build_config[model_field_name]["options"] = visible_options
 
     # Sticky-default: if the currently saved value references a model that
@@ -349,7 +364,6 @@ def update_model_options_in_build_config(
     # The frontend surfaces a "configure" wrench next to the trigger when it
     # sees this flag so the user can enable the provider without silently
     # losing their selection.
-    current_value = build_config.get(model_field_name, {}).get("value")
     if (
         isinstance(current_value, list)
         and current_value
@@ -358,9 +372,8 @@ def update_model_options_in_build_config(
     ):
         saved = current_value[0]
         saved_name = saved["name"]
-        saved_provider = saved.get("provider", "")
         options_list = build_config[model_field_name]["options"]
-        saved_provider_allowed = bool(saved_provider) and provider_policy.allows(saved_provider)
+        saved_provider_allowed = not saved_provider or provider_policy.allows(saved_provider)
         already_present = any(
             opt.get("name") == saved_name and opt.get("provider", "") == saved_provider for opt in options_list
         )

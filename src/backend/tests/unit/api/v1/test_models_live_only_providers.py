@@ -12,7 +12,6 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 from lfx.base.models import provider_registry
-from lfx.base.models.model_metadata import LIVE_MODEL_PROVIDERS, MODEL_PROVIDER_METADATA
 from lfx.base.models.provider_registry import ProviderSpec, register_provider
 
 _PROVIDER_NAME = "FakeLiveCo"
@@ -82,22 +81,7 @@ def _unregister(name: str) -> None:
     also wipe providers registered by real bundles during app startup and leak
     that loss into later tests in the same process. Reverse only ours instead.
     """
-    MODEL_PROVIDER_METADATA.pop(name, None)
-    if name in LIVE_MODEL_PROVIDERS:
-        LIVE_MODEL_PROVIDERS.remove(name)
-    descriptor = provider_registry._registered.pop(name, None)
-    if descriptor is not None:
-        provider_registry._registered_ids.pop(descriptor.canonical_id(), None)
-    for alias, registered_name in list(provider_registry._registered_aliases.items()):
-        if registered_name == name:
-            provider_registry._registered_aliases.pop(alias, None)
-    provider_registry._live_discovery_cache.pop(name, None)
-    provider_registry._validator_cache.pop(name, None)
-    provider_registry._catalog_cache.pop(name, None)
-    provider_registry._undo.metadata_keys.discard(name)
-    provider_registry._undo.live_names.discard(name)
-    provider_registry._generation += 1
-    provider_registry._clear_derived_caches()
+    assert provider_registry.unregister_provider(name) is True
 
 
 @pytest.fixture
