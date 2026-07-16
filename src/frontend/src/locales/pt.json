@@ -1609,6 +1609,8 @@
   "settings.apiPageParagraph": "Suas chaves secretas da API do Langflow estão listadas abaixo. Não compartilhe sua chave de API com outras pessoas nem a exponha no navegador ou em outro código do lado do cliente.",
   "settings.confirmPasswordPlaceholder": "Confirmar senha",
   "settings.confirmPasswordRequired": "Confirme sua senha",
+  "settings.currentPasswordPlaceholder": "Senha atual",
+  "settings.currentPasswordRequired": "Digite sua senha atual",
   "settings.dbProviders.active": "Ativo",
   "settings.dbProviders.chromaDescription": "O Chroma armazena vetores no disco junto com o Langflow e está ativado por padrão. Ao selecioná-lo aqui, ele se torna o provedor padrão para novas bases de conhecimento.",
   "settings.dbProviders.chromaSelected": "Chroma selecionado",

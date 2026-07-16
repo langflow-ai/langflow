@@ -1609,6 +1609,8 @@
   "settings.apiPageParagraph": "Ihre geheimen Langflow-API-Schlüssel sind unten aufgeführt. Geben Sie Ihren API-Schlüssel nicht an andere weiter und machen Sie ihn nicht im Browser oder in anderem clientseitigen Code sichtbar.",
   "settings.confirmPasswordPlaceholder": "Bestätigungskennwort",
   "settings.confirmPasswordRequired": "Bitte bestätigen Sie Ihr Passwort",
+  "settings.currentPasswordPlaceholder": "Aktuelles Passwort",
+  "settings.currentPasswordRequired": "Bitte geben Sie Ihr aktuelles Passwort ein",
   "settings.dbProviders.active": "Aktiv",
   "settings.dbProviders.chromaDescription": "Chroma speichert Vektoren auf der Festplatte neben Langflow und ist standardmäßig aktiviert. Wenn Sie ihn hier auswählen, wird er zum Standardanbieter für neue Wissensdatenbanken.",
   "settings.dbProviders.chromaSelected": "Chroma ausgewählt",

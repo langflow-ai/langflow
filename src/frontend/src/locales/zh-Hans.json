@@ -1609,6 +1609,8 @@
   "settings.apiPageParagraph": "您的 Langflow 私有 API 密钥如下所示。 请勿将您的 API 密钥分享给他人，也不要在浏览器或其他客户端代码中暴露该密钥。",
   "settings.confirmPasswordPlaceholder": "确认密码",
   "settings.confirmPasswordRequired": "请确认您的密码",
+  "settings.currentPasswordPlaceholder": "当前密码",
+  "settings.currentPasswordRequired": "请输入当前密码",
   "settings.dbProviders.active": "活动",
   "settings.dbProviders.chromaDescription": "Chroma 将矢量数据存储在 Langflow 旁边的磁盘上，并且默认处于启用状态。 在此处选中它，将使其成为新建知识库的默认提供程序。",
   "settings.dbProviders.chromaSelected": "已选择色相",
