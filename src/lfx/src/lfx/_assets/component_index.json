@@ -6336,7 +6336,7 @@
               "dependencies": [
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "lfx",
@@ -7735,7 +7735,7 @@
                 },
                 {
                   "name": "cryptography",
-                  "version": "49.0.0"
+                  "version": "48.0.1"
                 },
                 {
                   "name": "langchain_chroma",
@@ -7751,7 +7751,7 @@
                 },
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "chromadb",
@@ -9274,7 +9274,7 @@
                 },
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "langchain_chroma",
@@ -22518,7 +22518,7 @@
                 },
                 {
                   "name": "toolguard",
-                  "version": null
+                  "version": "0.2.21"
                 }
               ],
               "total_dependencies": 2
@@ -31464,6 +31464,6 @@
     "num_components": 130,
     "num_modules": 17
   },
-  "sha256": "c637ea1c70febe94a19d690ceb9d2b34c22db3ba065f720c4b154d3f6c06d536",
+  "sha256": "00ea9c72e528c44fdbf7049fbe1a6373e9c4301456e674143c9c27477fd12a95",
   "version": "1.11.0"
 }
