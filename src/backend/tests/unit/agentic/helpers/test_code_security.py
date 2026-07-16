@@ -626,7 +626,7 @@ module = object()
 
 def bind_locally():
     module = os
-    return module
+    return None
 
 module.system('not the os module')
 """
@@ -820,9 +820,9 @@ module.getenv('not the os module')
 import os
 module = object()
 try:
-    def deferred():
-        module = os
-        return module
+        def deferred():
+            module = os
+            return None
 finally:
     module.getenv('not the os module')
 """
@@ -882,6 +882,18 @@ class TestScanCodeSecurityIndirectReferenceBypass:
             "import os\ngetattr(os if True else object(), 'system')('id')",
             "import os\ndef run(module):\n    module.system('id')\nrun([module for module in (os,)][0])",
             "import os\ndef run(module):\n    module.system('id')\nrun(next(module for module in (os,)))",
+            "def expose():\n    return exec\nexpose()(\"print('unsafe')\")",
+            "import os\ndef expose():\n    return os\nexpose().system('id')",
+            "def expose():\n    yield exec\nnext(expose())(\"print('unsafe')\")",
+            "import os\ndef expose():\n    yield from (os,)\nnext(expose()).system('id')",
+            "(lambda: exec)()(\"print('unsafe')\")",
+            "import os\nmodule = os if flag else object()\nmodule.system('id')",
+            "import os\nmodule = [os][0]\nmodule.system('id')",
+            "import os\nmodule = [item for item in (os,)][0]\nmodule.system('id')",
+            "import os\n(module,) = ([os][0],)\nmodule.system('id')",
+            "import os\nif module := [os][0]:\n    module.system('id')",
+            "import os\nmodule: object = os if flag else object()\nmodule.system('id')",
+            "import os\ngetattr(os.system, '__call__')('id')",
         ],
         ids=[
             "function-argument",
@@ -899,6 +911,18 @@ class TestScanCodeSecurityIndirectReferenceBypass:
             "conditional-expression-in-getattr",
             "list-comprehension-as-argument",
             "generator-expression-as-argument",
+            "returned-builtin",
+            "returned-module",
+            "yielded-builtin",
+            "yielded-module",
+            "lambda-returned-builtin",
+            "conditional-assignment",
+            "subscript-assignment",
+            "comprehension-assignment",
+            "nested-unpacking-assignment",
+            "named-expression-assignment",
+            "annotated-assignment",
+            "getattr-dangerous-callable-receiver",
         ],
     )
     def test_should_detect_indirect_dangerous_reference(self, code):
@@ -962,6 +986,9 @@ class IndirectCommandComponent(Component):
             'import builtins\nsize = getattr(builtins, "len")([1, 2, 3])',
             "dangerous = exec\ndangerous = print\ndangerous('safe')",
             "import os\nmodule = os\nconsume([module for module in (object(),)])",
+            "import requests\ndef expose():\n    return requests\nexpose().get('https://example.com')",
+            "import os\n(module,) = (os.path,)\nmodule.join('a', 'b')",
+            "import os\ngetattr(os.path.join, '__call__')('a', 'b')",
         ],
         ids=[
             "ordinary-object-method",
@@ -970,6 +997,9 @@ class IndirectCommandComponent(Component):
             "safe-builtin-getattr",
             "dangerous-alias-rebound",
             "comprehension-target-shadows-restricted-module",
+            "returned-safe-module",
+            "unpacked-safe-module-attribute",
+            "getattr-safe-callable-receiver",
         ],
     )
     def test_should_allow_safe_indirect_reference(self, code):

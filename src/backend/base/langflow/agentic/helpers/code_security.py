@@ -5,6 +5,7 @@ Never executes the code. Called AFTER code extraction, BEFORE returning to user.
 """
 
 import ast
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 # Dangerous function calls that should never appear in component code
@@ -363,6 +364,20 @@ class _SecurityChecker(ast.NodeVisitor):
         if violation := self._opaque_reference_violation(node):
             self.violations.append(violation)
 
+    def visit_Return(self, node: ast.Return):
+        if node.value is not None:
+            self._check_opaque_reference(node.value)
+        self.generic_visit(node)
+
+    def visit_Yield(self, node: ast.Yield):
+        if node.value is not None:
+            self._check_opaque_reference(node.value)
+        self.generic_visit(node)
+
+    def visit_YieldFrom(self, node: ast.YieldFrom):
+        self._check_opaque_reference(node.value)
+        self.generic_visit(node)
+
     def _bind_name(self, name: str, values: frozenset[str]) -> None:
         if values:
             self.module_aliases[name] = values
@@ -376,13 +391,15 @@ class _SecurityChecker(ast.NodeVisitor):
                 if scope_depth == self._alias_scope_depth:
                     states.append(state)
 
-    def _bind_assignment_target(self, target: ast.AST, value: ast.AST) -> None:
-        """Apply assignment aliasing, including matching tuple/list unpacking."""
-        if isinstance(target, ast.Name):
-            self._bind_name(target.id, self._resolved_assignment_value(value))
-        elif isinstance(target, ast.Starred):
-            self._bind_assignment_target(target.value, value)
-        elif isinstance(target, (ast.Tuple, ast.List)):
+    def _iter_assignment_leaves(self, target: ast.AST, value: ast.AST) -> Iterator[tuple[ast.AST, ast.AST]]:
+        """Pair assignment target leaves with the values bound to them."""
+        if isinstance(target, (ast.Name, ast.Attribute, ast.Subscript)):
+            yield target, value
+            return
+        if isinstance(target, ast.Starred):
+            yield from self._iter_assignment_leaves(target.value, value)
+            return
+        if isinstance(target, (ast.Tuple, ast.List)):
             if isinstance(value, (ast.Tuple, ast.List)):
                 starred_index = next(
                     (
@@ -394,31 +411,44 @@ class _SecurityChecker(ast.NodeVisitor):
                 )
                 if starred_index is None and len(target.elts) == len(value.elts):
                     for target_element, value_element in zip(target.elts, value.elts, strict=True):
-                        self._bind_assignment_target(target_element, value_element)
+                        yield from self._iter_assignment_leaves(target_element, value_element)
                     return
                 if starred_index is not None and len(value.elts) >= len(target.elts) - 1:
                     for target_element, value_element in zip(
                         target.elts[:starred_index], value.elts[:starred_index], strict=True
                     ):
-                        self._bind_assignment_target(target_element, value_element)
+                        yield from self._iter_assignment_leaves(target_element, value_element)
 
                     trailing_count = len(target.elts) - starred_index - 1
                     if trailing_count:
                         for target_element, value_element in zip(
                             target.elts[-trailing_count:], value.elts[-trailing_count:], strict=True
                         ):
-                            self._bind_assignment_target(target_element, value_element)
+                            yield from self._iter_assignment_leaves(target_element, value_element)
 
                     remaining_end = len(value.elts) - trailing_count if trailing_count else len(value.elts)
                     remaining_values = ast.List(
                         elts=value.elts[starred_index:remaining_end],
                         ctx=ast.Load(),
                     )
-                    self._bind_assignment_target(target.elts[starred_index], remaining_values)
+                    yield from self._iter_assignment_leaves(target.elts[starred_index], remaining_values)
                     return
 
             for target_element in target.elts:
-                self._bind_assignment_target(target_element, value)
+                yield from self._iter_assignment_leaves(target_element, value)
+
+    def _check_assignment_value(self, target: ast.AST, value: ast.AST) -> None:
+        """Check assignment values that cannot remain visible to alias tracking."""
+        for target_leaf, value_leaf in self._iter_assignment_leaves(target, value):
+            if isinstance(target_leaf, ast.Name) and self._resolved_assignment_value(value_leaf):
+                continue
+            self._check_opaque_reference(value_leaf)
+
+    def _bind_assignment_target(self, target: ast.AST, value: ast.AST) -> None:
+        """Apply assignment aliasing, including matching tuple/list unpacking."""
+        for target_leaf, value_leaf in self._iter_assignment_leaves(target, value):
+            if isinstance(target_leaf, ast.Name):
+                self._bind_name(target_leaf.id, self._resolved_assignment_value(value_leaf))
 
     def _bind_iterated_target(self, target: ast.AST, iterable: ast.AST) -> None:
         """Bind a loop target to every statically visible iterable value."""
@@ -529,14 +559,9 @@ class _SecurityChecker(ast.NodeVisitor):
 
     def visit_Assign(self, node: ast.Assign):
         self.visit(node.value)
-        if isinstance(node.value, (ast.List, ast.Tuple, ast.Set, ast.Dict)) and any(
-            isinstance(target, ast.Name) for target in node.targets
-        ):
-            self._check_opaque_reference(node.value)
         for target in node.targets:
             self.visit(target)
-            if isinstance(target, (ast.Attribute, ast.Subscript)):
-                self._check_opaque_reference(node.value)
+            self._check_assignment_value(target, node.value)
             self._bind_assignment_target(target, node.value)
 
     def visit_AnnAssign(self, node: ast.AnnAssign):
@@ -544,19 +569,13 @@ class _SecurityChecker(ast.NodeVisitor):
         if node.value is not None:
             self.visit(node.value)
             self.visit(node.target)
-            if isinstance(node.target, ast.Name) and isinstance(node.value, (ast.List, ast.Tuple, ast.Set, ast.Dict)):
-                self._check_opaque_reference(node.value)
-            if isinstance(node.target, (ast.Attribute, ast.Subscript)):
-                self._check_opaque_reference(node.value)
+            self._check_assignment_value(node.target, node.value)
             self._bind_assignment_target(node.target, node.value)
 
     def visit_NamedExpr(self, node: ast.NamedExpr):
         self.visit(node.value)
         self.visit(node.target)
-        if isinstance(node.target, ast.Name) and isinstance(node.value, (ast.List, ast.Tuple, ast.Set, ast.Dict)):
-            self._check_opaque_reference(node.value)
-        if isinstance(node.target, (ast.Attribute, ast.Subscript)):
-            self._check_opaque_reference(node.value)
+        self._check_assignment_value(node.target, node.value)
         self._bind_assignment_target(node.target, node.value)
 
     def visit_AugAssign(self, node: ast.AugAssign):
@@ -757,6 +776,7 @@ class _SecurityChecker(ast.NodeVisitor):
         self._alias_scope_depth += 1
         try:
             self._shadow_arguments(node.args)
+            self._check_opaque_reference(node.body)
             self.visit(node.body)
         finally:
             self._alias_scope_depth -= 1
@@ -906,6 +926,10 @@ class _SecurityChecker(ast.NodeVisitor):
             return False
 
         module_names = self._resolved_receiver_names(node.args[0])
+        for receiver_name in module_names:
+            if violation := self._dangerous_callable_message(receiver_name):
+                self.violations.append(violation)
+                return True
         try:
             attr_node = node.args[1]
         except IndexError:
