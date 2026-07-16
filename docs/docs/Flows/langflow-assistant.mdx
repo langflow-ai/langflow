@@ -18,13 +18,13 @@ To give **Langflow Assistant** context for a different flow, switch to that flow
 
 ## Prerequisites
 
-* `LANGFLOW_AGENTIC_EXPERIENCE` must be `true`.
+* Connect an LLM provider in the [Global model providers page](/components-models) for **Langflow Assistant** to use
+* `LANGFLOW_AGENTIC_EXPERIENCE` must be `true` (default).
 
-  **Langflow Assistant** is disabled by default, because it generates and runs component code on your Langflow server.
-  While it is disabled, the Assistant's endpoints return `404`.
+  **Langflow Assistant** is available out of the box. Set this to `false` to turn it off for a deployment, for example if you don't want model-generated component code running on your server.
+  While it is off, the Assistant's endpoints return `404`.
   For more information, see [Supported environment variables](/environment-variables#supported-variables).
 
-* Connect an LLM provider in the [Global model providers page](/components-models) for **Langflow Assistant** to use
 * Custom component creation must be enabled and permitted for your user role:
   * `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` must be `true` (default).
    * `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY` must be `false` (default) for non-superusers. For superusers, this option is irrelevant.

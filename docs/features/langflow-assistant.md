@@ -614,6 +614,21 @@ The frontend implements automatic model selection to ensure a valid model is alw
 - **And** I should see a refusal message redirecting me to Langflow-related topics
 - **And** the LLM should NOT be called for the main response (saves API cost)
 
+### Scenario: Abusive content (content guardrail)
+- **Given** the assistant panel is open
+- **When** I send a message containing a slur or explicit profanity
+- **Then** `content_safety.check_content` should refuse it before any LLM call (usage reports zero tokens)
+- **And** I should see the content refusal, which is worded differently from the injection refusal
+- **When** the model's own answer contains one instead
+- **Then** `_complete` should replace it with the same refusal
+- **And** generated component code carrying one should fail `scan_code_security`
+
+### Scenario: Build moderation tooling (content guardrail must not false-positive)
+- **Given** the assistant panel is open
+- **When** I ask for "a component that detects hate speech in user messages"
+- **Then** the request should proceed normally
+- **And** the guardrail should not fire, because it matches slurs rather than topic words
+
 ### Scenario: No model provider configured
 - **Given** no model providers are configured
 - **When** I open the assistant panel

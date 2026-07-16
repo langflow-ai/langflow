@@ -2,8 +2,10 @@
 
 `variables_to_get_from_environment` is populated by a field validator, which cannot read the
 sibling `agentic_experience` field and therefore re-reads `LANGFLOW_AGENTIC_EXPERIENCE` from the
-environment. These tests pin the two defaults together: a drift between them silently imports
-FLOW_ID / COMPONENT_ID / FIELD_NAME / ASTRA_TOKEN while the assistant experience is off.
+environment. These tests pin the two defaults together: a drift between them makes the agentic
+variables disagree with the setting -- the shipped code once read the env with a "true" default
+while the field said False, so FLOW_ID / COMPONENT_ID / FIELD_NAME / ASTRA_TOKEN were imported
+into a deployment whose settings reported the Assistant off.
 """
 
 import pytest
@@ -16,14 +18,20 @@ def _clear_agentic_env(monkeypatch):
     monkeypatch.delenv("LANGFLOW_AGENTIC_EXPERIENCE", raising=False)
 
 
-def test_should_not_import_agentic_variables_when_experience_is_off_by_default():
+def test_should_enable_the_assistant_by_default():
+    """The Assistant is the primary way into the product; opt-in would hide it behind an env var."""
     settings = Settings()
 
-    assert settings.agentic_experience is False
-    assert not set(AGENTIC_VARIABLES) & set(settings.variables_to_get_from_environment)
+    assert settings.agentic_experience is True
 
 
-def test_should_import_agentic_variables_when_experience_is_enabled(monkeypatch):
+def test_should_import_agentic_variables_by_default():
+    settings = Settings()
+
+    assert set(AGENTIC_VARIABLES) <= set(settings.variables_to_get_from_environment)
+
+
+def test_should_import_agentic_variables_when_experience_is_explicitly_enabled(monkeypatch):
     monkeypatch.setenv("LANGFLOW_AGENTIC_EXPERIENCE", "true")
 
     settings = Settings()

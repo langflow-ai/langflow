@@ -26,6 +26,8 @@ from lfx.mcp.tool_cache import reset_tool_cache
 
 from langflow.agentic.helpers.code_extraction import extract_component_code, extract_flow_json
 from langflow.agentic.helpers.code_security import scan_code_security
+from langflow.agentic.helpers.content_safety import REFUSAL_MESSAGE as CONTENT_REFUSAL_MESSAGE
+from langflow.agentic.helpers.content_safety import check_content
 from langflow.agentic.helpers.error_handling import (
     build_error_detail,
     build_recovered_notice,
@@ -34,7 +36,7 @@ from langflow.agentic.helpers.error_handling import (
     is_model_unavailable_error,
     is_transient_tool_call_error,
 )
-from langflow.agentic.helpers.input_sanitization import REFUSAL_MESSAGE, sanitize_input
+from langflow.agentic.helpers.input_sanitization import sanitize_input
 from langflow.agentic.helpers.sse import (
     format_cancelled_event,
     format_complete_event,
@@ -337,7 +339,7 @@ async def execute_flow_with_validation(
     sanitization = sanitize_input(input_value)
     if not sanitization.is_safe:
         logger.warning(f"Input sanitization blocked request: {sanitization.violation}")
-        return {"result": REFUSAL_MESSAGE}
+        return {"result": sanitization.refusal}
 
     current_input = sanitization.sanitized_input
     attempt = 0
@@ -614,6 +616,14 @@ async def execute_flow_with_validation_streaming(
                 )
 
     def _complete(data: dict) -> str:
+        # Layer 5: output guardrail. Input checks cannot see what the model itself produced,
+        # and with a local unaligned provider nothing else here would.
+        result = data.get("result")
+        if isinstance(result, str):
+            outcome = check_content(result)
+            if not outcome.is_safe:
+                logger.warning(f"Output guardrail blocked the answer: {outcome.violation}")
+                data = {**data, "result": CONTENT_REFUSAL_MESSAGE}
         payload = {
             **data,
             "usage": dict(total_usage),
@@ -631,7 +641,7 @@ async def execute_flow_with_validation_streaming(
     sanitization = sanitize_input(input_value)
     if not sanitization.is_safe:
         logger.warning(f"Input sanitization blocked request: {sanitization.violation}")
-        yield _complete({"result": REFUSAL_MESSAGE})
+        yield _complete({"result": sanitization.refusal})
         return
 
     current_input = sanitization.sanitized_input
