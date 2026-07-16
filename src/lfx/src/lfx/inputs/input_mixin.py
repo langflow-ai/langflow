@@ -41,6 +41,7 @@ class FieldTypes(str, Enum):
     TOOLS = "tools"
     MCP = "mcp"
     MODEL = "model"
+    DATA_DISPLAY = "data_display"
     # Wire value stays "knowledge_backend" for backward compatibility with
     # serialized flows that predate the UI rename to "DB Provider".
     DB_PROVIDER = "knowledge_backend"
