@@ -71,10 +71,15 @@ def get_models_detailed() -> list[list[dict]]:
     # invalidate_catalog_cache).
     from lfx.base.models.models_dev_catalog import apply_models_dev_overrides, get_active_snapshot
 
+    # Provider-only extensions can contribute a static catalog without editing
+    # this core list. Import lazily to avoid a cycle during registry mutation.
+    from lfx.base.models.provider_registry import get_registered_model_catalogs
+
+    active_catalog = [*_STATIC_MODELS_DETAILED, *get_registered_model_catalogs()]
     snapshot = get_active_snapshot()
     if snapshot is None:
-        return _STATIC_MODELS_DETAILED
-    return apply_models_dev_overrides(_STATIC_MODELS_DETAILED, snapshot)
+        return active_catalog
+    return apply_models_dev_overrides(active_catalog, snapshot)
 
 
 # NOTE: ``MODELS_DETAILED`` is a back-compat binding for callers that imported
