@@ -15,17 +15,17 @@ _COMPONENT_CLASSES = (
 
 
 @pytest.mark.parametrize("component_class", _COMPONENT_CLASSES)
-def test_jwt_token_default_is_blank(component_class: type[Any]) -> None:
+def test_jwt_token_default_is_preserved(component_class: type[Any]) -> None:
     jwt_input = next(input_ for input_ in component_class().inputs if input_.name == "jwt_token")
 
-    assert jwt_input.value == ""
+    assert jwt_input.value == "JWT"
     assert jwt_input.load_from_db is False
 
 
 @pytest.mark.parametrize("component_class", _COMPONENT_CLASSES)
 def test_jwt_auth_without_token_raises(component_class: type[Any]) -> None:
     component = component_class()
-    component.set_attributes({"auth_mode": "jwt"})
+    component.set_attributes({"auth_mode": "jwt", "jwt_token": ""})
 
     with pytest.raises(ValueError, match="no jwt_token was provided"):
         component._build_auth_kwargs()
