@@ -9,12 +9,16 @@
             "dataType": "ChatInput",
             "id": "ChatInput-MBlfD",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "search_query",
             "id": "ArXivComponent-zGqWh",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -33,12 +37,19 @@
             "dataType": "LoopComponent",
             "id": "LoopComponent-E7Ur0",
             "name": "item",
-            "output_types": ["JSON"]
+            "output_types": [
+              "JSON"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_data",
             "id": "ParserComponent-V2o48",
-            "inputTypes": ["DataFrame", "Table", "Data", "JSON"],
+            "inputTypes": [
+              "DataFrame",
+              "Table",
+              "Data",
+              "JSON"
+            ],
             "type": "other"
           }
         },
@@ -57,12 +68,16 @@
             "dataType": "ParserComponent",
             "id": "ParserComponent-V2o48",
             "name": "parsed_text",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "LanguageModelComponent-ps5yd",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -81,13 +96,18 @@
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-ps5yd",
             "name": "text_output",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "dataType": "LoopComponent",
             "id": "LoopComponent-E7Ur0",
             "name": "item",
-            "output_types": ["Data", "Message"]
+            "output_types": [
+              "Data",
+              "Message"
+            ]
           }
         },
         "id": "reactflow__edge-LanguageModelComponent-ps5yd{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-ps5ydœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-LoopComponent-E7Ur0{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-E7Ur0œ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ,œMessageœ]}",
@@ -105,12 +125,19 @@
             "dataType": "ArXivComponent",
             "id": "ArXivComponent-zGqWh",
             "name": "dataframe",
-            "output_types": ["Table"]
+            "output_types": [
+              "Table"
+            ]
           },
           "targetHandle": {
             "fieldName": "data",
             "id": "LoopComponent-E7Ur0",
-            "inputTypes": ["DataFrame", "Table", "Data", "Message"],
+            "inputTypes": [
+              "DataFrame",
+              "Table",
+              "Data",
+              "Message"
+            ],
             "type": "other"
           }
         },
@@ -129,12 +156,20 @@
             "dataType": "LoopComponent",
             "id": "LoopComponent-E7Ur0",
             "name": "done",
-            "output_types": ["Table"]
+            "output_types": [
+              "Table"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-scvYG",
-            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
             "type": "other"
           }
         },
@@ -151,7 +186,10 @@
         "data": {
           "id": "ArXivComponent-zGqWh",
           "node": {
-            "base_classes": ["DataFrame", "Table"],
+            "base_classes": [
+              "DataFrame",
+              "Table"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -159,7 +197,11 @@
             "display_name": "arXiv",
             "documentation": "",
             "edited": false,
-            "field_order": ["search_query", "search_type", "max_results"],
+            "field_order": [
+              "search_query",
+              "search_type",
+              "max_results"
+            ],
             "frozen": false,
             "icon": "arXiv",
             "legacy": false,
@@ -193,7 +235,9 @@
                 "name": "dataframe",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": ["Table"],
+                "types": [
+                  "Table"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -243,7 +287,9 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "The search query for arXiv papers (e.g., 'quantum computing')",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -267,7 +313,13 @@
                 "dynamic": false,
                 "info": "The field to search in",
                 "name": "search_type",
-                "options": ["all", "title", "abstract", "author", "cat"],
+                "options": [
+                  "all",
+                  "title",
+                  "abstract",
+                  "author",
+                  "cat"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -302,7 +354,9 @@
         "data": {
           "id": "ChatOutput-scvYG",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -357,7 +411,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -406,7 +462,9 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -427,7 +485,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -475,7 +535,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -493,7 +556,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -514,7 +579,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -570,7 +637,9 @@
         "data": {
           "id": "ChatInput-MBlfD",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -580,6 +649,7 @@
             "edited": false,
             "field_order": [
               "input_value",
+              "use_global_variable",
               "should_store_message",
               "sender",
               "sender_name",
@@ -592,7 +662,7 @@
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
-              "code_hash": "7a26c54d89ed",
+              "code_hash": "b404cc0aaa37",
               "dependencies": {
                 "dependencies": [
                   {
@@ -616,7 +686,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -639,7 +711,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.inputs.inputs import BoolInput\nfrom lfx.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom lfx.schema.message import Message\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        # Ensure files is a list and filter out empty/None values\n        files = self.files if self.files else []\n        if files and not isinstance(files, list):\n            files = [files]\n        # Filter out None/empty values\n        files = [f for f in files if f is not None and f != \"\"]\n\n        session_id = self.session_id or self.graph.session_id or \"\"\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=session_id,\n            context_id=self.context_id,\n            files=files,\n        )\n        if session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from typing import Any\n\nfrom lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.inputs.inputs import BoolInput\nfrom lfx.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom lfx.schema.message import Message\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"use_global_variable\",\n            display_name=\"Use Global Variable\",\n            info=\"Enable to select from global variables (shows globe icon). Disables multiline editing.\",\n            value=False,\n            advanced=True,\n            real_time_refresh=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:\n        if field_name == \"use_global_variable\":\n            if field_value:\n                build_config[\"input_value\"][\"multiline\"] = False\n                build_config[\"input_value\"][\"password\"] = True\n            else:\n                build_config[\"input_value\"][\"multiline\"] = True\n                build_config[\"input_value\"][\"password\"] = False\n        return build_config\n\n    async def message_response(self) -> Message:\n        # Ensure files is a list and filter out empty/None values\n        files = self.files if self.files else []\n        if files and not isinstance(files, list):\n            files = [files]\n        # Filter out None/empty values\n        files = [f for f in files if f is not None and f != \"\"]\n\n        session_id = self.session_id or self.graph.session_id or \"\"\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=session_id,\n            context_id=self.context_id,\n            files=files,\n        )\n        if session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "context_id": {
                 "_input_type": "MessageTextInput",
@@ -647,7 +719,9 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -738,7 +812,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -756,7 +833,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -777,7 +856,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -809,6 +890,27 @@
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
+              },
+              "use_global_variable": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Global Variable",
+                "dynamic": false,
+                "info": "Enable to select from global variables (shows globe icon). Disables multiline editing.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_global_variable",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
               }
             },
             "tool_mode": false
@@ -861,7 +963,10 @@
         "data": {
           "id": "LanguageModelComponent-ps5yd",
           "node": {
-            "base_classes": ["LanguageModel", "Message"],
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -923,7 +1028,9 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -939,7 +1046,9 @@
                 "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": ["LanguageModel"],
+                "types": [
+                  "LanguageModel"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1029,7 +1138,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1064,7 +1175,9 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": ["LanguageModel"],
+                "input_types": [
+                  "LanguageModel"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
@@ -1198,7 +1311,9 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1270,7 +1385,12 @@
         "data": {
           "id": "LoopComponent-E7Ur0",
           "node": {
-            "base_classes": ["Data", "DataFrame", "JSON", "Table"],
+            "base_classes": [
+              "Data",
+              "DataFrame",
+              "JSON",
+              "Table"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1278,7 +1398,9 @@
             "display_name": "Loop",
             "documentation": "https://docs.langflow.org/loop",
             "edited": false,
-            "field_order": ["data"],
+            "field_order": [
+              "data"
+            ],
             "frozen": false,
             "icon": "infinity",
             "legacy": false,
@@ -1303,12 +1425,17 @@
                 "cache": true,
                 "display_name": "Item",
                 "group_outputs": true,
-                "loop_types": ["Message"],
+                "loop_types": [
+                  "Message"
+                ],
                 "method": "item_output",
                 "name": "item",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": ["Data", "JSON"],
+                "types": [
+                  "Data",
+                  "JSON"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1320,7 +1447,10 @@
                 "name": "done",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": ["DataFrame", "Table"],
+                "types": [
+                  "DataFrame",
+                  "Table"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1351,7 +1481,12 @@
                 "display_name": "Inputs",
                 "dynamic": false,
                 "info": "Data to iterate over. Accepts DataFrame, Table, Data, or Message.",
-                "input_types": ["DataFrame", "Table", "Data", "Message"],
+                "input_types": [
+                  "DataFrame",
+                  "Table",
+                  "Data",
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "data",
@@ -1388,7 +1523,9 @@
         "data": {
           "id": "ParserComponent-V2o48",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "models_and_agents",
             "conditional_paths": [],
@@ -1397,7 +1534,12 @@
             "display_name": "Parser",
             "documentation": "https://docs.langflow.org/parser",
             "edited": false,
-            "field_order": ["input_data", "mode", "pattern", "sep"],
+            "field_order": [
+              "input_data",
+              "mode",
+              "pattern",
+              "sep"
+            ],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
@@ -1426,7 +1568,9 @@
                 "name": "parsed_text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1457,7 +1601,12 @@
                 "display_name": "JSON or Table",
                 "dynamic": false,
                 "info": "Accepts either a DataFrame or a Data object.",
-                "input_types": ["DataFrame", "Table", "Data", "JSON"],
+                "input_types": [
+                  "DataFrame",
+                  "Table",
+                  "Data",
+                  "JSON"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_data",
@@ -1478,7 +1627,10 @@
                 "dynamic": false,
                 "info": "Convert into raw string instead of using a template.",
                 "name": "mode",
-                "options": ["Parser", "Stringify"],
+                "options": [
+                  "Parser",
+                  "Stringify"
+                ],
                 "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -1499,7 +1651,9 @@
                 "display_name": "Template",
                 "dynamic": true,
                 "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1523,7 +1677,9 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "String used to separate rows/items.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1573,5 +1729,8 @@
   "last_tested_version": "1.10.1",
   "locked": false,
   "name": "Research Translation Loop",
-  "tags": ["chatbots", "content-generation"]
+  "tags": [
+    "chatbots",
+    "content-generation"
+  ]
 }
