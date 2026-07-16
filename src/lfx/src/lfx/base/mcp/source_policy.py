@@ -598,7 +598,9 @@ def _is_clustered_short_flag(flag: str, target: str, allowed_prefixes: frozenset
 
 
 def _validate_docker_args(args: list[str], *, hardened: bool) -> None:
-    if hardened and (not args or args[0].lower() != "run"):
+    # Docker is allowlisted only as an isolated MCP server launcher. Other
+    # subcommands operate on the shared daemon and bypass the run-argument policy.
+    if not args or args[0].lower() != "run":
         _raise_disallowed("docker", args[0] if args else "<missing run subcommand>")
 
     for index, arg in enumerate(args):
