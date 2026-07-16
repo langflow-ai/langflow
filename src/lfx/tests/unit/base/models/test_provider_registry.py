@@ -25,6 +25,7 @@ from lfx.base.models.unified_models import (
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
+    get_models_detailed,
     validate_model_provider_key,
 )
 from lfx.base.models.unified_models.class_registry import (
@@ -54,6 +55,28 @@ def fake_validator(provider, variables, model_name):
 
 _LIVE_DISCOVERY_PATH = f"{__name__}:fake_live_discovery"
 _VALIDATOR_PATH = f"{__name__}:fake_validator"
+
+
+def fake_catalog_loader():
+    """Return rows whose provider ownership must be stamped by the registry."""
+    return [
+        {
+            "provider": "Untrusted manifest value",
+            "name": "fake-chat-1",
+            "icon": "FakeCo",
+            "default": True,
+            "model_type": "llm",
+        },
+        {
+            "name": "fake-embed-1",
+            "icon": "FakeCo",
+            "default": True,
+            "model_type": "embeddings",
+        },
+    ]
+
+
+_CATALOG_LOADER_PATH = f"{__name__}:fake_catalog_loader"
 
 
 def _fakeco_metadata() -> dict:
@@ -105,6 +128,53 @@ def test_register_adds_metadata_and_appears_in_accessors():
     assert "FakeCo" in get_model_provider_metadata()
     # Appears even though FakeCo ships no static model catalog.
     assert "FakeCo" in get_model_providers()
+
+
+def test_register_exposes_stable_identity_display_name_and_aliases():
+    register_provider(
+        _fakeco_spec(
+            provider_id="fakeco.enterprise",
+            display_name="FakeCo Enterprise",
+            aliases=("fake-co", "FakeCo Legacy"),
+        )
+    )
+
+    assert provider_registry.provider_id_for("FakeCo") == "fakeco.enterprise"
+    assert provider_registry.provider_id_for("fake-co") == "fakeco.enterprise"
+    assert provider_registry.provider_id_for("FakeCo Legacy") == "fakeco.enterprise"
+    assert provider_registry.provider_name_for_id("fakeco.enterprise") == "FakeCo"
+    assert MODEL_PROVIDER_METADATA["FakeCo"]["provider_id"] == "fakeco.enterprise"
+    assert MODEL_PROVIDER_METADATA["FakeCo"]["display_name"] == "FakeCo Enterprise"
+
+
+def test_registered_catalog_loader_contributes_static_models():
+    register_provider(
+        _fakeco_spec(
+            provider_id="fakeco",
+            catalog_loader=_CATALOG_LOADER_PATH,
+        )
+    )
+
+    fakeco_groups = [
+        group for group in get_models_detailed() if group and all(row.get("provider") == "FakeCo" for row in group)
+    ]
+
+    assert len(fakeco_groups) == 1
+    assert [row["name"] for row in fakeco_groups[0]] == ["fake-chat-1", "fake-embed-1"]
+    assert {row["provider"] for row in fakeco_groups[0]} == {"FakeCo"}
+
+
+def test_duplicate_provider_id_is_rejected_even_when_names_differ():
+    register_provider(_fakeco_spec(provider_id="fakeco"))
+
+    with pytest.raises(ValueError, match="provider_id"):
+        register_provider(
+            ProviderSpec(
+                name="OtherCo",
+                provider_id="fakeco",
+                metadata={**_fakeco_metadata(), "icon": "OtherCo"},
+            )
+        )
 
 
 def test_variable_mapping_cache_refreshed_after_register():
