@@ -148,6 +148,7 @@ class BedrockKnowledgeBaseRetrieverComponent(Component):
                     return results
             except Exception as e:  # noqa: BLE001
                 import logging
+
                 logging.getLogger(__name__).debug("Agentic retrieval unavailable, falling back: %s", e)
 
         try:
