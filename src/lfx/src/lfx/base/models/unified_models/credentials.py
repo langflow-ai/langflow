@@ -599,6 +599,33 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 logger.warning(msg)
                 raise ValueError(msg) from e
 
+        elif provider == "APIMart":
+            from http import HTTPStatus
+
+            import requests
+
+            api_key = variables.get("APIMART_API_KEY")
+            if not api_key:
+                return
+
+            try:
+                response = requests.get(
+                    "https://api.apimart.ai/v1/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=5,
+                )
+                if response.status_code in {HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN}:
+                    msg = "Invalid APIMart API key"
+                    logger.error(msg)
+                    raise ValueError(msg)
+                response.raise_for_status()
+            except ValueError:
+                raise
+            except requests.RequestException as e:
+                msg = f"Could not reach APIMart to validate the API key: {e}"
+                logger.warning(msg)
+                raise ValueError(msg) from e
+
         elif provider == "Azure AI Foundry":
             try:
                 from langchain_azure_ai.chat_models import AzureAIOpenAIApiChatModel

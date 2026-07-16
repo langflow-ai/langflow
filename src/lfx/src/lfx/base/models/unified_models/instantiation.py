@@ -259,7 +259,7 @@ def get_llm(
             pass  # Skip invalid max_tokens (e.g. empty string from form input)
 
     # Enable streaming usage for providers that support it
-    if provider in ["OpenAI", "Anthropic"]:
+    if provider in ["OpenAI", "Anthropic", "APIMart"]:
         kwargs["stream_usage"] = True
 
     # Add provider-specific parameters
@@ -324,30 +324,30 @@ def get_llm(
         openai_base_url_value = provider_vars.get("OPENAI_BASE_URL") or _env_if_allowed("OPENAI_BASE_URL")
         if openai_base_url_value:
             kwargs["base_url"] = transform_localhost_url(openai_base_url_value)
-    elif provider == "OpenRouter":
-        # OpenRouter speaks the OpenAI wire format. Point ChatOpenAI at the
-        # OpenRouter base URL (declared in MODEL_PROVIDER_METADATA) and forward
-        # any configured attribution headers (HTTP-Referer, X-Title) so usage
-        # shows up correctly in the OpenRouter dashboard.
+    elif provider in {"OpenRouter", "APIMart"}:
+        # OpenRouter and APIMart speak the OpenAI wire format. Point ChatOpenAI
+        # at the provider's fixed base URL declared in MODEL_PROVIDER_METADATA.
+        # OpenRouter additionally forwards optional attribution headers.
         provider_meta = model_provider_metadata.get(provider, {})
         base_url_value = provider_meta.get("base_url")
         if base_url_value:
             kwargs["base_url"] = base_url_value
 
-        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
-        default_headers: dict[str, str] = {}
-        for var in provider_meta.get("variables", []):
-            if not var.get("is_header"):
-                continue
-            header_name = var.get("header_name")
-            # KeyError on a misconfigured metadata entry beats silently
-            # skipping a header the operator expects to be sent.
-            variable_key = var["variable_key"]
-            value = provider_vars.get(variable_key) or _env_if_allowed(variable_key)
-            if header_name and value:
-                default_headers[header_name] = value
-        if default_headers:
-            kwargs["default_headers"] = default_headers
+        if provider == "OpenRouter":
+            provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+            default_headers: dict[str, str] = {}
+            for var in provider_meta.get("variables", []):
+                if not var.get("is_header"):
+                    continue
+                header_name = var.get("header_name")
+                # KeyError on a misconfigured metadata entry beats silently
+                # skipping a header the operator expects to be sent.
+                variable_key = var["variable_key"]
+                value = provider_vars.get(variable_key) or _env_if_allowed(variable_key)
+                if header_name and value:
+                    default_headers[header_name] = value
+            if default_headers:
+                kwargs["default_headers"] = default_headers
     elif provider == "Azure AI Foundry":
         from lfx.base.models.model_utils import AZURE_AI_FOUNDRY_REQUEST_TIMEOUT
 
