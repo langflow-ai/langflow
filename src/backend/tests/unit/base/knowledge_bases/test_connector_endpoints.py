@@ -142,8 +142,144 @@ class TestConnectorIngest:
         assert response.status_code == 422
         assert "chunk_size" in response.text
 
+    @patch("langflow.api.v1.knowledge_bases.get_task_service")
+    @patch("langflow.api.v1.knowledge_bases.get_job_service")
+    @patch("langflow.api.v1.knowledge_bases.get_settings_service")
+    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_folder_connector_rejects_request_controlled_allowed_root(
+        self,
+        mock_root,
+        mock_meta,
+        mock_settings_service,
+        mock_job_service,
+        mock_task_service,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        configured_root = tmp_path / "configured"
+        configured_root.mkdir()
+        untrusted_root = tmp_path / "request-controlled"
+        untrusted_folder = untrusted_root / "docs"
+        untrusted_folder.mkdir(parents=True)
+
+        mock_settings_service.return_value = SimpleNamespace(
+            settings=SimpleNamespace(
+                kb_allowed_folder_roots=[str(configured_root)],
+                kb_folder_max_file_size_bytes=4096,
+            )
+        )
+        mock_root.return_value = tmp_path
+        kb_dir = tmp_path / active_user.username / "connector_kb_untrusted_root"
+        kb_dir.mkdir(parents=True)
+        mock_meta.return_value = {
+            "id": "00000000-0000-0000-0000-000000000007",
+            "embedding_provider": "OpenAI",
+            "embedding_model": "text-embedding-3-small",
+        }
+
+        js = AsyncMock()
+        js.create_job = AsyncMock()
+        js.execute_with_status = AsyncMock()
+        mock_job_service.return_value = js
+        ts = AsyncMock()
+        ts.fire_and_forget_task = AsyncMock()
+        mock_task_service.return_value = ts
+
+        response = await client.post(
+            "api/v1/knowledge_bases/connector_kb_untrusted_root/ingest/connector",
+            headers=logged_in_headers,
+            json={
+                "source_type": "folder",
+                "source_config": {
+                    "path": str(untrusted_folder),
+                    "allowed_roots": [str(untrusted_root)],
+                    "max_file_size_bytes": 2**63,
+                },
+            },
+        )
+
+        assert response.status_code == 400
+        assert "outside the configured allow-list" in response.json()["detail"]
+        js.create_job.assert_not_awaited()
+        ts.fire_and_forget_task.assert_not_awaited()
+
+    @patch("langflow.api.v1.knowledge_bases.get_task_service")
+    @patch("langflow.api.v1.knowledge_bases.get_job_service")
+    @patch("langflow.api.v1.knowledge_bases.get_settings_service")
+    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_folder_connector_uses_operator_security_settings(
+        self,
+        mock_root,
+        mock_meta,
+        mock_settings_service,
+        mock_job_service,
+        mock_task_service,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        configured_root = tmp_path / "configured"
+        configured_folder = configured_root / "docs"
+        configured_folder.mkdir(parents=True)
+        request_root = tmp_path / "request-controlled"
+        request_root.mkdir()
+
+        mock_settings_service.return_value = SimpleNamespace(
+            settings=SimpleNamespace(
+                kb_allowed_folder_roots=[str(configured_root)],
+                kb_folder_max_file_size_bytes=4096,
+            )
+        )
+        mock_root.return_value = tmp_path
+        kb_dir = tmp_path / active_user.username / "connector_kb_configured_root"
+        kb_dir.mkdir(parents=True)
+        mock_meta.return_value = {
+            "id": "00000000-0000-0000-0000-000000000008",
+            "embedding_provider": "OpenAI",
+            "embedding_model": "text-embedding-3-small",
+        }
+
+        js = AsyncMock()
+        js.create_job = AsyncMock()
+        js.execute_with_status = AsyncMock()
+        mock_job_service.return_value = js
+        ts = AsyncMock()
+        ts.fire_and_forget_task = AsyncMock()
+        mock_task_service.return_value = ts
+
+        response = await client.post(
+            "api/v1/knowledge_bases/connector_kb_configured_root/ingest/connector",
+            headers=logged_in_headers,
+            json={
+                "source_type": "folder",
+                "source_config": {
+                    "path": str(configured_folder),
+                    "allowed_roots": [str(request_root)],
+                    "max_file_size_bytes": 1,
+                },
+            },
+        )
+
+        assert response.status_code == 200
+        fire_call = ts.fire_and_forget_task.await_args
+        assert fire_call is not None
+        passed_source = fire_call.kwargs["source"]
+        assert passed_source.source_config["allowed_roots"] == [str(configured_root)]
+        assert passed_source.source_config["max_file_size_bytes"] == 4096
+
 
 class TestFolderIngest:
+    def test_request_schema_does_not_expose_file_size_policy(self):
+        from langflow.api.v1.knowledge_bases import IngestFolderRequest
+
+        properties = IngestFolderRequest.model_json_schema()["properties"]
+        assert "max_file_size_bytes" not in properties
+
     @patch("langflow.api.v1.knowledge_bases.get_task_service")
     @patch("langflow.api.v1.knowledge_bases.get_job_service")
     @patch("langflow.api.v1.knowledge_bases.get_settings_service")
@@ -167,7 +303,10 @@ class TestFolderIngest:
         (folder / "readme.md").write_text("hello")
 
         mock_settings_service.return_value = SimpleNamespace(
-            settings=SimpleNamespace(kb_allowed_folder_roots=[str(allowed_root)])
+            settings=SimpleNamespace(
+                kb_allowed_folder_roots=[str(allowed_root)],
+                kb_folder_max_file_size_bytes=4096,
+            )
         )
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "folder_kb"
@@ -189,7 +328,12 @@ class TestFolderIngest:
         response = await client.post(
             "api/v1/knowledge_bases/folder_kb/ingest/folder",
             headers=logged_in_headers,
-            json={"path": str(folder), "chunk_size": 500, "chunk_overlap": 100},
+            json={
+                "path": str(folder),
+                "max_file_size_bytes": 1,
+                "chunk_size": 500,
+                "chunk_overlap": 100,
+            },
         )
 
         assert response.status_code == 200
@@ -199,6 +343,7 @@ class TestFolderIngest:
         assert passed_source.source_type.value == "folder"
         assert passed_source.source_config["path"] == str(folder)
         assert passed_source.source_config["allowed_roots"] == [str(allowed_root)]
+        assert passed_source.source_config["max_file_size_bytes"] == 4096
 
     @patch("langflow.api.v1.knowledge_bases.get_job_service")
     @patch("langflow.api.v1.knowledge_bases.get_settings_service")
@@ -221,7 +366,10 @@ class TestFolderIngest:
         outside_folder.mkdir()
 
         mock_settings_service.return_value = SimpleNamespace(
-            settings=SimpleNamespace(kb_allowed_folder_roots=[str(allowed_root)])
+            settings=SimpleNamespace(
+                kb_allowed_folder_roots=[str(allowed_root)],
+                kb_folder_max_file_size_bytes=4096,
+            )
         )
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "folder_kb"

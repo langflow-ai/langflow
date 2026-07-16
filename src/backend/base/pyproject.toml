@@ -176,6 +176,7 @@ Documentation = "https://docs.langflow.org"
 # Optional dependencies
 [project.optional-dependencies]
 audio = [
+    "openai>=1.68.2,<3.0.0",
     "webrtcvad>=2.0.10",
 ]
 

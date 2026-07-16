@@ -228,6 +228,11 @@ class UsersResponse(BaseModel):
     users: list[UserRead]
 
 
+class PasswordResetRequest(BaseModel):
+    current_password: str
+    password: str
+
+
 class ApiKeyResponse(BaseModel):
     id: str
     api_key: str
