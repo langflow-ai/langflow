@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.0.0"
+version = "1.1.0"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -22,16 +22,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Per-provider extras + the generated ``all`` aggregate. Extra keys are
-# PEP 685-normalized (lowercase, hyphen-separated). ``all`` is GENERATED
-# from the per-provider keys -- never hand-edit it. Managed by
-# scripts/migrate/consolidate_bundles.py.
+# Per-provider extras + the generated ``all`` / ``all-no-torch`` aggregates.
+# Extra keys are PEP 685-normalized (lowercase, hyphen-separated). ``all``
+# and ``all-no-torch`` are GENERATED from the per-provider keys -- never
+# hand-edit them. ``all`` pulls every provider; ``all-no-torch`` is ``all``
+# minus the torch-pulling providers (see TORCH_EXTRAS), giving a torch-free
+# superset for slim/CPU images. Managed by scripts/migrate/consolidate_bundles.py.
 agentql = []
 aiml = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
-altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
+altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; (sys_platform != 'darwin' or platform_machine != 'x86_64') and python_version < '3.14'"]
 apify = ["apify-client>=1.8.1", "langchain-community>=0.4.1,<1.0.0"]
 assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
-azure = ["langchain-openai>=1.1.6"]
+azure = ["langchain-openai>=1.1.6", "langchain-azure-ai>=1.1.0,<2"]
 baidu = ["qianfan==0.3.5", "langchain-community>=0.4.1,<1.0.0"]
 bing = ["langchain-community>=0.4.1,<1.0.0"]
 chroma = ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6", "langchain-community>=0.4.1,<1.0.0"]
@@ -46,7 +48,6 @@ couchbase = ["couchbase>=4.2.1", "langchain-community>=0.4.1,<1.0.0"]
 cuga = ["cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'", "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'"]
 deepseek = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"]
 elastic = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-py==2.8.0"]
-exa = ["metaphor-python==0.1.23"]
 faiss = ["faiss-cpu==1.9.0.post1; python_version < '3.14'", "faiss-cpu>=1.13.2; python_version >= '3.14'", "langchain-community>=0.4.1,<1.0.0"]
 git = ["GitPython>=3.1.50", "langchain-community>=0.4.1,<1.0.0"]
 glean = []
@@ -68,7 +69,7 @@ needle = ["needle-python>=0.4.0", "langchain-community>=0.4.1,<1.0.0"]
 notdiamond = []
 notion = ["requests>=2.32.0", "Markdown>=3.8.0"]
 novita = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
-nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0", "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
+nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0", "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
 olivya = []
 ollama = ["langchain-ollama~=0.3.10"]
 openrouter = ["langchain-openai>=1.1.6"]
@@ -118,7 +119,76 @@ all = [
     "lfx-bundles[cuga]",
     "lfx-bundles[deepseek]",
     "lfx-bundles[elastic]",
-    "lfx-bundles[exa]",
+    "lfx-bundles[faiss]",
+    "lfx-bundles[git]",
+    "lfx-bundles[glean]",
+    "lfx-bundles[google]",
+    "lfx-bundles[groq]",
+    "lfx-bundles[homeassistant]",
+    "lfx-bundles[huggingface]",
+    "lfx-bundles[icosacomputing]",
+    "lfx-bundles[jigsawstack]",
+    "lfx-bundles[langwatch]",
+    "lfx-bundles[litellm]",
+    "lfx-bundles[lmstudio]",
+    "lfx-bundles[maritalk]",
+    "lfx-bundles[mem0]",
+    "lfx-bundles[milvus]",
+    "lfx-bundles[mistral]",
+    "lfx-bundles[mongodb]",
+    "lfx-bundles[needle]",
+    "lfx-bundles[notdiamond]",
+    "lfx-bundles[notion]",
+    "lfx-bundles[novita]",
+    "lfx-bundles[nvidia]",
+    "lfx-bundles[olivya]",
+    "lfx-bundles[ollama]",
+    "lfx-bundles[openrouter]",
+    "lfx-bundles[perplexity]",
+    "lfx-bundles[pgvector]",
+    "lfx-bundles[pinecone]",
+    "lfx-bundles[qdrant]",
+    "lfx-bundles[redis]",
+    "lfx-bundles[sambanova]",
+    "lfx-bundles[scrapegraph]",
+    "lfx-bundles[searchapi]",
+    "lfx-bundles[serpapi]",
+    "lfx-bundles[spider]",
+    "lfx-bundles[supabase]",
+    "lfx-bundles[tavily]",
+    "lfx-bundles[twelvelabs]",
+    "lfx-bundles[unstructured]",
+    "lfx-bundles[upstash]",
+    "lfx-bundles[vectara]",
+    "lfx-bundles[vertexai]",
+    "lfx-bundles[vlmrun]",
+    "lfx-bundles[weaviate]",
+    "lfx-bundles[wikipedia]",
+    "lfx-bundles[wolframalpha]",
+    "lfx-bundles[xai]",
+    "lfx-bundles[yahoosearch]",
+    "lfx-bundles[youtube]",
+    "lfx-bundles[zep]",
+]
+all-no-torch = [
+    "lfx-bundles[agentql]",
+    "lfx-bundles[aiml]",
+    "lfx-bundles[altk]",
+    "lfx-bundles[apify]",
+    "lfx-bundles[assemblyai]",
+    "lfx-bundles[azure]",
+    "lfx-bundles[baidu]",
+    "lfx-bundles[bing]",
+    "lfx-bundles[chroma]",
+    "lfx-bundles[cleanlab]",
+    "lfx-bundles[clickhouse]",
+    "lfx-bundles[cloudflare]",
+    "lfx-bundles[cometapi]",
+    "lfx-bundles[composio]",
+    "lfx-bundles[confluence]",
+    "lfx-bundles[couchbase]",
+    "lfx-bundles[deepseek]",
+    "lfx-bundles[elastic]",
     "lfx-bundles[faiss]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",

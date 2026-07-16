@@ -2,8 +2,8 @@ import type { Page } from "@playwright/test";
 
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { openFlowCard } from "../../utils/flow/open-flow-card";
 
 const addLanguageModelNode = async (page: Page) => {
   await page.getByTestId("sidebar-search-input").click();
@@ -45,7 +45,7 @@ const openBlankFlowForModelInput = async (page: Page) => {
       .catch(() => false);
 
     if (createdFlowVisible) {
-      await createdFlow.click();
+      await openFlowCard(page, "New Flow");
     }
   }
 

@@ -150,7 +150,7 @@ for file in "${PY_FILES[@]}"; do
 
     # Streaming / long-running examples: skip in local harness (hang, flaky, or need extra setup).
     case "$(basename "$file")" in
-      build-flow-and-stream-events-2.py|build-flow-and-stream-events-3.py|stream-llm-token-responses.py|example-streaming-request.py|stream-logs.py)
+      build-flow-and-stream-events-2.py|build-flow-and-stream-events-3.py|stream-llm-token-responses.py|example-streaming-request.py|stream-logs.py|example-stream-agui-request.py|example-stream-agui-parse.py|example-stream-langflow-request.py)
         echo "SKIP  $rel (streaming/long-running; not run in local harness)"
         ((SKIP+=1))
         continue

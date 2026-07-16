@@ -454,7 +454,14 @@ const config = {
             from: [
               "/directory",
               "/text-input-and-output",
+              "/data-operations",
+              "/dataframe-operations",
+              "/text-operations",
             ]
+          },
+          {
+            to: "/api-keys-and-authentication",
+            from: "/jwt-authentication",
           },
           // add more redirects like this
           // {

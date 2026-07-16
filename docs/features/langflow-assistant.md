@@ -1249,6 +1249,32 @@ Add an **inner** `while swap_requested:` loop inside the streaming attempt:
 - The named "exhausted" message gives the user an actionable next step (request access OR switch provider)
 - Auth / rate-limit / network failures keep their existing semantics
 
+#### Which model is the default (`ASSISTANT_PREFERRED_MODELS`)
+
+The default is **curated per provider**, not derived from the catalog. The catalog's own default is "first entry in the provider's list" — it sorts by `created`, which is `0` for every model, so the order is simply however the list was written. First is not best: Google's first entry is `gemini-2.5-flash`, a small SKU the composer flags with *"may underperform on agent tasks"* — so the out-of-the-box default arrived pre-warned.
+
+`ASSISTANT_PREFERRED_MODELS` (in `agentic/services/provider_service.py`) declares an ordered preference per provider; `get_default_model` picks the first name the provider actually offers, constrained to installed models for live providers (Ollama/WatsonX/OpenRouter). Providers not listed — and names that no longer exist — fall back to the catalog default. A guard test mirrors the frontend's `classifyModelStrength` and fails if any provider's default ever regresses to a weak model.
+
+#### Model remediation — the same model, different instantiation params
+
+A model can be *available* and still reject the call: gpt-5.6 refuses function tools together with `reasoning_effort` on `/v1/chat/completions` and demands the Responses API. Since the assistant is a tool-calling agent, that makes the model dead on arrival — and the constraint class recurs with every new model generation.
+
+`lfx/base/models/model_remediation.py` is a **reactive, provider-agnostic** layer rather than a hardcoded table of per-model quirks: an *error signature* + provider maps to instantiation overrides, which are applied and retried once. `get_llm` pre-applies remembered overrides, so the fix reaches the Agent **embedded inside the assistant flow**, not just the top-level call. Adding a new constraint later is a data row, not code.
+
+**The cache is process-global, so a remembered override is provisional until it is proven.** `remember()` is a *bet* placed before the retry runs; an override that did not actually fix the run would silently poison every later request for that model. The assistant therefore snapshots the pre-write state, promotes the override at the single success point (the flow executed), and calls `restore_overrides` on every give-up path. Cost of the design: exactly one failed call per model per process, in exchange for surviving new model constraints without a release.
+
+#### Step budget (`max_iterations`) and the `/iterations` command
+
+The Agent's `max_iterations` caps its model-call loop **and derives LangGraph's recursion limit** (`max_iterations * 2 + 5`). The original pin of 15 therefore produced a recursion limit of 35 — too low for a compound one-turn task ("build the flow, then report what you built"), which died with `Recursion limit of 35 reached`. The pin is now **30** (recursion limit 65) on every Agent node in the assistant flow.
+
+The pin is a **cost** decision (a larger budget raises worst-case token spend per attempt), so a tripwire test asserts it: changing it must stay conscious. `/iterations N` overrides it per session (clamped to 1–200, persisted in localStorage, `off` resets); the client parses the command locally — it is never sent as a prompt — and puts `iterations_limit` on the request.
+
+The override reaches the Agent through **two paths, one per flow kind** (QA found the second one missing — `iterations_limit=1` still ran 6 model calls). JSON flows (`LangflowAssistant.json`): `inject_iterations_into_flow` rewrites `max_iterations` on the Agent nodes' templates. Python flows (`flow_builder_assistant.py`, which every build/edit/run intent executes): the JSON injector never touches them, so the loader forwards `ITERATIONS_LIMIT` to `get_graph(iterations_limit=...)`, which clamps it and sets the Agent's `max_iterations` directly — defaulting to the shared `DEFAULT_ASSISTANT_ITERATIONS` (30) so both surfaces pin the same budget.
+
+#### Recovered failures are visible, not silent
+
+When the assistant recovers on its own — swapping models, or retrying with adjusted params — the recovery used to be invisible: the turn merely looked slow, and the user had no idea a different model produced the answer. `build_recovered_notice` shapes a non-fatal notice for both kinds (`model_fallback`, `model_remediation`); they ride on the terminal `complete` event as an additive `notices` field and render as a discreet **(i)** next to the message metadata. A clean turn carries no notice, and a notice never turns a successful turn into an error state.
+
 **Trade-offs:**
 - Multiple LLM calls when the first models fail (cost is bounded by the candidate list length — same provider only)
 - The marker denylist is a heuristic; new wording variants for "model unavailable" must be added explicitly

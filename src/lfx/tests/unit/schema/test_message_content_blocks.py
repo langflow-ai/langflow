@@ -28,6 +28,65 @@ from lfx.utils.constants import (
 )
 
 
+class TestLegacyUntaggedContentBlocks:
+    """Stored/legacy content blocks may lack the ``type`` discriminator.
+
+    A DB row (or a v1 wire-shape re-store) can carry a bare text block
+    ``{"text": ...}`` with no ``type`` field. ``Message.create(**row)`` on
+    memory reload MUST tolerate it (infer ``text``) instead of raising a
+    ``union_tag_not_found`` ValidationError — otherwise every subsequent turn
+    in the session crashes when the agent reloads its history.
+    """
+
+    def test_should_parse_untagged_text_block(self):
+        msg = Message(content_blocks=[{"text": "Oi! Como posso ajudar?"}])
+        assert len(msg.content_blocks) == 1
+        assert isinstance(msg.content_blocks[0], TextContent)
+        assert msg.content_blocks[0].type == "text"
+        assert msg.content_blocks[0].text == "Oi! Como posso ajudar?"
+
+    def test_should_still_parse_untagged_group_block(self):
+        # Non-regression: the group (title+contents) legacy shape already worked.
+        msg = Message(content_blocks=[{"title": "Agent Steps", "contents": []}])
+        assert isinstance(msg.content_blocks[0], ContentBlock)
+        assert msg.content_blocks[0].type == "group"
+
+    def test_should_parse_mixed_untagged_and_tagged_blocks(self):
+        msg = Message(
+            content_blocks=[
+                {"title": "Agent Steps", "contents": []},
+                {"text": "final answer"},
+                {"type": "text", "text": "already tagged"},
+            ]
+        )
+        assert [b.type for b in msg.content_blocks] == ["group", "text", "text"]
+
+
+class TestContentTypeDiscriminatorSurvivesSerialization:
+    """The ``type`` discriminator must survive every serialization mode.
+
+    ``TextContent(text=...)`` leaves ``type`` at its default, so it is NOT in
+    ``model_fields_set``. A ``model_dump(exclude_unset=True)`` (used by the
+    message-update path) therefore dropped it, persisting a bare ``{"text": ...}``
+    that later fails ``union_tag_not_found`` on reload. The discriminator must
+    always be emitted.
+    """
+
+    def test_exclude_unset_keeps_type(self):
+        assert TextContent(text="hi").model_dump(exclude_unset=True)["type"] == "text"
+
+    def test_exclude_defaults_keeps_type(self):
+        assert TextContent(text="hi").model_dump(exclude_defaults=True)["type"] == "text"
+
+    def test_serialized_block_round_trips_through_message(self):
+        # The exact failure cycle: dump a text block with exclude_unset, then
+        # reload it as a Message — must not raise.
+        dumped = TextContent(text="final answer").model_dump(exclude_unset=True)
+        msg = Message(content_blocks=[dumped])
+        assert msg.content_blocks[0].type == "text"
+        assert msg.content_blocks[0].text == "final answer"
+
+
 class TestMessageConstruction:
     """Tests for constructing Message objects with the new content_blocks-first model."""
 
@@ -269,6 +328,31 @@ class TestTextSetter:
         # Non-text block stays at its original position
         assert isinstance(msg.content_blocks[0], ToolContent)
 
+    def test_set_text_to_iterator_drops_stale_text_content(self):
+        """Setting text to a stream drops existing TextContent and stashes the stream.
+
+        The stale prior-round TextContent is removed so it can't resurface once the
+        stream is consumed, and the data mirror is cleared. The getter returns the
+        pending stream as-is for streaming consumers; non-text blocks are preserved.
+        """
+
+        def gen():
+            yield "streamed"
+
+        stream = gen()
+        tool_block = ToolContent(name="search", tool_input={"q": "x"})
+        msg = Message(content_blocks=[TextContent(text="old"), tool_block])
+        msg.text = stream
+        # The stale prior TextContent is dropped, not left to resurface.
+        assert all(not isinstance(b, TextContent) for b in msg.content_blocks)
+        # The getter returns the pending stream for streaming consumers.
+        assert msg.text is stream
+        # Non-text blocks stay.
+        tool_blocks = [b for b in msg.content_blocks if isinstance(b, ToolContent)]
+        assert len(tool_blocks) == 1
+        # The stream is stashed for later consumption.
+        assert msg.text_stream is not None
+
 
 class TestSerialization:
     """Tests for model_dump / model_validate round-trip behavior."""
@@ -489,6 +573,45 @@ class TestFromLcMessageToolCallId:
         tool_blocks = [b for b in msg.content_blocks if isinstance(b, ToolContent)]
         assert [b.text for b in text_blocks] == ["I'll search for that."]
         assert [b.id for b in tool_blocks] == ["call_abc"]
+
+    def test_raw_tool_use_block_in_content_is_captured(self):
+        """Capture an inline Anthropic ``tool_use`` content block.
+
+        LangChain leaves ``.tool_calls`` empty for raw-content messages, so the
+        content walk must capture it or the call is dropped on round-trips.
+        """
+        lc_msg = AIMessage(
+            content=[
+                {"type": "text", "text": "Let me check"},
+                {"type": "tool_use", "id": "tu_1", "name": "search", "input": {"q": "x"}},
+            ],
+        )
+        # Raw-content AIMessages leave tool_calls empty — the fallback below
+        # the content walk won't fire, so the content walk must capture it.
+        assert lc_msg.tool_calls == []
+        msg = Message.from_lc_message(lc_msg)
+        tool_blocks = [b for b in msg.content_blocks if isinstance(b, ToolContent)]
+        assert len(tool_blocks) == 1
+        assert tool_blocks[0].name == "search"
+        assert tool_blocks[0].id == "tu_1"
+        assert tool_blocks[0].tool_input == {"q": "x"}
+
+    def test_tool_use_in_content_and_tool_calls_not_doubled(self):
+        """Inline tool_use plus a matching ``.tool_calls`` entry yield one block.
+
+        The same logical call (same id) must not be doubled across the content
+        walk and the tool_calls fallback.
+        """
+        lc_msg = AIMessage(
+            content=[
+                {"type": "tool_use", "id": "tu_1", "name": "search", "input": {"q": "x"}},
+            ],
+            tool_calls=[{"name": "search", "args": {"q": "x"}, "id": "tu_1", "type": "tool_call"}],
+        )
+        msg = Message.from_lc_message(lc_msg)
+        tool_blocks = [b for b in msg.content_blocks if isinstance(b, ToolContent)]
+        assert len(tool_blocks) == 1
+        assert tool_blocks[0].id == "tu_1"
 
 
 class TestMessageResponseFromMessage:

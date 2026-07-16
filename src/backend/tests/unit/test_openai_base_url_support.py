@@ -67,7 +67,7 @@ class TestGetLlmBaseUrl:
     def test_should_pass_base_url_to_chat_openai_when_variable_is_set(self):
         with patch(
             "lfx.base.models.unified_models.get_all_variables_for_provider",
-            return_value={"OPENAI_API_KEY": "sk-test", "OPENAI_BASE_URL": CUSTOM_BASE_URL},
+            return_value={"OPENAI_API_KEY": "sk-test", "OPENAI_BASE_URL": CUSTOM_BASE_URL},  # pragma: allowlist secret
         ):
             llm = get_llm(OPENAI_MODEL_SPEC, USER_ID, api_key="sk-test")
 
@@ -76,7 +76,7 @@ class TestGetLlmBaseUrl:
     def test_should_not_set_base_url_when_variable_is_absent(self):
         with patch(
             "lfx.base.models.unified_models.get_all_variables_for_provider",
-            return_value={"OPENAI_API_KEY": "sk-test"},
+            return_value={"OPENAI_API_KEY": "sk-test"},  # pragma: allowlist secret
         ):
             llm = get_llm(OPENAI_MODEL_SPEC, USER_ID, api_key="sk-test")
 
@@ -89,7 +89,7 @@ class TestKeyValidationWithBaseUrl:
         with patch("langchain_openai.ChatOpenAI", chat_openai):
             validate_model_provider_key(
                 "OpenAI",
-                {"OPENAI_API_KEY": "anything", "OPENAI_BASE_URL": CUSTOM_BASE_URL},
+                {"OPENAI_API_KEY": "anything", "OPENAI_BASE_URL": CUSTOM_BASE_URL},  # pragma: allowlist secret
                 model_name="gpt-oss:20b",
             )
 
@@ -98,7 +98,11 @@ class TestKeyValidationWithBaseUrl:
     def test_should_not_pass_base_url_when_not_configured(self):
         chat_openai = MagicMock()
         with patch("langchain_openai.ChatOpenAI", chat_openai):
-            validate_model_provider_key("OpenAI", {"OPENAI_API_KEY": "sk-test"}, model_name="gpt-4o-mini")
+            validate_model_provider_key(
+                "OpenAI",
+                {"OPENAI_API_KEY": "sk-test"},  # pragma: allowlist secret
+                model_name="gpt-4o-mini",
+            )
 
         assert "base_url" not in chat_openai.call_args.kwargs
 
@@ -118,7 +122,9 @@ class TestLiveOpenAICompatibleModels:
         with (
             patch(
                 "lfx.base.models.model_utils.get_provider_variable_value",
-                side_effect=lambda _uid, key: CUSTOM_BASE_URL if key == "OPENAI_BASE_URL" else "sk-test",
+                side_effect=lambda _uid, key: CUSTOM_BASE_URL
+                if key == "OPENAI_BASE_URL"
+                else "sk-test",  # pragma: allowlist secret
             ),
             patch("requests.get", return_value=response) as http_get,
         ):
@@ -187,7 +193,9 @@ class TestMalformedModelsPayload:
             patch.object(
                 model_utils,
                 "get_provider_variable_value",
-                side_effect=lambda _uid, key: CUSTOM_BASE_URL if key == "OPENAI_BASE_URL" else "sk-x",
+                side_effect=lambda _uid, key: CUSTOM_BASE_URL
+                if key == "OPENAI_BASE_URL"
+                else "sk-x",  # pragma: allowlist secret
             ),
             patch("requests.get", return_value=FakeResp()),
         ):
@@ -214,19 +222,21 @@ class TestBaseUrlNormalizationParity:
         with (
             patch("langchain_openai.ChatOpenAI", chat_openai),
             patch("lfx.utils.util.transform_localhost_url", return_value=self.TRANSFORMED),
+            patch("lfx.base.models.unified_models.credentials.validate_connector_url_for_ssrf") as validate_url,
         ):
             validate_model_provider_key(
                 "OpenAI",
-                {"OPENAI_API_KEY": "sk-x", "OPENAI_BASE_URL": "http://localhost:11434/v1"},
+                {"OPENAI_API_KEY": "sk-x", "OPENAI_BASE_URL": "http://localhost:11434/v1"},  # pragma: allowlist secret
                 model_name="gpt-oss:20b",
             )
 
+        validate_url.assert_called_once_with(self.TRANSFORMED)
         assert chat_openai.call_args.kwargs.get("base_url") == self.TRANSFORMED
 
     def test_get_llm_normalizes_base_url(self):
         with patch(
             "lfx.base.models.unified_models.get_all_variables_for_provider",
-            return_value={"OPENAI_API_KEY": "sk-test", "OPENAI_BASE_URL": CUSTOM_BASE_URL},
+            return_value={"OPENAI_API_KEY": "sk-test", "OPENAI_BASE_URL": CUSTOM_BASE_URL},  # pragma: allowlist secret
         ):
             llm = get_llm(OPENAI_MODEL_SPEC, USER_ID, api_key="sk-test")
 

@@ -1,3 +1,4 @@
+import platform
 from pathlib import Path
 
 from lfx.template import utils as template_utils
@@ -88,3 +89,33 @@ def test_update_template_field_clears_traversal_file_path(tmp_path: Path, monkey
 
     assert new_template["target_file"]["value"] == ""
     assert new_template["target_file"]["file_path"] == ""
+
+
+def test_get_file_path_value_case_insensitive_bypass_windows(tmp_path: Path, monkeypatch) -> None:
+    """Test that mixed-case paths cannot bypass security checks on case-insensitive filesystems.
+
+    On Windows (case-insensitive), an attacker might try to use 'Cache' instead of 'cache'
+    to bypass path validation. This test ensures the security check is robust against such attempts.
+    """
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    uploaded_file = cache_dir / "upload.txt"
+    uploaded_file.write_text("allowed")
+    _set_cache_dir(monkeypatch, cache_dir)
+
+    # Test with the correct case - should work
+    assert template_utils.get_file_path_value(str(uploaded_file)) == str(uploaded_file.resolve())
+
+    # On case-insensitive filesystems (Windows), test mixed-case variations
+    if platform.system() == "Windows":
+        # Try various case permutations of the path
+        mixed_case_path = str(uploaded_file).replace("cache", "Cache")
+        # Path.resolve() normalizes the case on Windows, so this should still be secure
+        result = template_utils.get_file_path_value(mixed_case_path)
+        # The resolved path should either match the normalized path or be rejected
+        assert result == "" or result == str(uploaded_file.resolve())
+
+        # Try uppercase
+        upper_case_path = str(uploaded_file).replace("cache", "CACHE")
+        result = template_utils.get_file_path_value(upper_case_path)
+        assert result == "" or result == str(uploaded_file.resolve())

@@ -19,7 +19,12 @@ from langflow.services.database.models.message.crud import (
     get_message_for_user,
     get_messages_for_user_by_session,
 )
-from langflow.services.database.models.message.model import MessageRead, MessageTable, MessageUpdate
+from langflow.services.database.models.message.model import (
+    ALLOWED_MESSAGE_ORDER_FIELDS,
+    MessageRead,
+    MessageTable,
+    MessageUpdate,
+)
 from langflow.services.database.models.transactions.crud import transform_transaction_table_for_logs
 from langflow.services.database.models.transactions.model import TransactionLogsResponse, TransactionTable
 from langflow.services.database.models.user.model import User
@@ -227,6 +232,8 @@ async def get_messages(
     sender: Annotated[str | None, Query()] = None,
     sender_name: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
+    limit: Annotated[int | None, Query(ge=0)] = None,
+    offset: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[MessageResponse]:
     try:
         # When a flow_id is provided, gate on flow READ permission first; the
@@ -255,10 +262,18 @@ async def get_messages(
         if sender_name:
             stmt = stmt.where(MessageTable.sender_name == sender_name)
         if order_by:
-            order_col = getattr(MessageTable, order_by).asc()
+            if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
+                raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
+            order_col = getattr(MessageTable, order_by).desc()
             stmt = stmt.order_by(order_col)
+        if limit:
+            stmt = stmt.limit(limit)
+        if offset:
+            stmt = stmt.offset(offset)
         messages = await session.exec(stmt)
         return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -520,6 +535,8 @@ async def get_shared_messages(
     source_flow_id: Annotated[UUID, Query(description="The original public flow ID")],
     session_id: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
+    limit: Annotated[int | None, Query(ge=0)] = None,
+    offset: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[MessageResponse]:
     """Get messages for a shared/public flow, scoped to the authenticated user.
 
@@ -536,12 +553,15 @@ async def get_shared_messages(
 
             decoded_session_id = unquote(session_id)
             stmt = stmt.where(MessageTable.session_id == decoded_session_id)
-        allowed_order_fields = {"timestamp", "sender", "sender_name", "session_id", "text"}
         if order_by:
-            if order_by not in allowed_order_fields:
+            if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
                 raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-            order_col = getattr(MessageTable, order_by).asc()
+            order_col = getattr(MessageTable, order_by).desc()
             stmt = stmt.order_by(order_col)
+        if limit:
+            stmt = stmt.limit(limit)
+        if offset:
+            stmt = stmt.offset(offset)
 
         messages = await session.exec(stmt)
         return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]

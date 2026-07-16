@@ -1,23 +1,31 @@
 """Extras-drift guard for the ``lfx-bundles`` metapackage.
 
 ``src/bundles/lfx-bundles/pyproject.toml`` carries one optional-dependency
-extra per provider plus a *generated* ``all`` aggregate (what ``langflow``
-depends on via ``lfx-bundles[all]``). These invariants are maintained by
-``scripts/migrate/consolidate_bundles.py`` and must never drift by hand-edit:
+extra per provider plus the *generated* ``all`` and ``all-no-torch`` aggregates
+(``langflow`` depends on the metapackage via ``lfx-bundles[all]``). These
+invariants are maintained by ``scripts/migrate/consolidate_bundles.py`` and must
+never drift by hand-edit:
 
     1. every provider directory has exactly one extra (PEP 685-normalized key),
     2. ``all`` is exactly the set of per-provider self-refs -- a provider
        missing from ``all`` silently drops its deps from ``pip install
        langflow`` (the epic's headline dep-parity risk),
-    3. normalized extra keys are collision-free,
-    4. the metapackage provider set stays disjoint from the graduated
-       partner distributions (no double-ship; manifest would shadow).
+    3. ``all-no-torch`` is exactly ``all`` minus the torch-pulling providers
+       (``TORCH_EXTRAS``), giving a torch-free full-provider install,
+    4. normalized extra keys are collision-free,
+    5. the metapackage provider set stays disjoint from the graduated
+       partner distributions (no double-ship; manifest would shadow),
+    6. ALTK stays gated off Python 3.14 while its LiteLLM dependency cannot
+       build there.
 """
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
+
+from packaging.markers import default_environment
+from packaging.requirements import Requirement
 
 try:
     import tomllib
@@ -28,6 +36,12 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 METAPACKAGE_DIR = REPO_ROOT / "src" / "bundles" / "lfx-bundles"
 PROVIDERS_DIR = METAPACKAGE_DIR / "src" / "lfx_bundles"
 BUNDLES_DIR = REPO_ROOT / "src" / "bundles"
+
+# Generated aggregate extras (not per-provider) -- kept in sync with
+# scripts/migrate/consolidate_bundles.py. ``all`` pulls every provider;
+# ``all-no-torch`` is ``all`` minus the torch-pulling providers (TORCH_EXTRAS).
+AGGREGATE_EXTRAS = frozenset({"all", "all-no-torch"})
+TORCH_EXTRAS = frozenset({"cuga", "codeagents"})
 
 
 def _normalize(name: str) -> str:
@@ -48,7 +62,7 @@ def _provider_dirs() -> list[str]:
 
 def test_every_provider_has_an_extra_and_vice_versa() -> None:
     extras = _load_extras()
-    extra_keys = set(extras) - {"all"}
+    extra_keys = set(extras) - AGGREGATE_EXTRAS
     provider_keys = {_normalize(p) for p in _provider_dirs()}
     assert extra_keys == provider_keys, (
         f"extras and provider dirs drifted: extras-only={sorted(extra_keys - provider_keys)}, "
@@ -58,10 +72,19 @@ def test_every_provider_has_an_extra_and_vice_versa() -> None:
 
 def test_all_extra_is_exactly_the_per_provider_self_refs() -> None:
     extras = _load_extras()
-    expected = {f"lfx-bundles[{key}]" for key in extras if key != "all"}
+    expected = {f"lfx-bundles[{key}]" for key in extras if key not in AGGREGATE_EXTRAS}
     actual = set(extras["all"])
     assert actual == expected, (
         f"generated `all` drifted: missing={sorted(expected - actual)}, stray={sorted(actual - expected)}"
+    )
+
+
+def test_all_no_torch_extra_is_all_minus_torch_providers() -> None:
+    extras = _load_extras()
+    expected = {f"lfx-bundles[{key}]" for key in extras if key not in AGGREGATE_EXTRAS and key not in TORCH_EXTRAS}
+    actual = set(extras["all-no-torch"])
+    assert actual == expected, (
+        f"generated `all-no-torch` drifted: missing={sorted(expected - actual)}, stray={sorted(actual - expected)}"
     )
 
 
@@ -86,3 +109,32 @@ def test_metapackage_providers_disjoint_from_graduated_partners() -> None:
     }
     overlap = {_normalize(p) for p in _provider_dirs()} & {_normalize(p) for p in partners}
     assert not overlap, f"providers shipped from both lfx-bundles and a graduated package: {sorted(overlap)}"
+
+
+def test_altk_dependency_is_gated_off_python_314() -> None:
+    """ALTK must not transitively install LiteLLM on unsupported Python 3.14."""
+    requirements = (Requirement(dependency) for dependency in _load_extras()["altk"])
+    altk = next(requirement for requirement in requirements if requirement.name == "agent-lifecycle-toolkit")
+    assert altk.marker is not None
+
+    environment = default_environment()
+    for sys_platform, platform_machine in (("linux", "x86_64"), ("darwin", "arm64"), ("win32", "AMD64")):
+        environment.update(
+            {
+                "python_full_version": "3.14.0",
+                "python_version": "3.14",
+                "sys_platform": sys_platform,
+                "platform_machine": platform_machine,
+            }
+        )
+        assert not altk.marker.evaluate(environment)
+
+    environment.update(
+        {
+            "python_full_version": "3.13.0",
+            "python_version": "3.13",
+            "sys_platform": "linux",
+            "platform_machine": "x86_64",
+        }
+    )
+    assert altk.marker.evaluate(environment)
