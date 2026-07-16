@@ -615,6 +615,26 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
+    async def claim_suspended_for_cancel(self, job_id: UUID) -> bool:
+        """Atomically flip SUSPENDED->CANCELLED; True iff this caller won.
+
+        Mirror of ``claim_suspended_for_resume`` for the supersede/stop side of the
+        race: a resume that already flipped the row to IN_PROGRESS keeps its run —
+        an unconditional CANCELLED write here would clobber it and destroy its
+        checkpoint mid-flight.
+        """
+        from sqlmodel import update
+
+        async with session_scope() as session:
+            stmt = (
+                update(Job)
+                .where(Job.job_id == job_id, Job.status == JobStatus.SUSPENDED)
+                .values(status=JobStatus.CANCELLED, finished_timestamp=datetime.now(timezone.utc))
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
     async def queued_workflow_job_ids(self) -> list[UUID]:
         """Return the ids of every QUEUED workflow job (for strand recovery)."""
         async with session_scope() as session:

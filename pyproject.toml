@@ -197,7 +197,7 @@ clickhouse-connect = [
 
 nv-ingest = [
     "nv-ingest-api>=26.1.0,<27.0.0 ; python_version >= '3.12'",
-    "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'",
+    "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'",
 ]
 
 postgresql = [

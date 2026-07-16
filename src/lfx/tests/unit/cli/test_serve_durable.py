@@ -177,6 +177,75 @@ def test_background_hitl_suspends_and_exposes_pending_request(client):
     assert any(option.get("action_id") == "approve" for option in pending.get("options", []))
 
 
+def test_resubmit_supersedes_the_stale_suspended_run(client):
+    """Re-running a paused flow cancels the stale pause and tracks only the new one."""
+    stale_job_id = _submit(client, _HITL_FLOW_ID)
+    _wait_for_status(client, stale_job_id, "suspended")
+    stale_request_id = _pending_request(client, stale_job_id)["request_id"]
+
+    new_job_id = _submit(client, _HITL_FLOW_ID)
+    _wait_for_status(client, new_job_id, "suspended")
+
+    stale = _get_status(client, stale_job_id)
+    assert stale["status"] == "cancelled"
+    resp = client.get(f"/api/v2/workflows/{stale_job_id}/pending", headers=_HEADERS)
+    assert resp.status_code == 404
+    pending = _pending_request(client, new_job_id)
+    assert pending["request_id"]
+    assert pending["request_id"] != stale_request_id
+
+
+def test_supersede_does_not_clobber_a_run_claimed_for_resume(tmp_path):
+    """A resume that wins the flip between supersede's select and cancel keeps its run.
+
+    No CANCELLED write, no lingering STOP signal, pending metadata intact.
+    """
+    import asyncio
+
+    from lfx.cli.serve_durable import DurableServeWorkflowHost
+    from lfx.services.durable.models import JobStatus as DurableJobStatus
+
+    host = DurableServeWorkflowHost(_build_registry(), lambda: None, db_path=tmp_path / "race.db")
+
+    async def scenario():
+        job_id = "job-race-1"
+        await host.jobs.create_job(job_id=job_id, flow_id=_HITL_FLOW_ID, user_id="")
+        await host.jobs.update_status(job_id, DurableJobStatus.SUSPENDED)
+        await host.jobs.update_metadata(job_id, {"pending": {"request_id": "req-1"}})
+
+        # Deterministically lose the race: the resume claims the job AFTER
+        # supersede's select returns it but BEFORE the cancel step runs.
+        original_select = host.jobs.suspended_job_ids_for_flow
+
+        async def select_then_lose_to_resume(flow_id_arg):
+            ids = await original_select(flow_id_arg)
+            assert ids == [job_id]
+            assert await host.jobs.claim_suspended_for_resume(job_id) is True
+            return ids
+
+        host.jobs.suspended_job_ids_for_flow = select_then_lose_to_resume
+
+        await host._supersede_suspended(_HITL_FLOW_ID)
+
+        job = await host.jobs.get_job(job_id)
+        assert job.status == DurableJobStatus.IN_PROGRESS
+        assert (job.job_metadata or {}).get("pending") == {"request_id": "req-1"}
+        assert await host.jobs.unconsumed_signals(job_id) == []
+
+    asyncio.run(scenario())
+
+
+def test_resubmit_of_a_different_flow_leaves_the_pause_alone(client):
+    suspended_job_id = _submit(client, _HITL_FLOW_ID)
+    _wait_for_status(client, suspended_job_id, "suspended")
+
+    other_job_id = _submit(client, _ECHO_FLOW_ID)
+    _wait_for_status(client, other_job_id, "completed")
+
+    assert _get_status(client, suspended_job_id)["status"] == "suspended"
+    assert _pending_request(client, suspended_job_id)["request_id"]
+
+
 def test_resume_completes_only_the_chosen_branch(client):
     job_id = _submit(client, _HITL_FLOW_ID)
     _wait_for_status(client, job_id, "suspended")
