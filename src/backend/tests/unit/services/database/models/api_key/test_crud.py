@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import secrets
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -133,10 +135,16 @@ async def test_check_key_fallback_for_legacy_keys(async_session, mock_settings, 
         "langflow.services.database.models.api_key.crud.auth_utils.decrypt_api_key",
         lambda val, **_kwargs: val,
     )
+    compare_digest = MagicMock(wraps=secrets.compare_digest)
+    monkeypatch.setattr(
+        "langflow.services.database.models.api_key.crud.secrets.compare_digest",
+        compare_digest,
+    )
 
     result = await _check_key_from_db(async_session, plaintext, mock_settings)
     assert result is not None
     assert result.id == user.id
+    compare_digest.assert_called_once_with(plaintext.encode(), plaintext.encode())
 
 
 @pytest.mark.anyio
