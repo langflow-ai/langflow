@@ -952,10 +952,10 @@ jobs:
         run: |
           core-test-env/bin/python - <<'PY'
           import importlib
-            import json
+          import json
           import re
           from importlib.metadata import distributions, entry_points
-            from pathlib import Path
+          from pathlib import Path
 
           from lfx.interface.components import _read_component_index
 
