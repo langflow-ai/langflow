@@ -18,6 +18,12 @@ To give **Langflow Assistant** context for a different flow, switch to that flow
 
 ## Prerequisites
 
+* `LANGFLOW_AGENTIC_EXPERIENCE` must be `true`.
+
+  **Langflow Assistant** is disabled by default, because it generates and runs component code on your Langflow server.
+  While it is disabled, the Assistant's endpoints return `404`.
+  For more information, see [Supported environment variables](/environment-variables#supported-variables).
+
 * Connect an LLM provider in the [Global model providers page](/components-models) for **Langflow Assistant** to use
 * Custom component creation must be enabled and permitted for your user role:
   * `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` must be `true` (default).
@@ -276,8 +282,48 @@ For example, to prompt **Langflow Assistant** to update the system prompt field 
 Update @Agent.System Prompt to always respond in bullet points.
 ```
 
+## Use a local or OpenAI-compatible model
+
+**Langflow Assistant** can run on a model served from your own machine or from any OpenAI-compatible endpoint, so your prompts never leave your environment.
+
+To use a local model served by [Ollama](https://ollama.com), set the `OLLAMA_BASE_URL` global variable to your Ollama server, such as `http://localhost:11434`.
+Ollama requires no API key.
+
+To use an OpenAI-compatible server instead of OpenAI itself, set the `OPENAI_BASE_URL` global variable to your server's URL, and set `OPENAI_API_KEY` to the key your server expects.
+
+You can set both values as [global variables](/configuration-global-variables) or as environment variables of the same name.
+Global variables take precedence, and Langflow falls back to the environment variable when no global variable is set.
+
+:::important
+**Langflow Assistant** builds flows by calling tools, so it requires a model that supports tool calling.
+Small local models often can't call tools reliably, which appears as an Assistant that only chats and never changes your canvas.
+If the Assistant doesn't act on your prompts, try a larger model.
+:::
+
+## Connect an external client with MCP
+
+**Langflow Assistant** and Langflow's flow-authoring tools are available to external MCP clients, such as Cursor, Claude Code, and Codex, over a [streamable HTTP](https://modelcontextprotocol.io/docs/concepts/transports) MCP server at `/api/v1/agentic/mcp`.
+
+This lets a client build, inspect, patch, and run your flows without opening the visual editor, including a `run_assistant` tool that calls **Langflow Assistant** itself.
+Changes are saved to your flows and appear in the visual editor.
+
+The server requires `LANGFLOW_AGENTIC_EXPERIENCE=true`, and returns `404` when the Assistant is disabled.
+Authenticate with a Langflow API key, in the same way as Langflow's other MCP endpoints:
+
+```bash
+curl -X POST "$LANGFLOW_URL/api/v1/agentic/mcp" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json"
+```
+
+For an MCP client, point it at `$LANGFLOW_URL/api/v1/agentic/mcp` with your API key as an `x-api-key` header.
+Every tool call is authorized as your own user, so a client can only reach the flows your API key can reach.
+
+For more information on creating an API key, see [API keys](/api-keys-and-authentication).
+
 ## See also
 
 - [Build flows](/concepts-flows)
 - [Custom components](/components-custom-components)
+- [MCP server](/mcp-server)
 - [Trigger flows with the Langflow API](/concepts-publish)

@@ -1908,11 +1908,16 @@ Event: `cancelled`
 
 **Purpose**: Check if assistant is properly configured and return available providers
 
+Ungated on purpose (no `require_agentic_experience`): it is the only probe that can tell
+"no provider connected" (`configured: false`) from "feature disabled" (`enabled: false`),
+since every other agentic route 404s when the gate is off.
+
 **Request**: None (uses authenticated user context)
 
 **Response (Success)**:
 ```json
 {
+  "enabled": true,
   "configured": true,
   "configured_providers": ["openai", "anthropic"],
   "providers": [

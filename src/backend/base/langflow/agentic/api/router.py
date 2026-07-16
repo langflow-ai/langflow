@@ -20,6 +20,7 @@ from lfx.base.models.unified_models import (
     get_unified_models_detailed,
 )
 from lfx.log.logger import logger
+from lfx.services.deps import get_settings_service
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from langflow.agentic.api.deps import require_agentic_experience
@@ -201,9 +202,14 @@ async def check_assistant_config(
 ) -> dict:
     """Check if the Langflow Assistant is properly configured.
 
-    Returns available providers with their configured status and available models.
+    Returns available providers with their configured status and available models, plus
+    ``enabled``: whether ``agentic_experience`` gates the assistant off. Provider config and
+    the feature gate are independent failure modes -- without ``enabled`` a caller cannot tell
+    "no provider connected" from "feature disabled", and every /assist call 404s with no way
+    to explain why. This probe stays ungated so that distinction survives the gate.
     """
     user_id = current_user.id
+    enabled = get_settings_service().settings.agentic_experience
     enabled_providers, _ = await get_enabled_providers_for_user(user_id, session)
 
     all_providers = []
@@ -285,6 +291,7 @@ async def check_assistant_config(
         default_model = all_providers[0]["default_model"]
 
     return {
+        "enabled": enabled,
         "configured": len(enabled_providers) > 0,
         "configured_providers": enabled_providers,
         "providers": all_providers,
