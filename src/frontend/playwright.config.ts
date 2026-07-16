@@ -123,6 +123,9 @@ export default defineConfig({
         LANGFLOW_DEACTIVATE_TRACING: "true",
         LANGFLOW_LOG_LEVEL: "ERROR",
         DO_NOT_TRACK: "true",
+        // Serve the A2A discovery + JSON-RPC endpoints so the Agent tab tests
+        // can publish and exercise a live agent.
+        LANGFLOW_A2A_ENABLED: "true",
       },
       stdout: "ignore",
 
