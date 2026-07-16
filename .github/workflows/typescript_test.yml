@@ -379,11 +379,10 @@ jobs:
             printf '%s\n' "$TEST_LIST"
 
             WORKERS=2
-            # The sweep lives in starter-projects-outdated-components.spec.ts
-            # (renamed from starter-projects-shardN in #13844 — keep this
-            # pattern in sync or the one-worker mitigation silently no-ops).
-            if printf '%s\n' "$TEST_LIST" | grep -q 'starter-projects-outdated-components'; then
-              echo "Detected starter project template sweep in this shard; running it with one worker to avoid shared backend contention."
+            # These suites mutate shared SQLite-backed state and are unsafe with
+            # multiple workers against the same test server.
+            if printf '%s\n' "$TEST_LIST" | grep -Eq 'starter-projects-outdated-components|user-flow-state-cleanup\.spec\.ts|user-progress-track\.spec\.ts'; then
+              echo "Detected shared-state tests in this shard; running with one worker."
               WORKERS=1
             fi
 
