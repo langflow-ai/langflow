@@ -4,6 +4,8 @@ slug: /a2a-server
 ---
 
 import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 :::tip
 As of Langflow 1.11.x, A2A support is **off** by default. To enable it, set the following environment variable before starting Langflow:
@@ -63,16 +65,143 @@ To stop serving the flow, turn off **Serve as an A2A agent**, and then click **S
 
 ## A2A endpoints
 
-When a flow is published, Langflow serves two endpoints for it:
+When a flow is published, Langflow serves two endpoints for the flow:
 
 | Endpoint | Description |
 | --- | --- |
-| `GET /api/v1/a2a/{flow_id}/.well-known/agent-card.json` | The [agent card](#customize-the-agent-card) used for discovery. Public by design, because the A2A public card is unauthenticated by spec. |
-| `POST /api/v1/a2a/{flow_id}/jsonrpc` | The JSON-RPC surface. Supports `message/send`, `message/stream`, `tasks/get`, `tasks/resubscribe`, and the `tasks/pushNotificationConfig/*` methods. |
+| `GET /api/v1/a2a/{flow_id}/.well-known/agent-card.json` | The [agent card](#customize-the-agent-card) used for client discovery. Public by design, because the A2A public card is unauthenticated by spec. |
+| `POST /api/v1/a2a/{flow_id}/jsonrpc` | The JSON-RPC endpoint. Supports `message/send`, `message/stream`, `tasks/get`, `tasks/resubscribe`, and the `tasks/pushNotificationConfig/*` methods. |
 
 The card advertises `protocolVersion` `0.3.0` and `JSONRPC` as the preferred transport.
 
 A `message/send` request runs the flow and returns a completed task carrying the agent's reply as a text artifact. To thread a multi-turn conversation, send a `contextId`. Langflow maps it to the flow's chat session, so messages that share a `contextId` share history.
+
+### Send a message
+
+To send a message, use the JSON-RPC URL from the **Address** tab, and not the agent card URL.
+Replace `FLOW_ID` with your flow ID. If the [project's authentication](#authentication) requires a key, include `x-api-key`.
+
+<Tabs>
+<TabItem value="python" label="Python" default>
+
+```python
+import os
+import uuid
+import requests
+
+url = "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc"
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": os.environ["LANGFLOW_API_KEY"],  # omit if project auth is None
+}
+payload = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "message/send",
+    "params": {
+        "message": {
+            "role": "user",
+            "parts": [{"kind": "text", "text": "Hello"}],
+            "messageId": uuid.uuid4().hex,
+        }
+    },
+}
+
+response = requests.post(url, headers=headers, json=payload, timeout=60)
+response.raise_for_status()
+print(response.json())
+```
+
+</TabItem>
+<TabItem value="typescript" label="TypeScript">
+
+```typescript
+const url = "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc";
+
+const response = await fetch(url, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-api-key": process.env.LANGFLOW_API_KEY!, // omit if project auth is None
+  },
+  body: JSON.stringify({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "message/send",
+    params: {
+      message: {
+        role: "user",
+        parts: [{ kind: "text", text: "Hello" }],
+        messageId: crypto.randomUUID(),
+      },
+    },
+  }),
+});
+
+if (!response.ok) {
+  throw new Error(`A2A request failed: ${response.status}`);
+}
+
+console.log(await response.json());
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+```bash
+curl -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: LANGFLOW_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "message/send",
+    "params": {
+      "message": {
+        "role": "user",
+        "parts": [{"kind": "text", "text": "Hello"}],
+        "messageId": "1"
+      }
+    }
+  }'
+```
+
+</TabItem>
+</Tabs>
+
+A successful response is a completed task. The agent's reply text is in `result.artifacts[0].parts`.
+
+Example response:
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "artifacts": [
+      {
+        "artifactId": "1b76f47a-f5d4-45e6-ac68-6bc283dab868",
+        "name": "result",
+        "parts": [
+          {
+            "kind": "text",
+            "text": "Hello! How can I help you today?"
+          }
+        ]
+      }
+    ],
+    "contextId": "7bbc5b0c-7a57-4c7e-8fba-f5290e8c3861",
+    "id": "f59bc5d0-9910-4f3c-be7b-f29b5ee388ae",
+    "kind": "task",
+    "status": {
+      "state": "completed",
+      "timestamp": "2026-07-16T20:56:15.219876Z"
+    }
+  }
+}
+```
+
+To continue the same chat session, use the same `contextId` on subsequent `message/send` requests.
 
 ## Customize the agent card {#customize-the-agent-card}
 
