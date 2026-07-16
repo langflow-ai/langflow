@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 import requests
-
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DictInput, DropdownInput, IntInput, MultilineInput, SecretStrInput, StrInput
 from lfx.io import Output
