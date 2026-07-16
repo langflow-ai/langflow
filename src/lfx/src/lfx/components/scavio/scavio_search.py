@@ -1,7 +1,7 @@
 import httpx
 
 from lfx.custom.custom_component.component import Component
-from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
+from lfx.inputs.inputs import DropdownInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
@@ -32,24 +32,16 @@ class ScavioSearchComponent(Component):
             info="The search query you want to execute with Scavio.",
             tool_mode=True,
         ),
-        DropdownInput(
-            name="search_type",
-            display_name="Search Type",
-            info="The Google search vertical.",
-            options=["classic", "news", "images"],
-            value="classic",
-            advanced=True,
-        ),
         MessageTextInput(
-            name="country_code",
+            name="gl",
             display_name="Country Code",
-            info="Two-letter country code, e.g. us.",
+            info="Geo location country code (ISO 3166-1 alpha-2), e.g. us.",
             advanced=True,
         ),
         MessageTextInput(
-            name="language",
+            name="hl",
             display_name="Language",
-            info="Two-letter language code, e.g. en.",
+            info="UI language code (ISO 639-1), e.g. en.",
             advanced=True,
         ),
         DropdownInput(
@@ -60,17 +52,10 @@ class ScavioSearchComponent(Component):
             value="desktop",
             advanced=True,
         ),
-        BoolInput(
-            name="light_request",
-            display_name="Light Request",
-            info="Cheaper, lighter response (1 credit instead of 2).",
-            value=True,
-            advanced=True,
-        ),
         IntInput(
             name="page",
             display_name="Page",
-            info="Result page number (1-based).",
+            info="Result page number (1-based), sent as the start offset.",
             value=1,
             advanced=True,
         ),
@@ -96,17 +81,16 @@ class ScavioSearchComponent(Component):
                 "authorization": f"Bearer {self.api_key}",
             }
 
+            page = int(self.page) if self.page else 1
             payload = {
                 "query": self.query,
-                "search_type": self.search_type,
                 "device": self.device,
-                "light_request": self.light_request,
-                "page": int(self.page) if self.page else 1,
+                "start": max(page - 1, 0) * 10,
             }
-            if self.country_code:
-                payload["country_code"] = self.country_code
-            if self.language:
-                payload["language"] = self.language
+            if self.gl:
+                payload["gl"] = self.gl
+            if self.hl:
+                payload["hl"] = self.hl
 
             with httpx.Client(timeout=90.0) as client:
                 response = client.post(url, json=payload, headers=headers)

@@ -54,6 +54,19 @@ def test_fetch_content_returns_data():
     assert results[0].text == "Description 1"
 
 
+def test_payload_uses_v2_params():
+    client = _mock_post()
+    with patch("httpx.Client", return_value=client):
+        component = ScavioSearchComponent(api_key="sk_live_test", query="openai", gl="us", hl="en", page=2)
+        component.fetch_content()
+
+    _, kwargs = client.__enter__.return_value.post.call_args
+    payload = kwargs["json"]
+    assert payload == {"query": "openai", "device": "desktop", "start": 10, "gl": "us", "hl": "en"}
+    for v1_param in ("search_type", "light_request", "page", "country_code", "language"):
+        assert v1_param not in payload
+
+
 def test_fetch_content_respects_max_results():
     with patch("httpx.Client", return_value=_mock_post()):
         component = ScavioSearchComponent(api_key="sk_live_test", query="openai", max_results=2)

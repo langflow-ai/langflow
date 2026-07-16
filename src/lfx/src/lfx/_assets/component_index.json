@@ -29155,6 +29155,254 @@
       }
     ],
     [
+      "scavio",
+      {
+        "ScavioSearch": {
+          "base_classes": [
+            "Table"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "**Scavio** is a real-time search API for AI agents - a unified API over Google, YouTube, Amazon, Walmart, Reddit, TikTok, and Instagram. A cost-effective Tavily and SerpAPI alternative that returns clean JSON.",
+          "display_name": "Scavio Search API",
+          "documentation": "https://scavio.dev/docs/langflow",
+          "edited": false,
+          "field_order": [
+            "api_key",
+            "query",
+            "gl",
+            "hl",
+            "device",
+            "page",
+            "max_results"
+          ],
+          "frozen": false,
+          "icon": "Scavio",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "9008504caefb",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "httpx",
+                  "version": "0.28.1"
+                },
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "module": "lfx.components.scavio.scavio_search.ScavioSearchComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Table",
+              "group_outputs": false,
+              "method": "fetch_content_dataframe",
+              "name": "dataframe",
+              "selected": "Table",
+              "tool_mode": true,
+              "types": [
+                "Table"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "api_key": {
+              "_input_type": "SecretStrInput",
+              "advanced": false,
+              "display_name": "Scavio API Key",
+              "dynamic": false,
+              "info": "Your Scavio API Key. Get one at https://dashboard.scavio.dev.",
+              "input_types": [],
+              "load_from_db": true,
+              "name": "api_key",
+              "override_skip": false,
+              "password": true,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "code": {
+              "advanced": true,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "import httpx\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import DropdownInput, IntInput, MessageTextInput, SecretStrInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.template.field.base import Output\n\n\nclass ScavioSearchComponent(Component):\n    display_name = \"Scavio Search API\"\n    description = (\n        \"**Scavio** is a real-time search API for AI agents - a unified API over Google, \"\n        \"YouTube, Amazon, Walmart, Reddit, TikTok, and Instagram. A cost-effective Tavily \"\n        \"and SerpAPI alternative that returns clean JSON.\"\n    )\n    documentation = \"https://scavio.dev/docs/langflow\"\n    icon = \"Scavio\"\n    name = \"ScavioSearch\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Scavio API Key\",\n            required=True,\n            info=\"Your Scavio API Key. Get one at https://dashboard.scavio.dev.\",\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"The search query you want to execute with Scavio.\",\n            tool_mode=True,\n        ),\n        MessageTextInput(\n            name=\"gl\",\n            display_name=\"Country Code\",\n            info=\"Geo location country code (ISO 3166-1 alpha-2), e.g. us.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"hl\",\n            display_name=\"Language\",\n            info=\"UI language code (ISO 639-1), e.g. en.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"device\",\n            display_name=\"Device\",\n            info=\"Device profile to emulate.\",\n            options=[\"desktop\", \"mobile\"],\n            value=\"desktop\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"page\",\n            display_name=\"Page\",\n            info=\"Result page number (1-based), sent as the start offset.\",\n            value=1,\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"The maximum number of search results to return.\",\n            value=10,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Table\", name=\"dataframe\", method=\"fetch_content_dataframe\"),\n    ]\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            url = \"https://api.scavio.dev/api/v2/google\"\n            headers = {\n                \"content-type\": \"application/json\",\n                \"accept\": \"application/json\",\n                \"authorization\": f\"Bearer {self.api_key}\",\n            }\n\n            page = int(self.page) if self.page else 1\n            payload = {\n                \"query\": self.query,\n                \"device\": self.device,\n                \"start\": max(page - 1, 0) * 10,\n            }\n            if self.gl:\n                payload[\"gl\"] = self.gl\n            if self.hl:\n                payload[\"hl\"] = self.hl\n\n            with httpx.Client(timeout=90.0) as client:\n                response = client.post(url, json=payload, headers=headers)\n\n            response.raise_for_status()\n            search_results = response.json()\n\n            data_results = []\n            results = search_results.get(\"organic_results\", [])\n            max_results = self.max_results if self.max_results is not None else len(results)\n            for result in results[:max_results]:\n                content = result.get(\"snippet\", \"\")\n                result_data = {\n                    \"title\": result.get(\"title\"),\n                    \"url\": result.get(\"link\"),\n                    \"content\": content,\n                    \"position\": result.get(\"position\"),\n                }\n                data_results.append(Data(text=content, data=result_data))\n\n        except httpx.TimeoutException:\n            error_message = \"Request timed out (90s). Please try again or adjust parameters.\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.HTTPStatusError as exc:\n            error_message = f\"HTTP error occurred: {exc.response.status_code} - {exc.response.text}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.RequestError as exc:\n            error_message = f\"Request error occurred: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except ValueError as exc:\n            error_message = f\"Invalid response format: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        else:\n            self.status = data_results\n            return data_results\n\n    def fetch_content_dataframe(self) -> DataFrame:\n        data = self.fetch_content()\n        return DataFrame(data)\n"
+            },
+            "device": {
+              "_input_type": "DropdownInput",
+              "advanced": true,
+              "combobox": false,
+              "dialog_inputs": {},
+              "display_name": "Device",
+              "dynamic": false,
+              "external_options": {},
+              "info": "Device profile to emulate.",
+              "name": "device",
+              "options": [
+                "desktop",
+                "mobile"
+              ],
+              "options_metadata": [],
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "toggle": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "str",
+              "value": "desktop"
+            },
+            "gl": {
+              "_input_type": "MessageTextInput",
+              "advanced": true,
+              "display_name": "Country Code",
+              "dynamic": false,
+              "info": "Geo location country code (ISO 3166-1 alpha-2), e.g. us.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "gl",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "hl": {
+              "_input_type": "MessageTextInput",
+              "advanced": true,
+              "display_name": "Language",
+              "dynamic": false,
+              "info": "UI language code (ISO 639-1), e.g. en.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "hl",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "max_results": {
+              "_input_type": "IntInput",
+              "advanced": true,
+              "display_name": "Max Results",
+              "dynamic": false,
+              "info": "The maximum number of search results to return.",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "max_results",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "int",
+              "value": 10
+            },
+            "page": {
+              "_input_type": "IntInput",
+              "advanced": true,
+              "display_name": "Page",
+              "dynamic": false,
+              "info": "Result page number (1-based), sent as the start offset.",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "page",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "int",
+              "value": 1
+            },
+            "query": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "display_name": "Search Query",
+              "dynamic": false,
+              "info": "The search query you want to execute with Scavio.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "query",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": true,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            }
+          },
+          "tool_mode": false
+        }
+      }
+    ],
+    [
       "tools",
       {
         "CalculatorTool": {
@@ -31461,9 +31709,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 130,
-    "num_modules": 17
+    "num_components": 131,
+    "num_modules": 18
   },
-  "sha256": "a80e21d85a525d58ea422099973395020e3577b68f3bf1c730ced137893e820c",
+  "sha256": "66f552c9b2377029810bd1a97851e72ac55224c23d57f49da68cb2fabb64e0c1",
   "version": "1.11.0"
 }
