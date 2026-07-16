@@ -5,43 +5,59 @@ slug: /a2a-server
 
 import Icon from "@site/src/components/icon";
 
-Langflow integrates with the [Agent2Agent (A2A) protocol](https://a2a-protocol.org/) so that an agent flow can be called by other agents, and so that your flows can call out to remote A2A agents.
+:::tip
+As of Langflow 1.11.x, A2A support is **off** by default. To enable it, set the following environment variable before starting Langflow:
 
-This page describes how to publish a flow as an A2A agent that A2A clients can discover and call, and how to call remote A2A agents from inside a flow with the **A2A Agent** component.
+```bash
+LANGFLOW_A2A_ENABLED=true
+```
+:::
 
-A2A support is off by default. To enable it, set the `LANGFLOW_A2A_ENABLED` environment variable to `true`. For more information, see [A2A environment variables](#a2a-environment-variables).
+Langflow supports the [Agent2Agent (A2A) protocol](https://a2a-protocol.org/). You can publish a flow so other agents can call it, and call remote A2A agents from inside a flow.
+
+This page describes how to publish a flow as an A2A agent that A2A clients can discover and call.
+
+To call remote A2A agents from inside a flow, see the [**A2A Agent** component](./a2a-agent-component).
 
 ## Prerequisites
 
-* A [Langflow flow](/concepts-flows) that contains a **Chat Input** (or **Human Input**) component and a **Chat Output** component.
-
-    An A2A caller sends a message and reads a reply, so a flow can be served as an agent only if it can receive and answer messages. Langflow marks an eligible flow as agent-typed when you save it from the **Agent** tab. A workflow-typed flow returns `404` from the A2A endpoints even when publishing is enabled.
-
 * `LANGFLOW_A2A_ENABLED` set to `true` on the Langflow server.
+* A [Langflow flow](/concepts-flows) that contains a [**Chat Input**](/chat-input-and-output#chat-input) (or **Human Input**) component and a [**Chat Output**](/chat-input-and-output#chat-output) component. An A2A caller sends a message and reads a reply, so a flow can be served as an agent only if it can receive and answer messages. Langflow marks an eligible flow as "agent-type" when the flow is saved from the <Icon name="Bot" aria-hidden="true" /> **Agent** tab. A "workflow-typed" flow returns `404` from the A2A endpoints even when publishing is enabled.
 
 ## Publish a flow as an A2A agent
 
 1. Open the flow that you want to publish.
 
-2. In the flow editor's left sidebar, click **Agent**.
+2. In the visual editor's sidebar, click <Icon name="Bot" aria-hidden="true" /> **Agent**.
 
-    The **Agent** tab replaces the canvas. The left pane publishes the agent and shows its card, and the right pane is a tester for the live endpoint.
+    The <Icon name="Bot" aria-hidden="true" /> **Agent** pane appears.
 
-    If the flow is missing a chat input or a chat output, the status reads **Unavailable**, the toggle is disabled, and a banner names what to add. If `LANGFLOW_A2A_ENABLED` is `false` on the server, the status reads **Off**.
+    ![Agent pane for serving a flow as an A2A agent](/img/serve-a2a.png)
 
-3. Turn on **Serve as an A2A agent**.
+    This pane configures serving the agent and displays its [agent card](#customize-the-agent-card), and includes a tester for the A2A endpoint.
 
-    The status changes to **Draft** and the toggle reads **Turn on, then save to publish**. Nothing is served yet.
+    If the flow to be published is missing a chat input or a chat output, the status reads **Unavailable** and the toggle is disabled.
 
-4. Click **Save**.
+    If `LANGFLOW_A2A_ENABLED` is set to `false`, the status reads **Off**.
 
-    Langflow publishes the flow. The status changes to **Live**, and Langflow serves the flow's agent card and JSON-RPC endpoint.
+3. Set **Serve as an A2A agent** to **On**.
 
-5. Under **Address**, select **URL** to get the agent card URL that A2A clients use for discovery, or **curl** to get a ready-made `message/send` request. Click <Icon name="Copy" aria-hidden="true"/> to copy it.
+    The flow status changes to **Draft**.
+    The flow is not served yet.
 
-6. To test the published agent, type a message in the **Try it** pane, and then click **Send**.
+4. To publish the flow, click **Save**.
 
-    Langflow sends the message over the live A2A endpoint and shows the agent's reply, so you can confirm the agent answers before you share the card URL. If the agent requires an API key, paste a valid key in the field above the message box.
+    Langflow publishes the flow. The status changes to **Live**, and Langflow serves the flow's [agent card](#customize-the-agent-card) and JSON-RPC endpoint.
+
+5. To test the published agent, enter a message in the **Try it** pane, and then click **Send**.
+
+    Langflow sends the message over the live A2A endpoint and displays the agent's reply, so you can confirm the agent answers before you share the card URL.
+
+    If the [project's authentication](#authentication) is set to **API key** or **OAuth**, an **API key** field is displayed. Paste a valid Langflow API key so the test request can authenticate. If project authentication is **None**, the field is hidden and no key is required.
+
+6. To share the flow's endpoint, under **Address**, select **URL**.
+
+    Alternatively, select **curl** to create a `message/send` request.
 
 To stop serving the flow, turn off **Serve as an A2A agent**, and then click **Save**.
 
@@ -51,16 +67,20 @@ When a flow is published, Langflow serves two endpoints for it:
 
 | Endpoint | Description |
 | --- | --- |
-| `GET /api/v1/a2a/{flow_id}/.well-known/agent-card.json` | The agent card used for discovery. Public by design, because the A2A public card is unauthenticated by spec. |
+| `GET /api/v1/a2a/{flow_id}/.well-known/agent-card.json` | The [agent card](#customize-the-agent-card) used for discovery. Public by design, because the A2A public card is unauthenticated by spec. |
 | `POST /api/v1/a2a/{flow_id}/jsonrpc` | The JSON-RPC surface. Supports `message/send`, `message/stream`, `tasks/get`, `tasks/resubscribe`, and the `tasks/pushNotificationConfig/*` methods. |
 
 The card advertises `protocolVersion` `0.3.0` and `JSONRPC` as the preferred transport.
 
 A `message/send` request runs the flow and returns a completed task carrying the agent's reply as a text artifact. To thread a multi-turn conversation, send a `contextId`. Langflow maps it to the flow's chat session, so messages that share a `contextId` share history.
 
-## Customize the agent card
+## Customize the agent card {#customize-the-agent-card}
 
-By default the card uses the flow's name and description, the Langflow version, and a single skill derived from the flow's input schema. In the **Agent** tab, under **Customize card**, you can override the editable parts of the card:
+In the A2A protocol, an **agent card** is a JSON file that clients fetch to learn what the agent does and how to communicate with it.
+
+When you publish a flow, Langflow serves the card at `/.well-known/agent-card.json`.
+
+By default the card uses the flow's name and description, the Langflow version, and a single skill derived from the flow's input schema. In the <Icon name="Bot" aria-hidden="true" /> **Agent** tab, under **Customize card**, you can configure the following fields in the agent card:
 
 | Field | Description |
 | --- | --- |
@@ -70,9 +90,10 @@ By default the card uses the flow's name and description, the Langflow version, 
 | **Tags** | Keywords that help people find the agent. Defaults to `langflow`. |
 | **Examples** | Sample prompts shown to callers. They don't affect how the agent runs. |
 
-Empty fields fall back to the defaults. Click **Save** to apply your overrides.
+Click **Save** to apply your overrides.
 
-The **Agent** tab also shows the card's **Input contract**, the fields a caller sends, derived from the flow's input schema.
+'The <Icon name="Bot" aria-hidden="true" /> **Agent** tab also displays the card's **Input contract**, derived from the flow's input schema.
+Similar to an MCP tool's input schema, the **Input contract** is a list of the fields the agent expects from the caller.'
 
 ## Authentication
 
@@ -98,16 +119,9 @@ If the flow pauses for human input, `message/send` returns a task in the `input-
 
 ## Call a remote A2A agent
 
-The **A2A Agent** component lets a flow call out to any spec-compliant A2A agent, which is the reverse of publishing a flow.
+The [**A2A Agent** component](./a2a-agent-component) lets a flow call out to another agent flow in the same project, or to any remote spec-compliant A2A agent.
 
-The component resolves the remote agent's card from `<url>/.well-known/agent-card.json`, sends one `message/send`, and returns the reply text.
-
-| Input | Description |
-| --- | --- |
-| **Agent URL** | The base URL of the remote A2A agent. |
-| **Message** | The message to send. |
-| **API Key** | Optional. Sent as `x-api-key` for agents that require it. |
-| **Timeout (s)** | Maximum seconds to wait for the reply. Default `60`. |
+For parameters and setup steps, see [**A2A Agent** component](./a2a-agent-component).
 
 ## A2A environment variables
 

@@ -1,0 +1,38 @@
+---
+title: A2A Agent
+slug: /a2a-agent-component
+---
+
+The **A2A Agent** component calls an [Agent2Agent (A2A)](https://a2a-protocol.org/) agent and returns its reply.
+
+Use **Internal Model** to call published A2A agent flows within the same Langflow [project](/concepts-flows#projects), or use **External Mode** to call a remote A2A agent by its published URL.
+
+For more information on publishing a Langflow flow, see [Serve a flow as an A2A agent](./a2a-server).
+
+## Use the A2A Agent component in a flow
+
+1. Add an **A2A Agent** component to your flow.
+2. Choose a **Mode**:
+   * **Internal**: Select a published flow in this project. The flow must have [**Chat Input** and **Chat Output**](/chat-input-and-output) components.
+   * **External**: Enter the remote agent's base URL or its `/.well-known/agent-card.json` card URL. Both resolve the same agent. When the URL returns a card, the component shows a read-only **Agent card** preview.
+3. Connect a [**Chat Input**](/chat-input-and-output#chat-input) component to the **A2A Agent** component's **Message** input.
+4. Optional: If the remote agent requires `x-api-key` authentication, enter the **API Key** field, or use a [global variable](/configuration-global-variables).
+5. Connect the **Response** output to the next component in your flow, such as [**Chat Output**](/chat-input-and-output#chat-output).
+
+## A2A Agent parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| mode | Tab | Input parameter. **Internal** calls another agent flow in this project. **External** calls a remote A2A agent by URL. Default: `External`. |
+| agent_name_selected | Dropdown | Input parameter. **Internal** mode only. An agent flow in this project (one with [**Chat Input** and **Chat Output**](/chat-input-and-output)). |
+| agent_url | String | Input parameter. **External** mode only. The remote A2A agent's base URL or `/.well-known/agent-card.json` card URL. |
+| agent_card | Data display | Input parameter. **External** mode only. Read-only preview of the remote agent's advertised card. Appears when the URL returns a card. |
+| input_value | String | Input parameter. The message to send to the agent. Supports **Tool Mode**. |
+| api_key | Secret string | Input parameter. **External** mode only. Optional API key sent as `x-api-key` for agents that require it. |
+| timeout | Integer | Input parameter. **External** mode only. Maximum seconds to wait for the agent's reply. Default: `60`. |
+| response | Message | Output parameter. The agent's reply text. |
+
+## See also
+
+* [Use Langflow as an A2A agent](./a2a-server)
+* [Agent2Agent protocol](https://a2a-protocol.org/)

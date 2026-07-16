@@ -277,7 +277,7 @@ class A2AAgentComponent(Component):
         "Call an A2A (Agent-to-Agent) agent and return its reply. Pick an agent flow in this "
         "project, or point at a remote agent by its URL."
     )
-    documentation: str = "https://a2a-protocol.org/"
+    documentation: str = "https://docs.langflow.org/a2a-server"
     icon = "bot"
     name = "A2AAgent"
 
