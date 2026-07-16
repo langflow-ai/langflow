@@ -5,11 +5,17 @@ Community ask: call the Langflow Assistant from external MCP clients
 a local stdio process.
 
 These tests pin the ``/api/v1/agentic/mcp`` streamable-http endpoint:
-gated on ``agentic_experience`` (404 when off), authenticated with the same
-dependency as the other MCP HTTP endpoints, and delegating to the single
-lfx toolkit (``lfx.mcp.server``) with the caller's own credentials bound to
-the loopback REST client — so authorization happens at the API on every tool
-call, and ``login`` (a credential-forwarding surface) is not exposed.
+authenticated with the same dependency as the other MCP HTTP endpoints, and
+delegating to the single lfx toolkit (``lfx.mcp.server``) with the caller's own
+credentials bound to the loopback REST client — so authorization happens at the
+API on every tool call, and ``login`` (a credential-forwarding surface) is not
+exposed.
+
+The mount is NOT gated on ``agentic_experience``: its tools are REST calls the
+API already authorizes, and the ``lfx-mcp`` stdio bridge serves the same toolkit
+ungated, so gating the mount would only make HTTP weaker than stdio for no gain.
+The gate applies per-tool to ``run_assistant``, the only tool that reaches the
+assistant's code-generating endpoints.
 """
 
 from unittest.mock import AsyncMock, patch
@@ -50,14 +56,58 @@ async def mock_agentic_streamable_manager():
         yield manager
 
 
-class TestAgenticMcpFeatureGate:
-    async def test_should_return_404_when_agentic_experience_is_disabled(self, client: AsyncClient, logged_in_headers):
-        response = await client.post("api/v1/agentic/mcp", headers=logged_in_headers, json={"type": "test"})
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+@pytest.fixture
+def agentic_disabled(client):  # noqa: ARG001 — the app (and its settings service) must exist first
+    from langflow.services.deps import get_settings_service
 
-    async def test_should_return_404_on_health_check_when_disabled(self, client: AsyncClient):
+    settings = get_settings_service().settings
+    original = settings.agentic_experience
+    settings.agentic_experience = False
+    yield
+    settings.agentic_experience = original
+
+
+@pytest.mark.usefixtures("agentic_disabled")
+class TestAgenticMcpToolkitStaysReachableWhenAssistantIsOff:
+    """The toolkit is REST-backed and ungated on stdio; HTTP must not be weaker."""
+
+    async def test_should_answer_health_check_when_the_assistant_is_disabled(self, client: AsyncClient):
         response = await client.head("api/v1/agentic/mcp")
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_200_OK
+
+    async def test_should_dispatch_an_authenticated_post_when_the_assistant_is_disabled(
+        self, client: AsyncClient, logged_in_headers, mock_agentic_streamable_manager
+    ):
+        response = await client.post("api/v1/agentic/mcp", headers=logged_in_headers, json={"type": "test"})
+        assert response.status_code == status.HTTP_200_OK
+        mock_agentic_streamable_manager.handle_request.assert_called_once()
+
+    async def test_should_still_require_authentication_when_the_assistant_is_disabled(self, client: AsyncClient):
+        response = await client.post("api/v1/agentic/mcp", json={"type": "test"})
+        assert response.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
+
+
+@pytest.mark.usefixtures("agentic_disabled")
+class TestRunAssistantIsGatedPerTool:
+    async def test_should_hide_run_assistant_while_the_assistant_is_disabled(self):
+        from langflow.api.v1.agentic_mcp import handle_list_tools
+
+        tool_names = {tool.name for tool in await handle_list_tools()}
+
+        assert "run_assistant" not in tool_names
+
+    async def test_should_keep_the_authoring_tools_while_the_assistant_is_disabled(self):
+        from langflow.api.v1.agentic_mcp import handle_list_tools
+
+        tool_names = {tool.name for tool in await handle_list_tools()}
+
+        assert {"create_flow", "connect_components", "run_flow", "update_flow_from_spec"} <= tool_names
+
+    async def test_should_refuse_run_assistant_with_an_explanatory_error(self):
+        from langflow.api.v1 import agentic_mcp
+
+        with pytest.raises(ValueError, match="LANGFLOW_AGENTIC_EXPERIENCE"):
+            await agentic_mcp.handle_call_tool("run_assistant", {"instruction": "build a flow"})
 
 
 @pytest.mark.usefixtures("agentic_enabled")
@@ -96,6 +146,42 @@ class TestAgenticMcpTransportDispatch:
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
+class TestAgenticMcpReleasesItsDbSession:
+    """The auth dependency's session must be released before the tool call runs.
+
+    FastAPI holds a yield-dependency's session open for the whole request. Every tool here
+    issues a loopback REST call needing its own connection, so holding this one across the
+    dispatch deadlocks the mount until SQLite's busy_timeout (30s) aborts it -- measured at
+    30.02s before the fix, 0.03s after. Asserting the ORDER of the two calls is what pins the
+    invariant; reproducing the deadlock itself would take a live server and 30 seconds a run.
+    """
+
+    async def test_should_close_the_session_before_dispatching_to_the_transport(self):
+        from langflow.api.v1 import agentic_mcp
+
+        calls: list[str] = []
+        db = AsyncMock()
+        db.close = AsyncMock(side_effect=lambda: calls.append("session_closed"))
+        manager = AsyncMock()
+        manager.handle_request = AsyncMock(side_effect=lambda *_a: calls.append("dispatched"))
+
+        class FakeRequest:
+            base_url = "http://testserver/"
+            headers = {"x-api-key": "key-1"}
+            scope: dict = {}
+            receive = None
+            _send = None
+
+        with (
+            patch(f"{MODULE}._streamable_http.start", new_callable=AsyncMock),
+            patch(f"{MODULE}._streamable_http.get_manager", return_value=manager),
+        ):
+            await agentic_mcp.handle_agentic_streamable_http(FakeRequest(), current_user=object(), db=db)
+
+        assert calls == ["session_closed", "dispatched"]
+
+
+@pytest.mark.usefixtures("agentic_enabled")
 class TestAgenticMcpToolDelegation:
     async def test_should_list_the_lfx_toolkit_including_run_assistant(self):
         from langflow.api.v1.agentic_mcp import handle_list_tools

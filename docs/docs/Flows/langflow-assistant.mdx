@@ -307,7 +307,9 @@ If the Assistant doesn't act on your prompts, try a larger model.
 This lets a client build, inspect, patch, and run your flows without opening the visual editor, including a `run_assistant` tool that calls **Langflow Assistant** itself.
 Changes are saved to your flows and appear in the visual editor.
 
-The server requires `LANGFLOW_AGENTIC_EXPERIENCE=true`, and returns `404` when the Assistant is disabled.
+The flow-authoring tools don't require `LANGFLOW_AGENTIC_EXPERIENCE`, because each one is a Langflow API call that your API key already authorizes.
+Only `run_assistant` requires it: while the Assistant is disabled, that single tool isn't listed and returns an error explaining why, and the rest of the toolkit keeps working.
+
 Authenticate with a Langflow API key, in the same way as Langflow's other MCP endpoints:
 
 ```bash

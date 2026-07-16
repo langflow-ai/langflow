@@ -11,14 +11,21 @@ call goes through the REST API in loopback with the caller's own credentials
 every operation and no tool ever touches the database directly. The ``login``
 tool is excluded over HTTP: the caller is already authenticated, and accepting
 credentials/server URLs from tool arguments would be a credential-forwarding
-surface. The whole endpoint is gated on the ``agentic_experience`` setting
-(404 when disabled).
+surface.
+
+The mount itself is NOT gated on ``agentic_experience``. Every tool here is a
+REST call the API already authorizes, and the ``lfx-mcp`` stdio bridge serves
+the same toolkit ungated -- gating the whole mount would hold 32 ungated tools
+hostage to the one tool that needs the gate, and make HTTP arbitrarily weaker
+than stdio for no security gain. Instead ``run_assistant`` alone is excluded
+while the gate is off, since it is the only tool that reaches the assistant's
+code-generating endpoints.
 """
 
 from contextvars import ContextVar
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response
 from lfx.log.logger import logger
 from lfx.mcp.client import LangflowClient
 from lfx.mcp.server import client_scope
@@ -26,7 +33,7 @@ from lfx.mcp.server import mcp as lfx_mcp
 from mcp import types
 from mcp.server import Server
 
-from langflow.api.utils import CurrentActiveMCPUser
+from langflow.api.utils import CurrentActiveMCPUser, DbSession
 from langflow.api.v1.mcp import ResponseNoOp, StreamableHTTP
 from langflow.services.deps import get_settings_service
 
@@ -36,14 +43,20 @@ router = APIRouter(prefix="/agentic/mcp", tags=["agentic-mcp"], include_in_schem
 # arguments; the route already authenticates the caller, so keep it stdio-only.
 _HTTP_EXCLUDED_TOOLS = frozenset({"login"})
 
+# run_assistant drives the assistant's codegen endpoints, which agentic_experience gates.
+_AGENTIC_GATED_TOOLS = frozenset({"run_assistant"})
+
+
+def _excluded_tools() -> frozenset[str]:
+    """Tools hidden from this transport for the current request."""
+    if get_settings_service().settings.agentic_experience:
+        return _HTTP_EXCLUDED_TOOLS
+    return _HTTP_EXCLUDED_TOOLS | _AGENTIC_GATED_TOOLS
+
+
 current_loopback_client_ctx: ContextVar[LangflowClient | None] = ContextVar("current_loopback_client_ctx", default=None)
 
 server: Server = Server("langflow-mcp")
-
-
-def enforce_agentic_experience() -> None:
-    if not get_settings_service().settings.agentic_experience:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This endpoint is not available")
 
 
 def _loopback_client(request: Request) -> LangflowClient:
@@ -74,7 +87,8 @@ async def handle_list_resources() -> list[types.Resource]:
 
 @server.list_tools()
 async def handle_list_tools() -> list[types.Tool]:
-    return [tool for tool in await lfx_mcp.list_tools() if tool.name not in _HTTP_EXCLUDED_TOOLS]
+    excluded = _excluded_tools()
+    return [tool for tool in await lfx_mcp.list_tools() if tool.name not in excluded]
 
 
 @server.call_tool(validate_input=False)
@@ -88,6 +102,12 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Any:
     """
     if name in _HTTP_EXCLUDED_TOOLS:
         msg = f"Tool '{name}' is not available over HTTP"
+        raise ValueError(msg)
+    if name in _excluded_tools():
+        msg = (
+            f"Tool '{name}' requires the Langflow Assistant, which is disabled on this server "
+            "(LANGFLOW_AGENTIC_EXPERIENCE is not enabled). The other tools remain available."
+        )
         raise ValueError(msg)
     client = current_loopback_client_ctx.get()
     if client is None:
@@ -110,19 +130,31 @@ streamable_http_route_config = {
 }
 
 
-@router.head("", dependencies=[Depends(enforce_agentic_experience)])
+@router.head("")
 async def agentic_mcp_health() -> Response:
     return Response()
 
 
-@router.api_route("", dependencies=[Depends(enforce_agentic_experience)], **streamable_http_route_config)
-@router.api_route("/", dependencies=[Depends(enforce_agentic_experience)], **streamable_http_route_config)
-async def handle_agentic_streamable_http(request: Request, current_user: CurrentActiveMCPUser) -> Response:
-    # current_user enforces authentication; the loopback client then carries the
-    # caller's own headers so every tool call re-authenticates at the REST API.
+@router.api_route("", **streamable_http_route_config)
+@router.api_route("/", **streamable_http_route_config)
+async def handle_agentic_streamable_http(
+    request: Request, current_user: CurrentActiveMCPUser, db: DbSession
+) -> Response:
+    """Dispatch one MCP request, with the caller's loopback client bound.
+
+    ``current_user`` only enforces authentication -- the loopback client carries the caller's
+    own headers, so every tool call re-authenticates at the REST API.
+
+    ``db`` is the very session the auth dependency opened (same cached dependency), and FastAPI
+    would hold it open for the whole request, tool call included. Every tool then issues a
+    loopback REST call that needs its own connection, and on SQLite it waits on the one this
+    request is still holding until ``busy_timeout`` (30s) kills it -- so the mount deadlocks on
+    the default database. Authentication is finished by now and nothing below reads the session,
+    so release it before dispatching.
+    """
     del current_user
-    # Started lazily so the session manager only runs when the endpoint is used
-    # (start() is idempotent and cheap once running).
+    await db.close()
+    # start() is idempotent; called here so the session manager only runs once the endpoint is used.
     await _streamable_http.start()
     context_token = current_loopback_client_ctx.set(_loopback_client(request))
     try:
