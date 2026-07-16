@@ -13,7 +13,7 @@ const toActionId = (label: string) =>
   label.trim().toLowerCase().replace(/ /g, "_");
 
 const baseInputClass =
-  "h-6 rounded-full border border-border bg-background px-2.5 text-sm outline-none focus:border-ring";
+  "h-7 rounded-full border border-border bg-background px-2.5 text-sm outline-none focus:border-ring";
 const inputClass = `${baseInputClass} w-32`;
 
 export default function ActionPickerComponent({
@@ -140,7 +140,7 @@ export default function ActionPickerComponent({
             key={action}
             variant="secondaryStatic"
             size="md"
-            className="gap-1 rounded-full px-2.5 font-normal"
+            className="h-7 gap-1 rounded-full px-2.5 font-normal"
           >
             <button
               type="button"

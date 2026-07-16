@@ -17,23 +17,26 @@ import sqlalchemy
 import websockets
 from cryptography.fernet import InvalidToken
 from elevenlabs import ElevenLabs
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from lfx.log import logger
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.secrets import secret_value_to_str
-from sqlalchemy import select
+from sqlmodel import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 from websockets.asyncio.client import ClientConnection
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.chat import build_flow_and_stream
+from langflow.api.v1.flows_helpers import _read_flow
 from langflow.memory import aadd_messagetables
 from langflow.schema.properties import Properties
 from langflow.services.auth.utils import get_current_user_for_websocket
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.authorization.fetch import deny_to_404
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_variable_service, session_scope
+from langflow.services.deps import get_variable_service
 from langflow.utils.voice_utils import BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K, resample_24k_to_16k
 
 router = APIRouter(prefix="/voice", tags=["Voice"], include_in_schema=False)
@@ -501,15 +504,31 @@ message_tasks: dict[str, asyncio.Task] = {}
 last_sender_by_session: defaultdict[str, str | None] = defaultdict(lambda: None)
 
 
-async def get_flow_desc_from_db(flow_id: str) -> Flow:
-    async with session_scope() as session:
-        stmt = select(Flow).where(Flow.id == UUID(flow_id))
-        result = await session.exec(stmt)
-        flow = result.scalar_one_or_none()
-        if not flow:
-            msg = f"Flow with id {flow_id} not found"
-            raise ValueError(msg)
-        return flow.description
+async def _get_authorized_voice_flow(flow_id: str, current_user: CurrentActiveUser, session: DbSession) -> Flow:
+    """Load a voice flow with the same share-aware execute policy as standard builds."""
+    flow_uuid = UUID(flow_id)
+    flow = await _read_flow(session, flow_uuid, current_user.id)
+    if flow is None:
+        public_stmt = select(Flow).where(
+            Flow.id == flow_uuid,
+            Flow.access_type == AccessTypeEnum.PUBLIC,
+        )
+        flow = (await session.exec(public_stmt)).first()
+    if flow is None:
+        raise HTTPException(status_code=404, detail="Flow not found")
+
+    try:
+        await ensure_flow_permission(
+            current_user,
+            FlowAction.EXECUTE,
+            flow_id=flow_uuid,
+            flow_user_id=flow.user_id,
+            workspace_id=flow.workspace_id,
+            folder_id=flow.folder_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Flow not found") from exc
+    return flow
 
 
 async def get_or_create_elevenlabs_client(user_id=None, session=None):
@@ -745,10 +764,9 @@ async def flow_as_tool_websocket(
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
         if current_user is None or openai_key is None:
             return
-        # Resolve voice config only after authentication, scoped to this user.
-        voice_config = get_voice_config(session_id, current_user.id)
         try:
-            flow_description = await get_flow_desc_from_db(flow_id)
+            flow = await _get_authorized_voice_flow(flow_id, current_user, session)
+            flow_description = flow.description
             flow_tool = {
                 "name": "execute_flow",
                 "type": "function",
@@ -764,6 +782,10 @@ async def flow_as_tool_websocket(
             await client_websocket.send_json(err_msg)
             await logger.aerror(f"Failed to load flow: {e}")
             return
+
+        # Resolve voice config only after authentication and flow authorization,
+        # scoped to this user.
+        voice_config = get_voice_config(session_id, current_user.id)
 
         url = "wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview"
         headers = {

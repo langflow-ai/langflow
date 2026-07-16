@@ -30,7 +30,6 @@ import { scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
-import HumanInputNodeBadge from "./components/HumanInputNodeBadge";
 import NodeDescription from "./components/NodeDescription";
 import NodeLegacyComponent from "./components/NodeLegacyComponent";
 import NodeName from "./components/NodeName";
@@ -641,7 +640,6 @@ function GenericNode({
                   setHasChangedNodeDescription={setHasChangedNodeDescription}
                 />
               </div>
-              <HumanInputNodeBadge nodeId={data.id} />
             </div>
             {!showNode && (
               <>
