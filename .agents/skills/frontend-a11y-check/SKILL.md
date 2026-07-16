@@ -20,6 +20,7 @@ Use alongside:
 - `e2e-testing` for Playwright patterns.
 - `frontend-i18n` when adding or changing user-facing labels, accessible names, `aria-label`, tooltips, or visible strings.
 - `ibm-a11y-automation` to run the Python IBM route scanner and produce Markdown/HTML reports.
+- `ibm-a11y-level1-audit` for a full IBM Level 1 audit → report → fix → verify loop against Equal Access Level 1 criteria.
 
 ## Goal
 
@@ -134,6 +135,16 @@ Rule of thumb: touch a table/tree/listbox/menu → scan with IBM.
 - **Disabled controls**: keep them out of the tab order. Only use `aria-disabled` (instead of native `disabled`) when the control must stay discoverable, and keep it non-operable.
 - **Icon-only buttons**: real `<button>` with an `aria-label`.
 - **Custom clickable divs/cells**: prefer a semantic element; if a cell/card must open something it needs Enter/Space handling, not just `onClick`.
+
+## Best practices (settings grids + modals)
+
+Apply these when building or reviewing AG Grid tables that open an edit modal (reference: `GlobalVariablesPage`, `tests/a11y/global-variables.a11y.spec.ts`):
+
+- **Keyboard map on selectable rows:** **Space** toggles the row checkbox; **Enter** opens the row’s edit/detail UI. Do not use Space to open the modal.
+- **Scope the map on the page:** implement with page-level `onCellKeyDown` and per-column `suppressKeyboardEvent` for Enter/Space so AG Grid’s default Space handling does not compete. Prefer not changing shared `TableComponent` defaults unless the same map is product-wide.
+- **Keep selection UI in sync:** after `node.setSelected`, update React selection state so toolbar actions (e.g. delete) enable/disable correctly (`TableOptions.hasSelection` is read at render time).
+- **Retain place on modal close (2.4.3):** remember the focused cell (`rowIndex` + `colId`) when opening edit; on close (Escape, Cancel, or save) restore with `api.setFocusedCell` + DOM `.focus()`, using a few `requestAnimationFrame`s to outlast Radix dialog cleanup. Controlled edit dialogs without a Radix trigger need this explicitly. Create flows that use a real `DialogTrigger` (e.g. Add New) should restore to that trigger.
+- **Verify with keyboard tests:** open from a cell → Escape → focus is still on that cell; Enter can open again without a mouse re-click.
 
 ## Choose Test Layer
 

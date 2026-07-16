@@ -24,6 +24,8 @@ class FieldTypes(str, Enum):
     DICT = "dict"
     NESTED_DICT = "NestedDict"
     SORTABLE_LIST = "sortableList"
+    ACTION_PICKER = "actionPicker"
+    DURATION = "duration"
     CONNECTION = "connect"
     AUTH = "auth"
     FILE = "file"
@@ -39,6 +41,7 @@ class FieldTypes(str, Enum):
     TOOLS = "tools"
     MCP = "mcp"
     MODEL = "model"
+    DATA_DISPLAY = "data_display"
     # Wire value stays "knowledge_backend" for backward compatibility with
     # serialized flows that predate the UI rename to "DB Provider".
     DB_PROVIDER = "knowledge_backend"

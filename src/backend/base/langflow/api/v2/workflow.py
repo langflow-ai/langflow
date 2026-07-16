@@ -12,6 +12,8 @@ Endpoints:
     POST /workflows: Execute a workflow (sync, stream, or background modes)
     GET /workflows: Get workflow job status by job_id
     POST /workflows/stop: Stop a running workflow execution
+    GET /workflows/pending: List suspended HITL jobs for a flow
+    POST /workflows/{job_id}/resume: Resume a suspended (HITL) workflow
     GET /workflows/{job_id}/events: Re-attach to a background run's event stream
 
 Features:
@@ -37,6 +39,8 @@ from lfx.schema.workflow import (
     JobStatus,
     WorkflowExecutionResponse,
     WorkflowJobResponse,
+    WorkflowResumeRequest,
+    WorkflowResumeResponse,
     WorkflowRunRequest,
     WorkflowStopRequest,
     WorkflowStopResponse,
@@ -66,6 +70,7 @@ from langflow.api.v2.workflow_reconstruction import reconstruct_workflow_respons
 from langflow.api.v2.workflow_validation import (
     _enforce_flow_data_override_owner,
     _flow_not_found_privacy_exception,
+    _reject_sync_only_fields,
     _reject_unsupported_sync_fields,
     _validate_flow_data_for_execution,
 )
@@ -94,8 +99,8 @@ from langflow.services.jobs.exceptions import DuplicateJobError
 # with its own idempotent early return).
 _TERMINAL_JOB_STATUSES = frozenset({JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.TIMED_OUT})
 
-# The langflow durable background routes (GET status, POST /stop,
-# GET /{job_id}/events). The POST run path is contributed
+# The langflow durable background routes (GET status, POST /stop, GET /pending,
+# POST /{job_id}/resume, GET /{job_id}/events). The POST run path is contributed
 # by the shared lfx router (``lfx.workflow.router.create_workflow_router``)
 # bound to ``LangflowWorkflowHost``; only these durable, behaviorally-rich
 # routes stay langflow-owned. Both are mounted on the same ``/workflows``
@@ -219,6 +224,7 @@ async def authorize_flow_action(
 def _apply_execution_gates(parsed, flow, current_user: UserRead) -> None:
     """The langflow request gates that run before a flow executes."""
     _reject_unsupported_sync_fields(parsed)
+    _reject_sync_only_fields(parsed)
     try:
         _enforce_flow_data_override_owner(parsed, flow, current_user)
     except HTTPException as exc:
@@ -430,7 +436,7 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
     parsed = parse_workflow_run_request(WorkflowRunRequest(**request))
     terminal_error_type = adapter.terminal_error_type
 
-    async def _source(*, job_id=None, **_kwargs):
+    async def _source(*, job_id=None, resume=None, **_kwargs):
         flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id, widen_for_shares=True)
         fresh_background_tasks = BackgroundTasks()
         errored = False
@@ -442,6 +448,8 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 background_tasks=fresh_background_tasks,
                 parsed=parsed,
                 current_user=user,
+                job_id=job_id,
+                resume=resume,
                 # Key the persisted vertex builds by the durable job_id so a completed run's GET
                 # status can reconstruct its outputs (and recover the session_id it ran under)
                 # instead of falling back to the leaner Job.result rebuild.
@@ -839,6 +847,96 @@ async def stop_workflow(
                 "message": f"Failed to stop job {job_id}.",
             },
         ) from exc
+
+
+@router.get(
+    "/pending",
+    summary="List pending human-input requests",
+    description="Suspended HITL jobs for a flow plus their pending request, for the Traces overlay.",
+)
+async def list_pending_workflows(
+    current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
+    flow_id: Annotated[UUID, Query(description="Flow ID to list pending HITL requests for")],
+) -> list[dict]:
+    from langflow.api.v2.hitl import list_pending_human_requests
+
+    return await list_pending_human_requests(flow_id, current_user.id)
+
+
+@router.post(
+    "/{job_id}/resume",
+    summary="Resume Workflow",
+    description="Resume a suspended (human-in-the-loop) workflow with a decision.",
+)
+async def resume_workflow(
+    job_id: str,
+    request: WorkflowResumeRequest,
+    current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
+) -> WorkflowResumeResponse:
+    """Resume a SUSPENDED workflow run with a human decision.
+
+    Owner-or-superuser; a non-owner non-superuser (or unknown/non-workflow job)
+    maps to 404 to avoid leaking other users' runs. A stale/duplicate request_id
+    or a non-suspended job maps to 409 (single-use enforced behind ``resume_job``).
+    Resuming executes the remainder of the flow, so flow:execute is re-enforced —
+    access revoked while the run was suspended must not let the decision through.
+    """
+
+    def _not_found() -> HTTPException:
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "Workflow job not found", "code": "JOB_NOT_FOUND", "job_id": job_id},
+        )
+
+    try:
+        parsed_job_id = UUID(job_id)
+    except ValueError as exc:
+        raise _not_found() from exc
+
+    job = await get_job_service().get_job_by_job_id(parsed_job_id)
+    is_owner = job is not None and job.user_id is not None and job.user_id == current_user.id
+    if job is None or job.type != JobType.WORKFLOW or not (is_owner or current_user.is_superuser):
+        raise _not_found()
+
+    from langflow.api.v2.hitl import ensure_resume_execute_permission, is_decision_allowed, mark_card_answered
+
+    await ensure_resume_execute_permission(current_user, job.flow_id)
+
+    if not await is_decision_allowed(parsed_job_id, request.decision or {}):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error": "Invalid decision",
+                "code": "INVALID_DECISION",
+                "message": "decision.action_id is not one of the pending request's allowed_decisions.",
+                "job_id": job_id,
+            },
+        )
+
+    service = get_background_execution_service()
+    if service._frame_source_factory is None:  # noqa: SLF001
+        service._frame_source_factory = _default_frame_source_factory  # noqa: SLF001
+    # Snapshot the card id before the continuation runs: it may reach another pause and
+    # overwrite job metadata, and this decision must never stamp that later card.
+    card_message_id = (job.job_metadata or {}).get("card_message_id")
+    accepted = await service.resume_job(
+        parsed_job_id,
+        current_user,
+        request_id=request.request_id,
+        decision=request.decision or {},
+    )
+    if not accepted:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Job is not resumable",
+                "code": "NOT_RESUMABLE",
+                "message": "Job is not suspended, already resumed, or the request_id is stale.",
+                "job_id": job_id,
+            },
+        )
+    await mark_card_answered(parsed_job_id, request.request_id, request.decision or {}, card_message_id=card_message_id)
+    return WorkflowResumeResponse(job_id=job_id, status="resuming", message="Resume accepted")
 
 
 @router.get(

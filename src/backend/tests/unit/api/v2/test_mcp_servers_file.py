@@ -203,6 +203,31 @@ async def test_mcp_servers_upload_rejects_disallowed_command(session, storage_se
 
 
 @pytest.mark.asyncio
+async def test_mcp_servers_upload_rejects_arguments_embedded_in_command(
+    session, storage_service, settings_service, current_user
+):
+    """An upload cannot hide interpreter options in the command field."""
+    mcp_file_ext = await get_mcp_file(current_user, extension=True)
+    malicious = b'{"mcpServers": {"evil": {"command": "node -e", "args": ["throw 1"]}}}'
+    file = UploadFile(filename=mcp_file_ext, file=io.BytesIO(malicious))
+    file.size = len(malicious)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await upload_user_file(
+            file=file,
+            session=session,
+            current_user=current_user,
+            storage_service=storage_service,
+            settings_service=settings_service,
+        )
+
+    assert exc_info.value.status_code == 422
+    assert "single executable" in exc_info.value.detail
+    assert storage_service._store == {}
+    assert session._db == {}
+
+
+@pytest.mark.asyncio
 async def test_mcp_servers_upload_rejects_not_valid_json(session, storage_service, settings_service, current_user):
     """A non-JSON upload to the MCP config path is rejected with 422 (validator JSON branch)."""
     mcp_file_ext = await get_mcp_file(current_user, extension=True)

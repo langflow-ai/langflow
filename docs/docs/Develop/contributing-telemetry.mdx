@@ -83,6 +83,35 @@ This telemetry event is sent for each component execution.
 - **Success**: Whether the component operated successfully, which helps in quality control.
 - **ErrorMessage**: Details of any errors encountered, crucial for debugging and improvement.
 
+### Component inputs
+
+This telemetry event is sent alongside each component execution.
+It is joined to the Component event through the component run ID.
+
+By default, Langflow does not send component input values in telemetry.
+Only these field types are tracked:
+
+- Integer and float numbers
+- Booleans
+- Dropdown selections
+- Tab selections
+
+Free-text fields such as prompts, messages, code, and multiline text are never tracked.
+Password, file, auth, connection, and MCP configuration fields are never tracked.
+
+- **ComponentRunId**: Unique identifier for the component run, used to join this event with the Component event.
+- **ComponentId**: Identifier for the component instance.
+- **ComponentName**: Name of the component.
+- **ComponentInputs**: Dictionary of input names and their configured values.
+- **ChunkIndex**: Index of the chunk when a large payload is split to respect size limits.
+- **TotalChunks**: Total number of chunks when a large payload is split.
+
+### Component index
+
+This telemetry event is sent when Langflow loads the component index at startup.
+It reports aggregate metrics such as module and component counts and load time.
+It does not include user or flow data.
+
 ### Exception
 
 This telemetry event is sent when an unhandled exception is captured by Langflow's lifecycle or global exception handler.

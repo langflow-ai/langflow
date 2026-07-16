@@ -13,6 +13,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import type { targetHandleType } from "@/types/flow";
 import ForwardedIconComponent, {
@@ -134,6 +135,8 @@ function NodeOutputField({
   const updateNodeInternals = useUpdateNodeInternals();
 
   const edges = useFlowStore((state) => state.edges);
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isReadOnly = useIsFlowReadOnly(currentFlowId);
   const setNode = useFlowStore((state) => state.setNode);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const flowPool = useFlowStore((state) => state.flowPool);
@@ -206,6 +209,7 @@ function NodeOutputField({
 
   const handleUpdateOutputHide = useCallback(
     (value?: boolean) => {
+      if (isReadOnly) return;
       setNode(data.id, (oldNode) => {
         if (oldNode.type !== "genericNode") return oldNode;
         const newNode = cloneDeep(oldNode);
@@ -225,14 +229,19 @@ function NodeOutputField({
       });
       updateNodeInternals(data.id);
     },
-    [data.id, index, setNode, updateNodeInternals],
+    [data.id, index, isReadOnly, setNode, updateNodeInternals],
   );
 
   useEffect(() => {
     const outputHasGroupOutputsFalse =
       data.node?.outputs?.[index]?.group_outputs === false;
 
-    if (disabledOutput && hidden && !outputHasGroupOutputsFalse) {
+    if (
+      !isReadOnly &&
+      disabledOutput &&
+      hidden &&
+      !outputHasGroupOutputsFalse
+    ) {
       handleUpdateOutputHide(false);
     }
   }, [
@@ -241,6 +250,7 @@ function NodeOutputField({
     hidden,
     data.node?.outputs,
     index,
+    isReadOnly,
   ]);
 
   const [openOutputModal, setOpenOutputModal] = useState(false);

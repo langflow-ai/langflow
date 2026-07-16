@@ -943,7 +943,11 @@ async def test_redis_service_cancel_marker_closes_signal_before_subscribe_race()
                 raise
 
         producer.start_job(job_id, _long_running())
-        await asyncio.wait_for(cancelled.wait(), timeout=2)
+        # Generous hang-guard, not a latency assertion: the marker path runs an
+        # extra spawned task (exists + delete + handle_cancel) so it needs more
+        # event-loop hops than the direct-cancel tests, and a 2s bound flaked
+        # under CI load on py3.14. The cancel still fires in ms when healthy.
+        await asyncio.wait_for(cancelled.wait(), timeout=5)
         assert cancelled.is_set()
         assert producer._cancel_stats["marker_hit"] == 1
     finally:
@@ -2152,6 +2156,7 @@ async def test_generate_flow_events_calls_end_all_traces_on_cancel(monkeypatch):
     mock_graph.run_manager = MagicMock()
     mock_graph.run_manager.vertices_being_run = set()
     mock_graph.build_vertex = _blocking_build_vertex
+    mock_graph.check_and_handle_pause = AsyncMock()  # HITL pause seam awaited per-vertex
     mock_graph.end_all_traces = _fake_end_all_traces
     mock_graph.end_all_traces_in_context = _fake_end_all_traces_in_context
 

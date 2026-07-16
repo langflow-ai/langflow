@@ -159,7 +159,7 @@ The **Agent** component has two outputs:
     1. In the **Agent** component, click the output label near the component's output port and select **Structured Response**.
     2. Select the **Agent** component to open the [component inspection panel](/concepts-components#component-inspection-panel), and then click <Icon name="Table" aria-hidden="true"/> **Open table**.
     3. Click <Icon name="Plus" aria-hidden="true"/> **+** to add a row for each field you want to extract. For each row, enter a **Name**, **Type**, and optionally a **Description** and **As List** toggle.
-    4. Connect the **Structured Response** port to a downstream component that accepts [`Data`](/data-types#data) input, such as a **Parser** or **JSON Operations** component.
+    4. Connect the **Structured Response** port to a downstream component that accepts [`JSON`](/data-types#json) input, such as a **Parser** or [**Data Operations** component](./operations).
 
     The **Agent** component uses the connected LLM to extract structured data, and the extraction behavior is configured in the **Output Format Instructions** field.
     Modify the prompt in the **Output Format Instructions** field to change extraction behavior.

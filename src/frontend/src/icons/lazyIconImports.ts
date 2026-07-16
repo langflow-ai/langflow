@@ -274,6 +274,10 @@ export const lazyIconsMapping = {
       default: mod.HackerNewsIcon,
     })),
   HCD: () => import("@/icons/HCD").then((mod) => ({ default: mod.HCDIcon })),
+  HumanInput: () =>
+    import("@/icons/HumanInput").then((mod) => ({
+      default: mod.HumanInputIcon,
+    })),
   HomeAssistant: () =>
     import("@/icons/HomeAssistant").then((mod) => ({
       default: mod.HomeAssistantIcon,
@@ -375,6 +379,8 @@ export const lazyIconsMapping = {
     import("@/icons/OpenAi").then((mod) => ({ default: mod.OpenAiIcon })),
   OpenAICopy: () =>
     import("@/icons/OpenAI copy").then((mod) => ({ default: mod.OpenAIIcon })),
+  OpenRAG: () =>
+    import("@/icons/OpenRAG").then((mod) => ({ default: mod.OpenRAGIcon })),
   OpenRouter: () =>
     import("@/icons/OpenRouter").then((mod) => ({
       default: mod.OpenRouterIcon,

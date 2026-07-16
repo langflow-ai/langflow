@@ -217,6 +217,9 @@ class Message(Data):
                     return _CONTENT_TYPE_ADAPTER.validate_python(item)
                 if "title" in item and "contents" in item:
                     return ContentBlock.model_validate(item)
+                # Untagged legacy/v1 text block: infer TextContent (else memory reload crashes).
+                if "text" in item:
+                    return TextContent.model_validate(item)
                 return _CONTENT_TYPE_ADAPTER.validate_python(item)
             return item
 

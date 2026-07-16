@@ -26,6 +26,8 @@ describe("computeDisplayHandle", () => {
         "slider",
         "tab",
         "sortableList",
+        "actionPicker",
+        "duration",
         "connect",
         "auth",
         "query",
