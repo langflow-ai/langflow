@@ -158,9 +158,9 @@ class SecuritySettings(BaseModel):
 
     # Rate Limiting
     rate_limit_enabled: bool = True
-    """Enable rate limiting for login endpoint. Set to False to disable (useful for testing)."""
+    """Enable rate limiting for login and public-flow build endpoints. Set to False to disable."""
     rate_limit_per_minute: int = 5
-    """Number of login attempts allowed per minute per IP."""
+    """Number of login attempts or builds of each public flow allowed per minute per IP."""
     rate_limit_storage_uri: str = "memory://"
     """Storage backend for rate limiting. Use 'memory://' for single-server or 'redis://host:port' for multi-server."""
     rate_limit_trust_proxy: bool = False
