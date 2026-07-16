@@ -1,5 +1,7 @@
 from unittest.mock import Mock, patch
 
+import requests
+
 from lfx_talordata import TalordataSERPAPIComponent
 
 
@@ -91,3 +93,82 @@ def test_fetch_content_maps_organic_results(mock_post):
     _, kwargs = mock_post.call_args
     assert kwargs["data"]["q"] == "coffee"
     assert kwargs["headers"]["Authorization"] == "Bearer test-key"
+
+
+@patch("lfx_talordata.components.talordata.talordata_serp_api.requests.post")
+def test_fetch_content_handles_request_exception(mock_post):
+    mock_post.side_effect = requests.RequestException("network failure")
+
+    component = TalordataSERPAPIComponent(
+        api_key="test-key",
+        input_value="coffee",
+        engine="google",
+        max_results=5,
+        gl="us",
+        hl="en",
+        location="",
+        device="desktop",
+        page=1,
+        search_params={},
+        _session_id="test-session",
+    )
+
+    results = component.fetch_content()
+
+    assert len(results) == 1
+    assert "Talordata request failed" in results[0].data["error"]
+    assert "network failure" in results[0].data["error"]
+
+
+@patch("lfx_talordata.components.talordata.talordata_serp_api.requests.post")
+def test_fetch_content_handles_invalid_json(mock_post):
+    response = Mock()
+    response.raise_for_status.return_value = None
+    response.json.side_effect = ValueError("invalid json")
+    mock_post.return_value = response
+
+    component = TalordataSERPAPIComponent(
+        api_key="test-key",
+        input_value="coffee",
+        engine="google",
+        max_results=5,
+        gl="us",
+        hl="en",
+        location="",
+        device="desktop",
+        page=1,
+        search_params={},
+        _session_id="test-session",
+    )
+
+    results = component.fetch_content()
+
+    assert len(results) == 1
+    assert "Talordata returned invalid JSON" in results[0].data["error"]
+    assert "invalid json" in results[0].data["error"]
+
+
+@patch("lfx_talordata.components.talordata.talordata_serp_api.requests.post")
+def test_fetch_content_handles_null_organic_results(mock_post):
+    response = Mock()
+    response.json.return_value = {"organic_results": None}
+    response.raise_for_status.return_value = None
+    mock_post.return_value = response
+
+    component = TalordataSERPAPIComponent(
+        api_key="test-key",
+        input_value="coffee",
+        engine="google",
+        max_results=5,
+        gl="us",
+        hl="en",
+        location="",
+        device="desktop",
+        page=1,
+        search_params={},
+        _session_id="test-session",
+    )
+
+    results = component.fetch_content()
+
+    assert results == []

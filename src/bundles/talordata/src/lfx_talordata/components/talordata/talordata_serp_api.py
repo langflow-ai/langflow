@@ -88,7 +88,7 @@ class TalordataSERPAPIComponent(Component):
             self.status = [error_data]
             return [error_data]
 
-        organic_results = response_json.get("organic_results", [])[: self.max_results]
+        organic_results = (response_json.get("organic_results") or [])[: self.max_results]
         results = [
             Data(
                 text=result.get("snippet", ""),
