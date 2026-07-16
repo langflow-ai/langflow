@@ -1,8 +1,8 @@
-"""Regression tests for Anthropic thinking-block compatibility in the bundle."""
+"""Regression tests for Anthropic thinking-block compatibility in LFX."""
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from lfx_anthropic.anthropic_chat_model import ChatAnthropicThinkingCompat, _ensure_thinking_field
-from lfx_anthropic.components.anthropic.anthropic import AnthropicModelComponent
+from lfx.base.models.anthropic_chat_model import ChatAnthropicThinkingCompat, _ensure_thinking_field
+from lfx.base.models.unified_models.class_registry import get_model_class
 
 
 def _malformed_history() -> list:
@@ -36,29 +36,25 @@ def _thinking_blocks(payload: dict) -> list[dict]:
     return blocks
 
 
-def _build_model() -> ChatAnthropicThinkingCompat:
-    component = AnthropicModelComponent(
-        model_name="claude-sonnet-5",
+def test_payload_thinking_blocks_always_carry_thinking_field():
+    model = ChatAnthropicThinkingCompat(
+        model="claude-sonnet-5",
         api_key="test-key",  # pragma: allowlist secret
         max_tokens=1024,
-        temperature=0.1,
-        base_url="https://api.anthropic.com",
-        stream=False,
     )
-    return component.build_model()
 
-
-def test_component_builds_bundle_local_compat_class():
-    model = _build_model()
-
-    assert type(model) is ChatAnthropicThinkingCompat
     blocks = _thinking_blocks(model._get_request_payload(_malformed_history()))
+
     assert blocks
     assert all(block.get("thinking") == "" for block in blocks)
 
 
 def test_payload_preserves_existing_thinking_text():
-    model = _build_model()
+    model = ChatAnthropicThinkingCompat(
+        model="claude-sonnet-5",
+        api_key="test-key",  # pragma: allowlist secret
+        max_tokens=1024,
+    )
     history = _malformed_history()
     history[1].content[0] = {
         "type": "thinking",
@@ -71,6 +67,10 @@ def test_payload_preserves_existing_thinking_text():
 
     assert blocks
     assert blocks[0]["thinking"] == "let me reason"
+
+
+def test_agent_registry_resolves_compat_class():
+    assert get_model_class("ChatAnthropic") is ChatAnthropicThinkingCompat
 
 
 def test_ensure_thinking_field_handles_missing_and_none():

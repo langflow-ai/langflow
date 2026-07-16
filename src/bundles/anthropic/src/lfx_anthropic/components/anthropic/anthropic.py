@@ -77,7 +77,7 @@ class AnthropicModelComponent(LCModelComponent):
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         try:
-            from lfx.base.models.anthropic_chat_model import ChatAnthropicThinkingCompat
+            from lfx_anthropic.anthropic_chat_model import ChatAnthropicThinkingCompat
         except ImportError as e:
             msg = "langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`."
             raise ImportError(msg) from e
