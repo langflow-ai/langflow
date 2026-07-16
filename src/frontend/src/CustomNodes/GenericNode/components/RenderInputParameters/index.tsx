@@ -155,7 +155,24 @@ const RenderInputParameters = ({
     },
   );
 
-  return <>{renderInputParameter}</>;
+  // LE-1810 (B05 polish): with several handles on a collapsed card the
+  // percentage offsets land too close together — an invisible spacer grows
+  // the card so each handle gets breathing room (~18px per handle).
+  const minimizedSpacer =
+    !showNode && handleFields.length > 1 ? (
+      <div
+        aria-hidden="true"
+        data-testid="minimized-handle-spacer"
+        style={{ height: `${(handleFields.length + 1) * 18}px` }}
+      />
+    ) : null;
+
+  return (
+    <>
+      {minimizedSpacer}
+      {renderInputParameter}
+    </>
+  );
 };
 
 export default RenderInputParameters;
