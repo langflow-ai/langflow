@@ -87,7 +87,9 @@ test(
 
     await expect(removeInputValue).toBeDisabled();
 
-    await removeInputValue.hover();
+    // The disabled button is pointer-events-none (so the tooltip reaches
+    // real users through its wrapper) — hover the wrapper, not the button.
+    await page.getByTestId("inspector-remove-wrapper-input_value").hover();
 
     await expect(
       page.getByText("Cannot change visibility of connected handles"),

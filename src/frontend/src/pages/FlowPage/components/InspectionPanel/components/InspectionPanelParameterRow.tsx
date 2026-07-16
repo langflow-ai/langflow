@@ -153,6 +153,7 @@ export default function InspectionPanelParameterRow({
               "inline-flex",
               isDisabledField && "cursor-not-allowed",
             )}
+            data-testid={`inspector-api-wrapper-${name}`}
           >
             <Button
               unstyled
@@ -191,6 +192,7 @@ export default function InspectionPanelParameterRow({
                 "inline-flex",
                 (isConnected || isRequiredAndEmpty) && "cursor-not-allowed",
               )}
+              data-testid={`inspector-remove-wrapper-${name}`}
             >
               <Button
                 unstyled
