@@ -242,6 +242,32 @@ class SqliteDurableJobStore:
 
         return await self._run(op)
 
+    async def claim_suspended_for_cancel(self, job_id: str) -> bool:
+        """Atomically flip SUSPENDED->CANCELLED; True iff this caller won.
+
+        Mirror of ``claim_suspended_for_resume`` for the supersede side of the race:
+        a resume that already flipped the row to IN_PROGRESS keeps its run.
+        """
+
+        def op(conn: sqlite3.Connection) -> bool:
+            cursor = conn.execute(
+                "UPDATE jobs SET status = ?, updated_at = ? WHERE job_id = ? AND status = ?",
+                (JobStatus.CANCELLED.value, _utcnow(), job_id, JobStatus.SUSPENDED.value),
+            )
+            return cursor.rowcount == 1
+
+        return await self._run(op)
+
+    async def suspended_job_ids_for_flow(self, flow_id: str) -> list[str]:
+        def op(conn: sqlite3.Connection) -> list[str]:
+            rows = conn.execute(
+                "SELECT job_id FROM jobs WHERE flow_id = ? AND status = ? AND job_type = ? ORDER BY created_at",
+                (flow_id, JobStatus.SUSPENDED.value, JobType.WORKFLOW.value),
+            ).fetchall()
+            return [row["job_id"] for row in rows]
+
+        return await self._run(op)
+
     async def queued_workflow_job_ids(self) -> list[str]:
         def op(conn: sqlite3.Connection) -> list[str]:
             rows = conn.execute(

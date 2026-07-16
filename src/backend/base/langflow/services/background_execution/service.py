@@ -162,6 +162,39 @@ class BackgroundExecutionService(Service):
 
     # ------------------------------------------------------------------ submit
 
+    async def supersede_suspended_runs(self, *, flow_id: UUID, user_id: UUID) -> list[UUID]:
+        """Cancel this user's SUSPENDED runs of the flow so a rerun replaces the stale pause.
+
+        A suspended run holds a pause nobody will answer once its owner reruns the flow;
+        left alive it piles up in every pending surface (badge, cards, trace bar). Scope is
+        flow + user: another user's pause on the same flow is never touched, and running
+        jobs are untouched so parallel runs stay supported.
+        """
+        from sqlmodel import select
+
+        from langflow.services.database.models.jobs.model import Job
+        from langflow.services.deps import session_scope
+
+        job_service = get_job_service()
+        async with session_scope() as session:
+            result = await session.exec(
+                select(Job.job_id).where(
+                    Job.flow_id == flow_id,
+                    Job.user_id == user_id,
+                    Job.status == JobStatus.SUSPENDED,
+                    Job.type == JobType.WORKFLOW,
+                )
+            )
+            stale_job_ids = list(result.all())
+        cancelled: list[UUID] = []
+        for stale_job_id in stale_job_ids:
+            if self._scaled:
+                await self._backend.stop(str(stale_job_id))
+                cancelled.append(stale_job_id)
+            elif await self._cancel_suspended(stale_job_id, job_service):
+                cancelled.append(stale_job_id)
+        return cancelled
+
     async def submit(self, *, flow_id: UUID, request: dict[str, Any], user: UserRead) -> UUID:
         # Lazy-start the executor so the facade works whether or not the app
         # lifespan called start() first. start() is idempotent.
@@ -199,6 +232,9 @@ class BackgroundExecutionService(Service):
         # variables by name for background runs rather than passing secrets inline.
         # The live in-memory run below still uses the full ``request``.
         await job_service.update_job_metadata(job_id, {"request": self._redact_request(request)})
+        # After create_job so an idempotent retry returns the existing job instead of
+        # cancelling it; the new job is QUEUED, so the suspended-only query skips it.
+        await self.supersede_suspended_runs(flow_id=flow_id, user_id=user.id)
         if self._scaled:
             # Scaled mode: hand the QUEUED job id to a worker via the redis claim
             # queue; the worker hydrates the request from the job row.
@@ -366,8 +402,9 @@ class BackgroundExecutionService(Service):
             await self._backend.stop(str(job_id))
             return
         job_service = get_job_service()
-        if job.status == JobStatus.SUSPENDED:
-            await self._cancel_suspended(job_id, job_service)
+        # A lost claim means a resume flipped it IN_PROGRESS mid-call — fall
+        # through to the running-job stop path instead of doing nothing.
+        if job.status == JobStatus.SUSPENDED and await self._cancel_suspended(job_id, job_service):
             return
         await job_service.write_signal(job_id, SignalType.STOP)
         await self._executor.cancel(str(job_id))
@@ -408,14 +445,25 @@ class BackgroundExecutionService(Service):
             raise
         return True
 
-    async def _cancel_suspended(self, job_id: UUID, job_service) -> None:
-        await job_service.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
+    async def _cancel_suspended(self, job_id: UUID, job_service) -> bool:
+        """Cancel a SUSPENDED job; False when a concurrent resume already claimed it.
+
+        The conditional claim is what makes supersede-vs-resume safe: cleanup
+        (checkpoint delete, metadata clear, terminal event) runs only for the row
+        this caller actually flipped, never for a run a resume just revived.
+        """
+        if not await job_service.claim_suspended_for_cancel(job_id):
+            return False
+        from langflow.api.v2.hitl import mark_card_superseded
+
+        await mark_card_superseded(job_id)
         with contextlib.suppress(Exception):
             await job_service.delete_checkpoint(job_id, "graph")
         await job_service.update_job_metadata(job_id, {"pending_request_id": None})
         await job_service.append_event(job_id, "run_cancelled", {"type": "cancelled"})
         await job_service.consume_signals(job_id, SignalType.STOP)
         await self._bus.close(str(job_id))
+        return True
 
     # ----------------------------------------------------------- startup sweep
 
