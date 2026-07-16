@@ -128,6 +128,7 @@ dev = [
     "blockbuster>=1.5.25",
     "coverage>=7.9.2",
     "hypothesis>=6.136.3",
+    "langchain-anthropic~=1.4.6",
     "pytest>=9.0.3",
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=7.0.0",
