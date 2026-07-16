@@ -160,11 +160,7 @@ export default function SessionSelector({
                 aria-label={t("chat.cancelRename")}
                 className="hover:text-status-red-hover ml-2 text-status-red"
               >
-                <IconComponent
-                  name="X"
-                  className="h-4 w-4"
-                  aria-hidden="true"
-                />
+                <IconComponent name="X" className="h-4 w-4" ariaHidden />
               </button>
               <button
                 onClick={handleConfirm}
@@ -172,11 +168,7 @@ export default function SessionSelector({
                 aria-label={t("chat.confirmRename")}
                 className="ml-2 text-accent-emerald-foreground hover:text-accent-emerald-foreground/80"
               >
-                <IconComponent
-                  name="Check"
-                  className="h-4 w-4"
-                  aria-hidden="true"
-                />
+                <IconComponent name="Check" className="h-4 w-4" ariaHidden />
               </button>
             </div>
           ) : (
@@ -231,7 +223,7 @@ export default function SessionSelector({
               <IconComponent
                 name="MoreHorizontal"
                 className="h-4 w-4"
-                aria-hidden="true"
+                ariaHidden
               />
             </SelectTrigger>
           </ShadTooltip>

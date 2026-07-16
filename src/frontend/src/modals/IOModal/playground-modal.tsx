@@ -396,18 +396,26 @@ export default function IOModal({
                   <ShadTooltip
                     styleClasses="z-50"
                     side="right"
-                    content={t("modal.io.hideSidebar")}
+                    content={
+                      sidebarOpen
+                        ? t("modal.io.hideSidebar")
+                        : t("modal.io.showSidebar")
+                    }
                   >
                     <Button
                       variant="ghost"
                       className="flex h-8 w-8 items-center justify-center !p-0"
                       onClick={() => setSidebarOpen(!sidebarOpen)}
-                      aria-label={t("modal.io.hideSidebar")}
+                      aria-label={
+                        sidebarOpen
+                          ? t("modal.io.hideSidebar")
+                          : t("modal.io.showSidebar")
+                      }
                     >
                       <IconComponent
                         name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
                         className="h-[18px] w-[18px] text-ring"
-                        aria-hidden="true"
+                        ariaHidden
                       />
                     </Button>
                   </ShadTooltip>

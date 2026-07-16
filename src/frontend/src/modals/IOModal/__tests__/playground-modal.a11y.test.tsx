@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { axe } from "jest-axe";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { axe } from "@/utils/a11y-test";
 import IOModal from "../playground-modal";
 
 // This suite only asserts the accessible-name fixes on IOModal's own icon
@@ -232,6 +232,19 @@ describe("IOModal (playground) accessibility", () => {
     // an unnamed <svg> inside a named button.
     const openVariantLogo = screen.getAllByTestId("langflow-logo-color")[0];
     expect(openVariantLogo).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("flips the toggle's aria-label to 'Show sidebar' once collapsed", () => {
+    renderPlayground();
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide sidebar" }));
+
+    expect(
+      screen.queryByRole("button", { name: "Hide sidebar" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Show sidebar" }),
+    ).toBeInTheDocument();
   });
 
   it("names the collapsed-sidebar 'Built with Langflow' button and hides its icon", () => {

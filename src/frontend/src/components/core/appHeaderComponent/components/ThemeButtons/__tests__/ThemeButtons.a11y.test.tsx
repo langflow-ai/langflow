@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { axe } from "jest-axe";
+import { axe } from "@/utils/a11y-test";
 import { ThemeButtons } from "..";
 
 describe("ThemeButtons accessibility", () => {

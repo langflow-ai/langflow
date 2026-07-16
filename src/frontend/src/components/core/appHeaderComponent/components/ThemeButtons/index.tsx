@@ -67,7 +67,7 @@ export const ThemeButtons = () => {
           strokeWidth={2}
           name="Sun"
           className="w-4"
-          aria-hidden="true"
+          ariaHidden
         />
       </Button>
 
@@ -88,7 +88,7 @@ export const ThemeButtons = () => {
           strokeWidth={2}
           name="Moon"
           className="w-4"
-          aria-hidden="true"
+          ariaHidden
         />
       </Button>
 
@@ -109,7 +109,7 @@ export const ThemeButtons = () => {
           name="Monitor"
           className="w-4"
           strokeWidth={2}
-          aria-hidden="true"
+          ariaHidden
         />
       </Button>
     </div>
