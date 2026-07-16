@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
@@ -118,6 +119,30 @@ async def created_messages(session, active_user):  # noqa: ARG001
 
 
 @pytest.fixture
+async def timestamped_messages(active_user):
+    async with session_scope() as session:
+        flow = Flow(name="test_flow_for_message_ordering", user_id=active_user.id, data={"nodes": [], "edges": []})
+        session.add(flow)
+        await session.flush()
+
+        base_timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        messages = [
+            MessageCreate(
+                text=f"Message {index}",
+                sender="User",
+                sender_name="User",
+                session_id="ordered-session",
+                timestamp=base_timestamp + timedelta(minutes=index),
+            )
+            for index in range(3)
+        ]
+        messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
+        for message in messagetables:
+            message.flow_id = flow.id
+        return await aadd_messagetables(messagetables, session)
+
+
+@pytest.fixture
 async def created_messages_multiple_sessions(session, active_user):  # noqa: ARG001
     """Create messages across multiple distinct sessions for bulk-delete testing."""
     async with session_scope() as _session:
@@ -183,6 +208,45 @@ async def test_get_messages_does_not_return_other_users_messages(
     other_returned_ids = {message["id"] for message in other_response.json()}
     assert str(cross_user_messages["foreign_message"].id) in other_returned_ids
     assert str(cross_user_messages["owned_message"].id) not in other_returned_ids
+
+
+@pytest.mark.api_key_required
+@pytest.mark.usefixtures("timestamped_messages")
+async def test_get_messages_defaults_to_timestamp_ascending(client: AsyncClient, logged_in_headers):
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "ordered-session"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert [message["text"] for message in response.json()] == ["Message 0", "Message 1", "Message 2"]
+
+
+@pytest.mark.api_key_required
+@pytest.mark.usefixtures("timestamped_messages")
+async def test_get_messages_supports_descending_order_with_pagination(client: AsyncClient, logged_in_headers):
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "ordered-session", "order": "DESC", "limit": 2, "offset": 1},
+    )
+
+    assert response.status_code == 200, response.text
+    assert [message["text"] for message in response.json()] == ["Message 1", "Message 0"]
+
+
+@pytest.mark.api_key_required
+@pytest.mark.usefixtures("timestamped_messages")
+async def test_get_messages_rejects_invalid_order_direction(client: AsyncClient, logged_in_headers):
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "ordered-session", "order": "sideways"},
+    )
+
+    assert response.status_code == 400, response.text
+    assert response.json()["detail"] == "Invalid order direction: sideways"
 
 
 @pytest.mark.api_key_required
@@ -456,10 +520,10 @@ async def test_successfully_update_session_id(client, logged_in_headers, created
         timestamp_str = timestamp_to_str(timestamp)
         assert timestamp_str == response_timestamp
 
-    # Messages ordered by timestamp DESC (newest first): AI, User, User
-    assert messages[0]["sender"] == "AI"
+    # Messages default to timestamp ASC (oldest first): User, User, AI
+    assert messages[0]["sender"] == "User"
     assert messages[1]["sender"] == "User"
-    assert messages[2]["sender"] == "User"
+    assert messages[2]["sender"] == "AI"
 
 
 @pytest.mark.api_key_required

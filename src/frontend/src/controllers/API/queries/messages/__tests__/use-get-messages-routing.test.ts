@@ -73,9 +73,9 @@ jest.mock("@/controllers/API/services/request-processor", () => ({
   })),
 }));
 
+import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import useFlowStore from "@/stores/flowStore";
 import { useMessagesStore } from "@/stores/messagesStore";
-import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import { useGetMessagesQuery } from "../use-get-messages";
 
 const mockFlowStore = useFlowStore as unknown as { getState: jest.Mock };
@@ -96,14 +96,32 @@ describe("useGetMessagesQuery - Routing Logic", () => {
     mockFlowStore.getState.mockReturnValue({ playgroundPage: false });
     mockIsAuth.mockReturnValue(false);
 
-    useGetMessagesQuery({ id: FLOW_ID, mode: "union" }, {});
+    useGetMessagesQuery(
+      {
+        id: FLOW_ID,
+        mode: "union",
+        params: {
+          session_id: "session-1",
+          limit: 20,
+          order: "DESC",
+          offset: 40,
+        },
+      },
+      {},
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(mockApiGet).toHaveBeenCalledWith(
       "api/v1/messages",
       expect.objectContaining({
-        params: expect.objectContaining({ flow_id: FLOW_ID }),
+        params: {
+          flow_id: FLOW_ID,
+          session_id: "session-1",
+          limit: 20,
+          order: "DESC",
+          offset: 40,
+        },
       }),
     );
   });
@@ -112,14 +130,32 @@ describe("useGetMessagesQuery - Routing Logic", () => {
     mockFlowStore.getState.mockReturnValue({ playgroundPage: true });
     mockIsAuth.mockReturnValue(true);
 
-    useGetMessagesQuery({ id: FLOW_ID, mode: "union" }, {});
+    useGetMessagesQuery(
+      {
+        id: FLOW_ID,
+        mode: "union",
+        params: {
+          flow_id: "must-not-be-forwarded",
+          session_id: "session-1",
+          limit: 20,
+          order: "DESC",
+          offset: 40,
+        },
+      },
+      {},
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(mockApiGet).toHaveBeenCalledWith(
-      "api/v1/messages/shared",
-      expect.objectContaining({ params: { source_flow_id: SOURCE_FLOW_ID } }),
-    );
+    expect(mockApiGet).toHaveBeenCalledWith("api/v1/messages/shared", {
+      params: {
+        session_id: "session-1",
+        limit: 20,
+        order: "DESC",
+        offset: 40,
+        source_flow_id: SOURCE_FLOW_ID,
+      },
+    });
   });
 
   it("should_use_sessionStorage_when_anonymous_playground", async () => {

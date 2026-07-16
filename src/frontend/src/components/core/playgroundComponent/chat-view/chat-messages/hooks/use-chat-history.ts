@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-get-flow-id";
-import { api } from "@/controllers/API/api";
-import { getURL } from "@/controllers/API/helpers/constants";
-import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
+import {
+  getMessages,
+  useGetMessagesQuery,
+} from "@/controllers/API/queries/messages";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import type { ChatMessageType } from "@/types/chat";
 import type { Message } from "@/types/messages";
@@ -33,7 +34,7 @@ export const useChatHistory = (visibleSession: string | null) => {
   const messageQueryParams: Parameters<typeof useGetMessagesQuery>[0] = {
     id: currentFlowId,
     mode: "union",
-    params: { limit: 20 },
+    params: { limit: 20, order: "DESC" },
   };
   const { data: queryData } = useGetMessagesQuery(messageQueryParams, {
     enabled: isPlaygroundOpen,
@@ -97,13 +98,11 @@ export const useChatHistory = (visibleSession: string | null) => {
       // early pages, and dedup would otherwise swallow them and stall.
       let prepended = 0;
       while (prepended === 0) {
-        const response = await api.get(`${getURL("MESSAGES")}`, {
-          params: {
-            flow_id: currentFlowId,
-            ...(visibleSession ? { session_id: visibleSession } : {}),
-            limit: 20,
-            offset: offsetRef.current,
-          },
+        const response = await getMessages(currentFlowId, {
+          ...(visibleSession ? { session_id: visibleSession } : {}),
+          limit: 20,
+          order: "DESC",
+          offset: offsetRef.current,
         });
         const olderMessages: Message[] = response.data || [];
         offsetRef.current += olderMessages.length;
