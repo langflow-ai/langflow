@@ -317,8 +317,62 @@ class TestLangfuseTracerFunctionality:
         mock_langfuse["child_span"].update.assert_called()
         mock_langfuse["child_span"].end.assert_called()
 
-    def test_end_updates_root_span_and_trace(self, mock_langfuse):
-        """Test that end() updates both root span and trace, then ends."""
+    def test_end_exposes_stable_evaluator_trace_input_and_output(self, mock_langfuse):
+        """Trace input/output should expose stable JSONPath keys with the flow boundary messages."""
+        from langflow.serialization.serialization import serialize
+        from langflow.services.tracing.langfuse import LangFuseTracer
+        from lfx.schema.message import Message
+
+        tracer = LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+        )
+
+        component_inputs = {
+            "Config (config-id)": {"model": "test-model"},
+            "Chat Input (chat-input-id)": {"input_value": "What is Langflow?", "sender": "User"},
+            "Prompt (prompt-id)": {"template": "Answer the user"},
+        }
+        component_outputs = {
+            "Chat Input (chat-input-id)": {"message": Message(text="What is Langflow?")},
+            "Agent (agent-id)": {"response": Message(text="An intermediate response")},
+            "Chat Output (chat-output-id)": {"message": Message(text="Langflow is a visual workflow builder.")},
+            "Audit Sink (audit-id)": {"record": {"status": "stored"}},
+        }
+        tracer.add_trace(
+            trace_id="chat-input-id",
+            trace_name="Chat Input (chat-input-id)",
+            trace_type="chain",
+            inputs=component_inputs["Chat Input (chat-input-id)"],
+            vertex=MagicMock(is_input=True, is_output=False),
+        )
+        tracer.add_trace(
+            trace_id="chat-output-id",
+            trace_name="Chat Output (chat-output-id)",
+            trace_type="chain",
+            inputs={"input_value": "Langflow is a visual workflow builder."},
+            vertex=MagicMock(is_input=False, is_output=True),
+        )
+        tracer.end(
+            inputs=component_inputs,
+            outputs=component_outputs,
+            metadata={"final": True},
+        )
+
+        root_update = mock_langfuse["root_span"].update.call_args.kwargs
+        assert root_update["input"] == serialize(component_inputs)
+        assert root_update["output"] == serialize(component_outputs)
+
+        trace_update = mock_langfuse["root_span"].update_trace.call_args.kwargs
+        assert trace_update["input"] == {"input": "What is Langflow?"}
+        assert trace_update["output"] == {"output": "Langflow is a visual workflow builder."}
+        assert trace_update["metadata"] == {"final": True}
+        mock_langfuse["root_span"].end.assert_called_once()
+
+    def test_end_exposes_stable_trace_io_for_marked_arbitrary_graphs(self, mock_langfuse):
+        """Marked non-chat boundaries should expose their structured input and output values."""
         from langflow.services.tracing.langfuse import LangFuseTracer
 
         tracer = LangFuseTracer(
@@ -328,18 +382,145 @@ class TestLangfuseTracerFunctionality:
             trace_id=uuid.uuid4(),
         )
 
-        tracer.end(
-            inputs={"flow_input": "test"},
-            outputs={"flow_output": "result"},
-            metadata={"final": True},
+        component_inputs = {
+            "Webhook (webhook-id)": {"payload": {"order_id": 42}, "method": "POST"},
+            "Transform (transform-id)": {"mapping": "order"},
+        }
+        component_outputs = {
+            "Webhook (webhook-id)": {},
+            "Transform (transform-id)": {"record": {"order_id": 42, "status": "ready"}},
+            "Data Output (data-output-id)": {"data": [{"order_id": 42, "status": "ready"}]},
+        }
+        tracer.add_trace(
+            trace_id="webhook-id",
+            trace_name="Webhook (webhook-id)",
+            trace_type="chain",
+            inputs=component_inputs["Webhook (webhook-id)"],
+            vertex=MagicMock(is_input=True, is_output=False),
+        )
+        tracer.add_trace(
+            trace_id="data-output-id",
+            trace_name="Data Output (data-output-id)",
+            trace_type="chain",
+            inputs={},
+            vertex=MagicMock(is_input=False, is_output=True),
+        )
+        tracer.end(inputs=component_inputs, outputs=component_outputs)
+
+        trace_update = mock_langfuse["root_span"].update_trace.call_args.kwargs
+        assert trace_update["input"] == {"input": component_inputs["Webhook (webhook-id)"]}
+        assert trace_update["output"] == {"output": [{"order_id": 42, "status": "ready"}]}
+
+    def test_end_falls_back_to_stable_aggregate_when_boundaries_are_unmarked(self, mock_langfuse):
+        """Custom graphs without boundary markers should retain their complete structured aggregates."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        tracer = LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+        )
+        component_inputs = {"Custom Source (source-id)": {"payload": {"order_id": 42}}}
+        component_outputs = {"Custom Sink (sink-id)": {"record": {"order_id": 42, "status": "ready"}}}
+
+        tracer.end(inputs=component_inputs, outputs=component_outputs)
+
+        trace_update = mock_langfuse["root_span"].update_trace.call_args.kwargs
+        assert trace_update["input"] == {"input": component_inputs}
+        assert trace_update["output"] == {"output": component_outputs}
+
+    def test_end_orders_multiple_boundary_outputs_by_component_id(self, mock_langfuse):
+        """Multiple graph outputs should be deterministic even when their completion order is not."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+        from lfx.schema.message import Message
+
+        tracer = LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+        )
+        component_outputs = {
+            "Data Output (z-output-id)": {"data": {"order_id": 42}},
+            "Text Output (a-output-id)": {"text": Message(text="ready")},
+        }
+        tracer.add_trace(
+            trace_id="z-output-id",
+            trace_name="Data Output (z-output-id)",
+            trace_type="chain",
+            inputs={},
+            vertex=MagicMock(is_input=False, is_output=True),
+        )
+        tracer.add_trace(
+            trace_id="a-output-id",
+            trace_name="Text Output (a-output-id)",
+            trace_type="chain",
+            inputs={},
+            vertex=MagicMock(is_input=False, is_output=True),
         )
 
-        # Should update root span
-        mock_langfuse["root_span"].update.assert_called()
-        # Should update trace metadata
-        assert mock_langfuse["root_span"].update_trace.call_count >= 2  # init + end
-        # Should end root span
-        mock_langfuse["root_span"].end.assert_called()
+        tracer.end(inputs={}, outputs=component_outputs)
+
+        trace_update = mock_langfuse["root_span"].update_trace.call_args.kwargs
+        assert trace_update["output"] == {"output": ["ready", {"order_id": 42}]}
+
+    def test_end_uses_component_input_for_dual_role_boundary(self, mock_langfuse):
+        """A component marked as both input and output should preserve the original request."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+        from lfx.schema.message import Message
+
+        tracer = LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+        )
+        trace_name = "Bidirectional (component-id)"
+        tracer.add_trace(
+            trace_id="component-id",
+            trace_name=trace_name,
+            trace_type="chain",
+            inputs={"request": "ping"},
+            vertex=MagicMock(is_input=True, is_output=True),
+        )
+
+        tracer.end(
+            inputs={trace_name: {"request": "ping"}},
+            outputs={trace_name: {"response": Message(text="pong")}},
+        )
+
+        trace_update = mock_langfuse["root_span"].update_trace.call_args.kwargs
+        assert trace_update["input"] == {"input": "ping"}
+        assert trace_update["output"] == {"output": "pong"}
+
+    def test_end_normalizes_messages_nested_in_multi_output_boundary(self, mock_langfuse):
+        """Message values should become evaluator-ready text without dropping sibling outputs."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+        from lfx.schema.message import Message
+
+        tracer = LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+        )
+        trace_name = "Composite Output (output-id)"
+        tracer.add_trace(
+            trace_id="output-id",
+            trace_name=trace_name,
+            trace_type="chain",
+            inputs={},
+            vertex=MagicMock(is_input=False, is_output=True),
+        )
+
+        tracer.end(
+            inputs={},
+            outputs={trace_name: {"message": Message(text="ready"), "usage": {"tokens": 3}}},
+        )
+
+        trace_update = mock_langfuse["root_span"].update_trace.call_args.kwargs
+        assert trace_update["output"] == {"output": {"message": "ready", "usage": {"tokens": 3}}}
 
     def test_get_langchain_callback_uses_trace_context(self, mock_langfuse):
         """Test that get_langchain_callback creates handler with trace context."""

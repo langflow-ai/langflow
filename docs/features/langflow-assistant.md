@@ -1267,7 +1267,9 @@ A model can be *available* and still reject the call: gpt-5.6 refuses function t
 
 The Agent's `max_iterations` caps its model-call loop **and derives LangGraph's recursion limit** (`max_iterations * 2 + 5`). The original pin of 15 therefore produced a recursion limit of 35 — too low for a compound one-turn task ("build the flow, then report what you built"), which died with `Recursion limit of 35 reached`. The pin is now **30** (recursion limit 65) on every Agent node in the assistant flow.
 
-The pin is a **cost** decision (a larger budget raises worst-case token spend per attempt), so a tripwire test asserts it: changing it must stay conscious. `/iterations N` overrides it per session (clamped to 1–200, persisted in localStorage, `off` resets); the client parses the command locally — it is never sent as a prompt — and puts `iterations_limit` on the request, which `inject_iterations_into_flow` writes onto the flow's Agent nodes.
+The pin is a **cost** decision (a larger budget raises worst-case token spend per attempt), so a tripwire test asserts it: changing it must stay conscious. `/iterations N` overrides it per session (clamped to 1–200, persisted in localStorage, `off` resets); the client parses the command locally — it is never sent as a prompt — and puts `iterations_limit` on the request.
+
+The override reaches the Agent through **two paths, one per flow kind** (QA found the second one missing — `iterations_limit=1` still ran 6 model calls). JSON flows (`LangflowAssistant.json`): `inject_iterations_into_flow` rewrites `max_iterations` on the Agent nodes' templates. Python flows (`flow_builder_assistant.py`, which every build/edit/run intent executes): the JSON injector never touches them, so the loader forwards `ITERATIONS_LIMIT` to `get_graph(iterations_limit=...)`, which clamps it and sets the Agent's `max_iterations` directly — defaulting to the shared `DEFAULT_ASSISTANT_ITERATIONS` (30) so both surfaces pin the same budget.
 
 #### Recovered failures are visible, not silent
 

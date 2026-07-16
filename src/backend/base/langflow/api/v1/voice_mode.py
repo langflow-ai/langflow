@@ -21,7 +21,6 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from lfx.log import logger
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.secrets import secret_value_to_str
-from openai import OpenAI
 from sqlmodel import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 from websockets.asyncio.client import ClientConnection
@@ -185,6 +184,12 @@ def get_voice_config(session_id: str, user_id: UUID | None = None) -> VoiceConfi
 
 class TTSConfig:
     def __init__(self, session_id: str, openai_key: str):
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            msg = "Voice mode requires the OpenAI SDK. Install it with `pip install 'langflow-base[audio]'`."
+            raise ImportError(msg) from exc
+
         self.session_id = session_id
         self.use_elevenlabs = False
         self.elevenlabs_voice = "JBFqnCBsd6RMkjVDRZzb"

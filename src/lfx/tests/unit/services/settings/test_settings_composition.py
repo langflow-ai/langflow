@@ -10,6 +10,7 @@ These guard the refactor that split ``Settings`` into per-group mixins:
 - yaml round-trip and the small utility helpers still work.
 """
 
+import builtins
 import tempfile
 from pathlib import Path
 
@@ -22,6 +23,24 @@ from lfx.services.settings.base import (
     load_settings_from_yaml,
     save_settings_to_yaml,
 )
+
+
+def test_voice_mode_requires_openai_sdk(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Installing only the VAD library must not advertise unusable voice mode."""
+    real_import = builtins.__import__
+
+    def import_without_openai(name, *args, **kwargs):
+        if name == "webrtcvad":
+            return object()
+        if name == "openai" or name.startswith("openai."):
+            error_message = "No module named 'openai'"
+            raise ModuleNotFoundError(error_message, name="openai")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_without_openai)
+
+    assert Settings().voice_mode_available is False
+
 
 # Every field the composed Settings must expose: the original monolith fields
 # plus the settings added in 1.10.0 (folded into the mixins during the release
