@@ -9,12 +9,16 @@
             "dataType": "ChatInput",
             "id": "ChatInput-7S2Wg",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "LanguageModelComponent-KHx2J",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -33,12 +37,20 @@
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-KHx2J",
             "name": "text_output",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-Ou5RJ",
-            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -57,7 +69,9 @@
           "display_name": "Chat Input",
           "id": "ChatInput-7S2Wg",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -102,7 +116,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -111,6 +127,7 @@
               "_type": "Component",
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
@@ -133,7 +150,9 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -220,7 +239,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -236,7 +258,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -256,7 +280,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -314,7 +340,9 @@
           "display_name": "Chat Output",
           "id": "ChatOutput-Ou5RJ",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -368,7 +396,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -395,6 +425,7 @@
               },
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
@@ -417,7 +448,9 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -438,7 +471,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -485,7 +520,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -501,7 +539,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -521,7 +561,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -577,7 +619,10 @@
         "data": {
           "id": "LanguageModelComponent-KHx2J",
           "node": {
-            "base_classes": ["LanguageModel", "Message"],
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -639,7 +684,9 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -655,7 +702,9 @@
                 "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": ["LanguageModel"],
+                "types": [
+                  "LanguageModel"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -723,6 +772,7 @@
               },
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
@@ -745,7 +795,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -780,7 +832,9 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": ["LanguageModel"],
+                "input_types": [
+                  "LanguageModel"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
@@ -795,7 +849,9 @@
                       "max_tokens_field_name": "max_tokens",
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": ["gpt-5.5-pro"]
+                      "reasoning_models": [
+                        "gpt-5.5-pro"
+                      ]
                     },
                     "name": "gpt-5.5-pro",
                     "provider": "OpenAI"
@@ -809,7 +865,9 @@
                       "max_tokens_field_name": "max_tokens",
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": ["gpt-5.5"]
+                      "reasoning_models": [
+                        "gpt-5.5"
+                      ]
                     },
                     "name": "gpt-5.5",
                     "provider": "OpenAI"
@@ -823,7 +881,9 @@
                       "max_tokens_field_name": "max_tokens",
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": ["gpt-5.4-nano"]
+                      "reasoning_models": [
+                        "gpt-5.4-nano"
+                      ]
                     },
                     "name": "gpt-5.4-nano",
                     "provider": "OpenAI"
@@ -837,7 +897,9 @@
                       "max_tokens_field_name": "max_tokens",
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": ["gpt-5.4-mini"]
+                      "reasoning_models": [
+                        "gpt-5.4-mini"
+                      ]
                     },
                     "name": "gpt-5.4-mini",
                     "provider": "OpenAI"
@@ -1023,7 +1085,9 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1139,5 +1203,7 @@
   "last_tested_version": "1.10.0",
   "locked": false,
   "name": "Image Sentiment Analysis",
-  "tags": ["classification"]
+  "tags": [
+    "classification"
+  ]
 }
