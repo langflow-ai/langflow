@@ -145,24 +145,34 @@ export default function InspectionPanelParameterRow({
           }
           avoidCollisions
         >
-          <Button
-            unstyled
-            ignoreTitleCase
-            onClick={handleToggleApiEditable}
-            disabled={isDisabledField}
+          {/* A disabled button emits no pointer events, so the tooltip would
+              never open — the span carries the hover and the button goes
+              pointer-events-none while disabled. */}
+          <span
             className={cn(
-              "flex h-6 items-center justify-center rounded-md border px-2 text-[10px] font-semibold transition-colors",
-              isEffectivelyExposed
-                ? "border-accent-emerald bg-accent-emerald/10 text-accent-emerald-foreground"
-                : "border-border text-muted-foreground hover:text-foreground",
-              isDisabledField && "cursor-not-allowed opacity-50",
+              "inline-flex",
+              isDisabledField && "cursor-not-allowed",
             )}
-            data-testid={`inspector-api-${name}`}
-            aria-pressed={isEffectivelyExposed}
-            aria-label={`${title} API`}
           >
-            API
-          </Button>
+            <Button
+              unstyled
+              ignoreTitleCase
+              onClick={handleToggleApiEditable}
+              disabled={isDisabledField}
+              className={cn(
+                "flex h-6 items-center justify-center rounded-md border px-2 text-[10px] font-semibold transition-colors",
+                isEffectivelyExposed
+                  ? "border-accent-emerald bg-accent-emerald/10 text-accent-emerald-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground",
+                isDisabledField && "pointer-events-none opacity-50",
+              )}
+              data-testid={`inspector-api-${name}`}
+              aria-pressed={isEffectivelyExposed}
+              aria-label={`${title} API`}
+            >
+              API
+            </Button>
+          </span>
         </ShadTooltip>
         {isOnCanvas ? (
           <ShadTooltip
@@ -175,22 +185,30 @@ export default function InspectionPanelParameterRow({
             }
             avoidCollisions
           >
-            <Button
-              unstyled
-              onClick={handleToggleVisibility}
-              disabled={isConnected || isRequiredAndEmpty}
+            {/* Same disabled-button hover fix as the API toggle above. */}
+            <span
               className={cn(
-                // min-w matches the Add button so the API column stays
-                // aligned across rows regardless of the action label.
-                "flex h-6 min-w-[4.5rem] items-center justify-center rounded-md bg-muted px-2 text-xs text-foreground transition-colors hover:bg-muted-foreground/20",
-                (isConnected || isRequiredAndEmpty) &&
-                  "cursor-not-allowed opacity-50",
+                "inline-flex",
+                (isConnected || isRequiredAndEmpty) && "cursor-not-allowed",
               )}
-              data-testid={`inspector-remove-${name}`}
-              aria-label={`${t("inspectionPanel.remove")} ${title}`}
             >
-              {t("inspectionPanel.remove")}
-            </Button>
+              <Button
+                unstyled
+                onClick={handleToggleVisibility}
+                disabled={isConnected || isRequiredAndEmpty}
+                className={cn(
+                  // min-w matches the Add button so the API column stays
+                  // aligned across rows regardless of the action label.
+                  "flex h-6 min-w-[4.5rem] items-center justify-center rounded-md bg-muted px-2 text-xs text-foreground transition-colors hover:bg-muted-foreground/20",
+                  (isConnected || isRequiredAndEmpty) &&
+                    "pointer-events-none opacity-50",
+                )}
+                data-testid={`inspector-remove-${name}`}
+                aria-label={`${t("inspectionPanel.remove")} ${title}`}
+              >
+                {t("inspectionPanel.remove")}
+              </Button>
+            </span>
           </ShadTooltip>
         ) : (
           <Button
