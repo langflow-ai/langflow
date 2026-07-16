@@ -158,17 +158,17 @@ class SecuritySettings(BaseModel):
 
     # Rate Limiting
     rate_limit_enabled: bool = True
-    """Enable rate limiting for login and public-flow build endpoints. Set to False to disable."""
+    """Enable rate limiting for login and public-flow endpoints. Set to False to disable."""
     rate_limit_per_minute: int = 5
-    """Number of login attempts or builds of each public flow allowed per minute per IP."""
+    """Number of login attempts allowed per minute per IP."""
     rate_limit_storage_uri: str = "memory://"
     """Storage backend for rate limiting. Use 'memory://' for single-server or 'redis://host:port' for multi-server."""
     rate_limit_trust_proxy: bool = False
     """Trust X-Forwarded-For header when behind a reverse proxy. Only enable when behind a trusted proxy."""
     public_flow_rate_limit_per_minute: int = 20
-    """Public-flow runs allowed per minute per IP on the unauthenticated /api/v2/workflows/public endpoint.
-    Each run executes as the flow owner (real CPU/DB/LLM-credit cost), so anonymous callers are throttled
-    separately from (and more generously than) the login limit. Gated by rate_limit_enabled."""
+    """Public-flow runs allowed per minute per IP on the unauthenticated v1 build and v2 workflow endpoints.
+    V1 uses one bucket per flow; v2 uses its public-workflow bucket. Each run executes as the flow owner, so
+    anonymous callers are throttled separately from and more generously than login. Gated by rate_limit_enabled."""
 
     @field_validator("cors_origins", mode="before")
     @classmethod

@@ -62,7 +62,12 @@ def get_rate_limiter() -> Limiter:
     return _limiter
 
 
-def check_rate_limit(request: Request, *, scope: str | None = None) -> None:
+def check_rate_limit(
+    request: Request,
+    *,
+    scope: str | None = None,
+    limit_per_minute: int | None = None,
+) -> None:
     """Enforce the configured rate limit for a request.
 
     A scope creates a distinct counter namespace while retaining the configured
@@ -72,12 +77,15 @@ def check_rate_limit(request: Request, *, scope: str | None = None) -> None:
     Args:
         request: FastAPI request whose app owns the configured limiter.
         scope: Optional counter namespace, such as a public flow identifier.
+        limit_per_minute: Optional endpoint-specific limit. When omitted, the
+            configured login limit is used.
 
     Raises:
         RateLimitExceeded: If the configured limit has been exceeded.
     """
     limiter = request.app.state.limiter
-    limit_item = parse(get_rate_limit_string())
+    limit_string = f"{limit_per_minute}/minute" if limit_per_minute is not None else get_rate_limit_string()
+    limit_item = parse(limit_string)
     client_key = limiter._key_func(request)  # noqa: SLF001
     identifiers = (scope, client_key) if scope is not None else (client_key,)
 

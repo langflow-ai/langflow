@@ -810,7 +810,13 @@ async def build_public_tmp(
     Returns:
         Dict with job_id that can be used to poll for build status
     """
-    check_rate_limit(request, scope=f"public-build:{flow_id}")
+    settings = get_settings_service().settings
+    if settings.rate_limit_enabled:
+        check_rate_limit(
+            request,
+            scope=f"public-build:{flow_id}",
+            limit_per_minute=settings.public_flow_rate_limit_per_minute,
+        )
 
     try:
         # Reject caller-supplied file references that aren't scoped to this

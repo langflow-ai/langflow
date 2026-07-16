@@ -7,6 +7,7 @@ from uuid import UUID
 import pytest
 from httpx import codes
 from langflow.services.database.models.flow import FlowUpdate
+from langflow.services.deps import get_settings_service
 from langflow.services.job_queue.service import JobQueueService
 from lfx.log.logger import logger
 from lfx.memory import aget_messages
@@ -590,7 +591,9 @@ async def test_build_public_tmp_rate_limits_each_client_and_flow(
         return str(uuid.uuid4())
 
     monkeypatch.setattr("langflow.api.v1.chat.start_flow_build", fake_start_flow_build)
-    monkeypatch.setattr("langflow.services.rate_limit.service.get_rate_limit_string", lambda: "2/minute")
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "rate_limit_enabled", True)
+    monkeypatch.setattr(settings, "public_flow_rate_limit_per_minute", 2)
 
     client.cookies.clear()
     client.cookies.set("client_id", "test-public-build-rate-limit-client")
