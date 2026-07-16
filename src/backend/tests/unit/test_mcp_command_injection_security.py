@@ -40,7 +40,8 @@ class TestMCPCommandInjectionSecurity:
     def test_allowed_commands_accepted(self):
         """Test that all allowed commands are accepted."""
         for command in ALLOWED_MCP_COMMANDS:
-            config = MCPServerConfig(command=command, args=["--version"])
+            args = ["run", "--rm", "mcp-image"] if command == "docker" else ["--version"]
+            config = MCPServerConfig(command=command, args=args)
             assert config.command == command
 
     def test_allowed_command_with_path_accepted(self):
@@ -724,6 +725,18 @@ class TestMCPCommandInjectionSecurity:
 
         error_msg = str(exc_info.value)
         assert "not allowed" in error_msg.lower()
+
+    @pytest.mark.parametrize(
+        "args",
+        [
+            ["cp", "other:/run/secrets/token", "/workspace/token"],
+            ["inspect", "other"],
+            ["network", "connect", "shared", "other"],
+        ],
+    )
+    def test_docker_non_run_subcommands_rejected(self, args):
+        with pytest.raises(ValidationError, match="not allowed"):
+            MCPServerConfig(command="docker", args=args)
 
     def test_docker_net_host_rejected(self):
         """Test that docker --net=host is rejected."""
