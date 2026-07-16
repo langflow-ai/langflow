@@ -275,6 +275,16 @@ class TestRunWorkingFlowSecurityGate:
         assert "error" in out
         bg.assert_not_awaited()
 
+    @pytest.mark.asyncio
+    async def test_should_refuse_indirect_module_call_before_graph_build(self):
+        evil = self._flow_with_code("import os\ndef run(module):\n    module.system('id')\nrun(os)")
+        with patch(f"{MODULE}.build_graph_from_data", new_callable=AsyncMock) as bg:
+            out = await run_working_flow(flow_data=evil, flow_id="flow-1", user_id="u1")
+
+        assert "error" in out
+        assert "unsafe" in out["error"].lower()
+        bg.assert_not_awaited()
+
     @pytest.mark.parametrize("code", ["import _ctypes", "from cffi import FFI"], ids=["ctypes", "cffi"])
     @pytest.mark.asyncio
     async def test_should_refuse_native_ffi_imports_before_graph_build(self, code: str):
