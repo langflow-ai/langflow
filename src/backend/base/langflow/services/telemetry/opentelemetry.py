@@ -173,8 +173,10 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             # Get existing meter provider if any
             existing_provider = metrics.get_meter_provider()
 
-            # Check if FastAPI instrumentation is already set up
-            if hasattr(existing_provider, "get_meter") and existing_provider.get_meter("http.server"):
+            # Reuse a concrete SDK provider installed by another integration. The
+            # default API proxy also returns meters, but it has no readers and must
+            # be replaced so Prometheus can collect Langflow metrics.
+            if isinstance(existing_provider, MeterProvider):
                 self._meter_provider = existing_provider
             else:
                 resource = Resource.create({"service.name": "langflow"})

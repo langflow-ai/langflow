@@ -145,8 +145,9 @@ class JobQueueService(Service):
         self._closed = False
         self.ready = False
         self.CLEANUP_GRACE_PERIOD = 300  # 5 minutes before cleaning up marked tasks
-        # Cached OpenTelemetry handle (resolved lazily on first emit). False after a
-        # failed lookup so we don't retry on every bump. None means "not yet tried."
+        # Cached OpenTelemetry handle (resolved lazily on first emit).
+        # _otel_resolved is True after the first lookup attempt, including failures,
+        # so we don't retry on every bump. _otel remains None when lookup fails.
         self._otel: Any = None
         self._otel_resolved: bool = False
 

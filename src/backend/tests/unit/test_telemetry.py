@@ -1,9 +1,11 @@
 import re
+import subprocess
+import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pytest
-from langflow.services.telemetry.opentelemetry import OpenTelemetry
+from langflow.services.telemetry.opentelemetry import MetricType, OpenTelemetry
 from langflow.services.telemetry.schema import DeploymentPayload
 from langflow.services.telemetry.service import TelemetryService
 
@@ -107,6 +109,36 @@ def test_init(opentelemetry_instance):
     assert isinstance(opentelemetry_instance, OpenTelemetry)
     assert set(opentelemetry_instance._metrics) == expected_metrics
     assert set(opentelemetry_instance._metrics_registry) == expected_metrics
+    cancel_events = opentelemetry_instance._metrics_registry["langflow_job_queue_cancel_events_total"]
+    assert cancel_events.type is MetricType.COUNTER
+    assert cancel_events.labels == {"event_type": True}
+    active_jobs = opentelemetry_instance._metrics_registry["langflow_job_queue_active_jobs"]
+    assert active_jobs.type is MetricType.UP_DOWN_COUNTER
+    assert active_jobs.labels == {"backend": True}
+
+
+def test_prometheus_exports_job_queue_metrics():
+    script = """
+from langflow.services.telemetry.opentelemetry import OpenTelemetry
+from prometheus_client import generate_latest
+
+otel = OpenTelemetry(prometheus_enabled=True)
+otel.increment_counter("langflow_job_queue_cancel_events_total", {"event_type": "published"})
+otel.up_down_counter("langflow_job_queue_active_jobs", 1, {"backend": "redis"})
+metrics = generate_latest().decode()
+assert "langflow_job_queue_cancel_events_total" in metrics
+assert 'event_type="published"' in metrics
+assert "langflow_job_queue_active_jobs" in metrics
+assert 'backend="redis"' in metrics
+"""
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", script],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_gauge(opentelemetry_instance):
