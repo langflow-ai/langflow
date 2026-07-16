@@ -1,3 +1,5 @@
+from typing import Any
+
 from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from lfx.base.io.chat import ChatComponent
 from lfx.inputs.inputs import BoolInput
@@ -31,6 +33,14 @@ class ChatInput(ChatComponent):
             value="",
             info="Message to be passed as input.",
             input_types=[],
+        ),
+        BoolInput(
+            name="use_global_variable",
+            display_name="Use Global Variable",
+            info="Enable to select from global variables (shows globe icon). Disables multiline editing.",
+            value=False,
+            advanced=True,
+            real_time_refresh=True,
         ),
         BoolInput(
             name="should_store_message",
@@ -80,6 +90,16 @@ class ChatInput(ChatComponent):
     outputs = [
         Output(display_name="Chat Message", name="message", method="message_response"),
     ]
+
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        if field_name == "use_global_variable":
+            if field_value:
+                build_config["input_value"]["multiline"] = False
+                build_config["input_value"]["password"] = True
+            else:
+                build_config["input_value"]["multiline"] = True
+                build_config["input_value"]["password"] = False
+        return build_config
 
     async def message_response(self) -> Message:
         # Ensure files is a list and filter out empty/None values

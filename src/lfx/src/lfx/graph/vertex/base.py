@@ -375,8 +375,13 @@ class Vertex:
             for key in new_params.copy():  # type: ignore[attr-defined]
                 if key not in self.raw_params:
                     new_params.pop(key)  # type: ignore[attr-defined]
+        overridden_fields = set(new_params)
         self.raw_params.update(new_params)
         self.params = self.raw_params.copy()
+        # Explicit run inputs take precedence over persisted global-variable references.
+        self.load_from_db_fields = [
+            field_name for field_name in self.load_from_db_fields if field_name not in overridden_fields
+        ]
         self.updated_raw_params = True
 
     def instantiate_component(self, user_id=None) -> None:
