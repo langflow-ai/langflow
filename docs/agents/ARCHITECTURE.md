@@ -1,34 +1,27 @@
 # Architecture Boundaries
 
-Langflow is four Python distributions and one frontend, layered with one-way dependencies. Most "off-narrative" code is a boundary violation. Read this before adding a new file.
+Langflow is three Python packages and one frontend, layered with one-way dependencies. Most "off-narrative" code is a boundary violation. Read this before adding a new file.
 
 ## Package dependency graph (one-way only)
 
 ```
-langflow (full distribution: core profile + curated provider bundles)
-    │
-    ▼ depends on
-langflow-core (service-complete, provider-bundle-free profile; owns the CLI)
-    │
-    ▼ depends on
-langflow-base[complete] (API, services, graph, db, alembic, service integrations)
-    │
-    ▼ depends on
-lfx (executor core, base primitives, built-in components)
-    │
-    ▼ may depend on
-langchain-core, pydantic, third-party SDKs
-
-frontend (TS) ──HTTP/WebSocket──▶ APIs provided by langflow-base
+frontend (TS)  ──HTTP──▶  langflow (api routers, integrations, distribution)
+                              │
+                              ▼ may import
+                          langflow-base (services, graph, db, alembic)
+                              │
+                              ▼ may import
+                          lfx (executor core, base primitives, components)
+                              │
+                              ▼ may import
+                          langchain-core, pydantic, third-party SDKs
 ```
 
 ### Dependency rules
 
 - **`lfx` MUST NOT import `langflow.*` or `langflow-base.*`.** If lfx code needs a service (auth, db, flow lookup), define an interface inside `lfx` and inject the implementation from `langflow`. The repo currently has ~13 upward `from langflow.*` imports inside `src/lfx/src/lfx/components/...` (auth, db, helpers) — these are **known violations**. Do not add more; prefer fixing them.
 - **`langflow-base` MAY import `lfx`.** It MUST NOT import vendor-specific component modules from `langflow.components.<vendor>`.
-- **`langflow-core` is a composition profile, not a new runtime layer.** It depends on `langflow-base[complete]`, must remain free of `lfx-*` provider distributions, and is the sole owner of the `langflow` and `langflow-core` console scripts.
-- **`langflow` depends on `langflow-core` and adds curated provider bundles.** It MUST NOT bypass core by depending directly on `langflow-base`, and it MUST NOT redeclare the `langflow` console script.
-- **`frontend` talks to the Langflow APIs only via HTTP/WebSocket.** No shared filesystem state.
+- **`frontend` talks to `langflow` only via HTTP/WebSocket.** No shared filesystem state.
 
 ## "Where does this code go?" decision tree
 
@@ -39,7 +32,7 @@ Walk top-down. Stop at the first match.
 2. Is it a FastAPI route, auth, db model, alembic migration, or a lifecycle-managed singleton?
    → `src/backend/base/langflow/` (`api/`, `services/X/`, `alembic/versions/`).
 3. Is it a vendor integration (OpenAI, Pinecone, Notion, …) — a `Component` subclass that wraps a third-party SDK?
-   → The matching package under `src/bundles/<provider>/`; use `src/bundles/lfx-bundles/` for providers collected in the shared bundle. Never rename the class.
+   → `src/lfx/src/lfx/components/<category>/` and update its `__init__.py` alphabetically. Never rename the class.
 4. Is it UI, state, or icons?
    → `src/frontend/src/`. If it consumes a new API field, also update `src/frontend/src/types/`.
 5. Is it CLI behavior for `lfx run` / `lfx serve`?
@@ -81,7 +74,7 @@ If you cannot do all three in one PR, do not start.
 
 - **Service** (`services/<name>/`): lifecycle-managed singleton, inherits `services.base.Service`, registered through `services/factory.py`, accessed via `services/deps.py`. Use when the thing has state, startup/shutdown, or shared connections (db, cache, queue).
 - **Utility** (`helpers/`, `utils/`, or `lfx/utils/`): pure or near-pure functions. Use when there is no shared state and no lifecycle.
-- **Component**: a user-visible graph node with `display_name`, `inputs`, and `outputs`. Generic built-ins live in `src/lfx/src/lfx/components/<category>/`; components that wrap a provider SDK live in `src/bundles/<provider>/`. Use a component only when the user must wire it on the canvas; do not expose internal plumbing as one.
+- **Component** (`src/lfx/src/lfx/components/<category>/`): user-visible node in the graph, subclass of `Component`, with `display_name`, `inputs`, `outputs`. Use only when the user must wire it on the canvas. Do not add a Component to expose internal plumbing.
 
 ## `lfx/base/` vs `langflow/base/`
 

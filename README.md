@@ -62,26 +62,6 @@ That's it! You're ready to build with Langflow! 🎉
 
 ## 📦 Other install options
 
-### Provider-bundle-free core profile
-
-`langflow-core` is the service-complete application profile consumed by the
-full `langflow` distribution. The full distribution adds Langflow's curated
-provider bundles; install the core profile directly when you want the UI, API,
-and built-in components while choosing provider bundles yourself:
-
-```shell
-uv pip install langflow-core
-uv run langflow run
-```
-
-The core profile does not install any `lfx-*` provider extension distribution.
-It owns the `langflow` command used by both core and full installations, and
-also provides `langflow-core` as an alias. It is not the slimmest Langflow
-layer; use the modular `langflow-base` package when you need lower-level control
-over service dependencies.
-
-The matching container image is `langflowai/langflow:core-latest`.
-
 ### Run from source
 If you've cloned this repository and want to contribute, run this command from the repository root:
 ```shell

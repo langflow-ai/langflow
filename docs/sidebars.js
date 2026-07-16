@@ -236,11 +236,6 @@ module.exports = {
             },
             {
               type: "doc",
-              id: "Deployment/deployment-docker-core",
-              label: "Langflow core Docker image"
-            },
-            {
-              type: "doc",
               id: "Deployment/deployment-caddyfile",
               label: "Deploy Langflow on a remote server"
             },

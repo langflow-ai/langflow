@@ -5,12 +5,11 @@ slug: /install-custom-dependencies
 
 Langflow provides optional dependency groups and support for custom dependencies to extend Langflow functionality. This guide covers how to add dependencies for different Langflow installations, including Langflow Desktop and Langflow OSS.
 
-The Langflow codebase uses four primary distributions, each with its own `pyproject.toml` file:
+The Langflow codebase uses three packages, each with its own `pyproject.toml` file:
 
-* The `main` package (`langflow`) is managed by the root-level `pyproject.toml`. It is the full end-user distribution and depends on `langflow-core` plus Langflow's curated provider bundles.
-* The `core` distribution (`langflow-core`) is managed at `src/langflow-core/pyproject.toml`. It is the service-complete, provider-bundle-free profile consumed by the full distribution. It depends on `langflow-base[complete]` and owns the `langflow` and `langflow-core` commands.
-* The `base` package (`langflow-base`) is managed at `src/backend/base/pyproject.toml`. It is the modular application platform and includes infrastructure such as the FastAPI web framework. Bare `langflow-base` intentionally has a smaller dependency surface; its `complete` extra adds the service integrations required by `langflow-core`. The `base` package depends on the `lfx` package.
-* The `lfx` package is managed at `src/lfx/pyproject.toml`. LFX is a lightweight CLI tool for executing and serving Langflow flows. Its optional groups add executor-specific capabilities such as Cassandra support and tool guards.
+* The `main` package (`langflow`) is managed by the root level `pyproject.toml`, and it includes end-user features and main application code, such as Langchain and OpenAI. The `main` package depends on the `base` package.
+* The `base` package (`langflow-base`) is managed at `src/backend/base/pyproject.toml`, and it includes core infrastructure, such as the FastAPI web framework. The `base` package depends on the `lfx` package.
+* The `lfx` package is managed at `src/lfx/pyproject.toml`. LFX is a lightweight CLI tool for executing and serving Langflow flows. The `lfx` package does not provide optional dependency groups for end users.
 
 ## Install custom dependencies in Langflow Desktop {#langflow-desktop}
 
@@ -28,8 +27,6 @@ If you need to change or uninstall custom dependencies, edit the `requirements.t
 ## Install custom dependencies in Langflow OSS
 
 To install your own custom dependencies in your Langflow environment, add them with your package manager.
-
-Install `langflow` for the default provider bundle set, or install `langflow-core` directly when you want the service-complete application without provider bundles. The full distribution already installs `langflow-core` transitively and uses its `langflow` command, so adding `langflow` to a core environment adds the curated bundles without introducing a second command owner.
 
 If you're working within a cloned Langflow repository, add dependencies with `uv add` because there is already a `pyproject.toml` file for uv to reference:
 
@@ -54,12 +51,13 @@ uv pip install "langflow[postgresql]"
 To install multiple extras, use commas to separate each dependency group:
 
 ```bash
-uv pip install "langflow[postgresql,audio]"
+uv pip install "langflow[postgresql,openai]"
 ```
 
 ### Install optional dependency groups for `langflow-base`
 
-`langflow-base` is the lower-level modular platform beneath `langflow-core`. Use it when you are assembling an application with only specific service dependencies; the full `langflow` distribution reaches it transitively through core rather than depending on it directly.
+`langflow-base` is recommended when you want to deploy Langflow with specific dependencies only.
+It contains the same codebase as `langflow`, but `langflow` includes `langflow-base` as a dependency and adds many additional dependencies on top of it.
 
 The `langflow-base` package provides its own optional dependency groups that are separate from those in the `langflow` package. The `langflow-base` package can be installed as a standalone package with these optional dependency groups.
 
@@ -75,10 +73,10 @@ uv pip install "langflow-base[postgresql]"
 To install multiple extras, use commas to separate each dependency group:
 
 ```bash
-uv pip install "langflow-base[postgresql,audio]"
+uv pip install "langflow-base[postgresql,openai]"
 ```
 
-To install the service integrations that make up the core profile's platform layer, use the `complete` extra. This is broader than bare `langflow-base`, but still does not install provider component bundles:
+To install all optional dependencies for `langflow-base`, use the `complete` extra:
 
 ```bash
 uv pip install "langflow-base[complete]"
@@ -103,7 +101,7 @@ You can also install `langflow-base` with specific optional dependency groups in
 
 ```bash
 # Install langflow-base with only the dependencies you need
-uv pip install "langflow-base[postgresql,audio]" matplotlib
+uv pip install "langflow-base[postgresql,openai]" matplotlib
 ```
 
 If you're working within a cloned Langflow repository, add dependencies with `uv add` to reference the existing `pyproject.toml` files:
