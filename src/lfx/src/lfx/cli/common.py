@@ -64,6 +64,19 @@ _LANGFLOW_NAMESPACE_UUID = uuid.UUID("3c091057-e799-4e32-8ebc-27bc31e1108c")
 _GITHUB_TOKEN_ENV = "GITHUB_TOKEN"
 
 
+class _StreamCaptureBinding:
+    """Shared capture state inherited by child execution contexts."""
+
+    def __init__(self, target) -> None:
+        self.target = target
+        self.active = True
+
+    def deactivate(self) -> None:
+        """Stop routing writes and release the completed capture buffer."""
+        self.active = False
+        self.target = None
+
+
 class _ContextualTextStream:
     """Route writes to a task-local stream while preserving a process fallback.
 
@@ -76,17 +89,25 @@ class _ContextualTextStream:
 
     def __init__(self, fallback, *, context_name: str) -> None:
         self._fallback = fallback
-        self._target: contextvars.ContextVar[Any | None] = contextvars.ContextVar(context_name, default=None)
+        self._binding: contextvars.ContextVar[_StreamCaptureBinding | None] = contextvars.ContextVar(
+            context_name, default=None
+        )
 
     def _current(self):
-        target = self._target.get()
-        return self._fallback if target is None else target
+        binding = self._binding.get()
+        return self._fallback if binding is None or not binding.active else binding.target
 
-    def activate(self, target) -> contextvars.Token[Any | None]:
-        return self._target.set(target)
+    def activate(self, target) -> tuple[contextvars.Token[_StreamCaptureBinding | None], _StreamCaptureBinding]:
+        binding = _StreamCaptureBinding(target)
+        return self._binding.set(binding), binding
 
-    def reset(self, token: contextvars.Token[Any | None]) -> None:
-        self._target.reset(token)
+    def reset(
+        self,
+        activation: tuple[contextvars.Token[_StreamCaptureBinding | None], _StreamCaptureBinding],
+    ) -> None:
+        token, binding = activation
+        binding.deactivate()
+        self._binding.reset(token)
 
     def write(self, data):
         return self._current().write(data)
