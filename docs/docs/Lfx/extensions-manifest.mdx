@@ -37,11 +37,14 @@ Use the `$schema` reference in your manifest so editors can autocomplete and val
 | `name` | string | yes | Human-readable display name shown in the Langflow palette. 1-200 chars. |
 | `description` | string \| null | no | Optional one-paragraph summary, max 2000 chars. |
 | `lfx` | object | yes | [Compatibility declaration](#lfx-compatibility-declaration) against the BUNDLE_API contract. |
-| `bundles` | array | yes | [Bundle list](#bundles). v0 accepts **exactly one** bundle. |
+| `bundles` | array | no | [Bundle list](#bundles). v0 accepts at most one bundle; omit it for a provider-only extension. |
+| `providers` | array | no | [Model providers](#providers) contributed to the unified model-provider registry. |
 | `capabilities` | object | no | [Optional capability flags](#capabilities). Defaults to all-false. |
 | `$schema` | string | no | Optional pointer to this JSON Schema; editors use it for autocomplete. |
 
 `additionalProperties: false` — any field not listed here is rejected with a typed error. Reserved names (`services`, `routes`, `hooks`, `starterProjects`, `userConfig`) are documented under [Deferred fields](#deferred-fields) and surface a more specific error code.
+
+An extension must declare at least one entry in either `bundles` or `providers`. It can declare both when one package contributes components and model providers.
 
 ## `lfx`: compatibility declaration
 
@@ -68,7 +71,66 @@ The runtime compares `str(BUNDLE_API_VERSION)` against this list. A mismatch fai
 | `name` | string | Bundle name; addressable as `ext:<bundle>:<Class>@<slot>`. Lowercase snake_case, starts with a letter, 2-64 chars. |
 | `path` | string | Path to the bundle directory, relative to the manifest. Must not start with `/` or contain `..`. |
 
-v0 enforces `minItems: 1, maxItems: 1`; multi-bundle extensions are rejected with `multi-bundle-deferred-in-this-milestone` and ship in a later epic.
+v0 enforces `maxItems: 1`; multi-bundle extensions are rejected with `multi-bundle-deferred-in-this-milestone` and ship in a later epic. The list can be empty when the extension declares at least one model provider.
+
+## `providers`
+
+A provider-only extension can add a provider without adding a component bundle:
+
+```json
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-acme-models",
+  "version": "0.1.0",
+  "name": "Acme Models",
+  "lfx": { "compat": ["1"] },
+  "providers": [
+    {
+      "name": "Acme",
+      "provider_id": "acme.models",
+      "display_name": "Acme Models",
+      "aliases": ["Acme Legacy"],
+      "metadata": {
+        "icon": "Bot",
+        "variables": [],
+        "mapping": {
+          "model_class": "ChatAcme",
+          "model_param": "model"
+        }
+      },
+      "api_key_required": false,
+      "model_class": {
+        "module": "langchain_acme",
+        "attr": "ChatAcme",
+        "install_hint": "langchain-acme"
+      },
+      "catalog_loader": "lfx_acme.catalog:load_models"
+    }
+  ]
+}
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | Canonical provider name used by existing saved flows and provider selectors. |
+| `provider_id` | string | no | Stable lowercase machine identity used by policy and extension compatibility. Must match `^[a-z0-9][a-z0-9._-]*$`. Legacy manifests can omit it and receive a deterministic ID derived from `name`. |
+| `display_name` | string | no | User-facing label. It can change without changing `provider_id` or saved-flow identity. |
+| `aliases` | array of strings | no | Unique legacy names accepted when resolving the provider's stable identity. |
+| `metadata` | object | yes | Provider icon, variables, API documentation URL, and mapping. `mapping.model_class` must be non-empty. |
+| `model_class` | object | no | Lazy LLM class import with `module`, `attr`, and optional `install_hint`. Omit it when reusing an already-registered class. |
+| `embedding` | object | no | Optional embedding class import and parameter mapping. Includes `class_name`, `module`, `attr`, `param_mapping_key`, `param_mapping`, and optional `install_hint`. |
+| `api_key_required` | bool | no | Whether unified runtime helpers reject missing API-key credentials. Defaults to `true`. |
+| `live` | bool | no | Enables always-on live model discovery. Mutually exclusive with `conditional_live`. |
+| `conditional_live` | bool | no | Enables live discovery only when the provider has a custom endpoint configured. Mutually exclusive with `live`. |
+| `live_discovery` | string | no | Lazy `module:callable` that receives `(user_id, model_type)` and returns live model rows. |
+| `validator` | string | no | Lazy `module:callable` that validates `(provider, variables, model)` and raises on invalid credentials. |
+| `catalog_loader` | string | no | Lazy `module:callable` returning the provider's static model metadata rows. |
+
+`catalog_loader` must return a flat `list[dict]`. Every row requires a non-empty `name`; `model_type` can be `llm` or `embeddings` and defaults to `llm`. Langflow overwrites any supplied `provider` value with the descriptor's canonical `name`, supplies the provider icon when omitted, and rejects duplicate `(model_type, name)` identities. Deployments that require an extension catalog can call `validate_registered_provider_catalogs()` or `get_registry_snapshot(validate_catalogs=True)` during readiness.
+
+Providers that use ambient authentication or need no credentials should set `api_key_required` to `false`. They remain eligible for unified model options when `metadata.variables` is empty or contains only optional configuration fields.
+
+Built-in providers take precedence over extension declarations. A colliding provider is skipped without preventing other providers or components in the extension from loading.
 
 ## `capabilities`
 
@@ -127,6 +189,8 @@ The loader and validator both emit typed errors keyed by the manifest field that
 | `multi-bundle-deferred-in-this-milestone` | `bundles` has more than one entry. |
 | `path-escape` | A `bundles[].path` resolves outside the manifest root (typically a symlink). |
 | `bundle-path-not-found` | `bundles[].path` does not exist or is not a directory. |
+| `provider-invalid` | A provider descriptor or one of its lazy import paths is malformed. The invalid provider is skipped. |
+| `provider-skipped` | A provider name collides with a built-in or previously loaded provider. The existing provider wins. |
 
 Run `lfx extension validate <path>` to see every error as a structured object with `code`, `message`, `location`, `hint`, and `ref_url`.
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 
 from lfx.custom import Component
+from lfx.graph.flow_builder.component import _coerce_model_value as fb_coerce_model_value
 from lfx.graph.flow_builder.component import add_component as fb_add_component
 from lfx.graph.flow_builder.component import configure_component as fb_configure
 from lfx.graph.flow_builder.component import remove_component as fb_remove_component
@@ -18,6 +19,11 @@ from lfx.graph.flow_builder.layout import layout_flow
 from lfx.io import MessageTextInput, Output
 from lfx.log.logger import logger
 from lfx.schema import Data
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyError,
+    ModelProviderPolicyPurpose,
+    resolve_model_provider_policy,
+)
 
 from ._state import (
     _emit,
@@ -169,6 +175,53 @@ def _reconcile_source_selected_output(flow: dict, source_id: str, source_output:
         _emit("select_output", component_id=source_id, output_name=outputs[0].get("name", ""))
 
 
+def _current_policy_user_id() -> str | None:
+    """Return the request user when lfx is hosted by Langflow."""
+    try:
+        from langflow.agentic.services.user_components_context import current_user_id
+    except ImportError:
+        return None
+    return current_user_id()
+
+
+def _model_providers_in_params(flow: dict, component_id: str, params: dict) -> set[str]:
+    """Extract provider names from model-typed fields without mutating the flow."""
+    node = _find_node(flow, component_id)
+    if node is None:
+        return set()
+    template = node.get("data", {}).get("node", {}).get("template", {})
+    providers: set[str] = set()
+    for field_name, value in params.items():
+        field = template.get(field_name)
+        if not isinstance(field, dict) or field.get("type") != "model":
+            continue
+        normalized = fb_coerce_model_value(value)
+        if not isinstance(normalized, list):
+            continue
+        for entry in normalized:
+            if not isinstance(entry, dict):
+                continue
+            provider = entry.get("provider")
+            if isinstance(provider, str) and provider.strip():
+                providers.add(provider.strip())
+    return providers
+
+
+def _require_allowed_model_providers(providers: set[str]) -> None:
+    """Require USE policy before model values reach configuration or catalogs."""
+    if not providers:
+        return
+    from lfx.base.models.unified_models import get_model_providers
+
+    policy = resolve_model_provider_policy(
+        user_id=_current_policy_user_id(),
+        providers=[*get_model_providers(), *providers],
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+    for provider in providers:
+        policy.require(provider)
+
+
 class ConnectComponents(Component):
     display_name = "Connect Components"
     description = "Connect an output of one component to an input of another."
@@ -246,6 +299,12 @@ class ConfigureComponent(Component):
                     return Data(data={"error": f"params must be a JSON object, got {type(params).__name__}"})
             except json.JSONDecodeError:
                 return Data(data={"error": f'Invalid JSON in params: {raw!r}. Use format: {{"key": "value"}}'})
+
+        try:
+            _require_allowed_model_providers(_model_providers_in_params(flow, self.component_id, params))
+        except ModelProviderPolicyError as e:
+            logger.warning("configure_component blocked by model-provider policy: %s", e)
+            return Data(data={"error": str(e)})
 
         # Deterministic review gate (Bug B): editing a TEXT field on a pre-existing
         # component is surfaced as a reviewable diff; model/number/bool still apply live.
@@ -330,6 +389,8 @@ def _mirror_model_value_into_options(flow: dict, component_id: str, params: dict
 
 def _resolve_default_model_name(provider: str) -> str | None:
     """Return the provider's catalog default model name, or None if unknown."""
+    _require_allowed_model_providers({provider})
+
     from lfx.base.models.unified_models import get_unified_models_detailed
 
     detailed = get_unified_models_detailed(

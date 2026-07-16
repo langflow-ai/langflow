@@ -514,6 +514,129 @@ class TestMemoryBaseCreateFlowOwnership:
         assert exc_info.value.status_code == 404
 
 
+class TestMemoryBaseProviderPolicy:
+    """Provider policy must run before Memory Base filesystem or persistence work."""
+
+    @pytest.fixture
+    def service(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        return MemoryBaseService()
+
+    @staticmethod
+    def _fake_scope(mock_db):
+        class _FakeCtx:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, *_args):
+                pass
+
+        scope = MagicMock()
+        scope.return_value = _FakeCtx()
+        return scope
+
+    @staticmethod
+    def _db_returning(value):
+        result = MagicMock()
+        result.first.return_value = value
+        db = AsyncMock()
+        db.exec = AsyncMock(return_value=result)
+        return db
+
+    @pytest.mark.asyncio
+    async def test_create_denied_embedding_provider_stops_before_initialize_or_persist(self, service):
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        user_id = uuid.uuid4()
+        payload = MemoryBaseCreate(name="mb", flow_id=uuid.uuid4(), embedding_model="denied-embed")
+        db = self._db_returning(object())
+        initialize = AsyncMock()
+        denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="Anthropic"),
+            patch("langflow.services.memory_base.service.require_model_provider", side_effect=denial) as require,
+            patch("langflow.services.memory_base.service.initialize_kb", initialize),
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            await service.create(payload, user_id=user_id)
+
+        require.assert_called_once_with(
+            user_id=user_id,
+            provider="Anthropic",
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        initialize.assert_not_awaited()
+        db.add.assert_not_called()
+        db.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_create_denied_preproc_model_is_rejected_even_when_preprocessing_is_disabled(self, service):
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        user_id = uuid.uuid4()
+        payload = MemoryBaseCreate(
+            name="mb",
+            flow_id=uuid.uuid4(),
+            embedding_model="text-embedding-3-small",
+            preprocessing=False,
+            preproc_model="claude-test",
+        )
+        db = self._db_returning(object())
+        initialize = AsyncMock()
+        denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+
+        def require_provider(*, provider, **_kwargs):
+            if provider == "Anthropic":
+                raise denial
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.infer_llm_provider", return_value="Anthropic"),
+            patch(
+                "langflow.services.memory_base.service.require_model_provider",
+                side_effect=require_provider,
+            ) as require,
+            patch("langflow.services.memory_base.service.initialize_kb", initialize),
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            await service.create(payload, user_id=user_id)
+
+        assert require.call_args.kwargs["purpose"] is ModelProviderPolicyPurpose.CONFIGURE
+        initialize.assert_not_awaited()
+        db.add.assert_not_called()
+        db.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_update_denied_embedding_provider_stops_before_mutation_or_persist(self, service):
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        user_id = uuid.uuid4()
+        mb = _make_mb(user_id=user_id, threshold=10)
+        mb.embedding_model = "denied-embed"
+        db = self._db_returning(mb)
+        denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="Anthropic"),
+            patch("langflow.services.memory_base.service.require_model_provider", side_effect=denial) as require,
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            await service.update(mb.id, user_id, MemoryBaseUpdate(threshold=99))
+
+        require.assert_called_once_with(
+            user_id=user_id,
+            provider="Anthropic",
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        assert mb.threshold == 10
+        db.add.assert_not_called()
+        db.commit.assert_not_awaited()
+
+
 class TestMemoryBaseGuardPassesRealKbIdentity:
     """The ID-bearing guards must pass the REAL kb identity, not actor-as-owner.
 
@@ -2302,6 +2425,30 @@ class TestPreprocessingApiKeyValidation:
         ):
             # Should not raise.
             _validate_preprocessing_api_key(uuid.uuid4(), "gpt-4o")
+
+    def test_policy_denial_happens_before_api_key_lookup(self):
+        from langflow.services.memory_base.service import _validate_preprocessing_api_key
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        key_lookup = MagicMock()
+        user_id = uuid.uuid4()
+        with (
+            patch("langflow.services.memory_base.service.infer_llm_provider", return_value="Anthropic"),
+            patch(
+                "langflow.services.memory_base.service.require_model_provider",
+                side_effect=ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE),
+            ) as require,
+            patch("langflow.services.memory_base.service.get_api_key_for_provider", key_lookup),
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            _validate_preprocessing_api_key(user_id, "claude-test")
+
+        require.assert_called_once_with(
+            user_id=user_id,
+            provider="Anthropic",
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        key_lookup.assert_not_called()
 
     def test_raises_when_provider_unknown(self):
         from langflow.services.memory_base.service import (

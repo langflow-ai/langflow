@@ -90,25 +90,44 @@ def get_models_detailed() -> list[list[dict]]:
 MODELS_DETAILED = _STATIC_MODELS_DETAILED
 
 
+def get_provider_secret_variable_key(provider: str) -> str | None:
+    """Return the provider's primary secret variable, never connection config.
+
+    Required secrets take precedence over optional secrets. Providers with no
+    declared secret (for example, a local API-key-optional endpoint configured
+    only by base URL) intentionally return ``None``.
+    """
+    variables = model_provider_metadata.get(provider, {}).get("variables", [])
+    required_secret = next(
+        (
+            variable.get("variable_key")
+            for variable in variables
+            if variable.get("required") and variable.get("is_secret")
+        ),
+        None,
+    )
+    if required_secret is not None:
+        return required_secret
+    return next((variable.get("variable_key") for variable in variables if variable.get("is_secret")), None)
+
+
 @lru_cache(maxsize=1)
 def get_model_provider_variable_mapping() -> dict[str, str]:
-    """Return primary (first required secret) variable for each provider.
+    """Return one primary variable for each provider.
 
-    Backward-compatible helper used in many callers that still expect a single
-    provider-level variable key.
+    This broad, backward-compatible mapping is used by provider UI and
+    enablement callers that need a representative variable even when a
+    provider has no secret. API-key resolution must instead use
+    :func:`get_provider_secret_variable_key`.
     """
     result = {}
     for provider, meta in model_provider_metadata.items():
         variables = meta.get("variables", [])
-        # Prefer a required secret (the canonical API key); then any secret
-        # (an *optional* API key, e.g. a local OpenAI-compatible server like
-        # vLLM whose VLLM_API_KEY is optional); only then fall back to the first
-        # variable. Without the "any secret" step the mapping would point at the
-        # first required *non-secret* connection field (e.g. a base URL), which
-        # get_api_key_for_provider would then resolve and send as the API key.
-        chosen = next((v["variable_key"] for v in variables if v.get("required") and v.get("is_secret")), None)
-        if chosen is None:
-            chosen = next((v["variable_key"] for v in variables if v.get("is_secret")), None)
+        # Prefer a required secret (the canonical API key), then any optional
+        # secret. Providers with no secret retain their first connection field
+        # for backward-compatible UI/enablement behavior; credential resolution
+        # deliberately uses get_provider_secret_variable_key directly.
+        chosen = get_provider_secret_variable_key(provider)
         if chosen is None and variables:
             chosen = variables[0]["variable_key"]
         if chosen is not None:

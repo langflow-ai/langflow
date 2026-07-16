@@ -38,7 +38,8 @@ from __future__ import annotations
 import importlib
 import re
 import threading
-from dataclasses import dataclass, field
+from collections.abc import Mapping
+from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
@@ -56,13 +57,16 @@ from lfx.base.models.unified_models.class_registry import (
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, Sequence
+    from collections.abc import Callable, Sequence
 
 # Provider names that ship in core lfx.  Captured at import (before any bundle
 # can register) so collision detection never depends on registration order.
 _CORE_PROVIDER_NAMES: frozenset[str] = frozenset(MODEL_PROVIDER_METADATA)
 
 _PROVIDER_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+_RESERVED_PROVIDER_METADATA_KEYS = frozenset(
+    {"provider", "name", "models", "num_models", "provider_id", "display_name", "aliases"}
+)
 
 ClassRef = tuple[str, str, str | None]
 """``(module_path, attribute_name, install_hint | None)`` -- the shape the lazy
@@ -101,7 +105,7 @@ class ProviderDescriptor:
     """
 
     name: str
-    metadata: dict
+    metadata: Mapping[str, Any]
     # Stable machine identity used by policy and extension compatibility.
     # ``name`` remains the legacy public selector stored in existing flows.
     provider_id: str | None = None
@@ -115,7 +119,9 @@ class ProviderDescriptor:
     # EMBEDDING_PROVIDER_CLASS_MAPPING[name] and the key into
     # _EMBEDDING_CLASS_IMPORTS; ``embedding_class`` supplies the import tuple
     # when that class is novel.  ``embedding_param_key``/``embedding_param_mapping``
-    # populate EMBEDDING_PARAM_MAPPINGS.
+    # populate EMBEDDING_PARAM_MAPPINGS. The mapping is always available under
+    # ``name`` because runtime consumers index it by the selected provider; an
+    # alternate key is retained as a compatibility alias for older manifests.
     embedding_class_name: str | None = None
     embedding_class: ClassRef | None = None
     embedding_param_key: str | None = None
@@ -232,9 +238,14 @@ def _validate_spec(spec: ProviderDescriptor) -> None:
     if not spec.name or not isinstance(spec.name, str):
         msg = "ProviderSpec.name must be a non-empty string"
         raise ValueError(msg)
-    if not isinstance(spec.metadata, dict):
-        msg = f"ProviderSpec.metadata for {spec.name!r} must be a dict"
+    if not isinstance(spec.metadata, Mapping):
+        msg = f"ProviderSpec.metadata for {spec.name!r} must be a mapping"
         raise ValueError(msg)  # noqa: TRY004 - spec validation surfaces uniformly as ValueError
+    reserved_metadata_keys = _RESERVED_PROVIDER_METADATA_KEYS.intersection(spec.metadata)
+    if reserved_metadata_keys:
+        keys = ", ".join(sorted(reserved_metadata_keys))
+        msg = f"ProviderDescriptor.metadata for {spec.name!r} contains reserved keys: {keys}"
+        raise ValueError(msg)
     if not spec.model_class_name():
         msg = f"ProviderSpec.metadata for {spec.name!r} must set mapping.model_class"
         raise ValueError(msg)
@@ -359,12 +370,20 @@ def register_provider(spec: ProviderDescriptor) -> bool:
                     f"conflicts with an existing import"
                 )
                 raise ValueError(msg)
-            if spec.embedding_param_key and spec.embedding_param_key in EMBEDDING_PARAM_MAPPINGS:
-                msg = (
-                    f"ProviderSpec {spec.name!r} embedding params {spec.embedding_param_key!r} "
-                    f"conflict with an existing mapping"
+            if spec.embedding_param_mapping is not None:
+                embedding_param_keys = {spec.name}
+                if spec.embedding_param_key:
+                    embedding_param_keys.add(spec.embedding_param_key)
+                conflicting_param_key = next(
+                    (key for key in embedding_param_keys if key in EMBEDDING_PARAM_MAPPINGS),
+                    None,
                 )
-                raise ValueError(msg)
+                if conflicting_param_key is not None:
+                    msg = (
+                        f"ProviderSpec {spec.name!r} embedding params {conflicting_param_key!r} "
+                        f"conflict with an existing mapping"
+                    )
+                    raise ValueError(msg)
 
         # --- metadata (C1) -------------------------------------------------
         metadata = dict(spec.metadata)
@@ -387,9 +406,13 @@ def register_provider(spec: ProviderDescriptor) -> bool:
             if spec.embedding_class and spec.embedding_class_name not in _EMBEDDING_CLASS_IMPORTS:
                 _EMBEDDING_CLASS_IMPORTS[spec.embedding_class_name] = spec.embedding_class
                 _undo.embedding_class_keys.add(spec.embedding_class_name)
-            if spec.embedding_param_key and spec.embedding_param_mapping is not None:
-                EMBEDDING_PARAM_MAPPINGS[spec.embedding_param_key] = dict(spec.embedding_param_mapping)
-                _undo.embedding_param_keys.add(spec.embedding_param_key)
+            if spec.embedding_param_mapping is not None:
+                embedding_param_keys = {spec.name}
+                if spec.embedding_param_key:
+                    embedding_param_keys.add(spec.embedding_param_key)
+                for embedding_param_key in embedding_param_keys:
+                    EMBEDDING_PARAM_MAPPINGS[embedding_param_key] = dict(spec.embedding_param_mapping)
+                    _undo.embedding_param_keys.add(embedding_param_key)
 
         # --- live-discovery gate (C2) -------------------------------------
         if spec.live and spec.name not in LIVE_MODEL_PROVIDERS:
@@ -554,13 +577,35 @@ def get_registry_snapshot(*, validate_catalogs: bool = False) -> ProviderRegistr
     if validate_catalogs:
         validate_registered_provider_catalogs()
     descriptors = {
-        provider_id: descriptor
+        provider_id: _freeze_descriptor(descriptor)
         for provider_id in _core_provider_ids() | _registered_ids
         if (descriptor := get_provider_descriptor(provider_id)) is not None
     }
     return ProviderRegistrySnapshot(
         generation=_generation,
         descriptors_by_id=MappingProxyType(descriptors),
+    )
+
+
+def _freeze_value(value: Any) -> Any:
+    """Recursively freeze manifest-owned containers for snapshot consumers."""
+    if isinstance(value, Mapping):
+        return MappingProxyType({key: _freeze_value(item) for key, item in value.items()})
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_value(item) for item in value)
+    if isinstance(value, (set, frozenset)):
+        return frozenset(_freeze_value(item) for item in value)
+    return value
+
+
+def _freeze_descriptor(descriptor: ProviderDescriptor) -> ProviderDescriptor:
+    embedding_mapping = (
+        _freeze_value(descriptor.embedding_param_mapping) if descriptor.embedding_param_mapping is not None else None
+    )
+    return replace(
+        descriptor,
+        metadata=_freeze_value(descriptor.metadata),
+        embedding_param_mapping=embedding_mapping,
     )
 
 

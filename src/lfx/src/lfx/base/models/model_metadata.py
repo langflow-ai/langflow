@@ -309,6 +309,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
     },
     "IBM WatsonX": {
         "provider_id": "ibm-watsonx",
+        "aliases": ["IBM watsonx.ai"],
         "icon": "WatsonxAI",
         "max_tokens_field_name": "max_tokens",
         "variables": [

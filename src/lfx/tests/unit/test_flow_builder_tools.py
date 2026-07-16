@@ -4,6 +4,7 @@ import asyncio
 import copy
 import json
 
+import pytest
 from lfx.mcp.flow_builder_tools import (
     AddComponent,
     BuildFlowFromSpec,
@@ -739,6 +740,68 @@ class TestConfigureComponentModelProviderOnly:
 
         value = _read_model_field_value(agent_id)
         assert value[0].get("name") == "claude-sonnet-4-5-20250929"
+
+
+class TestConfigureComponentModelProviderPolicy:
+    """Denied providers must never enter the MCP flow-builder model field."""
+
+    @staticmethod
+    def _deny_all_snapshot():
+        from lfx.services.model_provider_policy import (
+            ModelProviderPolicyContext,
+            ModelProviderPolicyPurpose,
+            ModelProviderPolicySnapshot,
+        )
+
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id="user-1"),
+            purpose=ModelProviderPolicyPurpose.USE,
+            candidate_provider_ids=frozenset({"openai", "anthropic"}),
+            allowed_provider_ids=frozenset(),
+        )
+
+    def test_denied_provider_returns_generic_error_before_configure_default_or_mirror(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import ConfigureComponent, mutate_tools
+
+        agent_id = _make_agent_node_for_model_test()
+        original_value = copy.deepcopy(_read_model_field_value(agent_id))
+        snapshot = self._deny_all_snapshot()
+
+        monkeypatch.setattr(mutate_tools, "resolve_model_provider_policy", lambda **_kwargs: snapshot)
+
+        def fail_if_called(*_args, **_kwargs):
+            msg = "denied provider reached downstream model configuration work"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(mutate_tools, "fb_configure", fail_if_called)
+        monkeypatch.setattr(mutate_tools, "_resolve_default_model_name", fail_if_called)
+        monkeypatch.setattr(mutate_tools, "_mirror_model_value_into_options", fail_if_called)
+
+        cfg = ConfigureComponent()
+        cfg.set(component_id=agent_id, params='{"model": [{"provider": "Anthropic"}]}')
+        result = cfg.configure_component()
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        assert _read_model_field_value(agent_id) == original_value
+
+    def test_default_resolution_denies_before_catalog_lookup(self, monkeypatch):
+        from lfx.base.models import unified_models
+        from lfx.mcp.flow_builder_tools import mutate_tools
+        from lfx.services.model_provider_policy import ModelProviderPolicyError
+
+        snapshot = self._deny_all_snapshot()
+        monkeypatch.setattr(mutate_tools, "resolve_model_provider_policy", lambda **_kwargs: snapshot)
+
+        def fail_if_called(*_args, **_kwargs):
+            msg = "denied provider reached the model catalog"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(unified_models, "get_unified_models_detailed", fail_if_called)
+
+        with pytest.raises(ModelProviderPolicyError) as exc_info:
+            mutate_tools._resolve_default_model_name("Anthropic")
+
+        assert str(exc_info.value) == "The requested model provider is not available"
 
 
 class TestConfigureComponentModelFieldSerializedSpec:

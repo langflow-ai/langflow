@@ -17,11 +17,24 @@ from lfx.base.models.provider_registry import ProviderSpec, register_provider
 
 _PROVIDER_NAME = "FakeLiveCo"
 _API_DOCS_URL = "https://fakeliveco.example/docs"
+_AMBIENT_PROVIDER_NAME = "AmbientAuthCo"
+_AMBIENT_MODEL_NAME = "ambient-chat"
 
 
 def fake_live_discovery(user_id, model_type):  # noqa: ARG001
     """Referenced by the ProviderSpec dotted path; never called while unconfigured."""
     return []
+
+
+def ambient_auth_catalog():
+    """Static catalog for a provider whose runtime uses ambient authentication."""
+    return [
+        {
+            "name": _AMBIENT_MODEL_NAME,
+            "model_type": "llm",
+            "default": True,
+        }
+    ]
 
 
 def _fakeliveco_spec() -> ProviderSpec:
@@ -49,6 +62,19 @@ def _fakeliveco_spec() -> ProviderSpec:
     )
 
 
+def _ambient_auth_spec() -> ProviderSpec:
+    return ProviderSpec(
+        name=_AMBIENT_PROVIDER_NAME,
+        metadata={
+            "icon": "Bot",
+            "variables": [],
+            "mapping": {"model_class": "ChatOpenAI", "model_param": "model"},
+        },
+        api_key_required=False,
+        catalog_loader=f"{__name__}:ambient_auth_catalog",
+    )
+
+
 def _unregister(name: str) -> None:
     """Remove a single provider registration.
 
@@ -59,9 +85,18 @@ def _unregister(name: str) -> None:
     MODEL_PROVIDER_METADATA.pop(name, None)
     if name in LIVE_MODEL_PROVIDERS:
         LIVE_MODEL_PROVIDERS.remove(name)
-    provider_registry._registered.pop(name, None)
+    descriptor = provider_registry._registered.pop(name, None)
+    if descriptor is not None:
+        provider_registry._registered_ids.pop(descriptor.canonical_id(), None)
+    for alias, registered_name in list(provider_registry._registered_aliases.items()):
+        if registered_name == name:
+            provider_registry._registered_aliases.pop(alias, None)
     provider_registry._live_discovery_cache.pop(name, None)
     provider_registry._validator_cache.pop(name, None)
+    provider_registry._catalog_cache.pop(name, None)
+    provider_registry._undo.metadata_keys.discard(name)
+    provider_registry._undo.live_names.discard(name)
+    provider_registry._generation += 1
     provider_registry._clear_derived_caches()
 
 
@@ -70,6 +105,13 @@ def fake_live_provider():
     assert register_provider(_fakeliveco_spec()) is True
     yield _PROVIDER_NAME
     _unregister(_PROVIDER_NAME)
+
+
+@pytest.fixture
+def ambient_auth_provider():
+    assert register_provider(_ambient_auth_spec()) is True
+    yield _AMBIENT_PROVIDER_NAME
+    _unregister(_AMBIENT_PROVIDER_NAME)
 
 
 async def _get_models(client: AsyncClient, headers: dict, params: dict | None = None) -> list[dict]:
@@ -119,3 +161,23 @@ async def test_non_live_metadata_providers_stay_hidden(client: AsyncClient, logg
     providers = {p["provider"] for p in await _get_models(client, logged_in_headers)}
     assert "Azure OpenAI" not in providers
     assert "Groq" not in providers
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_credentialless_extension_provider_is_enabled_and_offered(
+    client: AsyncClient,
+    logged_in_headers,
+    ambient_auth_provider,
+):
+    enabled_response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
+    options_response = await client.get("api/v1/model_options/language", headers=logged_in_headers)
+
+    assert enabled_response.status_code == status.HTTP_200_OK
+    assert enabled_response.json()["provider_status"][ambient_auth_provider] is True
+    assert ambient_auth_provider in enabled_response.json()["enabled_providers"]
+
+    assert options_response.status_code == status.HTTP_200_OK
+    assert any(
+        option["provider"] == ambient_auth_provider and option["name"] == _AMBIENT_MODEL_NAME
+        for option in options_response.json()
+    )

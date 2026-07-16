@@ -147,6 +147,21 @@ def test_register_exposes_stable_identity_display_name_and_aliases():
     assert MODEL_PROVIDER_METADATA["FakeCo"]["display_name"] == "FakeCo Enterprise"
 
 
+def test_registry_snapshot_deep_freezes_descriptor_payloads():
+    register_provider(_fakeco_spec(provider_id="fakeco"))
+
+    descriptor = provider_registry.get_registry_snapshot().descriptors_by_id["fakeco"]
+
+    with pytest.raises(TypeError):
+        descriptor.metadata["icon"] = "Spoofed"  # type: ignore[index]
+    variables = descriptor.metadata["variables"]
+    with pytest.raises(TypeError):
+        variables[0]["variable_key"] = "SPOOFED_KEY"  # type: ignore[index]
+
+    assert MODEL_PROVIDER_METADATA["FakeCo"]["icon"] == "FakeCo"
+    assert MODEL_PROVIDER_METADATA["FakeCo"]["variables"][0]["variable_key"] == "FAKECO_API_KEY"
+
+
 def test_registered_catalog_loader_contributes_static_models():
     register_provider(
         _fakeco_spec(
@@ -173,6 +188,16 @@ def test_duplicate_provider_id_is_rejected_even_when_names_differ():
                 name="OtherCo",
                 provider_id="fakeco",
                 metadata={**_fakeco_metadata(), "icon": "OtherCo"},
+            )
+        )
+
+
+@pytest.mark.parametrize("reserved_key", ["provider", "models", "num_models", "provider_id", "aliases"])
+def test_provider_metadata_cannot_override_identity_or_catalog_structure(reserved_key):
+    with pytest.raises(ValueError, match="reserved keys"):
+        register_provider(
+            _fakeco_spec(
+                metadata={**_fakeco_metadata(), reserved_key: "OpenAI"},
             )
         )
 
@@ -325,6 +350,23 @@ def _fakeco_metadata_with_base_url() -> dict:
     return meta
 
 
+def _fakeco_metadata_with_only_base_url() -> dict:
+    """Provider metadata with required connection config but no secret variable."""
+    meta = _fakeco_metadata()
+    meta["variables"] = [
+        {
+            "variable_name": "FakeCo Base URL",
+            "variable_key": "FAKECO_API_BASE",
+            "required": True,
+            "is_secret": False,
+            "is_list": False,
+            "options": [],
+            "langchain_param": "base_url",
+        }
+    ]
+    return meta
+
+
 def test_get_llm_applies_registered_provider_base_url(monkeypatch):
     from lfx.base.models import unified_models as um
     from lfx.base.models.unified_models.instantiation import get_llm
@@ -385,13 +427,18 @@ def test_get_llm_real_resolver_uses_placeholder_not_base_url(monkeypatch):
         def __init__(self, **kwargs):
             captured.update(kwargs)
 
-    register_provider(_fakeco_spec(metadata=_fakeco_metadata_with_base_url(), api_key_required=False))
+    register_provider(_fakeco_spec(metadata=_fakeco_metadata_with_only_base_url(), api_key_required=False))
     monkeypatch.setenv("FAKECO_API_BASE", "http://vllm.example:8000")
-    monkeypatch.delenv("FAKECO_API_KEY", raising=False)
     monkeypatch.setattr(um, "get_model_class", lambda _name: FakeChat)
     # Base URL comes from the env via the connection handler; do NOT patch the
     # api-key resolver -- that is the path under test.
     monkeypatch.setattr(um, "get_all_variables_for_provider", lambda *_a, **_k: {})
+
+    # The broad mapping remains available to provider enablement/UI callers,
+    # but neither implicit nor explicit API-key lookup may consume it.
+    assert um.get_model_provider_variable_mapping()["FakeCo"] == "FAKECO_API_BASE"
+    assert um.get_api_key_for_provider(None, "FakeCo") is None
+    assert um.get_api_key_for_provider(None, "FakeCo", "FAKECO_API_BASE") is None
 
     model_selection = [{"name": "m1", "provider": "FakeCo", "metadata": {"model_class": "ChatOpenAI"}}]
     get_llm(model_selection, user_id=None)
@@ -457,6 +504,7 @@ def test_embedding_wiring_registered():
         )
     )
     assert EMBEDDING_PROVIDER_CLASS_MAPPING["FakeCo"] == "OpenAIEmbeddings"
+    assert EMBEDDING_PARAM_MAPPINGS["FakeCo"]["api_key"] == "api_key"  # pragma: allowlist secret
     assert EMBEDDING_PARAM_MAPPINGS["FakeCo Embeddings"]["api_key"] == "api_key"  # pragma: allowlist secret
 
 
@@ -542,6 +590,7 @@ def test_clear_restores_baseline():
     assert set(MODEL_PROVIDER_METADATA) == baseline_meta_keys
     assert list(LIVE_MODEL_PROVIDERS) == baseline_live
     assert "FakeCo" not in EMBEDDING_PROVIDER_CLASS_MAPPING
+    assert "FakeCo" not in EMBEDDING_PARAM_MAPPINGS
     assert "FakeCo Embeddings" not in EMBEDDING_PARAM_MAPPINGS
 
 
