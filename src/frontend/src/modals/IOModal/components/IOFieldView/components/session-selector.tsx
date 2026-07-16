@@ -9,7 +9,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-} from "@/components/ui/select-custom";
+} from "@/components/ui/select";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
 import useFlowStore from "@/stores/flowStore";
@@ -204,6 +204,7 @@ export default function SessionSelector({
             content={t("chat.options")}
           >
             <SelectTrigger
+              variant="plain"
               onClick={(e) => {
                 e.stopPropagation();
               }}
@@ -219,8 +220,13 @@ export default function SessionSelector({
               <IconComponent name="MoreHorizontal" className="h-4 w-4" />
             </SelectTrigger>
           </ShadTooltip>
-          <SelectContent side="right" align="start" className="p-0">
+          <SelectContent
+            side="right"
+            align="start"
+            className="min-w-[11.5rem] p-0"
+          >
             <SelectItem
+              variant="plain"
               value="rename"
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >
@@ -230,6 +236,7 @@ export default function SessionSelector({
               </div>
             </SelectItem>
             <SelectItem
+              variant="plain"
               value="messageLogs"
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >
@@ -241,6 +248,7 @@ export default function SessionSelector({
               </div>
             </SelectItem>
             <SelectItem
+              variant="plain"
               value="delete"
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >

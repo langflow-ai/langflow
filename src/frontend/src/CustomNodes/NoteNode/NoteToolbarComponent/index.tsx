@@ -8,7 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Select, SelectTrigger } from "@/components/ui/select-custom";
+import { Select, SelectTrigger } from "@/components/ui/select";
 import { COLOR_OPTIONS } from "@/constants/constants";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
@@ -150,7 +150,7 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
 
         {/* More options dropdown */}
         <Select onValueChange={handleSelectChange} value="">
-          <SelectTrigger>
+          <SelectTrigger variant="plain">
             <ShadTooltip content={t("nodeToolbar.showMore")} side="top">
               <div
                 data-testid="more-options-modal"

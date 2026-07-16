@@ -144,7 +144,7 @@ jest.mock("../../../../../components/common/genericIconComponent", () => ({
   ForwardedIconComponent: ({ name }: { name: string }) => <span>{name}</span>,
 }));
 
-jest.mock("../../../../../components/ui/select-custom", () => ({
+jest.mock("../../../../../components/ui/select", () => ({
   Select: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),

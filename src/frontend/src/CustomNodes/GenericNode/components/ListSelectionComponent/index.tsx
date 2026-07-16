@@ -4,7 +4,10 @@ import SearchBarComponent from "@/components/core/parameterRenderComponent/compo
 import type { InputProps } from "@/components/core/parameterRenderComponent/types";
 import { Button } from "@/components/ui/button";
 import { DialogFooter, DialogHeader } from "@/components/ui/dialog";
-import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
+import {
+  Dialog,
+  DialogContentPlain as DialogContent,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn, testIdCase } from "@/utils/utils";
 import ListItem from "./ListItem";
