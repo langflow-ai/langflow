@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class PathSettings(BaseModel):
@@ -22,6 +22,13 @@ class PathSettings(BaseModel):
     directory that is not equal to or inside one of these roots; symlink escapes
     are blocked because the path is resolved before the containment check. Leave
     empty in multi-tenant cloud deployments to refuse arbitrary-path access."""
+
+    kb_folder_max_file_size_bytes: int = Field(default=25 * 1024 * 1024, gt=0)
+    """Maximum file size accepted by Knowledge Base folder ingestion.
+
+    Set ``LANGFLOW_KB_FOLDER_MAX_FILE_SIZE_BYTES`` to an operator-chosen positive
+    byte count. Public ingestion routes inject this value into ``FolderSource``;
+    request bodies cannot raise or lower the server-owned limit."""
 
     directory_component_allowed_roots: list[str] = []
     """Additional directories the legacy Directory component may read from.

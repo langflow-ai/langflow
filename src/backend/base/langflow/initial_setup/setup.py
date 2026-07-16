@@ -611,6 +611,41 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
     return starter_projects
 
 
+def filter_starter_projects_by_available_components(
+    starter_projects: list[tuple[anyio.Path, dict]], all_types_dict: dict
+) -> list[tuple[anyio.Path, dict]]:
+    """Return only starter projects whose component types exist in the live registry."""
+    available_component_types = set(flatten_components_with_aliases(all_types_dict))
+    filtered_projects = []
+
+    for project_path, project in starter_projects:
+        missing_component_types = set()
+        for node in project.get("data", {}).get("nodes", []):
+            node_data = node.get("data", {})
+            node_type = node_data.get("type")
+            component_data = node_data.get("node", {})
+            if not node_type or node_type == "note" or not isinstance(component_data, dict):
+                continue
+
+            metadata = component_data.get("metadata", {})
+            module_name = metadata.get("module") if isinstance(metadata, dict) else None
+            code = component_data.get("template", {}).get("code")
+            code_value = code.get("value") if isinstance(code, dict) else code
+            is_embedded_custom_component = bool(code_value) and not module_name
+
+            if node_type not in available_component_types and not is_embedded_custom_component:
+                missing_component_types.add(node_type)
+
+        if missing_component_types:
+            missing_components = ", ".join(sorted(missing_component_types))
+            project_name = project.get("name", project_path.name)
+            logger.warning(f"Skipping starter project '{project_name}'; unavailable components: {missing_components}")
+            continue
+        filtered_projects.append((project_path, project))
+
+    return filtered_projects
+
+
 async def copy_profile_pictures() -> None:
     """Asynchronously copies profile pictures from the source directory to the target configuration directory.
 
@@ -1328,6 +1363,7 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
     async with session_scope() as session:
         new_folder = await get_or_create_starter_folder(session)
         starter_projects = await load_starter_projects()
+        starter_projects = filter_starter_projects_by_available_components(starter_projects, all_types_dict)
 
         if get_settings_service().settings.update_starter_projects:
             await logger.adebug("Updating starter projects")

@@ -171,6 +171,9 @@ export interface InteractiveContent extends BaseContent {
   // Correlation for the resume round-trip; stamped from the run that paused.
   job_id?: string;
   submitted_action?: string;
+  // Stamped by the backend when a rerun superseded the paused run: the card
+  // renders closed instead of offering a decision that would only 409.
+  superseded?: boolean;
 }
 
 export interface ImageContent extends BaseContent {

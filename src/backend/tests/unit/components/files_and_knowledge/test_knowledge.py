@@ -309,6 +309,48 @@ class TestLegacySubclassesPinMode:
 
 
 # ---------------------------------------------------------------------------
+# Knowledge Base path isolation
+# ---------------------------------------------------------------------------
+class TestKnowledgeBasePathIsolation:
+    @pytest.mark.parametrize(
+        "component_class",
+        [KnowledgeComponent, KnowledgeIngestionComponent, KnowledgeBaseComponent],
+    )
+    @pytest.mark.parametrize("knowledge_base", ["../../outside", "../victim/secret_kb"])
+    def test_rejects_kb_names_outside_the_current_user_directory(
+        self, component_class, knowledge_base, tmp_path
+    ) -> None:
+        component = component_class(knowledge_base=knowledge_base)
+
+        with pytest.raises(ValueError, match="KB path escapes root directory"):
+            component._resolve_kb_path(tmp_path, "attacker", knowledge_base)
+
+    def test_rejects_username_that_escapes_the_global_kb_root(self, tmp_path) -> None:
+        component = KnowledgeComponent(knowledge_base="safe_kb")
+
+        with pytest.raises(ValueError, match="KB path escapes root directory"):
+            component._resolve_kb_path(tmp_path, "../outside", "safe_kb")
+
+    def test_rejects_symlink_escape_from_current_user_directory(self, tmp_path) -> None:
+        user_root = tmp_path / "attacker"
+        outside_root = tmp_path.parent / "outside"
+        user_root.mkdir()
+        outside_root.mkdir(exist_ok=True)
+        (user_root / "linked").symlink_to(outside_root, target_is_directory=True)
+        component = KnowledgeComponent(knowledge_base="linked/secret_kb")
+
+        with pytest.raises(ValueError, match="KB path escapes root directory"):
+            component._resolve_kb_path(tmp_path, "attacker", "linked/secret_kb")
+
+    def test_preserves_kb_names_inside_the_current_user_directory(self, tmp_path) -> None:
+        component = KnowledgeComponent(knowledge_base="existing_kb")
+
+        assert component._resolve_kb_path(tmp_path, "current_user", "existing_kb") == (
+            tmp_path / "current_user" / "existing_kb"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Display name / dropdown UX (matches starter projects + frontend create dialog)
 # ---------------------------------------------------------------------------
 class TestComponentSurface:

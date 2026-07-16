@@ -88,6 +88,7 @@ dependencies = [
     "networkx>=3.4.2,<4.0.0",
     "json-repair>=0.30.3,<1.0.0",
     "mcp>=1.17.0,<2.0.0",
+    "a2a-sdk>=1.1.0,<2.0.0",
     "ag-ui-protocol==0.1.18",
     "aiosqlite>=0.20.0,<1.0.0",
     "greenlet>=3.1.1,<4.0.0",
@@ -175,6 +176,7 @@ Documentation = "https://docs.langflow.org"
 # Optional dependencies
 [project.optional-dependencies]
 audio = [
+    "openai>=1.68.2,<3.0.0",
     "webrtcvad>=2.0.10",
 ]
 

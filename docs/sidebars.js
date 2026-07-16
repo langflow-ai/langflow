@@ -92,6 +92,7 @@ module.exports = {
       items: [
         "Agents/agents",
         "Agents/agents-tools",
+        "Agents/a2a-server",
       ],
     },
     {
@@ -511,6 +512,7 @@ module.exports = {
             "Components/bundles-nvidia",
             "Components/bundles-ollama",
             "Components/bundles-openai",
+            "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",
             "Components/bundles-oracle",
             "Components/bundles-paddle",
