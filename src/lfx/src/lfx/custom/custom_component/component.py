@@ -1233,19 +1233,28 @@ class Component(CustomComponent):
             setattr(self, output.name, output)
             self._outputs_map[output.name] = output
 
+    @staticmethod
+    def _get_trace_value(input_: Any) -> Any:
+        """Return an input value safe to send to tracing providers."""
+        if getattr(input_, "password", False):
+            return "**********"
+        return _mask_secret_value(input_.value)
+
     def get_trace_as_inputs(self):
         predefined_inputs = {
-            input_.name: input_.value
+            input_.name: self._get_trace_value(input_)
             for input_ in self.inputs
             if hasattr(input_, "trace_as_input") and input_.trace_as_input
         }
         # Runtime inputs
-        runtime_inputs = {name: input_.value for name, input_ in self._inputs.items() if hasattr(input_, "value")}
+        runtime_inputs = {
+            name: self._get_trace_value(input_) for name, input_ in self._inputs.items() if hasattr(input_, "value")
+        }
         return {**predefined_inputs, **runtime_inputs}
 
     def get_trace_as_metadata(self):
         return {
-            input_.name: input_.value
+            input_.name: self._get_trace_value(input_)
             for input_ in self.inputs
             if hasattr(input_, "trace_as_metadata") and input_.trace_as_metadata
         }
