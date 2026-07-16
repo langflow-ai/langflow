@@ -505,7 +505,7 @@ The API uses standard HTTP status codes to indicate success or failure:
 |-------------|-------------|
 | `200 OK` | Request successful. |
 | `400 Bad Request` | Invalid request parameters. |
-| `401 Unauthorized` | Invalid or missing API key. |
+| `403 Forbidden` | Invalid or missing API key. |
 | `404 Not Found` | Flow not found or developer API disabled. |
 | `422 Unprocessable Entity` | Unknown `stream_protocol` or unsupported field for the selected mode. |
 | `500 Internal Server Error` | Server error during execution. |

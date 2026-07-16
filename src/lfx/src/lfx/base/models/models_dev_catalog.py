@@ -57,12 +57,9 @@ _DATED_SNAPSHOT_RE = re.compile(r"-(?:\d{4}-\d{2}-\d{2}|\d{8}|preview-\d{2}-\d{2
 
 # Threshold for auto-deprecating models that haven't shipped a new version in
 # a long time. models.dev has no deprecation field, and providers rarely
-# formally deprecate models even after they ship a successor — but a model
-# that hasn't been touched in 30 months is overwhelmingly legacy in practice
-# (catches gpt-4 / gpt-4-turbo / text-embedding-ada-002 today, leaves
-# gpt-4o / text-embedding-3-small/large active). Tuned conservatively so
-# current embeddings (~28 months old) survive; nudge down only if successor
-# adoption is verified.
+# formally deprecate models even after they ship a successor. Apply this only
+# to language models: embedding release cadences are slower, and age alone
+# does not mean that a provider has deprecated an embedding model.
 _AGE_DEPRECATION_DAYS = 900
 
 MODELS_DEV_URL = "https://models.dev/api.json"
@@ -82,6 +79,17 @@ MODELS_DEV_PROVIDER_KEYS: dict[str, str] = {
     # first two have half-wired class registry entries and the third isn't in
     # models.dev. OpenRouter is omitted because it's live-fetched per-user.
 }
+
+_GOOGLE_GENERATIVE_AI_PROVIDER = "Google Generative AI"
+_GOOGLE_MODEL_PREFIX = "models/"
+
+
+def _catalog_model_identity(provider: str, model: dict[str, Any]) -> tuple[str | None, str]:
+    """Return a provider-aware identity for matching static and models.dev rows."""
+    name = model.get("name")
+    if provider == _GOOGLE_GENERATIVE_AI_PROVIDER and isinstance(name, str):
+        name = name.removeprefix(_GOOGLE_MODEL_PREFIX)
+    return name, model.get("model_type") or "llm"
 
 
 def _snapshot_dir() -> Path:
@@ -229,15 +237,16 @@ def _is_embedding_family(model_dict: dict[str, Any]) -> bool:
 
 
 def _is_aged_out(model_dict: dict[str, Any], now: datetime) -> bool:
-    """Return True if the model is older than ``_AGE_DEPRECATION_DAYS`` days.
+    """Return True if a language model is older than ``_AGE_DEPRECATION_DAYS`` days.
 
     Prefers ``release_date`` (when the model functionally shipped) over
     ``last_updated`` (which tracks catalog-curator edits like typo fixes, not
-    new model versions). The combination of preferring release_date and the
-    900-day threshold correctly catches ``gpt-4`` / ``gpt-4-turbo`` (924d from
-    their 2023-11 release) while keeping ``text-embedding-3-large`` (844d
-    from its 2024-01 release) active.
+    new model versions). Embedding models are excluded because their age does
+    not indicate provider deprecation.
     """
+    if _is_embedding_family(model_dict):
+        return False
+
     raw = model_dict.get("release_date") or model_dict.get("last_updated")
     epoch = _release_date_to_epoch(raw)
     if epoch == 0:
@@ -285,7 +294,7 @@ def _translate_model_entry(
     ``deprecated`` kwarg (which lets callers forward the static-list
     curation that models.dev itself doesn't surface):
       * dated-snapshot id (:data:`_DATED_SNAPSHOT_RE`);
-      * stale ``last_updated`` / ``release_date`` per :data:`_AGE_DEPRECATION_DAYS`.
+      * stale LLM ``last_updated`` / ``release_date`` per :data:`_AGE_DEPRECATION_DAYS`.
     ``now`` is injected for testability — defaults to the current UTC time.
     """
     now = now or datetime.now(tz=timezone.utc)
@@ -354,18 +363,18 @@ def apply_models_dev_overrides(
     the fresher metadata (context windows, pricing, capabilities) is preserved.
 
     models.dev exposes no ``deprecated`` field of its own, so this function
-    preserves the static-list curation by name: any model that was already
-    flagged deprecated in the bundled ``*_constants.py`` lists keeps that flag
-    after the override. Dated-snapshot ids
-    (e.g. ``claude-opus-4-5-20251101``, ``gpt-4o-2024-05-13``) and rows whose
-    most recent date is older than :data:`_AGE_DEPRECATION_DAYS` are also
+    preserves the static-list curation by catalog identity: any model that was
+    already flagged deprecated in the bundled ``*_constants.py`` lists keeps
+    that flag after the override. Dated-snapshot ids
+    (e.g. ``claude-opus-4-5-20251101``, ``gpt-4o-2024-05-13``) and language
+    models whose most recent date is older than :data:`_AGE_DEPRECATION_DAYS` are also
     auto-flagged in :func:`_translate_model_entry`. ``now`` is forwarded for
     testability.
     """
     now = now or datetime.now(tz=timezone.utc)
-    # Build provider_name -> {model_name: deprecated} from the static lists so
-    # we can preserve the static curation through the override.
-    static_deprecated_by_provider: dict[str, set[str]] = {}
+    # Build provider_name -> {model identity} from the static lists so we can
+    # preserve the static curation through the override.
+    static_deprecated_by_provider: dict[str, set[tuple[str | None, str]]] = {}
     for group in static_lists:
         for entry in group:
             if not isinstance(entry, dict):
@@ -375,7 +384,7 @@ def apply_models_dev_overrides(
             if not provider or not name:
                 continue
             if entry.get("deprecated"):
-                static_deprecated_by_provider.setdefault(provider, set()).add(name)
+                static_deprecated_by_provider.setdefault(provider, set()).add(_catalog_model_identity(provider, entry))
 
     # Build provider_name -> translated list once.
     overrides: dict[str, list[dict[str, Any]]] = {}
@@ -384,15 +393,12 @@ def apply_models_dev_overrides(
         if not isinstance(provider_block, dict):
             continue
         static_deprecated = static_deprecated_by_provider.get(provider_name, set())
-        translated = [
-            _translate_model_entry(
-                provider_name,
-                m,
-                deprecated=(m.get("id") in static_deprecated),
-                now=now,
-            )
-            for m in _provider_model_dicts(provider_block)
-        ]
+        translated = []
+        for model in _provider_model_dicts(provider_block):
+            translated_model = _translate_model_entry(provider_name, model, now=now)
+            if _catalog_model_identity(provider_name, translated_model) in static_deprecated:
+                translated_model["deprecated"] = True
+            translated.append(translated_model)
         if translated:
             overrides[provider_name] = translated
 
@@ -405,13 +411,30 @@ def apply_models_dev_overrides(
         models.dev only knows the models it ships, so any model a user added to
         the bundled ``*_constants.py`` lists would otherwise be silently dropped
         when its provider's group is replaced. Carrying those rows over (matched
-        by name) keeps user-added models selectable while models.dev still wins
-        for every model it does cover. The override list is mutated in place so a
-        later same-provider group (e.g. the OpenAI embeddings group) folds its
-        custom rows into the same list already appended to ``replaced``.
+        by provider-aware identity) keeps user-added models selectable while
+        models.dev still wins for every model it does cover. The override list
+        is mutated in place so a later same-provider group (e.g. the OpenAI
+        embeddings group) folds its custom rows into the same list already
+        appended to ``replaced``.
         """
-        override_names = {m.get("name") for m in overrides[provider] if isinstance(m, dict)}
-        custom_entries = [m for m in group if isinstance(m, dict) and m.get("name") not in override_names]
+        overrides_by_identity = {
+            _catalog_model_identity(provider, model): model for model in overrides[provider] if isinstance(model, dict)
+        }
+        custom_entries = []
+        for static_model in group:
+            if not isinstance(static_model, dict):
+                continue
+            override_model = overrides_by_identity.get(_catalog_model_identity(provider, static_model))
+            if override_model is None:
+                custom_entries.append(static_model)
+                continue
+
+            static_name = static_model.get("name")
+            if provider == _GOOGLE_GENERATIVE_AI_PROVIDER and static_name != override_model.get("name"):
+                override_model["name"] = static_name
+                if static_icon := static_model.get("icon"):
+                    override_model["icon"] = static_icon
+
         if custom_entries:
             overrides[provider].extend(custom_entries)
 

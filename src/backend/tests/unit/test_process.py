@@ -499,6 +499,46 @@ def test_apply_tweaks_code_override_prevention():
     assert node["data"]["node"]["template"]["param1"]["value"] == "new_value"
 
 
+def test_apply_tweaks_blocks_sql_connection_and_query():
+    """A run caller cannot repoint the stored SQL sink or replace its query."""
+    from unittest.mock import call, patch
+
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "SQLComponent-test",
+        "data": {
+            "type": "SQLComponent",
+            "node": {
+                "template": {
+                    "database_url": {"value": "postgresql://stored/db", "type": "str"},
+                    "query": {"value": "SELECT 1", "type": "str"},
+                    "include_columns": {"value": True, "type": "bool"},
+                }
+            },
+        },
+    }
+
+    with patch("langflow.processing.process.logger") as mock_logger:
+        apply_tweaks(
+            node,
+            {
+                "database_url": "sqlite:////etc/passwd",
+                "query": "DROP TABLE users",
+                "include_columns": False,
+            },
+        )
+
+    template = node["data"]["node"]["template"]
+    assert template["database_url"]["value"] == "postgresql://stored/db"
+    assert template["query"]["value"] == "SELECT 1"
+    assert template["include_columns"]["value"] is False
+    assert mock_logger.warning.call_args_list == [
+        call("Security: refusing to override protected field 'database_url' via tweaks."),
+        call("Security: refusing to override protected field 'query' via tweaks."),
+    ]
+
+
 def test_apply_tweaks_code_only_prevention():
     """Test that only code tweaks are prevented when trying to override code alone."""
     from unittest.mock import patch

@@ -35,14 +35,26 @@ def test_should_pin_json_agents_at_the_assistant_budget():
         )
 
 
-def test_should_not_hardcode_iterations_in_the_flow_builder_agent():
-    """The budget lives in the flow JSON and the /iterations runtime injection.
+def test_builder_budget_comes_from_the_shared_constant():
+    """The builder's budget is get_graph(iterations_limit) + the shared default.
 
-    It is never hardcoded in the assistant's Python -- one source of truth.
+    The Python builder flow never passes through inject_iterations_into_flow (that
+    only rewrites JSON templates), so its budget arrives via get_graph and defaults
+    to DEFAULT_ASSISTANT_ITERATIONS -- one source of truth, no numeric hardcode.
     """
-    source = PY_FLOW_PATH.read_text(encoding="utf-8")
+    import re
 
-    assert "max_iterations" not in source, (
-        "flow_builder_assistant.py must not hardcode max_iterations -- the sanctioned "
-        "override is inject_iterations_into_flow (runtime /iterations command)"
+    from langflow.agentic.services.flow_preparation import DEFAULT_ASSISTANT_ITERATIONS
+
+    assert DEFAULT_ASSISTANT_ITERATIONS == ASSISTANT_ITERATION_BUDGET, (
+        "the shared default drifted from the pinned cost decision -- "
+        "update ASSISTANT_ITERATION_BUDGET and see the docstring"
+    )
+    source = PY_FLOW_PATH.read_text(encoding="utf-8")
+    assert "DEFAULT_ASSISTANT_ITERATIONS" in source, (
+        "flow_builder_assistant.py must default its Agent budget to the shared constant"
+    )
+    assert not re.search(r"max_iterations\D{0,20}\d", source), (
+        "flow_builder_assistant.py must not hardcode a numeric max_iterations -- "
+        "the budget is DEFAULT_ASSISTANT_ITERATIONS plus the runtime iterations_limit override"
     )

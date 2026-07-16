@@ -10,7 +10,7 @@ from sqlalchemy.orm import aliased
 from sqlmodel import asc, desc, select
 
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import Flow, FlowRead, FlowType
 from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:
@@ -51,12 +51,14 @@ async def list_flows(*, user_id: str | None = None) -> list[Data]:
         raise ValueError(msg) from e
 
 
-async def list_flows_by_flow_folder(
+async def _list_flows_in_flow_folder(
     *,
-    user_id: str | None = None,
-    flow_id: str | None = None,
-    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006
+    user_id: str | None,
+    flow_id: str | None,
+    order_params: dict | None,
+    a2a_only: bool,
 ) -> list[Data]:
+    """Query flows sharing ``flow_id``'s folder, optionally only those published as A2A agents."""
     if not user_id:
         msg = "Session is invalid"
         raise ValueError(msg)
@@ -78,6 +80,8 @@ async def list_flows_by_flow_folder(
                 .where(Flow.user_id == uuid_user_id)
                 .where(Flow.id != uuid_flow_id)
             )
+            if a2a_only:
+                stmt = stmt.where(Flow.a2a_enabled == True)  # noqa: E712
             # sort flows by the specified column and direction
             if order_params is not None:
                 sort_col = getattr(Flow, order_params.get("column", "updated_at"), Flow.updated_at)
@@ -87,8 +91,33 @@ async def list_flows_by_flow_folder(
             flows = (await session.exec(stmt)).all()
             return [Data(data=dict(flow._mapping)) for flow in flows]  # noqa: SLF001
     except Exception as e:
-        msg = f"Error listing flows: {e}"
+        msg = f"Error listing {'A2A agents' if a2a_only else 'flows'}: {e}"
         raise ValueError(msg) from e
+
+
+async def list_flows_by_flow_folder(
+    *,
+    user_id: str | None = None,
+    flow_id: str | None = None,
+    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006
+) -> list[Data]:
+    """List the user's other flows in the same folder as ``flow_id``."""
+    return await _list_flows_in_flow_folder(user_id=user_id, flow_id=flow_id, order_params=order_params, a2a_only=False)
+
+
+async def list_a2a_agents_by_flow_folder(
+    *,
+    user_id: str | None = None,
+    flow_id: str | None = None,
+    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006
+) -> list[Data]:
+    """List flows published as A2A agents in the same folder as ``flow_id``.
+
+    Same shape as ``list_flows_by_flow_folder`` but restricted to flows the user has turned on
+    as A2A agents (``a2a_enabled``), so the A2A Agent component offers only real agents to call
+    internally, not every flow (that would just be Run Flow).
+    """
+    return await _list_flows_in_flow_folder(user_id=user_id, flow_id=flow_id, order_params=order_params, a2a_only=True)
 
 
 async def list_flows_by_folder_id(
@@ -551,24 +580,43 @@ async def generate_unique_flow_name(flow_name, user_id, session):
         n += 1
 
 
-def json_schema_from_flow(flow: Flow) -> dict:
-    """Generate JSON schema from flow input nodes."""
+def _get_flow_input_nodes(flow: Flow) -> list[Vertex]:
     from lfx.graph.graph.base import Graph
 
-    # Get the flow's data which contains the nodes and their configurations
-    flow_data = flow.data or {}
+    graph = Graph.from_payload(flow.data or {})
+    return [vertex for vertex in graph.vertices if vertex.is_input]
 
-    graph = Graph.from_payload(flow_data)
-    input_nodes = [vertex for vertex in graph.vertices if vertex.is_input]
 
+def _is_mcp_input_field(field_data: Any) -> bool:
+    return isinstance(field_data, dict) and field_data.get("show", False) and not field_data.get("advanced", False)
+
+
+def get_flow_input_tweaks(flow: Flow, inputs: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Map advertised MCP inputs to node-scoped flow tweaks."""
+    tweaks: dict[str, dict[str, Any]] = {}
+    for node in _get_flow_input_nodes(flow):
+        template = node.data["node"]["template"]
+        node_tweaks = {
+            field_name: inputs[field_name]
+            for field_name, field_data in template.items()
+            if field_name in inputs and _is_mcp_input_field(field_data)
+        }
+        if node_tweaks:
+            tweaks[node.id] = node_tweaks
+
+    return tweaks
+
+
+def json_schema_from_flow(flow: Flow) -> dict:
+    """Generate JSON schema from flow input nodes."""
     properties = {}
     required = []
-    for node in input_nodes:
+    for node in _get_flow_input_nodes(flow):
         node_data = node.data["node"]
         template = node_data["template"]
 
         for field_name, field_data in template.items():
-            if isinstance(field_data, dict) and field_data.get("show", False) and not field_data.get("advanced", False):
+            if _is_mcp_input_field(field_data):
                 field_type = field_data.get("type", "string")
                 properties[field_name] = {
                     "type": field_type,
@@ -601,3 +649,51 @@ def json_schema_from_flow(flow: Flow) -> dict:
         }
 
     return {"type": "object", "properties": properties, "required": required}
+
+
+# Built-in agents matched by their component ``name`` (stored as ``node.data.type``). The name is the
+# stable flow-matching identifier and never changes, so this classifies an agent flow even when the
+# node's stored source was saved by an older build and no longer evaluates. Custom agent components
+# (an unknown name) still fall through to the eval-based check below.
+_AGENT_TYPE_NAMES = frozenset({"Agent"})
+
+
+def suggest_flow_type(flow_data: dict | None) -> FlowType:
+    """Suggest ``agent`` vs ``workflow`` for a flow based on its graph contents.
+
+    Returns ``FlowType.AGENT`` if any node is a known agent component (matched by its stable
+    ``node.data.type`` name) or resolves to a subclass of ``LCAgentComponent``, else
+    ``FlowType.WORKFLOW``. This is a UI default suggestion only, never the stored source of truth, so
+    it never raises: any node it cannot resolve is skipped and the flow falls back to ``WORKFLOW``.
+    A custom component's class is recovered from its own stored source
+    (``node.data.node.template.code.value``) via ``eval_custom_component_code``, which evaluates the
+    class definition without instantiating or running it; the name fast-path handles flows whose
+    stored code predates the lfx module split and no longer evaluates.
+    """
+    from lfx.base.agents.agent import LCAgentComponent
+    from lfx.custom.eval import eval_custom_component_code
+
+    nodes = (flow_data or {}).get("nodes") or []
+    for node in nodes:
+        node_data = node.get("data") or {}
+        # Version-stable fast path before the fragile eval: a built-in agent classifies by name even
+        # if its stored code can't be evaluated in this build.
+        if node_data.get("type") in _AGENT_TYPE_NAMES:
+            return FlowType.AGENT
+        try:
+            code = node_data["node"]["template"]["code"]["value"]
+        except (KeyError, TypeError):
+            continue
+        if not code:
+            continue
+        try:
+            component_class = eval_custom_component_code(code)
+        except Exception:  # noqa: BLE001 - a suggestion must never fail the caller
+            logger.debug("suggest_flow_type: skipping a node whose code could not be evaluated", exc_info=True)
+            continue
+        try:
+            if issubclass(component_class, LCAgentComponent):
+                return FlowType.AGENT
+        except TypeError:
+            continue
+    return FlowType.WORKFLOW

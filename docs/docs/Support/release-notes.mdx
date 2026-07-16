@@ -86,6 +86,13 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For more information, see [Human-in-the-Loop](./human-in-the-loop).
     
+- OpenAI Compatible model provider
+
+    Point Langflow's model provider at any OpenAI-compatible endpoint, and Langflow discovers models live from the `/v1/models` endpoint.
+    These models can power flows, Langflow Assistant, and any component that uses Langflow’s global model providers.
+
+    For more information, see [OpenAI Compatible](./bundles-openai-compatible).
+
 - Unified **Data Operations** component
 
     **Text Operations**, **JSON Operations**, and **Table Operations** are consolidated into a single [**Data Operations** component](./operations).
@@ -104,8 +111,6 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     IBM watsonx Orchestrate is no longer excluded from Python 3.14 installs.
 
     For more information, see [Deploy flows on watsonx Orchestrate](/deployment-wxo).
-
-- Optional integrations not yet available on Python 3.14
 
     The following optional integrations remain excluded from installations on Python 3.14:
 

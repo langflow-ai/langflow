@@ -302,7 +302,7 @@ class TestSaveGeneratedIndex:
         cache_file = tmp_path / "component_index.json"
         monkeypatch.setattr("lfx.interface.components._get_cache_path", lambda: cache_file)
 
-        with patch("importlib.metadata.version", return_value="0.1.12"):
+        with patch("importlib.metadata.version", return_value="0.1.12") as mock_version:
             _save_generated_index(modules_dict)
 
         assert cache_file.exists()
@@ -312,6 +312,7 @@ class TestSaveGeneratedIndex:
         assert "entries" in saved_index
         assert "sha256" in saved_index
         assert len(saved_index["entries"]) == 2
+        mock_version.assert_called_once_with("lfx")
 
     def test_save_generated_index_empty_dict(self, tmp_path, monkeypatch):
         """Test saving empty modules dict."""

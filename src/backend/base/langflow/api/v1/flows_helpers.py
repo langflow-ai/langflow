@@ -130,6 +130,9 @@ _UPDATABLE_FLOW_FIELDS: frozenset[str] = frozenset(
         "gradient",
         "locked",
         "mcp_enabled",
+        "flow_type",
+        "a2a_enabled",
+        "a2a_card_overrides",
         "action_name",
         "action_description",
         "access_type",
@@ -408,6 +411,21 @@ async def _update_existing_flow(
                 status_code=403,
                 detail="Cannot transfer ownership of a flow you do not own.",
             )
+        # ``a2a_enabled`` defaults to False (not None) on FlowCreate, so gate on
+        # model_fields_set to block only an explicit, differing change.
+        if "a2a_enabled" in flow.model_fields_set and flow.a2a_enabled != existing_flow.a2a_enabled:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot change a2a_enabled of a flow you do not own.",
+            )
+        if (
+            "a2a_card_overrides" in flow.model_fields_set
+            and flow.a2a_card_overrides != existing_flow.a2a_card_overrides
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot change a2a_card_overrides of a flow you do not own.",
+            )
 
     # Validate fs_path if provided (use `is not None` to catch empty strings).
     # Path safety is scoped to the *owner* — fs_path lives under the owner's
@@ -542,6 +560,16 @@ async def _patch_flow(
             raise HTTPException(
                 status_code=403,
                 detail="Cannot transfer ownership of a flow you do not own.",
+            )
+        if "a2a_enabled" in update_data and update_data["a2a_enabled"] != db_flow.a2a_enabled:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot change a2a_enabled of a flow you do not own.",
+            )
+        if "a2a_card_overrides" in update_data and update_data["a2a_card_overrides"] != db_flow.a2a_card_overrides:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot change a2a_card_overrides of a flow you do not own.",
             )
 
     if "folder_id" in update_data and update_data["folder_id"] != db_flow.folder_id:
