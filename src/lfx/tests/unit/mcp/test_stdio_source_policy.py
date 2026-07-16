@@ -62,6 +62,7 @@ def test_package_manager_configuration_namespaces_are_reserved(env_var):
         ("sh", ["-c", "uvx --default-index https://packages.example.invalid/simple mcp-server"]),
         ("bash", ["-lc", "npx --registry=https://packages.example.invalid @example/mcp-server"]),
         ("cmd", ["/c", "docker", "run", "--mount", "type=bind,source=/,target=/host", "mcp-server"]),
+        ("sh", ["-c", "docker cp other:/run/secrets/token /workspace/token"]),
         ("sh", ["-c", "true; uvx --index-url https://packages.example.invalid/simple mcp-server"]),
         ("sh", ["-c", "exec uvx --index-url https://packages.example.invalid/simple mcp-server"]),
     ],
@@ -92,6 +93,20 @@ def test_source_redirects_and_docker_host_access_are_rejected(command, args):
 )
 def test_trusted_registry_packages_and_isolated_docker_args_are_allowed(command, args):
     _validate_policy(command, args)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        [],
+        ["cp", "other:/run/secrets/token", "/workspace/token"],
+        ["inspect", "other"],
+        ["network", "connect", "shared", "other"],
+    ],
+)
+def test_docker_requires_run_subcommand_by_default(args):
+    with pytest.raises(ValueError, match=r"not allowed"):
+        validate_mcp_stdio_source_policy("docker", args, docker_hardening=False)
 
 
 @pytest.mark.parametrize(

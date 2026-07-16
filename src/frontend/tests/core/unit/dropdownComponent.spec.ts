@@ -4,10 +4,9 @@ import { TEXTS } from "../../utils/constants/texts";
 
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
 
 test(
@@ -62,73 +61,45 @@ test(
       timeout: 3000,
     });
 
-    await disableInspectPanel(page);
-
-    await openAdvancedOptions(page);
+    // LE-1810: values live on the node; the panel only manages visibility.
+    await openParametersPanel(page);
 
     await page.waitForTimeout(1000);
 
-    value = await page
-      .getByTestId("value-dropdown-dropdown_str_edit_model_id")
-      .innerText();
+    // visibility round-trips through the panel Add/Remove actions
+    await toggleParameterOnNode(page, "region_name");
+    await expect(page.getByTestId("inspector-add-region_name")).toBeVisible();
 
-    expect(value.length).toBeGreaterThan(10);
+    await toggleParameterOnNode(page, "region_name");
+    await expect(
+      page.getByTestId("inspector-remove-region_name"),
+    ).toBeVisible();
 
-    await page.locator('//*[@id="showregion_name"]').click();
-    expect(
-      await page.locator('//*[@id="showregion_name"]').isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "model_id");
+    await expect(page.getByTestId("inspector-add-model_id")).toBeVisible();
 
-    await page.locator('//*[@id="showregion_name"]').click();
-    expect(
-      await page.locator('//*[@id="showregion_name"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "model_id");
+    await expect(page.getByTestId("inspector-remove-model_id")).toBeVisible();
 
-    // showmodel_id
-    await page.locator('//*[@id="showmodel_id"]').click();
-    expect(
-      await page.locator('//*[@id="showmodel_id"]').isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "region_name");
+    await expect(page.getByTestId("inspector-add-region_name")).toBeVisible();
 
-    // showmodel_id
-    await page.locator('//*[@id="showmodel_id"]').click();
-    expect(
-      await page.locator('//*[@id="showmodel_id"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "region_name");
+    await expect(
+      page.getByTestId("inspector-remove-region_name"),
+    ).toBeVisible();
 
-    await page.locator('//*[@id="showregion_name"]').click();
-    expect(
-      await page.locator('//*[@id="showregion_name"]').isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "model_id");
+    await expect(page.getByTestId("inspector-add-model_id")).toBeVisible();
 
-    await page.locator('//*[@id="showregion_name"]').click();
-    expect(
-      await page.locator('//*[@id="showregion_name"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "model_id");
+    await expect(page.getByTestId("inspector-remove-model_id")).toBeVisible();
 
-    // showmodel_id
-    await page.locator('//*[@id="showmodel_id"]').click();
-    expect(
-      await page.locator('//*[@id="showmodel_id"]').isChecked(),
-    ).toBeFalsy();
+    await closeParametersPanel(page);
 
-    // showmodel_id
-    await page.locator('//*[@id="showmodel_id"]').click();
-    expect(
-      await page.locator('//*[@id="showmodel_id"]').isChecked(),
-    ).toBeTruthy();
-
-    await page.getByTestId("value-dropdown-dropdown_str_edit_model_id").click();
+    // value editing happens on the node dropdown
+    await page.getByTestId("value-dropdown-dropdown_str_model_id").click();
     await page.getByText("cohere").last().click();
-
-    value = await page
-      .getByTestId("value-dropdown-dropdown_str_edit_model_id")
-      .innerText();
-    if (value !== "cohere.command-r-plus-v1:0") {
-      expect(false).toBeTruthy();
-    }
-
-    await closeAdvancedOptions(page);
 
     value = await page
       .getByTestId("value-dropdown-dropdown_str_model_id")
@@ -247,7 +218,5 @@ class AmazonBedrockComponent(LCModelComponent):
     await page
       .getByText("No parameters are available for display.")
       .isVisible();
-
-    await enableInspectPanel(page);
   },
 );
