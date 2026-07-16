@@ -332,10 +332,14 @@ ifdef main
 	make install_frontendci
 	make build_frontend
 	make build_langflow_base args="$(args)"
+	make build_langflow_core args="$(args)"
 	make build_langflow args="$(args)"
 endif
 
 ifdef core
+	make install_frontendci
+	make build_frontend
+	make build_langflow_base args="$(args)"
 	make build_langflow_core args="$(args)"
 endif
 
@@ -589,17 +593,20 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	\
 	LANGFLOW_VERSION="$(v)"; \
 	LANGFLOW_BASE_VERSION=$$(echo "$$LANGFLOW_VERSION" | sed -E 's/^[0-9]+\.(.*)$$/0.\1/'); \
+	LANGFLOW_COMPAT_VERSION=$$(echo "$$LANGFLOW_VERSION" | sed -E 's/^([0-9]+\.[0-9]+)\..*$$/\1.0/'); \
+	LANGFLOW_BASE_COMPAT_VERSION=$$(echo "$$LANGFLOW_BASE_VERSION" | sed -E 's/^([0-9]+\.[0-9]+)\..*$$/\1.0/'); \
 	\
 	echo "$(GREEN)Langflow version: $$LANGFLOW_VERSION$(NC)"; \
 	echo "$(GREEN)Langflow-core version: $$LANGFLOW_VERSION$(NC)"; \
 	echo "$(GREEN)Langflow-base version: $$LANGFLOW_BASE_VERSION$(NC)"; \
+	echo "$(GREEN)Compatibility floors: core $$LANGFLOW_COMPAT_VERSION, base $$LANGFLOW_BASE_COMPAT_VERSION$(NC)"; \
 	echo "$(GREEN)LFX (synced): $$LANGFLOW_VERSION$(NC)"; \
 	\
 	echo "$(GREEN)Updating main pyproject.toml...$(NC)"; \
-	python -c "import re; fname='pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-base(?:\[[^\]]*\])?(?:==|>=|~=)[^\"]*\"', '\"langflow-base[complete]>=$$LANGFLOW_BASE_VERSION\"', txt); open(fname, 'w').write(txt)"; \
+	python -c "import re; fname='pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-core(\[[^\]]*\])?(?:==|>=|~=)[^\"]*\"', lambda m: '\"langflow-core' + (m.group(1) or '') + '~=$$LANGFLOW_COMPAT_VERSION\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating langflow-core pyproject.toml...$(NC)"; \
-	python -c "import re; fname='src/langflow-core/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-base(\[[^\]]*\])?(?:==|>=|~=)[^\"]*\"', r'\"langflow-base\1~=$$LANGFLOW_BASE_VERSION\"', txt); open(fname, 'w').write(txt)"; \
+	python -c "import re; fname='src/langflow-core/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-base(\[[^\]]*\])?(?:==|>=|~=)[^\"]*\"', r'\"langflow-base\1~=$$LANGFLOW_BASE_COMPAT_VERSION\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating langflow-base pyproject.toml...$(NC)"; \
 	python -c "import re; fname='src/backend/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_BASE_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"lfx(?:~=|>=)[^\"]*\"', '\"lfx~=$$LANGFLOW_VERSION\"', txt); open(fname, 'w').write(txt)"; \
@@ -615,11 +622,13 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	\
 	echo "$(GREEN)Validating version changes...$(NC)"; \
 	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml version validation failed$(NC)"; exit 1; fi; \
-	if ! grep -qF "\"langflow-base[complete]>=$$LANGFLOW_BASE_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-core~=$$LANGFLOW_COMPAT_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-core dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-core[audio]~=$$LANGFLOW_COMPAT_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-core audio dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-core[postgresql]~=$$LANGFLOW_COMPAT_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-core PostgreSQL dependency validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core pyproject.toml version validation failed$(NC)"; exit 1; fi; \
-	if ! grep -qF "\"langflow-base[complete]~=$$LANGFLOW_BASE_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core complete dependency validation failed$(NC)"; exit 1; fi; \
-	if ! grep -qF "\"langflow-base[audio]~=$$LANGFLOW_BASE_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core audio dependency validation failed$(NC)"; exit 1; fi; \
-	if ! grep -qF "\"langflow-base[postgresql]~=$$LANGFLOW_BASE_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core PostgreSQL dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-base[complete]~=$$LANGFLOW_BASE_COMPAT_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core complete dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-base[audio]~=$$LANGFLOW_BASE_COMPAT_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core audio dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-base[postgresql]~=$$LANGFLOW_BASE_COMPAT_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core PostgreSQL dependency validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "^version = \"$$LANGFLOW_BASE_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "\"lfx~=$$LANGFLOW_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml lfx pin validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" src/lfx/pyproject.toml; then echo "$(RED)✗ LFX pyproject.toml version validation failed$(NC)"; exit 1; fi; \
@@ -650,8 +659,8 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	\
 	echo "$(GREEN)Version update complete!$(NC)"; \
 	echo "$(GREEN)Updated files:$(NC)"; \
-	echo "  - pyproject.toml: $$LANGFLOW_VERSION"; \
-	echo "  - src/langflow-core/pyproject.toml: $$LANGFLOW_VERSION (langflow-base pin → $$LANGFLOW_BASE_VERSION)"; \
+	echo "  - pyproject.toml: $$LANGFLOW_VERSION (langflow-core floor → $$LANGFLOW_COMPAT_VERSION)"; \
+	echo "  - src/langflow-core/pyproject.toml: $$LANGFLOW_VERSION (langflow-base floor → $$LANGFLOW_BASE_COMPAT_VERSION)"; \
 	echo "  - src/backend/base/pyproject.toml: $$LANGFLOW_BASE_VERSION (lfx pin → $$LANGFLOW_VERSION)"; \
 	echo "  - src/lfx/pyproject.toml: $$LANGFLOW_VERSION"; \
 	echo "  - src/frontend/package.json: $$LANGFLOW_VERSION"; \

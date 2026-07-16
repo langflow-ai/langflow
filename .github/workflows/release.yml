@@ -34,7 +34,7 @@ on:
         type: boolean
         default: false
       release_bundles:
-        description: "Release every src/bundles/* package (required when releasing main, since main pins exact bundle versions)"
+        description: "Release every src/bundles/* package (select when this release introduces bundle versions not yet on PyPI)"
         required: false
         type: boolean
         default: false
@@ -167,14 +167,8 @@ jobs:
     if: ${{ inputs.release_package_base || inputs.release_package_core || inputs.release_package_main || inputs.release_lfx || inputs.release_sdk || inputs.build_docker_base || inputs.build_docker_core || inputs.build_docker_main }}
     needs: [validate-tag]
     steps:
-      - name: Validate that build-base is enabled if build-main is enabled
+      - name: Validate selected package dependencies
         run: |
-          if [ "${{ inputs.release_package_main }}" = "true" ] && [ "${{ inputs.release_package_base }}" = "false" ]; then
-            echo "Error: Cannot release Langflow Main without releasing Langflow Base."
-            echo "Please enable 'release_package_base' or disable 'release_package_main'."
-            exit 1
-          fi
-
           if [ "${{ inputs.release_package_base }}" = "true" ] && [ "${{ inputs.release_lfx }}" = "false" ]; then
             echo "Error: Cannot release Langflow Base without releasing LFX."
             echo "Langflow Base depends on LFX. Please enable 'release_lfx' or disable 'release_package_base'."
@@ -187,10 +181,18 @@ jobs:
             exit 1
           fi
 
-          if [ "${{ inputs.release_package_main }}" = "true" ] && [ "${{ inputs.release_bundles }}" = "false" ]; then
-            echo "Error: Cannot release Langflow Main without releasing bundles."
-            echo "Langflow Main pins exact bundle versions (lfx-arxiv, lfx-duckduckgo, ...). Please enable 'release_bundles' or disable 'release_package_main'."
+          if [ "${{ inputs.release_bundles }}" = "true" ] && [ "${{ inputs.release_lfx }}" = "false" ]; then
+            echo "Error: Cannot release bundles without releasing LFX."
+            echo "Bundle builds are validated against the selected LFX artifact."
             exit 1
+          fi
+
+          if [ "${{ inputs.release_package_core }}" = "true" ] && [ "${{ inputs.release_package_base }}" = "false" ]; then
+            echo "Langflow Core will resolve its compatible langflow-base dependency from PyPI."
+          fi
+
+          if [ "${{ inputs.release_package_main }}" = "true" ] && [ "${{ inputs.release_package_core }}" = "false" ]; then
+            echo "Langflow will resolve its compatible langflow-core dependency from PyPI."
           fi
 
           echo "✅ Release dependencies validated successfully."
@@ -370,6 +372,7 @@ jobs:
   determine-base-version:
     name: Determine Base Version
     needs: [validate-tag, validate-dependencies, determine-rc-number]
+    if: ${{ inputs.release_package_base || inputs.release_package_core || inputs.build_docker_base }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -423,7 +426,7 @@ jobs:
   determine-core-version:
     name: Determine Core Version
     needs: [validate-tag, validate-dependencies, determine-rc-number]
-    if: ${{ inputs.release_package_core || inputs.build_docker_core }}
+    if: ${{ inputs.release_package_core || inputs.release_package_main || inputs.build_docker_core }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -536,7 +539,7 @@ jobs:
   determine-lfx-version:
     name: Determine LFX Version
     needs: [validate-tag, validate-dependencies, determine-rc-number]
-    if: ${{ inputs.release_lfx || inputs.release_package_base || inputs.release_package_main }}
+    if: ${{ inputs.release_lfx || inputs.release_package_base }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -1184,11 +1187,12 @@ jobs:
     needs:
       [
         build-base,
+        build-bundles,
+        build-core,
         build-lfx,
         build-sdk,
-        determine-base-version,
+        determine-core-version,
         determine-main-version,
-        determine-lfx-version,
       ]
     if: |
       always() &&
@@ -1196,8 +1200,8 @@ jobs:
       inputs.release_package_main &&
       needs.determine-main-version.result == 'success' &&
       needs.determine-main-version.outputs.skipped == 'false' &&
-      needs.build-base.result == 'success' &&
-      needs.build-lfx.result == 'success'
+      (needs.build-bundles.result == 'success' || needs.build-bundles.result == 'skipped') &&
+      (needs.build-core.result == 'success' || needs.build-core.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -1212,6 +1216,7 @@ jobs:
           python-version: "3.12"
           prune-cache: false
       - name: Download LFX artifact
+        if: needs.build-lfx.result == 'success'
         uses: actions/download-artifact@v7
         with:
           name: dist-lfx
@@ -1223,23 +1228,25 @@ jobs:
           name: dist-sdk
           path: ./sdk-dist
       - name: Download base artifact
+        if: needs.build-base.result == 'success'
         uses: actions/download-artifact@v7
         with:
           name: dist-base
           path: ./base-dist
-      - name: Install dependencies with local wheels
-        run: |
-          # Create virtual environment
-          uv venv
-          # Install using pip with local wheel directories as find-links
-          FIND_LINKS="--find-links ./lfx-dist --find-links ./base-dist"
-          if [ -d "./sdk-dist" ]; then
-            FIND_LINKS="$FIND_LINKS --find-links ./sdk-dist"
-          fi
-          uv pip install $FIND_LINKS --prerelease=allow -e .
-      - name: Check for dependency incompatibility
-        if: ${{ inputs.run_pip_check }}
-        run: uv pip check
+
+      - name: Download core artifact
+        if: needs.build-core.result == 'success'
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-core
+          path: ./core-dist
+
+      - name: Download bundle release artifact
+        if: needs.build-bundles.result == 'success'
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-bundles
+          path: ./bundle-release-dist
       - name: Set version for pre-release
         if: ${{ inputs.pre_release }}
         run: |
@@ -1252,31 +1259,110 @@ jobs:
           # Verify the change
           echo "Updated pyproject.toml version:"
           grep "^version" pyproject.toml
-      - name: Update langflow-base dependency for pre-release
+      - name: Resolve pre-release core dependency
+        id: main-core-version
         if: ${{ inputs.pre_release }}
+        env:
+          EXPECTED_CORE_VERSION: ${{ needs.determine-core-version.outputs.version }}
+          HAS_LOCAL_CORE: ${{ needs.build-core.result == 'success' }}
         run: |
-          BASE_VERSION="${{ needs.determine-base-version.outputs.version }}"
-          echo "Base version for pre-release: $BASE_VERSION"
+          set -euo pipefail
+          if [ "$HAS_LOCAL_CORE" = "true" ]; then
+            echo "version=$EXPECTED_CORE_VERSION" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-          # Extract current langflow-base constraint from pyproject.toml
-          CURRENT_CONSTRAINT=$(grep -E '^\s*"langflow-base' pyproject.toml | head -1)
-          echo "Current constraint: $CURRENT_CONSTRAINT"
+          status=$(curl --retry 3 --retry-delay 2 --retry-connrefused -sS \
+            -o /tmp/langflow-core-pypi.json -w "%{http_code}" \
+            "https://pypi.org/pypi/langflow-core/json")
+          if [ "$status" != "200" ]; then
+            echo "Cannot resolve a published langflow-core pre-release: HTTP $status"
+            exit 1
+          fi
 
-          # Extract the major.minor version (e.g., "0.8" from "~=0.8.0")
-          MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/.*[~>=<]+([0-9]+\.[0-9]+).*/\1/')
-          NEXT_MAJOR=$((${MAJOR_MINOR%.*} + 1))
+          resolved=$(uv run --no-project --with packaging python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
 
-          # Create new constraint: >=BASE_VERSION,<NEXT_MAJOR.dev0 (preserve [complete] extra)
-          NEW_CONSTRAINT="\"langflow-base[complete]>=$BASE_VERSION,<$NEXT_MAJOR.dev0\""
+          from packaging.version import InvalidVersion, Version
 
-          echo "New constraint: $NEW_CONSTRAINT"
+          expected = Version(os.environ["EXPECTED_CORE_VERSION"])
+          releases = json.loads(Path("/tmp/langflow-core-pypi.json").read_text())["releases"]
+          available = []
+          for raw_version, files in releases.items():
+              if not files:
+                  continue
+              try:
+                  parsed = Version(raw_version)
+              except InvalidVersion:
+                  continue
+              if parsed.release[:2] == expected.release[:2] and not parsed.is_devrelease:
+                  available.append(parsed)
 
-          # Replace the constraint
-          sed -i.bak "s|\"langflow-base[^\"]*\"|$NEW_CONSTRAINT|" pyproject.toml
+          exact = next((version for version in available if version == expected), None)
+          if exact is not None:
+              print(exact)
+          elif available:
+              print(max(available))
+          else:
+              raise SystemExit(
+                  f"No published langflow-core release exists for {expected.release[0]}.{expected.release[1]}"
+              )
+          PY
+          )
+          echo "Using published langflow-core $resolved for the full pre-release."
+          echo "version=$resolved" >> "$GITHUB_OUTPUT"
 
-          # Verify the change
-          echo "Updated dependency:"
-          grep "langflow-base" pyproject.toml
+      - name: Update langflow-core dependencies for pre-release
+        if: ${{ inputs.pre_release }}
+        env:
+          CORE_VERSION: ${{ steps.main-core-version.outputs.version }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import re
+
+          path = pathlib.Path("pyproject.toml")
+          content = path.read_text()
+          stable_core = re.match(r"(\d+)\.(\d+)", os.environ["CORE_VERSION"])
+          if stable_core is None:
+              raise ValueError(f"Invalid core version: {os.environ['CORE_VERSION']}")
+          upper_bound = f"{stable_core.group(1)}.{int(stable_core.group(2)) + 1}.dev0"
+
+          def replace_core(match: re.Match[str]) -> str:
+              extras = match.group(1) or ""
+              return f'"langflow-core{extras}>={os.environ["CORE_VERSION"]},<{upper_bound}"'
+
+          content, count = re.subn(r'"langflow-core(\[[^]]+\])?[^";]*"', replace_core, content)
+          if count == 0:
+              raise ValueError("No langflow-core dependency found in pyproject.toml")
+          path.write_text(content)
+          PY
+          grep "langflow-core" pyproject.toml
+      - name: Update bundle dependencies for pre-release
+        if: ${{ inputs.pre_release && needs.build-bundles.result == 'success' }}
+        run: |
+          uv run --no-project --with packaging python \
+            scripts/ci/update_bundle_prerelease_dependencies.py \
+            pyproject.toml bundle-release-dist/bundle-version-manifest.json
+          grep -E '"lfx-[^"]+(rc|a|b)[0-9]+' pyproject.toml || true
+      - name: Install dependencies with local wheels
+        run: |
+          # Rewrite coordinated pre-release constraints before resolving the
+          # editable root; ~=X.Y.0 excludes X.Y.0rcN under PEP 440.
+          uv venv
+          FIND_LINKS=()
+          for wheel_dir in sdk-dist lfx-dist base-dist core-dist bundle-release-dist; do
+            if [ -d "$wheel_dir" ]; then
+              FIND_LINKS+=(--find-links "./$wheel_dir")
+            fi
+          done
+          uv pip install "${FIND_LINKS[@]}" --prerelease=allow -e .
+      - name: Check for dependency incompatibility
+        if: ${{ inputs.run_pip_check }}
+        run: uv pip check
       - name: Build project for pre-release distribution
         if: ${{ inputs.pre_release }}
         run: make build pre=true args="--no-sources --wheel"
@@ -1286,7 +1372,7 @@ jobs:
       - name: Verify built version
         run: |
           EXPECTED_VERSION="${{ needs.determine-main-version.outputs.version }}"
-          WHEEL_FILE=$(ls dist/*.whl)
+          WHEEL_FILE=$(find dist -maxdepth 1 -name 'langflow-*.whl' -type f)
           echo "Built wheel: $WHEEL_FILE"
 
           NORMALIZED_VERSION=$(echo "$EXPECTED_VERSION" | sed 's/\.rc/rc/g; s/\.a/a/g; s/\.b/b/g; s/\.dev/dev/g')
@@ -1300,9 +1386,36 @@ jobs:
             exit 1
           fi
           echo "✅ Version verified: $EXPECTED_VERSION"
+      - name: Verify main wheel composition
+        run: |
+          WHEEL_FILE=$(find dist -maxdepth 1 -name 'langflow-*.whl' -type f)
+          uv run --no-project --with packaging python - "$WHEEL_FILE" <<'PY'
+          import email
+          import pathlib
+          import sys
+          import zipfile
+
+          from packaging.requirements import Requirement
+          from packaging.utils import canonicalize_name
+
+          wheel = pathlib.Path(sys.argv[1])
+          with zipfile.ZipFile(wheel) as archive:
+              names = archive.namelist()
+              metadata_name = next(name for name in names if name.endswith(".dist-info/METADATA"))
+              metadata = email.message_from_bytes(archive.read(metadata_name))
+
+          requirements = [Requirement(value) for value in metadata.get_all("Requires-Dist", [])]
+          dependency_names = {canonicalize_name(requirement.name) for requirement in requirements}
+          assert metadata["Name"] == "langflow"
+          assert "langflow-core" in dependency_names
+          assert "langflow-base" not in dependency_names
+          assert any(name.startswith("lfx-") for name in dependency_names)
+          assert not any(name.endswith(".dist-info/entry_points.txt") for name in names)
+          print(f"Verified {wheel.name}: core + bundles, no direct base or console script")
+          PY
       - name: Test CLI
         run: |
-          uv pip install dist/*.whl
+          uv pip install dist/langflow-*.whl
           uv run python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
@@ -1324,7 +1437,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: dist-main
-          path: dist
+          path: dist/langflow-*.whl
 
   build-bundles:
     name: Build Langflow Bundles
@@ -1434,6 +1547,23 @@ jobs:
           done
           echo "bundles-found=1" >> $GITHUB_OUTPUT
           ls -la bundles-dist/
+      - name: Record bundle version manifest
+        if: ${{ inputs.pre_release }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import pathlib
+          import tomllib
+
+          manifest = {}
+          for pyproject in sorted(pathlib.Path("src/bundles").glob("*/pyproject.toml")):
+              project = tomllib.loads(pyproject.read_text())["project"]
+              manifest[project["name"]] = project["version"]
+
+          output = pathlib.Path("bundles-dist/bundle-version-manifest.json")
+          output.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+          print(output.read_text())
+          PY
       - name: Upload bundles artifact
         if: steps.build.outputs.bundles-found == '1'
         uses: actions/upload-artifact@v6
@@ -1606,7 +1736,6 @@ jobs:
       inputs.release_package_main &&
       needs.build-main.result == 'success' &&
       needs.test-cross-platform.result == 'success' &&
-      needs.publish-base.result == 'success' &&
       needs.ci.result == 'success' &&
       (needs.publish-bundles.result == 'success' || needs.publish-bundles.result == 'skipped') &&
       (needs.publish-core.result == 'success' ||
@@ -1639,7 +1768,7 @@ jobs:
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          uv publish dist/*.whl
+          uv publish dist/langflow-*.whl
 
   publish-sdk:
     name: Publish langflow-sdk to PyPI
@@ -1823,13 +1952,13 @@ jobs:
       needs.validate-tag-format.result == 'success'
     steps:
       - name: Download main artifact
-        if: ${{ needs.publish-main.result == 'success' }}
+        if: ${{ inputs.release_package_main && needs.publish-main.result == 'success' }}
         uses: actions/download-artifact@v4
         with:
           name: dist-main
           path: dist
       - name: Download core artifact
-        if: ${{ needs.publish-core.result == 'success' }}
+        if: ${{ inputs.release_package_core && needs.publish-core.result == 'success' }}
         uses: actions/download-artifact@v4
         with:
           name: dist-core
