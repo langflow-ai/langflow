@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import contextlib
+import contextvars
 import importlib.metadata as importlib_metadata
 import io
 import os
@@ -12,6 +13,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import uuid
 import zipfile
 from io import StringIO
@@ -59,6 +61,62 @@ _LANGFLOW_NAMESPACE_UUID = uuid.UUID("3c091057-e799-4e32-8ebc-27bc31e1108c")
 
 # Environment variable for GitHub token
 _GITHUB_TOKEN_ENV = "GITHUB_TOKEN"
+
+
+class _ContextualTextStream:
+    """Route writes to a task-local stream while preserving a process fallback.
+
+    ``sys.stdout`` and ``sys.stderr`` are process globals, so replacing either
+    around an ``await`` lets concurrent requests overwrite one another's capture
+    target. A stable proxy keeps the process-global object unchanged while a
+    ContextVar selects the destination for the current request and any child
+    tasks (or context-propagating worker threads).
+    """
+
+    def __init__(self, fallback, *, context_name: str) -> None:
+        self._fallback = fallback
+        self._target: contextvars.ContextVar[Any | None] = contextvars.ContextVar(context_name, default=None)
+
+    def _current(self):
+        target = self._target.get()
+        return self._fallback if target is None else target
+
+    def activate(self, target) -> contextvars.Token[Any | None]:
+        return self._target.set(target)
+
+    def reset(self, token: contextvars.Token[Any | None]) -> None:
+        self._target.reset(token)
+
+    def write(self, data):
+        return self._current().write(data)
+
+    def flush(self) -> None:
+        self._current().flush()
+
+    def writelines(self, lines) -> None:
+        self._current().writelines(lines)
+
+    def __getattr__(self, name: str):
+        return getattr(self._current(), name)
+
+
+_STREAM_PROXY_LOCK = threading.Lock()
+
+
+def _ensure_contextual_streams() -> tuple[_ContextualTextStream, _ContextualTextStream]:
+    """Install stdout/stderr proxies once for the current process stream pair."""
+    with _STREAM_PROXY_LOCK:
+        stdout = sys.stdout
+        if not isinstance(stdout, _ContextualTextStream):
+            stdout = _ContextualTextStream(stdout, context_name="lfx_request_stdout")
+            sys.stdout = stdout
+
+        stderr = sys.stderr
+        if not isinstance(stderr, _ContextualTextStream):
+            stderr = _ContextualTextStream(stderr, context_name="lfx_request_stderr")
+            sys.stderr = stderr
+
+    return stdout, stderr
 
 
 def create_verbose_printer(*, verbose: bool):
@@ -332,23 +390,21 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
     # Create input request
     inputs = InputValueRequest(input_value=input_value) if input_value else None
 
-    # Capture output during execution
+    # Capture output during execution. The process-global streams remain stable
+    # proxies; only this request's ContextVars point at these buffers.
     captured_stdout = StringIO()
     captured_stderr = StringIO()
-
-    # Redirect stdout and stderr during graph execution
-    original_stdout = sys.stdout
-    original_stderr = sys.stderr
+    stdout_router, stderr_router = _ensure_contextual_streams()
 
     fallback_to_env_vars = resolve_fallback_to_env_vars()
 
     scope_vars = build_request_variables_from_global_vars(graph.context.get("request_variables"))
     scope_token = activate_request_variables(scope_vars or None)
     no_env_fallback_token = activate_no_env_fallback(disabled=bool(graph.context.get("no_env_fallback")))
+    stdout_token = stdout_router.activate(captured_stdout)
+    stderr_token = stderr_router.activate(captured_stderr)
 
     try:
-        sys.stdout = captured_stdout
-        sys.stderr = captured_stderr
         results = [result async for result in graph.async_start(inputs, fallback_to_env_vars=fallback_to_env_vars)]
     except Exception as exc:
         # Capture any error output that was written to stderr
@@ -358,11 +414,12 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
             exc.args = (f"{exc.args[0] if exc.args else str(exc)}\n\nCaptured stderr:\n{error_output}",)
         raise
     finally:
-        reset_no_env_fallback(no_env_fallback_token)
-        reset_request_variables(scope_token)
-        # Restore original stdout/stderr
-        sys.stdout = original_stdout
-        sys.stderr = original_stderr
+        try:
+            reset_no_env_fallback(no_env_fallback_token)
+            reset_request_variables(scope_token)
+        finally:
+            stderr_router.reset(stderr_token)
+            stdout_router.reset(stdout_token)
 
     # Get captured logs
     captured_logs = captured_stdout.getvalue() + captured_stderr.getvalue()
