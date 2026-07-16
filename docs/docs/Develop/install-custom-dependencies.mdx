@@ -7,9 +7,9 @@ Langflow provides optional dependency groups and support for custom dependencies
 
 The Langflow codebase uses four primary distributions, each with its own `pyproject.toml` file:
 
-* The `main` package (`langflow`) is managed by the root level `pyproject.toml`, and it includes end-user features and main application code, such as Langchain and OpenAI. The `main` package depends on the `base` package.
-* The `core` distribution (`langflow-core`) is managed at `src/langflow-core/pyproject.toml`. It provides the full Langflow application with the built-in component catalog, but does not install any `lfx-*` provider bundle. It depends on `langflow-base[complete]`.
+* The `langflow` package is managed by the root level `pyproject.toml`, and it includes end-user features and main application code, such as Langchain and OpenAI. The `langflow` package depends on the `base` package.
 * The `base` package (`langflow-base`) is managed at `src/backend/base/pyproject.toml`, and it includes core infrastructure, such as the FastAPI web framework. The `base` package depends on the `lfx` package.
+* The `core` distribution (`langflow-core`) is managed at `src/langflow-core/pyproject.toml`. It provides the full Langflow application with the built-in component catalog, but does not install any `lfx-*` provider bundle. It depends on `langflow-base[complete]`.
 * The `lfx` package is managed at `src/lfx/pyproject.toml`. LFX is a lightweight CLI tool for executing and serving Langflow flows. The `lfx` package does not provide optional dependency groups for end users.
 
 ## Install custom dependencies in Langflow Desktop {#langflow-desktop}

@@ -185,19 +185,6 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
 
 6. Create your first flow with the [Quickstart](/get-started-quickstart).
 
-### Install Langflow with core components only
-
-To run the complete Langflow UI and API without provider component bundles, install the `langflow-core` distribution instead:
-
-```bash
-uv pip install langflow-core
-uv run langflow run
-```
-
-`langflow-core` includes the built-in core component catalog and does not install any `lfx-*` extension distribution, such as `lfx-openai`, `lfx-bundles`, or `lfx-ibm`. You can add individual bundles later. Treat `langflow` and `langflow-core` as alternative distributions because both provide the `langflow` command.
-
-Install `langflow-core[audio]` when you need the optional voice mode dependencies.
-
 ### Manage the Langflow OSS version
 
 To upgrade Langflow to the latest version, run `uv pip install langflow -U`.

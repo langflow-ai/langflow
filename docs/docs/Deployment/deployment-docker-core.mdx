@@ -1,0 +1,46 @@
+---
+title: Deploy Langflow core on Docker
+slug: /deployment-docker-core
+---
+
+The Langflow core Docker image runs the complete Langflow UI and API with the built-in core component catalog only.
+It does not install any `lfx-*` provider bundle, such as `lfx-openai`, `lfx-bundles`, or `lfx-ibm`.
+
+For the default image that includes curated provider bundles, see [Deploy Langflow on Docker](/deployment-docker).
+
+The `langflowai/langflow:core-*` image installs these Langflow workspace packages:
+
+| Package | Role |
+|---|---|
+| `langflow-core` | Langflow server, flow builder UI, and built-in core component catalog |
+| `langflow-base` | Core infrastructure (API, services, persistence, UI assets) |
+| `lfx` | Flow execution engine |
+| `langflow-sdk` | Python SDK |
+
+The image does **not** install any distribution whose name starts with `lfx-`.
+To install additional bundles, see [Install with bundle components](/lfx-install#install-with-bundle-components).
+
+## Quickstart
+
+With Docker installed and running on your system, run:
+
+```shell
+docker run -p 7860:7860 -e LANGFLOW_AUTO_LOGIN=true langflowai/langflow:core-latest
+```
+
+Then, access Langflow at `http://localhost:7860/`.
+
+## Install Langflow with core components only
+
+To run the same core distribution without Docker, install the `langflow-core` package:
+
+```bash
+uv pip install langflow-core
+uv run langflow run
+```
+
+## See also
+
+* [Deploy Langflow on Docker](/deployment-docker)
+* [Install custom dependencies](/install-custom-dependencies)
+* [About bundles](/components-bundle-components)
