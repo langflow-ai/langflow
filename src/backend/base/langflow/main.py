@@ -606,6 +606,13 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await stop_streamable_http_manager()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Close the shared A2A push-notification webhook client.
+                    try:
+                        from langflow.api.v1.a2a import close_push_client
+
+                        await close_push_client()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to close A2A push notification client: {e}")
                     # Stop the authz audit-log retention worker (best-effort;
                     # no-op when it was never scheduled).
                     try:
