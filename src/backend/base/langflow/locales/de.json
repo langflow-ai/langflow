@@ -5514,7 +5514,6 @@
   "components.sambanovamodel.inputs.top_p.info.7ac0c35f": "Modell top_p",
   "components.sambanovamodel.outputs.model_output.display_name.698eabeb": "Sprachmodell",
   "components.sambanovamodel.outputs.text_output.display_name.2544139a": "Beispielantwort",
-  "components.savetofile.description.af7e703b": "Daten in einer Datei speichern. Argumente: 'input' – der zu speichernde Inhalt (übergebe direkt ein ` DataFrame `, eine JSON-Zeichenkette für tabellarische Daten oder einfachen Text für Nachrichten); 'file_name' – der Name, unter dem die Datei gespeichert werden soll, ohne Dateiendung (z. B. 'report'); 'file_format' – Ausgabeformat: 'csv', 'json', 'txt', 'html', 'excel', 'markdown' (optional). Gibt eine Bestätigung mit dem Dateipfad oder der E-Mail-Adresse URL zurück.",
   "components.savetofile.display_name.d78cd87c": "Datei schreiben",
   "components.savetofile.inputs.append_mode.display_name.fc15cc0a": "Anhängen",
   "components.savetofile.inputs.append_mode.info.4f370768": "An die Datei anhängen, falls diese bereits vorhanden ist (gilt nur für den lokalen Speicher bei Klartextformaten). Nicht unterstützt für Cloud-Speicher ( AWS / Google Drive ).",
