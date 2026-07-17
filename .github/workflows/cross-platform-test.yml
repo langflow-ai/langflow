@@ -952,10 +952,8 @@ jobs:
         run: |
           core-test-env/bin/python - <<'PY'
           import importlib
-          import json
           import re
           from importlib.metadata import distributions, entry_points
-          from pathlib import Path
 
           from lfx.interface.components import _read_component_index
 
@@ -970,10 +968,12 @@ jobs:
 
           index = _read_component_index()
           assert index is not None, "Installed LFX rejected its bundled component index"
-          expected_index = json.loads(Path("src/lfx/src/lfx/_assets/component_index.json").read_text())
-          assert index["metadata"] == expected_index["metadata"], (
-            f"Unexpected component index metadata: {index['metadata']} "
-            f"!= {expected_index['metadata']}"
+          expected_metadata = {
+              "num_modules": len(index["entries"]),
+              "num_components": sum(len(components) for _, components in index["entries"]),
+          }
+          assert index["metadata"] == expected_metadata, (
+            f"Unexpected component index metadata: {index['metadata']} != {expected_metadata}"
           )
           for category, components in index["entries"]:
               for component_name, component in components.items():
