@@ -1,15 +1,17 @@
-"""Test for GitHub issue #8791: Race condition when component-tool is invoked concurrently.
+"""Tests for race conditions when component tools are invoked concurrently.
 
 When an Agent invokes the same component-based tool multiple times concurrently,
 the same component instance is reused, causing inputs to be overwritten between
 concurrent invocations (data corruption).
 """
 
+import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 
-from lfx.base.tools.component_tool import ComponentToolkit
+import pytest
+from lfx.base.tools.component_tool import ComponentToolkit, send_message_noop
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DataInput, MessageTextInput
 from lfx.io import Output
@@ -50,6 +52,110 @@ class SlowLabelComponent(Component):
                 "label_after": self.label,
             }
         )
+
+
+class OrderedSyncComponent(Component):
+    inputs = []
+    outputs = [Output(display_name="Result", name="result", method="process")]
+
+    first_started = threading.Event()
+    second_started = threading.Event()
+    finish_first = threading.Event()
+    finish_second = threading.Event()
+    call_lock = threading.Lock()
+    call_number = 0
+
+    def process(self) -> Data:
+        with self.call_lock:
+            current = self.call_number
+            type(self).call_number += 1
+
+        if current == 0:
+            self.first_started.set()
+            assert self.second_started.wait(timeout=5)
+            assert self.finish_first.wait(timeout=5)
+        else:
+            self.second_started.set()
+            assert self.finish_second.wait(timeout=5)
+
+        return Data(data={"send_message_is_noop": self.send_message is send_message_noop})
+
+
+class OrderedAsyncComponent(Component):
+    inputs = []
+    outputs = [Output(display_name="Result", name="result", method="process")]
+
+    first_started: asyncio.Event
+    second_started: asyncio.Event
+    finish_first: asyncio.Event
+    finish_second: asyncio.Event
+    call_number = 0
+
+    async def process(self) -> Data:
+        current = self.call_number
+        type(self).call_number += 1
+
+        if current == 0:
+            self.first_started.set()
+            await asyncio.wait_for(self.second_started.wait(), timeout=5)
+            await asyncio.wait_for(self.finish_first.wait(), timeout=5)
+        else:
+            self.second_started.set()
+            await asyncio.wait_for(self.finish_second.wait(), timeout=5)
+
+        return Data(data={"send_message_is_noop": self.send_message is send_message_noop})
+
+
+def test_sync_tool_calls_do_not_patch_shared_send_message():
+    component = OrderedSyncComponent()
+    original_send_message = component.send_message
+    component_type = type(component)
+    component_type.first_started = threading.Event()
+    component_type.second_started = threading.Event()
+    component_type.finish_first = threading.Event()
+    component_type.finish_second = threading.Event()
+    component_type.call_number = 0
+    tool = ComponentToolkit(component=component).get_tools()[0]
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(tool.invoke, {})
+        assert component_type.first_started.wait(timeout=5)
+        second = executor.submit(tool.invoke, {})
+        assert component_type.second_started.wait(timeout=5)
+        component_type.finish_first.set()
+        first_result = first.result(timeout=5)
+        component_type.finish_second.set()
+        second_result = second.result(timeout=5)
+
+    assert first_result["send_message_is_noop"] is True
+    assert second_result["send_message_is_noop"] is True
+    assert component.send_message == original_send_message
+
+
+@pytest.mark.asyncio
+async def test_async_tool_calls_do_not_patch_shared_send_message():
+    component = OrderedAsyncComponent()
+    original_send_message = component.send_message
+    component_type = type(component)
+    component_type.first_started = asyncio.Event()
+    component_type.second_started = asyncio.Event()
+    component_type.finish_first = asyncio.Event()
+    component_type.finish_second = asyncio.Event()
+    component_type.call_number = 0
+    tool = ComponentToolkit(component=component).get_tools()[0]
+
+    first = asyncio.create_task(tool.ainvoke({}))
+    await asyncio.wait_for(component_type.first_started.wait(), timeout=5)
+    second = asyncio.create_task(tool.ainvoke({}))
+    await asyncio.wait_for(component_type.second_started.wait(), timeout=5)
+    component_type.finish_first.set()
+    first_result = await asyncio.wait_for(first, timeout=5)
+    component_type.finish_second.set()
+    second_result = await asyncio.wait_for(second, timeout=5)
+
+    assert first_result["send_message_is_noop"] is True
+    assert second_result["send_message_is_noop"] is True
+    assert component.send_message == original_send_message
 
 
 def test_should_isolate_inputs_when_tool_invoked_concurrently():

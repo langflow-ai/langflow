@@ -106,6 +106,7 @@ def _build_output_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
+        comp.send_message = send_message_noop  # type: ignore[method-assign, assignment]
         local_method = getattr(comp, method_name, output_method)
         build_started = False
         result = None
@@ -140,7 +141,7 @@ def _build_output_function(
         # removing the model_dump() call here because it is not serializable
         return serialize(result)
 
-    return _patch_send_message_decorator(component, output_function)
+    return output_function
 
 
 def _build_output_async_function(
@@ -162,6 +163,7 @@ def _build_output_async_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
+        comp.send_message = send_message_noop  # type: ignore[method-assign, assignment]
         local_method = getattr(comp, method_name, output_method)
         build_started = False
         result = None
@@ -195,7 +197,7 @@ def _build_output_async_function(
         # removing the model_dump() call here because it is not serializable
         return serialize(result)
 
-    return _patch_send_message_decorator(component, output_function)
+    return output_function
 
 
 def _format_tool_name(name: str):
