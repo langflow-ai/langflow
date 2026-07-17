@@ -232,6 +232,7 @@ async def get_messages(
     sender: Annotated[str | None, Query()] = None,
     sender_name: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
+    order: Annotated[str, Query()] = "ASC",
     limit: Annotated[int | None, Query(ge=0)] = None,
     offset: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[MessageResponse]:
@@ -261,10 +262,14 @@ async def get_messages(
             stmt = stmt.where(MessageTable.sender == sender)
         if sender_name:
             stmt = stmt.where(MessageTable.sender_name == sender_name)
+        normalized_order = order.upper()
+        if normalized_order not in {"ASC", "DESC"}:
+            raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
         if order_by:
             if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
                 raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-            order_col = getattr(MessageTable, order_by).desc()
+            order_col = getattr(MessageTable, order_by)
+            order_col = order_col.desc() if normalized_order == "DESC" else order_col.asc()
             stmt = stmt.order_by(order_col)
         if limit:
             stmt = stmt.limit(limit)
@@ -535,6 +540,7 @@ async def get_shared_messages(
     source_flow_id: Annotated[UUID, Query(description="The original public flow ID")],
     session_id: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
+    order: Annotated[str, Query()] = "ASC",
     limit: Annotated[int | None, Query(ge=0)] = None,
     offset: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[MessageResponse]:
@@ -553,10 +559,14 @@ async def get_shared_messages(
 
             decoded_session_id = unquote(session_id)
             stmt = stmt.where(MessageTable.session_id == decoded_session_id)
+        normalized_order = order.upper()
+        if normalized_order not in {"ASC", "DESC"}:
+            raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
         if order_by:
             if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
                 raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-            order_col = getattr(MessageTable, order_by).desc()
+            order_col = getattr(MessageTable, order_by)
+            order_col = order_col.desc() if normalized_order == "DESC" else order_col.asc()
             stmt = stmt.order_by(order_col)
         if limit:
             stmt = stmt.limit(limit)

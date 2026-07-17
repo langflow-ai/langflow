@@ -47,6 +47,7 @@ export default function NodeInputField({
   isToolMode = false,
   isPrimaryInput = false,
   displayHandle = false,
+  minimizedHandleTop,
 }: NodeInputFieldComponentType): JSX.Element {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
@@ -128,10 +129,13 @@ export default function NodeInputField({
       ).toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
       nodeId={data.id}
       colorName={colorName}
+      minimizedHandleTop={minimizedHandleTop}
     />
   );
 
-  return !showNode && displayHandle && isPrimaryInput ? (
+  // LE-1810 (T8): a minimized node renders every input handle, not only the
+  // primary one.
+  return !showNode && displayHandle ? (
     Handle
   ) : (
     <div
