@@ -1,5 +1,5 @@
 ---
-title: Use Langflow as an A2A agent
+title: Use Langflow as an A2A server
 slug: /a2a-server
 ---
 
@@ -69,7 +69,7 @@ When a flow is published, Langflow serves two endpoints for the flow:
 
 | Endpoint | Description |
 | --- | --- |
-| `GET /api/v1/a2a/{flow_id}/.well-known/agent-card.json` | The [agent card](#customize-the-agent-card) used for client discovery. Public by design, because the A2A public card is unauthenticated by spec. |
+| `GET /api/v1/a2a/{flow_id}/.well-known/agent-card.json` | The [agent card](#customize-the-agent-card) used for client discovery. The A2A public card is unauthenticated per the A2A spec. |
 | `POST /api/v1/a2a/{flow_id}/jsonrpc` | The JSON-RPC endpoint. Supports `message/send`, `message/stream`, `tasks/get`, `tasks/resubscribe`, and the `tasks/pushNotificationConfig/*` methods. |
 
 The card advertises `protocolVersion` `0.3.0` and `JSONRPC` as the preferred transport.
@@ -180,28 +180,517 @@ Example response:
   "result": {
     "artifacts": [
       {
-        "artifactId": "1b76f47a-f5d4-45e6-ac68-6bc283dab868",
+        "artifactId": "0775cf82-85b5-46a1-94aa-1e38db57cc2b",
         "name": "result",
         "parts": [
           {
             "kind": "text",
-            "text": "Hello! How can I help you today?"
+            "text": "Hello from docs test"
           }
         ]
       }
     ],
-    "contextId": "7bbc5b0c-7a57-4c7e-8fba-f5290e8c3861",
-    "id": "f59bc5d0-9910-4f3c-be7b-f29b5ee388ae",
+    "contextId": "8bc12160-1d54-4fe1-809d-95422945c3ed",
+    "id": "7f3f305e-f02e-444a-90bf-01179646fd85",
     "kind": "task",
     "status": {
       "state": "completed",
-      "timestamp": "2026-07-16T20:56:15.219876Z"
+      "timestamp": "2026-07-17T15:02:30.172601Z"
     }
   }
 }
 ```
 
-To continue the same chat session, use the same `contextId` on subsequent `message/send` requests.
+To read the task again later, call `tasks/get`:
+
+```bash
+curl -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: LANGFLOW_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tasks/get",
+    "params": {
+      "id": "7f3f305e-f02e-444a-90bf-01179646fd85"
+    }
+  }'
+```
+
+Example response (same task payload as `message/send`):
+
+```json
+{
+  "id": 2,
+  "jsonrpc": "2.0",
+  "result": {
+    "artifacts": [
+      {
+        "artifactId": "0775cf82-85b5-46a1-94aa-1e38db57cc2b",
+        "name": "result",
+        "parts": [
+          {
+            "kind": "text",
+            "text": "Hello from docs test"
+          }
+        ]
+      }
+    ],
+    "contextId": "8bc12160-1d54-4fe1-809d-95422945c3ed",
+    "id": "7f3f305e-f02e-444a-90bf-01179646fd85",
+    "kind": "task",
+    "status": {
+      "state": "completed",
+      "timestamp": "2026-07-17T15:02:30.172601Z"
+    }
+  }
+}
+```
+
+To continue the same chat session, reuse `contextId` on later `message/send` requests:
+
+```bash
+curl -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: LANGFLOW_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "message/send",
+    "params": {
+      "message": {
+        "role": "user",
+        "parts": [{"kind": "text", "text": "Follow-up"}],
+        "messageId": "2",
+        "contextId": "8bc12160-1d54-4fe1-809d-95422945c3ed"
+      }
+    }
+  }'
+```
+
+## Streaming and push notifications
+
+The agent card advertises both `streaming` and `pushNotifications`.
+
+### Stream a message
+
+To stream a message, call `message/stream` with the same message shape as `message/send`. The response is an SSE stream (`Content-Type: text/event-stream`) of JSON-RPC frames.
+
+<Tabs>
+<TabItem value="python" label="Python" default>
+
+```python
+import json
+import os
+import uuid
+import requests
+
+url = "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc"
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": os.environ["LANGFLOW_API_KEY"],  # omit if project auth is None
+}
+payload = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "message/stream",
+    "params": {
+        "message": {
+            "role": "user",
+            "parts": [{"kind": "text", "text": "Hello"}],
+            "messageId": uuid.uuid4().hex,
+        }
+    },
+}
+
+with requests.post(url, headers=headers, json=payload, stream=True, timeout=60) as response:
+    response.raise_for_status()
+    for line in response.iter_lines(decode_unicode=True):
+        if line and line.startswith("data:"):
+            print(json.loads(line.removeprefix("data:").strip()))
+```
+
+</TabItem>
+<TabItem value="typescript" label="TypeScript">
+
+```typescript
+const url = "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc";
+
+const response = await fetch(url, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-api-key": process.env.LANGFLOW_API_KEY!, // omit if project auth is None
+  },
+  body: JSON.stringify({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "message/stream",
+    params: {
+      message: {
+        role: "user",
+        parts: [{ kind: "text", text: "Hello" }],
+        messageId: crypto.randomUUID(),
+      },
+    },
+  }),
+});
+
+if (!response.ok || !response.body) {
+  throw new Error(`A2A stream failed: ${response.status}`);
+}
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+let buffer = "";
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  buffer += decoder.decode(value, { stream: true });
+  const lines = buffer.split("\n");
+  buffer = lines.pop() ?? "";
+  for (const line of lines) {
+    if (line.startsWith("data:")) {
+      console.log(JSON.parse(line.slice(5).trim()));
+    }
+  }
+}
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+```bash
+curl -N -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: LANGFLOW_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "message/stream",
+    "params": {
+      "message": {
+        "role": "user",
+        "parts": [{"kind": "text", "text": "Hello"}],
+        "messageId": "1"
+      }
+    }
+  }'
+```
+
+</TabItem>
+</Tabs>
+
+Example SSE response (one JSON object per `data:` line):
+
+```text
+data: {"id":10,"jsonrpc":"2.0","result":{"contextId":"57bcbe61-9a27-40eb-9040-cfa7a677df17","id":"0732102b-ac16-4b84-8a40-0ecb06be8788","kind":"task","status":{"state":"submitted"}}}
+
+data: {"id":10,"jsonrpc":"2.0","result":{"contextId":"57bcbe61-9a27-40eb-9040-cfa7a677df17","final":false,"kind":"status-update","status":{"state":"working","timestamp":"2026-07-17T15:02:30.341209Z"},"taskId":"0732102b-ac16-4b84-8a40-0ecb06be8788"}}
+
+data: {"id":10,"jsonrpc":"2.0","result":{"append":false,"artifact":{"artifactId":"675b035c-8fc3-4740-aed2-ee635dd4aa2b","name":"result","parts":[{"kind":"text","text":"Hello stream"}]},"contextId":"57bcbe61-9a27-40eb-9040-cfa7a677df17","kind":"artifact-update","lastChunk":false,"taskId":"0732102b-ac16-4b84-8a40-0ecb06be8788"}}
+
+data: {"id":10,"jsonrpc":"2.0","result":{"contextId":"57bcbe61-9a27-40eb-9040-cfa7a677df17","final":true,"kind":"status-update","status":{"state":"completed","timestamp":"2026-07-17T15:02:30.389825Z"},"taskId":"0732102b-ac16-4b84-8a40-0ecb06be8788"}}
+```
+
+### Resubscribe to a task
+
+Call `tasks/resubscribe` with a task `id` to reattach to that task's event stream.
+
+<Tabs>
+<TabItem value="python" label="Python" default>
+
+```python
+import json
+import os
+import requests
+
+url = "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc"
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": os.environ["LANGFLOW_API_KEY"],  # omit if project auth is None
+}
+payload = {
+    "jsonrpc": "2.0",
+    "id": 12,
+    "method": "tasks/resubscribe",
+    "params": {"id": "TASK_ID"},
+}
+
+with requests.post(url, headers=headers, json=payload, stream=True, timeout=60) as response:
+    response.raise_for_status()
+    for line in response.iter_lines(decode_unicode=True):
+        if line and line.startswith("data:"):
+            print(json.loads(line.removeprefix("data:").strip()))
+```
+
+</TabItem>
+<TabItem value="typescript" label="TypeScript">
+
+```typescript
+const url = "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc";
+
+const response = await fetch(url, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-api-key": process.env.LANGFLOW_API_KEY!, // omit if project auth is None
+  },
+  body: JSON.stringify({
+    jsonrpc: "2.0",
+    id: 12,
+    method: "tasks/resubscribe",
+    params: { id: "TASK_ID" },
+  }),
+});
+
+if (!response.ok || !response.body) {
+  throw new Error(`A2A resubscribe failed: ${response.status}`);
+}
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+let buffer = "";
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  buffer += decoder.decode(value, { stream: true });
+  const lines = buffer.split("\n");
+  buffer = lines.pop() ?? "";
+  for (const line of lines) {
+    if (line.startsWith("data:")) {
+      console.log(JSON.parse(line.slice(5).trim()));
+    }
+  }
+}
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+```bash
+curl -N -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: LANGFLOW_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 12,
+    "method": "tasks/resubscribe",
+    "params": {
+      "id": "a8820afb-7af7-4831-9233-b236e25e63be"
+    }
+  }'
+```
+
+</TabItem>
+</Tabs>
+
+If the task still has a live stream, you receive SSE frames like `message/stream`. If the task is already finished, which is common for short sync runs, the stream ends with an error frame:
+
+```text
+data: {"error":{"code":-32603,"message":"Task a8820afb-7af7-4831-9233-b236e25e63be has no active stream to resubscribe to"},"id":12,"jsonrpc":"2.0"}
+```
+
+### Register a push notification webhook
+
+Call `tasks/pushNotificationConfig/set` with a `taskId` and a public `http` or `https` webhook URL. Langflow then POSTs task lifecycle events to that URL.
+
+<Tabs>
+<TabItem value="python" label="Python" default>
+
+```python
+import os
+import requests
+
+url = "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc"
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": os.environ["LANGFLOW_API_KEY"],  # omit if project auth is None
+}
+payload = {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tasks/pushNotificationConfig/set",
+    "params": {
+        "taskId": "TASK_ID",
+        "pushNotificationConfig": {
+            "url": "https://example.com/a2a-webhook",
+        },
+    },
+}
+
+response = requests.post(url, headers=headers, json=payload, timeout=60)
+response.raise_for_status()
+print(response.json())
+```
+
+</TabItem>
+<TabItem value="typescript" label="TypeScript">
+
+```typescript
+const url = "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc";
+
+const response = await fetch(url, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-api-key": process.env.LANGFLOW_API_KEY!, // omit if project auth is None
+  },
+  body: JSON.stringify({
+    jsonrpc: "2.0",
+    id: 3,
+    method: "tasks/pushNotificationConfig/set",
+    params: {
+      taskId: "TASK_ID",
+      pushNotificationConfig: {
+        url: "https://example.com/a2a-webhook",
+      },
+    },
+  }),
+});
+
+if (!response.ok) {
+  throw new Error(`A2A push config failed: ${response.status}`);
+}
+
+console.log(await response.json());
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+```bash
+curl -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: LANGFLOW_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tasks/pushNotificationConfig/set",
+    "params": {
+      "taskId": "7f3f305e-f02e-444a-90bf-01179646fd85",
+      "pushNotificationConfig": {
+        "url": "https://example.com/a2a-webhook"
+      }
+    }
+  }'
+```
+
+</TabItem>
+</Tabs>
+
+Example response:
+
+```json
+{
+  "id": 3,
+  "jsonrpc": "2.0",
+  "result": {
+    "pushNotificationConfig": {
+      "id": "7f3f305e-f02e-444a-90bf-01179646fd85",
+      "url": "https://example.com/a2a-webhook"
+    },
+    "taskId": "7f3f305e-f02e-444a-90bf-01179646fd85"
+  }
+}
+```
+
+List registered webhooks for a task with `tasks/pushNotificationConfig/list`:
+
+<Tabs>
+<TabItem value="python" label="Python" default>
+
+```python
+import os
+import requests
+
+url = "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc"
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": os.environ["LANGFLOW_API_KEY"],  # omit if project auth is None
+}
+payload = {
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "tasks/pushNotificationConfig/list",
+    "params": {"id": "TASK_ID"},
+}
+
+response = requests.post(url, headers=headers, json=payload, timeout=60)
+response.raise_for_status()
+print(response.json())
+```
+
+</TabItem>
+<TabItem value="typescript" label="TypeScript">
+
+```typescript
+const url = "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc";
+
+const response = await fetch(url, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-api-key": process.env.LANGFLOW_API_KEY!, // omit if project auth is None
+  },
+  body: JSON.stringify({
+    jsonrpc: "2.0",
+    id: 4,
+    method: "tasks/pushNotificationConfig/list",
+    params: { id: "TASK_ID" },
+  }),
+});
+
+if (!response.ok) {
+  throw new Error(`A2A push list failed: ${response.status}`);
+}
+
+console.log(await response.json());
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+```bash
+curl -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: LANGFLOW_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "tasks/pushNotificationConfig/list",
+    "params": {
+      "id": "7f3f305e-f02e-444a-90bf-01179646fd85"
+    }
+  }'
+```
+
+</TabItem>
+</Tabs>
+
+Example response:
+
+```json
+{
+  "id": 4,
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "pushNotificationConfig": {
+        "id": "7f3f305e-f02e-444a-90bf-01179646fd85",
+        "url": "https://example.com/a2a-webhook"
+      },
+      "taskId": "7f3f305e-f02e-444a-90bf-01179646fd85"
+    }
+  ]
+}
+```
+
+Webhook URLs are validated when they are registered. Only `http` and `https` URLs that resolve entirely to public addresses are accepted; loopback, private, link-local, reserved, multicast, and unspecified targets are rejected. To allow private webhook targets on a trusted internal network, set `LANGFLOW_A2A_ALLOW_PRIVATE_WEBHOOKS` to `true`.
+
+You can also manage configs with `tasks/pushNotificationConfig/get` and `tasks/pushNotificationConfig/delete`.
 
 ## Customize the agent card {#customize-the-agent-card}
 
@@ -221,36 +710,48 @@ By default the card uses the flow's name and description, the Langflow version, 
 
 Click **Save** to apply your overrides.
 
-'The <Icon name="Bot" aria-hidden="true" /> **Agent** tab also displays the card's **Input contract**, derived from the flow's input schema.
-Similar to an MCP tool's input schema, the **Input contract** is a list of the fields the agent expects from the caller.'
+The <Icon name="Bot" aria-hidden="true" /> **Agent** tab also displays the card's **Input contract**, derived from the flow's input schema.
+The **Input contract** is a list of the fields the agent expects from the caller, similar to an MCP tool's input schema.
 
 ## Authentication
 
-Whether the JSON-RPC endpoint requires a key depends on the [authentication settings of the flow's project](/mcp-server#authentication):
+The agent card itself is always public, so clients can always discover the agent.
+Only the JSON-RPC endpoint enforces authentication.
+Whether that endpoint requires a key depends on the [authentication settings of the flow's project](./mcp-server#authentication):
 
-* **API key** or **OAuth**: The agent card advertises an `apiKey` security scheme, and `message/send` and `message/stream` require a valid owner API key in the `x-api-key` header. Requests without a valid key return `401`. An OAuth project is fronted by an external broker, but the A2A transport itself still takes an owner-scoped API key, the same way the MCP transport does.
-* **None**: The endpoint is public, and the card advertises no security scheme.
+* **None**: The endpoint is public. The card advertises no security scheme and callers omit `x-api-key`.
+* **API key**: The card advertises an `apiKey` security scheme. `message/send` and `message/stream` require a valid Langflow API key in the `x-api-key` header. Requests without a valid key return `401`.
+* **OAuth**: Not supported for A2A as of Langflow 1.11.x. This setting behaves the same as API key.
 
-The agent card itself is always public, so clients can always discover the agent. Only the JSON-RPC surface enforces the key.
+Authenticated request example:
 
-## Streaming and push notifications
-
-The card advertises both `streaming` and `pushNotifications`.
-
-* **Streaming**: A client can call `message/stream` to receive task lifecycle events (working, artifact, completed) over Server-Sent Events, or `tasks/resubscribe` to reattach to a task.
-* **Push notifications**: A client can register a webhook with `tasks/pushNotificationConfig/set`, and Langflow POSTs each task lifecycle event to it.
-
-To protect the public endpoint, webhook URLs are validated when they are registered. Only `http` and `https` URLs that resolve entirely to public addresses are accepted; loopback, private, link-local, reserved, multicast, and unspecified targets are rejected. To allow private webhook targets on a trusted internal network, set `LANGFLOW_A2A_ALLOW_PRIVATE_WEBHOOKS` to `true`.
+```bash
+curl -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: LANGFLOW_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "message/send",
+    "params": {
+      "message": {
+        "role": "user",
+        "parts": [{"kind": "text", "text": "Hello"}],
+        "messageId": "1"
+      }
+    }
+  }'
+```
 
 ## Human-in-the-loop agents
 
-If the flow pauses for human input, `message/send` returns a task in the `input-required` state along with the prompt. To resume, send another `message/send` with the same `taskId` and `contextId` carrying the human's response. Langflow restores the paused flow from its checkpoint and continues the run.
+If the flow pauses for human input, `message/send` returns a task in the `input-required` state along with the prompt. To resume, send another `message/send` with the same `taskId` and `contextId` carrying the human's response. Langflow restores the paused flow from its checkpoint and continues the flow run.
 
 ## Call a remote A2A agent
 
-The [**A2A Agent** component](./a2a-agent-component) lets a flow call out to another agent flow in the same project, or to any remote spec-compliant A2A agent.
+The [**A2A Agent** component](./a2a-agent-component) lets a flow call a flow within the same Langflow [project](/concepts-flows#projects), or call out to any remote spec-compliant A2A agent.
 
-For parameters and setup steps, see [**A2A Agent** component](./a2a-agent-component).
+For more information, see [**A2A Agent** component](./a2a-agent-component).
 
 ## A2A environment variables
 

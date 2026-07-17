@@ -3,28 +3,61 @@ title: A2A Agent
 slug: /a2a-agent-component
 ---
 
+:::tip
+As of Langflow 1.11.x, A2A support is **off** by default. To enable it, set the following environment variable before starting Langflow:
+
+```bash
+LANGFLOW_A2A_ENABLED=true
+```
+:::
+
 The **A2A Agent** component calls an [Agent2Agent (A2A)](https://a2a-protocol.org/) agent and returns its reply.
 
 Use **Internal Model** to call published A2A agent flows within the same Langflow [project](/concepts-flows#projects), or use **External Mode** to call a remote A2A agent by its published URL.
 
-For more information on publishing a Langflow flow, see [Serve a flow as an A2A agent](./a2a-server).
+For more information on publishing a Langflow flow, see [Publish a flow as an A2A agent](./a2a-server#publish-a-flow-as-an-a2a-agent).
 
-## Use the A2A Agent component in a flow
+## Use Internal mode in a flow
 
 1. Add an **A2A Agent** component to your flow.
-2. Choose a **Mode**:
-   * **Internal**: Select a published flow in this project. The flow must have [**Chat Input** and **Chat Output**](/chat-input-and-output) components.
-   * **External**: Enter the remote agent's base URL or its `/.well-known/agent-card.json` card URL. Both resolve the same agent. When the URL returns a card, the component shows a read-only **Agent card** preview.
-3. Connect a [**Chat Input**](/chat-input-and-output#chat-input) component to the **A2A Agent** component's **Message** input.
-4. Optional: If the remote agent requires `x-api-key` authentication, enter the **API Key** field, or use a [global variable](/configuration-global-variables).
-5. Connect the **Response** output to the next component in your flow, such as [**Chat Output**](/chat-input-and-output#chat-output).
+2. In the **A2A Agent** component, set **Mode** to **Internal**.
+3. In **Agent**, select a published A2A agent flow within your Langflow [project](/concepts-flows#projects). The flow must have [**Chat Input** and **Chat Output** components](./chat-input-and-output). For more information, see [Publish a flow as an A2A agent](./a2a-server#publish-a-flow-as-an-a2a-agent).
+4. Connect a [**Chat Input** component](./chat-input-and-output#chat-input) to the **A2A Agent** component's **Message** input.
+5. Connect the **Response** output to the next component in your flow, such as a [**Chat Output** component](./chat-input-and-output#chat-output).
+
+## Use External mode in a flow
+
+1. Add an **A2A Agent** component to your flow.
+2. In the **A2A Agent** component, set **Mode** to **External**.
+3. Enter the remote agent's base URL in the **Agent URL** field.
+Alternatively, enter the agent's `/.well-known/agent-card.json` card URL in the **Agent URL** field.
+Both options resolve the same agent.
+When the URL returns a card, the component displays a read-only **Agent card** preview.
+4. Optional: If the remote agent requires `x-api-key` authentication, enter the API key in the **API Key** field, or use a [global variable](./configuration-global-variables).
+5. Connect a [**Chat Input** component](./chat-input-and-output#chat-input) to the **A2A Agent** component's **Message** input.
+6. Connect the **Response** output to the next component in your flow, such as a [**Chat Output** component](./chat-input-and-output#chat-output).
+
+### Local and private agent URLs
+
+Langflow enables [SSRF protection](./api-keys-and-authentication#ssrf-protection) by default.
+Loopback and private addresses such as `localhost`, `127.0.0.1`, and `::1` are blocked unless you allow them.
+
+If the remote agent URL points at a local or private host, such as another Langflow instance on `http://localhost:7862`, add that URL to the SSRF allowlist on that host before you run the A2A component:
+
+```bash
+export LANGFLOW_SSRF_ALLOWED_HOSTS=localhost,127.0.0.1
+```
+
+Restart Langflow after changing the variable.
+
+For more information, see [SSRF protection](./api-keys-and-authentication#ssrf-protection).
 
 ## A2A Agent parameters
 
 | Name | Type | Description |
 |------|------|-------------|
 | mode | Tab | Input parameter. **Internal** calls another agent flow in this project. **External** calls a remote A2A agent by URL. Default: `External`. |
-| agent_name_selected | Dropdown | Input parameter. **Internal** mode only. An agent flow in this project (one with [**Chat Input** and **Chat Output**](/chat-input-and-output)). |
+| agent_name_selected | Dropdown | Input parameter. **Internal** mode only. An agent flow in this project (one with [**Chat Input** and **Chat Output** components](./chat-input-and-output)). |
 | agent_url | String | Input parameter. **External** mode only. The remote A2A agent's base URL or `/.well-known/agent-card.json` card URL. |
 | agent_card | Data display | Input parameter. **External** mode only. Read-only preview of the remote agent's advertised card. Appears when the URL returns a card. |
 | input_value | String | Input parameter. The message to send to the agent. Supports **Tool Mode**. |
@@ -35,4 +68,5 @@ For more information on publishing a Langflow flow, see [Serve a flow as an A2A 
 ## See also
 
 * [Use Langflow as an A2A agent](./a2a-server)
+* [SSRF protection](./api-keys-and-authentication#ssrf-protection)
 * [Agent2Agent protocol](https://a2a-protocol.org/)
