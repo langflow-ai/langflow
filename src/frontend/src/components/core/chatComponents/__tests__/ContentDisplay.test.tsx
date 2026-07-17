@@ -47,7 +47,11 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 }));
 jest.mock("@/components/core/codeTabsComponent", () => ({
   __esModule: true,
-  default: () => <div data-testid="code-tabs" />,
+  default: ({ code, language }: { code: string; language: string }) => (
+    <pre data-language={language} data-testid="code-tabs">
+      {code}
+    </pre>
+  ),
 }));
 jest.mock("../DurationDisplay", () => ({
   __esModule: true,
@@ -355,6 +359,39 @@ describe("ContentDisplay", () => {
       expect(tabs[1]).toHaveAttribute("aria-selected", "false");
       // Body of the Result tab renders the inner string, not a JSON dump.
       expect(screen.getByText("the body")).toBeInTheDocument();
+    });
+
+    it("renders a structured ToolMessage artifact instead of lossy string content", () => {
+      const tool = {
+        type: "tool_use",
+        name: "search_documents",
+        tool_input: {},
+        output: {
+          content:
+            "                                                text\n" +
+            "0  Thanks to the high-quality document conversion...",
+          artifact: [
+            {
+              text: "Thanks to the high-quality document conversion...",
+              source: "docling.pdf",
+            },
+          ],
+          additional_kwargs: {},
+          response_metadata: {},
+          type: "tool",
+          name: "search_documents",
+          tool_call_id: "toolu_xyz",
+          status: "success",
+        },
+      } as unknown as ContentBlockItem;
+
+      render(<ContentDisplay content={tool} chatId="t-t-artifact" />);
+
+      const result = screen.getByTestId("code-tabs");
+      expect(result).toHaveAttribute("data-language", "json");
+      expect(result).toHaveTextContent('"source": "docling.pdf"');
+      expect(result).not.toHaveTextContent("0 Thanks to");
+      expect(screen.getAllByRole("tab")).toHaveLength(2);
     });
 
     it("renders the error body in a destructive-toned panel", () => {
