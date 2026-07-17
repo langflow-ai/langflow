@@ -3,6 +3,7 @@
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from lfx.base.models.anthropic_chat_model import ChatAnthropicThinkingCompat, _ensure_thinking_field
 from lfx.base.models.unified_models.class_registry import get_model_class
+from lfx.base.models.unified_models.instantiation import get_llm
 
 
 def _malformed_history() -> list:
@@ -71,6 +72,31 @@ def test_payload_preserves_existing_thinking_text():
 
 def test_agent_registry_resolves_compat_class():
     assert get_model_class("ChatAnthropic") is ChatAnthropicThinkingCompat
+
+
+def test_unified_language_model_builds_anthropic_compat_class():
+    model = get_llm(
+        [
+            {
+                "name": "claude-sonnet-5",
+                "provider": "Anthropic",
+                "metadata": {
+                    "model_class": "ChatAnthropic",
+                    "model_name_param": "model",
+                    "api_key_param": "api_key",  # pragma: allowlist secret
+                },
+            }
+        ],
+        user_id=None,
+        api_key="test-key",  # pragma: allowlist secret
+    )
+
+    assert type(model) is ChatAnthropicThinkingCompat
+
+
+def test_compat_class_rebuilds_deferred_parent_annotations():
+    assert ChatAnthropicThinkingCompat.model_rebuild(force=True) is True
+    assert ChatAnthropicThinkingCompat.__pydantic_complete__
 
 
 def test_ensure_thinking_field_handles_missing_and_none():

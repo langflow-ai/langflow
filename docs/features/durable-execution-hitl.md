@@ -56,7 +56,7 @@ The pause probe is a no-op unless a component requests it, so normal flows are b
 | Decision | The human's answer: `action_id` (e.g. `approve`/`reject`) plus optional `values` | `graph.human_input_decisions` |
 | Run id | The graph's tracing identity; equals `graph_run_id` on the messages | `graph.set_run_id`, trace `id` |
 | Job id | The durable job identity used for checkpoints + resume | `JobStatus`, `/api/v2/workflows/{job_id}/resume` |
-| Gate span | The trace span recording the resolved decision: "Human In The Loop — Approved/Rejected" | `TracingService.record_event_span` |
+| Gate span | The trace span recording the resolved decision: "Human In The Loop — {action label}" (e.g. Approve/Reject/Remove) | `TracingService.record_event_span` |
 
 ---
 
@@ -211,7 +211,7 @@ Originally, resumed runs lost trace data in the backend: the **Chat Output** spa
 #### Decision
 1. On resume, call `graph.initialize_run()` on the checkpoint's `run_id` so resumed vertices trace into the **same** trace as the pre-pause run, and restore `flow_name` for the trace title.
 2. Pin the caller's `run_id` in `build_graph_from_data` **before** `initialize_run` (forwarded by `create_graph`), so the initial run traces into `graph_run_id` — not a fresh uuid.
-3. Record the resolved gate as a real span via `TracingService.record_event_span` ("Human In The Loop — Approved/Rejected").
+3. Record the resolved gate as a real span via `TracingService.record_event_span` ("Human In The Loop — {action label}", e.g. Approve/Reject/Remove).
 4. Remove the frontend `localStorage` persistence; `TraceDetailView` reads the gate + output from the backend trace and only synthesizes a gate for the live window, deduped by name.
 
 #### Consequences
@@ -263,7 +263,9 @@ Drain the queue **inline** after cancelling the worker (`service.py::_stop`), an
   decision = reroute_decision_on_timeout(pending, resume["decision"])
   graph.human_input_decisions = {resume["request_id"]: decision}
   action_id = str((decision or {}).get("action_id", ""))
-  gate_label = "Rejected" if "reject" in action_id.lower() else "Approved"
+  # HITL actions are user-defined (Approve/Reject/Remove/...), so label the span with the chosen
+  # action's button label (from the pending options), not a hardcoded approve/reject binary.
+  gate_label = _hitl_gate_label(action_id, (pending or {}).get("options"))
   graph.tracing_service.record_event_span(
       span_id=f"hitl-{resume['request_id']}",
       name=f"Human In The Loop — {gate_label}",
@@ -368,7 +370,7 @@ sequenceDiagram
   U->>API: POST /v2/workflows/{job}/resume {decision}
   API->>DB: claim SUSPENDED→IN_PROGRESS (single-flight)
   API->>G: resume_from_checkpoint + initialize_run(run_id)
-  G->>T: record "Human In The Loop — Approved" span
+  G->>T: record "Human In The Loop — {decision}" span
   G->>T: trace re-run predecessors … Chat Output
   G->>DB: flush spans (one trace) + job COMPLETED
   API-->>U: result; trace panel shows full run

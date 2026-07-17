@@ -11,6 +11,7 @@ Agent turn with an empty final message.
 from typing import Any
 
 from langchain_anthropic import ChatAnthropic
+from pydantic import SecretStr
 
 
 def _ensure_thinking_field(payload: dict) -> None:
@@ -31,3 +32,8 @@ class ChatAnthropicThinkingCompat(ChatAnthropic):
         payload = super()._get_request_payload(*args, **kwargs)
         _ensure_thinking_field(payload)
         return payload
+
+
+# Pydantic resolves inherited forward annotations in the subclass module. Make
+# ChatAnthropic's SecretStr annotation available before the first construction.
+ChatAnthropicThinkingCompat.model_rebuild(_types_namespace={"SecretStr": SecretStr})
