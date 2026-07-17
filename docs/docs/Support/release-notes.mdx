@@ -79,6 +79,13 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
+- Human-in-the-Loop (HITL)
+
+    Human-in-the-Loop (HITL) pauses an agent when the agent calls a tool and creates a stateful checkpoint.
+    After a human responds by approving, rejecting, or editing the request, the agent resumes from the checkpoint.
+
+    For more information, see [Human-in-the-Loop](./human-in-the-loop).
+    
 - OpenAI Compatible model provider
 
     Point Langflow's model provider at any OpenAI-compatible endpoint, and Langflow discovers models live from the `/v1/models` endpoint.
@@ -104,8 +111,6 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     IBM watsonx Orchestrate is no longer excluded from Python 3.14 installs.
 
     For more information, see [Deploy flows on watsonx Orchestrate](/deployment-wxo).
-
-- Optional integrations not yet available on Python 3.14
 
     The following optional integrations remain excluded from installations on Python 3.14:
 
