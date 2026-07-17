@@ -9620,7 +9620,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-anthropic"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/anthropic" }
 dependencies = [
     { name = "langchain-anthropic" },
