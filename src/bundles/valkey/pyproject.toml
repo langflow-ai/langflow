@@ -1,27 +1,29 @@
 [project]
-name = "lfx-amazon"
+name = "lfx-valkey"
 version = "0.1.0"
-description = "Amazon component(s) as a standalone Langflow Extension Bundle."
+description = "Valkey component(s) as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
 license = { text = "MIT" }
 authors = [
     { name = "Langflow", email = "contact@langflow.org" },
 ]
-keywords = ["langflow", "lfx", "extension", "bundle", "amazon"]
+keywords = ["langflow", "lfx", "extension", "bundle", "valkey"]
 
 # Runtime deps: lfx (the BUNDLE_API surface) plus any third-party imports
 # the bundle's components rely on.  REVIEW THIS LIST -- the script ports
 # only ``lfx``; add any other deps the moved component(s) import.
 # lfx is floored at the current major.minor line and capped below the next
-# lfx major (e.g. "lfx>=1.11.0,<2.0.0"); the floor is read from
+# lfx major (e.g. "lfx>=1.10.0,<2.0.0"); the floor is read from
 # src/lfx/pyproject.toml at port time and re-synced on ``make patch`` via
 # scripts/ci/sync_bundle_lfx_pin.py.  Fine-grained BUNDLE_API compatibility
 # is enforced via extension.json's lfx.compat list against BUNDLE_API_VERSION.
 dependencies = [
     "lfx>=1.11.0.dev0,<2.0.0",
-    "boto3>=1.34.162,<2.0.0",
-    "langchain-aws>=1.4.1,<2.0.0",
+    "langchain-aws[valkey]>=1.4.1,<2.0.0",
+    "langchain-community>=0.4.1,<1.0.0",
+    "redis>=7.4.0,<8.0.0",
+    "structlog>=25.4.0,<26.0.0",
 ]
 
 [project.urls]
@@ -34,25 +36,25 @@ Repository = "https://github.com/langflow-ai/langflow"
 # ``dist.files`` only surfaces dist-info entries fall back to this
 # entry-point to find the manifest.
 [project.entry-points."langflow.extensions"]
-lfx-amazon = "lfx_amazon"
+lfx-valkey = "lfx_valkey"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-# extension.json + components live inside the lfx_amazon package so
+# extension.json + components live inside the lfx_valkey package so
 # ``importlib.metadata.files(dist)`` finds them and the loader resolves
 # bundles[].path relative to the manifest's directory.
-packages = ["src/lfx_amazon"]
+packages = ["src/lfx_valkey"]
 include = [
-    "src/lfx_amazon/extension.json",
-    "src/lfx_amazon/components/**/*.py",
+    "src/lfx_valkey/extension.json",
+    "src/lfx_valkey/components/**/*.py",
 ]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "src/lfx_amazon",
+    "src/lfx_valkey",
     "extension.json",
     "README.md",
     "pyproject.toml",

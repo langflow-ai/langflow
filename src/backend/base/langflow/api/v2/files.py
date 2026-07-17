@@ -46,7 +46,7 @@ def is_permanent_storage_failure(error: Exception) -> bool:
     if isinstance(error, FileNotFoundError):
         return True
 
-    # Check for S3 error codes (boto3/aioboto3)
+    # Check for S3 error codes (boto3/aiobotocore)
     # S3 errors have a 'response' attribute with Error.Code
     if hasattr(error, "response"):
         response = error.response
