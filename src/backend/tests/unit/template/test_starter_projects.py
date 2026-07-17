@@ -78,7 +78,9 @@ def get_starter_projects_path() -> Path:
 
 def get_template_files():
     """Get all template files for parameterization."""
-    return list(get_starter_projects_path().glob("*.json"))
+    core_templates = get_starter_projects_path().glob("*.json")
+    bundle_templates = Path("src/bundles").glob("**/starter_projects/*.json")
+    return sorted([*core_templates, *bundle_templates])
 
 
 def get_basic_template_files():

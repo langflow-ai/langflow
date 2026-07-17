@@ -24,7 +24,9 @@ manifest. Adding a provider is just adding a folder.
 src/lfx_bundles/
 ├── __init__.py        # bare namespace marker
 ├── <provider>/        # one bundle, e.g. tavily/, pinecone/, ...
-│   └── *.py           # Component subclasses
+│   ├── *.py           # Component subclasses
+│   └── starter_projects/
+│       └── *.json     # Optional templates owned by this provider
 └── ...
 ```
 
@@ -53,3 +55,8 @@ Providers are moved here by `scripts/migrate/consolidate_bundles.py`, which also
 maintains the per-provider extras and the generated `all` aggregate. **Do not**
 hand-edit the extras block in `pyproject.toml`. Provider folder names must be
 lowercase snake_case (`a-z`, `0-9`, `_`, 2–64 chars).
+
+Starter projects that require a provider belong in that provider's
+`starter_projects/` directory. Langflow discovers them only after the
+manifest-less provider loads, then applies the normal component-availability
+filter before seeding them.

@@ -260,6 +260,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lfx_bundles"]
+include = [
+    "src/lfx_bundles/**/*.py",
+    "src/lfx_bundles/**/starter_projects/*.json",
+]
 
 [tool.hatch.build.targets.sdist]
 include = [
