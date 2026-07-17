@@ -103,6 +103,21 @@ export const AccountMenu = () => {
               </span>
             </HeaderMenuItemButton>
 
+            <div>
+              <HeaderMenuItemButton
+                onClick={() => {
+                  navigate("/image-annotation");
+                }}
+              >
+                <span
+                  data-testid="menu_image_annotation_button"
+                  id="menu_image_annotation_button"
+                >
+                  {t("account.imageAnnotation")}
+                </span>
+              </HeaderMenuItemButton>
+            </div>
+
             {isAdmin && !autoLogin && (
               <div>
                 <HeaderMenuItemButton

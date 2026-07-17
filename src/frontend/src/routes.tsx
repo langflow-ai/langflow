@@ -47,6 +47,7 @@ import ViewPage from "./pages/ViewPage";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
+const ImageAnnotationPage = lazy(() => import("./pages/ImageAnnotationPage"));
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 
 const PlaygroundPage = lazy(() => import("./pages/Playground"));
@@ -195,6 +196,10 @@ const router = createBrowserRouter(
                     </ProtectedAdminRoute>
                   }
                 />
+                <Route path="image-annotation">
+                  <Route index element={<ImageAnnotationPage />} />
+                  <Route path=":projectId" element={<ImageAnnotationPage />} />
+                </Route>
               </Route>
               <Route path="flow/:id/">
                 <Route path="" element={<CustomDashboardWrapperPage />}>
