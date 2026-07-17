@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.0"
+version = "1.1.1"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
