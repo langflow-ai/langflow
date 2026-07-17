@@ -80,6 +80,19 @@ function FormattedOutput({ value }: { value: JSONValue }) {
 
 type Tab = "result" | "metadata";
 
+function isMcpCallToolResultArtifact(
+  value: JSONValue | undefined,
+): value is Record<string, JSONValue> {
+  return (
+    value !== null &&
+    value !== undefined &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Array.isArray(value.content) &&
+    typeof value.isError === "boolean"
+  );
+}
+
 /** Tab control sized for the inside of a tool-call card. Matches the
  * underline-on-active pattern used across assistant-ui / Claude /
  * ChatGPT — quiet by default, the active tab gets a 2px underline in
@@ -116,11 +129,12 @@ function TabButton({
  * eyebrow so the section is unambiguous next to the "Arguments" block
  * above it. Routes by shape:
  *   - LangChain ToolMessage envelope with non-standard metadata keys
- *     (additional_kwargs, response_metadata, artifact, type, ...) gets
- *     a 2-tab UI: "Result" shows the inner `.content` rendered through
- *     FormattedOutput, "Metadata" shows the rest of the envelope as
- *     pretty JSON. Plumbing keys (name, id, tool_call_id, status) are
- *     suppressed because the accordion trigger already surfaces them.
+ *     (additional_kwargs, response_metadata, type, ...) gets a 2-tab UI:
+ *     "Result" prefers the structured `.artifact` and falls back to the
+ *     model-facing `.content`. MCP `CallToolResult` artifacts are protocol
+ *     envelopes, so their readable content stays in Result and the raw
+ *     artifact stays in Metadata. Plumbing keys (name, id, tool_call_id,
+ *     status) are suppressed because the accordion trigger surfaces them.
  *   - Anything else (simple string, plain dict, unwrappable envelope)
  *     falls through to FormattedOutput directly under the eyebrow —
  *     no tabs, just the body. */
@@ -137,25 +151,29 @@ export function ToolOutputDisplay({ output }: { output: JSONValue }) {
     );
   }
 
-  const content = output.content;
+  const artifact = output.artifact;
+  const isMcpArtifact = isMcpCallToolResultArtifact(artifact);
+  const result = artifact != null && !isMcpArtifact ? artifact : output.content;
   // Strip the standard ToolMessage plumbing keys from the metadata view —
   // the accordion trigger already shows tool name and status, and id /
   // tool_call_id aren't useful in the UI. What remains is the actually
   // interesting custom metadata (additional_kwargs, response_metadata,
-  // artifact, type, custom fields).
+  // type, custom fields). Component artifacts are the primary result, while
+  // raw MCP protocol artifacts remain metadata behind readable content.
   const metadata = Object.fromEntries(
-    Object.entries(output).filter(
-      ([k]) => !TOOL_MESSAGE_KEYS_PLUS_CONTENT.has(k),
-    ),
+    Object.entries(output).filter(([key, value]) => {
+      if (key === "artifact") return value != null && isMcpArtifact;
+      return !TOOL_MESSAGE_KEYS_PLUS_CONTENT.has(key);
+    }),
   );
   const hasMetadata = Object.keys(metadata).length > 0;
 
   // If after stripping plumbing there's no meaningful metadata left,
-  // drop the tabs and render content directly.
+  // drop the tabs and render the result directly.
   if (!hasMetadata) {
     return (
       <ToolSection eyebrow="Output">
-        <FormattedOutput value={content} />
+        <FormattedOutput value={result} />
       </ToolSection>
     );
   }
@@ -190,7 +208,7 @@ export function ToolOutputDisplay({ output }: { output: JSONValue }) {
             transition={{ duration: 0.08, ease: "easeOut" }}
           >
             {tab === "result" ? (
-              <FormattedOutput value={content} />
+              <FormattedOutput value={result} />
             ) : (
               <SimplifiedCodeTabComponent
                 language="json"
@@ -204,9 +222,10 @@ export function ToolOutputDisplay({ output }: { output: JSONValue }) {
   );
 }
 
-// `content` belongs in its own tab; the rest of the canonical plumbing
-// fields aren't worth exposing — keep this set local rather than
-// re-exporting yet another constant.
+// `content` belongs in the Result tab; the canonical plumbing fields aren't
+// worth exposing — keep this set local rather than re-exporting another
+// constant. Artifact routing depends on whether it is component data or an
+// MCP protocol envelope, so it is handled separately above.
 const TOOL_MESSAGE_KEYS_PLUS_CONTENT = new Set([
   "content",
   "name",

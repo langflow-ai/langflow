@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type {
   CitationContent,
   ContentBlockItem,
@@ -47,7 +47,11 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 }));
 jest.mock("@/components/core/codeTabsComponent", () => ({
   __esModule: true,
-  default: () => <div data-testid="code-tabs" />,
+  default: ({ code, language }: { code: string; language: string }) => (
+    <pre data-language={language} data-testid="code-tabs">
+      {code}
+    </pre>
+  ),
 }));
 jest.mock("../DurationDisplay", () => ({
   __esModule: true,
@@ -355,6 +359,71 @@ describe("ContentDisplay", () => {
       expect(tabs[1]).toHaveAttribute("aria-selected", "false");
       // Body of the Result tab renders the inner string, not a JSON dump.
       expect(screen.getByText("the body")).toBeInTheDocument();
+    });
+
+    it("renders a structured ToolMessage artifact instead of lossy string content", () => {
+      const tool = {
+        type: "tool_use",
+        name: "search_documents",
+        tool_input: {},
+        output: {
+          content:
+            "                                                text\n" +
+            "0  Thanks to the high-quality document conversion...",
+          artifact: [
+            {
+              text: "Thanks to the high-quality document conversion...",
+              source: "docling.pdf",
+            },
+          ],
+          additional_kwargs: {},
+          response_metadata: {},
+          type: "tool",
+          name: "search_documents",
+          tool_call_id: "toolu_xyz",
+          status: "success",
+        },
+      } as unknown as ContentBlockItem;
+
+      render(<ContentDisplay content={tool} chatId="t-t-artifact" />);
+
+      const result = screen.getByTestId("code-tabs");
+      expect(result).toHaveAttribute("data-language", "json");
+      expect(result).toHaveTextContent('"source": "docling.pdf"');
+      expect(result).not.toHaveTextContent("0 Thanks to");
+      expect(screen.getAllByRole("tab")).toHaveLength(2);
+    });
+
+    it("keeps MCP content as the result and its protocol artifact in metadata", async () => {
+      const tool = {
+        type: "tool_use",
+        name: "mcp_search",
+        tool_input: {},
+        output: {
+          content: "readable MCP output",
+          artifact: {
+            meta: null,
+            content: [{ type: "text", text: "readable MCP output" }],
+            structuredContent: null,
+            isError: false,
+          },
+          additional_kwargs: {},
+          response_metadata: {},
+          type: "tool",
+          name: "mcp_search",
+          tool_call_id: "toolu_mcp",
+          status: "success",
+        },
+      } as unknown as ContentBlockItem;
+
+      render(<ContentDisplay content={tool} chatId="t-t-mcp-artifact" />);
+
+      expect(screen.getByText("readable MCP output")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("tab", { name: "Metadata" }));
+      const metadata = await screen.findByTestId("code-tabs");
+      expect(metadata).toHaveTextContent('"artifact": {');
+      expect(metadata).toHaveTextContent('"isError": false');
     });
 
     it("renders the error body in a destructive-toned panel", () => {
