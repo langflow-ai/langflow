@@ -155,6 +155,29 @@ class TestValkeyIndexChatMemoryURLConstruction:
         url = _MockRedisChatMessageHistory.call_args[1]["url"]
         assert url == "redis://user%40example.com:password@localhost:6379/0"  # pragma: allowlist secret
 
+    def test_password_with_space_round_trips_through_redis_py(self):
+        """A space must encode as %20, not '+'.
+
+        redis-py's from_url decodes credentials with urllib unquote (not
+        unquote_plus), so quote_plus would send '+' and the client would read a
+        literal '+' back. Assert both the encoding and the redis-py round-trip.
+        """
+        import redis
+
+        component = ValkeyIndexChatMemory()
+        component.host = "localhost"
+        component.port = 6379
+        component.database = "0"
+        component.username = ""
+        component.password = "pass word"  # noqa: S105  # pragma: allowlist secret
+        component.key_prefix = ""
+        component.session_id = "test-session"
+        component.build_message_history()
+        url = _MockRedisChatMessageHistory.call_args[1]["url"]
+        assert "pass%20word" in url
+        assert "pass+word" not in url
+        assert redis.connection.parse_url(url)["password"] == "pass word"  # noqa: S105  # pragma: allowlist secret
+
 
 class TestValkeyIndexChatMemoryKeyPrefix:
     def test_key_prefix_passed_when_set(self):

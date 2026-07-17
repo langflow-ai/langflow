@@ -47,8 +47,13 @@ class ValkeyIndexChatMemory(LCChatMemoryComponent):
         has_username = bool(username) and str(username).strip() not in ("", "None")
 
         if has_password:
-            encoded_pw = parse.quote_plus(str(password))
-            encoded_username = parse.quote_plus(str(username)) if has_username else ""
+            # Use quote(safe="") so every reserved char (space, +, /, :, @) is
+            # percent-encoded. redis-py's from_url parses the URL with urlparse
+            # and decodes credentials with unquote (not unquote_plus), so
+            # quote_plus would turn a space into "+" and round-trip to a wrong
+            # password.
+            encoded_pw = parse.quote(str(password), safe="")
+            encoded_username = parse.quote(str(username), safe="") if has_username else ""
             auth = f"{encoded_username}:{encoded_pw}@"
         else:
             auth = ""
