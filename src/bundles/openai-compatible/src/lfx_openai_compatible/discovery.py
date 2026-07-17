@@ -17,7 +17,7 @@ import requests
 from lfx.base.models.model_metadata import create_model_metadata
 from lfx.base.models.model_utils import MIN_DEFAULT_MODELS, get_provider_variable_value
 from lfx.log.logger import logger
-from lfx.utils.ssrf_protection import validate_url_for_ssrf
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -65,7 +65,7 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
         headers: dict[str, str] = {}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
-        validate_url_for_ssrf(models_url)
+        validate_connector_url_for_ssrf(models_url)
         response = requests.get(models_url, headers=headers, timeout=_TIMEOUT_SECONDS)
         response.raise_for_status()
         model_names = _parse_model_names(response.json())
@@ -110,7 +110,7 @@ def validate_openai_compatible_credentials(
         headers["Authorization"] = f"Bearer {api_key}"
 
     try:
-        validate_url_for_ssrf(models_url)
+        validate_connector_url_for_ssrf(models_url)
         response = requests.get(models_url, headers=headers, timeout=_TIMEOUT_SECONDS)
         if response.status_code in (401, 403):
             msg = "Authentication failed for the OpenAI-compatible endpoint. Check OPENAI_COMPATIBLE_API_KEY."

@@ -72,7 +72,7 @@ def test_fetch_openai_dict_format():
     response = _ok_response({"data": [{"id": "meta-llama/llama-3.1-8b"}, {"id": "mistral-7b"}]})
     with (
         patch.object(discovery, "get_provider_variable_value", side_effect=["https://openrouter.ai/api/v1", None]),
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", return_value=response),
     ):
         result = discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -85,7 +85,7 @@ def test_fetch_plain_list_format():
     response = _ok_response(["qwen2-7b", "deepseek-r1"])
     with (
         patch.object(discovery, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", return_value=response),
     ):
         result = discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -96,7 +96,7 @@ def test_fetch_sorts_alphabetically():
     response = _ok_response({"data": [{"id": "zzz"}, {"id": "aaa"}, {"id": "mmm"}]})
     with (
         patch.object(discovery, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", return_value=response),
     ):
         result = discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -122,7 +122,7 @@ def test_fetch_models_url_normalization(base_url, expected):
 
     with (
         patch.object(discovery, "get_provider_variable_value", side_effect=[base_url, None]),
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", side_effect=fake_get),
     ):
         discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -143,7 +143,7 @@ def test_fetch_forwards_api_key_as_bearer():
             "get_provider_variable_value",
             side_effect=["http://localhost:8000", "secret-key"],  # pragma: allowlist secret
         ),
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", side_effect=fake_get),
     ):
         discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -160,7 +160,7 @@ def test_fetch_no_auth_header_when_no_key():
 
     with (
         patch.object(discovery, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", side_effect=fake_get),
     ):
         discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -170,7 +170,7 @@ def test_fetch_no_auth_header_when_no_key():
 def test_fetch_swallows_connection_error():
     with (
         patch.object(discovery, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", side_effect=requests.ConnectionError("refused")),
     ):
         assert discovery.fetch_live_openai_compatible_models("user-id", "llm") == []
@@ -180,7 +180,7 @@ def test_fetch_swallows_bad_payload():
     response = _ok_response({"unexpected": "shape"})
     with (
         patch.object(discovery, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", return_value=response),
     ):
         assert discovery.fetch_live_openai_compatible_models("user-id", "llm") == []
@@ -198,7 +198,7 @@ def test_fetch_swallows_api_key_lookup_error():
 
     with (
         patch.object(discovery, "get_provider_variable_value", side_effect=fake_get_var),
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", return_value=response),
     ):
         result = discovery.fetch_live_openai_compatible_models("user-id", "llm")
@@ -209,7 +209,7 @@ def test_fetch_embeddings_tagged_embeddings():
     response = _ok_response({"data": [{"id": "bge-m3"}]})
     with (
         patch.object(discovery, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", return_value=response),
     ):
         result = discovery.fetch_live_openai_compatible_models("user-id", "embeddings")
@@ -236,13 +236,49 @@ def test_validate_happy_path_uses_v1_models():
         return response
 
     with (
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", side_effect=fake_get),
     ):
         discovery.validate_openai_compatible_credentials(
             "OpenAI Compatible", {"OPENAI_COMPATIBLE_BASE_URL": "http://localhost:8000/v1"}
         )
     assert captured[0] == "http://localhost:8000/v1/models"
+
+
+def test_validate_allows_literal_loopback_by_default(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", "true")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+    response = _ok_response({"data": []})
+
+    with patch.object(discovery.requests, "get", return_value=response) as mock_get:
+        discovery.validate_openai_compatible_credentials(
+            "OpenAI Compatible", {"OPENAI_COMPATIBLE_BASE_URL": "http://127.0.0.1:1234/v1"}
+        )
+
+    mock_get.assert_called_once_with(
+        "http://127.0.0.1:1234/v1/models",
+        headers={},
+        timeout=discovery._TIMEOUT_SECONDS,
+    )
+
+
+def test_validate_blocks_literal_loopback_when_connector_policy_opts_out(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", "false")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+
+    with (
+        patch.object(discovery.requests, "get") as mock_get,
+        pytest.raises(ValueError, match=r"127\.0\.0\.1.*blocked"),
+    ):
+        discovery.validate_openai_compatible_credentials(
+            "OpenAI Compatible", {"OPENAI_COMPATIBLE_BASE_URL": "http://127.0.0.1:1234/v1"}
+        )
+
+    mock_get.assert_not_called()
 
 
 def test_validate_forwards_api_key():
@@ -254,7 +290,7 @@ def test_validate_forwards_api_key():
         return response
 
     with (
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", side_effect=fake_get),
     ):
         discovery.validate_openai_compatible_credentials(
@@ -272,7 +308,7 @@ def test_validate_raises_on_auth_failure(status):
     response = MagicMock()
     response.status_code = status
     with (
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", return_value=response),
         pytest.raises(ValueError, match="Authentication failed"),
     ):
@@ -288,7 +324,7 @@ def test_validate_raises_value_error_on_server_error():
     http_error = requests.HTTPError("server error", response=response)
     response.raise_for_status.side_effect = http_error
     with (
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", return_value=response),
         pytest.raises(ValueError, match="returned HTTP 500"),
     ):
@@ -299,7 +335,7 @@ def test_validate_raises_value_error_on_server_error():
 
 def test_validate_raises_on_connection_error():
     with (
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", side_effect=requests.ConnectionError("refused")),
         pytest.raises(ValueError, match="Could not connect to the OpenAI-compatible endpoint"),
     ):
@@ -310,7 +346,7 @@ def test_validate_raises_on_connection_error():
 
 def test_validate_raises_on_timeout():
     with (
-        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery, "validate_connector_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", side_effect=requests.Timeout("slow")),
         pytest.raises(ValueError, match="timed out"),
     ):
