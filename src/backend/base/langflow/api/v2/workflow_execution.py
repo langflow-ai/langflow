@@ -30,10 +30,12 @@ from fastapi import BackgroundTasks, Request
 from fastapi.responses import EventSourceResponse
 from fastapi.sse import format_sse_event
 from lfx.events.event_manager import create_default_event_manager
+from lfx.graph.checkpoint.store import CheckpointStore
+from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
-from lfx.schema.workflow import WorkflowExecutionResponse
+from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
 from lfx.workflow.converters import ParsedWorkflowRun, create_error_response, run_response_to_workflow_response
 
@@ -180,6 +182,8 @@ async def _stream_event_frames(
     current_user: UserRead,
     source_flow_id: UUID | None = None,
     run_id: str | None = None,
+    job_id: UUID | None = None,
+    resume: dict | None = None,
     track_job_status: bool = True,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
@@ -248,7 +252,13 @@ async def _stream_event_frames(
                     flow_name=flow_name,
                     source_flow_id=source_flow_id,
                     run_id=run_id,
+                    job_id=job_id,
+                    resume=resume,
                     track_job_status=track_job_status,
+                    # The sync path applies tweaks before Graph construction; this loop
+                    # builds from the DB (or request data), so without this the streaming
+                    # and background paths silently drop request tweaks.
+                    tweaks=parsed.tweaks,
                 ),
                 timeout=execution_timeout,
             )
@@ -314,7 +324,11 @@ async def _stream_event_frames(
             for event in adapter.translate(event_type, event_data):
                 if terminal_error_type is not None and event.type == terminal_error_type:
                     terminal_error_seen = True
-                yield _frame(event, seq)
+                frame_bytes, frame_type = _frame(event, seq)
+                # Runner detects a pause by the langflow-side type; agui maps it to CUSTOM.
+                if event_type == "human_input_required":
+                    frame_type = "human_input_required"
+                yield (frame_bytes, frame_type)
                 seq += 1
         for event in adapter.final_events():
             if terminal_error_type is not None and event.type == terminal_error_type:
@@ -378,6 +392,7 @@ async def execute_sync_workflow_with_timeout(
     current_user: UserRead,
     background_tasks: BackgroundTasks,
     http_request: Request,
+    checkpoint_store: CheckpointStore | None = None,
 ) -> WorkflowExecutionResponse:
     """Execute workflow with timeout protection.
 
@@ -388,6 +403,8 @@ async def execute_sync_workflow_with_timeout(
         current_user: Authenticated user
         background_tasks: FastAPI background tasks
         http_request: The HTTP request object for extracting headers
+        checkpoint_store: When provided, enables HITL checkpointing so a flow that
+            pauses for human input returns a ``suspended`` response instead of failing.
 
     Returns:
         WorkflowExecutionResponse with complete results
@@ -405,6 +422,7 @@ async def execute_sync_workflow_with_timeout(
                 current_user=current_user,
                 background_tasks=background_tasks,
                 http_request=http_request,
+                checkpoint_store=checkpoint_store,
             ),
             timeout=_resolve_execution_timeout(),
         )
@@ -419,6 +437,7 @@ async def execute_sync_workflow(
     current_user: UserRead,
     background_tasks: BackgroundTasks,  # noqa: ARG001
     http_request: Request,
+    checkpoint_store: CheckpointStore | None = None,
 ) -> WorkflowExecutionResponse:
     """Execute workflow synchronously and return complete results.
 
@@ -445,6 +464,9 @@ async def execute_sync_workflow(
         current_user: Authenticated user for permission checks
         background_tasks: FastAPI background tasks (unused in sync mode)
         http_request: The HTTP request object for extracting headers
+        checkpoint_store: When provided, enables HITL checkpointing so a pausing flow
+            returns a ``suspended`` response (carrying the human-input request) instead of
+            running through. Off by default, so non-HITL callers are unchanged.
 
     Returns:
         WorkflowExecutionResponse: Complete execution results with outputs and metadata
@@ -484,6 +506,12 @@ async def execute_sync_workflow(
         )
         # Set run_id for tracing/logging (similar to V1's simple_run_flow)
         graph.set_run_id(job_id)
+        # HITL: when a checkpoint store is supplied, a pausing node (HumanInput) durably
+        # checkpoints and suspends instead of running straight through. Off by default,
+        # so non-HITL callers are unchanged.
+        if checkpoint_store is not None:
+            graph.checkpointing_enabled = True
+            graph.checkpoint_store = checkpoint_store
     except Exception as e:
         msg = f"Failed to build graph from flow data: {e!s}"
         raise WorkflowValidationError(msg) from e
@@ -536,6 +564,22 @@ async def execute_sync_workflow(
             selected_ids=parsed.output_ids,
         )
 
+    except GraphPausedException as exc:
+        # HITL: a pausing node suspended the run for human input. The checkpoint is already
+        # persisted in checkpoint_store; surface a suspended response carrying the request so
+        # the caller can resume. Only reachable when a checkpoint_store was supplied.
+        # execute_with_status left the Job row IN_PROGRESS on the pause (it re-raises without a
+        # terminal write). Flip it to SUSPENDED like the background runner does, or the orphan sweep
+        # reaps this parked run to FAILED (worker_lost) once its heartbeat goes stale, and resume
+        # (WHERE status=SUSPENDED) could never re-claim it.
+        await job_service.update_job_status(job_id, JobStatus.SUSPENDED)
+        return WorkflowExecutionResponse(
+            flow_id=parsed.flow_id,
+            session_id=session_id,
+            job_id=str(job_id),
+            status=JobStatus.SUSPENDED,
+            human_request=exc.data or {},
+        )
     except asyncio.CancelledError:
         # Re-raise CancelledError to allow timeout mechanism to work properly
         # This ensures asyncio.wait_for() can properly cancel and raise TimeoutError

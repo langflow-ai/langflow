@@ -61,7 +61,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Upcoming breaking change: bundle separation
 
     Langflow 1.10.x introduced the Extension bundles model.
-    In Langflow 1.11.x and future releases, bundle separation will extend to more component providers.
+    In Langflow 1.11.x and future releases, bundle separation extends to more component providers.
 
     Saved flows continue to open normally, but the following may require manual updates before upgrading:
 
@@ -79,12 +79,44 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
+- OpenAI Compatible model provider
+
+    Point Langflow's model provider at any OpenAI-compatible endpoint, and Langflow discovers models live from the `/v1/models` endpoint.
+    These models can power flows, Langflow Assistant, and any component that uses Langflow’s global model providers.
+
+    For more information, see [OpenAI Compatible](./bundles-openai-compatible).
+
+- Unified **Data Operations** component
+
+    **Text Operations**, **JSON Operations**, and **Table Operations** are consolidated into a single [**Data Operations** component](./operations).
+    Saved flows that use the separate components continue to work.
+    For more information, see the [**Data Operations** component](./operations).
+
+- AG-UI compatible streaming for the Workflow API
+
+    The v2 [Workflow API](/workflow-api) now supports streaming with the [AG-UI (Agent–User Interaction) protocol](https://docs.ag-ui.com/introduction) streaming format.
+
+    For more information, see [Workflow API (Beta)](/workflow-api#stream-with-ag-ui).
+
 - IBM watsonx Orchestrate: Python 3.14 compatibility
 
     The `ibm-watsonx-orchestrate-core` and `ibm-watsonx-orchestrate-clients` packages are upgraded to version 2.12, which supports Python 3.14.
     IBM watsonx Orchestrate is no longer excluded from Python 3.14 installs.
 
     For more information, see [Deploy flows on watsonx Orchestrate](/deployment-wxo).
+
+- Optional integrations not yet available on Python 3.14
+
+    The following optional integrations remain excluded from installations on Python 3.14:
+
+    - [ALTK](/bundles-altk)
+    - [CUGA](/bundles-cuga)
+    - [LangWatch](/integrations-langwatch)
+    - [Pinecone](/bundles-pinecone)
+    - [OpenDsStar](/bundles-files-ingestion)
+    - [litellm](/bundles-lite-llm)
+    - [opik](/integrations-opik)
+    - [toolguard](/policies)
 
 - NextPlaid multi-vector bundle
 
@@ -93,6 +125,24 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     The **NextPlaid** vector store, backed by a running [NextPlaid](https://github.com/meetdoshi90/next-plaid) server, stores each document as a matrix of token embeddings, and the **vLLM Multivector Embeddings** component generates the token-level multi-vector embeddings required by NextPlaid.
 
     For more information, see [NextPlaid bundle](./bundles-nextplaid).
+
+- PaddleOCR bundle
+
+    The **Paddle** bundle (`lfx-paddle`) adds a **PaddleOCR** component that calls the PaddleOCR AI Studio Job API for layout-aware document parsing into Markdown.
+
+    For more information, see [Paddle bundle](./bundles-paddle).
+
+- Oracle Extension bundle
+
+    The **Oracle** bundle adds Oracle Database integration for vector search, document loading, and embeddings.
+
+    For more information, see [Oracle bundle](./bundles-oracle).
+
+- Valkey bundle
+
+    The **Valkey** bundle adds a vector store and chat memory components for [Valkey](https://valkey.io/), an open-source Redis fork.
+
+    For more information, see [Valkey bundle](./bundles-valkey).
 
 - LFX is now engine-only
 

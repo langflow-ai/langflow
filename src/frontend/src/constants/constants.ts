@@ -637,6 +637,7 @@ export const CONTROL_INPUT_STATE = {
 };
 
 export const CONTROL_PATCH_USER_STATE = {
+  currentPassword: "",
   password: "",
   cnfPassword: "",
   profilePicture: "",
@@ -694,11 +695,14 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "slider",
   "tab",
   "sortableList",
+  "actionPicker",
+  "duration",
   "connect",
   "auth",
   "query",
   "mcp",
   "tools",
+  "data_display",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];

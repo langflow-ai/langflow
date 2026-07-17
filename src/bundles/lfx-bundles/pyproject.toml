@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.0"
+version = "1.1.1"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -30,10 +30,10 @@ dependencies = [
 # superset for slim/CPU images. Managed by scripts/migrate/consolidate_bundles.py.
 agentql = []
 aiml = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
-altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
+altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; (sys_platform != 'darwin' or platform_machine != 'x86_64') and python_version < '3.14'"]
 apify = ["apify-client>=1.8.1", "langchain-community>=0.4.1,<1.0.0"]
 assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
-azure = ["langchain-openai>=1.1.6"]
+azure = ["langchain-openai>=1.1.6", "langchain-azure-ai>=1.1.0,<2"]
 baidu = ["qianfan==0.3.5", "langchain-community>=0.4.1,<1.0.0"]
 bing = ["langchain-community>=0.4.1,<1.0.0"]
 chroma = ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6", "langchain-community>=0.4.1,<1.0.0"]
@@ -69,7 +69,7 @@ needle = ["needle-python>=0.4.0", "langchain-community>=0.4.1,<1.0.0"]
 notdiamond = []
 notion = ["requests>=2.32.0", "Markdown>=3.8.0"]
 novita = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
-nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0", "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
+nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0", "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
 olivya = []
 ollama = ["langchain-ollama~=0.3.10"]
 openrouter = ["langchain-openai>=1.1.6"]

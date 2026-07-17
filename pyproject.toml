@@ -197,7 +197,7 @@ clickhouse-connect = [
 
 nv-ingest = [
     "nv-ingest-api>=26.1.0,<27.0.0 ; python_version >= '3.12'",
-    "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'",
+    "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'",
 ]
 
 postgresql = [
@@ -270,7 +270,8 @@ markers = [
     "unit: Unit tests",
     "integration: Integration tests",
     "slow: Slow-running tests",
-    "security: Security regression tests (IDOR, auth, access control)"
+    "security: Security regression tests (IDOR, auth, access control)",
+    "real_services: Tests that need real service instances (real SQLite + real Postgres + real Redis)"
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

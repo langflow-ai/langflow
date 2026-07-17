@@ -92,6 +92,7 @@ module.exports = {
       items: [
         "Agents/agents",
         "Agents/agents-tools",
+        "Agents/a2a-server",
       ],
     },
     {
@@ -384,12 +385,9 @@ module.exports = {
               label: "Processing",
               items: [
                 "Components/operations",
-                "Components/data-operations",
-                "Components/dataframe-operations",
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
-                "Components/text-operations",
                 "Components/type-convert",
               ]
             },
@@ -519,8 +517,10 @@ module.exports = {
             "Components/bundles-nvidia",
             "Components/bundles-ollama",
             "Components/bundles-openai",
+            "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",
             "Components/bundles-oracle",
+            "Components/bundles-paddle",
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",
             "Components/bundles-pinecone",
@@ -531,9 +531,10 @@ module.exports = {
             "Components/bundles-serper",
             "Components/bundles-supabase",
             "Components/bundles-upstash",
-            "Components/bundles-vllm",
+            "Components/bundles-valkey",
             "Components/bundles-vectara",
             "Components/bundles-vertexai",
+            "Components/bundles-vllm",
             "Components/bundles-weaviate",
             "Components/bundles-wikipedia",
             "Components/bundles-xai",
@@ -577,6 +578,7 @@ module.exports = {
           type: "category",
           label: "Developer API (Beta)",
           items: [
+            "API-Reference/workflow-api-quickstart",
             "API-Reference/workflows-api",
             {
               type: "link",

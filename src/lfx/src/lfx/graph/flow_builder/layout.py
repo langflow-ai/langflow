@@ -10,7 +10,9 @@ from collections import defaultdict, deque
 
 from lfx.graph.flow_builder._utils import node_id as _node_id
 
-LAYER_SPACING_X = 600
+# Canvas nodes render 384px wide (frontend NODE_WIDTH), so column spacing
+# of 480 leaves a ~96px visual gap between layers.
+LAYER_SPACING_X = 480
 NODE_SPACING_Y = 350
 
 

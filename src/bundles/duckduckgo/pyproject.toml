@@ -1,6 +1,6 @@
 [project]
 name = "lfx-duckduckgo"
-version = "0.1.1"
+version = "0.1.2"
 description = "DuckDuckGo Search component as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
