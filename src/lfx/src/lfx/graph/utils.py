@@ -11,7 +11,8 @@ from lfx.schema.data import Data
 from lfx.schema.message import Message
 
 # Database imports removed - lfx should be lightweight
-from lfx.services.deps import get_settings_service
+from lfx.services.database.service import NoopDatabaseService
+from lfx.services.deps import get_db_service, get_settings_service
 
 if TYPE_CHECKING:
     from lfx.graph.vertex.base import Vertex
@@ -356,13 +357,19 @@ async def log_vertex_build(
     try:
         # Try to use langflow's services if available (when running within langflow)
         try:
-            from langflow.services.deps import get_db_service as langflow_get_db_service
-            from langflow.services.deps import get_settings_service as langflow_get_settings_service
-
-            settings_service = langflow_get_settings_service()
+            settings_service = get_settings_service()
             if not settings_service:
                 return
             if not getattr(settings_service.settings, "vertex_builds_storage_enabled", False):
+                return
+
+            # Resolve only the database service already registered with the shared
+            # LFX service manager. Calling langflow.services.deps.get_db_service()
+            # here would install Langflow's default DatabaseService as a lookup
+            # side effect, turning a DB-less `lfx serve` process into a partially
+            # initialized DB runtime between two vertices in the same graph run.
+            db_service = get_db_service()
+            if isinstance(db_service, NoopDatabaseService):
                 return
 
             if isinstance(flow_id, str):
@@ -405,10 +412,6 @@ async def log_vertex_build(
             if getattr(
                 settings_service.settings, "telemetry_writer_enabled", False
             ) and _try_enqueue_via_telemetry_writer(vertex_build):
-                return
-
-            db_service = langflow_get_db_service()
-            if db_service is None:
                 return
 
             async with db_service._with_session() as session:  # noqa: SLF001
