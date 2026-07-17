@@ -169,7 +169,7 @@ curl -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
 </TabItem>
 </Tabs>
 
-A successful response is a completed task. The agent's reply text is in `result.artifacts[0].parts`.
+A successful response is a completed task. The agent's reply text is in `result.artifacts[0].parts[0].text`. If multiple parts are present, iterate over `result.artifacts[0].parts` and read each part's `text`, or other fields by `kind`.
 
 Example response:
 
@@ -385,15 +385,14 @@ curl -N -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
 Example SSE response (one JSON object per `data:` line):
 
 ```text
-data: {"id":10,"jsonrpc":"2.0","result":{"contextId":"57bcbe61-9a27-40eb-9040-cfa7a677df17","id":"0732102b-ac16-4b84-8a40-0ecb06be8788","kind":"task","status":{"state":"submitted"}}}
+data: {"id":1,"jsonrpc":"2.0","result":{"contextId":"57bcbe61-9a27-40eb-9040-cfa7a677df17","id":"0732102b-ac16-4b84-8a40-0ecb06be8788","kind":"task","status":{"state":"submitted"}}}
 
-data: {"id":10,"jsonrpc":"2.0","result":{"contextId":"57bcbe61-9a27-40eb-9040-cfa7a677df17","final":false,"kind":"status-update","status":{"state":"working","timestamp":"2026-07-17T15:02:30.341209Z"},"taskId":"0732102b-ac16-4b84-8a40-0ecb06be8788"}}
+data: {"id":1,"jsonrpc":"2.0","result":{"contextId":"57bcbe61-9a27-40eb-9040-cfa7a677df17","final":false,"kind":"status-update","status":{"state":"working","timestamp":"2026-07-17T15:02:30.341209Z"},"taskId":"0732102b-ac16-4b84-8a40-0ecb06be8788"}}
 
-data: {"id":10,"jsonrpc":"2.0","result":{"append":false,"artifact":{"artifactId":"675b035c-8fc3-4740-aed2-ee635dd4aa2b","name":"result","parts":[{"kind":"text","text":"Hello stream"}]},"contextId":"57bcbe61-9a27-40eb-9040-cfa7a677df17","kind":"artifact-update","lastChunk":false,"taskId":"0732102b-ac16-4b84-8a40-0ecb06be8788"}}
+data: {"id":1,"jsonrpc":"2.0","result":{"append":false,"artifact":{"artifactId":"675b035c-8fc3-4740-aed2-ee635dd4aa2b","name":"result","parts":[{"kind":"text","text":"Hello stream"}]},"contextId":"57bcbe61-9a27-40eb-9040-cfa7a677df17","kind":"artifact-update","lastChunk":false,"taskId":"0732102b-ac16-4b84-8a40-0ecb06be8788"}}
 
-data: {"id":10,"jsonrpc":"2.0","result":{"contextId":"57bcbe61-9a27-40eb-9040-cfa7a677df17","final":true,"kind":"status-update","status":{"state":"completed","timestamp":"2026-07-17T15:02:30.389825Z"},"taskId":"0732102b-ac16-4b84-8a40-0ecb06be8788"}}
+data: {"id":1,"jsonrpc":"2.0","result":{"contextId":"57bcbe61-9a27-40eb-9040-cfa7a677df17","final":true,"kind":"status-update","status":{"state":"completed","timestamp":"2026-07-17T15:02:30.389825Z"},"taskId":"0732102b-ac16-4b84-8a40-0ecb06be8788"}}
 ```
-
 ### Resubscribe to a task
 
 Call `tasks/resubscribe` with a task `id` to reattach to that task's event stream.

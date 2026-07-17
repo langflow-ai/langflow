@@ -42,12 +42,11 @@ When the URL returns a card, the component displays a read-only **Agent card** p
 Langflow enables [SSRF protection](./api-keys-and-authentication#ssrf-protection) by default.
 Loopback and private addresses such as `localhost`, `127.0.0.1`, and `::1` are blocked unless you allow them.
 
-If the remote agent URL points at a local or private host, such as another Langflow instance on `http://localhost:7862`, add that URL to the SSRF allowlist on that host before you run the A2A component:
+If the remote agent URL points at a local or private host, such as another Langflow instance on `http://localhost:7862`, set `LANGFLOW_SSRF_ALLOWED_HOSTS` on the Langflow instance that runs the **A2A Agent** component. The allowlist takes hostnames and not full URLs. For example:
 
 ```bash
 export LANGFLOW_SSRF_ALLOWED_HOSTS=localhost,127.0.0.1
 ```
-
 Restart Langflow after changing the variable.
 
 For more information, see [SSRF protection](./api-keys-and-authentication#ssrf-protection).
