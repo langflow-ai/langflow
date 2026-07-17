@@ -5514,7 +5514,6 @@
   "components.sambanovamodel.inputs.top_p.info.7ac0c35f": "模型 top_p",
   "components.sambanovamodel.outputs.model_output.display_name.698eabeb": "语言模型",
   "components.sambanovamodel.outputs.text_output.display_name.2544139a": "示例答案",
-  "components.savetofile.description.af7e703b": "将数据保存到文件中。 参数：'input' — 待保存的内容（可直接传入 DataFrame 对象，或传入表格数据的JSON字符串，或传入消息的纯文本）；'file_name' — 保存文件名（不带扩展名，例如 'report'）； 'file_format' — 输出格式：'csv'、'json'、'txt'、'html'、'excel'、'markdown'（可选）。 返回包含文件路径的确认信息，或返回 URL。",
   "components.savetofile.display_name.d78cd87c": "写入文件",
   "components.savetofile.inputs.append_mode.display_name.fc15cc0a": "附加",
   "components.savetofile.inputs.append_mode.info.4f370768": "如果文件已存在，则追加内容（仅适用于采用纯文本格式的本地存储）。 不支持云存储（ AWS / Google Drive ）。",

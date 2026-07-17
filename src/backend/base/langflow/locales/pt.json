@@ -5514,7 +5514,6 @@
   "components.sambanovamodel.inputs.top_p.info.7ac0c35f": "Modelo top_p",
   "components.sambanovamodel.outputs.model_output.display_name.698eabeb": "Modelo de linguagem",
   "components.sambanovamodel.outputs.text_output.display_name.2544139a": "Resposta modelo",
-  "components.savetofile.description.af7e703b": "Salvar os dados em um arquivo. Argumentos: 'input' — o conteúdo a ser salvo (passe diretamente um objeto ` DataFrame `, uma string JSON para dados tabulares ou texto simples para mensagens); 'file_name' — o nome com o qual salvar, sem extensão (por exemplo, 'report'); 'file_format' — formato de saída: 'csv', 'json', 'txt', 'html', 'excel', 'markdown' (opcional). Retorna uma confirmação com o caminho do arquivo ou a mensagem \" URL \".",
   "components.savetofile.display_name.d78cd87c": "Gravar arquivo",
   "components.savetofile.inputs.append_mode.display_name.fc15cc0a": "Anexo",
   "components.savetofile.inputs.append_mode.info.4f370768": "Anexar ao arquivo, caso ele já exista (apenas para armazenamento local com formatos de texto simples). Não compatível com armazenamento em nuvem ( AWS / Google Drive ).",

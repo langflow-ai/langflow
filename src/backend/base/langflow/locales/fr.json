@@ -5514,7 +5514,6 @@
   "components.sambanovamodel.inputs.top_p.info.7ac0c35f": "Modèle top_p",
   "components.sambanovamodel.outputs.model_output.display_name.698eabeb": "Modèle linguistique",
   "components.sambanovamodel.outputs.text_output.display_name.2544139a": "Réponse type",
-  "components.savetofile.description.af7e703b": "Enregistrer les données dans un fichier. Arguments : « input » — le contenu à enregistrer (passez directement un objet ` DataFrame `, une chaîne JSON pour les données tabulaires ou du texte brut pour les messages); « file_name » — le nom sous lequel enregistrer le fichier, sans extension (par exemple « report »); « file_format » — format de sortie : « csv », « json », « txt », « html », « excel », « markdown » (facultatif). Renvoie une confirmation indiquant le chemin d'accès au fichier ou l' URL.",
   "components.savetofile.display_name.d78cd87c": "Écrire dans un fichier",
   "components.savetofile.inputs.append_mode.display_name.fc15cc0a": "Ajouter",
   "components.savetofile.inputs.append_mode.info.4f370768": "Ajouter à la fin du fichier s'il existe (uniquement pour le stockage local avec des formats de texte brut). Non pris en charge pour le stockage dans le cloud ( AWS / Google Drive ).",
