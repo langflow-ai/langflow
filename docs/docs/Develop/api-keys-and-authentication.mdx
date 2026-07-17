@@ -470,7 +470,7 @@ When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` h
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_RATE_LIMIT_ENABLED` | Boolean | `True` | Enable rate limiting globally. Set to `False` to disable all rate limiting (not recommended in production). |
+| `LANGFLOW_RATE_LIMIT_ENABLED` | Boolean | `True` | Enable rate limiting on the `/login` and `/api/v2/workflows/public` endpoints. Set to False to disable those limits (not recommended in production). |
 | `LANGFLOW_RATE_LIMIT_PER_MINUTE` | Integer | `5` | Maximum number of login attempts allowed per minute from a single IP address. |
 | `LANGFLOW_RATE_LIMIT_STORAGE_URI` | String | `memory://` | Storage backend for rate limit counters. Use `memory://` for single-server deployments or `redis://host:port` for multi-server deployments where the limit should be shared across instances. |
 | `LANGFLOW_RATE_LIMIT_TRUST_PROXY` | Boolean | `False` | When `true`, Langflow reads the client IP from the rightmost `X-Forwarded-For` header entry instead of the direct connection IP. Enable only when Langflow is behind a trusted reverse proxy or load balancer. Do not enable if users can reach Langflow directly, as this allows header spoofing. |
@@ -503,12 +503,16 @@ As of Langflow 1.11.x, Langflow application defaults remain permissive for trust
 | `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | Boolean | `False` | When `true`, applies a strict Docker-argument policy to MCP stdio servers that use the `docker` transport. Rejects host filesystem or device mounts, `host/another-container` namespaces, non-default networks, privilege flags, and sandbox-disabling `--security-opt` values. Forms such as `--network none` / `bridge` and `--security-opt no-new-privileges` remain allowed. |
 
 Enable these flags when untrusted users can build flows on this server.
+
+The `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` and `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` flags are _complementary_.
+`LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` blocks user-authored component code, but built-in code-execution components still pass that check because their class code is trusted. Set `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true` to block those built-in components as well.
+
 To enable these flags, set the following:
 
-* `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` — blocks user-authored component code. See [Block custom components](/deployment-block-custom-components).
-* `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true` — blocks built-in code-execution components.
-* `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true` — confines built-in file access to the upload sandbox.
-* `LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true` — tightens Docker MCP server arguments.
+* `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`: blocks user-authored component code. See [Block custom components](/deployment-block-custom-components).
+* `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true`: blocks built-in code-execution components.
+* `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true`: confines built-in file access to the upload sandbox.
+* `LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true`: tightens Docker MCP server arguments.
 
 Pair these settings with the [SSRF settings](#ssrf-protection) to reduce common escape hatches.
 

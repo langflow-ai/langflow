@@ -230,7 +230,7 @@ Replace the following:
 * `SUPERUSER_PASSWORD`: a strong password for the Langflow superuser
 * `VERSION`: the version in `pyproject.toml` at the repo root
 
-The image sets `LANGFLOW_AUTO_LOGIN=false` and the [component hardening defaults](#docker-image-security-defaults), so a superuser password is required unless you override those environment variables.
+The image sets `LANGFLOW_AUTO_LOGIN=false` and the [component hardening defaults](#docker-image-security-defaults), so a superuser password is required unless you set `LANGFLOW_AUTO_LOGIN=true`.
 
 To build only the LFX executor CLI image instead of the full Langflow application, run:
 
