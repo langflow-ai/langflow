@@ -453,6 +453,23 @@ def _is_loopback_host(hostname: str) -> bool:
         return False
 
 
+def _connector_url_has_loopback_exemption(url: str) -> bool:
+    """Validate connector URL shape and return whether its literal host is exempt."""
+    if not is_ssrf_protection_enabled():
+        return False
+
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        msg = (
+            f"Connector URL must be an http(s) URL with a host for SSRF validation; got {url!r}. "
+            "Use an explicit scheme (e.g. 'http://host:port'); to reach an internal host, also add "
+            "it to LANGFLOW_SSRF_ALLOWED_HOSTS (allowlisting alone does not permit a scheme-less host)."
+        )
+        raise SSRFProtectionError(msg)
+
+    return is_connector_loopback_allowed() and _is_loopback_host(parsed.hostname)
+
+
 def validate_connector_url_for_ssrf(url: str) -> None:
     """SSRF-validate a tenant-controlled connector URL unless connector validation is disabled.
 
@@ -476,28 +493,38 @@ def validate_connector_url_for_ssrf(url: str) -> None:
     """
     if not is_connector_ssrf_validation_enabled():
         return
-    # The shared validator only understands http/https URLs that carry a host. Connector fields
-    # are sometimes a bare "host:port" (e.g. Milvus) or a non-HTTP scheme, which urlparse maps to
-    # a missing/garbage scheme -- without this, that would surface as a confusing
-    # "Invalid URL scheme ''". Only raise when host validation would actually run (global SSRF
-    # protection on); otherwise stay a no-op exactly as before.
-    if is_ssrf_protection_enabled():
-        parsed = urlparse(url)
-        if parsed.scheme not in ("http", "https") or not parsed.hostname:
-            msg = (
-                f"Connector URL must be an http(s) URL with a host for SSRF validation; got {url!r}. "
-                "Use an explicit scheme (e.g. 'http://host:port'); to reach an internal host, also add "
-                "it to LANGFLOW_SSRF_ALLOWED_HOSTS (allowlisting alone does not permit a scheme-less host)."
-            )
-            raise SSRFProtectionError(msg)
-        # Connectors commonly target a local service (Ollama / LM Studio default to localhost,
-        # local vector stores bind to loopback). Allow a literal loopback host by default; a
-        # multi-tenant deployer sets connector_ssrf_allow_loopback=false to block it too. Only a
-        # literal loopback reference is exempted — a hostname that resolves to loopback still goes
-        # through the full check below, so DNS-rebinding cannot abuse this.
-        if is_connector_loopback_allowed() and _is_loopback_host(parsed.hostname):
-            return
+    # Connectors commonly target a local service (Ollama / LM Studio default to localhost,
+    # local vector stores bind to loopback). Allow a literal loopback host by default; a
+    # multi-tenant deployer sets connector_ssrf_allow_loopback=false to block it too. Only a
+    # literal loopback reference is exempted — a hostname that resolves to loopback still goes
+    # through the full check below, so DNS-rebinding cannot abuse this.
+    if _connector_url_has_loopback_exemption(url):
+        return
     validate_url_for_ssrf(url)
+
+
+def validate_and_resolve_connector_url(url: str) -> tuple[str, list[str]]:
+    """Validate a connector URL and return IPs for DNS-pinned HTTP clients.
+
+    This applies the same connector policy as :func:`validate_connector_url_for_ssrf`, including
+    the literal-loopback exemption, while retaining DNS pinning for non-exempt hosts used by HTTP
+    connector clients.
+
+    Args:
+        url: Connector URL to validate.
+
+    Returns:
+        The original URL and validated IP addresses. The IP list is empty when connector
+        validation is disabled, global SSRF protection is disabled, the host is allowlisted, or
+        the literal-loopback exemption applies.
+
+    Raises:
+        SSRFProtectionError: If connector validation is enabled and the URL is blocked or malformed.
+        ValueError: If the URL format is invalid.
+    """
+    if not is_connector_ssrf_validation_enabled() or _connector_url_has_loopback_exemption(url):
+        return url, []
+    return validate_and_resolve_url(url)
 
 
 # SQLAlchemy dialects that read/write the local filesystem instead of connecting over the

@@ -10538,14 +10538,14 @@ name = "lfx-openai-compatible"
 version = "0.1.0"
 source = { editable = "src/bundles/openai-compatible" }
 dependencies = [
+    { name = "httpx" },
     { name = "lfx" },
-    { name = "requests" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
-    { name = "requests", specifier = ">=2.31.0,<3.0.0" },
 ]
 
 [[package]]
@@ -10587,14 +10587,14 @@ name = "lfx-vllm"
 version = "0.1.0"
 source = { editable = "src/bundles/vllm" }
 dependencies = [
+    { name = "httpx" },
     { name = "lfx" },
-    { name = "requests" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
-    { name = "requests", specifier = ">=2.31.0,<3.0.0" },
 ]
 
 [[package]]
