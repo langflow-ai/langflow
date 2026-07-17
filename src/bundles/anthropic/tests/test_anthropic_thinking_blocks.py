@@ -73,6 +73,11 @@ def test_payload_preserves_existing_thinking_text():
     assert blocks[0]["thinking"] == "let me reason"
 
 
+def test_compat_class_rebuilds_deferred_parent_annotations():
+    assert ChatAnthropicThinkingCompat.model_rebuild(force=True) is True
+    assert ChatAnthropicThinkingCompat.__pydantic_complete__
+
+
 def test_ensure_thinking_field_handles_missing_and_none():
     payload = {
         "messages": [
