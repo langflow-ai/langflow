@@ -104,6 +104,7 @@ _MODEL_FIELDS = {"model", "agent_llm", "embeddings_model", "embedding_model"}
 # ``MODEL_PROVIDERS_DICT``) are not unified-selectable but back the dedicated
 # provider components / legacy flows.
 _PROVIDER_PACKAGE_FALLBACKS: dict[str, set[str]] = {
+    "APIMart": {"langchain-openai"},
     "Amazon Bedrock": {"langchain-aws"},
     "Anthropic": {"langchain-anthropic"},
     "Azure AI Foundry": {"langchain-azure-ai"},
