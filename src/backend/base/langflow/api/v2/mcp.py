@@ -40,6 +40,22 @@ def is_mcp_servers_locked(settings: object) -> bool:
     return getattr(settings, "mcp_servers_locked", False) is True
 
 
+def ensure_mcp_stdio_access(server_config: dict, current_user: CurrentActiveUser, settings: object) -> None:
+    """Restrict local MCP processes when custom code execution is restricted."""
+    mode = server_config.get("mode")
+    is_stdio = bool(server_config.get("command")) or (isinstance(mode, str) and mode.lower() == "stdio")
+    code_execution_restricted = (
+        getattr(settings, "allow_custom_components", True) is False
+        or getattr(settings, "custom_component_admin_only", False) is True
+    )
+
+    if is_stdio and code_execution_restricted and getattr(current_user, "is_superuser", False) is not True:
+        raise HTTPException(
+            status_code=403,
+            detail="MCP stdio servers are restricted to administrators when custom code execution is restricted.",
+        )
+
+
 def _enforce_immutable_server_name(server_name: str, server_config: dict) -> dict:
     """Enforce that the server name is owned by the URL path, not the request body.
 
@@ -210,6 +226,9 @@ async def get_servers(
         # Return only the server names, with mode and toolsCount as None
         return [{"name": server_name, "mode": None, "toolsCount": None} for server_name in server_list["mcpServers"]]
 
+    for server_config in server_list["mcpServers"].values():
+        ensure_mcp_stdio_access(server_config, current_user, settings_service.settings)
+
     # Check all of the tool counts for each server concurrently
     async def check_server(server_name: str) -> dict:
         server_info: dict[str, str | int | None] = {"name": server_name, "mode": None, "toolsCount": None}
@@ -333,6 +352,9 @@ async def update_server(
     delete: bool = False,
     merge_existing: bool = False,
 ):
+    if not delete:
+        ensure_mcp_stdio_access(server_config, current_user, settings_service.settings)
+
     async with _update_server_locks[str(current_user.id)]:
         server_list = await get_server_list(current_user, session, storage_service, settings_service)
 
@@ -348,7 +370,9 @@ async def update_server(
                 raise HTTPException(status_code=500, detail="Server not found.")
         elif merge_existing:
             existing_config = server_list["mcpServers"].get(server_name, {})
-            server_list["mcpServers"][server_name] = {**existing_config, **server_config}
+            merged_config = {**existing_config, **server_config}
+            ensure_mcp_stdio_access(merged_config, current_user, settings_service.settings)
+            server_list["mcpServers"][server_name] = merged_config
         else:
             server_list["mcpServers"][server_name] = server_config
 
