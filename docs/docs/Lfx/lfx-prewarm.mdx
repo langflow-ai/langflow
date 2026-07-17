@@ -5,7 +5,7 @@ slug: /lfx-prewarm
 
 `lfx prewarm` pre-warms core component imports and, optionally, specific flows so the first build or run after a fork or snapshot skips the cold lazy-import cost.
 
-:::note
+:::tip
 `lfx prewarm` has no benefit for single-shot `lfx run` invocations. Use it in a long-lived process when you intend to fork workers or capture a warm snapshot.
 :::
 
