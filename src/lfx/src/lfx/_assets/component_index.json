@@ -7110,7 +7110,7 @@
                 },
                 {
                   "name": "googleapiclient",
-                  "version": "2.198.0"
+                  "version": null
                 }
               ],
               "total_dependencies": 4
@@ -7974,7 +7974,7 @@
                 },
                 {
                   "name": "cryptography",
-                  "version": "48.0.1"
+                  "version": "49.0.0"
                 },
                 {
                   "name": "langchain_chroma",
@@ -9807,7 +9807,7 @@
                 },
                 {
                   "name": "googleapiclient",
-                  "version": "2.198.0"
+                  "version": null
                 }
               ],
               "total_dependencies": 7
@@ -30452,7 +30452,7 @@
                 },
                 {
                   "name": "langchain_google_community",
-                  "version": "3.0.5"
+                  "version": null
                 }
               ],
               "total_dependencies": 3
@@ -32046,7 +32046,7 @@
                 },
                 {
                   "name": "yfinance",
-                  "version": "0.2.50"
+                  "version": null
                 }
               ],
               "total_dependencies": 4
@@ -32655,6 +32655,6 @@
     "num_components": 131,
     "num_modules": 17
   },
-  "sha256": "f56cfedc227ec74d2181c2348c40708c7e8ce18ac8a0c9bb79bcb050cb560330",
+  "sha256": "475583ccd4d07886a25c46fae3f4a290b7201681905ce3d2271488f3ec03a4da",
   "version": "1.11.0"
 }
