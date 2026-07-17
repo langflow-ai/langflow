@@ -10,6 +10,25 @@ import { TraceHitlBar } from "./TraceHitlBar";
 import { Span, TraceDetailViewProps } from "./types";
 
 /**
+ * Gate span suffix reflecting the chosen HITL action. Actions are user-defined (Approve, Reject,
+ * Remove, Escalate, ...), not a fixed approve/reject binary, so prefer the option's button label
+ * and fall back to a humanized action_id. Mirrors the backend's `_hitl_gate_label` so the live
+ * label matches the persisted trace span.
+ */
+export function hitlGateLabel(
+  actionId: string,
+  options?: { action_id: string; label?: string }[],
+): string {
+  const label = options?.find((o) => o.action_id === actionId)?.label?.trim();
+  if (label) return label;
+  const humanized = actionId
+    .replace(/_/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return humanized || "Resolved";
+}
+
+/**
  * Single-trace detail view used in the right-side panel.
  * Matches the "Trace Detail" layout (header + span list + span details).
  */
@@ -160,9 +179,7 @@ export function TraceDetailView({
     if (backendHasGate || (!pendingRequest && !effectiveResolved))
       return [{ ...summarySpan, children }];
     const decisionLabel = effectiveResolved
-      ? effectiveResolved.toLowerCase().includes("reject")
-        ? "Rejected"
-        : "Approved"
+      ? hitlGateLabel(effectiveResolved, pendingRequest?.options)
       : null;
     const hitlSpan: Span = {
       id: `hitl-${pendingRequest?.request_id ?? trace.id}`,
