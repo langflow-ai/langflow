@@ -64,8 +64,35 @@ env:
   PYTHON_VERSION: "3.13"
 
 jobs:
+  validate-inputs:
+    name: Validate Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate reusable workflow inputs
+        env:
+          RELEASE_TYPE: ${{ inputs.release_type }}
+          VERSION_OVERRIDE: ${{ inputs.version_override }}
+        run: |
+          set -euo pipefail
+
+          case "$RELEASE_TYPE" in
+            main | main-backend | main-frontend | main-ep | base | main-all) ;;
+            *)
+              echo "Invalid release type: $RELEASE_TYPE" >&2
+              exit 1
+              ;;
+          esac
+
+          if [[ -n "$VERSION_OVERRIDE" ]]; then
+            if [[ ${#VERSION_OVERRIDE} -gt 117 || ! "$VERSION_OVERRIDE" =~ ^[0-9][A-Za-z0-9_.-]*$ ]]; then
+              echo "Version override is not safe for a Docker tag: $VERSION_OVERRIDE" >&2
+              exit 1
+            fi
+          fi
+
   determine-base-version:
     name: Determine Base Version
+    needs: [validate-inputs]
     if: ${{ inputs.release_type == 'base' }}
     runs-on: ubuntu-latest
     outputs:
@@ -87,37 +114,46 @@ jobs:
 
       - name: Determine version
         id: version
+        env:
+          PRE_RELEASE: ${{ inputs.pre_release }}
+          VERSION_OVERRIDE: ${{ inputs.version_override }}
         run: |
+          set -euo pipefail
           version=$(uv tree 2>/dev/null | grep '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
           echo "Base version from pyproject.toml: $version"
+          last_released_version=""
 
-          if [ -n "${{ inputs.version_override }}" ]; then
-            version="${{ inputs.version_override }}"
+          if [ -n "$VERSION_OVERRIDE" ]; then
+            version="$VERSION_OVERRIDE"
             echo "Using version override: $version"
-            if [ ${{inputs.pre_release}} != "true" ]; then
-              last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -E '^base-' | grep -vE '\-(amd64|arm64)$' | grep -v 'latest' | sed 's/^base-//' | sort -V | tail -n 1)
+            if [ "$PRE_RELEASE" != "true" ]; then
+              docker_tags="$(bash ./scripts/ci/fetch_docker_hub_tags.sh langflowai/langflow)"
+              last_released_version=$(printf '%s\n' "$docker_tags" | awk '/^base-/ && !/-(amd64|arm64)$/ && !/latest/ {sub(/^base-/, ""); print}' | sort -V | tail -n 1)
               echo "Latest base release version: $last_released_version"
             fi
-          elif [ ${{inputs.pre_release}} == "true" ]; then
-            released_versions=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -E '^base-' | grep -vE '\-(amd64|arm64)$' | sed 's/^base-//' || true)
+          elif [ "$PRE_RELEASE" == "true" ]; then
+            docker_tags="$(bash ./scripts/ci/fetch_docker_hub_tags.sh langflowai/langflow)"
+            released_versions=$(printf '%s\n' "$docker_tags" | awk '/^base-/ && !/-(amd64|arm64)$/ {sub(/^base-/, ""); print}')
             version="$(printf '%s\n' "$released_versions" | uv run ./scripts/ci/langflow_pre_release_tag.py "$version" -)"
             echo "Base pre-release version to be released: $version"
           else
-            last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -E '^base-' | grep -vE '\-(amd64|arm64)$' | grep -v 'latest' | sed 's/^base-//' | sort -V | tail -n 1)
+            docker_tags="$(bash ./scripts/ci/fetch_docker_hub_tags.sh langflowai/langflow)"
+            last_released_version=$(printf '%s\n' "$docker_tags" | awk '/^base-/ && !/-(amd64|arm64)$/ && !/latest/ {sub(/^base-/, ""); print}' | sort -V | tail -n 1)
             echo "Latest base release version: $last_released_version"
           fi
 
           if [ "$version" = "$last_released_version" ]; then
             echo "Base docker version $version is already released. Skipping release."
-            echo skipped=true >> $GITHUB_OUTPUT
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
             exit 0
           else
-            echo version=$version >> $GITHUB_OUTPUT
-            echo skipped=false >> $GITHUB_OUTPUT
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "skipped=false" >> "$GITHUB_OUTPUT"
           fi
 
   determine-main-version:
     name: Determine Main Version
+    needs: [validate-inputs]
     if: ${{ inputs.release_type != 'base' }}
     runs-on: ubuntu-latest
     outputs:
@@ -139,34 +175,43 @@ jobs:
 
       - name: Determine version
         id: version
+        env:
+          PRE_RELEASE: ${{ inputs.pre_release }}
+          RELEASE_TYPE: ${{ inputs.release_type }}
+          VERSION_OVERRIDE: ${{ inputs.version_override }}
         run: |
+          set -euo pipefail
           version=$(uv tree 2>/dev/null | grep -E '^langflow(-nightly)?[[:space:]]' | cut -d' ' -f2 | sed 's/^v//')
           echo "Main version from pyproject.toml: $version"
+          last_released_version=""
 
-          if [ -n "${{ inputs.version_override }}" ]; then
-            version="${{ inputs.version_override }}"
+          if [ -n "$VERSION_OVERRIDE" ]; then
+            version="$VERSION_OVERRIDE"
             echo "Using version override: $version"
-            if [ ${{inputs.pre_release}} != "true" ]; then
-              last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -v '^base-' | grep -vE '\-(amd64|arm64)$' | grep -v 'latest' | sort -V | tail -n 1)
+            if [ "$PRE_RELEASE" != "true" ]; then
+              docker_tags="$(bash ./scripts/ci/fetch_docker_hub_tags.sh langflowai/langflow)"
+              last_released_version=$(printf '%s\n' "$docker_tags" | awk '!/^base-/ && !/-(amd64|arm64)$/ && !/latest/' | sort -V | tail -n 1)
               echo "Latest main release version: $last_released_version"
             fi
-          elif [ ${{inputs.pre_release}} == "true" ]; then
-            released_versions=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -v '^base-' | grep -vE '\-(amd64|arm64)$' || true)
+          elif [ "$PRE_RELEASE" == "true" ]; then
+            docker_tags="$(bash ./scripts/ci/fetch_docker_hub_tags.sh langflowai/langflow)"
+            released_versions=$(printf '%s\n' "$docker_tags" | awk '!/^base-/ && !/-(amd64|arm64)$/')
             version="$(printf '%s\n' "$released_versions" | uv run ./scripts/ci/langflow_pre_release_tag.py "$version" -)"
             echo "Main pre-release version to be released: $version"
           else
-            last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -v '^base-' | grep -vE '\-(amd64|arm64)$' | grep -v 'latest' | sort -V | tail -n 1)
+            docker_tags="$(bash ./scripts/ci/fetch_docker_hub_tags.sh langflowai/langflow)"
+            last_released_version=$(printf '%s\n' "$docker_tags" | awk '!/^base-/ && !/-(amd64|arm64)$/ && !/latest/' | sort -V | tail -n 1)
             echo "Latest main release version: $last_released_version"
           fi
 
           # Skip check only applies to main image, not backend/frontend which are separate images
-          if [ "$version" = "$last_released_version" ] && [[ "${{ inputs.release_type }}" != "main-backend" ]] && [[ "${{ inputs.release_type }}" != "main-frontend" ]]; then
+          if [ "$version" = "$last_released_version" ] && [[ "$RELEASE_TYPE" != "main-backend" ]] && [[ "$RELEASE_TYPE" != "main-frontend" ]]; then
             echo "Main docker version $version is already released. Skipping release."
-            echo skipped=true >> $GITHUB_OUTPUT
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
             exit 0
           else
-            echo version=$version >> $GITHUB_OUTPUT
-            echo skipped=false >> $GITHUB_OUTPUT
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "skipped=false" >> "$GITHUB_OUTPUT"
           fi
 
   build-base:
@@ -204,12 +249,14 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        if: ${{ inputs.push_to_registry }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
+        if: ${{ inputs.push_to_registry }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -275,12 +322,14 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        if: ${{ inputs.push_to_registry }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
+        if: ${{ inputs.push_to_registry }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -346,6 +395,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        if: ${{ inputs.push_to_registry }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -366,6 +416,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Login to GitHub Container Registry
+        if: ${{ inputs.push_to_registry }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -421,6 +472,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        if: ${{ inputs.push_to_registry }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -439,6 +491,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Login to GitHub Container Registry
+        if: ${{ inputs.push_to_registry }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -492,12 +545,14 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        if: ${{ inputs.push_to_registry }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
+        if: ${{ inputs.push_to_registry }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -563,12 +618,14 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        if: ${{ inputs.push_to_registry }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
+        if: ${{ inputs.push_to_registry }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -622,23 +679,30 @@ jobs:
 
       - name: Get version
         id: version
+        env:
+          RELEASE_TYPE: ${{ inputs.release_type }}
         run: |
-          if [[ "${{ inputs.release_type }}" == "base" ]]; then
+          if [[ "$RELEASE_TYPE" == "base" ]]; then
             version=$(uv tree 2>/dev/null | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
           else
             version=$(uv tree 2>/dev/null | grep -E '^langflow(-nightly)?[[:space:]]' | cut -d' ' -f2 | sed 's/^v//')
           fi
           echo "Using version: $version"
-          echo version=$version >> $GITHUB_OUTPUT
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Set tags
         id: tags
+        env:
+          BASE_VERSION: ${{ needs.determine-base-version.outputs.version }}
+          MAIN_VERSION: ${{ needs.determine-main-version.outputs.version }}
+          PRE_RELEASE: ${{ inputs.pre_release }}
+          RELEASE_TYPE: ${{ inputs.release_type }}
         run: |
-          version="${{ needs.determine-main-version.outputs.version }}"
-          case "${{ inputs.release_type }}" in
+          version="$MAIN_VERSION"
+          case "$RELEASE_TYPE" in
             "base")
-              version="${{ needs.determine-base-version.outputs.version }}"
-              if [[ "${{ inputs.pre_release }}" == "true" ]]; then
+              version="$BASE_VERSION"
+              if [[ "$PRE_RELEASE" == "true" ]]; then
                 echo "final_tags=langflowai/langflow:base-${version},ghcr.io/langflow-ai/langflow:base-${version}" >> $GITHUB_OUTPUT
               else
                 echo "final_tags=langflowai/langflow:base-${version},langflowai/langflow:base-latest,ghcr.io/langflow-ai/langflow:base-${version},ghcr.io/langflow-ai/langflow:base-latest" >> $GITHUB_OUTPUT
@@ -647,7 +711,7 @@ jobs:
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow:base-${version}" >> $GITHUB_OUTPUT
               ;;
             "main")
-              if [[ "${{ inputs.pre_release }}" == "true" ]]; then
+              if [[ "$PRE_RELEASE" == "true" ]]; then
                 echo "final_tags=langflowai/langflow:${version},ghcr.io/langflow-ai/langflow:${version}" >> $GITHUB_OUTPUT
               else
                 echo "final_tags=langflowai/langflow:${version},langflowai/langflow:latest,ghcr.io/langflow-ai/langflow:${version},ghcr.io/langflow-ai/langflow:latest" >> $GITHUB_OUTPUT
@@ -656,7 +720,7 @@ jobs:
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow:${version}" >> $GITHUB_OUTPUT
               ;;
             "main-backend")
-              if [[ "${{ inputs.pre_release }}" == "true" ]]; then
+              if [[ "$PRE_RELEASE" == "true" ]]; then
                 echo "final_tags=langflowai/langflow-backend:${version},ghcr.io/langflow-ai/langflow-backend:${version}" >> $GITHUB_OUTPUT
               else
                 echo "final_tags=langflowai/langflow-backend:${version},langflowai/langflow-backend:latest,ghcr.io/langflow-ai/langflow-backend:${version},ghcr.io/langflow-ai/langflow-backend:latest" >> $GITHUB_OUTPUT
@@ -665,7 +729,7 @@ jobs:
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-backend:${version}" >> $GITHUB_OUTPUT
               ;;
             "main-frontend")
-              if [[ "${{ inputs.pre_release }}" == "true" ]]; then
+              if [[ "$PRE_RELEASE" == "true" ]]; then
                 echo "final_tags=langflowai/langflow-frontend:${version},ghcr.io/langflow-ai/langflow-frontend:${version}" >> $GITHUB_OUTPUT
               else
                 echo "final_tags=langflowai/langflow-frontend:${version},langflowai/langflow-frontend:latest,ghcr.io/langflow-ai/langflow-frontend:${version},ghcr.io/langflow-ai/langflow-frontend:latest" >> $GITHUB_OUTPUT
@@ -674,7 +738,7 @@ jobs:
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-frontend:${version}" >> $GITHUB_OUTPUT
               ;;
             "main-ep")
-              if [[ "${{ inputs.pre_release }}" == "true" ]]; then
+              if [[ "$PRE_RELEASE" == "true" ]]; then
                 echo "final_tags=langflowai/langflow-ep:${version},ghcr.io/langflow-ai/langflow-ep:${version}" >> $GITHUB_OUTPUT
               else
                 echo "final_tags=langflowai/langflow-ep:${version},langflowai/langflow-ep:latest,ghcr.io/langflow-ai/langflow-ep:${version},ghcr.io/langflow-ai/langflow-ep:latest" >> $GITHUB_OUTPUT
@@ -683,7 +747,7 @@ jobs:
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-ep:${version}" >> $GITHUB_OUTPUT
               ;;
             "main-all")
-              if [[ "${{ inputs.pre_release }}" == "true" ]]; then
+              if [[ "$PRE_RELEASE" == "true" ]]; then
                 echo "final_tags=langflowai/langflow-all:${version},ghcr.io/langflow-ai/langflow-all:${version}" >> $GITHUB_OUTPUT
               else
                 echo "final_tags=langflowai/langflow-all:${version},langflowai/langflow-all:latest,ghcr.io/langflow-ai/langflow-all:${version},ghcr.io/langflow-ai/langflow-all:latest" >> $GITHUB_OUTPUT
@@ -692,18 +756,20 @@ jobs:
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-all:${version}" >> $GITHUB_OUTPUT
               ;;
             *)
-              echo "Error: Invalid release_type: ${{ inputs.release_type }}" >&2
+              echo "Error: Invalid release type: $RELEASE_TYPE" >&2
               exit 1
               ;;
           esac
 
       - name: Login to Docker Hub
+        if: ${{ inputs.push_to_registry }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
+        if: ${{ inputs.push_to_registry }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io

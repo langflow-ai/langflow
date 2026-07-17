@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 from lfx.services.settings.auth import AuthSettings
-from lfx.services.settings.constants import DEFAULT_SUPERUSER
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from pydantic import SecretStr, ValidationError
 
 
@@ -13,7 +13,7 @@ def test_superuser_password_is_secretstr(auto_login, tmp_path: Path):
     assert isinstance(settings.SUPERUSER_PASSWORD, SecretStr)
 
 
-def test_auto_login_true_forces_default_and_scrubs_password(tmp_path: Path):
+def test_auto_login_true_preserves_configured_credentials_and_scrubs_password(tmp_path: Path):
     cfg_dir = tmp_path.as_posix()
     settings = AuthSettings(
         CONFIG_DIR=cfg_dir,
@@ -21,15 +21,21 @@ def test_auto_login_true_forces_default_and_scrubs_password(tmp_path: Path):
         SUPERUSER="custom",
         SUPERUSER_PASSWORD=SecretStr("_changed"),
     )
-    # Validator forces default username and scrubs password
-    assert settings.SUPERUSER == DEFAULT_SUPERUSER
+    assert settings.SUPERUSER == "custom"
     assert isinstance(settings.SUPERUSER_PASSWORD, SecretStr)
-    assert settings.SUPERUSER_PASSWORD.get_secret_value() == "langflow"
+    assert settings.SUPERUSER_PASSWORD.get_secret_value() == "_changed"
 
-    # reset_credentials keeps default username (AUTO_LOGIN on) and keeps password scrubbed
+    # reset_credentials preserves the username and scrubs the password even in AUTO_LOGIN mode.
     settings.reset_credentials()
+    assert settings.SUPERUSER == "custom"
+    assert settings.SUPERUSER_PASSWORD.get_secret_value() == ""
+
+
+def test_default_superuser_password_is_empty(tmp_path: Path):
+    cfg_dir = tmp_path.as_posix()
+    settings = AuthSettings(CONFIG_DIR=cfg_dir)
     assert settings.SUPERUSER == DEFAULT_SUPERUSER
-    assert settings.SUPERUSER_PASSWORD.get_secret_value() == "langflow"
+    assert settings.SUPERUSER_PASSWORD.get_secret_value() == DEFAULT_SUPERUSER_PASSWORD.get_secret_value() == ""
 
 
 def test_auto_login_false_preserves_username_and_scrubs_password_on_reset(tmp_path: Path):
