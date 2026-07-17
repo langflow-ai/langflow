@@ -105,7 +105,6 @@ def test_agent_tool_preserves_dataframe_as_artifact():
     ]
 
 
-@pytest.mark.asyncio
 async def test_sync_agent_tool_preserves_dataframe_as_artifact_when_awaited():
     """Async agent execution of a sync tool must not wrap the response tuple twice."""
     component = DataFrameProducerComponent()
@@ -126,6 +125,17 @@ async def test_sync_agent_tool_preserves_dataframe_as_artifact_when_awaited():
         {"col1": 2, "col2": "b"},
         {"col1": 3, "col2": "c"},
     ]
+
+
+async def test_sync_tool_arun_returns_dataframe_not_wrapped_tuple():
+    """Direct arun calls on sync tools must preserve the legacy raw-result contract."""
+    component = DataFrameProducerComponent()
+    table_tool = next(t for t in ComponentToolkit(component=component).get_tools() if t.name == "get_table")
+
+    result = await table_tool.arun({"query": "test"})
+
+    assert isinstance(result, pd.DataFrame), f"Expected pandas DataFrame, got {type(result).__name__}: {result!r}"
+    assert result["col1"].tolist() == [1, 2, 3]
 
 
 def test_tool_returns_text_for_message():
@@ -193,7 +203,6 @@ async def test_tool_handles_positional_args_async():
     assert "my_async_query" in result
 
 
-@pytest.mark.asyncio
 async def test_async_agent_tool_preserves_dataframe_as_artifact():
     """Async component tools must preserve structured output under the same Agent contract."""
     component = AsyncTextComponent()

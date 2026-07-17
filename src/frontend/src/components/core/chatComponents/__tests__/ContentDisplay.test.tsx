@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type {
   CitationContent,
   ContentBlockItem,
@@ -392,6 +392,38 @@ describe("ContentDisplay", () => {
       expect(result).toHaveTextContent('"source": "docling.pdf"');
       expect(result).not.toHaveTextContent("0 Thanks to");
       expect(screen.getAllByRole("tab")).toHaveLength(2);
+    });
+
+    it("keeps MCP content as the result and its protocol artifact in metadata", async () => {
+      const tool = {
+        type: "tool_use",
+        name: "mcp_search",
+        tool_input: {},
+        output: {
+          content: "readable MCP output",
+          artifact: {
+            meta: null,
+            content: [{ type: "text", text: "readable MCP output" }],
+            structuredContent: null,
+            isError: false,
+          },
+          additional_kwargs: {},
+          response_metadata: {},
+          type: "tool",
+          name: "mcp_search",
+          tool_call_id: "toolu_mcp",
+          status: "success",
+        },
+      } as unknown as ContentBlockItem;
+
+      render(<ContentDisplay content={tool} chatId="t-t-mcp-artifact" />);
+
+      expect(screen.getByText("readable MCP output")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("tab", { name: "Metadata" }));
+      const metadata = await screen.findByTestId("code-tabs");
+      expect(metadata).toHaveTextContent('"artifact": {');
+      expect(metadata).toHaveTextContent('"isError": false');
     });
 
     it("renders the error body in a destructive-toned panel", () => {

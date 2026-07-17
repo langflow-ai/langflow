@@ -63,6 +63,10 @@ class ComponentStructuredTool(StructuredTool):
         run_manager: AsyncCallbackManagerForToolRun | None = None,
         **kwargs: Any,
     ) -> tuple[Any, Any | None]:
+        if self.coroutine is None:
+            # StructuredTool falls back to self._run, which already returns the
+            # content-and-artifact tuple. Wrapping it again would nest the tuple.
+            return await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
         content = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
         return self._content_and_artifact(content)
 
