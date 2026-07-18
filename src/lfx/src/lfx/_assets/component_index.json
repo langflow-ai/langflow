@@ -9803,7 +9803,7 @@
                 },
                 {
                   "name": "boto3",
-                  "version": "1.40.61"
+                  "version": "1.43.46"
                 },
                 {
                   "name": "googleapiclient",
@@ -32655,6 +32655,6 @@
     "num_components": 131,
     "num_modules": 17
   },
-  "sha256": "9f6538b9bac394b60d3cc497ab82e3644260468273e9dbd95301d12fc07682ff",
+  "sha256": "ecbc19e79f5853156b003d105d096826a32b4fb0c1f97947091f7673fc3ffbc4",
   "version": "1.11.0"
 }
