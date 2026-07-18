@@ -1,11 +1,18 @@
 # celeryconfig.py
 import os
 
+langflow_valkey_host = os.environ.get("LANGFLOW_VALKEY_HOST")
+langflow_valkey_port = os.environ.get("LANGFLOW_VALKEY_PORT")
 langflow_redis_host = os.environ.get("LANGFLOW_REDIS_HOST")
 langflow_redis_port = os.environ.get("LANGFLOW_REDIS_PORT")
 # broker default user
 
-if langflow_redis_host and langflow_redis_port:
+if langflow_valkey_host and langflow_valkey_port:
+    # Valkey is wire-compatible with Redis. Celery/kombu registers redis://,
+    # not valkey://, as the transport scheme.
+    broker_url = f"redis://{langflow_valkey_host}:{langflow_valkey_port}/0"
+    result_backend = f"redis://{langflow_valkey_host}:{langflow_valkey_port}/0"
+elif langflow_redis_host and langflow_redis_port:
     broker_url = f"redis://{langflow_redis_host}:{langflow_redis_port}/0"
     result_backend = f"redis://{langflow_redis_host}:{langflow_redis_port}/0"
 else:
