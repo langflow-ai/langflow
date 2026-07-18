@@ -1,7 +1,18 @@
 """Unit tests for langflow.core.celeryconfig module."""
 
+import importlib
+
+import pytest
+
 # Import the module to test
 from langflow.core import celeryconfig
+
+
+@pytest.fixture(autouse=True)
+def _restore_celeryconfig_after_test(monkeypatch):
+    yield
+    monkeypatch.undo()
+    importlib.reload(celeryconfig)
 
 
 class TestCeleryConfigAcceptContent:
@@ -93,3 +104,51 @@ class TestCeleryConfigStructure:
         if "://" in result_backend:
             host_part = result_backend.split("://")[1]
             assert len(host_part) > 0
+
+
+class TestCeleryConfigValkey:
+    """Unit tests for Valkey broker configuration."""
+
+    def test_valkey_env_vars_set_broker_and_backend(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_VALKEY_HOST", "valkey-host")
+        monkeypatch.setenv("LANGFLOW_VALKEY_PORT", "6380")
+        monkeypatch.delenv("LANGFLOW_REDIS_HOST", raising=False)
+        monkeypatch.delenv("LANGFLOW_REDIS_PORT", raising=False)
+
+        importlib.reload(celeryconfig)
+
+        assert celeryconfig.broker_url == "redis://valkey-host:6380/0"
+        assert celeryconfig.result_backend == "redis://valkey-host:6380/0"
+
+    def test_valkey_takes_precedence_over_redis(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_VALKEY_HOST", "valkey-host")
+        monkeypatch.setenv("LANGFLOW_VALKEY_PORT", "6380")
+        monkeypatch.setenv("LANGFLOW_REDIS_HOST", "redis-host")
+        monkeypatch.setenv("LANGFLOW_REDIS_PORT", "6379")
+
+        importlib.reload(celeryconfig)
+
+        assert celeryconfig.broker_url == "redis://valkey-host:6380/0"
+        assert celeryconfig.result_backend == "redis://valkey-host:6380/0"
+
+    def test_without_valkey_preserves_redis_behavior(self, monkeypatch):
+        monkeypatch.delenv("LANGFLOW_VALKEY_HOST", raising=False)
+        monkeypatch.delenv("LANGFLOW_VALKEY_PORT", raising=False)
+        monkeypatch.setenv("LANGFLOW_REDIS_HOST", "redis-host")
+        monkeypatch.setenv("LANGFLOW_REDIS_PORT", "6379")
+
+        importlib.reload(celeryconfig)
+
+        assert celeryconfig.broker_url == "redis://redis-host:6379/0"
+        assert celeryconfig.result_backend == "redis://redis-host:6379/0"
+
+    def test_incomplete_valkey_configuration_falls_back_to_redis(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_VALKEY_HOST", "valkey-host")
+        monkeypatch.delenv("LANGFLOW_VALKEY_PORT", raising=False)
+        monkeypatch.setenv("LANGFLOW_REDIS_HOST", "redis-host")
+        monkeypatch.setenv("LANGFLOW_REDIS_PORT", "6379")
+
+        importlib.reload(celeryconfig)
+
+        assert celeryconfig.broker_url == "redis://redis-host:6379/0"
+        assert celeryconfig.result_backend == "redis://redis-host:6379/0"

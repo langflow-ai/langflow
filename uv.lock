@@ -48,6 +48,7 @@ members = [
     "lfx-openai-compatible",
     "lfx-oracle",
     "lfx-paddle",
+    "lfx-valkey",
     "lfx-vllm",
 ]
 overrides = [
@@ -198,21 +199,8 @@ wheels = [
 ]
 
 [[package]]
-name = "aioboto3"
-version = "15.5.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "aiobotocore", extra = ["boto3"] },
-    { name = "aiofiles" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a2/01/92e9ab00f36e2899315f49eefcd5b4685fbb19016c7f19a9edf06da80bb0/aioboto3-15.5.0.tar.gz", hash = "sha256:ea8d8787d315594842fbfcf2c4dce3bac2ad61be275bc8584b2ce9a3402a6979", size = 255069, upload-time = "2025-10-30T13:37:16.122Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e5/3e/e8f5b665bca646d43b916763c901e00a07e40f7746c9128bdc912a089424/aioboto3-15.5.0-py3-none-any.whl", hash = "sha256:cc880c4d6a8481dd7e05da89f41c384dbd841454fc1998ae25ca9c39201437a6", size = 35913, upload-time = "2025-10-30T13:37:14.549Z" },
-]
-
-[[package]]
 name = "aiobotocore"
-version = "2.25.1"
+version = "3.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -221,16 +209,12 @@ dependencies = [
     { name = "jmespath" },
     { name = "multidict" },
     { name = "python-dateutil" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/62/94/2e4ec48cf1abb89971cb2612d86f979a6240520f0a659b53a43116d344dc/aiobotocore-2.25.1.tar.gz", hash = "sha256:ea9be739bfd7ece8864f072ec99bb9ed5c7e78ebb2b0b15f29781fbe02daedbc", size = 120560, upload-time = "2025-10-28T22:33:21.787Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/a7/bc31b7046c610471f0630819ca5d2a57ac4efa8d47135cb53e43f2785390/aiobotocore-3.8.0.tar.gz", hash = "sha256:80a1eb64ea915f3af3c1518669975bae74a17b2f37c14eb0fa2f83b915974670", size = 131368, upload-time = "2026-07-17T03:10:30.258Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/2a/d275ec4ce5cd0096665043995a7d76f5d0524853c76a3d04656de49f8808/aiobotocore-2.25.1-py3-none-any.whl", hash = "sha256:eb6daebe3cbef5b39a0bb2a97cffbe9c7cb46b2fcc399ad141f369f3c2134b1f", size = 86039, upload-time = "2025-10-28T22:33:19.949Z" },
-]
-
-[package.optional-dependencies]
-boto3 = [
-    { name = "boto3" },
+    { url = "https://files.pythonhosted.org/packages/6d/f4/5a7d76dc844d3ff8ed1f1a043158aa393794aebb787d3e2f8c0fe87f674f/aiobotocore-3.8.0-py3-none-any.whl", hash = "sha256:8bc605132cadfe844a3f334635a0a64fa5e360a4a206e915d99d53db5b6deeba", size = 91169, upload-time = "2026-07-17T03:10:28.771Z" },
 ]
 
 [[package]]
@@ -1249,16 +1233,16 @@ wheels = [
 
 [[package]]
 name = "boto3"
-version = "1.40.61"
+version = "1.43.46"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore" },
     { name = "jmespath" },
     { name = "s3transfer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ed/f9/6ef8feb52c3cce5ec3967a535a6114b57ac7949fd166b0f3090c2b06e4e5/boto3-1.40.61.tar.gz", hash = "sha256:d6c56277251adf6c2bdd25249feae625abe4966831676689ff23b4694dea5b12", size = 111535, upload-time = "2025-10-28T19:26:57.247Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f2/e7/976bf3dfe0aa5d7f31bec2f2cf57c79641620c910a39bc843a237aa9592d/boto3-1.43.46.tar.gz", hash = "sha256:66c0d943b049a46a492ec4ec2ebe73c930b1842c7137bee83aad6d93e95d4d96", size = 112654, upload-time = "2026-07-10T19:32:12.498Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/61/24/3bf865b07d15fea85b63504856e137029b6acbc73762496064219cdb265d/boto3-1.40.61-py3-none-any.whl", hash = "sha256:6b9c57b2a922b5d8c17766e29ed792586a818098efe84def27c8f582b33f898c", size = 139321, upload-time = "2025-10-28T19:26:55.007Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/1d/c52e66ff32ba7911664e6c4c2ac62e1c6d2d1e7550c7ac185d3f4b70a8a4/boto3-1.43.46-py3-none-any.whl", hash = "sha256:69453e2c1bcb9fd9806527ab99950cacfc2826cb0dce9a3a0414d19270c06c3c", size = 140031, upload-time = "2026-07-10T19:32:11.129Z" },
 ]
 
 [[package]]
@@ -1282,16 +1266,16 @@ bedrock-runtime = [
 
 [[package]]
 name = "botocore"
-version = "1.40.61"
+version = "1.43.46"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jmespath" },
     { name = "python-dateutil" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/28/a3/81d3a47c2dbfd76f185d3b894f2ad01a75096c006a2dd91f237dca182188/botocore-1.40.61.tar.gz", hash = "sha256:a2487ad69b090f9cccd64cf07c7021cd80ee9c0655ad974f87045b02f3ef52cd", size = 14393956, upload-time = "2025-10-28T19:26:46.108Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/f1/1917891851ac5ac09bb9f4862b8fc9252a009d7c24e8688bb67e4383d9e7/botocore-1.43.46.tar.gz", hash = "sha256:59f2e1ac3cdc66d191cae91c0804bc41847ce817dc8147cf43eaada8f76a5533", size = 15694635, upload-time = "2026-07-10T19:32:00.437Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/38/c5/f6ce561004db45f0b847c2cd9b19c67c6bf348a82018a48cb718be6b58b0/botocore-1.40.61-py3-none-any.whl", hash = "sha256:17ebae412692fd4824f99cde0f08d50126dc97954008e5ba2b522eb049238aa7", size = 14055973, upload-time = "2025-10-28T19:26:42.15Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/f2/4bd8f2f419088feb3ce55f0ca91040ff902f402edfd197450b20a2e1d533/botocore-1.43.46-py3-none-any.whl", hash = "sha256:cb673891e623ae6e6a1bf24d94ef169504f3eb02584adb5d5bee2f6aae819b60", size = 15380350, upload-time = "2026-07-10T19:31:57.616Z" },
 ]
 
 [[package]]
@@ -7550,7 +7534,7 @@ wheels = [
 
 [[package]]
 name = "langchain-aws"
-version = "1.1.0"
+version = "1.6.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "boto3" },
@@ -7560,9 +7544,14 @@ dependencies = [
     { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/52/1d/bb306951b1c394b7a27effb8eb6c9ee65dd77fcc4be7c20f76e3299a9e1e/langchain_aws-1.1.0.tar.gz", hash = "sha256:1e2f8570328eae4907c3cf7e900dc68d8034ddc865d9dc96823c9f9d8cccb901", size = 393899, upload-time = "2025-11-24T14:35:24.216Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/59/04f8572e65581d032b2df2516c0059fa064e680f5caa5cabcd03d525092a/langchain_aws-1.6.2.tar.gz", hash = "sha256:df2c15b463c068031af40460dbea6efb7999832263ff6eaec6b99c5f6b291acd", size = 537522, upload-time = "2026-07-07T01:24:58.11Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/26/33/91b8d2a7570657b371382b45054142c54165a51706990a5c1b4cc40c0e9a/langchain_aws-1.1.0-py3-none-any.whl", hash = "sha256:8ec074615b42839e035354063717374c32c63f5028ef5221ba073fd5f3ef5e37", size = 152432, upload-time = "2025-11-24T14:35:23.004Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/ed/bb5211637276616e7b176f3ff08e9d0bf1ce61d1a00c99d26348d6236a3d/langchain_aws-1.6.2-py3-none-any.whl", hash = "sha256:4755c60ce88fff2b829d96027068b7930f335cd85da41fda061769439c288251", size = 206507, upload-time = "2026-07-07T01:24:56.557Z" },
+]
+
+[package.optional-dependencies]
+valkey = [
+    { name = "valkey-glide-sync" },
 ]
 
 [[package]]
@@ -8193,6 +8182,7 @@ dependencies = [
     { name = "lfx-openai-compatible" },
     { name = "lfx-oracle" },
     { name = "lfx-paddle" },
+    { name = "lfx-valkey" },
     { name = "lfx-vllm" },
 ]
 
@@ -8302,6 +8292,7 @@ requires-dist = [
     { name = "lfx-openai-compatible", editable = "src/bundles/openai-compatible" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
     { name = "lfx-paddle", editable = "src/bundles/paddle" },
+    { name = "lfx-valkey", editable = "src/bundles/valkey" },
     { name = "lfx-vllm", editable = "src/bundles/vllm" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<26.3.0" },
@@ -8464,10 +8455,13 @@ ag2 = [
     { name = "ag2" },
 ]
 aioboto3 = [
-    { name = "aioboto3" },
+    { name = "aiobotocore" },
+]
+aiobotocore = [
+    { name = "aiobotocore" },
 ]
 all = [
-    { name = "aioboto3" },
+    { name = "aiobotocore" },
     { name = "apscheduler" },
     { name = "arize-phoenix-otel" },
     { name = "chromadb" },
@@ -8535,7 +8529,7 @@ clickhouse = [
     { name = "clickhouse-connect" },
 ]
 complete = [
-    { name = "aioboto3" },
+    { name = "aiobotocore" },
     { name = "apscheduler" },
     { name = "arize-phoenix-otel" },
     { name = "chromadb" },
@@ -8884,7 +8878,8 @@ requires-dist = [
     { name = "ag-ui-protocol", specifier = "==0.1.18" },
     { name = "ag2", marker = "extra == 'ag2'", specifier = ">=0.1.0" },
     { name = "agent-lifecycle-toolkit", marker = "(python_full_version < '3.14' and platform_machine != 'x86_64' and extra == 'altk') or (python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'altk')", specifier = ">=0.10.1,<1.0" },
-    { name = "aioboto3", marker = "extra == 'aioboto3'", specifier = ">=15.2.0,<16.0.0" },
+    { name = "aiobotocore", marker = "extra == 'aioboto3'", specifier = ">=3.7.0,<4.0.0" },
+    { name = "aiobotocore", marker = "extra == 'aiobotocore'", specifier = ">=3.7.0,<4.0.0" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
     { name = "aiosqlite", specifier = ">=0.20.0,<1.0.0" },
@@ -8991,7 +8986,7 @@ requires-dist = [
     { name = "langchain-unstructured", marker = "extra == 'langchain-unstructured'", specifier = "~=1.0.0" },
     { name = "langchain-weaviate", specifier = ">=0.0.6" },
     { name = "langchainhub", specifier = "~=0.1.15" },
-    { name = "langflow-base", extras = ["aioboto3"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["aiobotocore"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["arize"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["cassandra"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["chroma"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -9116,7 +9111,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "opendsstar", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
+provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "opendsstar", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aiobotocore", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -9627,7 +9622,7 @@ integration = [
 
 [[package]]
 name = "lfx-amazon"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/amazon" }
 dependencies = [
     { name = "boto3" },
@@ -9638,7 +9633,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = ">=1.34.162,<2.0.0" },
-    { name = "langchain-aws", specifier = "~=1.1.0" },
+    { name = "langchain-aws", specifier = ">=1.4.1,<2.0.0" },
     { name = "lfx", editable = "src/lfx" },
 ]
 
@@ -10604,6 +10599,29 @@ dependencies = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-valkey"
+version = "0.1.0"
+source = { editable = "src/bundles/valkey" }
+dependencies = [
+    { name = "langchain-aws", marker = "sys_platform == 'win32'" },
+    { name = "langchain-aws", extra = ["valkey"], marker = "sys_platform != 'win32'" },
+    { name = "langchain-community" },
+    { name = "lfx" },
+    { name = "redis" },
+    { name = "structlog" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-aws", marker = "sys_platform == 'win32'", specifier = ">=1.4.1,<2.0.0" },
+    { name = "langchain-aws", extras = ["valkey"], marker = "sys_platform != 'win32'", specifier = ">=1.4.1,<2.0.0" },
+    { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "redis", specifier = ">=7.4.0,<8.0.0" },
+    { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
 ]
 
 [[package]]
@@ -17783,14 +17801,14 @@ wheels = [
 
 [[package]]
 name = "s3transfer"
-version = "0.14.0"
+version = "0.19.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/62/74/8d69dcb7a9efe8baa2046891735e5dfe433ad558ae23d9e3c14c633d1d58/s3transfer-0.14.0.tar.gz", hash = "sha256:eff12264e7c8b4985074ccce27a3b38a485bb7f7422cc8046fee9be4983e4125", size = 151547, upload-time = "2025-09-09T19:23:31.089Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/65/da/4bef7ce7bb989b222aa4785a413896dbec53306dfc59c6ce7d16a7ffbd6a/s3transfer-0.19.1.tar.gz", hash = "sha256:d3d6371dc3f1e5c5427b2b457bcf13bcf87bec334c95aed18642eae61f6926f3", size = 165354, upload-time = "2026-07-10T19:32:04.849Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/f0/ae7ca09223a81a1d890b2557186ea015f6e0502e9b8cb8e1813f1d8cfa4e/s3transfer-0.14.0-py3-none-any.whl", hash = "sha256:ea3b790c7077558ed1f02a3072fb3cb992bbbd253392f4b6e9e8976941c7d456", size = 85712, upload-time = "2025-09-09T19:23:30.041Z" },
+    { url = "https://files.pythonhosted.org/packages/24/23/e84c64ad0e8bc59cd1b2ef98def848deff0ef3456c542afe74d51e9e8c85/s3transfer-0.19.1-py3-none-any.whl", hash = "sha256:d5fd7005ee39307455ad5f310b5ea67f4b1960d7fed5b3671ee50c249de675de", size = 90072, upload-time = "2026-07-10T19:32:03.673Z" },
 ]
 
 [[package]]
@@ -20582,6 +20600,43 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/53/66/a435d9ae49850b2f071f7ebd8119dd4e84872b01630d6736761e6e7fd847/validators-0.35.0.tar.gz", hash = "sha256:992d6c48a4e77c81f1b4daba10d16c3a9bb0dbb79b3a19ea847ff0928e70497a", size = 73399, upload-time = "2025-05-01T05:42:06.7Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/6e/3e955517e22cbdd565f2f8b2e73d52528b14b8bcfdb04f62466b071de847/validators-0.35.0-py3-none-any.whl", hash = "sha256:e8c947097eae7892cb3d26868d637f79f47b4a0554bc6b80065dfe5aac3705dd", size = 44712, upload-time = "2025-05-01T05:42:04.203Z" },
+]
+
+[[package]]
+name = "valkey-glide-sync"
+version = "2.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cffi" },
+    { name = "protobuf" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/96/c9/e4acc31ceb91fa2c96d0a3147de9d0d86208579532d25eebfcf09aab9877/valkey_glide_sync-2.5.0.tar.gz", hash = "sha256:75366dccc7d0f92a41ec47ccd49fbac45c48b92d2a8d2f677ae5673dda7f9325", size = 961943, upload-time = "2026-07-14T18:50:45.415Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e5/92/4b6f15c4b76ee2782f606cf951ba4cb63bbdcc4de916787de735d54909e0/valkey_glide_sync-2.5.0-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:0d05f119dfba8d0689f169b8b0683b1e521733945c583fb63db76aab8e6c45d9", size = 5767358, upload-time = "2026-07-14T18:50:00.944Z" },
+    { url = "https://files.pythonhosted.org/packages/29/f1/b7ae37ba58f619a17fd1f253042f6b5799c9b1f23c43aeac0ae88e917b67/valkey_glide_sync-2.5.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:9ad7acb6b0f641df0608860491e31cd00bab4bfa88397b352a98cffb895fb317", size = 5330328, upload-time = "2026-07-14T18:50:02.934Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/93/33661bd023f5d95f46b324e5909629250ea9dc3b79edd6e0df2e222fedd3/valkey_glide_sync-2.5.0-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:0871e3ff1e39afd96f20a3b167005a57ed7f62ae08653854b3d035e0224dbc40", size = 5885688, upload-time = "2026-07-14T18:50:04.451Z" },
+    { url = "https://files.pythonhosted.org/packages/11/87/cecf5a8d1c2b87980603ecfb1dfd712fbe95d6f50e9f7082ed511f541dce/valkey_glide_sync-2.5.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:9c07eb24932d8f0881ec6cc34f262c6a7e2a395050463a339f37ad4d719462fd", size = 6177560, upload-time = "2026-07-14T18:50:05.959Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/a4/54322718d02d6154fb5eabb7f120b3a3719649a6b7de5421956ea852fadf/valkey_glide_sync-2.5.0-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:95fed493abceff742bbc1602c0e2b667cc7bd8900f011030b0adcf173812ffcb", size = 5767134, upload-time = "2026-07-14T18:50:07.376Z" },
+    { url = "https://files.pythonhosted.org/packages/ed/e1/a9b8dac9c681c58a5a4680528221499ff3aaae44e29709f7d1e21ad09b82/valkey_glide_sync-2.5.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:26e9ae1fef0b4574c9cea86faa09556b141c58e22687af1121acbe30f264af19", size = 5330093, upload-time = "2026-07-14T18:50:08.748Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/b0/c8f7e6dbb75fb351f0a648aa8fd7a64e509f2861ffd0c781186fcab9d3b3/valkey_glide_sync-2.5.0-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:c2d9b0e6a44bb96177cfb557ebdd8da8a7c051c6a7a8280c7eabb136677839b3", size = 5885409, upload-time = "2026-07-14T18:50:10.14Z" },
+    { url = "https://files.pythonhosted.org/packages/59/77/76610f1927119695207c89992b6660668b58e8cf501e91c4ef82eb61a6b1/valkey_glide_sync-2.5.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:d68c036d7892a259cfec38542053ba77bb67acfbdb47a70464b0df69619e3e68", size = 6177548, upload-time = "2026-07-14T18:50:11.551Z" },
+    { url = "https://files.pythonhosted.org/packages/ce/54/4091447ca639eec8523b14d0f71d84d49ded7a17c901dea1f7692d529b76/valkey_glide_sync-2.5.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:468a25fc801815b68f1303be5d1f7f08df4e523df3febfd5e807c5f4cf58a714", size = 5764874, upload-time = "2026-07-14T18:50:13.022Z" },
+    { url = "https://files.pythonhosted.org/packages/22/a7/19c0f46a586caef64a628dcff9770a9fac22e787b8221d65ce70d17d114e/valkey_glide_sync-2.5.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:cee21fb1d8a6f929101f606174fddc24dfdf8b4bac8a342c3018e8de5bfb7de2", size = 5325693, upload-time = "2026-07-14T18:50:14.525Z" },
+    { url = "https://files.pythonhosted.org/packages/18/67/8594521cb0b831ab65b5dd0f090d7067072916e2c20465ab4394221f4e88/valkey_glide_sync-2.5.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:cd6a356df4bad470b011865b1f2fc4aac1888d2697022b36235f721c9957b098", size = 5882462, upload-time = "2026-07-14T18:50:16.118Z" },
+    { url = "https://files.pythonhosted.org/packages/26/09/022a29c8e3bd51c4a17b2121b39fc0409bcea7ac4ce992d800dafea2e1f9/valkey_glide_sync-2.5.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:48c5df09cce3686020bb452e85677b2c5696e4e958eaa0367b2468d41bad4fc8", size = 6174767, upload-time = "2026-07-14T18:50:17.872Z" },
+    { url = "https://files.pythonhosted.org/packages/8b/d7/10c2a937d0f75e13d54342578d2009601479e0d622b2be7767bae15f46c9/valkey_glide_sync-2.5.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:a062693944046b102d86add3c03b0fb498b91456bc641acbb7b3a20851b33c35", size = 5765328, upload-time = "2026-07-14T18:50:19.469Z" },
+    { url = "https://files.pythonhosted.org/packages/61/5c/79790c7ad70cbd2c364fb12a261e8b7861b52d4efd5017954c564eed41ef/valkey_glide_sync-2.5.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:47c765aca9bb0e97f40ec4f0b241cdc81b3dc58636cd29aa1d0087243e14d49a", size = 5326091, upload-time = "2026-07-14T18:50:21.216Z" },
+    { url = "https://files.pythonhosted.org/packages/08/84/d371113c1990752774b59596d1eac61527b2f7684bc7f7de0561b169a039/valkey_glide_sync-2.5.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:64a2731a0c2e60b34b47e71191098736e87060bf97d96363e7b033bf9fca5d34", size = 5882768, upload-time = "2026-07-14T18:50:22.585Z" },
+    { url = "https://files.pythonhosted.org/packages/b0/a0/e64735eaa23913fa9df8e79cf09455ba1b8a77b3d96ddb0d23423507e8b8/valkey_glide_sync-2.5.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:a6dfdb5733232189ed111a68f994d54082ebfd7ad0a08820703174f092815974", size = 6174722, upload-time = "2026-07-14T18:50:24.102Z" },
+    { url = "https://files.pythonhosted.org/packages/54/b8/ff01fd2384c4e41db1169f2b9204a3d3f4143c05d7e2937ba9f1fbe9cf5b/valkey_glide_sync-2.5.0-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:e3a544749c3f164e0768776c49b0b2e8f819de9f364f081f4467060461281fe9", size = 5766515, upload-time = "2026-07-14T18:50:25.579Z" },
+    { url = "https://files.pythonhosted.org/packages/16/fc/1e7d571cac41b698235ab5ec4c877b7f70146180671dcf55e45ebe317d72/valkey_glide_sync-2.5.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:df10754041b1fc4388173b3f407f74cdd618ef604579476b89666c97c2b5d0ac", size = 5327168, upload-time = "2026-07-14T18:50:27.057Z" },
+    { url = "https://files.pythonhosted.org/packages/ff/f4/46587cb226a26f27dc46a81ebd1192d663bdac77fe13b2eeacee2f6cc4e9/valkey_glide_sync-2.5.0-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:ce9edd8bced5cfa51588776c03a4fdbc2a07c575085741341c5abf73e903b1d2", size = 5883424, upload-time = "2026-07-14T18:50:28.518Z" },
+    { url = "https://files.pythonhosted.org/packages/f2/9a/2678922bd732e6b98f7f5035acc595daaee21119cd242388612ec9148d2f/valkey_glide_sync-2.5.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:449c2187b78f94929b4143b4298596a5cb91822bbd2c076819f6e9a445bde4c9", size = 6175606, upload-time = "2026-07-14T18:50:30.063Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/56/47a3664ed44bc8a17e62aa5aa15e5b0dd1b389bcb4b4d5ad623273e43a94/valkey_glide_sync-2.5.0-pp311-pypy311_pp73-macosx_10_15_x86_64.whl", hash = "sha256:f9f54e61d7beefedb5d2f65816b86d184d6f85cbe32e55ab633cafaa0e72660e", size = 5768723, upload-time = "2026-07-14T18:50:38.815Z" },
+    { url = "https://files.pythonhosted.org/packages/05/ce/93b41717df339b7cfa430f4caefd8c63d92f23441c58d70ca7058ac1e7dc/valkey_glide_sync-2.5.0-pp311-pypy311_pp73-macosx_11_0_arm64.whl", hash = "sha256:ff8ffabe57e9bb5916aacfef6e727683b6bbc6eaa3b8b10d2ed67b62cd6d1a84", size = 5331584, upload-time = "2026-07-14T18:50:40.568Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/a9/37e4dce26d0be348fc2d01eeeda1baf59b15f4e86f69fb7a112c87ec1395/valkey_glide_sync-2.5.0-pp311-pypy311_pp73-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:6ba29c7f12de39f031efaafcea9c599330c719cba540dcd13d56d022911f8035", size = 5886309, upload-time = "2026-07-14T18:50:42.093Z" },
+    { url = "https://files.pythonhosted.org/packages/5b/46/85ad7fba8f4abd023aa655a8f49edc956f054e495d8e3463871a42526023/valkey_glide_sync-2.5.0-pp311-pypy311_pp73-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:966a77f2045f6e62c7a112fcc9eed5b1314027fd26f38b6d0480df53a7d1c1cf", size = 6178354, upload-time = "2026-07-14T18:50:43.566Z" },
 ]
 
 [[package]]
