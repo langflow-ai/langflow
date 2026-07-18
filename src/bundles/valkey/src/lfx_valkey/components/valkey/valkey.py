@@ -69,7 +69,22 @@ class ValkeyVectorStoreComponent(LCVectorStoreComponent):
     def build_vector_store(self):
         import json
 
-        from langchain_aws.vectorstores import ValkeyVectorStore
+        # Imported lazily because it pulls valkey-glide, which ships no Windows
+        # wheels -- the ``valkey`` extra of langchain-aws is gated off Windows
+        # via the platform marker in this bundle's pyproject.toml.  Keeping the
+        # import out of module scope lets the bundle load on Windows even though
+        # this vector store cannot run there; the Valkey Chat Memory component
+        # (redis-py based) still works.
+        try:
+            from langchain_aws.vectorstores import ValkeyVectorStore
+        except ImportError as e:
+            msg = (
+                "Could not import valkey-glide, which backs the Valkey Vector Store. "
+                "It ships no Windows wheels and is not installed on Windows; run this "
+                "component on Linux or macOS. Elsewhere, install it with "
+                "'pip install langchain-aws[valkey]'."
+            )
+            raise ImportError(msg) from e
 
         _patch_check_index_exists()
 
