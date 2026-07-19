@@ -72,6 +72,10 @@ class Vertex:
         self._is_loop = None
         self.has_session_id = None
         self.custom_component = None
+        # Secret values inherited from upstream component outputs. Keep these in
+        # memory only so downstream display results can be masked without
+        # replacing the raw values consumed through graph edges.
+        self._upstream_secret_values: set[str] = set()
         self.has_external_input = False
         self.has_external_output = False
         self.graph = graph
@@ -414,6 +418,9 @@ class Vertex:
             custom_params = initialize.loading.get_params(self.params)
             custom_params.pop("code", None)
 
+        if hasattr(custom_component, "_secret_values"):
+            custom_component._secret_values.update(self._upstream_secret_values)  # noqa: SLF001
+
         await self._build_results(
             custom_component=custom_component,
             custom_params=custom_params,
@@ -584,7 +591,14 @@ class Vertex:
                 self.params[key][sub_key] = value
             else:
                 result = await value.get_result(self, target_handle_name=key)
+                self._inherit_secret_values(value)
                 self.params[key][sub_key] = result
+
+    def _inherit_secret_values(self, vertex: Vertex) -> None:
+        """Track secrets that arrive through an upstream component edge."""
+        component = vertex.custom_component
+        if component is not None:
+            self._upstream_secret_values.update(getattr(component, "_secret_values", set()))
 
     @staticmethod
     def _is_vertex(value):
@@ -651,6 +665,7 @@ class Vertex:
     async def _build_vertex_and_update_params(self, key, vertex: Vertex) -> None:
         """Builds a given vertex and updates the params dictionary accordingly."""
         result = await vertex.get_result(self, target_handle_name=key)
+        self._inherit_secret_values(vertex)
         self._handle_func(key, result)
         if isinstance(result, list):
             self._extend_params_list_with_result(key, result)
@@ -672,6 +687,7 @@ class Vertex:
             if not vertex.built and vertex.id in self.graph.conditionally_excluded_vertices:
                 continue
             result = await vertex.get_result(self, target_handle_name=key)
+            self._inherit_secret_values(vertex)
             # Weird check to see if the params[key] is a list
             # because sometimes it is a Data and breaks the code
             if not isinstance(self.params[key], list):
