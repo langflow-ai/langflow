@@ -406,7 +406,6 @@ async def update_flow(
         if folder_id_will_change:
             return await retry_flow_operation_on_deployment_guard(
                 db=session,
-                user_id=current_user.id,
                 flow_ids=[flow_id],
                 operation=operation,
             )
@@ -506,7 +505,6 @@ async def upsert_flow(
             if folder_id_will_change:
                 flow_read = await retry_flow_operation_on_deployment_guard(
                     db=session,
-                    user_id=current_user.id,
                     flow_ids=[existing_flow.id],
                     operation=update_operation,
                 )
@@ -547,12 +545,11 @@ async def delete_flow(
     session: DbSession,
     flow_id: UUID,  # noqa: ARG001
     flow: AuthorizedDeleteFlow,
-    current_user: CurrentActiveUser,
+    current_user: CurrentActiveUser,  # noqa: ARG001
 ):
     """Delete a flow."""
     await retry_flow_operation_on_deployment_guard(
         db=session,
-        user_id=current_user.id,
         flow_ids=[flow.id],
         operation=lambda: cascade_delete_flow(session, flow.id),
     )
@@ -743,7 +740,6 @@ async def delete_multiple_flows(
 
         deleted_count = await retry_flow_operation_on_deployment_guard(
             db=db,
-            user_id=user.id,
             flow_ids=flow_ids,
             operation=_delete_operation,
         )

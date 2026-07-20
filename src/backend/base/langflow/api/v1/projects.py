@@ -186,7 +186,6 @@ async def create_project(
         if flow_ids_for_sync:
             await retry_flow_operation_on_deployment_guard(
                 db=session,
-                user_id=current_user.id,
                 flow_ids=flow_ids_for_sync,
                 operation=_move_flows_into_project,
             )
@@ -629,7 +628,6 @@ async def update_project(
         if flow_ids_for_sync:
             await retry_flow_operation_on_deployment_guard(
                 db=session,
-                user_id=current_user.id,
                 flow_ids=flow_ids_for_sync,
                 operation=_move_flows_for_project_update,
             )
