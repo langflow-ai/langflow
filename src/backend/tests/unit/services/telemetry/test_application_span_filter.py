@@ -102,6 +102,57 @@ def test_child_of_a_dropped_span_is_still_exported_and_orphaned(exporter_and_pro
     assert finished[0].parent.span_id not in exported_ids, "parent should be absent, not silently re-parented"
 
 
+@pytest.mark.parametrize("scope", ["opentelemetry.instrumentation.requests", "opentelemetry.instrumentation.urllib3"])
+def test_outbound_http_client_scopes_are_not_allowlisted(scope):
+    """The LLM vendor SDKs instrument these globally, so they carry outbound LLM API calls.
+
+    traceloop-sdk calls RequestsInstrumentor().instrument() and the urllib3 equivalent with no
+    tracer_provider, which binds them to our global provider. Allowlisting them produced one
+    span per outbound LLM call, carrying the request URL, and provider keys passed as query
+    parameters travelled with it. Langflow's own uses pass tracer_provider= explicitly.
+    """
+    assert scope not in APPLICATION_INSTRUMENTATION_SCOPES
+
+
+def test_globally_instrumented_requests_does_not_reach_the_apm(exporter_and_provider):
+    """Drives the real RequestsInstrumentor the way traceloop-sdk does, against a local server."""
+    import http.server
+    import socketserver
+    import threading
+
+    import requests
+    from opentelemetry.instrumentation.requests import RequestsInstrumentor
+
+    exporter, provider = exporter_and_provider
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"{}")
+
+        def log_message(self, *args):
+            pass
+
+    server = socketserver.TCPServer(("127.0.0.1", 0), Handler)
+    port = server.server_address[1]
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+
+    instrumentor = RequestsInstrumentor()
+    was_instrumented = instrumentor.is_instrumented_by_opentelemetry
+    if not was_instrumented:
+        # No tracer_provider, exactly as traceloop-sdk does it: binds to the global provider.
+        instrumentor.instrument(tracer_provider=provider)
+    try:
+        requests.get(f"http://127.0.0.1:{port}/v1beta/models/gemini:generateContent?key={SENTINEL}", timeout=10)
+    finally:
+        if not was_instrumented:
+            instrumentor.uninstrument()
+        server.shutdown()
+
+    assert exported_span_names(exporter, provider) == [], "outbound LLM API call reached the APM"
+
+
 def test_llm_tracer_name_is_not_allowlisted():
     """The vendor integrations use the bare "langflow" tracer name; ours must differ."""
     assert "langflow" not in APPLICATION_INSTRUMENTATION_SCOPES

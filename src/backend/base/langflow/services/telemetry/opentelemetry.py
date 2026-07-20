@@ -32,15 +32,25 @@ APPLICATION_TRACER_NAME = "langflow.observability"
 # opentelemetry.instrumentation.* namespace as the application ones (openai, anthropic,
 # langchain, bedrock, ... are all installed alongside fastapi and sqlalchemy). Their spans
 # carry prompt and completion text, which must never reach the operator's APM, so anything
-# not named here is dropped. Adding an application instrumentation means adding it here.
+# not named here is dropped.
+#
+# The rule for adding to this list: only scopes Langflow itself instruments against its own
+# provider. A scope is NOT safe merely because it sounds like infrastructure. The LLM vendor
+# SDKs call bare Instrumentor().instrument() with no tracer_provider, which binds them to
+# whatever global provider exists, i.e. ours. requests and urllib3 were on this list and had
+# to be removed for exactly that reason: traceloop-sdk instruments both, so every outbound
+# LLM API call produced a span here, carrying the request URL, and provider keys passed as
+# query parameters travelled with it. Langflow's own uses of those two live in
+# services/tracing/http_instrumentation.py and pass tracer_provider= explicitly, so they
+# never route through this processor. Redis is deliberately absent for the same reason:
+# traceloop-sdk instruments it and Langflow does not. sqlalchemy and httpx are listed ahead
+# of the instrumentation Langflow adds for them, and carry no LLM content either way.
 APPLICATION_INSTRUMENTATION_SCOPES = frozenset(
     {
         "opentelemetry.instrumentation.asgi",
         "opentelemetry.instrumentation.fastapi",
         "opentelemetry.instrumentation.httpx",
-        "opentelemetry.instrumentation.requests",
         "opentelemetry.instrumentation.sqlalchemy",
-        "opentelemetry.instrumentation.urllib3",
         APPLICATION_TRACER_NAME,
     }
 )
@@ -322,6 +332,15 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             return
 
         if trace.get_tracer_provider().__class__.__name__ != "ProxyTracerProvider":
+            # Someone else owns tracing (opentelemetry-instrument, the OTel operator, or app
+            # code). Installing over it would break them, but it also means our export filter
+            # is not in the path, so nothing stops the LLM tracer integrations from sending
+            # prompt content to that provider's exporter. Say so rather than implying a
+            # boundary we are not enforcing.
+            logger.warning(
+                "A tracer provider is already installed, so Langflow is not configuring OTLP export. "
+                "LLM tracing integrations may export prompt and completion content through it."
+            )
             return
 
         protocol = _otlp_protocol()
