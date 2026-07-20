@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from lfx.components.data_source.sql_executor import SQLComponent
     from lfx.components.data_source.url import URLComponent
     from lfx.components.data_source.web_search import WebSearchComponent
+    from lfx.components.data_source.xquik import XquikComponent
 
 _dynamic_imports = {
     "APIRequestComponent": "api_request",
@@ -24,6 +25,7 @@ _dynamic_imports = {
     "RSSReaderComponent": "rss",
     "URLComponent": "url",
     "WebSearchComponent": "web_search",
+    "XquikComponent": "xquik",
     "SQLComponent": "sql_executor",
 }
 
@@ -37,6 +39,7 @@ __all__ = [
     "SQLComponent",
     "URLComponent",
     "WebSearchComponent",
+    "XquikComponent",
 ]
 
 
