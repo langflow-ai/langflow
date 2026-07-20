@@ -46,7 +46,7 @@ def update_lfx_dep_in_base(pyproject_path: str, lfx_version: str) -> None:
 
     # Updated pattern to handle PEP 440 version suffixes, both ~= and == version specifiers,
     # both lfx and lfx-nightly names, extras (e.g. lfx[cassandra], lfx[toolguard]), and
-    # trailing markers (e.g. `; python_version < '3.14'`).
+    # trailing markers (e.g. `; sys_platform != 'win32'`).
     # The extras group (1) MUST be preserved: base's `[complete]` extra pulls these
     # `lfx[extra]` references, and if they keep a `~=X.Y.0` floor while base's bare `lfx`
     # dep is pinned to `==X.Y.0.devN`, the floor (>=X.Y.0) excludes the dev release and
