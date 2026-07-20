@@ -12,6 +12,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from packaging.requirements import Requirement
+
 if sys.version_info >= (3, 11):
     import tomllib
 else:
@@ -49,3 +51,19 @@ def test_litellm_optional_dependency_includes_runtime_proxy_modules() -> None:
         f"These are needed when langflow-ide invokes litellm's proxy server module for logging "
         f"(see issue #12228). Current specs: {litellm_specs}"
     )
+
+
+def test_litellm_dependent_extras_are_available_on_python_314() -> None:
+    """LiteLLM and the extras that require it must not retain a Python 3.14 gate."""
+    optional = _load_base_pyproject()["project"]["optional-dependencies"]
+
+    litellm = next(Requirement(spec) for spec in optional["litellm"] if Requirement(spec).name == "litellm")
+    assert any(spec.operator == ">=" and spec.version == "1.93.0" for spec in litellm.specifier)
+    assert litellm.marker is None
+
+    opik = next(Requirement(spec) for spec in optional["opik"] if Requirement(spec).name == "opik")
+    assert opik.marker is None
+
+    toolguard = next(Requirement(spec) for spec in optional["toolguard"] if Requirement(spec).name == "lfx")
+    assert "toolguard" in toolguard.extras
+    assert toolguard.marker is None

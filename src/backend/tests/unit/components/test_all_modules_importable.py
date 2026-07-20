@@ -68,22 +68,6 @@ class TestAllModulesImportable:
 
     def test_all_components_in_categories_importable(self):
         """Test that all components in each category's __all__ can be imported."""
-        import sys
-
-        # Components whose underlying packages are gated to python_version<'3.14'
-        # in pyproject.toml because upstream pins exclude 3.14. These are expected
-        # to fail import on 3.14 until the upstreams adapt.
-        # NOTE: ibm.* moved to the lfx-ibm bundle (src/bundles/ibm) and is no
-        # longer iterated through ``langflow.components``; the watsonx
-        # 3.14-gating moved with them.
-        gated_on_py314 = {
-            "altk.ALTKAgentComponent",
-            "crewai.CrewAIAgentComponent",
-            "crewai.HierarchicalCrewComponent",
-            "crewai.SequentialCrewComponent",
-        }
-        on_py314 = sys.version_info >= (3, 14)
-
         failed_imports = []
         successful_imports = 0
 
@@ -108,9 +92,6 @@ class TestAllModulesImportable:
                             successful_imports += 1
 
                         except Exception as e:
-                            if on_py314 and qualified in gated_on_py314:
-                                print(f"SKIPPED on 3.14: {qualified}: {e!s}")  # noqa: T201
-                                continue
                             failed_imports.append(f"{qualified}: {e!s}")
                             print(f"FAILED: {qualified}: {e!s}")  # noqa: T201
                 else:
@@ -448,8 +429,7 @@ class TestDirectModuleImports:
                         "redis",
                         "elasticsearch",
                         "langchain_community",
-                        # Gated to python_version<'3.14' in pyproject.toml until
-                        # upstream caps lift.
+                        # Optional dependencies with platform-specific availability.
                         "altk",
                         "langchain_ibm",
                         "ibm_watsonx_ai",
@@ -458,12 +438,6 @@ class TestDirectModuleImports:
                         "lfx-openai",
                         "lfx-datastax",
                         "lfx-oracle",
-                        # litellm has no 3.14-compatible release, so it is gated to
-                        # python_version<'3.14'. Its absence surfaces transitively
-                        # via crewai (``from crewai import Agent`` -> litellm) and
-                        # via toolguard (the policies components import it directly).
-                        "litellm",
-                        "toolguard",
                     ]
                 ):
                     return ("skipped", modname, "missing optional dependency")
