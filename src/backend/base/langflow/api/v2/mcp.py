@@ -43,6 +43,22 @@ def is_mcp_servers_locked(settings: object) -> bool:
     return getattr(settings, "mcp_servers_locked", False) is True
 
 
+def ensure_mcp_stdio_access(server_config: dict, current_user: CurrentActiveUser, settings: object) -> None:
+    """Restrict local MCP processes when custom code execution is restricted."""
+    mode = server_config.get("mode")
+    is_stdio = bool(server_config.get("command")) or (isinstance(mode, str) and mode.lower() == "stdio")
+    code_execution_restricted = (
+        getattr(settings, "allow_custom_components", True) is False
+        or getattr(settings, "custom_component_admin_only", False) is True
+    )
+
+    if is_stdio and code_execution_restricted and getattr(current_user, "is_superuser", False) is not True:
+        raise HTTPException(
+            status_code=403,
+            detail="MCP stdio servers are restricted to administrators when custom code execution is restricted.",
+        )
+
+
 def _enforce_immutable_server_name(server_name: str, server_config: dict) -> dict:
     """Enforce that the server name is owned by the URL path, not the request body.
 
@@ -251,6 +267,9 @@ async def get_servers(
         # Return only the server names, with mode and toolsCount as None
         return [{"name": server_name, "mode": None, "toolsCount": None} for server_name in server_list["mcpServers"]]
 
+    for server_config in server_list["mcpServers"].values():
+        ensure_mcp_stdio_access(server_config, current_user, settings_service.settings)
+
     # Check all of the tool counts for each server concurrently
     async def check_server(server_name: str) -> dict:
         server_info: dict[str, str | int | None] = {"name": server_name, "mode": None, "toolsCount": None}
@@ -392,7 +411,7 @@ async def update_server(
     current_user: CurrentActiveUser,
     session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],  # noqa: ARG001
-    settings_service: Annotated[SettingsService, Depends(get_settings_service)],  # noqa: ARG001
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
     *,
     check_existing: bool = False,
     delete: bool = False,
@@ -408,6 +427,9 @@ async def update_server(
     would attempt IO in an async context.
     """
     user_id = current_user.id
+    settings = getattr(settings_service, "settings", None)
+    if not delete:
+        ensure_mcp_stdio_access(server_config, current_user, settings)
 
     if delete:
         result = await session.exec(
@@ -456,6 +478,7 @@ async def update_server(
 
         if merge_existing:
             merged = {**decrypt_mcp_config(existing.config or {}), **server_config}
+            ensure_mcp_stdio_access(merged, current_user, settings)
             updated = await session.execute(
                 update(MCPServer)
                 .where(MCPServer.id == existing.id, MCPServer.version == existing.version)
