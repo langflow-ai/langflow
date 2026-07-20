@@ -30,6 +30,7 @@ members = [
     "langflow-sdk",
     "langflow-stepflow",
     "lfx",
+    "lfx-adanos",
     "lfx-amazon",
     "lfx-anthropic",
     "lfx-arxiv",
@@ -8164,6 +8165,7 @@ version = "1.11.0"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
+    { name = "lfx-adanos" },
     { name = "lfx-amazon" },
     { name = "lfx-anthropic" },
     { name = "lfx-arxiv" },
@@ -8269,6 +8271,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
+    { name = "lfx-adanos", editable = "src/bundles/adanos" },
     { name = "lfx-amazon", editable = "src/bundles/amazon" },
     { name = "lfx-anthropic", editable = "src/bundles/anthropic" },
     { name = "lfx-arxiv", editable = "src/bundles/arxiv" },
@@ -9594,6 +9597,21 @@ integration = [
     { name = "langchain-qdrant", specifier = ">=1.1.0" },
     { name = "langchain-weaviate", specifier = ">=0.0.6" },
     { name = "lxml", specifier = ">=5.0.0" },
+]
+
+[[package]]
+name = "lfx-adanos"
+version = "0.1.0"
+source = { editable = "src/bundles/adanos" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.28.1,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]
