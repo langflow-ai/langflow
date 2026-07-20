@@ -53,6 +53,15 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### Breaking changes
 
+- Short `LANGFLOW_SECRET_KEY` upgrade compatibility
+
+    Langflow 1.10.1 changed how secrets shorter than 32 characters derive the Fernet key used for encrypted credentials.
+    Langflow 1.11.x retains read compatibility with credentials encrypted by the earlier derivation while continuing to use the current SHA-256 derivation for all new writes.
+
+    If your deployment uses a `LANGFLOW_SECRET_KEY` shorter than 32 characters, keep it unchanged during the initial upgrade so Langflow can continue to decrypt existing credentials.
+    Langflow logs a startup warning for this configuration because short secrets aren't recommended for production.
+    To replace the key, first record or export the stored credentials, set a randomly generated key of at least 32 characters, and then re-enter the credentials; changing the key directly invalidates ciphertext created with the old key.
+
 - Default superuser password removed
 
     Langflow no longer creates or accepts the legacy `langflow`/`langflow` default superuser credentials.
