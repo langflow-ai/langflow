@@ -465,8 +465,6 @@ function GenericNode({
             }}
             numberOfOutputHandles={shownOutputs.length ?? 0}
             showNode={showNode}
-            openAdvancedModal={false}
-            onCloseAdvancedModal={() => {}}
             updateNode={() => handleUpdateCode()}
             isOutdated={isOutdated && (dismissAll || isUserEdited)}
             isUserEdited={isUserEdited}

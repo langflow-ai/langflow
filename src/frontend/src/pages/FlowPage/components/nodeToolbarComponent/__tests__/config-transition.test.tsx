@@ -228,7 +228,6 @@ const getProps = () => ({
   setShowNode: jest.fn(),
   numberOfOutputHandles: 0,
   showNode: true,
-  onCloseAdvancedModal: jest.fn(),
   updateNode: jest.fn(),
   isOutdated: false,
   isUserEdited: false,
