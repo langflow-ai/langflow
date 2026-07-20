@@ -15,8 +15,8 @@ never drift by hand-edit:
     4. normalized extra keys are collision-free,
     5. the metapackage provider set stays disjoint from the graduated
        partner distributions (no double-ship; manifest would shadow),
-    6. ALTK stays gated off Python 3.14 while its LiteLLM dependency cannot
-       build there.
+    6. ALTK remains available on Python 3.14 while preserving its Intel macOS
+       exclusion.
 """
 
 from __future__ import annotations
@@ -111,8 +111,8 @@ def test_metapackage_providers_disjoint_from_graduated_partners() -> None:
     assert not overlap, f"providers shipped from both lfx-bundles and a graduated package: {sorted(overlap)}"
 
 
-def test_altk_dependency_is_gated_off_python_314() -> None:
-    """ALTK must not transitively install LiteLLM on unsupported Python 3.14."""
+def test_altk_dependency_supports_python_314() -> None:
+    """ALTK supports Python 3.14 everywhere except unsupported Intel macOS."""
     requirements = (Requirement(dependency) for dependency in _load_extras()["altk"])
     altk = next(requirement for requirement in requirements if requirement.name == "agent-lifecycle-toolkit")
     assert altk.marker is not None
@@ -127,14 +127,14 @@ def test_altk_dependency_is_gated_off_python_314() -> None:
                 "platform_machine": platform_machine,
             }
         )
-        assert not altk.marker.evaluate(environment)
+        assert altk.marker.evaluate(environment)
 
     environment.update(
         {
-            "python_full_version": "3.13.0",
-            "python_version": "3.13",
-            "sys_platform": "linux",
+            "python_full_version": "3.14.0",
+            "python_version": "3.14",
+            "sys_platform": "darwin",
             "platform_machine": "x86_64",
         }
     )
-    assert altk.marker.evaluate(environment)
+    assert not altk.marker.evaluate(environment)
