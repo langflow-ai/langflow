@@ -439,6 +439,10 @@ async def sync_flow_deployment_state_by_owner(
     Deployment rows and attachments are owner-scoped. Under share-aware RBAC the
     actor may differ from the flow owner, so sync must use each flow's owner
     ``user_id`` — never the actor's.
+
+    Today's create/update paths require the same owner id for the flow, flow
+    version, attachment, and deployment, so resolving owners from ``flow_ids``
+    selects the correct deployment namespace for those rows.
     """
     from sqlmodel import col, select
 
