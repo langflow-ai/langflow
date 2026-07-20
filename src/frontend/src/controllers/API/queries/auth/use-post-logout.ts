@@ -17,7 +17,7 @@ export const useLogout: useMutationFunctionType<undefined, void> = (
   const cookies = getCookiesInstance();
   const logout = useAuthStore((state) => state.logout);
 
-  async function logoutUser(): Promise<any> {
+  async function logoutUser(): Promise<unknown> {
     // Auto-login state is per-backend runtime config, not a build-time constant.
     // Only skip the server logout when this backend actually runs in auto-login
     // mode; otherwise the HttpOnly refresh cookie survives and POST /refresh
