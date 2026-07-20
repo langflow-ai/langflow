@@ -6,11 +6,9 @@ floor. The LFX unified-model registry carries an equivalent wrapper for Agent
 model construction.
 """
 
-from collections.abc import Mapping
 from typing import Any
 
 from langchain_anthropic import ChatAnthropic
-from pydantic import SecretStr
 
 
 def _ensure_thinking_field(payload: dict) -> None:
@@ -24,16 +22,24 @@ def _ensure_thinking_field(payload: dict) -> None:
                 block["thinking"] = ""
 
 
-class ChatAnthropicThinkingCompat(ChatAnthropic):
-    """ChatAnthropic that normalizes thinking blocks in outgoing payloads."""
+def _install_thinking_compat() -> type[ChatAnthropic]:
+    """Patch ChatAnthropic's request hook once without rebuilding its Pydantic model."""
+    original_get_request_payload = getattr(ChatAnthropic, "_get_request_payload")  # noqa: B009
+    if getattr(original_get_request_payload, "__lfx_thinking_compat__", False):
+        return ChatAnthropic
 
-    def _get_request_payload(self, *args: Any, **kwargs: Any) -> dict:
-        payload = super()._get_request_payload(*args, **kwargs)
+    def get_request_payload_with_thinking_compat(self: ChatAnthropic, *args: Any, **kwargs: Any) -> dict:
+        payload = original_get_request_payload(self, *args, **kwargs)
         _ensure_thinking_field(payload)
         return payload
 
+    setattr(get_request_payload_with_thinking_compat, "__lfx_thinking_compat__", True)  # noqa: B010
+    setattr(ChatAnthropic, "_get_request_payload", get_request_payload_with_thinking_compat)  # noqa: B010
+    return ChatAnthropic
 
-# Pydantic resolves inherited forward annotations in the subclass module. Make
-# ChatAnthropic's annotation types available before the first construction.
-_MODEL_REBUILD_TYPES_NAMESPACE = {"Mapping": Mapping, "SecretStr": SecretStr}
-ChatAnthropicThinkingCompat.model_rebuild(_types_namespace=_MODEL_REBUILD_TYPES_NAMESPACE)
+
+# Do not subclass ChatAnthropic here. Pydantic 2.14 can leave its inherited
+# fields deferred during server startup; rebuilding a subclass then resolves
+# those fields without their defaults. Patch the request hook once and keep the
+# already-supported ChatAnthropic model and validator intact.
+ChatAnthropicThinkingCompat = _install_thinking_compat()

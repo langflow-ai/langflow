@@ -1,13 +1,13 @@
 """Regression tests for Anthropic thinking-block compatibility in the bundle."""
 
+from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from lfx_anthropic.anthropic_chat_model import (
-    _MODEL_REBUILD_TYPES_NAMESPACE,
     ChatAnthropicThinkingCompat,
     _ensure_thinking_field,
+    _install_thinking_compat,
 )
 from lfx_anthropic.components.anthropic.anthropic import AnthropicModelComponent
-from pydantic import ConfigDict
 
 
 def _malformed_history() -> list:
@@ -78,24 +78,17 @@ def test_payload_preserves_existing_thinking_text():
     assert blocks[0]["thinking"] == "let me reason"
 
 
-def test_compat_class_rebuilds_deferred_parent_annotations():
-    assert ChatAnthropicThinkingCompat.model_rebuild(force=True) is True
-    assert ChatAnthropicThinkingCompat.__pydantic_complete__
+def test_compat_reuses_parent_pydantic_model_and_defaults():
+    assert ChatAnthropicThinkingCompat is ChatAnthropic
+    required_fields = {name for name, field in ChatAnthropicThinkingCompat.model_fields.items() if field.is_required()}
+    assert required_fields == {"model"}
+    assert ChatAnthropicThinkingCompat.model_fields["temperature"].default is None
 
 
-def test_compat_class_rebuild_namespace_resolves_deferred_mapping():
-    deferred_model = type(
-        "DeferredMappingModel",
-        (ChatAnthropicThinkingCompat,),
-        {
-            "__module__": "server_lazy_import_test",
-            "__annotations__": {"mapping_field": "Mapping[str, str] | None"},
-            "mapping_field": None,
-            "model_config": ConfigDict(defer_build=True),
-        },
-    )
-
-    assert deferred_model.model_rebuild(force=True, _types_namespace=_MODEL_REBUILD_TYPES_NAMESPACE) is True
+def test_compat_install_is_idempotent():
+    request_hook = getattr(ChatAnthropic, "_get_request_payload")  # noqa: B009
+    assert _install_thinking_compat() is ChatAnthropic
+    assert getattr(ChatAnthropic, "_get_request_payload") is request_hook  # noqa: B009
 
 
 def test_ensure_thinking_field_handles_missing_and_none():
