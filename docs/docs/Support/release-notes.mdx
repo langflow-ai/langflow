@@ -83,21 +83,12 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
       ${IMAGE}
     ```
 
-- Docker images enable component hardening by default
+- Docker images disable auto-login by default
 
-    Official Langflow Docker images now include stricter defaults and include the following environment variables:
+    Official Langflow Docker images set `LANGFLOW_AUTO_LOGIN=false`.
+    You must set `LANGFLOW_SUPERUSER_PASSWORD` (and optionally `LANGFLOW_SUPERUSER`) before the container can start, unless you explicitly set `LANGFLOW_AUTO_LOGIN=true`.
 
-    ```bash
-    LANGFLOW_AUTO_LOGIN=false
-    LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false
-    LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true
-    LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true
-    LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true
-    ```
-
-    Existing Langflow containers that rely on custom components, code interpreters, or absolute local file paths must override these variables.
-    Keep the image defaults when users who can build flows on the server are not fully trusted.
-    For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
+    For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
 
 - Ongoing breaking changes: bundle separation
 

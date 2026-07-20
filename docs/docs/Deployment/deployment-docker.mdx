@@ -16,21 +16,24 @@ This guide demonstrates several ways to run Langflow with [Docker](https://docs.
 * [Customize the Docker Compose file](#customize): Package a flow or add your own code into a custom image built on top of the official Langflow image.
 * [Build and run the Docker image from source](#build-from-source): Build a Docker image from a local clone of the repo, or start a full development environment with hot reload on both frontend and backend.
 * [Upgrade the Langflow Docker image](#upgrade-the-langflow-docker-image): Upgrade to a newer image without losing your database or flows.
-* [Docker image security defaults](#docker-image-security-defaults): Hardened environment variables baked into published images, and how to override them for local use.
+* [Docker image defaults](#docker-image-security-defaults): Environment variables included in the Langflow image and how to override them.
 
 ## Quickstart {#quickstart}
 
 With Docker installed and running on your system, run the following command:
 
-```shell
-docker run -p 7860:7860 \
-  -e LANGFLOW_AUTO_LOGIN=true \
-  -e LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD \
-  langflowai/langflow:latest
-```
+    ```bash
+    docker run -p 7860:7860 \
+      -e LANGFLOW_AUTO_LOGIN=false \
+      -e LANGFLOW_SUPERUSER_PASSWORD=<SUPERUSER_PASSWORD> \
+      langflowai/langflow:latest
+    ```
 
-Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
-As of Langflow 1.11.x, images include [security defaults](#docker-image-security-defaults) that you may need to override for local workflows.
+    By default, the official Docker images set `LANGFLOW_AUTO_LOGIN=false` by default.
+
+    Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
+
+    For more information, see [Docker image defaults](#docker-image-security-defaults).
 
 Then, access Langflow at `http://localhost:7860/`.
 
@@ -230,7 +233,8 @@ Replace the following:
 * `SUPERUSER_PASSWORD`: a strong password for the Langflow superuser
 * `VERSION`: the version in `pyproject.toml` at the repo root
 
-The image sets `LANGFLOW_AUTO_LOGIN=false` and the [component hardening defaults](#docker-image-security-defaults), so a superuser password is required unless you set `LANGFLOW_AUTO_LOGIN=true`.
+The image sets `LANGFLOW_AUTO_LOGIN=false`, so a superuser password is required unless you set `LANGFLOW_AUTO_LOGIN=true`.
+For more information, see [Docker image defaults](#docker-image-security-defaults).
 
 To build only the LFX executor CLI image instead of the full Langflow application, run:
 
@@ -380,35 +384,18 @@ Set the custom image in your compose file or `docker run`, and then pull and res
 
 For a minimal Dockerfile that adds `uv` to the 1.8.0 image, see the [release notes](/release-notes) ("Docker image no longer includes uv or uvx").
 
-## Docker image security defaults {#docker-image-security-defaults}
+## Docker image defaults {#docker-image-security-defaults}
 
-As of Langflow 1.11.x, official Langflow Docker images set `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` at image build time, and include stricter defaults for the following environment variables:
+As of Langflow 1.11.x, official Langflow Docker images set `LANGFLOW_AUTO_LOGIN=false` at image build time.
+The Langflow application default for non-Docker installs remains `true`.
 
-| Variable | Image value | Application default (pip / local) |
-|----------|-------------|-----------------------------------|
-| `LANGFLOW_AUTO_LOGIN` | `false` | `true` |
-| `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` | `false` | `true` |
-| `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | `true` | `false` |
-| `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | `true` | `false` |
-| `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | `true` (main `langflowai/langflow` image only) | `false` |
-
-These image values match the [component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening) recommendation.
-They apply whether you use `docker run`, Docker Compose, or Kubernetes with the published image, unless you override them.
-
-The image sets `LANGFLOW_AUTO_LOGIN=false`, so you must set `LANGFLOW_SUPERUSER_PASSWORD` (and optionally, `LANGFLOW_SUPERUSER`) unless you explicitly set `LANGFLOW_AUTO_LOGIN=true`.
-
-To disable the stricter defaults and use custom components, built-in code-execution components, or absolute local file paths, override the image defaults:
+Because auto-login is disabled, you must set `LANGFLOW_SUPERUSER_PASSWORD` (and optionally `LANGFLOW_SUPERUSER`) unless you explicitly set `LANGFLOW_AUTO_LOGIN=true`.
 
 ```bash
 docker run -p 7860:7860 \
   -e LANGFLOW_AUTO_LOGIN=true \
-  -e LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true \
-  -e LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=false \
-  -e LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=false \
-  -e LANGFLOW_MCP_SERVER_DOCKER_HARDENING=false \
+  -e LANGFLOW_SUPERUSER_PASSWORD=<SUPERUSER_PASSWORD> \
   langflowai/langflow:latest
 ```
-
-In Docker Compose, add the same keys under `services.langflow.environment`.
 
 For more information, see [Component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening) and [Block custom components](/deployment-block-custom-components).

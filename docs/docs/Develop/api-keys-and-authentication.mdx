@@ -167,7 +167,7 @@ All users share the same visual editor environment without password protection, 
 API requests still require a Langflow API key unless you also set [`LANGFLOW_SKIP_AUTH_AUTO_LOGIN`](#langflow-skip-auth-auto-login) to `true`.
 
 The Langflow application default is `True`.
-Official Langflow Docker images set `false`. For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
+Official Langflow Docker images set `false`. For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
 
 #### LANGFLOW_SKIP_AUTH_AUTO_LOGIN {#langflow-skip-auth-auto-login}
 
@@ -494,7 +494,7 @@ In a shared server where users you do not fully trust can build flows, set `LANG
 
 Use these variables when users who can build or run flows on your server should not get host-level code execution, arbitrary file reads, or  MCP mounts.
 
-As of Langflow 1.11.x, Langflow application defaults remain permissive for trusted single-user installations, while official Docker images enable the hardened values. For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
+For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
@@ -747,7 +747,7 @@ This configuration is recommended for any deployment where Langflow is exposed t
 :::tip Docker images
 Official Langflow Docker images already set `LANGFLOW_AUTO_LOGIN=false`.
 You still must set `LANGFLOW_SUPERUSER_PASSWORD` (and optionally `LANGFLOW_SUPERUSER`) before the container can start.
-For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
+For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
 :::
 
 With authentication enabled, all users must sign in to the visual editor with valid credentials, and API requests require authentication with a Langflow API key.
