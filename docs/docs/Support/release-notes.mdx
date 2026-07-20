@@ -83,7 +83,23 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
       ${IMAGE}
     ```
 
-- Upcoming breaking change: bundle separation
+- Docker images enable component hardening by default
+
+    Official Langflow Docker images now include stricter defaults and include the following environment variables:
+
+    ```bash
+    LANGFLOW_AUTO_LOGIN=false
+    LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false
+    LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true
+    LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true
+    LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true
+    ```
+
+    Existing Langflow containers that rely on custom components, code interpreters, or absolute local file paths must override these variables.
+    Keep the image defaults when users who can build flows on the server are not fully trusted.
+    For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
+
+- Ongoing breaking changes: bundle separation
 
     Langflow 1.10.x introduced the Extension bundles model.
     In Langflow 1.11.x, many third-party provider integrations are now shipped as *long-tail bundles* inside the `lfx-bundles` package, instead of in the core `langflow` installation.
@@ -105,6 +121,42 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     **CUGA**, **Code Agents**, and **Docling** local conversion are excluded from the default `uv pip install langflow` installation because they require PyTorch.
 
     To install these components, see [Torch opt-in installs](./components-bundle-components#torch-opt-in).
+
+- Workflow API request schema (Beta)
+
+    The v2 [Workflow API (Beta)](/workflow-api) request body and interaction pattern changes in 1.11.
+    Any client that calls `POST /api/v2/workflows` against 1.10.x must update as follows:
+
+    Example 1.10.x request:
+
+    ```json
+    {
+      "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+      "background": false,
+      "inputs": {
+        "ChatInput-abc.input_value": "what is 2+2",
+        "LLMComponent-123.temperature": 0.7
+      }
+    }
+    ```
+
+    Example 1.11.x request:
+
+    ```json
+    {
+      "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+      "input_value": "what is 2+2",
+      "mode": "stream",
+      "stream_protocol": "agui",
+      "tweaks": {
+        "LLMComponent-123": {
+          "temperature": 0.7
+        }
+      }
+    }
+    ```
+
+    For more information, see [Workflow API (Beta)](/workflow-api).
 
 ### New features and enhancements
 
