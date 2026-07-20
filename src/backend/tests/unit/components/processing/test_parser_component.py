@@ -148,6 +148,26 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         assert result.text == "Test message content"
 
+    def test_stringify_list_without_clean_data(self, component_class):
+        component = component_class(
+            input_data=[Message(text="First"), Message(text="Second")],
+            mode="Stringify",
+        )
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == "First\nSecond"
+
+    @pytest.mark.parametrize(("input_data", "expected"), [("", ""), (0, "0")])
+    def test_stringify_preserves_falsy_scalar_input(self, component_class, input_data, expected):
+        component = component_class(input_data=input_data, mode="Stringify")
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == expected
+
     def test_clean_data_with_stringify(self, component_class):
         # Arrange
         data_frame = DataFrame(

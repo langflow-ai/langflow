@@ -7,6 +7,15 @@ from lfx.schema.message import Message
 from lfx.template.field.base import Output
 
 
+class _DefaultDict(dict):
+    def __init__(self, data_item: Data):
+        super().__init__(data_item.data)
+        self.default_value = data_item.default_value
+
+    def __missing__(self, key):
+        return self.default_value if self.default_value is not None else ""
+
+
 class ParserComponent(Component):
     display_name = "Parser"
     description = "Extracts text using a template."
@@ -121,18 +130,9 @@ class ParserComponent(Component):
                 formatted_text = self.pattern.format(**row.to_dict())
                 lines.append(formatted_text)
         elif data is not None:
-
-            class DefaultDict(dict):
-                def __init__(self, data_item: Data):
-                    super().__init__(data_item.data)
-                    self.default_value = data_item.default_value
-
-                def __missing__(self, key):
-                    return self.default_value or ""
-
             data_items = data if isinstance(data, list) else [data]
             for data_item in data_items:
-                formatted_text = self.pattern.format_map(DefaultDict(data_item))
+                formatted_text = self.pattern.format_map(_DefaultDict(data_item))
                 lines.append(formatted_text)
 
         combined_text = self.sep.join(lines)
@@ -141,11 +141,11 @@ class ParserComponent(Component):
 
     def convert_to_string(self) -> Message:
         """Convert input data to string with proper error handling."""
-        result = ""
+        clean_data = getattr(self, "clean_data", False)
         if isinstance(self.input_data, list):
-            result = "\n".join([safe_convert(item, clean_data=self.clean_data or False) for item in self.input_data])
+            result = "\n".join(safe_convert(item, clean_data=clean_data) for item in self.input_data)
         else:
-            result = safe_convert(self.input_data or False)
+            result = safe_convert(self.input_data, clean_data=clean_data)
         self.log(f"Converted to string with length: {len(result)}")
 
         message = Message(text=result)
