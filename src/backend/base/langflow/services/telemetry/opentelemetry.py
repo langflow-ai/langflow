@@ -1,18 +1,68 @@
+import os
 import threading
 from collections.abc import Mapping
 from enum import Enum
 from typing import Any
 from weakref import WeakValueDictionary
 
-from opentelemetry import metrics
+from lfx.log.logger import logger
+from opentelemetry import metrics, trace
 from opentelemetry.exporter.prometheus import PrometheusMetricReader
 from opentelemetry.metrics import CallbackOptions, Observation
 from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDownCounter
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.resources import SERVICE_NAME, OTELResourceDetector, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 # a default OpenTelemetry meter name
 langflow_meter_name = "langflow"
+
+
+DEFAULT_SERVICE_NAME = "langflow"
+SUPPORTED_OTLP_PROTOCOLS = ("grpc", "http/protobuf")
+
+
+def _resource() -> Resource:
+    """Build the resource, letting OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES win.
+
+    Resource.create() gives explicit attributes precedence over both env vars, so passing
+    service.name unconditionally would make them unsettable. Ask the SDK's own detector
+    whether the environment supplied one, and only fall back to our default when it did
+    not. Parsing the env ourselves gets keys that merely end in service.name
+    (k8s.service.name=...) and values with spaces around the = wrong.
+    """
+    if OTELResourceDetector().detect().attributes.get(SERVICE_NAME):
+        return Resource.create()
+    return Resource.create({SERVICE_NAME: DEFAULT_SERVICE_NAME})
+
+
+def _otlp_protocol() -> str:
+    """Resolve the OTLP protocol, per-signal variable first, then the generic one.
+
+    The SDK's own auto-configuration strips whitespace and rejects unknown values; match
+    that leniency so a stray space does not silently route gRPC traffic at an HTTP exporter.
+    """
+    protocol = (
+        os.getenv("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL") or os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL") or "http/protobuf"
+    ).strip()
+    if protocol not in SUPPORTED_OTLP_PROTOCOLS:
+        logger.warning(
+            f"Unsupported OTLP protocol {protocol!r}; falling back to http/protobuf. "
+            f"Supported values: {', '.join(SUPPORTED_OTLP_PROTOCOLS)}."
+        )
+        return "http/protobuf"
+    return protocol
+
+
+def _otlp_span_exporter(protocol: str):
+    """Build the OTLP span exporter; it reads endpoint, headers and timeout from the environment."""
+    if protocol == "grpc":
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    else:
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+    return OTLPSpanExporter()
+
 
 """
 If the measurement values are non-additive, use an Asynchronous Gauge.
@@ -109,6 +159,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
     _metrics_registry: dict[str, Metric] = {}
     _metrics: dict[str, Counter | ObservableGaugeWrapper | Histogram | UpDownCounter] = {}
     _meter_provider: MeterProvider | None = None
+    _tracer_provider: TracerProvider | None = None
     _initialized: bool = False  # Add initialization flag
     prometheus_enabled: bool = True
 
@@ -179,7 +230,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             if isinstance(existing_provider, MeterProvider):
                 self._meter_provider = existing_provider
             else:
-                resource = Resource.create({"service.name": "langflow"})
+                resource = _resource()
                 metric_readers = []
                 if self.prometheus_enabled:
                     metric_readers.append(PrometheusMetricReader())
@@ -196,7 +247,39 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             if name not in self._metrics:
                 self._metrics[metric.name] = self._create_metric(metric)
 
+        self._configure_tracer_provider_from_environment()
+
         OpenTelemetry._initialized = True
+
+    def _configure_tracer_provider_from_environment(self) -> None:
+        """Install an OTLP tracer provider when the standard OTel env vars opt in.
+
+        Nothing sets a tracer provider otherwise, so spans go nowhere. If application code
+        or opentelemetry-instrument already installed one, leave it alone.
+        """
+        endpoint = os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        if not endpoint:
+            return
+
+        # The operator's documented way to turn traces off while leaving a shared endpoint set.
+        if os.getenv("OTEL_TRACES_EXPORTER", "otlp").strip().lower() == "none":
+            return
+
+        if trace.get_tracer_provider().__class__.__name__ != "ProxyTracerProvider":
+            return
+
+        protocol = _otlp_protocol()
+        try:
+            tracer_provider = TracerProvider(resource=_resource())
+            tracer_provider.add_span_processor(BatchSpanProcessor(_otlp_span_exporter(protocol)))
+        except Exception:  # noqa: BLE001
+            logger.warning("Could not configure the OTLP tracer provider; traces will not be exported.")
+            return
+
+        trace.set_tracer_provider(tracer_provider)
+        self._tracer_provider = tracer_provider
+        # Without this, a protocol/port mismatch is indistinguishable from never having booted.
+        logger.info(f"OTLP trace export enabled (protocol={protocol}, endpoint={endpoint}).")
 
     def _create_metric(self, metric):
         # Remove _created_instruments check
