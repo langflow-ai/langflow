@@ -9,7 +9,7 @@ import shutil
 import unicodedata
 from collections.abc import AsyncIterator, Awaitable, Callable
 from types import UnionType
-from typing import Any, TypedDict, Union, get_args, get_origin
+from typing import Annotated, Any, TypedDict, Union, get_args, get_origin
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -17,10 +17,10 @@ import httpx
 from anyio import ClosedResourceError
 from httpx import codes as httpx_codes
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import StructuredTool
+from langchain_core.tools import ArgsSchema, StructuredTool
 from mcp import ClientSession
 from mcp.shared.exceptions import McpError
-from pydantic import BaseModel
+from pydantic import BaseModel, SkipValidation
 
 from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.base.mcp import security as mcp_security
@@ -2388,6 +2388,15 @@ async def update_tools(
                         if key not in schema_fields and key not in normalized:
                             normalized[key] = value
                     return normalized
+
+            if not MCPStructuredTool.__pydantic_complete__:
+                MCPStructuredTool.model_rebuild(
+                    _types_namespace={
+                        "Annotated": Annotated,
+                        "ArgsSchema": ArgsSchema,
+                        "SkipValidation": SkipValidation,
+                    }
+                )
 
             tool_obj = MCPStructuredTool(
                 name=tool.name,
