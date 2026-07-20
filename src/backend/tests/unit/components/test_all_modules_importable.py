@@ -429,7 +429,7 @@ class TestDirectModuleImports:
                         "redis",
                         "elasticsearch",
                         "langchain_community",
-                        # Optional dependencies with platform-specific availability.
+                        # ALTK is excluded on Intel macOS; the IBM integrations remain optional.
                         "altk",
                         "langchain_ibm",
                         "ibm_watsonx_ai",
