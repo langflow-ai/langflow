@@ -1,8 +1,13 @@
 """Regression tests for Anthropic thinking-block compatibility in the bundle."""
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from lfx_anthropic.anthropic_chat_model import ChatAnthropicThinkingCompat, _ensure_thinking_field
+from lfx_anthropic.anthropic_chat_model import (
+    _MODEL_REBUILD_TYPES_NAMESPACE,
+    ChatAnthropicThinkingCompat,
+    _ensure_thinking_field,
+)
 from lfx_anthropic.components.anthropic.anthropic import AnthropicModelComponent
+from pydantic import ConfigDict
 
 
 def _malformed_history() -> list:
@@ -76,6 +81,21 @@ def test_payload_preserves_existing_thinking_text():
 def test_compat_class_rebuilds_deferred_parent_annotations():
     assert ChatAnthropicThinkingCompat.model_rebuild(force=True) is True
     assert ChatAnthropicThinkingCompat.__pydantic_complete__
+
+
+def test_compat_class_rebuild_namespace_resolves_deferred_mapping():
+    deferred_model = type(
+        "DeferredMappingModel",
+        (ChatAnthropicThinkingCompat,),
+        {
+            "__module__": "server_lazy_import_test",
+            "__annotations__": {"mapping_field": "Mapping[str, str] | None"},
+            "mapping_field": None,
+            "model_config": ConfigDict(defer_build=True),
+        },
+    )
+
+    assert deferred_model.model_rebuild(force=True, _types_namespace=_MODEL_REBUILD_TYPES_NAMESPACE) is True
 
 
 def test_ensure_thinking_field_handles_missing_and_none():

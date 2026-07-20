@@ -8,6 +8,7 @@ request fails with HTTP 400 `thinking.thinking: Field required`, aborting the
 Agent turn with an empty final message.
 """
 
+from collections.abc import Mapping
 from typing import Any
 
 from langchain_anthropic import ChatAnthropic
@@ -35,5 +36,6 @@ class ChatAnthropicThinkingCompat(ChatAnthropic):
 
 
 # Pydantic resolves inherited forward annotations in the subclass module. Make
-# ChatAnthropic's SecretStr annotation available before the first construction.
-ChatAnthropicThinkingCompat.model_rebuild(_types_namespace={"SecretStr": SecretStr})
+# ChatAnthropic's annotation types available before the first construction.
+_MODEL_REBUILD_TYPES_NAMESPACE = {"Mapping": Mapping, "SecretStr": SecretStr}
+ChatAnthropicThinkingCompat.model_rebuild(_types_namespace=_MODEL_REBUILD_TYPES_NAMESPACE)
