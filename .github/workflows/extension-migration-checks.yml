@@ -12,9 +12,43 @@ on:
       - "src/backend/base/langflow/api/**.py"
       - "scripts/ci/check_components_frozen.py"
       - "scripts/ci/frozen_component_dirs.txt"
+      - "scripts/ci/bundle_release_plan.py"
+      - "pyproject.toml"
+      - "uv.lock"
       - ".github/workflows/extension-migration-checks.yml"
 
 jobs:
+  bundle-release-plan:
+    name: Bundle release plan - version and metadata consistency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Validate affected bundle release plan
+        run: |
+          base_ref="origin/${GITHUB_BASE_REF:-main}"
+          python scripts/ci/bundle_release_plan.py plan \
+            --base-ref "$base_ref" \
+            --head-ref HEAD \
+            --check \
+            --output bundle-release-plan.json
+
+      - name: Upload bundle release plan
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: bundle-release-plan
+          path: bundle-release-plan.json
+          if-no-files-found: ignore
+
   bare-names:
     name: Migration table - bare-name uniqueness
     runs-on: ubuntu-latest
