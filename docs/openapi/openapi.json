@@ -769,7 +769,7 @@
             "title": "Metadata"
           },
           "status": {
-            "$ref": "#/$defs/JobStatus"
+            "$ref": "#/components/schemas/JobStatus"
           },
           "type": {
             "description": "Type of the component output (e.g., 'message', 'data', 'tool', 'text')",
@@ -5733,7 +5733,7 @@
         "description": "The run's primary text answer plus the reason it resolved that way.",
         "properties": {
           "reason": {
-            "$ref": "#/$defs/OutputReason",
+            "$ref": "#/components/schemas/OutputReason",
             "description": "Why ``text`` is or isn't populated. ``single`` means ``text`` holds the answer; ``multiple`` / ``none`` / ``non_string`` / ``failed`` mean ``text`` is null and name why, so callers never have to guess."
           },
           "source": {
