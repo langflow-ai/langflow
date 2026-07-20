@@ -70,7 +70,7 @@ When a flow is published, Langflow serves two endpoints for the flow:
 | Endpoint | Description |
 | --- | --- |
 | `GET /api/v1/a2a/{flow_id}/.well-known/agent-card.json` | The [agent card](#customize-the-agent-card) used for client discovery. The A2A public card is unauthenticated per the A2A spec. |
-| `POST /api/v1/a2a/{flow_id}/jsonrpc` | The JSON-RPC endpoint. Supports `message/send`, `message/stream`, `tasks/get`, `tasks/resubscribe`, and the `tasks/pushNotificationConfig/*` methods. |
+| `POST /api/v1/a2a/{flow_id}/jsonrpc` | The JSON-RPC endpoint. Supports `message/send`, `message/stream`, `tasks/get`, `tasks/cancel`, `tasks/resubscribe`, and the `tasks/pushNotificationConfig/*` methods. |
 
 The card advertises `protocolVersion` `0.3.0` and `JSONRPC` as the preferred transport.
 
@@ -393,6 +393,7 @@ data: {"id":1,"jsonrpc":"2.0","result":{"append":false,"artifact":{"artifactId":
 
 data: {"id":1,"jsonrpc":"2.0","result":{"contextId":"57bcbe61-9a27-40eb-9040-cfa7a677df17","final":true,"kind":"status-update","status":{"state":"completed","timestamp":"2026-07-17T15:02:30.389825Z"},"taskId":"0732102b-ac16-4b84-8a40-0ecb06be8788"}}
 ```
+
 ### Resubscribe to a task
 
 Call `tasks/resubscribe` with a task `id` to reattach to that task's event stream.
@@ -486,21 +487,24 @@ curl -N -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
 </TabItem>
 </Tabs>
 
-If the task still has a live stream, you receive SSE frames like `message/stream`. If the task is already finished, which is common for short sync runs, the stream ends with an error frame:
+If the task still has a live stream on the same worker, the subscriber receives SSE frames like `message/stream`. If the task is already finished, which is common for short sync runs, the stream ends with an error frame:
 
 ```text
 data: {"error":{"code":-32603,"message":"Task a8820afb-7af7-4831-9233-b236e25e63be has no active stream to resubscribe to"},"id":12,"jsonrpc":"2.0"}
 ```
 
+Live resubscription queues are in-memory and per worker. In a multi-worker deployment, a `tasks/resubscribe` request routed to a different worker than the one running the task returns "no active stream". Prefer a single worker, or sticky routing to the worker that started the task.
+
 ### Register a push notification webhook
 
-Call `tasks/pushNotificationConfig/set` with a `taskId` and a public `http` or `https` webhook URL. Langflow then POSTs task lifecycle events to that URL.
+Include `pushNotificationConfig` in the initial `message/send` or `message/stream` request so Langflow can POST lifecycle events to your webhook while the task runs. Registering after a blocking `message/send` returns does not replay events that already completed.
 
 <Tabs>
 <TabItem value="python" label="Python" default>
 
 ```python
 import os
+import uuid
 import requests
 
 url = "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc"
@@ -510,12 +514,18 @@ headers = {
 }
 payload = {
     "jsonrpc": "2.0",
-    "id": 3,
-    "method": "tasks/pushNotificationConfig/set",
+    "id": 1,
+    "method": "message/send",
     "params": {
-        "taskId": "TASK_ID",
-        "pushNotificationConfig": {
-            "url": "https://example.com/a2a-webhook",
+        "message": {
+            "role": "user",
+            "parts": [{"kind": "text", "text": "Hello"}],
+            "messageId": uuid.uuid4().hex,
+        },
+        "configuration": {
+            "pushNotificationConfig": {
+                "url": "https://example.com/a2a-webhook",
+            },
         },
     },
 }
@@ -539,19 +549,25 @@ const response = await fetch(url, {
   },
   body: JSON.stringify({
     jsonrpc: "2.0",
-    id: 3,
-    method: "tasks/pushNotificationConfig/set",
+    id: 1,
+    method: "message/send",
     params: {
-      taskId: "TASK_ID",
-      pushNotificationConfig: {
-        url: "https://example.com/a2a-webhook",
+      message: {
+        role: "user",
+        parts: [{ kind: "text", text: "Hello" }],
+        messageId: crypto.randomUUID(),
+      },
+      configuration: {
+        pushNotificationConfig: {
+          url: "https://example.com/a2a-webhook",
+        },
       },
     },
   }),
 });
 
 if (!response.ok) {
-  throw new Error(`A2A push config failed: ${response.status}`);
+  throw new Error(`A2A request failed: ${response.status}`);
 }
 
 console.log(await response.json());
@@ -566,12 +582,18 @@ curl -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
   -H "x-api-key: LANGFLOW_API_KEY" \
   -d '{
     "jsonrpc": "2.0",
-    "id": 3,
-    "method": "tasks/pushNotificationConfig/set",
+    "id": 1,
+    "method": "message/send",
     "params": {
-      "taskId": "7f3f305e-f02e-444a-90bf-01179646fd85",
-      "pushNotificationConfig": {
-        "url": "https://example.com/a2a-webhook"
+      "message": {
+        "role": "user",
+        "parts": [{"kind": "text", "text": "Hello"}],
+        "messageId": "1"
+      },
+      "configuration": {
+        "pushNotificationConfig": {
+          "url": "https://example.com/a2a-webhook"
+        }
       }
     }
   }'
@@ -579,6 +601,25 @@ curl -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
 
 </TabItem>
 </Tabs>
+
+To add or update a webhook on a task that is still active, call `tasks/pushNotificationConfig/set` with a `taskId` and a public `http` or `https` webhook URL. That method only affects future events, and does not replay lifecycle events that already happened.
+
+```bash
+curl -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: LANGFLOW_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tasks/pushNotificationConfig/set",
+    "params": {
+      "taskId": "TASK_ID",
+      "pushNotificationConfig": {
+        "url": "https://example.com/a2a-webhook"
+      }
+    }
+  }'
+```
 
 Example response:
 
@@ -595,6 +636,10 @@ Example response:
   }
 }
 ```
+
+:::warning
+Push notification configurations are in-memory and per worker. In a multi-worker deployment, a later `tasks/pushNotificationConfig/*` call or webhook dispatch can miss config stored on another worker. Prefer a single worker, or sticky routing to the worker that registered the webhook.
+:::
 
 List registered webhooks for a task with `tasks/pushNotificationConfig/list`:
 
@@ -690,6 +735,27 @@ Example response:
 Webhook URLs are validated when they are registered. Only `http` and `https` URLs that resolve entirely to public addresses are accepted; loopback, private, link-local, reserved, multicast, and unspecified targets are rejected. To allow private webhook targets on a trusted internal network, set `LANGFLOW_A2A_ALLOW_PRIVATE_WEBHOOKS` to `true`.
 
 You can also manage configs with `tasks/pushNotificationConfig/get` and `tasks/pushNotificationConfig/delete`.
+
+### Cancel a task
+
+To cancel an active task, such as a task waiting for [human input](#human-in-the-loop-agents), call `tasks/cancel` with  the task `id` to cancel.
+
+```bash
+curl -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: LANGFLOW_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "tasks/cancel",
+    "params": {
+      "id": "7f3f305e-f02e-444a-90bf-01179646fd85"
+    }
+  }'
+```
+
+Langflow persists the canceled state, so a later `tasks/get` returns `canceled`.
+A task that has already completed or failed cannot be canceled.
 
 ## Customize the agent card {#customize-the-agent-card}
 

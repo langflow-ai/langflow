@@ -9,11 +9,13 @@ As of Langflow 1.11.x, A2A support is **off** by default. To enable it, set the 
 ```bash
 LANGFLOW_A2A_ENABLED=true
 ```
+
+`LANGFLOW_A2A_ENABLED` enables Langflow's A2A server endpoints. Set it when you [publish Langflow flows as A2A agents](./a2a-server#publish-a-flow-as-an-a2a-agent), or when you use **Internal** mode to call those published flows. You do **not** need it to call a remote agent in **External** mode.
 :::
 
 The **A2A Agent** component calls an [Agent2Agent (A2A)](https://a2a-protocol.org/) agent and returns its reply.
 
-Use **Internal Model** to call published A2A agent flows within the same Langflow [project](/concepts-flows#projects), or use **External Mode** to call a remote A2A agent by its published URL.
+Use **Internal** mode to call published A2A agent flows within the same Langflow [project](/concepts-flows#projects), or use **External** mode to call a remote A2A agent by its published URL.
 
 For more information on publishing a Langflow flow, see [Publish a flow as an A2A agent](./a2a-server#publish-a-flow-as-an-a2a-agent).
 
