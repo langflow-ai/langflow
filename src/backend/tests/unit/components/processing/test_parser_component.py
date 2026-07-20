@@ -59,6 +59,40 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         assert result.text == "text: Hello World"
 
+    def test_parse_data_list(self, component_class):
+        data = [
+            Data(data={"name": "John", "age": 30}),
+            Data(data={"name": "Jane", "age": 25}),
+        ]
+        component = component_class(
+            input_data=data,
+            pattern="{name} is {age} years old",
+            sep=" | ",
+            mode="Parser",
+        )
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == "John is 30 years old | Jane is 25 years old"
+
+    def test_parse_data_list_uses_each_item_default_value(self, component_class):
+        data = [
+            Data(data={"name": "John"}, default_value="unknown"),
+            Data(data={"name": "Jane"}, default_value="not provided"),
+        ]
+        component = component_class(
+            input_data=data,
+            pattern="{name}: {role}",
+            sep="\n",
+            mode="Parser",
+        )
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == "John: unknown\nJane: not provided"
+
     def test_stringify_dataframe(self, component_class):
         # Arrange
         data_frame = DataFrame({"Name": ["John", "Jane"], "Age": [30, 25]})
@@ -164,7 +198,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         # Act & Assert
         with pytest.raises(
             ValueError,
-            match=re.escape("Unsupported input type: <class 'int'>. Expected DataFrame or Data."),
+            match=re.escape("Unsupported input type: <class 'int'>. Expected DataFrame, Data, or list[Data]."),
         ):
             component.parse_combined_text()
 
@@ -180,7 +214,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         # Act & Assert
         with pytest.raises(
             ValueError,
-            match=re.escape("Unsupported input type: <class 'NoneType'>. Expected DataFrame or Data."),
+            match=re.escape("Unsupported input type: <class 'NoneType'>. Expected DataFrame, Data, or list[Data]."),
         ):
             component.parse_combined_text()
 
