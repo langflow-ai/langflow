@@ -73,6 +73,7 @@
   "assistant.maxSessionsLabel": "Nbre max. de sessions",
   "assistant.maxSessionsTooltip": "Le nombre maximal de sessions d' {{max}} s a été atteint. Supprimez une session pour en créer une nouvelle.",
   "assistant.mentionNoMatches": "Aucun composant correspondant sur le canevas",
+  "assistant.flowProposalReplaceOnly": "Ce flux comprend un Chat Input ou un Webhook et votre canevas en possède déjà un. Un flux ne peut en avoir qu'un seul. Remplacez le canevas pour utiliser ce flux.",
   "assistant.messageCounts": "{{count}} messages",
   "assistant.newConversation": "Nouvelle conversation",
   "assistant.newPill": "Nouveau",
