@@ -56,7 +56,8 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Default superuser password removed
 
     Langflow no longer creates or accepts the legacy `langflow`/`langflow` default superuser credentials.
-    If `LANGFLOW_AUTO_LOGIN=false`, set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password before startup. The legacy value `langflow` is not allowed.
+    If `LANGFLOW_AUTO_LOGIN=False`, set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password before startup.
+    The legacy value `langflow` is not allowed, even if `LANGFLOW_AUTO_LOGIN=True`.
 
     ```bash
     export LANGFLOW_SUPERUSER_PASSWORD='your-strong-password'
