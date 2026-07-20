@@ -294,6 +294,7 @@ Drain the queue **inline** after cancelling the worker (`service.py::_stop`), an
 - `useGetTraceQuery` → `GET /api/v1/monitor/traces/{id}` returns the span tree.
 - `TraceDetailView.tsx`: renders the backend gate span; `backendHasGate` dedup prevents a duplicate synthetic node; `executedOutputSpans` bridges Chat Output from live `flowPool` only during the resume window (deduped by name).
 - `hitlStore.ts`: in-memory only (`pending` slot); `localStorage`/`persist` removed.
+- Answered-card propagation: the chat's session cache is a subscription-only query (`staleTime: Infinity`, fed by `setQueryData`), so `invalidateQueries` cannot refresh it and it re-hydrates from the backend only while empty. A decision taken on another surface — canvas badge, trace bar, another tab — is therefore adopted on load by `withAnsweredHumanInputCards` (`human-input-card.ts`), which stamps `submitted_action` from the backend copy onto cards the cache still shows as open. Without it an answered pause keeps rendering its buttons until a full page reload.
 
 ### 6.7 lfx serve durable mode (LE-1695)
 
