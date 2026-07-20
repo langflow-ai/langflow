@@ -22,6 +22,62 @@ langflow_meter_name = "langflow"
 DEFAULT_SERVICE_NAME = "langflow"
 SUPPORTED_OTLP_PROTOCOLS = ("grpc", "http/protobuf")
 
+# The tracer name Langflow's own application spans must use to reach the APM. Deliberately
+# not "langflow": the LLM tracer integrations already take a tracer under that name, and
+# their spans carry flow inputs and outputs.
+APPLICATION_TRACER_NAME = "langflow.observability"
+
+# Instrumentation scopes whose spans describe the service itself. This is an allowlist, not
+# a denylist, because the LLM instrumentors ship inside the very same
+# opentelemetry.instrumentation.* namespace as the application ones (openai, anthropic,
+# langchain, bedrock, ... are all installed alongside fastapi and sqlalchemy). Their spans
+# carry prompt and completion text, which must never reach the operator's APM, so anything
+# not named here is dropped. Adding an application instrumentation means adding it here.
+APPLICATION_INSTRUMENTATION_SCOPES = frozenset(
+    {
+        "opentelemetry.instrumentation.asgi",
+        "opentelemetry.instrumentation.fastapi",
+        "opentelemetry.instrumentation.httpx",
+        "opentelemetry.instrumentation.requests",
+        "opentelemetry.instrumentation.sqlalchemy",
+        "opentelemetry.instrumentation.urllib3",
+        APPLICATION_TRACER_NAME,
+    }
+)
+
+
+class ApplicationOnlySpanProcessor(BatchSpanProcessor):
+    """Exports only spans that describe the application, dropping everything else.
+
+    Langflow installs a global tracer provider, so any library that takes a tracer from it
+    ends up exporting through this processor. That includes the LLM tracing integrations,
+    whose spans carry prompts and completions. Filtering on the way out keeps the boundary
+    in one place and costs the vendor integrations nothing.
+
+    Drops are logged once per scope at debug level; they are the expected case for LLM
+    instrumentation, and logging every one would be noise.
+
+    Known consequence: an exported span whose parent was dropped arrives at the APM with a
+    parent that never shows up, so the trace renders with a gap. That follows from the
+    requirement of zero component spans in the APM, and it cannot be repaired here because
+    a child ends before its parent, so there is no way to know at the child's on_end that
+    the parent will be dropped. Scrubbing attributes instead of dropping would keep the
+    tree intact, but the requirement is no component spans, not merely no content.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._dropped_scopes: set[str] = set()
+
+    def on_end(self, span) -> None:
+        scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
+        if scope in APPLICATION_INSTRUMENTATION_SCOPES:
+            super().on_end(span)
+            return
+        if scope not in self._dropped_scopes:
+            self._dropped_scopes.add(scope)
+            logger.debug(f"Not exporting spans from {scope!r}; only application telemetry is sent to the APM.")
+
 
 def _resource() -> Resource:
     """Build the resource, letting OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES win.
@@ -271,7 +327,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         protocol = _otlp_protocol()
         try:
             tracer_provider = TracerProvider(resource=_resource())
-            tracer_provider.add_span_processor(BatchSpanProcessor(_otlp_span_exporter(protocol)))
+            tracer_provider.add_span_processor(ApplicationOnlySpanProcessor(_otlp_span_exporter(protocol)))
         except Exception:  # noqa: BLE001
             logger.warning("Could not configure the OTLP tracer provider; traces will not be exported.")
             return
