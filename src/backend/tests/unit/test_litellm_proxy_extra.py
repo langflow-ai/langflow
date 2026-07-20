@@ -2,10 +2,9 @@
 
 When langflow-ide logs through litellm (e.g. to langfuse), litellm imports
 its proxy server module, which in turn needs `apscheduler` and `cryptography`
-at runtime. These are normally shipped via `litellm[proxy]`, but that extra
-pins `boto3` in a way that conflicts with our `aioboto3` transitives. We
-therefore add the specific modules directly to the `litellm` optional
-dependency group — this test guards against them being dropped.
+at runtime. These are normally shipped via the much larger `litellm[proxy]`
+extra. We add the specific modules directly to the `litellm` optional
+dependency group, and this test guards against them being dropped.
 """
 
 from __future__ import annotations

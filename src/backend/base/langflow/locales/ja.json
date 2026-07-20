@@ -5514,7 +5514,6 @@
   "components.sambanovamodel.inputs.top_p.info.7ac0c35f": "モデル top_p",
   "components.sambanovamodel.outputs.model_output.display_name.698eabeb": "言語モデル",
   "components.sambanovamodel.outputs.text_output.display_name.2544139a": "回答例",
-  "components.savetofile.description.af7e703b": "データをファイルに保存する。 引数: 'input' — 保存する内容（ DataFrame を直接渡すか、表形式のデータの場合はJSON文字列、メッセージの場合はプレーンテキストを指定します）；'file_name' — 保存するファイル名（拡張子を除く、例: 'report'）； 'file_format' — 出力形式: 'csv', 'json', 'txt', 'html', 'excel', 'markdown'（オプション）。 ファイルのパス、または URL を含む確認メッセージを返します。",
   "components.savetofile.display_name.d78cd87c": "ファイルの書き込み",
   "components.savetofile.inputs.append_mode.display_name.fc15cc0a": "追加",
   "components.savetofile.inputs.append_mode.info.4f370768": "ファイルが存在する場合はそのファイルに追加する（プレーンテキスト形式のローカルストレージのみ）。 クラウドストレージ（ AWS / Google Drive ）ではサポートされていません。",

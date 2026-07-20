@@ -455,13 +455,13 @@ LANGFLOW_CORS_ALLOW_METHODS=["GET","POST","PUT"]
 
 For a shared or public deployment served over HTTPS, harden the access-token cookie. These default to permissive values for local HTTP development and for the current frontend, which reads the access token in JavaScript.
 
+The refresh-token cookie is `HttpOnly` + `Secure` + `SameSite` by default.
+
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | `LANGFLOW_ACCESS_SECURE` | Boolean | `False` | When `true`, the `access_token_lf` cookie is sent only over HTTPS. Recommended `true` for any HTTPS deployment. |
 | `LANGFLOW_ACCESS_HTTPONLY` | Boolean | `False` | When `true`, the `access_token_lf` cookie is not readable by JavaScript. The default is `false` because the bundled frontend currently reads this cookie in JavaScript. |
 | `LANGFLOW_ACCESS_SAME_SITE` | String | `lax` | The `SameSite` attribute of the access-token cookie (`lax`, `strict`, or `none`). |
-
-The refresh-token cookie is already `HttpOnly` + `Secure` + `SameSite` by default.
 
 ### LANGFLOW_RATE_LIMIT_* {#login-rate-limiting}
 
@@ -494,7 +494,7 @@ In a shared server where users you do not fully trust can build flows, set `LANG
 
 Use these variables when users who can build or run flows on your server should not get host-level code execution, arbitrary file reads, or  MCP mounts.
 
-As of Langflow 1.11.x, Langflow application defaults remain permissive for trusted single-user installs, while official Docker images enable the hardened values. For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
+As of Langflow 1.11.x, Langflow application defaults remain permissive for trusted single-user installations, while official Docker images enable the hardened values. For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|

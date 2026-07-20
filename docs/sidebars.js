@@ -66,6 +66,11 @@ module.exports = {
               id: "Flows/webhook",
               label: "Trigger flows with webhooks"
             },
+            {
+              type: "doc",
+              id: "Flows/human-in-the-loop",
+              label: "Human-in-the-Loop"
+            },
           ],
         },
         {
@@ -92,6 +97,7 @@ module.exports = {
       items: [
         "Agents/agents",
         "Agents/agents-tools",
+        "Agents/a2a-server",
       ],
     },
     {
@@ -336,6 +342,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Lfx/lfx-prewarm",
+          label: "Pre-warm LFX"
+        },
+        {
+          type: "doc",
           id: "Lfx/lfx-mcp",
           label: "Build flows with the LFX MCP server"
         },
@@ -379,12 +390,9 @@ module.exports = {
               label: "Processing",
               items: [
                 "Components/operations",
-                "Components/data-operations",
-                "Components/dataframe-operations",
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
-                "Components/text-operations",
                 "Components/type-convert",
               ]
             },
@@ -414,6 +422,7 @@ module.exports = {
               label: "Flow Controls",
               items: [
                 "Components/if-else",
+                "Components/human-input",
                 "Components/loop",
                 "Components/notify-and-listen",
                 "Components/run-flow",
@@ -514,6 +523,7 @@ module.exports = {
             "Components/bundles-nvidia",
             "Components/bundles-ollama",
             "Components/bundles-openai",
+            "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",
             "Components/bundles-oracle",
             "Components/bundles-paddle",
@@ -527,9 +537,10 @@ module.exports = {
             "Components/bundles-serper",
             "Components/bundles-supabase",
             "Components/bundles-upstash",
-            "Components/bundles-vllm",
+            "Components/bundles-valkey",
             "Components/bundles-vectara",
             "Components/bundles-vertexai",
+            "Components/bundles-vllm",
             "Components/bundles-weaviate",
             "Components/bundles-wikipedia",
             "Components/bundles-xai",

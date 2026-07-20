@@ -51,7 +51,7 @@ export default function DurationComponent({
             <TabsTrigger
               key={`${id}_unit_${unit}`}
               value={unit}
-              className="block flex-1 truncate px-2"
+              className="min-w-fit flex-1 px-2"
               disabled={disabled}
               data-testid={`duration-unit-${index}_${testIdCase(unit)}`}
             >

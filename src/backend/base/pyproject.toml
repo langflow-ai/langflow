@@ -74,7 +74,7 @@ dependencies = [
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
     "pip>=26.0.0,<27.0.0",
-    "setuptools>=80.0.0,<81.0.0",
+    "setuptools>=83.0.0,<84.0.0",
     "nanoid>=2.0.0,<3.0.0",
     "filelock>=3.20.1,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",
@@ -87,7 +87,8 @@ dependencies = [
     "validators>=0.34.0,<1.0.0",
     "networkx>=3.4.2,<4.0.0",
     "json-repair>=0.30.3,<1.0.0",
-    "mcp>=1.17.0,<2.0.0",
+    "mcp>=1.28.0,<2.0.0",
+    "a2a-sdk>=1.1.0,<2.0.0",
     "ag-ui-protocol==0.1.18",
     "aiosqlite>=0.20.0,<1.0.0",
     "greenlet>=3.1.1,<4.0.0",
@@ -175,6 +176,7 @@ Documentation = "https://docs.langflow.org"
 # Optional dependencies
 [project.optional-dependencies]
 audio = [
+    "openai>=1.68.2,<3.0.0",
     "webrtcvad>=2.0.10",
 ]
 
@@ -295,9 +297,8 @@ huggingface = ["huggingface-hub[inference]>=1.0.0,<2.0.0"]
 metaphor = ["exa-py>=1.14,<3"]
 metal = ["metal_sdk==2.5.1"]
 markup = ["MarkupSafe==3.0.2"]
-# Deliberately retained after the lfx-amazon graduation: boto3 also backs
-# langflow-base's own S3 storage backend (services/storage/s3.py, api/v2/files.py)
-# and lfx's S3 ingestion sources -- it is not exclusive to the amazon components.
+# Deliberately retained after the lfx-amazon graduation: boto3 backs lfx's
+# synchronous S3 file helpers. The backend storage service uses aiobotocore.
 aws = ["boto3>=1.34.162,<2.0.0"]
 numexpr = ["numexpr>=2.10.2"]
 qianfan = ["qianfan==0.3.5"]
@@ -311,8 +312,8 @@ litellm = [
     "litellm>=1.85.1,<2.0.0; python_version < '3.14'",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
-    # [proxy] extra pins boto3==1.43.1, which conflicts with our aioboto3
-    # transitive cap, so we pull in just the missing modules instead.
+    # Pull in only the modules Langflow uses from litellm[proxy] rather than
+    # its much larger dependency surface.
     "apscheduler>=3.10.4,<4.0.0",
     "cryptography",
 ]
@@ -320,7 +321,7 @@ zep = ["zep-python==2.0.2"]
 youtube = ["youtube-transcript-api>=1.0.0,<2.0.0"]
 markdown = ["Markdown>=3.8.0"]
 kubernetes = ["kubernetes==31.0.0"]
-json-repair = ["json_repair==0.30.3"]
+json-repair = ["json_repair>=0.60.1"]
 composio = [
     "composio==0.16.0",
     "composio-langchain==0.16.0"
@@ -332,7 +333,7 @@ mem0 = ["mem0ai>=2.0.2,<3.0.0"]
 needle = ["needle-python>=0.4.0"]
 sseclient = ["sseclient-py==1.8.0"]
 openinference = ["openinference-instrumentation-langchain>=0.1.29"]
-mcp = ["mcp>=1.17.0,<2.0.0"]
+mcp = ["mcp>=1.28.0,<2.0.0"]
 ag2 = ["ag2>=0.1.0"]
 scrapegraph = ["scrapegraph-py>=1.12.0"]
 apify = ["apify-client>=1.8.1"]
@@ -412,8 +413,12 @@ mlx = [
 # MCP
 fastmcp = ["fastmcp>=3.2.0"]
 
-# AWS extras
-aioboto3 = ["aioboto3>=15.2.0,<16.0.0"]
+# AWS async client. S3 storage uses aiobotocore directly so boto3 is no longer
+# constrained by aioboto3's exact pin to aiobotocore 2.25.1.
+aiobotocore = ["aiobotocore>=3.7.0,<4.0.0"]
+# Preserve the legacy extra name so existing langflow-base[aioboto3] install
+# commands continue to enable Langflow's async S3 backend.
+aioboto3 = ["aiobotocore>=3.7.0,<4.0.0"]
 
 # Astra
 astrapy = ["astrapy>=2.1.0,<3.0.0"]
@@ -461,7 +466,7 @@ complete = [
     "langflow-base[mcp]",
     # Orchestration / deployment adapters
     "langflow-base[kubernetes]",
-    "langflow-base[aioboto3]",
+    "langflow-base[aiobotocore]",
     "langflow-base[ibm-watsonx-clients]",
     # lfx-core component features: the dependency now lives in lfx (these base
     # extras re-export the matching lfx extra), keeping a single source of truth

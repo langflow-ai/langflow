@@ -10,6 +10,7 @@ These guard the refactor that split ``Settings`` into per-group mixins:
 - yaml round-trip and the small utility helpers still work.
 """
 
+import builtins
 import tempfile
 from pathlib import Path
 
@@ -22,6 +23,24 @@ from lfx.services.settings.base import (
     load_settings_from_yaml,
     save_settings_to_yaml,
 )
+
+
+def test_voice_mode_requires_openai_sdk(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Installing only the VAD library must not advertise unusable voice mode."""
+    real_import = builtins.__import__
+
+    def import_without_openai(name, *args, **kwargs):
+        if name == "webrtcvad":
+            return object()
+        if name == "openai" or name.startswith("openai."):
+            error_message = "No module named 'openai'"
+            raise ModuleNotFoundError(error_message, name="openai")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_without_openai)
+
+    assert Settings().voice_mode_available is False
+
 
 # Every field the composed Settings must expose: the original monolith fields
 # plus the settings added in 1.10.0 (folded into the mixins during the release
@@ -86,6 +105,8 @@ EXPECTED_FIELDS = {
     "skip_mcp_auto_init",
     "mcp_composer_enabled",
     "mcp_composer_version",
+    "a2a_enabled",
+    "a2a_allow_private_webhooks",
     # TelemetrySettings
     "sentry_dsn",
     "sentry_traces_sample_rate",
@@ -151,15 +172,17 @@ EXPECTED_FIELDS = {
     "variables_to_get_from_environment",
     "agentic_experience",
     "developer_api_enabled",
-    # ---- Added in 1.10.0, folded into the mixins during the release back-merge ----
+    # ---- Added after the original Settings split and folded into the mixins ----
     # PathSettings
     "kb_allowed_folder_roots",
+    "kb_folder_max_file_size_bytes",
     "directory_component_allowed_roots",
     # McpSettings
     "mcp_tool_execution_timeout",
     "mcp_servers_locked",
     # ComponentsSettings
     "load_flows_overwrite_on_name_match",
+    "load_flows_preserve_variable_bindings",
     "enable_extension_reload",
     # SecuritySettings
     "rate_limit_enabled",
@@ -257,6 +280,7 @@ def test_critical_defaults_unchanged():
     assert settings.mcp_server_allowed_packages is None
     assert settings.mcp_server_enabled is True
     assert settings.mcp_composer_enabled is True
+    assert settings.load_flows_preserve_variable_bindings is True
     assert settings.do_not_track is False
     assert settings.dev is False
     assert settings.agentic_experience is False
@@ -389,6 +413,12 @@ def test_yaml_round_trip():
         ("LANGFLOW_BACKEND_ONLY", "true", "backend_only", True),
         ("LANGFLOW_AUTO_SAVING", "false", "auto_saving", False),
         ("LANGFLOW_FALLBACK_TO_ENV_VAR", "false", "fallback_to_env_var", False),
+        (
+            "LANGFLOW_LOAD_FLOWS_PRESERVE_VARIABLE_BINDINGS",
+            "false",
+            "load_flows_preserve_variable_bindings",
+            False,
+        ),
         ("LANGFLOW_VARIABLE_STORE", "kubernetes", "variable_store", "kubernetes"),
     ],
 )

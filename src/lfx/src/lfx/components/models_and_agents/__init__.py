@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
+    from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent
     from lfx.components.models_and_agents.agent import AgentComponent
     from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
     from lfx.components.models_and_agents.language_model import LanguageModelComponent
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
     from lfx.components.models_and_agents.prompt import PromptComponent
 
 _dynamic_imports = {
+    "A2AAgentComponent": "a2a_agent",
     "AgentComponent": "agent",
     "EmbeddingModelComponent": "embedding_model",
     "LanguageModelComponent": "language_model",
@@ -24,6 +26,7 @@ _dynamic_imports = {
 }
 
 __all__ = [
+    "A2AAgentComponent",
     "AgentComponent",
     "EmbeddingModelComponent",
     "LanguageModelComponent",
