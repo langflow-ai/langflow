@@ -286,8 +286,9 @@ The following environment variables are set by default:
 |---|---|---|
 | `LANGFLOW_DATABASE_URL` | `postgresql://langflow:langflow@postgres:5432/langflow` | PostgreSQL connection string |
 | `LANGFLOW_SUPERUSER` | `langflow` | Initial admin username |
-| `LANGFLOW_SUPERUSER_PASSWORD` | `langflow` | Initial admin password |
 | `LANGFLOW_CONFIG_DIR` | `/var/lib/langflow` | Directory for Langflow config and data |
+
+`LANGFLOW_SUPERUSER_PASSWORD` is not set in the compose file. With the default `LANGFLOW_AUTO_LOGIN=true`, Langflow generates a random bootstrap password for the auto-login account. If you set `LANGFLOW_AUTO_LOGIN=false`, you must set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password before startup. The legacy value `langflow` is not allowed.
 
 To override these values, edit `docker/dev.docker-compose.yml` directly.
 
