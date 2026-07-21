@@ -118,4 +118,33 @@ describe("SpanTree", () => {
       "false",
     );
   });
+
+  it("expands Loop iterations and their component spans by default", () => {
+    const component = buildSpan({ id: "component-1", name: "Parser" });
+    const iteration = buildSpan({
+      id: "iteration-1",
+      name: "Iteration 1 / 2",
+      type: "chain",
+      children: [component],
+    });
+    const loop = buildSpan({
+      id: "loop-1",
+      name: "Loop",
+      type: "chain",
+      children: [iteration],
+    });
+    const root = buildSpan({ ...rootDefaults, children: [loop] });
+
+    render(
+      <SpanTree
+        spans={[root]}
+        selectedSpanId={null}
+        onSelectSpan={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("span-node-loop-1")).toBeInTheDocument();
+    expect(screen.getByTestId("span-node-iteration-1")).toBeInTheDocument();
+    expect(screen.getByTestId("span-node-component-1")).toBeInTheDocument();
+  });
 });

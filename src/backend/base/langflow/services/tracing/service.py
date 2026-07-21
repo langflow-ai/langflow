@@ -8,6 +8,7 @@ from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
+from lfx.services.tracing.base import LoopIterationTrace
 
 from langflow.services.base import Service
 
@@ -143,6 +144,7 @@ class TracingService(Service):
     """
 
     name = "tracing_service"
+    supports_loop_iteration_tracing = True
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
@@ -423,7 +425,7 @@ class TracingService(Service):
                     tracer.end_trace(
                         trace_id=component_trace_context.trace_id,
                         trace_name=component_trace_context.trace_name,
-                        outputs=trace_context.all_outputs[component_trace_context.trace_name],
+                        outputs=component_trace_context.outputs[component_trace_context.trace_name],
                         error=error,
                         logs=component_trace_context.logs[component_trace_context.trace_name],
                     )
@@ -452,29 +454,101 @@ class TracingService(Service):
         vertex = component.get_vertex()
         if vertex:
             trace_id = vertex.id
+        # Loop bodies run in cloned subgraphs. The async execution context is
+        # the reliable source for the active iteration; ``component.graph`` is
+        # retained as a fallback for compatibility with direct component runs.
+        from lfx.graph.graph.base import current_execution_context
+
+        execution_context = current_execution_context.get()
+        if execution_context is None:
+            execution_context = getattr(getattr(component, "graph", None), "execution_context", None)
+        metadata = dict(metadata or {})
+        if isinstance(execution_context, dict) and execution_context.get("loop_id") is not None:
+            loop_id = str(execution_context["loop_id"])
+            iteration_index = int(execution_context.get("iteration_index", 0))
+            iteration_count = int(execution_context.get("iteration_count", 0))
+            iteration_span_id = f"{loop_id}:iteration:{iteration_index}"
+            trace_id = f"{trace_id}:loop:{loop_id}:iteration:{iteration_index}"
+            if vertex:
+                metadata["langflow.component.id"] = vertex.id
+            metadata.update(
+                {
+                    "langflow.loop.id": loop_id,
+                    "langflow.loop.iteration_index": iteration_index,
+                    "langflow.loop.iteration_count": iteration_count,
+                    "langflow.loop.iteration_span_id": iteration_span_id,
+                    "langflow.loop.parent_span_id": loop_id,
+                }
+            )
         trace_type = component.trace_type
         inputs = self._cleanup_inputs(inputs)
         component_trace_context = ComponentTraceContext(trace_id, trace_name, trace_type, vertex, inputs, metadata)
-        component_context_var.set(component_trace_context)
+        context_token = component_context_var.set(component_trace_context)
+        try:
+            trace_context = trace_context_var.get()
+            if trace_context is None:
+                msg = "called trace_component but no trace context found"
+                logger.warning(msg)
+                yield self
+                return
+            trace_context.all_inputs[trace_name] |= inputs or {}
+            await trace_context.traces_queue.put(
+                (self._start_component_traces, (component_trace_context, trace_context))
+            )
+            try:
+                yield self
+            except Exception as e:
+                await trace_context.traces_queue.put(
+                    (self._end_component_traces, (component_trace_context, trace_context, e))
+                )
+                raise
+            else:
+                await trace_context.traces_queue.put(
+                    (self._end_component_traces, (component_trace_context, trace_context, None))
+                )
+        finally:
+            component_context_var.reset(context_token)
+
+    @asynccontextmanager
+    async def trace_loop_iteration(
+        self,
+        *,
+        loop_id: str,
+        iteration_index: int,
+        iteration_count: int,
+        inputs: dict[str, Any],
+    ):
+        """Create and close a real parent span for one Loop iteration."""
+        result = LoopIterationTrace()
+        if self.deactivated:
+            yield result
+            return
+
         trace_context = trace_context_var.get()
         if trace_context is None:
-            msg = "called trace_component but no trace context found"
-            logger.warning(msg)
-            yield self
+            yield result
             return
-        trace_context.all_inputs[trace_name] |= inputs or {}
-        await trace_context.traces_queue.put((self._start_component_traces, (component_trace_context, trace_context)))
+
+        trace_id = f"{loop_id}:iteration:{iteration_index}"
+        trace_name = f"Iteration {iteration_index + 1} / {iteration_count}"
+        metadata = {
+            "langflow.loop.id": loop_id,
+            "langflow.loop.iteration_index": iteration_index,
+            "langflow.loop.iteration_count": iteration_count,
+            "langflow.loop.is_iteration": True,
+            "langflow.loop.parent_span_id": loop_id,
+        }
+        iteration_context = ComponentTraceContext(trace_id, trace_name, "chain", None, inputs, metadata)
+        await trace_context.traces_queue.put((self._start_component_traces, (iteration_context, trace_context)))
         try:
-            yield self
-        except Exception as e:
-            await trace_context.traces_queue.put(
-                (self._end_component_traces, (component_trace_context, trace_context, e))
-            )
+            yield result
+        except Exception as exc:
+            iteration_context.outputs[trace_name] = result.outputs
+            await trace_context.traces_queue.put((self._end_component_traces, (iteration_context, trace_context, exc)))
             raise
         else:
-            await trace_context.traces_queue.put(
-                (self._end_component_traces, (component_trace_context, trace_context, None))
-            )
+            iteration_context.outputs[trace_name] = result.outputs
+            await trace_context.traces_queue.put((self._end_component_traces, (iteration_context, trace_context, None)))
 
     @property
     def project_name(self):

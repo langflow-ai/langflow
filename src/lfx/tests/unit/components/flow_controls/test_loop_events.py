@@ -82,7 +82,8 @@ class TestEventManagerPropagation:
         received_event_manager = None
 
         # Create a mock subgraph that captures the event_manager
-        async def mock_async_start(event_manager=None):
+        async def mock_async_start(event_manager=None, execution_context=None):
+            _ = execution_context
             nonlocal received_event_manager
             received_event_manager = event_manager
             yield MagicMock(valid=True, result_dict=MagicMock(outputs={}))
@@ -118,9 +119,11 @@ class TestEventManagerPropagation:
         """Test that event_manager is passed to async_start for each loop iteration."""
         mock_event_manager = MagicMock()
         event_manager_calls = []
+        execution_contexts = []
 
-        async def mock_async_start(event_manager=None):
+        async def mock_async_start(event_manager=None, execution_context=None):
             event_manager_calls.append(event_manager)
+            execution_contexts.append(execution_context)
             yield MagicMock(valid=True, result_dict=MagicMock(outputs={}))
 
         def create_mock_subgraph(_vertex_ids):
@@ -145,11 +148,53 @@ class TestEventManagerPropagation:
             start_edge=MagicMock(target_handle=MagicMock(field_name="data")),
             end_vertex_id="vertex1",
             event_manager=mock_event_manager,
+            loop_id="loop-1",
         )
 
         # Verify event_manager was passed for each iteration
         assert len(event_manager_calls) == 3
         assert all(em is mock_event_manager for em in event_manager_calls)
+        assert execution_contexts == [
+            {"loop_id": "loop-1", "iteration_index": 0, "iteration_count": 3},
+            {"loop_id": "loop-1", "iteration_index": 1, "iteration_count": 3},
+            {"loop_id": "loop-1", "iteration_index": 2, "iteration_count": 3},
+        ]
+
+    @pytest.mark.asyncio
+    async def test_old_saved_loop_infers_loop_id_from_start_edge(self):
+        """Saved Loop code that omits loop_id still produces iteration metadata."""
+        execution_contexts = []
+
+        async def mock_async_start(event_manager=None, execution_context=None):
+            _ = event_manager
+            execution_contexts.append(execution_context)
+            yield MagicMock(valid=True, result_dict=MagicMock(outputs={}))
+
+        def create_mock_subgraph(_vertex_ids):
+            mock_subgraph = MagicMock()
+            mock_subgraph._vertices = []
+            mock_subgraph.prepare = MagicMock()
+            mock_subgraph.async_start = mock_async_start
+            mock_subgraph.get_vertex = MagicMock(return_value=MagicMock(custom_component=MagicMock()))
+            return mock_subgraph
+
+        mock_graph = MagicMock()
+        mock_graph.create_subgraph = create_subgraph_context_manager_mock(create_mock_subgraph)
+        start_edge = MagicMock(source_id="saved-loop-id", target_handle=MagicMock(field_name="data"))
+
+        await execute_loop_body(
+            graph=mock_graph,
+            data_list=[Data(text="item1"), Data(text="item2")],
+            loop_body_vertex_ids={"vertex1"},
+            start_vertex_id="vertex1",
+            start_edge=start_edge,
+            end_vertex_id="vertex1",
+        )
+
+        assert execution_contexts == [
+            {"loop_id": "saved-loop-id", "iteration_index": 0, "iteration_count": 2},
+            {"loop_id": "saved-loop-id", "iteration_index": 1, "iteration_count": 2},
+        ]
 
     def test_subgraph_preserves_vertex_ids(self):
         """Test that subgraph vertices maintain original IDs.

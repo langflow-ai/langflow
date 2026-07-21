@@ -163,6 +163,12 @@ jobs:
             exit 1
           fi
 
+          if [ "${{ inputs.release_package_base }}" = "true" ] && [ "${{ inputs.release_lfx }}" = "false" ]; then
+            echo "Error: Cannot release Langflow Base without releasing LFX."
+            echo "Langflow Base depends on LFX. Please enable 'release_lfx' or disable 'release_package_base'."
+            exit 1
+          fi
+
           if [ "${{ inputs.release_lfx }}" = "true" ] && [ "${{ inputs.release_sdk }}" = "false" ]; then
             echo "Error: Cannot release LFX without releasing langflow-sdk."
             echo "LFX depends on langflow-sdk. Please enable 'release_sdk' or disable 'release_lfx'."
@@ -311,7 +317,11 @@ jobs:
               version="$(read_pyproject_version "$pyproject")"
               output_file="$tmp_dir/${package_name}-pypi.txt"
               fetch_pypi_versions "$package_name" "$output_file"
-              consider_versions "PyPI ${package_name}" "$version" "$output_file"
+              if grep -Fxq "$version" "$output_file"; then
+                echo "PyPI ${package_name}: final ${version} is already published; excluding its historical RCs."
+              else
+                consider_versions "PyPI ${package_name}" "$version" "$output_file"
+              fi
             done
           fi
 
@@ -666,6 +676,10 @@ jobs:
 
           # Update version in lfx pyproject.toml
           sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+
+          # Keep the bundled component index version/hash aligned with the RC wheel.
+          uv run --no-sync python ../../scripts/ci/update_component_index_version.py \
+            src/lfx/_assets/component_index.json "$VERSION"
 
           # Verify the change
           echo "Updated pyproject.toml version:"
@@ -1049,25 +1063,49 @@ jobs:
           prune-cache: false
       - name: Install the project
         run: uv sync
-      - name: Set bundle versions for pre-release
+      - name: Set unpublished bundle versions for pre-release
         if: ${{ inputs.pre_release }}
         run: |
+          set -euo pipefail
+
+          pypi_final_exists() {
+            local package_name="$1"
+            local version="$2"
+            local response_file
+            response_file="$(mktemp)"
+            local status
+            status=$(curl --retry 3 --retry-delay 2 --retry-connrefused -sS -o "$response_file" -w "%{http_code}" "https://pypi.org/pypi/${package_name}/${version}/json")
+            if [ "$status" = "200" ]; then
+              return 0
+            fi
+            if [ "$status" = "404" ]; then
+              return 1
+            fi
+            echo "Failed to check PyPI release ${package_name} ${version}: HTTP ${status}" >&2
+            cat "$response_file" >&2 || true
+            exit 1
+          }
+
           RC_NUMBER="${{ needs.determine-rc-number.outputs.rc_number }}"
-          echo "Setting bundle pre-release versions with shared rc number: rc$RC_NUMBER"
+          echo "Setting unpublished bundle pre-release versions with shared rc number: rc$RC_NUMBER"
           for pyproject in src/bundles/*/pyproject.toml; do
-            CURRENT_VERSION=$(python3 - "$pyproject" <<'PY'
+            read -r PACKAGE_NAME CURRENT_VERSION < <(python3 - "$pyproject" <<'PY'
           import pathlib
           import sys
           import tomllib
 
           data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text())
-          print(data["project"]["version"])
+          print(data["project"]["name"], data["project"]["version"])
           PY
           )
+            if pypi_final_exists "$PACKAGE_NAME" "$CURRENT_VERSION"; then
+              echo "Keeping ${PACKAGE_NAME} at ${CURRENT_VERSION}: final version is already published."
+              continue
+            fi
             VERSION=$(uv run ./scripts/ci/langflow_pre_release_tag.py "$CURRENT_VERSION" --rc-number "$RC_NUMBER")
             sed -i.bak "0,/^version = /s|^version = .*|version = \"$VERSION\"|" "$pyproject"
             rm -f "${pyproject}.bak"
-            grep "^version" "$pyproject" | sed "s|^|  ${pyproject}: |"
+            echo "Set ${PACKAGE_NAME} to ${VERSION}."
           done
       - name: Relax bundle lfx floor for pre-release
         if: ${{ inputs.pre_release }}

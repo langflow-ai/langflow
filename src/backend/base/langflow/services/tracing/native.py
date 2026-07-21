@@ -144,8 +144,10 @@ class NativeTracer(BaseTracer):
 
         start_time = datetime.now(tz=timezone.utc)
 
-        # Strip the component ID suffix so the UI shows a clean display name.
-        name = trace_name.removesuffix(f" ({trace_id})")
+        # Loop executions use a unique trace_id per iteration, while the
+        # display-name suffix still contains the stable graph vertex ID.
+        component_id = (metadata or {}).get("langflow.component.id", trace_id)
+        name = trace_name.removesuffix(f" ({component_id})")
         self.spans[trace_id] = {
             "id": trace_id,
             "name": name,
@@ -206,6 +208,9 @@ class NativeTracer(BaseTracer):
             attributes["gen_ai.usage.input_tokens"] = tokens["gen_ai.usage.input_tokens"]
         if tokens.get("gen_ai.usage.output_tokens"):
             attributes["gen_ai.usage.output_tokens"] = tokens["gen_ai.usage.output_tokens"]
+        metadata = span_info.get("metadata") or {}
+        attributes.update({key: value for key, value in metadata.items() if key.startswith("langflow.loop.")})
+        is_loop_iteration = bool(metadata.get("langflow.loop.is_iteration"))
 
         self.completed_spans.append(
             self._build_completed_span(
@@ -219,7 +224,12 @@ class NativeTracer(BaseTracer):
                 latency_ms=latency_ms,
                 error=str(error) if error else None,
                 attributes=attributes,
-                span_source="component",
+                span_source="loop_iteration" if is_loop_iteration else "component",
+                parent_span_id=(
+                    metadata.get("langflow.loop.parent_span_id")
+                    if is_loop_iteration
+                    else metadata.get("langflow.loop.iteration_span_id")
+                ),
             )
         )
 
