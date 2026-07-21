@@ -12,7 +12,7 @@ export default function CrashErrorComponent({
   return (
     <div className="z-50 flex h-screen w-screen items-center justify-center bg-foreground bg-opacity-50">
       <div className="flex h-screen w-screen flex-col bg-background text-start shadow-lg">
-        <div className="m-auto grid w-1/2 justify-center gap-5 text-center">
+        <main className="m-auto grid w-1/2 justify-center gap-5 text-center">
           <Card className="p-8">
             <CardHeader>
               <div className="m-auto">
@@ -62,7 +62,7 @@ export default function CrashErrorComponent({
               </div>
             </CardFooter>
           </Card>
-        </div>
+        </main>
       </div>
     </div>
   );

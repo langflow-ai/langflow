@@ -34,6 +34,7 @@ class DatabaseVariableService(VariableService, Service):
         # Import the provider mapping to set default_fields for known providers
         try:
             from lfx.base.models.unified_models import get_model_provider_metadata
+            from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
 
             # Build var_to_provider from all variables in metadata (not just primary)
             var_to_provider = {}
@@ -45,9 +46,14 @@ class DatabaseVariableService(VariableService, Service):
                     if var_key:
                         var_to_provider[var_key] = provider
                         var_to_info[var_key] = var
+            provider_policy = resolve_model_provider_policy(
+                user_id=user_id,
+                providers=metadata,
+                purpose=ModelProviderPolicyPurpose.CONFIGURE,
+            )
         except Exception:  # noqa: BLE001
-            var_to_provider = {}
-            var_to_info = {}
+            await logger.aexception("Could not resolve model-provider metadata; skipping environment variable import")
+            return
 
         for var_name in self.settings_service.settings.variables_to_get_from_environment:
             # Check if session is still usable before processing each variable
@@ -57,6 +63,10 @@ class DatabaseVariableService(VariableService, Service):
                     "Some environment variables may not have been processed."
                 )
                 break
+
+            provider_name = var_to_provider.get(var_name)
+            if provider_name is not None and not provider_policy.allows(provider_name):
+                continue
 
             if var_name in os.environ and os.environ[var_name].strip():
                 value = os.environ[var_name].strip()

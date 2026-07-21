@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from lfx.base.models import provider_registry
-from lfx.base.models.unified_models import get_model_providers
+from lfx.base.models.unified_models import get_model_providers, get_models_detailed
 from lfx.extension import load_extension
 from lfx.extension.manifest import ExtensionManifest
 
@@ -26,7 +26,12 @@ def fake_live_discovery(user_id, model_type):  # noqa: ARG001
     return [{"provider": "FakeCo", "name": f"fake-{model_type}", "icon": "FakeCo"}]
 
 
+def fake_catalog_loader():
+    return [{"name": "fake-static", "icon": "FakeCo", "default": True, "model_type": "llm"}]
+
+
 _LIVE_DISCOVERY_PATH = f"{__name__}:fake_live_discovery"
+_CATALOG_LOADER_PATH = f"{__name__}:fake_catalog_loader"
 
 
 def _provider_entry(**overrides) -> dict:
@@ -91,6 +96,30 @@ def test_provider_only_extension_registers_provider(tmp_path: Path):
     assert provider_registry.is_registered("FakeCo")
     assert "FakeCo" in get_model_providers()
     assert provider_registry.is_api_key_optional("FakeCo") is True
+
+
+def test_provider_manifest_registers_identity_aliases_and_static_catalog(tmp_path: Path):
+    manifest = {
+        "id": "lfx-fakeco",
+        "version": "0.1.0",
+        "name": "FakeCo Provider",
+        "lfx": {"compat": ["1"]},
+        "providers": [
+            _provider_entry(
+                provider_id="fakeco.enterprise",
+                display_name="FakeCo Enterprise",
+                aliases=["FakeCo Legacy"],
+                catalog_loader=_CATALOG_LOADER_PATH,
+            )
+        ],
+    }
+
+    result = load_extension(_write_manifest(tmp_path, manifest))
+
+    assert result.ok, (result.errors, result.warnings)
+    assert provider_registry.provider_id_for("FakeCo Legacy") == "fakeco.enterprise"
+    assert provider_registry.provider_name_for_id("fakeco.enterprise") == "FakeCo"
+    assert any(row["name"] == "fake-static" for group in get_models_detailed() for row in group)
 
 
 def test_loaded_provider_live_discovery_dispatches(tmp_path: Path):

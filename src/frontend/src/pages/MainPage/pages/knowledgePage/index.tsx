@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { RadixAriaControlsFix } from "@/components/common/radixAriaControlsFix";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -21,6 +22,7 @@ export const KnowledgePage = () => {
   const { t } = useTranslation();
   const navigate = useCustomNavigate();
   const drawerRef = useRef<HTMLDivElement>(null);
+  const drawerTriggerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -76,6 +78,10 @@ export const KnowledgePage = () => {
   }, [isDrawerOpen]);
 
   const handleKnowledgeBaseSelect = (knowledgeBase: KnowledgeBaseInfo) => {
+    drawerTriggerRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     setSelectedKnowledgeBase(knowledgeBase);
     setIsDrawerOpen(true);
   };
@@ -87,6 +93,11 @@ export const KnowledgePage = () => {
   const closeDrawer = () => {
     setIsDrawerOpen(false);
     setSelectedKnowledgeBase(null);
+    // Restore focus after the drawer unmounts so the trigger is focusable again.
+    requestAnimationFrame(() => {
+      drawerTriggerRef.current?.focus();
+      drawerTriggerRef.current = null;
+    });
   };
 
   const tabProps = {
@@ -103,6 +114,7 @@ export const KnowledgePage = () => {
 
   return (
     <div className="flex h-full w-full" data-testid="cards-wrapper">
+      <RadixAriaControlsFix />
       <div
         className={`flex h-full w-full flex-col overflow-y-auto transition-all duration-200 ${
           isDrawerOpen ? "mr-80" : ""

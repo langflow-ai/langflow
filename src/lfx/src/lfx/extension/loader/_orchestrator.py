@@ -274,14 +274,17 @@ def _register_manifest_providers(
 
     # Lazy import: keeps the loader importable without pulling in the model
     # stack at module-import time and avoids any cycle through lfx.base.models.
-    from lfx.base.models.provider_registry import ProviderSpec, register_provider
+    from lfx.base.models.provider_registry import ProviderDescriptor, ProviderOrigin, register_provider
 
     for entry in manifest.providers:
         try:
             embedding = entry.embedding
-            spec = ProviderSpec(
+            spec = ProviderDescriptor(
                 name=entry.name,
                 metadata=dict(entry.metadata),
+                provider_id=entry.provider_id,
+                display_name=entry.display_name,
+                aliases=tuple(entry.aliases),
                 model_class=(
                     (entry.model_class.module, entry.model_class.attr, entry.model_class.install_hint)
                     if entry.model_class
@@ -296,6 +299,13 @@ def _register_manifest_providers(
                 conditional_live=entry.conditional_live,
                 live_discovery=entry.live_discovery,
                 validator=entry.validator,
+                catalog_loader=entry.catalog_loader,
+                origin=ProviderOrigin(
+                    extension_id=manifest.id,
+                    extension_version=manifest.version,
+                    distribution=result.distribution,
+                    manifest_path=str(source.path),
+                ),
             )
             if not register_provider(spec):
                 result.warnings.append(
