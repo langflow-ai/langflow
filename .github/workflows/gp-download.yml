@@ -53,27 +53,6 @@ jobs:
           GP_BUNDLE: ${{ vars.GP_BUNDLE }}
         run: python download.py --target frontend --output ../../src/frontend/src/locales/
 
-      - name: Close stale translation PRs
-        uses: actions/github-script@v8
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { data: pulls } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open'
-            });
-            for (const pull of pulls) {
-              if (pull.title === "chore: update translations from Globalization Pipeline") {
-                await github.rest.pulls.update({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: pull.number,
-                  state: 'closed'
-                });
-              }
-            }
-
       - name: Create Pull Request
         id: create-pr
         uses: peter-evans/create-pull-request@v8
@@ -89,7 +68,6 @@ jobs:
             This PR was automatically created by the `gp-download` workflow.
             If no files changed, this PR will be empty and can be closed.
           branch: translations/update-gp
-          branch-suffix: timestamp
           delete-branch: true
           maintainer-can-modify: true
           add-paths: src/frontend/src/locales/*.json
@@ -154,27 +132,6 @@ jobs:
           GP_BACKEND_BUNDLE: ${{ vars.GP_BACKEND_BUNDLE }}
         run: python download.py --target backend
 
-      - name: Close stale backend translation PRs
-        uses: actions/github-script@v8
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { data: pulls } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open'
-            });
-            for (const pull of pulls) {
-              if (pull.title === "chore: update backend translations from Globalization Pipeline") {
-                await github.rest.pulls.update({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: pull.number,
-                  state: 'closed'
-                });
-              }
-            }
-
       - name: Create Pull Request
         id: create-pr
         uses: peter-evans/create-pull-request@v8
@@ -190,7 +147,6 @@ jobs:
             This PR was automatically created by the `gp-download` workflow.
             If no files changed, this PR will be empty and can be closed.
           branch: translations/update-backend-gp
-          branch-suffix: timestamp
           delete-branch: true
           maintainer-can-modify: true
           add-paths: src/backend/base/langflow/locales/*.json
