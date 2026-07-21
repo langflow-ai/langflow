@@ -7,6 +7,7 @@ content so regressions are caught without needing to run make.
 
 from __future__ import annotations
 
+import json
 import re
 
 # ---------------------------------------------------------------------------
@@ -43,6 +44,18 @@ def _patch_langflow_core_pyproject(txt: str, langflow_version: str, base_compat_
 
 def _patch_lfx_pyproject(txt: str, langflow_version: str) -> str:
     return re.sub(r'^version = ".*"', f'version = "{langflow_version}"', txt, flags=re.MULTILINE)
+
+
+def _patch_sdk_pyproject(txt: str, sdk_version: str) -> str:
+    return re.sub(r'^version = ".*"', f'version = "{sdk_version}"', txt, flags=re.MULTILINE)
+
+
+def _patch_lfx_sdk_dependency(txt: str, sdk_version: str) -> str:
+    return re.sub(r'"langflow-sdk(?:==|>=|~=)[^"]*"', f'"langflow-sdk>={sdk_version}"', txt)
+
+
+def _component_index_version_matches(txt: str, langflow_version: str) -> bool:
+    return json.loads(txt).get("version") == langflow_version
 
 
 # ---------------------------------------------------------------------------
@@ -218,6 +231,43 @@ description = "Lightweight executor for Langflow"
         result = _patch_lfx_pyproject(txt, "1.11.0")
         assert 'version = "1.11.0"' in result
         assert "Lightweight executor" in result
+
+
+# ---------------------------------------------------------------------------
+# SDK version and LFX SDK dependency
+# ---------------------------------------------------------------------------
+
+
+class TestSdkVersionSubstitution:
+    def test_updates_sdk_version(self):
+        txt = '[project]\nname = "langflow-sdk"\nversion = "0.3.0"\n'
+        result = _patch_sdk_pyproject(txt, "0.4.0")
+        assert 'version = "0.4.0"' in result
+        assert 'name = "langflow-sdk"' in result
+
+    def test_updates_lfx_sdk_dependency(self):
+        txt = 'dependencies = ["langflow-sdk~=0.3.0", "orjson>=3.10.0"]'
+        result = _patch_lfx_sdk_dependency(txt, "0.4.0")
+        assert '"langflow-sdk>=0.4.0"' in result
+        assert '"orjson>=3.10.0"' in result
+
+
+# ---------------------------------------------------------------------------
+# component-index version validation
+# ---------------------------------------------------------------------------
+
+
+class TestComponentIndexVersionValidation:
+    def test_accepts_matching_top_level_version(self):
+        index = {"entries": [], "version": "1.12.0"}
+        assert _component_index_version_matches(json.dumps(index), "1.12.0")
+
+    def test_rejects_nested_match_when_top_level_version_is_stale(self):
+        index = {
+            "entries": [["example", {"metadata": {"dependencies": [{"name": "langflow", "version": "1.12.0"}]}}]],
+            "version": "1.11.0",
+        }
+        assert not _component_index_version_matches(json.dumps(index), "1.12.0")
 
 
 # ---------------------------------------------------------------------------

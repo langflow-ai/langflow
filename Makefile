@@ -642,7 +642,7 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0 [sdk_v=0
 	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" src/lfx/pyproject.toml; then echo "$(RED)✗ LFX pyproject.toml version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "^version = \"$$SDK_VERSION\"" src/sdk/pyproject.toml; then echo "$(RED)✗ SDK pyproject.toml version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "\"langflow-sdk>=$$SDK_VERSION\"" src/lfx/pyproject.toml; then echo "$(RED)✗ LFX SDK dependency validation failed$(NC)"; exit 1; fi; \
-	if ! grep -q "\"version\": \"$$LANGFLOW_VERSION\"" src/lfx/src/lfx/_assets/component_index.json; then echo "$(RED)✗ Component index version validation failed$(NC)"; exit 1; fi; \
+	if ! python -c 'import json, sys; index = json.load(open(sys.argv[1], encoding="utf-8")); raise SystemExit(index.get("version") != sys.argv[2])' src/lfx/src/lfx/_assets/component_index.json "$$LANGFLOW_VERSION"; then echo "$(RED)✗ Component index version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "\"version\": \"$$LANGFLOW_VERSION\"" src/frontend/package.json; then echo "$(RED)✗ Frontend package.json version validation failed$(NC)"; exit 1; fi; \
 	echo "$(GREEN)✓ All versions updated successfully$(NC)"; \
 	\
