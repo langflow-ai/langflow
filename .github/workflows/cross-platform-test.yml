@@ -889,9 +889,164 @@ jobs:
           "
         shell: bash
 
+  test-core-runtime:
+    name: Core Runtime Wheel - Linux Python 3.14
+    needs: [build-if-needed]
+    if: |
+      always() &&
+      inputs.langflow-version == '' &&
+      (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: "3.14"
+
+      - name: Download langflow-sdk package artifact
+        if: inputs.sdk-artifact-name != '' || needs.build-if-needed.outputs.sdk-artifact-name != ''
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.sdk-artifact-name || needs.build-if-needed.outputs.sdk-artifact-name || 'adhoc-dist-sdk' }}
+          path: ./sdk-dist
+
+      - name: Download LFX package artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name || 'adhoc-dist-lfx' }}
+          path: ./lfx-dist
+
+      - name: Download base package artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
+          path: ./base-dist
+
+      - name: Install only core wheels
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          SDK_WHEELS=(./sdk-dist/*.whl)
+          LFX_WHEELS=(./lfx-dist/*.whl)
+          BASE_WHEELS=(./base-dist/*.whl)
+          [ ${#LFX_WHEELS[@]} -eq 1 ] || { echo "Expected one LFX wheel, found ${#LFX_WHEELS[@]}"; exit 1; }
+          [ ${#BASE_WHEELS[@]} -eq 1 ] || { echo "Expected one base wheel, found ${#BASE_WHEELS[@]}"; exit 1; }
+          [ ${#SDK_WHEELS[@]} -le 1 ] || { echo "Expected at most one SDK wheel, found ${#SDK_WHEELS[@]}"; exit 1; }
+
+          FIND_LINKS=(--find-links ./lfx-dist --find-links ./base-dist)
+          if [ ${#SDK_WHEELS[@]} -eq 1 ]; then
+            FIND_LINKS+=(--find-links ./sdk-dist)
+          fi
+
+          uv venv core-test-env --seed --python 3.14
+          uv pip install --python core-test-env/bin/python \
+            --prerelease=if-necessary-or-explicit \
+            "${FIND_LINKS[@]}" "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BASE_WHEELS[0]}"
+          uv pip check --python core-test-env/bin/python
+
+      - name: Verify core boundary and indexed imports
+        shell: bash
+        run: |
+          core-test-env/bin/python - <<'PY'
+          import importlib
+          import re
+          from importlib.metadata import distributions, entry_points
+
+          from lfx.interface.components import _read_component_index
+
+          normalize = lambda value: re.sub(r"[-_.]+", "-", value).lower()
+          installed = {normalize(dist.metadata["Name"]) for dist in distributions() if dist.metadata["Name"]}
+          assert {"langflow-base", "langflow-sdk", "lfx"} <= installed, installed
+          assert "langflow" not in installed, installed
+          extensions = sorted(name for name in installed if name.startswith("lfx-"))
+          assert not extensions, f"Extension distributions installed: {extensions}"
+          for group in ("lfx.bundles", "langflow.extensions", "langflow.plugins"):
+              assert not entry_points(group=group), f"Extension entry points registered in {group}"
+
+          index = _read_component_index()
+          assert index is not None, "Installed LFX rejected its bundled component index"
+          expected_metadata = {
+              "num_modules": len(index["entries"]),
+              "num_components": sum(len(components) for _, components in index["entries"]),
+          }
+          assert index["metadata"] == expected_metadata, (
+            f"Unexpected component index metadata: {index['metadata']} != {expected_metadata}"
+          )
+          for category, components in index["entries"]:
+              for component_name, component in components.items():
+                  module_path = component.get("metadata", {}).get("module")
+                  assert module_path, f"{category}.{component_name} has no module"
+                  module_name, class_name = module_path.rsplit(".", 1)
+                  getattr(importlib.import_module(module_name), class_name)
+          PY
+
+      - name: Boot installed core server
+        shell: bash
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          RUNTIME_DIR=$(mktemp -d)
+          export LANGFLOW_CONFIG_DIR="$RUNTIME_DIR/config"
+          export LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true
+          export LANGFLOW_AUTO_LOGIN=true
+          export DO_NOT_TRACK=true
+          LOG_FILE="$RUNTIME_DIR/server.log"
+
+          core-test-env/bin/langflow-base run \
+            --host 127.0.0.1 --port 7861 --backend-only --workers 1 >"$LOG_FILE" 2>&1 &
+          SERVER_PID=$!
+          cleanup() {
+            kill "$SERVER_PID" 2>/dev/null || true
+            wait "$SERVER_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          READY=false
+          for _ in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:7861/health_check >/dev/null 2>&1; then
+              READY=true
+              break
+            fi
+            if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+              cat "$LOG_FILE"
+              exit 1
+            fi
+            sleep 2
+          done
+          if [ "$READY" != true ]; then
+            cat "$LOG_FILE"
+            exit 1
+          fi
+
+          curl -fsS -c "$RUNTIME_DIR/cookies" http://127.0.0.1:7861/api/v1/auto_login >/dev/null
+          curl -fsS --compressed -b "$RUNTIME_DIR/cookies" \
+            http://127.0.0.1:7861/api/v1/all >"$RUNTIME_DIR/catalog.json"
+          core-test-env/bin/python - "$RUNTIME_DIR/catalog.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          from lfx.interface.components import _read_component_index
+
+          catalog = json.loads(Path(sys.argv[1]).read_text())
+          catalog.pop("component_display_names", None)
+          index = _read_component_index()
+          assert index is not None, "Installed LFX rejected its bundled component index"
+          actual_metadata = {
+              "num_modules": len(catalog),
+              "num_components": sum(len(components) for components in catalog.values()),
+          }
+          assert actual_metadata == index["metadata"], (
+              f"Unexpected API catalog metadata: {actual_metadata} != {index['metadata']}"
+          )
+          PY
+
   test-summary:
     name: Cross-Platform Test Summary
-    needs: [test-installation-stable, test-installation-experimental]
+    needs: [test-installation-stable, test-installation-experimental, test-core-runtime]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -899,9 +1054,16 @@ jobs:
         run: |
           stable_result="${{ needs.test-installation-stable.result }}"
           experimental_result="${{ needs.test-installation-experimental.result }}"
+          core_result="${{ needs.test-core-runtime.result }}"
 
           echo "Stable platforms result: $stable_result"
           echo "Experimental platforms result: $experimental_result"
+          echo "Core runtime result: $core_result"
+
+          if [ "${{ inputs.langflow-version }}" = "" ] && [ "$core_result" != "success" ]; then
+            echo "❌ Core runtime wheel test failed: $core_result"
+            exit 1
+          fi
 
           # Stable platforms must succeed, experimental can fail
           if [ "$stable_result" = "success" ]; then

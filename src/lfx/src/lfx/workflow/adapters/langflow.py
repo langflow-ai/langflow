@@ -35,6 +35,7 @@ _LANGFLOW_DURABLE_EVENTS: frozenset[str] = frozenset(
         "remove_message",
         "error",
         "end",
+        "human_input_required",
     }
 )
 

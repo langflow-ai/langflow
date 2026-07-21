@@ -397,14 +397,19 @@ class GenerateComponent(Component):
             return Data(data={"error": msg, "text": msg})
 
         try:
-            from langflow.agentic.services.agent_run_context import current_agent_run_model
+            from langflow.agentic.services.agent_run_context import (
+                current_agent_run_iterations,
+                current_agent_run_model,
+            )
             from langflow.agentic.services.user_components_context import current_user_id
 
             user_id = current_user_id()
             model = current_agent_run_model() or {}
+            iterations_limit = current_agent_run_iterations()
         except ImportError:
             user_id = None
             model = {}
+            iterations_limit = None
 
         # Give the internal generation sub-flow a valid (ephemeral) flow id
         # so its tracing doesn't log "Invalid flow_id ... None" and persist
@@ -412,6 +417,13 @@ class GenerateComponent(Component):
         from lfx.mcp.tool_cache import reset_tool_cache
 
         flow_id = str(uuid4())
+
+        # Without ITERATIONS_LIMIT the nested assistant keeps the default step
+        # budget, defeating /iterations N for component_then_flow requests.
+        nested_globals = {"FLOW_ID": flow_id}
+        if iterations_limit is not None:
+            nested_globals["ITERATIONS_LIMIT"] = str(iterations_limit)
+            logger.info("generate_component: nested subflow inherits step budget %s", iterations_limit)
 
         async def _isolated_generation() -> dict:
             # This nested pipeline drains flow events and resets the
@@ -424,7 +436,7 @@ class GenerateComponent(Component):
             return await execute_flow_with_validation(
                 flow_filename=LANGFLOW_ASSISTANT_FLOW,
                 input_value=spec,
-                global_variables={"FLOW_ID": flow_id},
+                global_variables=nested_globals,
                 user_id=user_id,
                 provider=model.get("provider"),
                 model_name=model.get("model_name"),

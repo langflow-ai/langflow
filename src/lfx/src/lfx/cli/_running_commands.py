@@ -2,6 +2,7 @@
 
 import typer
 
+from lfx.cli import _serve_help
 from lfx.upgrade.cli_gate import UpgradeFlowMode
 
 
@@ -84,6 +85,17 @@ def register(app: typer.Typer) -> None:
                 "'safe' auto-applies safe upgrades; aborts on breaking or blocked components."
             ),
         ),
+        human_input: bool | None = typer.Option(
+            None,
+            "--human-input/--no-human-input",
+            help=(
+                "Interactive human-in-the-loop. Default auto-enables it when the flow has a "
+                "pausing node (e.g. HumanInput) and the terminal is interactive; the run then "
+                "prompts at each pause. Use --no-human-input to disable. Interactive-session "
+                "only: checkpoints are in-memory, so a paused run cannot be resumed later or "
+                "from another process. Non-interactive runs do not pause (a warning is printed)."
+            ),
+        ),
     ) -> None:
         """Run a flow directly (lazy-loaded)."""
         from pathlib import Path
@@ -108,6 +120,7 @@ def register(app: typer.Typer) -> None:
             timing=timing,
             session_id=session_id,
             upgrade_flow=upgrade_flow,
+            human_input=human_input,
         )
 
     @app.command(name="serve", help="Serve a flow as an API", rich_help_panel="Running")
@@ -126,7 +139,8 @@ def register(app: typer.Typer) -> None:
             1,
             "--workers",
             "-w",
-            help="Number of uvicorn worker processes. Use with --flow-dir for multi-worker flow sharing.",
+            help="Number of worker processes (gunicorn on Unix, uvicorn on Windows). "
+            "Use with --flow-dir for multi-worker flow sharing.",
         ),
         verbose: bool = typer.Option(False, "--verbose", "-v", help="Show diagnostic output and execution details"),
         env_file: str | None = typer.Option(
@@ -147,12 +161,17 @@ def register(app: typer.Typer) -> None:
         flow_dir: str | None = typer.Option(
             None,
             "--flow-dir",
-            help=(
-                "Directory for filesystem-backed flow storage. "
-                "All uvicorn workers sharing this path will serve the same flows. "
-                "Use /tmp/lfx-flows for single-pod sharing or a PVC mount for cross-pod. "
-                "Defaults to in-memory only when omitted."
-            ),
+            help=_serve_help.FLOW_DIR,
+        ),
+        max_requests: int | None = typer.Option(
+            None,
+            "--max-requests",
+            help=_serve_help.MAX_REQUESTS,
+        ),
+        timeout: int | None = typer.Option(
+            None,
+            "--timeout",
+            help=_serve_help.TIMEOUT,
         ),
         *,
         stdin: bool = typer.Option(
@@ -177,11 +196,17 @@ def register(app: typer.Typer) -> None:
         no_env_fallback: bool = typer.Option(
             False,
             "--no-env-fallback/--env-fallback",
-            help=(
-                "Disable os.environ fallback for credential variables. "
-                "Variables not supplied via global_vars on each request resolve to None "
-                "instead of reading from the process environment."
-            ),
+            help=_serve_help.NO_ENV_FALLBACK,
+        ),
+        reset_environ: bool = typer.Option(
+            False,
+            "--reset-environ/--no-reset-environ",
+            help=_serve_help.RESET_ENVIRON,
+        ),
+        sync_workers: bool = typer.Option(
+            False,
+            "--use-sync-workers/--use-async-workers",
+            help=_serve_help.SYNC_WORKERS,
         ),
         identity_mode: str = typer.Option(
             "off",
@@ -251,6 +276,10 @@ def register(app: typer.Typer) -> None:
             check_variables=check_variables,
             upgrade_flow=upgrade_flow,
             no_env_fallback=no_env_fallback,
+            max_requests=max_requests,
+            reset_environ=reset_environ,
+            sync_workers=sync_workers,
+            timeout=timeout,
             identity_mode=identity_mode,
             identity_jwt_issuer=identity_jwt_issuer,
             identity_jwt_audience=identity_jwt_audience,

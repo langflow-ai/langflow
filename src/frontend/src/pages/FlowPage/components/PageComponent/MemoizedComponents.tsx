@@ -19,13 +19,18 @@ export const MemoizedBackground = memo(() => (
 interface MemoizedCanvasControlsProps {
   selectedNode: AllNodeType | null;
   isAgentWorking?: boolean;
+  isReadOnly?: boolean;
 }
 
 export const MemoizedCanvasControls = memo(
-  ({ selectedNode, isAgentWorking }: MemoizedCanvasControlsProps) => {
+  ({
+    selectedNode,
+    isAgentWorking,
+    isReadOnly,
+  }: MemoizedCanvasControlsProps) => {
     const currentFlow = useFlowStore(useShallow((state) => state.currentFlow));
     const isLocked = currentFlow?.locked ?? false;
-    const effectiveLocked = isLocked || isAgentWorking;
+    const effectiveLocked = isLocked || isAgentWorking || isReadOnly;
 
     return (
       <CanvasControls

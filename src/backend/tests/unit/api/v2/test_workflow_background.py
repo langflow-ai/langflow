@@ -191,3 +191,51 @@ async def test_background_events_replay_durable(client, created_api_key, bg_flow
             if b'"event": "end"' in body or b"end_vertex" in body:
                 break
     assert b"build_start" in body or b"end_vertex" in body
+
+
+async def test_finalize_job_status_never_overwrites_suspended():
+    """A suspended (HITL) job must survive the AGUI finalize path unchanged.
+
+    HITL suspend runs on the durable substrate, which skips finalization while
+    ``paused``, so a SUSPENDED job should never reach ``_finalize_job_status``.
+    This is the defense-in-depth guard: if one ever did, finalizing it to
+    COMPLETED/FAILED would clobber the resumable state and silently break resume.
+    A real suspend cannot exercise this AGUI path, so the guard is mocked.
+    """
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, patch
+    from uuid import uuid4
+
+    from langflow.api.v2 import workflow_background as wb
+    from lfx.schema.workflow import JobStatus
+
+    job_uuid = uuid4()
+    suspended_job = SimpleNamespace(status=JobStatus.SUSPENDED)
+    fake_service = SimpleNamespace(
+        get_job_by_job_id=AsyncMock(return_value=suspended_job),
+        update_job_status=AsyncMock(),
+    )
+    with patch.object(wb, "get_job_service", return_value=fake_service):
+        await wb._finalize_job_status(job_uuid, JobStatus.COMPLETED)
+
+    fake_service.update_job_status.assert_not_awaited()
+
+
+async def test_finalize_job_status_still_writes_terminal_for_running_job():
+    """The guard must NOT block normal finalization of a live run."""
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, patch
+    from uuid import uuid4
+
+    from langflow.api.v2 import workflow_background as wb
+    from lfx.schema.workflow import JobStatus
+
+    running_job = SimpleNamespace(status=JobStatus.IN_PROGRESS)
+    fake_service = SimpleNamespace(
+        get_job_by_job_id=AsyncMock(return_value=running_job),
+        update_job_status=AsyncMock(),
+    )
+    with patch.object(wb, "get_job_service", return_value=fake_service):
+        await wb._finalize_job_status(uuid4(), JobStatus.COMPLETED)
+
+    fake_service.update_job_status.assert_awaited_once()

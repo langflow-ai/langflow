@@ -3,13 +3,14 @@
 These mirror the langflow-side regression tests in
 ``src/backend/tests/unit/test_process.py`` so the two copies of ``apply_tweaks``
 (``langflow.processing.process`` used by the API and ``lfx.processing.process``)
-cannot drift. They guard the Tweaks-API code-injection gate (CWE-94): a tweak must
-never override an executable/sandbox input, while leaving benign fields tweakable.
+cannot drift. They guard Tweaks-API security boundaries: a tweak must never
+override an executable/sandbox input or repoint a protected sink, while leaving
+benign fields tweakable.
 """
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 from lfx.processing.process import apply_tweaks
 from lfx.utils.flow_validation import CODE_EXECUTION_COMPONENT_TYPES, CODE_EXECUTION_FIELD_NAMES
@@ -27,6 +28,37 @@ def test_apply_tweaks_applies_ordinary_field():
     node = _template_node({"param1": {"value": "old", "type": "str"}})
     apply_tweaks(node, {"param1": "new"})
     assert node["data"]["node"]["template"]["param1"]["value"] == "new"
+
+
+def test_apply_tweaks_blocks_sql_connection_and_query():
+    """A run caller cannot repoint the stored SQL sink or replace its query."""
+    node = _template_node(
+        {
+            "database_url": {"value": "postgresql://stored/db", "type": "str"},
+            "query": {"value": "SELECT 1", "type": "str"},
+            "include_columns": {"value": True, "type": "bool"},
+        },
+        node_type="SQLComponent",
+    )
+
+    with patch("lfx.processing.process.logger") as mock_logger:
+        apply_tweaks(
+            node,
+            {
+                "database_url": "sqlite:////etc/passwd",
+                "query": "DROP TABLE users",
+                "include_columns": False,
+            },
+        )
+
+    template = node["data"]["node"]["template"]
+    assert template["database_url"]["value"] == "postgresql://stored/db"
+    assert template["query"]["value"] == "SELECT 1"
+    assert template["include_columns"]["value"] is False
+    assert mock_logger.warning.call_args_list == [
+        call("Security: refusing to override protected field 'database_url' via tweaks."),
+        call("Security: refusing to override protected field 'query' via tweaks."),
+    ]
 
 
 def test_apply_tweaks_blocks_code_named_field():
@@ -71,6 +103,18 @@ def test_apply_tweaks_blocks_python_interpreter_code_and_imports():
 
     assert node["data"]["node"]["template"]["python_code"]["value"] == "print('safe')"
     assert node["data"]["node"]["template"]["global_imports"]["value"] == "math"
+
+
+def test_apply_tweaks_blocks_python_function_code_for_all_aliases():
+    """Python Function aliases must not bypass the by-name code-field guard."""
+    for node_type in ("Python Function", "PythonFunction", "PythonFunctionComponent"):
+        node = _template_node(
+            {"function_code": {"value": "def run():\n    return 'safe'", "type": "str"}},
+            node_type=node_type,
+        )
+        apply_tweaks(node, {"function_code": "def run():\n    return __import__('os').system('id')"})
+
+        assert node["data"]["node"]["template"]["function_code"]["value"] == "def run():\n    return 'safe'"
 
 
 def test_apply_tweaks_allows_benign_fields_on_code_execution_component():
@@ -141,12 +185,21 @@ def test_apply_tweaks_smart_transform_blocks_instruction_allows_data():
 #   - CSVAgent: allow_dangerous_code enables LangChain Python execution
 #   - PythonREPLComponent (Python Interpreter): python_code exec + global_imports sandbox
 #   - PythonREPLTool (Python REPL): code exec (global block) + global_imports sandbox
+#   - PythonFunctionComponent (Python Function): function_code exec
 #   - Smart Transform (LambdaFilterComponent): filter_instruction → eval()'d lambda
 #   - PythonCodeStructuredTool (removed): tool_code exec input, type retained
 _EXPECTED_CODE_FIELDS_BY_TYPE: dict[str, set[str]] = {
     "CSVAgent": {"allow_dangerous_code"},
+    "LambdaFilterComponent": {"filter_instruction"},
+    "Python Code Structured": {"tool_code"},
+    "Python Function": {"function_code"},
+    "Python Interpreter": {"python_code", "global_imports"},
+    "Python REPL": {"code", "global_imports"},
+    "PythonFunction": {"function_code"},
+    "PythonFunctionComponent": {"function_code"},
     "PythonREPLComponent": {"python_code", "global_imports"},
     "PythonREPLTool": {"code", "global_imports"},
+    "PythonREPLToolComponent": {"code", "global_imports"},
     "Smart Transform": {"filter_instruction"},
     "PythonCodeStructuredTool": {"tool_code"},
 }
@@ -154,8 +207,10 @@ _EXPECTED_CODE_FIELDS_BY_TYPE: dict[str, set[str]] = {
 # Code-execution components with no tweakable code/sandbox field. They are still
 # blocked on unauthenticated public builds by CODE_EXECUTION_COMPONENT_TYPES.
 _CODE_EXECUTION_TYPES_WITHOUT_TWEAK_CODE_FIELDS = {
+    "CodeAct Agent (Smolagents)",
     "CodeActAgentSmolagents",
     "Cuga",
+    "OpenDsStar Agent",
     "OpenDsStarAgent",
 }
 

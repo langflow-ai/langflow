@@ -124,6 +124,18 @@ describe("DialogContent", () => {
     expect(screen.getByText("Dialog")).toBeInTheDocument();
   });
 
+  it("should_skip_fallback_title_when_hideTitle_is_set", () => {
+    renderWithProviders(
+      <Dialog open>
+        <DialogContent hideTitle hideDescription>
+          <p>Content provided by a composed header</p>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    expect(screen.queryByText("Dialog")).not.toBeInTheDocument();
+  });
+
   it("should_restore_focus_to_opener_on_escape_without_dialog_trigger", async () => {
     const user = userEvent.setup();
 

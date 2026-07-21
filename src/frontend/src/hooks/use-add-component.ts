@@ -1,6 +1,7 @@
 import { useStoreApi } from "@xyflow/react";
 import { useCallback } from "react";
 import { NODE_WIDTH } from "@/constants/constants";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
@@ -13,6 +14,8 @@ export function useAddComponent() {
   const paste = useFlowStore((state) => state.paste);
   const filterEdge = useFlowStore((state) => state.getFilterEdge);
   const filterType = useFlowStore((state) => state.filterType);
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isReadOnly = useIsFlowReadOnly(currentFlowId);
 
   const addComponent = useCallback(
     (
@@ -20,6 +23,7 @@ export function useAddComponent() {
       type: string,
       position?: { x: number; y: number },
     ) => {
+      if (isReadOnly) return;
       track("Component Added", { componentType: component.display_name });
 
       const {
@@ -73,7 +77,7 @@ export function useAddComponent() {
 
       paste({ nodes: [newNode], edges: [] }, pos);
     },
-    [store, paste, filterEdge],
+    [store, paste, filterEdge, filterType, isReadOnly],
   );
 
   return addComponent;
