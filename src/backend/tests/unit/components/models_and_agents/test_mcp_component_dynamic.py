@@ -14,6 +14,7 @@ Covers:
 """
 
 import asyncio
+from copy import deepcopy
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -148,6 +149,29 @@ class TestTtlToolCacheIsolation:
         a._ttl_tool_cache["k"] = (0.0, [_make_tool("leak")])
 
         assert "k" not in b._ttl_tool_cache
+
+    def test_invocation_copy_shares_cache_with_source_component(self) -> None:
+        component = MCPToolsComponent()
+
+        invocation_copy = deepcopy(component)
+
+        assert invocation_copy._ttl_tool_cache is component._ttl_tool_cache
+
+    @pytest.mark.asyncio
+    async def test_sequential_invocation_copies_reuse_cached_tools(self) -> None:
+        component = MCPToolsComponent(mcp_server={"name": "srv"}, headers=[])
+        first_invocation = deepcopy(component)
+        second_invocation = deepcopy(component)
+        tools = [_make_tool("cached")]
+
+        update_tool_list = AsyncMock(return_value=(tools, {"name": "srv", "config": {}}))
+        with patch.object(MCPToolsComponent, "update_tool_list", new=update_tool_list):
+            first_result = await first_invocation._get_tools()
+            second_result = await second_invocation._get_tools()
+
+        assert first_result is tools
+        assert second_result is tools
+        update_tool_list.assert_awaited_once()
 
 
 class TestGetToolsTtlCache:
