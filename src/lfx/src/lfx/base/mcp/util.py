@@ -1309,15 +1309,11 @@ class MCPSessionManager:
         # Wait for session to be ready (use longer timeout for remote connections)
         try:
             session = await asyncio.wait_for(session_future, timeout=30.0)
+        except asyncio.CancelledError:
+            await self._cancel_session_task(task)
+            raise
         except asyncio.TimeoutError as timeout_err:
-            # Clean up the failed task
-            if not task.done():
-                task.cancel()
-                import contextlib
-
-                with contextlib.suppress(asyncio.CancelledError):
-                    await task
-            self._background_tasks.discard(task)
+            await self._cancel_session_task(task)
             msg = f"Timeout waiting for STDIO session {session_id} to initialize"
             await logger.aerror(msg)
             raise ValueError(msg) from timeout_err
@@ -1479,15 +1475,21 @@ class MCPSessionManager:
                 return session, task, transport_used, sse_preference_locked[0]
             msg = f"Session {session_id} established but transport not recorded"
             raise ValueError(msg)
+        except asyncio.CancelledError:
+            await self._cancel_session_task(task)
+            raise
         except asyncio.TimeoutError as timeout_err:
-            if not task.done():
-                task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await task
-            self._background_tasks.discard(task)
+            await self._cancel_session_task(task)
             msg = f"Timeout waiting for Streamable HTTP/SSE session {session_id} to initialize"
             await logger.aerror(msg)
             raise ValueError(msg) from timeout_err
+
+    async def _cancel_session_task(self, task: asyncio.Task) -> None:
+        """Cancel and reap a session task that failed before registration."""
+        if not task.done():
+            task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        self._background_tasks.discard(task)
 
     async def _cleanup_session_by_id(self, server_key: str, session_id: str):
         """Clean up a specific session by server key and session ID.
