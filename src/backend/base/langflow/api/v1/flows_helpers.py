@@ -24,7 +24,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.api.utils import build_content_disposition, normalize_flow_for_export, remove_api_keys
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
-from langflow.services.database.models.flow.guards import LockedFlowError, ensure_flow_update_allowed
+from langflow.services.database.models.flow.guards import (
+    LockedFlowError,
+    ensure_flow_update_allowed,
+    lock_flow_for_update,
+)
 from langflow.services.database.models.flow.model import (
     Flow,
     FlowCreate,
@@ -396,6 +400,8 @@ async def _update_existing_flow(
     actor. This mirrors the cross-user semantics already enforced by
     ``_patch_flow``.
     """
+    await lock_flow_for_update(session, existing_flow)
+
     settings_service = get_settings_service()
     actor_user_id = current_user.id
     owner_user_id: UUID = existing_flow.user_id
@@ -539,6 +545,8 @@ async def _patch_flow(
     silently move the flow into the actor's folder or write into the actor's
     fs namespace; the actor cannot change ownership-bound state at all.
     """
+    await lock_flow_for_update(session, db_flow)
+
     settings_service = get_settings_service()
 
     owner_user_id: UUID = db_flow.user_id

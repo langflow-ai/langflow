@@ -23,7 +23,7 @@ from langflow.agentic.services.assistant_service import execute_flow_with_valida
 from langflow.agentic.services.flow_types import LANGFLOW_ASSISTANT_FLOW
 from langflow.api.v1.flows import _new_flow, _save_flow_to_fs
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.database.models.flow.guards import ensure_flow_unlocked
+from langflow.services.database.models.flow.guards import ensure_flow_unlocked, lock_flow_for_update
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.deps import get_storage_service
 
@@ -211,9 +211,9 @@ async def run_assistant_and_persist(
 
     if canvas.changed:
         if not created_new:
-            # The assistant can run for a while. Refresh the lock immediately
-            # before persisting so a concurrent lock toggle wins the race.
-            await session.refresh(flow, attribute_names=["locked"])
+            # The assistant can run for a while. Re-read under a row lock so a
+            # concurrent lock toggle and this write are ordered atomically.
+            await lock_flow_for_update(session, flow)
             ensure_flow_unlocked(flow)
         flow_data = working_snapshot["data"] if working_snapshot else canvas.data
         # Headless MCP has no UI to apply an edit_field review proposal, so apply

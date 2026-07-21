@@ -286,7 +286,6 @@ class TestUpdateComponentFieldValue:
         assert result["success"] is False
         assert "permission" in result["error"].lower()
 
-    @pytest.mark.asyncio
     async def test_should_reject_update_when_fresh_database_row_is_locked(self):
         """The direct MCP DB path must honor a lock acquired after lookup."""
         flow = _make_flow()
@@ -317,6 +316,7 @@ class TestUpdateComponentFieldValue:
 
         assert result["success"] is False
         assert result["error"] == "Flow is locked. Unlock it before making changes."
+        mock_session.refresh.assert_awaited_once_with(db_flow, with_for_update=True)
         mock_session.commit.assert_not_awaited()
 
 

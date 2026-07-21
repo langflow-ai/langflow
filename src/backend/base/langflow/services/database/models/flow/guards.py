@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
     from langflow.services.database.models.flow.model import Flow
 
 LOCKED_FLOW_DETAIL = "Flow is locked. Unlock it before making changes."
@@ -14,6 +16,11 @@ LOCKED_FLOW_DETAIL = "Flow is locked. Unlock it before making changes."
 
 class LockedFlowError(RuntimeError):
     """Raised when a mutation targets a locked flow."""
+
+
+async def lock_flow_for_update(session: AsyncSession, flow: Flow) -> None:
+    """Refresh *flow* while holding its database row lock until transaction end."""
+    await session.refresh(flow, with_for_update=True)
 
 
 def ensure_flow_unlocked(flow: Flow) -> None:
