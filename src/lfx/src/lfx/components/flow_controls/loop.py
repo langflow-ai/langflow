@@ -180,6 +180,7 @@ class LoopComponent(Component):
             start_edge=start_edge,
             end_vertex_id=end_vertex_id,
             event_manager=event_manager,
+            loop_id=self._id,
         )
 
     async def _iterate(self) -> list[Data]:

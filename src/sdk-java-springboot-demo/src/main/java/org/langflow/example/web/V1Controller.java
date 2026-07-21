@@ -42,14 +42,18 @@ public class V1Controller {
         SseEmitter emitter = new SseEmitter(0L);
         langflowV1Client.stream(flowId, new RunRequest(inputValue)).subscribe(new Subscriber<>() {
             private Subscription subscription;
+            @Override
             public void onSubscribe(Subscription value) { subscription = value; value.request(1); }
+            @Override
             public void onNext(StreamChunk chunk) {
                 try {
                     emitter.send(SseEmitter.event().name(chunk.event()).data(chunk));
                     subscription.request(1);
                 } catch (IOException error) { subscription.cancel(); emitter.completeWithError(error); }
             }
+            @Override
             public void onError(Throwable error) { emitter.completeWithError(error); }
+            @Override
             public void onComplete() { emitter.complete(); }
         });
         return emitter;

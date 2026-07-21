@@ -36,8 +36,10 @@ from langflow.services.tracing.validation import sanitize_query_string
 
 logger = logging.getLogger(__name__)
 
-# Keeps the API responsive when the trace table doesn't exist yet or the DB is slow at startup.
-DB_TIMEOUT = 5.0
+# List queries are lightweight, while a trace detail may transfer large span
+# input/output payloads from a remote database and needs a larger decode budget.
+TRACE_LIST_DB_TIMEOUT = 30.0
+TRACE_DETAIL_DB_TIMEOUT = 30.0
 
 router = APIRouter(prefix="/monitor/traces", tags=["Traces"])
 
@@ -86,11 +88,13 @@ async def get_traces(
                 effective_page,
                 size,
             ),
-            timeout=DB_TIMEOUT,
+            timeout=TRACE_LIST_DB_TIMEOUT,
         )
     except asyncio.TimeoutError:
-        logger.warning("Traces query timed out after %ss (table may not exist or DB is slow)", DB_TIMEOUT)
-        return TraceListResponse(traces=[], total=0, pages=0)
+        logger.warning(
+            "Traces query timed out after %ss (table may not exist or DB is slow)", TRACE_LIST_DB_TIMEOUT
+        )
+        raise HTTPException(status_code=504, detail="Trace query timed out") from None
     except (OperationalError, ProgrammingError) as e:
         logger.debug("Database error getting traces (table may not exist): %s", e)
         return TraceListResponse(traces=[], total=0, pages=0)
@@ -116,14 +120,14 @@ async def get_trace(
     try:
         result = await asyncio.wait_for(
             fetch_single_trace(current_user.id, trace_id),
-            timeout=DB_TIMEOUT,
+            timeout=TRACE_DETAIL_DB_TIMEOUT,
         )
         if result is None:
             raise HTTPException(status_code=404, detail="Trace not found")
     except HTTPException:
         raise
     except asyncio.TimeoutError:
-        logger.warning("Single trace query timed out after %ss", DB_TIMEOUT)
+        logger.warning("Single trace query timed out after %ss", TRACE_DETAIL_DB_TIMEOUT)
         raise HTTPException(status_code=504, detail="Database query timed out") from None
     except (OperationalError, ProgrammingError) as e:
         logger.debug("Database error getting trace: %s", e)

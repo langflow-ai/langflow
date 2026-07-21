@@ -10,6 +10,7 @@ from langflow.services.tracing.service import (
     component_context_var,
     trace_context_var,
 )
+from lfx.graph.graph.base import Graph, current_execution_context
 from lfx.services.settings.base import Settings
 from lfx.services.settings.service import SettingsService
 
@@ -308,6 +309,145 @@ async def test_trace_component(tracing_service, mock_component):
         assert tracer.end_trace_list[0]["logs"] == component_context.logs[trace_name]
 
     # Cleanup
+    await tracing_service.end_tracers({})
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
+async def test_trace_component_uses_loop_iteration_hierarchy(tracing_service, mock_component):
+    """Loop body nodes get unique span IDs and iteration-parent metadata."""
+    mock_component.graph.execution_context = {
+        "loop_id": "loop-1",
+        "iteration_index": 1,
+        "iteration_count": 3,
+    }
+    await tracing_service.start_tracers(uuid.uuid4(), "run", "user", "session", "project")
+
+    async with tracing_service.trace_component(mock_component, "Parser (test_vertex_id)", {"text": "input"}) as ts:
+        ts.set_outputs("Parser (test_vertex_id)", {"text": "output"})
+
+    await asyncio.sleep(0.1)
+    trace_context = trace_context_var.get()
+    expected_id = "test_vertex_id:loop:loop-1:iteration:1"
+    for tracer in trace_context.tracers.values():
+        started = tracer.add_trace_list[0]
+        assert started["trace_id"] == expected_id
+        assert started["metadata"]["langflow.loop.iteration_span_id"] == "loop-1:iteration:1"
+        assert started["metadata"]["langflow.loop.parent_span_id"] == "loop-1"
+        assert tracer.end_trace_list[0]["trace_id"] == expected_id
+        assert tracer.end_trace_list[0]["outputs"] == {"text": "output"}
+
+    await tracing_service.end_tracers({})
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
+async def test_trace_loop_iteration_has_real_start_and_end(tracing_service):
+    await tracing_service.start_tracers(uuid.uuid4(), "run", "user", "session", "project")
+
+    async with tracing_service.trace_loop_iteration(
+        loop_id="loop-1",
+        iteration_index=0,
+        iteration_count=2,
+        inputs={"item": "input"},
+    ) as iteration:
+        iteration.set_outputs({"result": "output"})
+
+    await asyncio.sleep(0.1)
+    trace_context = trace_context_var.get()
+    for tracer in trace_context.tracers.values():
+        started = tracer.add_trace_list[0]
+        assert started["trace_id"] == "loop-1:iteration:0"
+        assert started["trace_name"] == "Iteration 1 / 2"
+        assert started["metadata"]["langflow.loop.is_iteration"] is True
+        assert tracer.end_trace_list[0]["trace_id"] == "loop-1:iteration:0"
+        assert tracer.end_trace_list[0]["outputs"] == {"result": "output"}
+
+    await tracing_service.end_tracers({})
+
+
+@pytest.mark.asyncio
+async def test_loop_subgraph_reuses_parent_trace_context():
+    """Starting each Loop iteration must not replace the parent graph trace."""
+    graph = Graph(flow_id=str(uuid.uuid4()), flow_name="loop-subgraph")
+    graph._is_subgraph = True
+    graph._run_id = str(uuid.uuid4())
+    graph._tracing_service = AsyncMock()
+    graph._tracing_service_initialized = True
+
+    await graph.initialize_run()
+
+    graph._tracing_service.start_tracers.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
+async def test_all_loop_iteration_children_and_post_loop_component_are_traced(tracing_service, mock_component):
+    """Every iteration child is unique and tracing continues after the Loop."""
+    await tracing_service.start_tracers(uuid.uuid4(), "run", "user", "session", "project")
+
+    for iteration_index in range(3):
+        async with tracing_service.trace_loop_iteration(
+            loop_id="loop-1",
+            iteration_index=iteration_index,
+            iteration_count=3,
+            inputs={"item": iteration_index},
+        ):
+            token = current_execution_context.set(
+                {"loop_id": "loop-1", "iteration_index": iteration_index, "iteration_count": 3}
+            )
+            try:
+                async with tracing_service.trace_component(
+                    mock_component,
+                    "Parser (test_vertex_id)",
+                    {"item": iteration_index},
+                ):
+                    pass
+            finally:
+                current_execution_context.reset(token)
+
+    async with tracing_service.trace_component(mock_component, "Parser (test_vertex_id)", {"post_loop": True}):
+        pass
+
+    await asyncio.sleep(0.1)
+    trace_context = trace_context_var.get()
+    expected_ids = [
+        "loop-1:iteration:0",
+        "test_vertex_id:loop:loop-1:iteration:0",
+        "loop-1:iteration:1",
+        "test_vertex_id:loop:loop-1:iteration:1",
+        "loop-1:iteration:2",
+        "test_vertex_id:loop:loop-1:iteration:2",
+        "test_vertex_id",
+    ]
+    for tracer in trace_context.tracers.values():
+        assert [call["trace_id"] for call in tracer.add_trace_list] == expected_ids
+
+    await tracing_service.end_tracers({})
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
+async def test_trace_component_uses_active_async_loop_context(tracing_service, mock_component):
+    """Cloned Loop subgraphs propagate iteration metadata through the active task."""
+    mock_component.graph.execution_context = None
+    token = current_execution_context.set(
+        {"loop_id": "loop-async", "iteration_index": 2, "iteration_count": 4}
+    )
+    try:
+        await tracing_service.start_tracers(uuid.uuid4(), "run", "user", "session", "project")
+        async with tracing_service.trace_component(mock_component, "Parser (test_vertex_id)", {"text": "input"}):
+            pass
+
+        await asyncio.sleep(0.1)
+        trace_context = trace_context_var.get()
+        for tracer in trace_context.tracers.values():
+            started = tracer.add_trace_list[0]
+            assert started["trace_id"] == "test_vertex_id:loop:loop-async:iteration:2"
+            assert started["metadata"]["langflow.loop.iteration_span_id"] == "loop-async:iteration:2"
+    finally:
+        current_execution_context.reset(token)
+
     await tracing_service.end_tracers({})
 
 

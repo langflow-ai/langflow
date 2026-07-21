@@ -9,6 +9,27 @@ interface SpanTreeProps {
   onSelectSpan: (span: Span) => void;
 }
 
+const LOOP_ITERATION_NAME = /^Iteration \d+ \/ \d+$/;
+
+function getInitiallyExpandedIds(spans: Span[]): Set<string> {
+  const expanded = new Set<string>();
+
+  const visit = (span: Span, isRoot = false) => {
+    if (isRoot) expanded.add(span.id);
+    const iterationChildren = span.children.filter((child) =>
+      LOOP_ITERATION_NAME.test(child.name),
+    );
+    if (iterationChildren.length > 0) {
+      expanded.add(span.id);
+      iterationChildren.forEach((iteration) => expanded.add(iteration.id));
+    }
+    span.children.forEach((child) => visit(child));
+  };
+
+  spans.forEach((span) => visit(span, true));
+  return expanded;
+}
+
 /**
  * Recursive tree component for rendering hierarchical spans
  * Manages expand/collapse state for each node
@@ -20,12 +41,9 @@ export function SpanTree({
 }: SpanTreeProps) {
   // Track which spans are expanded (default: root level expanded)
   const { t } = useTranslation();
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
-    const initial = new Set<string>();
-    // Expand root level spans by default
-    spans.forEach((span) => initial.add(span.id));
-    return initial;
-  });
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() =>
+    getInitiallyExpandedIds(spans),
+  );
 
   const toggleExpand = useCallback((spanId: string) => {
     setExpandedIds((prev) => {

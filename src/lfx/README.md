@@ -443,6 +443,30 @@ uv run lfx serve my-flow.json --upgrade-flow=safe
 
 The `lfx run` command runs a flow from a JSON file without serving it, and the output is sent to `stdout`. Input to `lfx run` can be a path to the JSON file, inline JSON passed with `--input-value`, or read from `stdin`. No Langflow API key is required.
 
+### Run a flow JSON in Docker
+
+Build the one-shot `runner` target from the repository root:
+
+```bash
+docker build --target runner -f src/lfx/docker/Dockerfile -t lfx-runner .
+```
+
+Mount the Flow JSON directory read-only and pass the JSON path and input:
+
+```bash
+docker run --rm \
+  -v "$PWD/flows:/flows:ro" \
+  lfx-runner /flows/my-flow.json "Hello world"
+```
+
+Pass component credentials through environment variables, not through flow JSON:
+
+```bash
+docker run --rm --env OPENAI_API_KEY \
+  -v "$PWD/flows:/flows:ro" \
+  lfx-runner /flows/my-flow.json "Hello world" --format result
+```
+
 This example uses the **Agent** component's built-in OpenAI model, which requires an OpenAI API key. If you want to use a different provider, edit the model provider, model name, and credentials accordingly.
 
 1. Export your variables in the same terminal session where you'll run the flow:

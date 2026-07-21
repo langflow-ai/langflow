@@ -178,6 +178,15 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
+@asynccontextmanager
+async def session_scope_readonly() -> AsyncGenerator[AsyncSession, None]:
+    """Manage a read-only async session without committing on exit."""
+    from lfx.services.deps import session_scope_readonly as lfx_session_scope_readonly
+
+    async with lfx_session_scope_readonly() as session:
+        yield session
+
+
 def get_cache_service() -> Union[CacheService, AsyncBaseCacheService]:  # noqa: UP007
     """Retrieves the cache service from the service manager.
 

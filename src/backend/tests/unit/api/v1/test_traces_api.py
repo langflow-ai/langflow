@@ -113,16 +113,15 @@ class TestGetTraces:
         assert body["pages"] == 1
         assert len(body["traces"]) == 1
 
-    def test_should_return_empty_list_on_timeout(self, client: TestClient):
+    def test_should_return_gateway_timeout_on_timeout(self, client: TestClient):
         async def _fetch(*_args, **_kwargs):
             raise asyncio.TimeoutError
 
         with patch("langflow.api.v1.traces.fetch_traces", side_effect=_fetch):
             resp = client.get(self._PATH)
 
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body == {"traces": [], "total": 0, "pages": 0}
+        assert resp.status_code == 504
+        assert resp.json() == {"detail": "Trace query timed out"}
 
     def test_should_return_empty_list_on_operational_error(self, client: TestClient):
         async def _fetch(*_args, **_kwargs):

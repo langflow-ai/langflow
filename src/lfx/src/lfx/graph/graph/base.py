@@ -49,6 +49,14 @@ INPUT_TYPE_COMPONENT_TYPES = {
     "text": {InterfaceComponentTypes.TextInput.value},
 }
 
+# The component instance used while executing a cloned Loop subgraph is not
+# guaranteed to expose that subgraph through ``component.graph`` at tracing
+# time. Keep the per-iteration metadata in the active async task as the
+# authoritative runtime source instead.
+current_execution_context: contextvars.ContextVar[dict[str, Any] | None] = contextvars.ContextVar(
+    "current_execution_context",
+    default=None,
+)
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable, Generator, Iterable
     from typing import Any
@@ -89,6 +97,7 @@ class Graph:
         self._start = start
         self._state_model = None
         self._end = end
+        self.execution_context: dict[str, Any] | None = None
         self._prepared = False
         self._runs = 0
         self._updates = 0
@@ -374,9 +383,11 @@ class Graph:
         config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
         *,
+        execution_context: dict[str, Any] | None = None,
         reset_output_values: bool = True,
         fallback_to_env_vars: bool = False,
     ):
+        self.execution_context = execution_context
         # Preserve start_component_id from constructor if available
         start_component_id = self._start.get_id() if self._start else None
         self.prepare(start_component_id=start_component_id)
@@ -395,7 +406,10 @@ class Graph:
 
         while should_continue(yielded_counts, max_iterations):
             result = await self.astep(
-                event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+                event_manager=event_manager,
+                inputs=inputs,
+                fallback_to_env_vars=fallback_to_env_vars,
+                execution_context=execution_context,
             )
             yield result
             if isinstance(result, Finish):
@@ -681,6 +695,13 @@ class Graph:
     async def initialize_run(self) -> None:
         if not self._run_id:
             self.set_run_id()
+        # A Loop body subgraph is part of the parent graph's run. Starting
+        # tracers here would replace the active TraceContext on every
+        # iteration, causing later iterations and post-Loop vertices to be
+        # written to a discarded context. Subgraphs reuse the parent's tracing
+        # service and run_id and therefore must neither start nor end a trace.
+        if self._is_subgraph:
+            return
         if self.tracing_service:
             run_name = f"{self.flow_name} - {self.flow_id}"
             await self.tracing_service.start_tracers(
@@ -1584,6 +1605,7 @@ class Graph:
         user_id: str | None = None,
         event_manager: EventManager | None = None,
         *,
+        execution_context: dict[str, Any] | None = None,
         fallback_to_env_vars: bool = False,
     ):
         if not self._prepared:
@@ -1615,16 +1637,20 @@ class Graph:
             async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
                 return True
 
-        vertex_build_result = await self.build_vertex(
-            vertex_id=vertex_id,
-            user_id=user_id,
-            inputs_dict=inputs.model_dump() if inputs and hasattr(inputs, "model_dump") else {},
-            files=files,
-            get_cache=get_cache_func,
-            set_cache=set_cache_func,
-            event_manager=event_manager,
-            fallback_to_env_vars=fallback_to_env_vars,
-        )
+        execution_context_token = current_execution_context.set(execution_context)
+        try:
+            vertex_build_result = await self.build_vertex(
+                vertex_id=vertex_id,
+                user_id=user_id,
+                inputs_dict=inputs.model_dump() if inputs and hasattr(inputs, "model_dump") else {},
+                files=files,
+                get_cache=get_cache_func,
+                set_cache=set_cache_func,
+                event_manager=event_manager,
+                fallback_to_env_vars=fallback_to_env_vars,
+            )
+        finally:
+            current_execution_context.reset(execution_context_token)
 
         next_runnable_vertices = await self.get_next_runnable_vertices(
             self.lock, vertex=vertex_build_result.vertex, cache=False

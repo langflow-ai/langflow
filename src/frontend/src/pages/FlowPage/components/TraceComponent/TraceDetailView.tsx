@@ -124,6 +124,7 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
       <div className="flex flex-1 overflow-hidden">
         <div className="w-[380px] min-w-[320px] overflow-y-auto border-r border-border p-2">
           <SpanTree
+            key={trace.id}
             spans={treeSpans}
             selectedSpanId={selectedSpan?.id ?? null}
             onSelectSpan={handleSelectSpan}
