@@ -6,11 +6,19 @@ from typing import Any
 from weakref import WeakValueDictionary
 
 from lfx.log.logger import logger
+from lfx.observability import APPLICATION_TRACER_NAME
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.prometheus import PrometheusMetricReader
 from opentelemetry.metrics import CallbackOptions, Observation
 from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDownCounter
 from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import (
+    MetricExporter,
+    MetricExportResult,
+    MetricsData,
+    PeriodicExportingMetricReader,
+    ResourceMetrics,
+)
 from opentelemetry.sdk.resources import SERVICE_NAME, OTELResourceDetector, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -21,11 +29,6 @@ langflow_meter_name = "langflow"
 
 DEFAULT_SERVICE_NAME = "langflow"
 SUPPORTED_OTLP_PROTOCOLS = ("grpc", "http/protobuf")
-
-# The tracer name Langflow's own application spans must use to reach the APM. Deliberately
-# not "langflow": the LLM tracer integrations already take a tracer under that name, and
-# their spans carry flow inputs and outputs.
-APPLICATION_TRACER_NAME = "langflow.observability"
 
 # Instrumentation scopes whose spans describe the service itself. This is an allowlist, not
 # a denylist, because the LLM instrumentors ship inside the very same
@@ -54,6 +57,11 @@ APPLICATION_INSTRUMENTATION_SCOPES = frozenset(
         APPLICATION_TRACER_NAME,
     }
 )
+
+# The same boundary for metrics. Separate from the span set because the meter Langflow
+# records its own counters and histograms on is named "langflow", while its application
+# spans use APPLICATION_TRACER_NAME. Both names are listed so the two signals stay in step.
+APPLICATION_METRIC_SCOPES = APPLICATION_INSTRUMENTATION_SCOPES | {langflow_meter_name}
 
 
 class ApplicationOnlySpanProcessor(BatchSpanProcessor):
@@ -89,6 +97,59 @@ class ApplicationOnlySpanProcessor(BatchSpanProcessor):
             logger.debug(f"Not exporting spans from {scope!r}; only application telemetry is sent to the APM.")
 
 
+class ApplicationOnlyMetricExporter(MetricExporter):
+    """Pushes only the service's own metrics, dropping every other instrumentation scope.
+
+    The metrics counterpart of ApplicationOnlySpanProcessor, and it exists for the same
+    reason: Langflow installs a global meter provider, and the LLM instrumentors take their
+    meters from it with a bare get_meter, so their gen_ai token and duration metrics would
+    otherwise be pushed to the operator's APM alongside the service's own. Those belong to
+    the LLM tracing integrations and their separate backends.
+
+    Only the push exporter is wrapped. The local Prometheus endpoint is the flow author's
+    own process and keeps seeing everything.
+    """
+
+    def __init__(self, exporter: MetricExporter) -> None:
+        # Read off the wrapped exporter rather than defaulted: the temporality preference is
+        # how OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta reaches the reader, and
+        # New Relic rejects cumulative. These are the same private attributes
+        # PeriodicExportingMetricReader itself reads from an exporter.
+        super().__init__(
+            preferred_temporality=exporter._preferred_temporality,  # noqa: SLF001
+            preferred_aggregation=exporter._preferred_aggregation,  # noqa: SLF001
+        )
+        self._exporter = exporter
+        self._dropped_scopes: set[str] = set()
+
+    def _allowed(self, scope_name: str) -> bool:
+        if scope_name in APPLICATION_METRIC_SCOPES:
+            return True
+        if scope_name not in self._dropped_scopes:
+            self._dropped_scopes.add(scope_name)
+            logger.debug(f"Not exporting metrics from {scope_name!r}; only application telemetry is sent to the APM.")
+        return False
+
+    def export(self, metrics_data: MetricsData, timeout_millis: float = 10_000, **kwargs) -> MetricExportResult:
+        resource_metrics = []
+        for rm in metrics_data.resource_metrics:
+            scope_metrics = [sm for sm in rm.scope_metrics if self._allowed(sm.scope.name if sm.scope else "")]
+            if scope_metrics:
+                resource_metrics.append(
+                    ResourceMetrics(resource=rm.resource, scope_metrics=scope_metrics, schema_url=rm.schema_url)
+                )
+        # Nothing survived the filter; an empty export is a wasted round trip, not a failure.
+        if not resource_metrics:
+            return MetricExportResult.SUCCESS
+        return self._exporter.export(MetricsData(resource_metrics=resource_metrics), timeout_millis, **kwargs)
+
+    def force_flush(self, timeout_millis: float = 10_000) -> bool:
+        return self._exporter.force_flush(timeout_millis)
+
+    def shutdown(self, timeout_millis: float = 30_000, **kwargs) -> None:
+        self._exporter.shutdown(timeout_millis, **kwargs)
+
+
 def _resource() -> Resource:
     """Build the resource, letting OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES win.
 
@@ -103,14 +164,16 @@ def _resource() -> Resource:
     return Resource.create({SERVICE_NAME: DEFAULT_SERVICE_NAME})
 
 
-def _otlp_protocol() -> str:
+def _otlp_protocol(signal: str) -> str:
     """Resolve the OTLP protocol, per-signal variable first, then the generic one.
 
     The SDK's own auto-configuration strips whitespace and rejects unknown values; match
     that leniency so a stray space does not silently route gRPC traffic at an HTTP exporter.
     """
     protocol = (
-        os.getenv("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL") or os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL") or "http/protobuf"
+        os.getenv(f"OTEL_EXPORTER_OTLP_{signal.upper()}_PROTOCOL")
+        or os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL")
+        or "http/protobuf"
     ).strip()
     if protocol not in SUPPORTED_OTLP_PROTOCOLS:
         logger.warning(
@@ -128,6 +191,41 @@ def _otlp_span_exporter(protocol: str):
     else:
         from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
     return OTLPSpanExporter()
+
+
+def _otlp_metric_reader() -> PeriodicExportingMetricReader | None:
+    """Build the OTLP push reader when the standard OTel env vars opt in.
+
+    The exporter and the reader take no arguments on purpose: endpoint, headers, timeout,
+    compression, export interval and OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+    (New Relic requires delta) all come from the environment, and passing any of them here
+    would make the corresponding variable unsettable.
+
+    The final flush on exit needs no wiring: MeterProvider registers its own atexit handler
+    (shutdown_on_exit defaults to True), which shuts the reader down and drains it.
+    """
+    endpoint = os.getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+    if not endpoint:
+        return None
+
+    # The operator's documented way to turn metrics off while leaving a shared endpoint set.
+    if os.getenv("OTEL_METRICS_EXPORTER", "otlp").strip().lower() == "none":
+        return None
+
+    protocol = _otlp_protocol("metrics")
+    try:
+        if protocol == "grpc":
+            from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+        else:
+            from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+        reader = PeriodicExportingMetricReader(ApplicationOnlyMetricExporter(OTLPMetricExporter()))
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not configure the OTLP metric exporter; metrics will not be pushed.")
+        return None
+
+    # Without this, a protocol/port mismatch is indistinguishable from never having booted.
+    logger.info(f"OTLP metric export enabled (protocol={protocol}, endpoint={endpoint}).")
+    return reader
 
 
 """
@@ -301,6 +399,12 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
                 if self.prometheus_enabled:
                     metric_readers.append(PrometheusMetricReader())
 
+                # Prometheus is a pull endpoint, so it cannot cover a process that exits
+                # between scrapes. Both readers sit on the one provider.
+                otlp_reader = _otlp_metric_reader()
+                if otlp_reader is not None:
+                    metric_readers.append(otlp_reader)
+
                 self._meter_provider = MeterProvider(resource=resource, metric_readers=metric_readers)
                 metrics.set_meter_provider(self._meter_provider)
 
@@ -343,7 +447,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             )
             return
 
-        protocol = _otlp_protocol()
+        protocol = _otlp_protocol("traces")
         try:
             tracer_provider = TracerProvider(resource=_resource())
             tracer_provider.add_span_processor(ApplicationOnlySpanProcessor(_otlp_span_exporter(protocol)))
@@ -436,9 +540,11 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         if not self._initialized:
             return
         if self._meter_provider:
-            readers = getattr(self._meter_provider, "_metric_readers", [])
-            for reader in readers:
-                if hasattr(reader, "shutdown"):
-                    reader.shutdown()
+            # Not the readers directly: only MeterProvider.shutdown unregisters the atexit
+            # handler, and without that the interpreter shuts the readers down a second time
+            # and Prometheus raises on the double unregister.
+            self._meter_provider.shutdown()
+        if self._tracer_provider:
+            self._tracer_provider.shutdown()
         self._metrics.clear()
         OpenTelemetry._initialized = False
