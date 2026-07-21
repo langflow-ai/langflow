@@ -17,6 +17,7 @@ interface ModelTriggerProps {
   id: string;
   refButton: RefObject<HTMLButtonElement | null>;
   showEmptyState?: boolean;
+  "aria-label"?: string;
 }
 
 const ModelTrigger = ({
@@ -30,6 +31,7 @@ const ModelTrigger = ({
   id,
   refButton,
   showEmptyState = false,
+  "aria-label": ariaLabel,
 }: ModelTriggerProps) => {
   const { t } = useTranslation();
   const renderSelectedIcon = () => {
@@ -73,12 +75,14 @@ const ModelTrigger = ({
     <div className="flex w-full flex-col">
       <PopoverTrigger asChild>
         <Button
+          id={id}
           disabled={disabled}
           variant="primary"
           size="xs"
           role="combobox"
           ref={refButton}
           aria-expanded={open}
+          aria-label={ariaLabel}
           data-testid={id}
           className={cn(
             "dropdown-component-false-outline py-2",
