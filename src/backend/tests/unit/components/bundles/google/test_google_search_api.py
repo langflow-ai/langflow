@@ -2,6 +2,9 @@ from unittest.mock import patch
 
 import pandas as pd
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.schema import DataFrame
 from lfx_bundles.google.google_search_api_core import GoogleSearchAPICore
 

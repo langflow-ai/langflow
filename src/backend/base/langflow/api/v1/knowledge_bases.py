@@ -22,8 +22,14 @@ from lfx.base.knowledge_bases.ingestion_sources import (
     get_source_class,
     registered_sources,
 )
+from lfx.base.models.provider_registry import provider_id_for
 from lfx.base.vectorstores.chroma_security import chroma_client_create_collection_kwargs
 from lfx.log import logger
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyError,
+    ModelProviderPolicyPurpose,
+    require_model_provider,
+)
 from pydantic import BaseModel, Field
 
 from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
@@ -76,6 +82,41 @@ from langflow.utils.kb_constants import (
 KB_METADATA_KEYS_VALUES_CAP = 50
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_in_schema=False)
+
+
+def _provider_identity(provider: str) -> str:
+    """Return a stable identity for comparison without exposing registry state."""
+    normalized = provider.strip()
+    return provider_id_for(normalized) or normalized.casefold()
+
+
+def _require_create_embedding_provider(
+    request: CreateKnowledgeBaseRequest,
+    current_user: CurrentActiveUser,
+) -> str:
+    """Validate both provider representations and enforce CONFIGURE policy."""
+    flat_provider = request.embedding_provider.strip()
+    selected_provider = None
+    if request.model_selection is not None:
+        selected_provider = knowledge_base_service.get_embedding_provider(request.model_selection)
+    if not flat_provider or (
+        selected_provider is not None
+        and (
+            selected_provider == "Unknown" or _provider_identity(flat_provider) != _provider_identity(selected_provider)
+        )
+    ):
+        raise HTTPException(status_code=404, detail="Model provider not found")
+
+    try:
+        require_model_provider(
+            user_id=current_user.id,
+            provider=flat_provider,
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+    except ModelProviderPolicyError as exc:
+        # Treat unknown, blocked, and conflicting provider identities alike.
+        raise HTTPException(status_code=404, detail="Model provider not found") from exc
+    return flat_provider
 
 
 @dataclass(frozen=True)
@@ -709,6 +750,7 @@ async def create_knowledge_base(
 ) -> KnowledgeBaseInfo:
     """Create a new knowledge base with embedding configuration."""
     try:
+        embedding_provider = _require_create_embedding_provider(request, current_user)
         kb_root_path = KBStorageHelper.get_root_path()
         kb_user = current_user.username
         kb_name = request.name.strip().replace(" ", "_")
@@ -788,7 +830,7 @@ async def create_knowledge_base(
         backend_config_value = request.backend_config or {}
         embedding_metadata = {
             "id": str(kb_id),
-            "embedding_provider": request.embedding_provider,
+            "embedding_provider": embedding_provider,
             "embedding_model": request.embedding_model,
             "model_selection": request.model_selection,
             "created_at": datetime.now(timezone.utc).isoformat(),
@@ -827,7 +869,7 @@ async def create_knowledge_base(
             # when the request didn't carry one of its own.
             persisted_selection = request.model_selection or {
                 "name": request.embedding_model,
-                "provider": request.embedding_provider,
+                "provider": embedding_provider,
             }
             await knowledge_base_service.create_record(
                 user_id=current_user.id,
@@ -857,7 +899,7 @@ async def create_knowledge_base(
             id=str(kb_id),
             dir_name=kb_name,
             name=kb_name.replace("_", " "),
-            embedding_provider=request.embedding_provider,
+            embedding_provider=embedding_provider,
             embedding_model=request.embedding_model,
             size=0,
             words=0,

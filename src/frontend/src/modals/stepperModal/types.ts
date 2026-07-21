@@ -38,6 +38,8 @@ export interface StepperModalProps {
   width?: string;
   sidePanel?: ReactNode;
   sidePanelOpen?: boolean;
+  /** Called when the dialog closes and focus would return to the trigger. */
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
 export interface StepperModalFooterProps {

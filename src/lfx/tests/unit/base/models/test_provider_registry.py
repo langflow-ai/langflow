@@ -25,6 +25,7 @@ from lfx.base.models.unified_models import (
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
+    get_models_detailed,
     validate_model_provider_key,
 )
 from lfx.base.models.unified_models.class_registry import (
@@ -54,6 +55,37 @@ def fake_validator(provider, variables, model_name):
 
 _LIVE_DISCOVERY_PATH = f"{__name__}:fake_live_discovery"
 _VALIDATOR_PATH = f"{__name__}:fake_validator"
+
+
+def fake_catalog_loader():
+    """Return rows whose provider ownership must be stamped by the registry."""
+    return [
+        {
+            "provider": "Untrusted manifest value",
+            "name": "fake-chat-1",
+            "icon": "FakeCo",
+            "default": True,
+            "model_type": "llm",
+        },
+        {
+            "name": "fake-embed-1",
+            "icon": "FakeCo",
+            "default": True,
+            "model_type": "embeddings",
+        },
+    ]
+
+
+def duplicate_whitespace_catalog_loader():
+    """Return duplicate model identities after registry normalization."""
+    return [
+        {"name": "fake-chat-1", "model_type": "llm"},
+        {"name": " fake-chat-1 ", "model_type": "llm"},
+    ]
+
+
+_CATALOG_LOADER_PATH = f"{__name__}:fake_catalog_loader"
+_DUPLICATE_CATALOG_LOADER_PATH = f"{__name__}:duplicate_whitespace_catalog_loader"
 
 
 def _fakeco_metadata() -> dict:
@@ -105,6 +137,90 @@ def test_register_adds_metadata_and_appears_in_accessors():
     assert "FakeCo" in get_model_provider_metadata()
     # Appears even though FakeCo ships no static model catalog.
     assert "FakeCo" in get_model_providers()
+
+
+def test_register_exposes_stable_identity_display_name_and_aliases():
+    register_provider(
+        _fakeco_spec(
+            provider_id="fakeco.enterprise",
+            display_name="FakeCo Enterprise",
+            aliases=("fake-co", "FakeCo Legacy"),
+        )
+    )
+
+    assert provider_registry.provider_id_for("FakeCo") == "fakeco.enterprise"
+    assert provider_registry.provider_id_for("fake-co") == "fakeco.enterprise"
+    assert provider_registry.provider_id_for("FakeCo Legacy") == "fakeco.enterprise"
+    assert provider_registry.provider_name_for_id("fakeco.enterprise") == "FakeCo"
+    assert MODEL_PROVIDER_METADATA["FakeCo"]["provider_id"] == "fakeco.enterprise"
+    assert MODEL_PROVIDER_METADATA["FakeCo"]["display_name"] == "FakeCo Enterprise"
+
+
+def test_registry_snapshot_deep_freezes_descriptor_payloads():
+    register_provider(_fakeco_spec(provider_id="fakeco"))
+
+    descriptor = provider_registry.get_registry_snapshot().descriptors_by_id["fakeco"]
+
+    with pytest.raises(TypeError):
+        descriptor.metadata["icon"] = "Spoofed"  # type: ignore[index]
+    variables = descriptor.metadata["variables"]
+    with pytest.raises(TypeError):
+        variables[0]["variable_key"] = "SPOOFED_KEY"  # type: ignore[index]
+
+    assert MODEL_PROVIDER_METADATA["FakeCo"]["icon"] == "FakeCo"
+    assert MODEL_PROVIDER_METADATA["FakeCo"]["variables"][0]["variable_key"] == "FAKECO_API_KEY"
+
+
+def test_registered_catalog_loader_contributes_static_models():
+    register_provider(
+        _fakeco_spec(
+            provider_id="fakeco",
+            catalog_loader=_CATALOG_LOADER_PATH,
+        )
+    )
+
+    fakeco_groups = [
+        group for group in get_models_detailed() if group and all(row.get("provider") == "FakeCo" for row in group)
+    ]
+
+    assert len(fakeco_groups) == 1
+    assert [row["name"] for row in fakeco_groups[0]] == ["fake-chat-1", "fake-embed-1"]
+    assert {row["provider"] for row in fakeco_groups[0]} == {"FakeCo"}
+
+
+def test_registered_catalog_rejects_duplicate_normalized_model_names():
+    register_provider(
+        _fakeco_spec(
+            provider_id="fakeco",
+            catalog_loader=_DUPLICATE_CATALOG_LOADER_PATH,
+        )
+    )
+
+    with pytest.raises(ValueError, match="duplicate model identity"):
+        provider_registry.validate_registered_provider_catalogs()
+
+
+def test_duplicate_provider_id_is_rejected_even_when_names_differ():
+    register_provider(_fakeco_spec(provider_id="fakeco"))
+
+    with pytest.raises(ValueError, match="provider_id"):
+        register_provider(
+            ProviderSpec(
+                name="OtherCo",
+                provider_id="fakeco",
+                metadata={**_fakeco_metadata(), "icon": "OtherCo"},
+            )
+        )
+
+
+@pytest.mark.parametrize("reserved_key", ["provider", "models", "num_models", "provider_id", "aliases"])
+def test_provider_metadata_cannot_override_identity_or_catalog_structure(reserved_key):
+    with pytest.raises(ValueError, match="reserved keys"):
+        register_provider(
+            _fakeco_spec(
+                metadata={**_fakeco_metadata(), reserved_key: "OpenAI"},
+            )
+        )
 
 
 def test_variable_mapping_cache_refreshed_after_register():
@@ -255,6 +371,23 @@ def _fakeco_metadata_with_base_url() -> dict:
     return meta
 
 
+def _fakeco_metadata_with_only_base_url() -> dict:
+    """Provider metadata with required connection config but no secret variable."""
+    meta = _fakeco_metadata()
+    meta["variables"] = [
+        {
+            "variable_name": "FakeCo Base URL",
+            "variable_key": "FAKECO_API_BASE",
+            "required": True,
+            "is_secret": False,
+            "is_list": False,
+            "options": [],
+            "langchain_param": "base_url",
+        }
+    ]
+    return meta
+
+
 def test_get_llm_applies_registered_provider_base_url(monkeypatch):
     from lfx.base.models import unified_models as um
     from lfx.base.models.unified_models.instantiation import get_llm
@@ -315,13 +448,18 @@ def test_get_llm_real_resolver_uses_placeholder_not_base_url(monkeypatch):
         def __init__(self, **kwargs):
             captured.update(kwargs)
 
-    register_provider(_fakeco_spec(metadata=_fakeco_metadata_with_base_url(), api_key_required=False))
+    register_provider(_fakeco_spec(metadata=_fakeco_metadata_with_only_base_url(), api_key_required=False))
     monkeypatch.setenv("FAKECO_API_BASE", "http://vllm.example:8000")
-    monkeypatch.delenv("FAKECO_API_KEY", raising=False)
     monkeypatch.setattr(um, "get_model_class", lambda _name: FakeChat)
     # Base URL comes from the env via the connection handler; do NOT patch the
     # api-key resolver -- that is the path under test.
     monkeypatch.setattr(um, "get_all_variables_for_provider", lambda *_a, **_k: {})
+
+    # The broad mapping remains available to provider enablement/UI callers,
+    # but neither implicit nor explicit API-key lookup may consume it.
+    assert um.get_model_provider_variable_mapping()["FakeCo"] == "FAKECO_API_BASE"
+    assert um.get_api_key_for_provider(None, "FakeCo") is None
+    assert um.get_api_key_for_provider(None, "FakeCo", "FAKECO_API_BASE") is None
 
     model_selection = [{"name": "m1", "provider": "FakeCo", "metadata": {"model_class": "ChatOpenAI"}}]
     get_llm(model_selection, user_id=None)
@@ -387,6 +525,7 @@ def test_embedding_wiring_registered():
         )
     )
     assert EMBEDDING_PROVIDER_CLASS_MAPPING["FakeCo"] == "OpenAIEmbeddings"
+    assert EMBEDDING_PARAM_MAPPINGS["FakeCo"]["api_key"] == "api_key"  # pragma: allowlist secret
     assert EMBEDDING_PARAM_MAPPINGS["FakeCo Embeddings"]["api_key"] == "api_key"  # pragma: allowlist secret
 
 
@@ -472,7 +611,38 @@ def test_clear_restores_baseline():
     assert set(MODEL_PROVIDER_METADATA) == baseline_meta_keys
     assert list(LIVE_MODEL_PROVIDERS) == baseline_live
     assert "FakeCo" not in EMBEDDING_PROVIDER_CLASS_MAPPING
+    assert "FakeCo" not in EMBEDDING_PARAM_MAPPINGS
     assert "FakeCo Embeddings" not in EMBEDDING_PARAM_MAPPINGS
+
+
+def test_unregister_provider_removes_only_the_target_registration():
+    register_provider(
+        _fakeco_spec(
+            provider_id="fakeco",
+            aliases=("FakeCo Legacy",),
+            live=True,
+            live_discovery=_LIVE_DISCOVERY_PATH,
+            catalog_loader=_CATALOG_LOADER_PATH,
+            embedding_class_name="OpenAIEmbeddings",
+            embedding_param_key="FakeCo Embeddings",
+            embedding_param_mapping={"model": "model"},
+        )
+    )
+    register_provider(_fakeco_spec(name="OtherCo", provider_id="otherco"))
+    provider_registry.live_discovery_for("FakeCo")
+    provider_registry.validate_registered_provider_catalogs(["FakeCo"])
+
+    assert provider_registry.unregister_provider("FakeCo") is True
+
+    assert provider_registry.is_registered("FakeCo") is False
+    assert provider_registry.is_registered("OtherCo") is True
+    assert provider_registry.provider_id_for("FakeCo Legacy") is None
+    assert "FakeCo" not in MODEL_PROVIDER_METADATA
+    assert "FakeCo" not in LIVE_MODEL_PROVIDERS
+    assert "FakeCo" not in EMBEDDING_PROVIDER_CLASS_MAPPING
+    assert "FakeCo" not in EMBEDDING_PARAM_MAPPINGS
+    assert "FakeCo Embeddings" not in EMBEDDING_PARAM_MAPPINGS
+    assert provider_registry.unregister_provider("FakeCo") is False
 
 
 def test_zero_registration_is_noop():
