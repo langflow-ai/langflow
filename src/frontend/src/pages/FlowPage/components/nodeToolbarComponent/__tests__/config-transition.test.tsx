@@ -1,15 +1,22 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useUtilityStore } from "@/stores/utilityStore";
 import NodeToolbarComponent from "../index";
 
 const mockFreezeAllVertices = jest.fn();
 const mockAddFlow = jest.fn();
+const mockCheckHasToolMode = jest.fn(() => false);
+const mockMutateTemplate = jest.fn();
+const mockPostToolModeValue = { isPending: false };
 const mockSetNoticeData = jest.fn();
 const mockSetErrorData = jest.fn();
 const mockSetSuccessData = jest.fn();
 
 jest.mock("@xyflow/react", () => ({
   useUpdateNodeInternals: () => jest.fn(),
+}));
+
+jest.mock("@/CustomNodes/helpers/mutate-template", () => ({
+  mutateTemplate: (...args: unknown[]) => mockMutateTemplate(...args),
 }));
 
 jest.mock("@/CustomNodes/hooks/use-handle-new-value", () => ({
@@ -59,7 +66,7 @@ jest.mock("@/components/ui/button", () => ({
 }));
 
 jest.mock("@/controllers/API/queries/nodes/use-post-template-value", () => ({
-  usePostTemplateValue: () => ({}),
+  usePostTemplateValue: () => mockPostToolModeValue,
 }));
 
 jest.mock("@/controllers/API/queries/vertex", () => ({
@@ -160,7 +167,7 @@ jest.mock("../../../../../components/ui/select-custom", () => ({
 }));
 
 jest.mock("../../../../../utils/reactflowUtils", () => ({
-  checkHasToolMode: jest.fn(() => false),
+  checkHasToolMode: () => mockCheckHasToolMode(),
   createFlowComponent: jest.fn((data) => ({
     name: data.id,
   })),
@@ -217,8 +224,16 @@ const getProps = () => ({
     node: {
       display_name: "Prompt",
       description: "Prompt node",
+      documentation: "",
       template: {
-        code: { value: "print('hello')" },
+        code: {
+          value: "print('hello')",
+          type: "code",
+          required: true,
+          list: false,
+          show: true,
+          readonly: false,
+        },
       },
       outputs: [],
       frozen: false,
@@ -237,6 +252,8 @@ const getProps = () => ({
 describe("NodeToolbarComponent config transitions", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCheckHasToolMode.mockReturnValue(false);
+    mockPostToolModeValue.isPending = false;
     act(() => {
       useUtilityStore.setState({ allowCustomComponents: false });
     });
@@ -262,5 +279,41 @@ describe("NodeToolbarComponent config transitions", () => {
     rerender(<NodeToolbarComponent {...getProps()} />);
 
     expect(screen.queryByTestId("code-button-modal")).not.toBeInTheDocument();
+  });
+
+  it("keeps an optimistic Tool Mode toggle on while its update is pending", () => {
+    mockCheckHasToolMode.mockReturnValue(true);
+    const props = {
+      ...getProps(),
+      data: {
+        ...getProps().data,
+        node: {
+          ...getProps().data.node,
+          tool_mode: false,
+        },
+      },
+    };
+    const { rerender } = render(<NodeToolbarComponent {...props} />);
+    const toolModeButton = screen.getByTestId("tool-mode-button");
+
+    fireEvent.click(screen.getByText("Tool Mode"));
+    expect(toolModeButton).toHaveClass("text-primary");
+
+    mockPostToolModeValue.isPending = true;
+    rerender(
+      <NodeToolbarComponent
+        {...props}
+        data={{
+          ...props.data,
+          node: {
+            ...props.data.node,
+            outputs: [],
+            tool_mode: false,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId("tool-mode-button")).toHaveClass("text-primary");
   });
 });
