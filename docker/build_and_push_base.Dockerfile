@@ -50,6 +50,11 @@ COPY ./src/lfx/README.md /app/src/lfx/README.md
 # Copy sdk metadata files since it's a workspace member
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
+# Copy langflow-core metadata since it is a workspace member. This image does
+# not install langflow-core, but uv must discover every workspace member before
+# resolving the base package.
+COPY ./src/langflow-core/pyproject.toml /app/src/langflow-core/pyproject.toml
+COPY ./src/langflow-core/README.md /app/src/langflow-core/README.md
 # Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
 # is a uv workspace member, so each bundle's pyproject.toml must be present
 # for ``uv sync --no-install-project`` to resolve the workspace.  Copy the
