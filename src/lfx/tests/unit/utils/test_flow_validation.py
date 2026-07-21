@@ -327,7 +327,8 @@ def test_public_flow_blocks_structured_data_analysis_starter_template():
     """The bundled data-analysis starter contains OpenDsStarAgent and must be rejected publicly."""
     repo_root = Path(__file__).resolve().parents[5]
     starter_path = (
-        repo_root / "src/backend/base/langflow/initial_setup/starter_projects/Structured Data Analysis Agent.json"
+        repo_root
+        / "src/bundles/lfx-bundles/src/lfx_bundles/codeagents/starter_projects/Structured Data Analysis Agent.json"
     )
     starter_flow = json.loads(starter_path.read_text())
 

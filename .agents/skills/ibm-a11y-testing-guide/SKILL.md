@@ -1,9 +1,11 @@
 ---
-name: frontend-a11y-check
-description: Plan, write, run, or review accessibility checks for Langflow frontend work. Use when changes touch React UI, routes, pages, modals, forms, tables, navigation, Radix/shadcn primitives, keyboard behavior, ARIA labels, focus order, or when the user asks for an a11y check, axe test, IBM scan, Playwright a11y scan, or accessibility coverage.
+name: ibm-a11y-testing-guide
+description: Reference guide for writing and running Langflow frontend accessibility tests with axe (Jest) and IBM Equal Access (Playwright `page.runA11yScan`). Covers which engine/test layer to pick, the POUR checklist, axe-vs-IBM rule gaps, Radix/AG-Grid component gotchas, and IBM baselines. Use when writing or reviewing a11y tests, debugging a specific axe/IBM violation, or deciding which test layer fits a UI surface. Does not run scans, audit a whole surface, or fix a PR end-to-end — see ibm-a11y-route-scan, ibm-a11y-level1-audit, and ibm-a11y-pr-remediation for those.
 ---
 
-# Frontend Accessibility Check
+# IBM/axe Accessibility Testing Guide
+
+Reference material for **how** to test a given UI surface. This skill does not decide what to scan or drive a fix loop by itself — use it while writing tests, debugging a violation, or implementing a fix identified by `ibm-a11y-route-scan`, `ibm-a11y-level1-audit`, or `ibm-a11y-pr-remediation`.
 
 ## When To Use
 
@@ -11,16 +13,16 @@ Use this skill for frontend work under `src/frontend` when the change affects:
 
 - UI components, primitives, pages, routes, dialogs, drawers, popovers, dropdowns, tabs, accordions, tables, forms, navigation, or canvas controls.
 - ARIA attributes, labels, roles, focus management, tab order, keyboard interaction, disabled states, loading states, or error states.
-- A new route or existing route surface that should be scanned.
-- A request to add, fix, run, or review accessibility tests.
+- A request to write, fix, or review an axe/IBM accessibility test.
 
 Use alongside:
 
 - `frontend-testing` for Jest/React Testing Library patterns.
 - `e2e-testing` for Playwright patterns.
 - `frontend-i18n` when adding or changing user-facing labels, accessible names, `aria-label`, tooltips, or visible strings.
-- `ibm-a11y-automation` to run the Python IBM route scanner and produce Markdown/HTML reports.
-- `ibm-a11y-level1-audit` for a full IBM Level 1 audit → report → fix → verify loop against Equal Access Level 1 criteria.
+- `ibm-a11y-route-scan` to batch-scan routes with the Python scanner and produce Markdown/HTML reports.
+- `ibm-a11y-level1-audit` for a scoped IBM Level 1 compliance audit and report.
+- `ibm-a11y-pr-remediation` to scan and fix an entire PR/branch end-to-end.
 
 ## Goal
 
@@ -33,7 +35,7 @@ Automated a11y is not one tool. Run BOTH — they catch different classes of bug
 - **axe-core** — Jest `axe()` (`@/utils/a11y-test`), jsdom-only. Fast; strong on contrast, labels, roles, ARIA basics.
 - **IBM Equal Access** — the stricter engine on ARIA structure and keyboard semantics; catches real WCAG Level-1 issues axe silently passes. Two entry points, **same engine** (`aChecker`):
   - Playwright **`page.runA11yScan(label)`** — runs `aChecker.getCompliance` in-browser on the **live DOM**, so it scans open modals / menus / selected / editing states. This is IBM, **not** axe (despite the name).
-  - `scripts/a11y/a11y_scan.py` (see `ibm-a11y-automation`) — route scanner for the default-loaded page only.
+  - `scripts/a11y/a11y_scan.py` (see `ibm-a11y-route-scan`) — route scanner for the default-loaded page only.
 
 A page that is green on axe is NOT done. When the change touches a table/tree/listbox/menu/composite widget, IBM is mandatory. Prefer `page.runA11yScan` for stateful surfaces (it sees the DOM after your interactions); use the Python scanner for a quick default-load route check.
 

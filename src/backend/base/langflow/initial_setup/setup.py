@@ -26,6 +26,7 @@ from lfx.base.constants import (
     SKIPPED_COMPONENTS,
     SKIPPED_FIELD_ATTRIBUTES,
 )
+from lfx.extension.bundle_registry import get_default_registry
 from lfx.log.logger import logger
 from lfx.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from lfx.utils.component_aliases import flatten_components_with_aliases
@@ -592,23 +593,33 @@ def log_node_changes(node_changes_log) -> None:
 
 
 async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, dict]]:
+    """Load core starters plus starters owned by discovered manifest-less bundles."""
     starter_projects = []
-    folder = anyio.Path(__file__).parent / "starter_projects"
+    core_folder = anyio.Path(__file__).parent / "starter_projects"
+    bundle_folders = sorted(
+        {
+            anyio.Path(record.source_path) / "starter_projects"
+            for record in get_default_registry().snapshot().values()
+            if record.manifestless and record.source_path is not None
+        },
+        key=str,
+    )
     await logger.adebug("Loading starter projects")
-    async for file in folder.glob("*.json"):
-        attempt = 0
-        while attempt < retries:
-            content = await file.read_text(encoding="utf-8")
-            try:
-                project = orjson.loads(content)
-                starter_projects.append((file, project))
-                break  # Break if load is successful
-            except orjson.JSONDecodeError as e:
-                attempt += 1
-                if attempt >= retries:
-                    msg = f"Error loading starter project {file}: {e}"
-                    raise ValueError(msg) from e
-                await asyncio.sleep(delay)  # Wait before retrying
+    for folder in [core_folder, *bundle_folders]:
+        async for file in folder.glob("*.json"):
+            attempt = 0
+            while attempt < retries:
+                content = await file.read_text(encoding="utf-8")
+                try:
+                    project = orjson.loads(content)
+                    starter_projects.append((file, project))
+                    break  # Break if load is successful
+                except orjson.JSONDecodeError as e:
+                    attempt += 1
+                    if attempt >= retries:
+                        msg = f"Error loading starter project {file}: {e}"
+                        raise ValueError(msg) from e
+                    await asyncio.sleep(delay)  # Wait before retrying
     await logger.adebug(f"Loaded {len(starter_projects)} starter projects")
     return starter_projects
 
