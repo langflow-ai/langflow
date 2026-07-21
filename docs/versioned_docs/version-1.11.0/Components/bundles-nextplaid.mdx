@@ -1,0 +1,107 @@
+---
+title: NextPlaid
+slug: /bundles-nextplaid
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="nextplaid" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+The **NextPlaid** bundle provides multi-vector ColBERT-style retrieval for Langflow through a running [NextPlaid](https://github.com/meetdoshi90/next-plaid) server.
+NextPlaid stores each document as a matrix of token embeddings, which enables higher retrieval quality on semantic search tasks through ColBERT-style late interaction with MaxSim scoring.
+For more information on multi-vector embeddings, see the [langchain-plaid](https://github.com/meetdoshi90/langchain-plaid) package that this bundle is built on.
+
+The bundle includes two components:
+
+* **NextPlaid**: vector store component backed by a running NextPlaid server.
+* **vLLM Multivector Embeddings**: generates the multi-vector token embeddings required by NextPlaid.
+
+## NextPlaid
+
+The **NextPlaid** component reads from and writes to a [NextPlaid](https://github.com/meetdoshi90/next-plaid) multi-vector search server.
+
+NextPlaid is a Rust-based server that implements ColBERT-style late interaction retrieval with MaxSim scoring.
+Each document is stored as a matrix of token embeddings rather than a single dense vector, giving better retrieval quality on semantic search tasks.
+The component supports both text retrieval with ColBERT models and image retrieval with ColPali models.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+<PartialVectorSearchResults />
+
+### Use the NextPlaid component in a flow
+
+Connect a **vLLM Multivector Embeddings** component to the **Embedding (Multivector)** input. Standard single-vector embedding components are not compatible with NextPlaid.
+
+The **NextPlaid** component can be used for both writes and reads:
+
+* When writing, it ingests documents from an attached data source, computes multi-vector embeddings with the connected **vLLM Multivector Embeddings** component, and then loads them into the NextPlaid index.
+  To trigger writes, click <Icon name="Play" aria-hidden="true"/> **Run component** on the **NextPlaid** component.
+
+* When reading, the **NextPlaid** component uses chat input to perform a MaxSim similarity search against the index and returns the top results.
+
+### NextPlaid parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Server URL** (`url`) | String | Input parameter. Base URL of the running NextPlaid server. Default: `http://localhost:8080`. |
+| **Index Name** (`index_name`) | String | Input parameter. Name of the index to create or connect to. Default: `langflow`. |
+| **Ingest Data** (`ingest_data`) | Data | Input parameter. Documents or images to write to the vector store. Only relevant for writes. |
+| **Search Query** (`search_query`) | String | Input parameter. The query string to use for similarity search. Only relevant for reads. |
+| **Embedding (Multivector)** (`embedding`) | Embeddings | Input parameter. Connect a **vLLM Multivector Embeddings** component to generate token-level embeddings. Required for both reads and writes. |
+| **Index Batch Size** (`index_batch_size`) | Integer | Input parameter. Number of documents per indexing request. PLAID builds its initial cluster centroids from the first batch — larger batches produce better retrieval quality. Default: `500`. |
+| **Number of Results** (`number_of_results`) | Integer | Input parameter. Number of results to return from similarity search. Default: `4`. |
+| **Quantization Bits** (`nbits`) | Dropdown | Input parameter. Bit-width for PLAID quantization. `4` gives better quality; `2` uses less memory. Options: `2`, `4`. Default: `4`. |
+| **Create Index If Not Exists** (`create_index_if_not_exists`) | Boolean | Input parameter. If `true`, creates the index on the NextPlaid server if it does not already exist. Default: `true`. |
+| **Write Timeout** (`write_timeout`) | Float | Input parameter. Seconds to wait for each indexing batch to finish. Set to `0` for async indexing (search may return empty results on the first run). Recommended: `30` or higher when ingesting and searching in the same flow run. Default: `30.0`. |
+
+## vLLM Multivector Embeddings
+
+The **vLLM Multivector Embeddings** component generates multi-vector token embeddings by calling vLLM's `/pooling` endpoint with `task: token_embed`.
+
+The output is a multi-vector `Embeddings` object that returns a matrix of token embeddings per document, which is required by the **NextPlaid** vector store. It is not compatible with standard single-vector stores.
+
+For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
+
+Your vLLM server must be started with a ColBERT- or ColPali-compatible model and the pooling runner enabled:
+
+```bash
+vllm serve <model> --runner pooling --pooler-config '{"task": "token_embed"}'
+```
+
+Compatible models include:
+* **Text (ColBERT):** `answerdotai/answerai-colbert-small-v1`
+* **Text + Images (ColPali):** `ModernVBERT/colmodernvbert`
+
+For more information on the vLLM server, see the [vLLM documentation](https://docs.vllm.ai/).
+
+### vLLM Multivector Embeddings parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Model Name** (`model_name`) | String | Input parameter. The multi-vector model name served by vLLM. Default: `answerdotai/answerai-colbert-small-v1`. |
+| **vLLM API Base** (`api_base`) | String | Input parameter. Base URL of the vLLM server (without the `/v1` suffix). Default: `http://localhost:8000`. |
+| **API Key** (`api_key`) | SecretString | Input parameter. API key for the vLLM server. Leave empty for local servers. Optional. |
+| **Request Timeout** (`request_timeout`) | Float | Input parameter. Timeout in seconds for each request to the vLLM API. Default: `60.0`. Advanced. |
+| **Max Retries** (`max_retries`) | Integer | Input parameter. Number of times to retry a failed request before raising an error. Default: `3`. Advanced. |
+
+## See also
+
+* [**Embedding model** components](/components-embedding-models)
+* [NextPlaid server](https://github.com/meetdoshi90/next-plaid)
+* [langchain-plaid](https://github.com/meetdoshi90/langchain-plaid)
+* [vLLM documentation](https://docs.vllm.ai/)
