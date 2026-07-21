@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 
 from langflow.api.v1 import (
+    annotation_projects_router,
     api_key_router,
     authz_audit_router,
     authz_me_router,
@@ -31,6 +32,7 @@ from langflow.api.v1 import (
     starter_projects_router,
     store_router,
     team_templates_router,
+    text_annotation_projects_router,
     traces_router,
     triton_servers_router,
     users_router,
@@ -93,6 +95,8 @@ router_v1.include_router(authz_roles_router)
 router_v1.include_router(authz_role_assignments_router)
 router_v1.include_router(authz_teams_router)
 router_v1.include_router(authz_me_router)
+router_v1.include_router(annotation_projects_router)
+router_v1.include_router(text_annotation_projects_router)
 
 
 # Extension reload is Mode A (local-dev / pip-installed) only.  The route is

@@ -10,6 +10,7 @@ from lfx.log.logger import logger
 
 from langflow.services.authorization import audit as _audit
 from langflow.services.authorization.actions import (
+    AnnotationProjectAction,
     DeploymentAction,
     FileAction,
     FlowAction,
@@ -34,6 +35,7 @@ _ACTION_ENUMS = (
     VariableAction,
     FileAction,
     ShareAction,
+    AnnotationProjectAction,
 )
 
 # Resource-owner keys included in audit details (kept in one place so a new
@@ -46,6 +48,7 @@ _OWNER_CONTEXT_KEYS = (
     "variable_user_id",
     "file_user_id",
     "share_user_id",
+    "annotation_project_user_id",
 )
 
 # Default 403 detail. UUID-leaking detail strings are opt-in via ``detail=...``
@@ -67,6 +70,7 @@ def _coerce_action(
     | VariableAction
     | FileAction
     | ShareAction
+    | AnnotationProjectAction
     | str,
 ) -> str:
     """Return the string value of an action enum or pass through a raw string."""
@@ -260,6 +264,13 @@ _RESOURCE_SPECS: dict[str, _ResourceSpec] = {
         owner_kw="share_user_id",
         id_kw="share_id",
         workspace_kw=None,
+        scope_kw=None,
+    ),
+    "annotation_project": _ResourceSpec(
+        resource_type="annotation_project",
+        owner_kw="annotation_project_user_id",
+        id_kw="annotation_project_id",
+        workspace_kw="workspace_id",
         scope_kw=None,
     ),
 }
@@ -490,6 +501,29 @@ async def ensure_share_permission(
         kwargs={
             "share_id": share_id,
             "share_user_id": share_user_id,
+        },
+        domain_override=domain,
+    )
+
+
+async def ensure_annotation_project_permission(
+    user: User | UserRead,
+    act: AnnotationProjectAction | str,
+    *,
+    annotation_project_id: UUID | None = None,
+    annotation_project_user_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+    domain: str | None = None,
+) -> None:
+    """Check image-annotation-project permission (owner override, then plugin enforce)."""
+    await _ensure_typed(
+        user,
+        spec_key="annotation_project",
+        act_str=_coerce_action(act),
+        kwargs={
+            "annotation_project_id": annotation_project_id,
+            "annotation_project_user_id": annotation_project_user_id,
+            "workspace_id": workspace_id,
         },
         domain_override=domain,
     )

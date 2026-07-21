@@ -1,3 +1,4 @@
+from langflow.api.v1.annotation_projects import router as annotation_projects_router
 from langflow.api.v1.api_key import router as api_key_router
 from langflow.api.v1.authz_audit import router as authz_audit_router
 from langflow.api.v1.authz_me import router as authz_me_router
@@ -26,6 +27,7 @@ from langflow.api.v1.projects import router as projects_router
 from langflow.api.v1.starter_projects import router as starter_projects_router
 from langflow.api.v1.store import router as store_router
 from langflow.api.v1.team_templates import router as team_templates_router
+from langflow.api.v1.text_annotation_projects import router as text_annotation_projects_router
 from langflow.api.v1.traces import router as traces_router
 from langflow.api.v1.triton_servers import router as triton_servers_router
 from langflow.api.v1.users import router as users_router
@@ -34,6 +36,7 @@ from langflow.api.v1.variable import router as variables_router
 from langflow.api.v1.voice_mode import router as voice_mode_router
 
 __all__ = [
+    "annotation_projects_router",
     "api_key_router",
     "authz_audit_router",
     "authz_me_router",
@@ -62,6 +65,7 @@ __all__ = [
     "starter_projects_router",
     "store_router",
     "team_templates_router",
+    "text_annotation_projects_router",
     "traces_router",
     "triton_servers_router",
     "users_router",

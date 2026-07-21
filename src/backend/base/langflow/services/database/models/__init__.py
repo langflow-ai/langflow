@@ -1,3 +1,4 @@
+from .annotation import AnnotationImage, AnnotationProject
 from .api_key import ApiKey
 from .auth import (
     AuthzAuditLog,
@@ -24,6 +25,7 @@ from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
 from .team_template import TeamTemplate, TeamTemplateStatus
+from .text_annotation import TextAnnotationProject, TextAnnotationTask
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
 from .triton_server import TritonServer
@@ -31,6 +33,8 @@ from .user import User
 from .variable import Variable
 
 __all__ = [
+    "AnnotationImage",
+    "AnnotationProject",
     "ApiKey",
     "AuthzAuditLog",
     "AuthzEditLock",
@@ -62,6 +66,8 @@ __all__ = [
     "SpanTable",
     "TeamTemplate",
     "TeamTemplateStatus",
+    "TextAnnotationProject",
+    "TextAnnotationTask",
     "TraceTable",
     "TransactionTable",
     "TritonServer",

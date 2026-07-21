@@ -70,3 +70,12 @@ class ShareAction(str, Enum):
     CREATE = "create"
     DELETE = "delete"
     UPDATE = "update"
+
+
+class AnnotationProjectAction(str, Enum):
+    """Actions authorized on an image-annotation project resource."""
+
+    READ = "read"
+    WRITE = "write"
+    CREATE = "create"
+    DELETE = "delete"

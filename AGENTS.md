@@ -113,6 +113,7 @@ Route guards live in `langflow.services.authorization.guards` (the legacy `langf
 - `ensure_variable_permission(user, VariableAction.*, variable_id=..., variable_user_id=...)`
 - `ensure_file_permission(user, FileAction.*, file_id=..., file_user_id=...)`
 - `ensure_share_permission(user, ShareAction.*, share_id=..., share_user_id=...)`
+- `ensure_annotation_project_permission(user, AnnotationProjectAction.*, annotation_project_id=..., annotation_project_user_id=...)` — image-annotation projects + their images
 - `filter_visible_resources(user, resource_type=..., candidates=..., act=...)` — list-endpoint filter; safe no-op in OSS
 
 The enforcement request shape is `(subject, domain, object, action)`:

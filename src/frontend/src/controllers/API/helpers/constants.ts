@@ -49,6 +49,8 @@ export const URLs = {
   AGENTIC_FILES: `agentic/files`,
   EXTENSIONS: `extensions`,
   TRITON_SERVERS: `triton_servers`,
+  ANNOTATION_PROJECTS: `annotation-projects`,
+  TEXT_ANNOTATION_PROJECTS: `text-annotation-projects`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility
