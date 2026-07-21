@@ -62,7 +62,11 @@ def set_secure_permissions(file_path: Path) -> None:
             import win32con
             import win32security
 
-            user, _, _ = win32security.LookupAccountName("", win32api.GetUserName())
+            # The user SID must come from the process token: resolving by name
+            # (LookupAccountName + GetUserName) returns the machine-domain SID
+            # when the computer name equals the username, locking the user out.
+            token = win32security.OpenProcessToken(win32api.GetCurrentProcess(), win32con.TOKEN_QUERY)
+            user, _attributes = win32security.GetTokenInformation(token, win32security.TokenUser)
             sd = win32security.GetFileSecurity(str(file_path), win32security.DACL_SECURITY_INFORMATION)
             dacl = win32security.ACL()
             dacl.AddAccessAllowedAce(
