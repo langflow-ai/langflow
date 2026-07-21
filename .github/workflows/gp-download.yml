@@ -1,8 +1,6 @@
 name: GP Download Translations
 
 on:
-  schedule:
-    - cron: "0 23 * * *" # 11 PM UTC — 1h before nightly build at midnight
   workflow_dispatch:
 
 jobs:
