@@ -61,12 +61,10 @@ To enable file input in your flow, do the following:
 
 1. Add a [**Read File** component](/read-file) to your flow.
 
-2. Click **Share**, select **API access**, and then click **Input Schema** to add [`tweaks`](/concepts-publish#input-schema) to the request payload in the flow's automatically generated code snippets.
+2. Select the **Read File** component, click **Parameters**, and then click **API** on the **Files** (path) field to expose it as a [`tweak`](/concepts-publish#input-schema).
 
-3. Expand the **File** section, find the **Files** row, and then enable **Expose Input** to allow the parameter to be set at runtime through the Langflow API.
-
-4. Close the **Input Schema** pane to return to the **API access** pane.
-The payload in each code snippet now includes `tweaks` with your **Read File** component's ID and the `path` key that you enabled in **Input Schema**:
+3. Open **Share** > **API access**.
+The payload in each code snippet now includes `tweaks` with your **Read File** component's ID and the `path` key:
 
     ```json
     "tweaks": {
@@ -76,7 +74,7 @@ The payload in each code snippet now includes `tweaks` with your **Read File** c
 	}
     ```
 
-5. When you run this flow programmatically, your script must upload a file to Langflow file management, and then pass the returned `file_path` to the `path` tweak in the `/run` request:
+4. When you run this flow programmatically, your script must upload a file to Langflow file management, and then pass the returned `file_path` to the `path` tweak in the `/run` request:
 
     ```json
     "tweaks": {

@@ -47,7 +47,7 @@ To get these code snippets, do the following:
 
     ![API access pane](/img/api-pane.png)
 
-3. Optional: Click [**Input Schema**](#input-schema) to modify component parameters in the code snippets without changing the flow itself.
+3. Optional: [Expose component parameters as API tweaks](#input-schema) so the generated snippets include a `tweaks` object that can be modified in the request.
 
 4. Copy the snippet for the language that you want to use.
 
@@ -74,23 +74,29 @@ Alternatively, you can edit the code snippet to include an `x-api-key` header an
 
 For more information, see [API keys and authentication](/api-keys-and-authentication) and [Get started with the Langflow API](/api-reference-api-examples).
 
-### Input Schema (tweaks) {#input-schema}
+### Tweaks (API inputs) {#input-schema}
+
+:::tip Changed in Langflow 1.11
+In Langflow 1.11, the **Input Schema** pane under **Share** > **API access** was removed, but the fields can still be exposed to requests.
+The `tweaks` object in API requests is unchanged.
+**Endpoint Name** remains available from the **API access** pane.
+:::
 
 Tweaks are one-time overrides that modify component parameters at runtime, rather than permanently modifying the flow itself.
 For an example of tweaks in a script, see the [Quickstart](/get-started-quickstart).
 
-:::tip
-Tweaks make your flows more dynamic and reusable.
+To add `tweaks` to a flow's **API access** code snippets:
 
-You can create one flow and use it for multiple applications by passing application-specific tweaks in each application's Langflow API requests.
-:::
+1. On the canvas, select the component whose parameters you want to override at runtime.
+2. In the component toolbar, click **Parameters**.
+3. In **Component Parameters**, click **API** on each field you want to expose.
+4. To confirm the parameters are exposed in the request, click **Share** > **API access**.
+   The API request snippets include a `tweaks` object with the component's ID and the exposed fields included.
 
-In the **API access** pane, click **Input Schema** to add `tweaks` to the request payload in a flow's code snippets.
+Exposed fields are saved on the component as `api_editable`, and apply to only that flow's generated request snippets.
+They don't change the values set on the node in the [workspace](/concepts-overview#workspace).
 
-Changes to a flow's **Input Schema** are saved exclusively as tweaks for that flow's **API access** code snippets.
-These tweaks don't change the flow parameters set in the [workspace](/concepts-overview#workspace), and they don't apply to other flows.
-
-Adding tweaks through the **Input Schema** can help you troubleshoot formatting issues with tweaks that you manually added to Langflow API requests.
+For large or shared runtime values, you can also pass request-scoped variables in the v2 Workflow API `globals` field. See [Pass request-level global variables](/workflow-api#request-level-global-variables).
 
 For example, the following curl command includes a tweak that disables the **Store Messages** setting in a flow's **Chat Input** component:
 
@@ -116,12 +122,12 @@ curl --request POST \
 If you want your requests to use an alias instead of the actual flow ID, you can rename the flow's `/v1/run/$FLOW_ID` endpoint:
 
 1. In Langflow, open the flow, click **Share**, and then select **API access**.
-2. Click **Input Schema**.
-3. In the **Endpoint Name** field, enter an alias for your flow's ID, such as a memorable, human-readable name.
+2. Click **Endpoint Name**.
+3. Enter an alias for your flow's ID, such as a memorable, human-readable name.
 
     The name can contain only letters, numbers, hyphens, and underscores, such as `flow-customer-database-agent`.
 
-4. To save the change, close the **Input Schema** pane.
+4. Close the dialog to save.
 
 The automatically generated code snippets now use your new endpoint name instead of the original flow ID, such as `url = "http://localhost:7868/api/v1/run/flow-customer-database-agent"`.
 
