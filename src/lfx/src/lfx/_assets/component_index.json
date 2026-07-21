@@ -7974,7 +7974,7 @@
                 },
                 {
                   "name": "cryptography",
-                  "version": "49.0.0"
+                  "version": "48.0.1"
                 },
                 {
                   "name": "langchain_chroma",
@@ -32655,6 +32655,6 @@
     "num_components": 131,
     "num_modules": 17
   },
-  "sha256": "a02ac67b8f4defa2558cff1c356bb25b1055bb61acd8e82c674d7d583def0bf7",
+  "sha256": "739053ecf3703cd6e0edd53586a4345324b01e93708ffe25330b8676f23aec73",
   "version": "1.11.0"
 }
