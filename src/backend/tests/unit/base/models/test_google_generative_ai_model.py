@@ -1,6 +1,12 @@
 """Regression tests for Gemini function-response compatibility in LFX."""
 
+import pytest
 from langchain_core.messages import AIMessage, FunctionMessage, HumanMessage, ToolMessage
+
+# langchain-google-genai ships via the optional google / lfx-bundles extras and is
+# not part of the default langflow install.
+pytest.importorskip("langchain_google_genai")
+
 from langchain_google_genai import ChatGoogleGenerativeAI
 from lfx.base.models.google_generative_ai_model import (
     ChatGoogleGenerativeAIFixed,
