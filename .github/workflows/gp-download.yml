@@ -53,6 +53,32 @@ jobs:
           GP_BUNDLE: ${{ vars.GP_BUNDLE }}
         run: python download.py --target frontend --output ../../src/frontend/src/locales/
 
+      - name: Close stale translation PRs targeting old release branches
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const latestRelease = '${{ steps.resolve-branch.outputs.branch }}';
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:translations/update-gp`
+            });
+            for (const pull of pulls) {
+              if (pull.base.ref !== latestRelease) {
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pull.number,
+                  state: 'closed'
+                });
+                console.log(`Closed PR #${pull.number} — was targeting ${pull.base.ref}, now targeting ${latestRelease}`);
+              } else {
+                console.log(`PR #${pull.number} already targets ${latestRelease}, will update in place`);
+              }
+            }
+
       - name: Create Pull Request
         id: create-pr
         uses: peter-evans/create-pull-request@v8
@@ -131,6 +157,32 @@ jobs:
           GP_INSTANCE: ${{ vars.GP_INSTANCE }}
           GP_BACKEND_BUNDLE: ${{ vars.GP_BACKEND_BUNDLE }}
         run: python download.py --target backend
+
+      - name: Close stale backend translation PRs targeting old release branches
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const latestRelease = '${{ steps.resolve-branch.outputs.branch }}';
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:translations/update-backend-gp`
+            });
+            for (const pull of pulls) {
+              if (pull.base.ref !== latestRelease) {
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pull.number,
+                  state: 'closed'
+                });
+                console.log(`Closed PR #${pull.number} — was targeting ${pull.base.ref}, now targeting ${latestRelease}`);
+              } else {
+                console.log(`PR #${pull.number} already targets ${latestRelease}, will update in place`);
+              }
+            }
 
       - name: Create Pull Request
         id: create-pr
