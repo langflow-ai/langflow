@@ -129,9 +129,10 @@ class TestLiveOpenAICompatibleModels:
         assert http_get.call_args.args[0] == f"{CUSTOM_BASE_URL}/models"
 
     def test_should_list_embeddings_from_the_custom_server(self):
-        """Custom OpenAI-compatible servers expose embeddings via the same /models
-        endpoint as chat models (issue #14180). Live fetch must not short-circuit
-        embeddings to [].
+        """List embeddings from a custom OpenAI-compatible /models endpoint.
+
+        Custom servers expose embeddings via the same /models endpoint as chat
+        models (issue #14180). Live fetch must not short-circuit embeddings to [].
         """
         response = MagicMock()
         response.json.return_value = {"data": [{"id": "BAAI/bge-base-en-v1.5"}, {"id": "text-embedding-3-small"}]}
