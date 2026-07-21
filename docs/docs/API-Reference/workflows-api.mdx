@@ -497,9 +497,9 @@ This note applies to the **Workflow API only**. The v1 [`/run`](/api-flows-run) 
 
 </details>
 
-## Component tweaks
+## Component tweaks {#component-tweaks}
 
-Use the `tweaks` object to override component parameters. Keys are component ids; values are objects of field names and values to set on that component's template.
+Use the `tweaks` object for one-off component parameter overrides in a single run.
 
 ```json
 {
@@ -514,7 +514,7 @@ Use the `tweaks` object to override component parameters. Keys are component ids
 }
 ```
 
-To find a component id in the Langflow UI, open your flow, click the component, and then click **Controls**. The component id is at the top of the **Controls** pane.
+For more information, see [Tweaks (API inputs)](/concepts-publish#input-schema).
 
 ## Error handling
 
