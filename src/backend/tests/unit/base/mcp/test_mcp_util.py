@@ -6,6 +6,8 @@ This test suite validates the MCP utility functions including:
 - Utility functions for name sanitization and schema conversion
 """
 
+import asyncio
+import contextlib
 import re
 import shutil
 import sys
@@ -48,10 +50,7 @@ class TestMCPSessionManager:
         mock_task = AsyncMock()
         mock_task.done = MagicMock(return_value=False)
 
-        with (
-            patch.object(session_manager, "_create_stdio_session") as mock_create,
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
-        ):
+        with patch.object(session_manager, "_create_stdio_session") as mock_create:
             mock_create.return_value = (mock_session, mock_task)
 
             # First call should create session
@@ -103,14 +102,13 @@ class TestMCPSessionManager:
         server2_params = MagicMock()
         server2_params.command = "server2"
 
-        with (
-            patch.object(session_manager, "_create_stdio_session") as mock_create,
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
-        ):
+        with patch.object(session_manager, "_create_stdio_session") as mock_create:
             mock_session1 = AsyncMock()
             mock_session2 = AsyncMock()
             mock_task1 = AsyncMock()
+            mock_task1.done = MagicMock(return_value=False)
             mock_task2 = AsyncMock()
+            mock_task2.done = MagicMock(return_value=False)
             mock_create.side_effect = [(mock_session1, mock_task1), (mock_session2, mock_task2)]
 
             # First connection
@@ -3198,6 +3196,97 @@ class TestMCPStructuredToolToolCallId:
     is multimodal-ready and whose artifact holds the original CallToolResult.
     """
 
+
+class TestMCPToolExecutionTimeout:
+    """Tests for configurable MCP tool execution timeout."""
+
+    @pytest.mark.asyncio
+    async def test_tool_execution_uses_configured_timeout(self):
+        """Test that tool execution respects the configured timeout setting."""
+        from unittest.mock import patch
+
+        from lfx.base.mcp.util import MCPStdioClient
+
+        # Create a mock settings service with custom timeout
+        mock_settings = MagicMock()
+        mock_settings.mcp_tool_execution_timeout = 300  # 5 minutes
+
+        with patch("lfx.base.mcp.util.get_settings_service") as mock_get_settings:
+            mock_get_settings.return_value.settings = mock_settings
+
+            client = MCPStdioClient()
+            # Satisfy the connected-guard so run_tool doesn't short-circuit.
+            client._connected = True
+            client._connection_params = MagicMock()
+
+            # Mock the session and its call_tool method
+            mock_session = AsyncMock()
+            mock_result = MagicMock()
+            mock_result.content = []
+            mock_session.call_tool = AsyncMock(return_value=mock_result)
+
+            # Mock _get_or_create_session to return our mock session
+            with (
+                patch.object(client, "_get_or_create_session", return_value=mock_session),
+                patch("lfx.base.mcp.util.asyncio.wait_for", new_callable=AsyncMock) as mock_wait_for,
+            ):
+                mock_wait_for.return_value = mock_result
+
+                # Execute the tool
+                await client.run_tool("test_tool", arguments={})
+
+                # Verify that wait_for was called with the configured timeout
+                mock_wait_for.assert_called_once()
+                call_args = mock_wait_for.call_args
+                assert call_args.kwargs["timeout"] == 300
+
+    @pytest.mark.asyncio
+    async def test_streamable_http_client_uses_configured_timeout(self):
+        """Test that streamable HTTP client respects the configured timeout setting."""
+        from unittest.mock import patch
+
+        from lfx.base.mcp.util import MCPStreamableHttpClient
+
+        # Create a mock settings service with custom timeout
+        mock_settings = MagicMock()
+        mock_settings.mcp_tool_execution_timeout = 240  # 4 minutes
+
+        with patch("lfx.base.mcp.util.get_settings_service") as mock_get_settings:
+            mock_get_settings.return_value.settings = mock_settings
+
+            client = MCPStreamableHttpClient()
+            # Satisfy the connected-guard so run_tool doesn't short-circuit.
+            client._connected = True
+            client._connection_params = MagicMock()
+
+            # Mock the session and its call_tool method
+            mock_session = AsyncMock()
+            mock_result = MagicMock()
+            mock_result.content = []
+            mock_session.call_tool = AsyncMock(return_value=mock_result)
+
+            # Mock _get_or_create_session to return our mock session
+            with (
+                patch.object(client, "_get_or_create_session", return_value=mock_session),
+                patch("lfx.base.mcp.util.asyncio.wait_for", new_callable=AsyncMock) as mock_wait_for,
+            ):
+                mock_wait_for.return_value = mock_result
+
+                # Execute the tool
+                await client.run_tool("test_tool", arguments={})
+
+                # Verify that wait_for was called with the configured timeout
+                mock_wait_for.assert_called_once()
+                call_args = mock_wait_for.call_args
+                assert call_args.kwargs["timeout"] == 240
+
+    def test_default_timeout_value_in_settings(self):
+        """Test that the default timeout is set to 180 seconds."""
+        from lfx.services.settings.base import Settings
+
+        settings = Settings()
+        assert settings.mcp_tool_execution_timeout == 180
+
     def _make_raw_result(self, text: str = "ok", image_data: str | None = None):
         """Build a minimal CallToolResult-like mock."""
         text_block = MagicMock()
@@ -3332,3 +3421,213 @@ class TestMCPStructuredToolToolCallId:
         assert handler.outputs[0].name == "get_image"
         assert handler.outputs[0].artifact is raw
         assert result.name == "get_image"
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for the CPU-spike / workflow-hang bug fixes
+# ---------------------------------------------------------------------------
+
+
+class TestCleanupIntervalFloorGuard:
+    """Bug fix: get_session_cleanup_interval() must never return 0 or a negative value.
+
+    If the settings service returns 0, None, or a very small number the
+    _periodic_cleanup loop calls ``asyncio.sleep(0)`` on every iteration,
+    spinning at 100 % CPU and blocking the event loop.  The floor guard
+    ``_MCP_CLEANUP_INTERVAL_MIN`` (30 s) prevents this.
+    """
+
+    def test_zero_interval_returns_floor(self):
+        """Settings value of 0 → floor minimum is returned, NOT 0."""
+        from lfx.base.mcp.util import _MCP_CLEANUP_INTERVAL_MIN, get_session_cleanup_interval
+
+        with patch("lfx.base.mcp.util._get_mcp_setting", return_value=0):
+            result = get_session_cleanup_interval()
+        assert result == _MCP_CLEANUP_INTERVAL_MIN
+
+    def test_none_interval_returns_floor(self):
+        """Settings value of None → floor minimum is returned, NOT None."""
+        from lfx.base.mcp.util import _MCP_CLEANUP_INTERVAL_MIN, get_session_cleanup_interval
+
+        with patch("lfx.base.mcp.util._get_mcp_setting", return_value=None):
+            result = get_session_cleanup_interval()
+        assert result == _MCP_CLEANUP_INTERVAL_MIN
+
+    def test_negative_interval_returns_floor(self):
+        """Settings value of -1 → floor minimum is returned."""
+        from lfx.base.mcp.util import _MCP_CLEANUP_INTERVAL_MIN, get_session_cleanup_interval
+
+        with patch("lfx.base.mcp.util._get_mcp_setting", return_value=-1):
+            result = get_session_cleanup_interval()
+        assert result == _MCP_CLEANUP_INTERVAL_MIN
+
+    def test_valid_interval_is_returned_unchanged(self):
+        """A legitimately configured value above the floor passes through."""
+        from lfx.base.mcp.util import get_session_cleanup_interval
+
+        with patch("lfx.base.mcp.util._get_mcp_setting", return_value=120):
+            result = get_session_cleanup_interval()
+        assert result == 120
+
+    def test_floor_constant_is_at_least_30_seconds(self):
+        """The floor constant must be >= 30 s to be safe."""
+        from lfx.base.mcp.util import _MCP_CLEANUP_INTERVAL_MIN
+
+        assert _MCP_CLEANUP_INTERVAL_MIN >= 30
+
+
+class TestGetSessionNoBlockingHealthCheck:
+    """Bug fix: get_session() must NOT call list_tools() on the hot path.
+
+    In every upstream release through v1.11.0, get_session() calls
+    _validate_session_connectivity() (which issues list_tools() with a 3 s
+    timeout) for *every* reused session.  With a pool of 10 sessions that
+    stacks to 30 s of blocking per tool invocation, preventing workflows from
+    ever finishing.  The fix uses task.done() as the sole liveness check.
+    """
+
+    @pytest.fixture
+    async def session_manager(self):
+        manager = MCPSessionManager()
+        yield manager
+        await manager.cleanup_all()
+
+    async def test_get_session_reuse_does_not_call_list_tools(self, session_manager):
+        """Reusing an existing live session must NOT invoke list_tools()."""
+        mock_session = AsyncMock()
+        mock_session.list_tools = AsyncMock(side_effect=AssertionError("list_tools must not be called on the hot path"))
+
+        mock_task = MagicMock()
+        mock_task.done.return_value = False  # task is alive
+
+        # Pre-populate the sessions dict so get_session finds an existing session.
+        server_key = "test_server_reuse"
+        session_id = "sess_0"
+        session_manager.sessions_by_server[server_key] = {
+            "sessions": {
+                session_id: {
+                    "session": mock_session,
+                    "task": mock_task,
+                    "type": "stdio",
+                    "last_used": 0.0,
+                }
+            },
+            "last_cleanup": 0.0,
+        }
+
+        connection_params = MagicMock()
+        connection_params.command = "fake_command"
+        connection_params.args = []
+        connection_params.env = {}
+
+        # The session_manager builds its server_key from connection_params, so we
+        # patch _get_server_key to return our pre-populated key.
+        with patch.object(session_manager, "_get_server_key", return_value=server_key):
+            returned = await session_manager.get_session("ctx_1", connection_params, "stdio")
+
+        assert returned is mock_session
+        mock_session.list_tools.assert_not_called()
+
+    async def test_get_session_dead_task_creates_new_session(self, session_manager):
+        """A session whose background task has finished is discarded and a new one created."""
+        dead_task = MagicMock()
+        dead_task.done.return_value = True  # task finished → session is dead
+        dead_task.cancel = MagicMock()
+
+        old_session = AsyncMock()
+        old_session.list_tools = AsyncMock(side_effect=AssertionError("list_tools must not be called"))
+
+        server_key = "test_server_dead"
+        session_id = "sess_dead"
+        session_manager.sessions_by_server[server_key] = {
+            "sessions": {
+                session_id: {
+                    "session": old_session,
+                    "task": dead_task,
+                    "type": "stdio",
+                    "last_used": 0.0,
+                }
+            },
+            "last_cleanup": 0.0,
+        }
+
+        new_session = AsyncMock()
+        new_task = MagicMock()
+        new_task.done.return_value = False
+
+        connection_params = MagicMock()
+        connection_params.command = "fake_command"
+        connection_params.args = []
+        connection_params.env = {}
+
+        with (
+            patch.object(session_manager, "_get_server_key", return_value=server_key),
+            patch.object(session_manager, "_create_stdio_session", new=AsyncMock(return_value=(new_session, new_task))),
+        ):
+            returned = await session_manager.get_session("ctx_2", connection_params, "stdio")
+
+        assert returned is new_session
+        old_session.list_tools.assert_not_called()
+
+
+class TestSettingsCacheNotStale:
+    """Bug fix: _get_mcp_setting() must read the live settings on every call.
+
+    The old module-level ``_mcp_settings_cache`` dict cached the first value
+    forever.  After a settings change (e.g. env-var override in tests) the
+    cache would return the old stale value, causing cleanup loops to run at
+    the wrong cadence or session pools to grow beyond the new limit.
+    """
+
+    def test_setting_change_is_reflected_immediately(self):
+        """Two consecutive calls with different mocked settings return different values."""
+        from lfx.base.mcp.util import get_session_cleanup_interval
+
+        with patch("lfx.base.mcp.util._get_mcp_setting", return_value=60):
+            first = get_session_cleanup_interval()
+
+        with patch("lfx.base.mcp.util._get_mcp_setting", return_value=300):
+            second = get_session_cleanup_interval()
+
+        assert first == 60
+        assert second == 300
+        assert first != second
+
+
+class TestPeriodicCleanupSurvivesUnexpectedError:
+    """Bug fix: _periodic_cleanup() must survive unexpected exceptions.
+
+    The old narrow ``except (RuntimeError, KeyError, …)`` tuple silently
+    killed the loop for any error type not in the list (e.g. an
+    ``AttributeError`` or a new MCP SDK exception).  After the loop died no
+    further cleanup happened and sessions accumulated unbounded.  The fix
+    uses ``except Exception`` so the loop always continues.
+    """
+
+    async def test_unexpected_exception_does_not_kill_cleanup_loop(self):
+        """An AttributeError in _cleanup_idle_sessions must not stop the loop."""
+        manager = MCPSessionManager()
+
+        call_count = 0
+
+        async def patched_cleanup():
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                msg = "unexpected error from new SDK version"
+                raise AttributeError(msg)
+            # Stop after the second invocation so the test terminates.
+            raise asyncio.CancelledError
+
+        with (
+            patch("lfx.base.mcp.util.get_session_cleanup_interval", return_value=0),
+            patch.object(manager, "_cleanup_idle_sessions", side_effect=patched_cleanup),
+            contextlib.suppress(asyncio.CancelledError),
+        ):
+            await manager._periodic_cleanup()
+
+        # The loop must have run at least twice — proving the first exception
+        # was caught and the loop continued.
+        assert call_count >= 2
+
+        await manager.cleanup_all()

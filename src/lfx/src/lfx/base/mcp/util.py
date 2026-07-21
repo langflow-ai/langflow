@@ -41,16 +41,14 @@ HTTP_INTERNAL_SERVER_ERROR = 500
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
 
-# MCP Session Manager constants - lazy loaded
-_mcp_settings_cache: dict[str, Any] = {}
+# Minimum cleanup interval to prevent tight-loop CPU spin if settings return 0 or fail
+_MCP_CLEANUP_INTERVAL_MIN = 30  # seconds
 
 
 def _get_mcp_setting(key: str, default: Any = None) -> Any:
-    """Lazy load MCP settings from settings service."""
-    if key not in _mcp_settings_cache:
-        settings = get_settings_service().settings
-        _mcp_settings_cache[key] = getattr(settings, key, default)
-    return _mcp_settings_cache[key]
+    """Read MCP settings from settings service (no cache — settings may change)."""
+    settings = get_settings_service().settings
+    return getattr(settings, key, default)
 
 
 def get_max_sessions_per_server() -> int:
@@ -64,8 +62,12 @@ def get_session_idle_timeout() -> int:
 
 
 def get_session_cleanup_interval() -> int:
-    """Get cleanup interval in seconds."""
-    return _get_mcp_setting("mcp_session_cleanup_interval")
+    """Get cleanup interval in seconds, clamped to a safe minimum."""
+    interval = _get_mcp_setting("mcp_session_cleanup_interval")
+    # Guard: if settings return 0, None, or a negative value the loop would spin at full CPU.
+    if not interval or interval < _MCP_CLEANUP_INTERVAL_MIN:
+        return _MCP_CLEANUP_INTERVAL_MIN
+    return interval
 
 
 # RFC 7230 compliant header name pattern: token = 1*tchar
@@ -762,8 +764,8 @@ class MCPSessionManager:
                 await self._cleanup_idle_sessions()
             except asyncio.CancelledError:
                 break
-            except (RuntimeError, KeyError, ClosedResourceError, ValueError, asyncio.TimeoutError) as e:
-                # Handle common recoverable errors without stopping the cleanup loop
+            except Exception as e:  # noqa: BLE001
+                # Catch all recoverable errors so the cleanup loop never silently dies.
                 await logger.awarning(f"Error in periodic cleanup: {e}")
 
     async def _cleanup_idle_sessions(self):
@@ -872,31 +874,27 @@ class MCPSessionManager:
         server_data = self.sessions_by_server[server_key]
         sessions = server_data["sessions"]
 
-        # Try to find a healthy existing session
+        # Try to find a healthy existing session.
+        # Only sessions whose background task is still running are considered alive.
+        # We do NOT call list_tools() here because that would add up to
+        # (max_sessions x 3 s timeout) = ~30 s of blocking on every run_tool invocation.
         for session_id, session_info in list(sessions.items()):
             session = session_info["session"]
             task = session_info["task"]
 
-            # Check if session is still alive
             if not task.done():
-                # Update last used time
+                # Background task is still alive — treat the session as healthy.
                 session_info["last_used"] = asyncio.get_event_loop().time()
-
-                # Quick health check
-                if await self._validate_session_connectivity(session):
-                    await logger.adebug(f"Reusing existing session {session_id} for server {server_key}")
-                    # record mapping & bump ref-count for backwards compatibility
-                    self._context_to_session[context_id] = (server_key, session_id)
-                    self._session_refcount[(server_key, session_id)] = (
-                        self._session_refcount.get((server_key, session_id), 0) + 1
-                    )
-                    return session
-                await logger.ainfo(f"Session {session_id} for server {server_key} failed health check, cleaning up")
-                await self._cleanup_session_by_id(server_key, session_id)
-            else:
-                # Task is done, clean up
-                await logger.ainfo(f"Session {session_id} for server {server_key} task is done, cleaning up")
-                await self._cleanup_session_by_id(server_key, session_id)
+                await logger.adebug(f"Reusing existing session {session_id} for server {server_key}")
+                # record mapping & bump ref-count for backwards compatibility
+                self._context_to_session[context_id] = (server_key, session_id)
+                self._session_refcount[(server_key, session_id)] = (
+                    self._session_refcount.get((server_key, session_id), 0) + 1
+                )
+                return session
+            # Background task finished — session is dead, clean it up.
+            await logger.ainfo(f"Session {session_id} for server {server_key} task is done, cleaning up")
+            await self._cleanup_session_by_id(server_key, session_id)
 
         # Check if we've reached the maximum number of sessions for this server
         if len(sessions) >= get_max_sessions_per_server():
@@ -1418,9 +1416,11 @@ class MCPStdioClient:
                 # Get or create persistent session
                 session = await self._get_or_create_session()
 
+                # Use configurable timeout from settings
+                tool_timeout = get_settings_service().settings.mcp_tool_execution_timeout
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                    timeout=tool_timeout,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
@@ -1690,9 +1690,11 @@ class MCPStreamableHttpClient:
                 # Get or create persistent session
                 session = await self._get_or_create_session()
 
+                # Use configurable timeout from settings
+                tool_timeout = get_settings_service().settings.mcp_tool_execution_timeout
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                    timeout=tool_timeout,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
