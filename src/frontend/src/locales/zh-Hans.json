@@ -73,6 +73,7 @@
   "assistant.maxSessionsLabel": "最大会话数",
   "assistant.maxSessionsTooltip": "已达到 {{max}} 会话的上限。 删除当前会话以创建新会话。",
   "assistant.mentionNoMatches": "画布上没有匹配的组件",
+  "assistant.flowProposalReplaceOnly": "此流程包含 Chat Input 或 Webhook，而您的画布中已有一个。一个流程只能有一个。请替换画布以使用此流程。",
   "assistant.messageCounts": "{{count}} msgs",
   "assistant.newConversation": "新建对话",
   "assistant.newPill": "新",

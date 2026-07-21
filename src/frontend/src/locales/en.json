@@ -1297,6 +1297,7 @@
   "assistant.messageCounts": "{{count}} msgs",
   "assistant.workingOnIt": "Working on it...",
   "assistant.mentionNoMatches": "No matching components on the canvas",
+  "assistant.flowProposalReplaceOnly": "This flow includes a Chat Input or Webhook and your canvas already has one. A flow can only have one. Replace the canvas to use this flow.",
   "assistant.title": "Langflow Assistant",
   "assistant.user": "User",
   "sidebar.mcpNewBadge": "New",

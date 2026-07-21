@@ -73,6 +73,7 @@
   "assistant.maxSessionsLabel": "セッションの最大数",
   "assistant.maxSessionsTooltip": "{{max}} セッションの上限に達しました。 セッションを削除して、新しいセッションを作成します。",
   "assistant.mentionNoMatches": "キャンバス上に一致するコンポーネントがありません",
+  "assistant.flowProposalReplaceOnly": "このフローには Chat Input または Webhook が含まれていますが、キャンバスには既に存在します。フローに設定できるのは 1 つだけです。このフローを使用するにはキャンバスを置き換えてください。",
   "assistant.messageCounts": "{{count}} メッセージ",
   "assistant.newConversation": "新規会話",
   "assistant.newPill": "新規",
