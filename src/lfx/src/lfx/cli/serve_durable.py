@@ -326,7 +326,11 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
         scope_token = activate_request_variables(scope_vars or None)
         no_env_token = activate_no_env_fallback(disabled=bool(graph.context.get("no_env_fallback")))
         try:
-            await graph.process(fallback_to_env_vars=False)
+            # Graph.process is a third entry point alongside async_start and arun, and the one the
+            # durable/background path uses, so it needs its own application span or every job run
+            # here is invisible to the operator's APM.
+            with graph.flow_execution_span():
+                await graph.process(fallback_to_env_vars=False)
         except GraphPausedException as pause:
             data = pause.data or {}
             await self.jobs.update_metadata(job_id, {"run_id": str(graph.run_id), "pending": data})
