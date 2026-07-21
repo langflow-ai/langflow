@@ -219,7 +219,6 @@ export default function ToolsTable({
         ? t("toolsModal.columnTool")
         : t("toolsModal.columnSlug"),
       flex: 1,
-      resizable: false,
       valueGetter: (params) =>
         params.data.name !== ""
           ? parseString(params.data.name, [
@@ -242,7 +241,7 @@ export default function ToolsTable({
     },
     {
       field: "approval_actions",
-      headerName: t("toolsModal.columnApproval", "Requires approval"),
+      headerName: t("toolsModal.columnApproval", "Requires Approval"),
       width: 150,
       flex: 0,
       resizable: false,

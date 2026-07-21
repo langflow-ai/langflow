@@ -2,10 +2,9 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
 
@@ -26,14 +25,15 @@ test(
       .getByTestId("div-generic-node")
       .getByText(TEXTS.componentLanguageModel, { exact: true })
       .click();
-    await openAdvancedOptions(page);
+    await openParametersPanel(page);
 
-    const input_value = page.getByTestId("showinput_value");
+    // LE-1810: connected fields stay listed in the panel, but their
+    // visibility cannot be changed while the handle is connected.
+    await expect(
+      page.getByTestId("inspector-remove-input_value"),
+    ).toBeDisabled();
 
-    // Connected fields should not appear in edit mode
-    await expect(input_value).toBeHidden();
-
-    await closeAdvancedOptions(page);
+    await closeParametersPanel(page);
 
     await page.locator(".react-flow__edge").nth(0).click();
 
@@ -45,15 +45,17 @@ test(
       .getByTestId("div-generic-node")
       .getByText(TEXTS.componentLanguageModel, { exact: true })
       .click();
-    await openAdvancedOptions(page);
+    await openParametersPanel(page);
 
-    // After disconnecting, the field should appear and be enabled
-    await expect(input_value).toBeVisible();
-    await expect(input_value).toBeEnabled();
+    // After disconnecting, the parameter can be managed again
+    await expect(
+      page.getByTestId("inspector-remove-input_value"),
+    ).toBeEnabled();
 
-    await input_value.click();
+    await toggleParameterOnNode(page, "input_value");
+    await expect(page.getByTestId("inspector-add-input_value")).toBeVisible();
 
-    await closeAdvancedOptions(page);
+    await closeParametersPanel(page);
 
     await unselectNodes(page);
 
@@ -62,7 +64,7 @@ test(
 );
 
 test(
-  "user should not be able to hide connected inputs when inspection panel is disabled",
+  "user should see why a connected input cannot be hidden",
   { tag: ["@release", "@api", "@database"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
@@ -72,28 +74,28 @@ test(
       .getByRole("heading", { name: TEXTS.templateBasicPrompting })
       .click();
 
-    await disableInspectPanel(page);
-
     await page.waitForSelector("text=Language Model", { timeout: 30000 });
 
     await page
       .getByTestId("div-generic-node")
       .getByText(TEXTS.componentLanguageModel, { exact: true })
       .click();
-    await openAdvancedOptions(page);
+    await openParametersPanel(page);
 
-    const input_value = page.getByTestId("showinput_value");
-    await expect(input_value).toBeVisible();
+    const removeInputValue = page.getByTestId("inspector-remove-input_value");
+    await expect(removeInputValue).toBeVisible();
 
-    await expect(input_value).toBeDisabled();
+    await expect(removeInputValue).toBeDisabled();
 
-    await input_value.hover();
+    // The disabled button is pointer-events-none (so the tooltip reaches
+    // real users through its wrapper) — hover the wrapper, not the button.
+    await page.getByTestId("inspector-remove-wrapper-input_value").hover();
 
     await expect(
       page.getByText("Cannot change visibility of connected handles"),
     ).toBeVisible();
 
-    await closeAdvancedOptions(page);
+    await closeParametersPanel(page);
 
     await page.locator(".react-flow__edge").nth(0).click();
 
@@ -105,16 +107,15 @@ test(
       .getByTestId("div-generic-node")
       .getByText(TEXTS.componentLanguageModel, { exact: true })
       .click();
-    await openAdvancedOptions(page);
+    await openParametersPanel(page);
 
-    await expect(input_value).toBeEnabled();
+    await expect(removeInputValue).toBeEnabled();
 
-    await input_value.click();
+    await toggleParameterOnNode(page, "input_value");
+    await expect(page.getByTestId("inspector-add-input_value")).toBeVisible();
 
-    await closeAdvancedOptions(page);
+    await closeParametersPanel(page);
 
     await expect(page.getByText("Input", { exact: true })).toBeHidden();
-
-    await enableInspectPanel(page);
   },
 );

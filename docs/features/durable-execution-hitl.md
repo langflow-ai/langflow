@@ -56,7 +56,7 @@ The pause probe is a no-op unless a component requests it, so normal flows are b
 | Decision | The human's answer: `action_id` (e.g. `approve`/`reject`) plus optional `values` | `graph.human_input_decisions` |
 | Run id | The graph's tracing identity; equals `graph_run_id` on the messages | `graph.set_run_id`, trace `id` |
 | Job id | The durable job identity used for checkpoints + resume | `JobStatus`, `/api/v2/workflows/{job_id}/resume` |
-| Gate span | The trace span recording the resolved decision: "Human In The Loop — Approved/Rejected" | `TracingService.record_event_span` |
+| Gate span | The trace span recording the resolved decision: "Human In The Loop — {action label}" (e.g. Approve/Reject/Remove) | `TracingService.record_event_span` |
 
 ---
 
@@ -113,6 +113,7 @@ The pause probe is a no-op unless a component requests it, so normal flows are b
 - **Given** a paused run with already-built vertices
 - **When** the run resumes
 - **Then** built vertices are restored, not re-executed (no LLM re-billing, no re-fired tools)
+- **And** a restored-built vertex is never handed back to the build loop by the runnable-predecessor walk (a re-run Chat Input would persist a duplicate `User` message for the turn)
 - **And** branches killed before the pause stay dead
 
 ### Scenario: HITL inside a nested flow is rejected
@@ -126,6 +127,18 @@ The pause probe is a no-op unless a component requests it, so normal flows are b
 - **When** the first is approved, the second pauses, and the second is then approved
 - **Then** the run finalizes once — no loop back to the first node
 - **And** only the chosen branch of each node runs (the first node's non-chosen branches stay dead across the second pause's resume, not just within the build that answered them)
+
+### Scenario: Rerunning a paused flow supersedes the stale pause
+- **Given** a flow with a `SUSPENDED` run awaiting a decision
+- **When** the same user submits a new background run of that flow
+- **Then** the stale suspended run is cancelled (`CANCELLED`, pending request cleared) before the new run starts, so only the new pause is offered on every surface
+- **And** the persisted chat card of the superseded pause is stamped `superseded` — after a history reload it renders closed ("Superseded by a new run") instead of turning interactive again and 409ing on every click
+- **And** the scope is flow + user on the langflow backend (another user's pause on the same flow is untouched) and flow on `lfx serve` (single API-key identity); running jobs are never superseded, so parallel runs stay supported
+
+### Scenario: Supersede loses the race to a resume
+- **Given** a `SUSPENDED` run whose resume arrives while a rerun's supersede is in flight
+- **When** the resume wins the atomic `SUSPENDED → IN_PROGRESS` claim between supersede's select and its cancel
+- **Then** supersede skips that job entirely — no `CANCELLED` write, no checkpoint delete, no metadata clear (backend) and no lingering STOP signal (`lfx serve`) — and the resumed run finishes normally
 
 ### Scenario: Single-flight resume
 - **Given** two resume requests for the same `SUSPENDED` job
@@ -185,9 +198,12 @@ Re-executing completed vertices on resume would re-bill LLMs, re-fire tools, and
 #### Decision
 Restore built vertices from the checkpoint; re-run only the paused vertex's **non-input predecessors whose dropped output an unbuilt consumer will actually read** (`_rerun_non_input_predecessors` / `_unbuild_needed_dropped_producers`). A producer behind a still-built, round-tripped consumer is left alone — re-running it is wasted work and, for a side-effecting node (an Agent re-bills its LLM and re-emits its message), surfaces as duplicate outputs on every later resume. Inputs (e.g. Chat Input) are never re-executed.
 
+Selecting the resume layer is not enough to hold that invariant. A resume restores `vertices_to_run` verbatim from the checkpoint, so vertices that came back **built** stay in the runnable pool; because `RunnableVerticesManager.is_vertex_runnable` never consulted `built`, the backward walk that looks for runnable predecessors when a successor is blocked (`find_runnable_predecessors_for_successor`) could hand one back to the build loop mid-resume. `Graph.is_vertex_runnable` therefore rejects a vertex that is still `built` **and** was restored from the checkpoint (`checkpoint_restored_built_ids`), excluding loop vertices, which legitimately re-run. Reading the live `built` flag rather than the checkpoint's is what keeps the gated node and the opaque-dropped producers — built at checkpoint time, deliberately un-built by the resume — eligible.
+
 #### Consequences
 - **Benefits**: no double billing, no duplicate side effects, deterministic continuation.
 - **Trade-offs**: the resume re-runs a minimal predecessor set; the terminal output is produced fresh on resume (see ADR-004).
+- **Symptom this prevents**: a re-executed Chat Input persists a second `User` message for the same turn, so the paused chat renders the user's question twice after the decision.
 
 ### ADR-004: The whole run is one durable backend trace (gate + Chat Output as spans)
 
@@ -199,7 +215,7 @@ Originally, resumed runs lost trace data in the backend: the **Chat Output** spa
 #### Decision
 1. On resume, call `graph.initialize_run()` on the checkpoint's `run_id` so resumed vertices trace into the **same** trace as the pre-pause run, and restore `flow_name` for the trace title.
 2. Pin the caller's `run_id` in `build_graph_from_data` **before** `initialize_run` (forwarded by `create_graph`), so the initial run traces into `graph_run_id` — not a fresh uuid.
-3. Record the resolved gate as a real span via `TracingService.record_event_span` ("Human In The Loop — Approved/Rejected").
+3. Record the resolved gate as a real span via `TracingService.record_event_span` ("Human In The Loop — {action label}", e.g. Approve/Reject/Remove).
 4. Remove the frontend `localStorage` persistence; `TraceDetailView` reads the gate + output from the backend trace and only synthesizes a gate for the live window, deduped by name.
 
 #### Consequences
@@ -225,12 +241,19 @@ Drain the queue **inline** after cancelling the worker (`service.py::_stop`), an
 
 ## 6. Technical Specification
 
-### 6.1 Pause → suspend (initial run)
+### 6.1 Submit supersedes stale pauses
+- `BackgroundExecutionService.submit` calls `supersede_suspended_runs(flow_id, user_id)` after `create_job` (so idempotent retries still return the existing job) and before enqueue: every `SUSPENDED` workflow job of the same flow + user is cancelled through the `_cancel_suspended` path (status `CANCELLED`, card stamped superseded, checkpoint deleted, pending cleared, `run_cancelled` event, bus closed).
+- The cancel is an **atomic claim**: `JobService.claim_suspended_for_cancel` (a conditional `UPDATE … WHERE status = SUSPENDED`, the mirror of `claim_suspended_for_resume`) flips the row, and cleanup runs only for rows this caller actually claimed. A resume that won the flip first keeps its run — supersede can never cancel a resumed job or destroy its checkpoint mid-flight. `stop_job` uses the same claim and falls through to the running-job STOP path when it loses.
+- Before metadata is cleared, `mark_card_superseded` (`api/v2/hitl.py`) patches the persisted card's `human_input` content with `superseded: true` (skipping already-answered cards); `HumanInputCard` renders that state closed, so a reloaded history cannot re-offer a decision that would only 409.
+- `DurableServeWorkflowHost.submit_background` mirrors it flow-scoped: `SqliteDurableJobStore.claim_suspended_for_cancel` first, then (only for claimed rows) STOP signal, task cancel, pending metadata cleared — a lost claim also means no stray STOP signal for the resumed continuation to consume.
+- Frontend: the canvas badge auto-open is keyed by `request_id`, so the superseding run's new pause reopens a dismissed popover; the 5s pending poll converges every surface onto the single remaining pause.
+
+### 6.2 Pause → suspend (initial run)
 - The graph consults a pause probe at each layer boundary; on a pending pause it snapshots itself, writes a `checkpoint` row (always-writable schema), and raises `GraphPausedException`.
 - The build seam (`api/build.py`) catches it, persists the human-input card to history, emits `human_input_required`, and ends the stream without `on_end`.
 - The runner marks the job `SUSPENDED` (`services/background_execution/runner.py`).
 
-### 6.2 Resume (single-flight)
+### 6.3 Resume (single-flight)
 - `POST /api/v2/workflows/{job_id}/resume` with `{request_id, decision}`.
 - The route re-enforces `FlowAction.EXECUTE` (`ensure_resume_execute_permission`) before applying the decision — job ownership alone is not enough once shared access has been revoked.
 - `claim_suspended_for_resume` performs the atomic status claim; failure → `NOT_RESUMABLE`.
@@ -244,7 +267,9 @@ Drain the queue **inline** after cancelling the worker (`service.py::_stop`), an
   decision = reroute_decision_on_timeout(pending, resume["decision"])
   graph.human_input_decisions = {resume["request_id"]: decision}
   action_id = str((decision or {}).get("action_id", ""))
-  gate_label = "Rejected" if "reject" in action_id.lower() else "Approved"
+  # HITL actions are user-defined (Approve/Reject/Remove/...), so label the span with the chosen
+  # action's button label (from the pending options), not a hardcoded approve/reject binary.
+  gate_label = _hitl_gate_label(action_id, (pending or {}).get("options"))
   graph.tracing_service.record_event_span(
       span_id=f"hitl-{resume['request_id']}",
       name=f"Human In The Loop — {gate_label}",
@@ -253,7 +278,7 @@ Drain the queue **inline** after cancelling the worker (`service.py::_stop`), an
   # restore built vertices; re-run only non-input predecessors of the gated vertex
   ```
 
-### 6.3 Trace continuity (initial run)
+### 6.4 Trace continuity (initial run)
 - `build_graph_from_data` (`api/utils/flow_utils.py`) pins the run id before tracing starts:
   ```python
   if (caller_run_id := kwargs.get("run_id")) is not None:
@@ -262,15 +287,16 @@ Drain the queue **inline** after cancelling the worker (`service.py::_stop`), an
   ```
 - `create_graph` forwards `run_id=str(job_id) if job_id is not None else run_id` to both `build_graph_from_data` and `build_graph_from_db`.
 
-### 6.4 Gate span recording
+### 6.5 Gate span recording
 - `TracingService.record_event_span(span_id, name, outputs, span_type="chain")` writes a standalone start+end span into the active trace for every ready tracer; deactivated/contextless calls are no-ops.
 
-### 6.5 Frontend (reads backend spans)
+### 6.6 Frontend (reads backend spans)
 - `useGetTraceQuery` → `GET /api/v1/monitor/traces/{id}` returns the span tree.
 - `TraceDetailView.tsx`: renders the backend gate span; `backendHasGate` dedup prevents a duplicate synthetic node; `executedOutputSpans` bridges Chat Output from live `flowPool` only during the resume window (deduped by name).
 - `hitlStore.ts`: in-memory only (`pending` slot); `localStorage`/`persist` removed.
+- Answered-card propagation: the chat's session cache is a subscription-only query (`staleTime: Infinity`, fed by `setQueryData`), so `invalidateQueries` cannot refresh it and it re-hydrates from the backend only while empty. A decision taken on another surface — canvas badge, trace bar, another tab — is therefore adopted on load by `withAnsweredHumanInputCards` (`human-input-card.ts`), which stamps `submitted_action` from the backend copy onto cards the cache still shows as open. Without it an answered pause keeps rendering its buttons until a full page reload.
 
-### 6.6 lfx serve durable mode (LE-1695)
+### 6.7 lfx serve durable mode (LE-1695)
 
 Bare `lfx serve` gains the same background + HITL contract without a database, backed by the single-node SQLite substrate:
 
@@ -282,12 +308,13 @@ Bare `lfx serve` gains the same background + HITL contract without a database, b
 - **Opt-in**: `LFX_SERVE_DURABLE_DB=<path>`. Unset → serve stays stateless and `mode: background` keeps its 422; workers in multi-worker mode inherit the env var and share the DB file (a stop cancels the run only in the worker executing it).
 - **Proof**: `src/lfx/tests/unit/cli/test_serve_durable.py` — background echo completes with the sync-shaped response; a HITL flow suspends, exposes its pending request, resumes only the approved branch, and resumes to completion on a fresh app instance over the same DB file (restart equivalence). The `{job_id}/events` SSE stream replays a completed run, surfaces the `human_input_request` on a suspend, and — reconnected with `Last-Event-ID` after a resume — delivers only the post-resume `human_input_decision` + `end` frames.
 
-### 6.7 Component map (quick index)
+### 6.8 Component map (quick index)
 
 | Concern | Where | Key symbols |
 |---------|-------|-------------|
 | Pause signal + checkpoint | `lfx/graph/graph/base.py`, `lfx/graph/checkpoint/` | `GraphPausedException`, `resume_from_checkpoint`, `set_run_id` |
 | Build seam + resume rebuild | `api/build.py` | `build_resumed_graph_and_get_order`, `_rerun_non_input_predecessors` |
+| Resume scheduling guard | `lfx/graph/graph/base.py` | `is_vertex_runnable`, `checkpoint_restored_built_ids` |
 | Run-id pinning | `api/utils/flow_utils.py` | `build_graph_from_data` |
 | Durable job + single-flight | `services/background_execution/{runner,service}.py` | `JobStatus.SUSPENDED`, `claim_suspended_for_resume` |
 | lfx serve durable substrate | `lfx/services/durable/`, `lfx/cli/serve_durable.py` | `SqliteDurableJobStore`, `SqliteCheckpointStore`, `DurableServeWorkflowHost` |
@@ -349,7 +376,7 @@ sequenceDiagram
   U->>API: POST /v2/workflows/{job}/resume {decision}
   API->>DB: claim SUSPENDED→IN_PROGRESS (single-flight)
   API->>G: resume_from_checkpoint + initialize_run(run_id)
-  G->>T: record "Human In The Loop — Approved" span
+  G->>T: record "Human In The Loop — {decision}" span
   G->>T: trace re-run predecessors … Chat Output
   G->>DB: flush spans (one trace) + job COMPLETED
   API-->>U: result; trace panel shows full run

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/contexts";
 import {
@@ -12,18 +13,6 @@ import { useResumeWorkflow } from "@/controllers/API/queries/workflows/use-resum
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useHitlStore } from "@/stores/hitlStore";
-import { cn } from "@/utils/utils";
-
-function PauseGlyph() {
-  return (
-    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-[1.5px] border-accent-indigo-foreground">
-      <span className="flex items-center gap-[1.5px]">
-        <span className="h-2 w-0.5 rounded-[1px] bg-accent-indigo-foreground" />
-        <span className="h-2 w-0.5 rounded-[1px] bg-accent-indigo-foreground" />
-      </span>
-    </span>
-  );
-}
 
 /**
  * Bottom bar for a paused (awaiting-human) trace: mirrors the chat/canvas HITL card,
@@ -108,13 +97,15 @@ export function TraceHitlBar({
   };
 
   const isReject = (id: string) => id.toLowerCase().includes("reject");
-  const isApprove = (id: string) => id.toLowerCase().includes("approve");
 
   return (
     <div className="flex items-center justify-between gap-3 border-t border-border bg-muted/40 px-4 py-3">
       <div className="flex min-w-0 items-center gap-2">
-        <PauseGlyph />
-        <span className="text-sm font-medium text-accent-indigo-foreground">
+        <IconComponent
+          name="Pause"
+          className="h-4 w-4 shrink-0 text-accent-indigo-foreground"
+        />
+        <span className="text-sm font-medium text-primary">
           {t("trace.hitlTitle")}
         </span>
         <span className="truncate text-sm text-muted-foreground">
@@ -123,7 +114,7 @@ export function TraceHitlBar({
       </div>
 
       {resuming ? (
-        <span className="flex items-center gap-2 text-sm text-accent-indigo-foreground">
+        <span className="flex items-center gap-2 text-sm text-muted-foreground">
           <span className="animate-pulse tracking-widest">•••</span>
           {t("trace.resumingFlow")}
         </span>
@@ -133,15 +124,9 @@ export function TraceHitlBar({
             <Button
               key={option.action_id}
               size="sm"
-              variant={isReject(option.action_id) ? "outline" : "default"}
+              variant={isReject(option.action_id) ? "destructive" : "default"}
               disabled={isPending}
               data-testid={`trace-hitl-${option.action_id}`}
-              className={cn(
-                isApprove(option.action_id) &&
-                  "bg-accent-indigo-foreground text-white hover:bg-accent-indigo-foreground/90",
-                isReject(option.action_id) &&
-                  "border-status-red text-status-red hover:bg-status-red/10",
-              )}
               onClick={() => decide(option.action_id)}
             >
               {option.label ?? option.action_id}
