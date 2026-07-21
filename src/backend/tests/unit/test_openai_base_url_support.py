@@ -134,9 +134,7 @@ class TestLiveOpenAICompatibleModels:
         embeddings to [].
         """
         response = MagicMock()
-        response.json.return_value = {
-            "data": [{"id": "BAAI/bge-base-en-v1.5"}, {"id": "text-embedding-3-small"}]
-        }
+        response.json.return_value = {"data": [{"id": "BAAI/bge-base-en-v1.5"}, {"id": "text-embedding-3-small"}]}
         response.raise_for_status.return_value = None
         with (
             patch(
