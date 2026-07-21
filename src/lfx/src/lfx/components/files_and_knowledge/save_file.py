@@ -15,7 +15,7 @@ from lfx.io import BoolInput, DropdownInput, SecretStrInput, StrInput
 from lfx.schema import Data, DataFrame, Message
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 from lfx.template.field.base import Output
-from lfx.utils.file_path_security import enforce_local_file_access
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 
@@ -39,14 +39,7 @@ def _is_default_storage(storage_name: str) -> bool:
 
 class SaveToFileComponent(Component):
     display_name = "Write File"
-    description = (
-        "Save data to a file. "
-        "Arguments: 'input' — the content to save (pass a DataFrame directly, or a JSON string "
-        "for tabular data, or plain text for messages); "
-        "'file_name' — the name to save as, without extension (e.g. 'report'); "
-        "'file_format' — output format: 'csv', 'json', 'txt', 'html', 'excel', 'markdown' (optional). "
-        "Returns a confirmation with the file path or URL."
-    )
+    description = "Save content to a file in the specified format and return its path."
     documentation: str = "https://docs.langflow.org/write-file"
     icon = "file-text"
     name = "SaveToFile"
@@ -208,7 +201,25 @@ class SaveToFileComponent(Component):
         ),
     ]
 
-    outputs = [Output(display_name="File Path", name="message", method="save_to_file")]
+    outputs = [
+        Output(
+            display_name="File Path",
+            name="message",
+            method="save_to_file",
+            # Tool-facing documentation: ``build_description`` prefers output
+            # ``info`` over the component description when this component is
+            # exposed as an agent tool, so the argument reference lives here
+            # instead of bloating the UI card description.
+            info=(
+                "Save data to a file. "
+                "Arguments: 'input' — the content to save (pass a DataFrame directly, or a JSON string "
+                "for tabular data, or plain text for messages); "
+                "'file_name' — the name to save as, without extension (e.g. 'report'); "
+                "'file_format' — output format: 'csv', 'json', 'txt', 'html', 'excel', 'markdown' (optional). "
+                "Returns a confirmation with the file path or URL."
+            ),
+        )
+    ]
 
     def update_build_config(self, build_config, field_value, field_name=None):
         """Update build configuration to show/hide fields based on storage location selection."""
@@ -640,11 +651,15 @@ class SaveToFileComponent(Component):
 
         # Prepare file path. file_name is tenant-controlled and this writes to local disk.
         settings = get_settings_service().settings
+        scope_ids = component_file_access_scopes(self)
         file_path = Path(self._get_safe_local_file_name()).expanduser()
         if settings.restrict_local_file_access and not file_path.is_absolute():
-            file_path = Path(settings.config_dir) / file_path
+            # New files belong to the authenticated user's storage namespace. If no
+            # user/flow scope exists, ``enforce_local_file_access`` below fails closed.
+            scope_root = Path(scope_ids[0]) if scope_ids else Path()
+            file_path = Path(settings.config_dir) / scope_root / file_path
         file_path = self._adjust_file_path_with_format(file_path, file_format)
-        file_path = enforce_local_file_access(file_path)
+        file_path = enforce_local_file_access(file_path, scope_ids=scope_ids)
         if not file_path.parent.exists():
             file_path.parent.mkdir(parents=True, exist_ok=True)
 

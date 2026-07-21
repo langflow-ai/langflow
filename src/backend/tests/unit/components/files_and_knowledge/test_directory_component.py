@@ -108,6 +108,7 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_mock),
         ):
             allowed = DirectoryComponent()
+            allowed._user_id = "flow-id"
             allowed.set_attributes(
                 {"path": str(inside), "use_multithreading": False, "silent_errors": False, "types": ["txt"]}
             )
@@ -116,10 +117,11 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
 
             # A configured/allowed root outside the storage dir is still blocked in restricted mode.
             blocked = DirectoryComponent()
+            blocked._user_id = "flow-id"
             blocked.set_attributes(
                 {"path": str(outside), "use_multithreading": False, "silent_errors": False, "types": ["txt"]}
             )
-            with pytest.raises(ValueError, match="outside the storage directory"):
+            with pytest.raises(ValueError, match="outside the authenticated user's storage scope"):
                 blocked.load_directory()
 
     def test_directory_without_mocks(self, monkeypatch):

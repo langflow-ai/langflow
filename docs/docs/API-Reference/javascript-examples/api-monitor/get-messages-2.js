@@ -1,4 +1,4 @@
-const url = `${process.env.LANGFLOW_URL ?? ""}/api/v1/monitor/messages?flow_id=${process.env.FLOW_ID ?? ""}&session_id=01ce083d-748b-4b8d-97b6-33adbb6a528a&sender=Machine&sender_name=AI&order_by=timestamp`;
+const url = `${process.env.LANGFLOW_URL ?? ""}/api/v1/monitor/messages?flow_id=${process.env.FLOW_ID ?? ""}&session_id=01ce083d-748b-4b8d-97b6-33adbb6a528a&sender=Machine&sender_name=AI&order_by=timestamp&order=ASC&limit=100&offset=0`;
 
 const options = {
   method: 'GET',

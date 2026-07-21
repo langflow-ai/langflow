@@ -125,15 +125,15 @@ class SecuritySettings(BaseModel):
 
     restrict_local_file_access: bool = False
     """If set to True, the built-in file-reading components (File, Directory, JSON/CSV-to-Data)
-    may only read paths that resolve *inside* the storage data directory (``config_dir``), where
-    uploaded files live.
+    may only read paths that resolve inside the authenticated user's or executing flow's storage
+    subdirectory under ``config_dir``, where uploaded files live.
 
     These components accept a filesystem path from a tenant-controlled input field. With the
     default (False) a tenant can set that path to an absolute server path (``/etc/passwd``, the
     SQLite DB, secrets) or a traversal string and read arbitrary server files — or another
     tenant's uploads. Multi-tenant / untrusted-user deployments that disallow user-authored
     components should set this to True (alongside ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``) so
-    these components cannot be used to read files outside the upload sandbox.
+    these components cannot read server files or storage belonging to another user or flow.
 
     Defaults to False to preserve existing single-tenant behavior, where reading local server
     files by absolute path is a legitimate feature."""
@@ -143,22 +143,22 @@ class SecuritySettings(BaseModel):
     flow-embedded configs and the ``/api/v2/mcp/servers`` REST endpoint).
 
     ``docker`` is an allowed MCP transport, but flags like ``-v /:/host`` (mount the host
-    filesystem), ``-v /var/run/docker.sock:/s`` (Docker-API root), ``--device``, ``--network
-    host``, and ``--privileged`` turn a container run into host access. With the default (False)
-    only ``--privileged`` / ``--cap-add`` and the host-namespace ``=`` forms are blocked, which
-    preserves existing single-tenant behavior where docker MCP servers legitimately use volume
-    mounts and custom networks.
+    filesystem), ``--use-api-socket`` (Docker-API root), ``--env-file`` (host file read),
+    ``--device``, ``--network host``, and ``--privileged`` turn a container run into host access.
+    With the default (False) only ``--privileged`` / ``--cap-add`` and the host-namespace ``=``
+    forms are blocked, which preserves existing single-tenant behavior where docker MCP servers
+    legitimately use volume mounts and custom networks.
 
     Multi-tenant / untrusted-tenant deployments should set this to True (alongside
-    ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``): host filesystem/device mounts and privilege flags
-    are then rejected outright, host/another-container namespaces and non-default networks are
-    rejected, and ``--security-opt`` is rejected only when it disables the sandbox. Benign forms
-    (no flags, ``--user``, ``--network none``/``bridge``, ``--security-opt no-new-privileges``)
-    stay allowed."""
+    ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``): host file/API/device access, published ports,
+    custom runtimes, restart persistence, and privilege flags are then rejected outright;
+    host/another-container namespaces and non-default networks are rejected; and
+    ``--security-opt`` is rejected only when it disables the sandbox. Benign forms (no flags,
+    ``--user``, ``--network none``/``bridge``, ``--security-opt no-new-privileges``) stay allowed."""
 
     # Rate Limiting
     rate_limit_enabled: bool = True
-    """Enable rate limiting for login endpoint. Set to False to disable (useful for testing)."""
+    """Enable rate limiting for login and public-flow endpoints. Set to False to disable."""
     rate_limit_per_minute: int = 5
     """Number of login attempts allowed per minute per IP."""
     rate_limit_storage_uri: str = "memory://"
@@ -166,9 +166,9 @@ class SecuritySettings(BaseModel):
     rate_limit_trust_proxy: bool = False
     """Trust X-Forwarded-For header when behind a reverse proxy. Only enable when behind a trusted proxy."""
     public_flow_rate_limit_per_minute: int = 20
-    """Public-flow runs allowed per minute per IP on the unauthenticated /api/v2/workflows/public endpoint.
-    Each run executes as the flow owner (real CPU/DB/LLM-credit cost), so anonymous callers are throttled
-    separately from (and more generously than) the login limit. Gated by rate_limit_enabled."""
+    """Public-flow runs allowed per minute per IP on the unauthenticated v1 build and v2 workflow endpoints.
+    V1 uses one bucket per flow; v2 uses its public-workflow bucket. Each run executes as the flow owner, so
+    anonymous callers are throttled separately from and more generously than login. Gated by rate_limit_enabled."""
 
     @field_validator("cors_origins", mode="before")
     @classmethod

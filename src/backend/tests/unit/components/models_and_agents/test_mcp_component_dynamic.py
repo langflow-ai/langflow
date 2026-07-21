@@ -87,6 +87,22 @@ class TestCacheKey:
 
         assert a._mcp_servers_cache_key("srv") != b._mcp_servers_cache_key("srv")
 
+    def test_different_users_produce_different_keys(self) -> None:
+        a = MCPToolsComponent()
+        a._user_id = "tenant-a"
+        b = MCPToolsComponent()
+        b._user_id = "tenant-b"
+
+        assert a._mcp_servers_cache_key("srv") != b._mcp_servers_cache_key("srv")
+
+    def test_same_user_produces_identical_keys(self) -> None:
+        a = MCPToolsComponent()
+        a._user_id = "tenant-a"
+        b = MCPToolsComponent()
+        b._user_id = "tenant-a"
+
+        assert a._mcp_servers_cache_key("srv") == b._mcp_servers_cache_key("srv")
+
     def test_same_headers_produce_identical_keys(self) -> None:
         a = MCPToolsComponent()
         a.headers = [{"key": "Authorization", "value": "Bearer same"}]
@@ -297,7 +313,7 @@ class TestUpdateBuildConfigRefresh:
     @staticmethod
     def _build_config(**overrides):
         config = {
-            "mcp_server": {"value": {"name": "srv", "config": {"command": "uvx test"}}},
+            "mcp_server": {"value": {"name": "srv", "config": {"command": "uvx", "args": ["test"]}}},
             "tool": {"show": True, "options": ["stale"], "value": "", "placeholder": "Select a tool"},
             "tool_placeholder": {"tool_mode": False},
             "tools_metadata": {"show": False},
@@ -318,11 +334,11 @@ class TestUpdateBuildConfigRefresh:
         with patch.object(
             component,
             "update_tool_list",
-            new=AsyncMock(return_value=([tool], {"name": "srv", "config": {"command": "uvx test"}})),
+            new=AsyncMock(return_value=([tool], {"name": "srv", "config": {"command": "uvx", "args": ["test"]}})),
         ) as mocked_update:
             build_config = await component.update_build_config(
                 self._build_config(is_refresh=True),
-                {"name": "srv", "config": {"command": "uvx test"}},
+                {"name": "srv", "config": {"command": "uvx", "args": ["test"]}},
                 "mcp_server",
             )
 
@@ -346,7 +362,7 @@ class TestUpdateBuildConfigRefresh:
             # depend on shared-cache state left by a sibling test (order-dependent under xdist).
             build_config = await component.update_build_config(
                 self._build_config(is_refresh=True),
-                {"name": "srv", "config": {"command": "uvx test"}},
+                {"name": "srv", "config": {"command": "uvx", "args": ["test"]}},
                 "mcp_server",
             )
 

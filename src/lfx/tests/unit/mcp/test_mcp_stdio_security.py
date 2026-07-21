@@ -5,6 +5,9 @@ validators, closing the hole where a tenant-embedded MCP stdio config reached
 ``bash -c "exec <command>"`` without any allowlist/metacharacter checks.
 """
 
+import re
+from types import SimpleNamespace
+
 import pytest
 from lfx.base.mcp.security import (
     ALLOWED_MCP_COMMANDS,
@@ -38,6 +41,13 @@ from lfx.base.mcp.security import (
         ("uvx", ["mcp-server-fetch"], {"LD_PRELOAD": "/tmp/x.so"}),
         ("node", ["server.js"], {"NODE_OPTIONS": "--require /tmp/x.js"}),
         ("uvx", ["x"], {"BASH_FUNC_foo%%": "() { :; }; evil"}),
+        # Package-runner source/config overrides can replace an approved package with attacker code.
+        ("uvx", ["lfx"], {"UV_DEFAULT_INDEX": "https://attacker.invalid/simple"}),
+        ("uvx", ["lfx"], {"uv_index": "evil=https://attacker.invalid/simple"}),
+        ("uvx", ["lfx"], {"UV_FIND_LINKS": "https://attacker.invalid/packages"}),
+        ("uvx", ["lfx"], {"UV_CONFIG_FILE": "/tenant/uv.toml"}),
+        ("npx", ["lfx"], {"NPM_CONFIG_REGISTRY": "https://attacker.invalid"}),
+        ("npx", ["lfx"], {"npm_config_userconfig": "/tenant/npmrc"}),
         # A tenant cannot supply the agentic user-id binding env var (case-insensitive); only
         # Langflow may inject it at spawn from the authenticated identity.
         ("python", ["-m", "langflow.agentic.mcp"], {"LANGFLOW_AGENTIC_USER_ID": "victim"}),
@@ -74,12 +84,20 @@ def test_validate_mcp_stdio_config_blocks_malicious(command, args, env):
     [
         # Host filesystem / device mounts -> host compromise.
         ["run", "-v", "/:/host", "alpine"],
+        ["run", "-v/:/host", "alpine"],
+        ["run", "-itv", "/:/host", "alpine"],
         ["run", "--volume=/:/host", "alpine"],
         ["run", "-v", "/var/run/docker.sock:/s", "alpine"],
         ["run", "--mount", "type=bind,src=/,dst=/host", "alpine"],
         ["run", "--volumes-from", "other", "img"],
         ["run", "--device", "/dev/mem", "img"],
         ["run", "--device-cgroup-rule", "b 8:0 rwm", "img"],
+        ["run", "--gpus", "all", "img"],
+        ["run", "--use-api-socket", "img"],
+        # Docker CLI host-file reads/writes.
+        ["run", "--env-file", "/app/.env", "img"],
+        ["run", "--label-file=/app/.env", "img"],
+        ["run", "--cidfile", "/app/container.id", "img"],
         # Host / another-container namespaces.
         ["run", "--network", "host", "img"],
         ["run", "--net=host", "img"],
@@ -87,12 +105,28 @@ def test_validate_mcp_stdio_config_blocks_malicious(command, args, env):
         ["run", "--ipc", "host", "img"],
         ["run", "--uts", "host", "img"],
         ["run", "--pid", "container:victim", "img"],
+        ["run", "--cgroupns", "host", "img"],
+        ["run", "--userns=host", "img"],
         # Non-default network (named infra network -> lateral movement).
         ["run", "--network", "internal-db-net", "img"],
+        ["run", "--link", "database:db", "img"],
+        # MCP stdio servers do not need host ports, custom runtimes, or restart persistence.
+        ["run", "-p", "8080:80", "img"],
+        ["run", "-p8080:80", "img"],
+        ["run", "-itp8080:80", "img"],
+        ["run", "-P", "img"],
+        ["run", "--publish=8080:80", "img"],
+        ["run", "--runtime", "custom", "img"],
+        ["run", "--restart", "always", "img"],
         # Sandbox-profile downgrades.
         ["run", "--security-opt", "seccomp=unconfined", "img"],
         ["run", "--security-opt=apparmor=unconfined", "img"],
         ["run", "--security-opt", "label:disable", "img"],
+        # Existing-container/build/daemon surfaces are outside the MCP Docker transport contract.
+        ["exec", "victim", "node", "server.js"],
+        ["cp", "victim:/etc/passwd", "./passwd"],
+        ["build", "."],
+        ["-H", "tcp://docker.internal:2375", "run", "img"],
     ],
 )
 def test_docker_hardened_policy_blocks_host_access(args):
@@ -111,6 +145,7 @@ def test_docker_hardened_policy_blocks_host_access(args):
         ["run", "--network=default", "img"],
         ["run", "--security-opt", "no-new-privileges", "img"],  # hardening flag, must stay allowed
         ["run", "--ipc", "private", "img"],
+        ["run", "--cgroupns", "private", "img"],
     ],
 )
 def test_docker_hardened_policy_allows_benign(args):
@@ -125,21 +160,39 @@ def test_docker_hardened_policy_allows_benign(args):
         (["run", "--privileged", "img"], True),
         (["run", "--cap-add", "SYS_ADMIN", "img"], True),
         (["run", "--network=host", "img"], True),
-        # ...but host mounts / named networks / space-form namespaces are allowed by default
-        # (only the opt-in hardened policy rejects them).
-        (["run", "-v", "/:/host", "alpine"], False),
-        (["run", "--mount", "type=bind,src=/,dst=/host", "alpine"], False),
-        (["run", "--device", "/dev/mem", "img"], False),
-        (["run", "--network", "host", "img"], False),
-        (["run", "--security-opt", "seccomp=unconfined", "img"], False),
+        # Baseline source policy now blocks direct host access even when the
+        # additional multi-tenant Docker hardening setting is disabled.
+        (["run", "-v", "/:/host", "alpine"], True),
+        (["run", "--mount", "type=bind,src=/,dst=/host", "alpine"], True),
+        (["run", "--device", "/dev/mem", "img"], True),
+        (["run", "--network", "host", "img"], True),
+        (["run", "--security-opt", "seccomp=unconfined", "img"], True),
     ],
 )
-def test_docker_default_policy_is_lenient(args, should_block):
+def test_docker_default_policy_blocks_baseline_host_access(args, should_block):
     if should_block:
         with pytest.raises(MCPStdioSecurityError):
             validate_mcp_stdio_config("docker", args, {}, docker_hardening=False)
     else:
         validate_mcp_stdio_config("docker", args, {}, docker_hardening=False)
+
+
+@pytest.mark.parametrize(
+    ("wrapped_command", "docker_hardening"),
+    [
+        ("docker run -v /:/host alpine", True),
+        ("docker run --privileged alpine", False),
+    ],
+)
+def test_shell_wrapped_docker_uses_selected_policy(wrapped_command, docker_hardening):
+    with pytest.raises(MCPStdioSecurityError, match="Docker argument"):
+        validate_mcp_stdio_config(
+            "sh",
+            ["-c", wrapped_command],
+            {},
+            docker_hardening=docker_hardening,
+            interpreter_hardening=True,
+        )
 
 
 @pytest.mark.parametrize(
@@ -270,6 +323,185 @@ def test_yes_flag_allowed_for_safe_commands():
 
     with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
         validate_mcp_stdio_config("node", ["--yes", "script.js"], {})
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("npx", ["--yes", "@attacker/owned-package"]),
+        ("uvx", ["attacker-package"]),
+        ("sh", ["-c", "uvx attacker-package"]),
+        ("cmd", ["/c", "npx", "@attacker/owned-package"]),
+        ("npx", ["--package", "@attacker/owned-package", "mcp-proxy"]),
+        ("uvx", ["--with", "attacker-package", "mcp-proxy"]),
+        ("uvx", ["--from", "lfx", "--with", "attacker-package", "lfx-mcp"]),
+    ],
+)
+def test_package_runner_allowlist_rejects_unapproved_packages(command, args):
+    with pytest.raises(MCPStdioSecurityError):
+        validate_mcp_stdio_config(command, args, {}, allowed_packages={"mcp-proxy", "lfx"})
+
+
+@pytest.mark.parametrize(
+    ("command", "args", "rejection"),
+    [
+        (
+            "npx",
+            ["mcp-proxy@https://attacker.invalid/pkg.tgz"],
+            "Argument 'mcp-proxy@https://attacker.invalid/pkg.tgz' is not allowed for MCP stdio command 'npx'",
+        ),
+        (
+            "uvx",
+            ["mcp-proxy @ https://attacker.invalid/pkg.whl"],
+            "Argument 'mcp-proxy @ https://attacker.invalid/pkg.whl' is not allowed for MCP stdio command 'uvx'",
+        ),
+        (
+            "uvx",
+            ["--from", "lfx@file:///tmp/attacker", "lfx-mcp"],
+            "Argument 'lfx@file:///tmp/attacker' is not allowed for MCP stdio command 'uvx'",
+        ),
+    ],
+)
+def test_package_runner_allowlist_rejects_direct_package_references(command, args, rejection):
+    with pytest.raises(MCPStdioSecurityError, match=re.escape(rejection)):
+        validate_mcp_stdio_config(command, args, {}, allowed_packages={"mcp-proxy", "lfx"})
+
+
+@pytest.mark.parametrize(
+    ("command", "args", "allowed"),
+    [
+        (
+            "npx",
+            ["--yes", "@modelcontextprotocol/server-everything@1.2.3"],
+            {"@modelcontextprotocol/server-everything"},
+        ),
+        ("uvx", ["mcp-proxy==0.8.2", "--transport", "stdio"], {"mcp-proxy"}),
+        ("uvx", ["--from", "lfx==1.11", "lfx-mcp"], {"lfx"}),
+    ],
+)
+def test_package_runner_allowlist_preserves_approved_packages(command, args, allowed):
+    validate_mcp_stdio_config(command, args, {}, allowed_packages=allowed)
+
+
+@pytest.mark.parametrize("with_arg", ["-wmcp-proxy", "-w=mcp-proxy"])
+def test_uvx_attached_with_preserves_approved_package_at_public_boundary(with_arg):
+    validate_mcp_stdio_config("uvx", [with_arg, "mcp-proxy"], {}, allowed_packages={"mcp-proxy"})
+
+
+def test_python_attached_code_flag_is_still_rejected():
+    with pytest.raises(MCPStdioSecurityError, match="Flag -c or /c is only allowed with shell wrappers"):
+        validate_mcp_stdio_config("python", ["-cpass"], {})
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--from", "lfx", "python", "/app/langflow/attacker/upload.py"],
+        ["--from=lfx", "python3", "-m", "attacker_module"],
+        ["--from", "lfx", "node", "/app/langflow/attacker/server.js"],
+        ["--from", "lfx", "/tenant/lfx-mcp"],
+    ],
+)
+def test_uvx_from_rejects_unapproved_entrypoint(args):
+    with pytest.raises(MCPStdioSecurityError, match=r"Entrypoint '.+' is not allowed for MCP uvx package 'lfx'"):
+        validate_mcp_stdio_config(
+            "uvx",
+            args,
+            {},
+            allowed_packages={"lfx"},
+            interpreter_hardening=True,
+        )
+
+
+def test_uvx_from_requires_entrypoint():
+    with pytest.raises(
+        MCPStdioSecurityError,
+        match=re.escape(
+            "Entrypoint '<missing>' is not allowed for MCP uvx package 'lfx'. Allowed entrypoints: lfx-mcp"
+        ),
+    ):
+        validate_mcp_stdio_config(
+            "uvx",
+            ["--from", "lfx"],
+            {},
+            allowed_packages={"lfx"},
+            interpreter_hardening=True,
+        )
+
+
+def test_uvx_from_preserves_matching_package_entrypoint():
+    validate_mcp_stdio_config(
+        "uvx",
+        ["--from", "mcp-proxy==0.8.2", "mcp-proxy", "https://example.invalid/mcp"],
+        {},
+        allowed_packages={"mcp-proxy"},
+        interpreter_hardening=True,
+    )
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("python", ["/app/langflow/attacker/upload.py"]),
+        ("python3", ["-m", "attacker_module"]),
+        ("node", ["/app/langflow/attacker/server.js"]),
+        ("bash", ["/app/langflow/attacker/server.sh"]),
+        ("cmd", ["C:\\Users\\attacker\\server.bat"]),
+        ("sh", ["-c", "python /app/langflow/attacker/upload.py"]),
+        ("cmd", ["/c", "node", "C:\\Users\\attacker\\server.js"]),
+    ],
+)
+def test_interpreter_hardening_blocks_tenant_code(command, args):
+    with pytest.raises(MCPStdioSecurityError, match="INTERPRETER_HARDENING"):
+        validate_mcp_stdio_config(command, args, {}, interpreter_hardening=True)
+
+
+@pytest.mark.parametrize("module", ["langflow.agentic.mcp", "langflow.agentic.mcp.server"])
+def test_interpreter_hardening_preserves_bound_internal_server(module):
+    validate_mcp_stdio_config("python", ["-m", module], {}, interpreter_hardening=True)
+
+
+def test_interpreter_hardening_preserves_validated_shell_wrapper():
+    validate_mcp_stdio_config(
+        "sh",
+        ["-c", "uvx mcp-proxy"],
+        {},
+        allowed_packages={"mcp-proxy"},
+        interpreter_hardening=True,
+    )
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("sh", ["/tenant/evil.sh", "-c", "uvx mcp-proxy"]),
+        ("cmd", ["C:\\tenant\\evil.bat", "/c", "uvx", "mcp-proxy"]),
+    ],
+)
+def test_interpreter_hardening_rejects_late_shell_exec_flag(command, args):
+    with pytest.raises(MCPStdioSecurityError, match="INTERPRETER_HARDENING"):
+        validate_mcp_stdio_config(
+            command,
+            args,
+            {},
+            allowed_packages={"mcp-proxy"},
+            interpreter_hardening=True,
+        )
+
+
+def test_interpreter_default_preserves_legacy_single_tenant_config():
+    validate_mcp_stdio_config("python", ["custom_server.py"], {}, interpreter_hardening=False)
+    validate_mcp_stdio_config("node", ["custom_server.js"], {}, interpreter_hardening=False)
+
+
+def test_configured_package_allowlist_is_enforced_at_validation_sink(monkeypatch):
+    settings_service = SimpleNamespace(settings=SimpleNamespace(mcp_server_allowed_packages="mcp-proxy,lfx"))
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+
+    with pytest.raises(MCPStdioSecurityError, match="not allowed for MCP"):
+        validate_mcp_stdio_config("npx", ["--yes", "@attacker/owned-package"], {})
+
+    validate_mcp_stdio_config("uvx", ["mcp-proxy"], {})
 
 
 def test_combined_keywords_with_quotes():
@@ -481,7 +713,6 @@ async def test_update_tools_injects_bound_user_for_agentic_server():
     """A provided user id is injected into the agentic server's spawn env (never from config)."""
     from unittest.mock import AsyncMock
 
-    from lfx.base.mcp.security import AGENTIC_USER_ID_ENV_VAR
     from lfx.base.mcp.util import update_tools
 
     stdio_client = AsyncMock()
@@ -491,6 +722,8 @@ async def test_update_tools_injects_bound_user_for_agentic_server():
 
     await update_tools("langflow-agentic", config, mcp_stdio_client=stdio_client, current_user_id=user_id)
 
-    assert stdio_client.connect_to_server.call_count == 1
-    _command, env_arg = stdio_client.connect_to_server.call_args.args
-    assert env_arg[AGENTIC_USER_ID_ENV_VAR] == user_id
+    stdio_client.connect_to_server.assert_awaited_once_with(
+        "python -m langflow.agentic.mcp",
+        {},
+        current_user_id=user_id,
+    )

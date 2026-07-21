@@ -1055,3 +1055,24 @@ def test_full_sequence_ending_in_error_is_well_formed():
     _assert_well_formed(out)
     assert isinstance(out[-1], RunErrorEvent)
     assert "the agent crashed" in out[-1].message
+
+
+def test_user_add_message_emits_no_text_message():
+    """A user-sender add_message must emit no events (else AG-UI shows a stray empty bubble)."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("add_message", {"id": "u1", "text": "fetch google.com", "sender": "User"})
+
+    assert out == []
+
+
+def test_ai_add_message_still_emits_text_message():
+    """Regression guard: the user-sender skip must not suppress assistant messages."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("add_message", {"id": "a1", "text": "done", "sender": "Machine"})
+
+    assert any(isinstance(e, TextMessageStartEvent) for e in out)
+    assert any(isinstance(e, TextMessageContentEvent) and e.delta == "done" for e in out)

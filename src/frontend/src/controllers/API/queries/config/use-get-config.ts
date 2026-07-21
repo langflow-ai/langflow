@@ -48,6 +48,7 @@ export interface ConfigResponse extends BaseConfig {
   hide_starter_projects: boolean;
   mcp_servers_locked: boolean;
   custom_component_admin_only: boolean;
+  a2a_enabled: boolean;
 }
 
 // Union type for the response (can be either public or full config)
@@ -117,6 +118,7 @@ export const useGetConfig: useQueryFunctionType<
   const setCustomComponentAdminOnly = useUtilityStore(
     (state) => state.setCustomComponentAdminOnly,
   );
+  const setA2aEnabled = useUtilityStore((state) => state.setA2aEnabled);
 
   const { query } = UseRequestProcessor();
 
@@ -166,6 +168,7 @@ export const useGetConfig: useQueryFunctionType<
         setHideStarterProjects(data.hide_starter_projects ?? false);
         setMcpServersLocked(data.mcp_servers_locked ?? false);
         setCustomComponentAdminOnly(data.custom_component_admin_only ?? false);
+        setA2aEnabled(data.a2a_enabled ?? false);
       }
     }
     return data;
