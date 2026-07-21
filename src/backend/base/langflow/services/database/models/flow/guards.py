@@ -30,11 +30,11 @@ def ensure_flow_unlocked(flow: Flow) -> None:
 
 
 def ensure_flow_update_allowed(flow: Flow, update_data: Mapping[str, Any]) -> None:
-    """Allow updates to unlocked flows and unlock-only updates to locked flows.
+    """Allow updates to unlocked flows and safe updates to locked flows.
 
     API clients commonly send the full current flow when toggling the lock. We
-    therefore compare payload values with the persisted row and allow the
-    request when ``locked=False`` is the only effective change.
+    therefore compare payload values with the persisted row and allow no-op
+    requests or requests where ``locked=False`` is the only effective change.
     """
     if getattr(flow, "locked", False) is not True:
         return
@@ -42,7 +42,7 @@ def ensure_flow_update_allowed(flow: Flow, update_data: Mapping[str, Any]) -> No
     changed_fields = {
         field_name for field_name, new_value in update_data.items() if getattr(flow, field_name, None) != new_value
     }
-    if changed_fields == {"locked"} and update_data.get("locked") is False:
+    if not changed_fields or (changed_fields == {"locked"} and update_data.get("locked") is False):
         return
 
     raise LockedFlowError(LOCKED_FLOW_DETAIL)

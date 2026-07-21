@@ -218,6 +218,23 @@ async def test_locked_flow_rejects_api_updates_until_unlocked(client: AsyncClien
     created = create_response.json()
     flow_id = created["id"]
 
+    # Navigation can submit the full current flow even when nothing changed.
+    # A no-op save must succeed so the UI can leave a locked flow cleanly.
+    no_op_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={
+            "name": created["name"],
+            "description": created["description"],
+            "data": created["data"],
+            "folder_id": created["folder_id"],
+            "endpoint_name": created["endpoint_name"],
+            "locked": True,
+        },
+        headers=logged_in_headers,
+    )
+    assert no_op_response.status_code == status.HTTP_200_OK
+    assert no_op_response.json()["locked"] is True
+
     patch_response = await client.patch(
         f"api/v1/flows/{flow_id}",
         json={"description": "changed via PATCH"},
