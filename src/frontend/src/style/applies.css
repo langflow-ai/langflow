@@ -663,7 +663,7 @@ input[type="password"]::-ms-clear {
   }
 
   .app-div {
-    @apply absolute bottom-20 left-5 flex flex-col-reverse;
+    @apply absolute bottom-4 left-4 flex flex-col-reverse;
   }
 
   .chat-input-modal-txtarea {

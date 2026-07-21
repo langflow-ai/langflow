@@ -158,6 +158,7 @@ export type NodeInputFieldComponentType = {
   isToolMode?: boolean;
   isPrimaryInput?: boolean;
   displayHandle?: boolean;
+  minimizedHandleTop?: string;
 };
 
 export type IOJSONInputComponentType = {
@@ -463,6 +464,7 @@ export type loginInputStateType = {
 };
 
 export type patchUserInputStateType = {
+  currentPassword: string;
   password: string;
   cnfPassword: string;
   profilePicture: string;
@@ -631,8 +633,6 @@ export type nodeToolbarPropsType = {
   numberOfOutputHandles: number;
   showNode: boolean;
   name?: string;
-  openAdvancedModal?: boolean;
-  onCloseAdvancedModal?: (close: boolean) => void;
   isOutdated: boolean;
   isUserEdited: boolean;
   hasBreakingChange: boolean;

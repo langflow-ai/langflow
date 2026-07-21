@@ -44,6 +44,12 @@ export const NAV_ITEMS: SidebarNavItem[] = [
     tooltip: "sidebar.nav.versionHistory",
   },
   {
+    id: "agent",
+    icon: "Bot",
+    label: "sidebar.nav.agent",
+    tooltip: "sidebar.nav.agent",
+  },
+  {
     id: "memories",
     icon: "BrainCog",
     label: "memory.sidebarTitle",

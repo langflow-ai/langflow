@@ -131,10 +131,31 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
         *,
         stream_protocol: str,  # noqa: ARG002
     ) -> WorkflowJobResponse:
+        await self._supersede_suspended(flow.flow_id)
         job_id = str(uuid4())
         await self.jobs.create_job(job_id=job_id, flow_id=flow.flow_id, user_id=self._run_user_id(caller) or "")
         self._spawn(job_id, self._run_job(job_id, flow.graph, parsed, caller))
         return create_job_response(job_id, flow.flow_id)
+
+    async def _supersede_suspended(self, flow_id: str) -> None:
+        """Cancel this flow's stale suspended runs so a rerun replaces the pause.
+
+        A suspended run holds a pause nobody will answer once the flow is rerun;
+        left alive it piles up in every pending surface. serve has a single API-key
+        identity, so the scope is the flow (the langflow backend scopes by user too).
+
+        The conditional claim keeps supersede-vs-resume safe: a resume that flipped
+        the row IN_PROGRESS between the select and this loop keeps its run, and no
+        STOP signal is written that its continuation could later consume.
+        """
+        for stale_job_id in await self.jobs.suspended_job_ids_for_flow(flow_id):
+            if not await self.jobs.claim_suspended_for_cancel(stale_job_id):
+                continue
+            await self.jobs.write_signal(stale_job_id, SignalType.STOP)
+            task = self._tasks.get(stale_job_id)
+            if task is not None and not task.done():
+                task.cancel()
+            await self.jobs.update_metadata(stale_job_id, {"pending": None})
 
     async def get_job_status(
         self,

@@ -4,10 +4,10 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
+  addParameterToNode,
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
 
@@ -125,21 +125,16 @@ test(
       false,
     );
 
-    // Final verification - check that the template persists
+    // Final verification - check that the template persists on the node
+    // (LE-1810: values are displayed and edited on the node itself)
     await page.getByTestId("div-generic-node").click();
-    await disableInspectPanel(page);
-    await openAdvancedOptions(page);
 
     const savedTemplate = await page
-      .locator('//*[@id="promptarea_prompt_edit_template"]')
+      .getByTestId("promptarea_prompt_template")
       .innerText();
     expect(savedTemplate).toBe(
       "Multi-line with {var1}\n      and {var2} plus\n      {var3} at the end",
     );
-
-    // Close the final modal
-    await closeAdvancedOptions(page);
-    await enableInspectPanel(page);
   },
 );
 
@@ -227,40 +222,28 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await disableInspectPanel(page);
-
-    await openAdvancedOptions(page);
-
-    value =
-      (await page
-        .locator('//*[@id="textarea_str_edit_prompt"]')
-        .inputValue()) ?? "";
+    // LE-1810: values live on the node — verify them there.
+    value = (await page.getByTestId("textarea_str_prompt").inputValue()) ?? "";
 
     if (value != "prompt_value_!@#!@#") {
       expect(false).toBeTruthy();
     }
 
-    value =
-      (await page
-        .locator('//*[@id="textarea_str_edit_prompt1"]')
-        .inputValue()) ?? "";
+    value = (await page.getByTestId("textarea_str_prompt1").inputValue()) ?? "";
 
     if (value != "prompt_name_test_123123!@#!@#") {
       expect(false).toBeTruthy();
     }
 
-    value = await page
-      .locator('//*[@id="promptarea_prompt_edit_template"]')
-      .innerText();
+    value = await page.getByTestId("promptarea_prompt_template").innerText();
 
     if (value != "{prompt} example {prompt1}") {
       expect(false).toBeTruthy();
     }
 
+    // Values are edited on the node through the text area modal
     await page
-      .getByTestId(
-        "button_open_text_area_modal_textarea_str_edit_prompt1_advanced",
-      )
+      .getByTestId("button_open_text_area_modal_textarea_str_prompt1")
       .click();
     await page
       .getByTestId("text-area-modal")
@@ -269,10 +252,7 @@ test(
     await page.getByText("Finish Editing", { exact: true }).click();
 
     await page
-      .getByTestId(
-        "button_open_text_area_modal_textarea_str_edit_prompt_advanced",
-      )
-      .nth(0)
+      .getByTestId("button_open_text_area_modal_textarea_str_prompt")
       .click();
     await page
       .getByTestId("text-area-modal")
@@ -280,95 +260,71 @@ test(
 
     await page.getByText("Finish Editing", { exact: true }).click();
 
-    await page.locator('//*[@id="showtemplate"]').click();
-    expect(
-      await page.locator('//*[@id="showtemplate"]').isChecked(),
-    ).toBeFalsy();
+    // LE-1810: canvas visibility rounds now happen through the panel
+    // Add/Remove rows.
+    await openParametersPanel(page);
 
-    await page.locator('//*[@id="showprompt"]').click();
-    await expect(page.locator('//*[@id="showprompt"]')).not.toBeChecked();
+    await toggleParameterOnNode(page, "template");
+    await expect(page.getByTestId("inspector-add-template")).toBeVisible();
 
-    await page.locator('//*[@id="showprompt1"]').click();
-    expect(
-      await page.locator('//*[@id="showprompt1"]').isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "prompt");
+    await expect(page.getByTestId("inspector-add-prompt")).toBeVisible();
 
-    await page.locator('//*[@id="showtemplate"]').click();
-    expect(
-      await page.locator('//*[@id="showtemplate"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "prompt1");
+    await expect(page.getByTestId("inspector-add-prompt1")).toBeVisible();
 
-    await page.locator('//*[@id="showprompt"]').click();
-    expect(
-      await page.locator('//*[@id="showprompt"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "template");
+    await expect(page.getByTestId("inspector-remove-template")).toBeVisible();
 
-    await page.locator('//*[@id="showprompt1"]').click();
-    expect(
-      await page.locator('//*[@id="showprompt1"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "prompt");
+    await expect(page.getByTestId("inspector-remove-prompt")).toBeVisible();
 
-    await page.locator('//*[@id="showtemplate"]').click();
-    expect(
-      await page.locator('//*[@id="showtemplate"]').isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "prompt1");
+    await expect(page.getByTestId("inspector-remove-prompt1")).toBeVisible();
 
-    await page.locator('//*[@id="showprompt"]').click();
-    await expect(page.locator('//*[@id="showprompt"]')).not.toBeChecked();
+    await toggleParameterOnNode(page, "template");
+    await expect(page.getByTestId("inspector-add-template")).toBeVisible();
 
-    await page.locator('//*[@id="showprompt1"]').click();
-    expect(
-      await page.locator('//*[@id="showprompt1"]').isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "prompt");
+    await expect(page.getByTestId("inspector-add-prompt")).toBeVisible();
 
-    await page.locator('//*[@id="showtemplate"]').click();
-    expect(
-      await page.locator('//*[@id="showtemplate"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "prompt1");
+    await expect(page.getByTestId("inspector-add-prompt1")).toBeVisible();
 
-    await page.locator('//*[@id="showprompt"]').click();
-    expect(
-      await page.locator('//*[@id="showprompt"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "template");
+    await expect(page.getByTestId("inspector-remove-template")).toBeVisible();
 
-    await closeAdvancedOptions(page);
+    await toggleParameterOnNode(page, "prompt");
+    await expect(page.getByTestId("inspector-remove-prompt")).toBeVisible();
+
+    await closeParametersPanel(page);
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
-    await openAdvancedOptions(page);
+    await openParametersPanel(page);
 
-    await page.locator('//*[@id="showprompt1"]').click();
-    expect(
-      await page.locator('//*[@id="showprompt1"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "prompt1");
+    await expect(page.getByTestId("inspector-remove-prompt1")).toBeVisible();
 
-    value =
-      (await page
-        .locator('//*[@id="textarea_str_edit_prompt"]')
-        .inputValue()) ?? "";
+    await closeParametersPanel(page);
+
+    // Values survived the visibility round-trips — verify on the node.
+    value = (await page.getByTestId("textarea_str_prompt").inputValue()) ?? "";
 
     if (value != "prompt_edit_test_44444444444!@#$") {
       expect(false).toBeTruthy();
     }
 
-    value =
-      (await page
-        .locator('//*[@id="textarea_str_edit_prompt1"]')
-        .inputValue()) ?? "";
+    value = (await page.getByTestId("textarea_str_prompt1").inputValue()) ?? "";
 
     if (value != "prompt_edit_test_12312312321!@#$") {
       expect(false).toBeTruthy();
     }
 
-    value = await page
-      .locator('//*[@id="promptarea_prompt_edit_template"]')
-      .innerText();
+    value = await page.getByTestId("promptarea_prompt_template").innerText();
 
     if (value != "{prompt} example {prompt1}") {
       expect(false).toBeTruthy();
     }
-
-    await closeAdvancedOptions(page);
-    await enableInspectPanel(page);
   },
 );
 
@@ -401,6 +357,10 @@ test(
 
     // Click on the node to select it
     await page.getByTestId("div-generic-node").click();
+
+    // LE-1810: use_double_brackets is hidden by default — add it to the node
+    await addParameterToNode(page, "use_double_brackets");
+    await closeParametersPanel(page);
 
     // Wait for toggle to be visible
     await page.waitForSelector(
@@ -490,33 +450,25 @@ test(
     // Click on the node to select it
     await page.getByTestId("div-generic-node").click();
 
-    await disableInspectPanel(page);
-    // Wait for and click the edit button
-    await page.waitForSelector('[data-testid="edit-button-modal"]', {
-      timeout: 5000,
-    });
-    await openAdvancedOptions(page);
+    // LE-1810: use_double_brackets is hidden by default — add it to the node
+    await addParameterToNode(page, "use_double_brackets");
+    await closeParametersPanel(page);
 
-    // Wait for the modal to open and the toggle to be visible
+    // Wait for the toggle to be visible on the node
     await page.waitForSelector(
-      '[data-testid="toggle_bool_edit_use_double_brackets"]',
+      '[data-testid="toggle_bool_use_double_brackets"]',
       {
         timeout: 5000,
       },
     );
 
-    // Enable the "Use Double Brackets" toggle in the modal
-    await page.getByTestId("toggle_bool_edit_use_double_brackets").click();
+    // Enable the "Use Double Brackets" toggle on the node
+    await page.getByTestId("toggle_bool_use_double_brackets").click();
 
     // Verify the toggle is now checked
     expect(
-      await page
-        .getByTestId("toggle_bool_edit_use_double_brackets")
-        .isChecked(),
+      await page.getByTestId("toggle_bool_use_double_brackets").isChecked(),
     ).toBeTruthy();
-
-    // Close the modal
-    await closeAdvancedOptions(page);
 
     // Test multiple double bracket variables - click the mustache prompt button
     await page.waitForSelector(
@@ -585,8 +537,6 @@ test(
 
     await page.getByTestId("textarea_str_age").fill("25");
     expect(await page.getByTestId("textarea_str_age").inputValue()).toBe("25");
-
-    await enableInspectPanel(page);
   },
 );
 
@@ -619,6 +569,10 @@ test(
 
     // Click on the node to select it
     await page.getByTestId("div-generic-node").click();
+
+    // LE-1810: use_double_brackets is hidden by default — add it to the node
+    await addParameterToNode(page, "use_double_brackets");
+    await closeParametersPanel(page);
 
     // Wait for toggle to be visible
     await page.waitForSelector(

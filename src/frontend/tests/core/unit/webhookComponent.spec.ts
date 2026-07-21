@@ -4,10 +4,8 @@ import { TEXTS } from "../../utils/constants/texts";
 
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
+  addParameterToNode,
+  closeParametersPanel,
 } from "../../utils/open-advanced-options";
 
 test(
@@ -46,13 +44,15 @@ test(
     await page.getByTestId("btn_copy_str_endpoint").click();
     await page.waitForSelector("text=Endpoint URL copied", { timeout: 30000 });
 
-    await disableInspectPanel(page);
     await page.getByTestId("title-Webhook").click();
-    await openAdvancedOptions(page);
 
-    await page
-      .getByTestId("button_open_text_area_modal_str_edit_curl_advanced")
-      .click();
+    // LE-1810: curl is an advanced field — surface it on the node and read
+    // it there.
+    await addParameterToNode(page, "curl");
+    await closeParametersPanel(page);
+    await adjustScreenView(page);
+
+    await page.getByTestId("button_open_text_area_modal_str_curl").click();
 
     const curl = await page.getByTestId("text-area-modal").inputValue();
 
@@ -63,8 +63,6 @@ test(
     expect(curl).toContain(flowId);
 
     await page.getByText(TEXTS.close, { exact: true }).last().click();
-    await closeAdvancedOptions(page);
-    await enableInspectPanel(page);
   },
 );
 

@@ -22,21 +22,25 @@ export function buildActivityRows({
   statusFilter: string;
   fallbackName: string;
 }): TraceListItem[] {
+  const pendingByJobId = new Map<string, PendingHumanRequest>();
+  pendingRequests.forEach((req) => pendingByJobId.set(req.job_id, req));
   const pendingBySession = new Map<string, PendingHumanRequest>();
   pendingRequests.forEach((req) => {
     if (req.session_id) pendingBySession.set(req.session_id, req);
   });
 
-  // Why: overlay the pending onto only the newest trace per session (baseRows are newest-first)
-  // — that's the paused run, so older completed siblings in the session get no false awaiting bar.
-  const matchedSessions = new Set<string>();
+  // Match a pending to its run's trace by id (durable HITL flushes the trace under an id equal to
+  // job_id, and a background job may have no session_id), then fall back to newest-trace-per-session.
+  const usedJobIds = new Set<string>();
   const overlaid = baseRows.map((row) => {
-    const pending =
-      row.sessionId && !matchedSessions.has(row.sessionId)
-        ? pendingBySession.get(row.sessionId)
-        : undefined;
+    let pending = pendingByJobId.get(row.id);
+    if (pending && usedJobIds.has(pending.job_id)) pending = undefined;
+    if (!pending && row.sessionId) {
+      const bySession = pendingBySession.get(row.sessionId);
+      if (bySession && !usedJobIds.has(bySession.job_id)) pending = bySession;
+    }
     if (pending) {
-      matchedSessions.add(row.sessionId as string);
+      usedJobIds.add(pending.job_id);
       return {
         ...row,
         status: "awaiting_human" as const,
@@ -50,9 +54,7 @@ export function buildActivityRows({
     statusFilter === "all" || statusFilter === "awaiting_human";
   const syntheticRows: TraceListItem[] = includeSynthetic
     ? pendingRequests
-        .filter(
-          (req) => !req.session_id || !matchedSessions.has(req.session_id),
-        )
+        .filter((req) => !usedJobIds.has(req.job_id))
         .map((req) => ({
           id: req.job_id,
           name: fallbackName,

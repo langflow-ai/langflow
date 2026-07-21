@@ -8,6 +8,7 @@ This allows agents like OpenDsStar to use the DataFrame natively with
 
 import pandas as pd
 import pytest
+from langchain_core.messages import ToolMessage
 from lfx.base.tools.component_tool import ComponentToolkit
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import MessageTextInput
@@ -52,8 +53,12 @@ class AsyncTextComponent(Component):
     ]
 
     outputs = [
+        Output(display_name="Table", name="table", method="get_table"),
         Output(display_name="Text", name="text", method="get_text"),
     ]
+
+    async def get_table(self) -> DataFrame:
+        return DataFrame(pd.DataFrame({"col1": [1, 2, 3], "col2": ["a", "b", "c"]}))
 
     async def get_text(self) -> Message:
         return Message(text=f"async query was: {self.query}")
@@ -73,6 +78,63 @@ def test_tool_returns_dataframe_not_list():
     assert isinstance(result, pd.DataFrame), f"Expected pandas DataFrame, got {type(result).__name__}: {result!r}"
     assert list(result.columns) == ["col1", "col2"]
     assert len(result) == 3
+    assert result["col1"].tolist() == [1, 2, 3]
+
+
+def test_agent_tool_preserves_dataframe_as_artifact():
+    """Agent tool calls must keep structured rows instead of only a lossy DataFrame string."""
+    component = DataFrameProducerComponent()
+    table_tool = next(t for t in ComponentToolkit(component=component).get_tools() if t.name == "get_table")
+
+    result = table_tool.invoke(
+        {
+            "name": "get_table",
+            "args": {"query": "test"},
+            "id": "call-sync-table",
+            "type": "tool_call",
+        }
+    )
+
+    assert isinstance(result, ToolMessage)
+    assert isinstance(result.content, str)
+    assert "col1" in result.content
+    assert result.artifact == [
+        {"col1": 1, "col2": "a"},
+        {"col1": 2, "col2": "b"},
+        {"col1": 3, "col2": "c"},
+    ]
+
+
+async def test_sync_agent_tool_preserves_dataframe_as_artifact_when_awaited():
+    """Async agent execution of a sync tool must not wrap the response tuple twice."""
+    component = DataFrameProducerComponent()
+    table_tool = next(t for t in ComponentToolkit(component=component).get_tools() if t.name == "get_table")
+
+    result = await table_tool.ainvoke(
+        {
+            "name": "get_table",
+            "args": {"query": "test"},
+            "id": "call-awaited-sync-table",
+            "type": "tool_call",
+        }
+    )
+
+    assert isinstance(result, ToolMessage)
+    assert result.artifact == [
+        {"col1": 1, "col2": "a"},
+        {"col1": 2, "col2": "b"},
+        {"col1": 3, "col2": "c"},
+    ]
+
+
+async def test_sync_tool_arun_returns_dataframe_not_wrapped_tuple():
+    """Direct arun calls on sync tools must preserve the legacy raw-result contract."""
+    component = DataFrameProducerComponent()
+    table_tool = next(t for t in ComponentToolkit(component=component).get_tools() if t.name == "get_table")
+
+    result = await table_tool.arun({"query": "test"})
+
+    assert isinstance(result, pd.DataFrame), f"Expected pandas DataFrame, got {type(result).__name__}: {result!r}"
     assert result["col1"].tolist() == [1, 2, 3]
 
 
@@ -139,3 +201,27 @@ async def test_tool_handles_positional_args_async():
 
     assert isinstance(result, str)
     assert "my_async_query" in result
+
+
+async def test_async_agent_tool_preserves_dataframe_as_artifact():
+    """Async component tools must preserve structured output under the same Agent contract."""
+    component = AsyncTextComponent()
+    table_tool = next(t for t in ComponentToolkit(component=component).get_tools() if t.name == "get_table")
+
+    result = await table_tool.ainvoke(
+        {
+            "name": "get_table",
+            "args": {"query": "test"},
+            "id": "call-async-table",
+            "type": "tool_call",
+        }
+    )
+
+    assert isinstance(result, ToolMessage)
+    assert isinstance(result.content, str)
+    assert "col1" in result.content
+    assert result.artifact == [
+        {"col1": 1, "col2": "a"},
+        {"col1": 2, "col2": "b"},
+        {"col1": 3, "col2": "c"},
+    ]

@@ -23,6 +23,11 @@ import shlex
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from lfx.base.mcp.source_policy import (
+    parse_mcp_shell_wrapper,
+    validate_mcp_stdio_source_policy,
+)
+
 if TYPE_CHECKING:
     from collections.abc import Collection
 
@@ -83,15 +88,6 @@ COMMAND_SAFE_FLAGS: dict[str, frozenset[str]] = {
     "uvx": frozenset({"-y", "--yes"}),
 }
 
-# ``uvx --from PACKAGE COMMAND`` decouples the approved package from the executable that
-# uvx launches. Without an entrypoint policy, an approved package can therefore be used only
-# to construct an environment before launching a system interpreter (for example,
-# ``uvx --from lfx python tenant_script.py``). Package-name entrypoints are the safe default;
-# packages whose executable intentionally differs must be listed explicitly.
-UVX_SAFE_FROM_ENTRYPOINTS: dict[str, frozenset[str]] = {
-    "lfx": frozenset({"lfx-mcp"}),
-}
-
 # SECURITY: Environment variables that enable code injection via approved commands.
 # All comparisons are case-insensitive.
 DANGEROUS_ENV_VARS = frozenset(
@@ -148,7 +144,10 @@ DANGEROUS_ENV_VARS = frozenset(
 # Prefixes whose values can alter command execution or the package source selected by an
 # approved package runner. In particular, UV_* and NPM_CONFIG_* can redirect uvx/npx to an
 # attacker-controlled registry while retaining an allowlisted package name.
-DANGEROUS_ENV_VAR_PREFIXES = ("bash_func_", "npm_config_", "uv_")
+DANGEROUS_ENV_VAR_PREFIXES = ("bash_func_", "npm_config_", "pip_", "uv_")
+
+# Backward-compatible name previously exported by ``lfx.base.mcp.util``.
+DANGEROUS_MCP_ENV_VARS = DANGEROUS_ENV_VARS
 
 # SECURITY: docker-flag policy for MCP stdio servers. ``docker`` is allowlisted but several flags
 # turn a container run into host access. Two modes, selected by LANGFLOW_MCP_SERVER_DOCKER_HARDENING
@@ -204,6 +203,7 @@ SHELL_WRAPPERS = frozenset({"cmd", "sh", "bash"})
 
 # SECURITY: Shell command flags that execute code.
 SHELL_EXEC_FLAGS = frozenset({"-c", "/c"})
+MAX_SHELL_WRAPPER_DEPTH = 4
 
 # Python modules owned by Langflow whose server identity is rebound from the authenticated
 # request in ``update_tools``. No tenant-selected script/module is allowed in interpreter-
@@ -232,13 +232,19 @@ class MCPStdioSecurityError(ValueError):
     """
 
 
+def is_dangerous_mcp_env_var(key: str) -> bool:
+    """Return whether an environment variable can alter MCP process execution."""
+    lower_key = key.lower()
+    return lower_key in DANGEROUS_ENV_VARS or lower_key.startswith(DANGEROUS_ENV_VAR_PREFIXES)
+
+
 def _is_file_path(command: str) -> bool:
     """Whether command looks like a filesystem path (Unix/relative/Windows) vs a bare command name."""
     drive_letter_len = 3
     return (
         command.startswith(("/", "./", "../"))
         or "\\" in command
-        or (len(command) >= drive_letter_len and command[1:3] == ":\\")  # Windows drive letter
+        or (len(command) >= drive_letter_len and command[1:3] in {":\\", ":/"})  # Windows drive letter
     )
 
 
@@ -286,19 +292,6 @@ def _interpreter_hardening_enabled() -> bool:
         return False
 
 
-def _configured_allowed_packages() -> frozenset[str] | None:
-    """Return the operator-controlled package allowlist, or ``None`` when disabled."""
-    try:
-        from lfx.services.deps import get_settings_service
-
-        configured = get_settings_service().settings.mcp_server_allowed_packages
-    except Exception:  # noqa: BLE001 - settings may be unavailable during early import
-        return None
-    if not isinstance(configured, str):
-        return None
-    return frozenset(_normalize_package_name(item) for item in configured.split(",") if item.strip())
-
-
 def _normalize_package_name(package_spec: str) -> str:
     """Normalize npm/Python package specs to the package identity used by the allowlist."""
     package = package_spec.strip().lower()
@@ -313,92 +306,6 @@ def _normalize_package_name(package_spec: str) -> str:
     for separator in ("==", "~=", ">=", "<=", "!=", ">", "<", "["):
         package = package.split(separator, 1)[0]
     return package.strip()
-
-
-def _package_runner_target(base_command: str, args: list[str]) -> tuple[str | None, str | None]:
-    """Extract the package and explicit ``uvx --from`` entrypoint, when present."""
-    index = 0
-    while index < len(args):
-        arg = args[index]
-        if arg in COMMAND_SAFE_FLAGS.get(base_command, frozenset()):
-            index += 1
-            continue
-        if base_command == "uvx" and arg == "--from":
-            if index + 1 >= len(args):
-                return None, None
-            if index + 2 >= len(args):
-                msg = "Package runner option '--from' requires an approved entrypoint"
-                raise MCPStdioSecurityError(msg)
-            entrypoint = args[index + 2]
-            if entrypoint.startswith("-"):
-                msg = f"Package runner option '{entrypoint}' is not allowed after --from"
-                raise MCPStdioSecurityError(msg)
-            return args[index + 1], entrypoint
-        if base_command == "uvx" and arg.startswith("--from="):
-            if index + 1 >= len(args):
-                msg = "Package runner option '--from' requires an approved entrypoint"
-                raise MCPStdioSecurityError(msg)
-            entrypoint = args[index + 1]
-            if entrypoint.startswith("-"):
-                msg = f"Package runner option '{entrypoint}' is not allowed after --from"
-                raise MCPStdioSecurityError(msg)
-            return arg.split("=", 1)[1], entrypoint
-        if arg.startswith("-"):
-            msg = f"Package runner option '{arg}' is not allowed before the package name"
-            raise MCPStdioSecurityError(msg)
-        return arg, None
-    return None, None
-
-
-def _validate_uvx_from_entrypoint(package: str, entrypoint: str | None) -> None:
-    """Ensure ``uvx --from`` cannot launch an unrelated executable from the environment."""
-    if entrypoint is None:
-        return
-    allowed_entrypoints = UVX_SAFE_FROM_ENTRYPOINTS.get(package, frozenset({package}))
-    if entrypoint not in allowed_entrypoints:
-        msg = (
-            f"Entrypoint '{entrypoint}' is not allowed for MCP uvx package '{package}'. "
-            f"Allowed entrypoints: {', '.join(sorted(allowed_entrypoints))}"
-        )
-        raise MCPStdioSecurityError(msg)
-
-
-def _validate_registry_package_spec(package_spec: str) -> None:
-    """Reject direct URLs, paths, aliases, and whitespace-smuggled package specs."""
-    lowered = package_spec.strip().lower()
-    direct_reference_markers = ("://", "file:", "git+", "github:", "npm:")
-    if (
-        any(marker in lowered for marker in direct_reference_markers)
-        or any(char.isspace() for char in lowered)
-        or lowered.startswith((".", "/", "\\"))
-    ):
-        msg = f"Package reference '{package_spec}' must be a registry package name or version"
-        raise MCPStdioSecurityError(msg)
-
-
-def _validate_package_runner(
-    base_command: str,
-    args: list[str],
-    allowed_packages: Collection[str] | str | None,
-) -> None:
-    """Restrict package runners to packages selected by the server operator."""
-    if allowed_packages is None or base_command not in {"npx", "uvx"}:
-        return
-
-    configured = allowed_packages.split(",") if isinstance(allowed_packages, str) else allowed_packages
-    allowed = {_normalize_package_name(package) for package in configured if str(package).strip()}
-    target, uvx_from_entrypoint = _package_runner_target(base_command, args)
-    if target:
-        _validate_registry_package_spec(target)
-    normalized_target = _normalize_package_name(target or "")
-    if not normalized_target or normalized_target not in allowed:
-        msg = (
-            f"Package '{target or '<missing>'}' is not allowed for MCP {base_command}. "
-            "Configure LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES with server-approved package names."
-        )
-        raise MCPStdioSecurityError(msg)
-    if base_command == "uvx":
-        _validate_uvx_from_entrypoint(normalized_target, uvx_from_entrypoint)
 
 
 def _validate_interpreter_invocation(base_command: str, args: list[str], *, hardened: bool) -> None:
@@ -538,6 +445,8 @@ def validate_mcp_stdio_config(
     docker_hardening: bool | None = None,
     allowed_packages: Collection[str] | str | None = None,
     interpreter_hardening: bool | None = None,
+    _depth: int = 0,
+    _seen: frozenset[tuple[str, tuple[str, ...]]] | None = None,
 ) -> None:
     """Validate an MCP stdio command/args/env triple against the security policy.
 
@@ -566,24 +475,37 @@ def validate_mcp_stdio_config(
             wraps a non-allowed command, an env var is in the blocklist, or a docker arg
             breaks container isolation.
     """
-    # Split commands with embedded arguments (e.g. "bash -c 'payload'") into separate tokens
-    # so security checks can scan them. Without this, an attacker could bypass validation by
-    # packing everything into the command string with empty args. File paths with spaces
-    # (e.g. "C:\\Program Files\\nodejs\\node.exe") are not split since they're not shell commands.
     args = list(args or [])
-    if allowed_packages is None:
-        allowed_packages = _configured_allowed_packages()
     if interpreter_hardening is None:
         interpreter_hardening = _interpreter_hardening_enabled()
-    if command and not _is_file_path(command):
-        try:
-            command_tokens = shlex.split(command)
-        except ValueError:
-            # Unbalanced quotes etc. -- fall back to whitespace splitting (fail toward more checks).
-            command_tokens = command.split()
-        if command_tokens:
-            command = command_tokens[0]
-            args = command_tokens[1:] + args
+
+    # The structured command field is exactly one executable. Options belong in args so every
+    # policy layer sees the same argv. Parent-directory spaces remain valid for executable paths.
+    if command:
+        normalized = command.replace("\\", "/")
+        executable_name = normalized.rsplit("/", 1)[-1]
+        first_space = command.find(" ")
+        first_separator = min((index for index, char in enumerate(command) if char in "/\\"), default=-1)
+        invalid_whitespace = command != command.strip() or any(char.isspace() and char != " " for char in command)
+        space_without_path_prefix = first_space >= 0 and not 0 <= first_separator < first_space
+        if (
+            not executable_name
+            or invalid_whitespace
+            or space_without_path_prefix
+            or any(char.isspace() for char in executable_name)
+        ):
+            msg = (
+                "MCP stdio command must be a single executable name or path; "
+                "put options and arguments in the 'args' field"
+            )
+            raise MCPStdioSecurityError(msg)
+
+        signature = (command, tuple(args))
+        seen = _seen or frozenset()
+        if signature in seen:
+            msg = "MCP stdio shell wrapper recursion is not allowed"
+            raise MCPStdioSecurityError(msg)
+        _seen = seen | {signature}
 
     # Command allowlist.
     if command:
@@ -594,12 +516,34 @@ def validate_mcp_stdio_config(
             raise MCPStdioSecurityError(msg)
         _validate_interpreter_invocation(base_command, args, hardened=interpreter_hardening)
 
+    normalized_allowed_packages: frozenset[str] | None = None
+    if allowed_packages is not None:
+        configured_packages = allowed_packages.split(",") if isinstance(allowed_packages, str) else allowed_packages
+        normalized_allowed_packages = frozenset(
+            _normalize_package_name(str(package)) for package in configured_packages if str(package).strip()
+        )
+    try:
+        validate_mcp_stdio_source_policy(
+            command,
+            args,
+            allowed_packages=normalized_allowed_packages,
+            docker_hardening=docker_hardening,
+            interpreter_hardening=interpreter_hardening,
+        )
+    except ValueError as exc:
+        raise MCPStdioSecurityError(str(exc)) from exc
+
     # Shell-wrapper rules: -c/-/c only with shell wrappers, and a wrapper may only wrap
     # another allowed (non-shell) command. This is what blocks `bash -c '<payload>'`. Checked
     # before the metacharacter scan so a `-c` on a non-shell command is reported as such.
     if command and args:
         base_command = extract_base_command(command)
-        has_shell_exec_flag = any(_is_shell_exec_flag(arg) for arg in args)
+        # Shells and Python interpret ``-c`` as executable code. Package
+        # runners have their own command-aware flag policy; scanning every
+        # single-dash token here would misclassify valid uvx values such as
+        # ``-wmcp-proxy`` merely because the package name contains a ``c``.
+        checks_code_exec_flags = base_command in SHELL_WRAPPERS | {"python", "python3"}
+        has_shell_exec_flag = checks_code_exec_flags and any(_is_shell_exec_flag(arg) for arg in args)
 
         if has_shell_exec_flag and base_command not in SHELL_WRAPPERS:
             msg = f"Flag -c or /c is only allowed with shell wrappers (cmd/sh/bash), not with '{base_command}'"
@@ -629,12 +573,9 @@ def validate_mcp_stdio_config(
                     nested_command = wrapped_tokens[0]
                     nested_args = wrapped_tokens[1:] + wrapped_args
                     nested_base = extract_base_command(nested_command)
-                    _validate_package_runner(nested_base, nested_args, allowed_packages)
                     _validate_interpreter_invocation(nested_base, nested_args, hardened=interpreter_hardening)
                     if nested_base == "docker":
                         _validate_docker_invocation(nested_args, hardened=docker_hardening)
-
-        _validate_package_runner(base_command, args, allowed_packages)
 
     # Argument metacharacters and dangerous keywords.
     if args:
@@ -684,8 +625,7 @@ def validate_mcp_stdio_config(
     # Environment-variable blocklist.
     if env:
         for key in env:
-            lower_key = key.lower()
-            if lower_key in DANGEROUS_ENV_VARS or lower_key.startswith(DANGEROUS_ENV_VAR_PREFIXES):
+            if is_dangerous_mcp_env_var(key):
                 msg = f"Environment variable '{key}' is not allowed for security reasons"
                 raise MCPStdioSecurityError(msg)
 
@@ -694,3 +634,23 @@ def validate_mcp_stdio_config(
     # the DOCKER_* constants above for the rationale of each set.
     if command and args and extract_base_command(command) == "docker":
         _validate_docker_invocation(args, hardened=docker_hardening)
+
+    if command and extract_base_command(command) in SHELL_WRAPPERS:
+        try:
+            wrapped = parse_mcp_shell_wrapper(command, args)
+        except ValueError as exc:
+            raise MCPStdioSecurityError(str(exc)) from exc
+        if wrapped:
+            if _depth >= MAX_SHELL_WRAPPER_DEPTH:
+                msg = f"MCP stdio shell wrapper nesting exceeds {MAX_SHELL_WRAPPER_DEPTH} levels"
+                raise MCPStdioSecurityError(msg)
+            validate_mcp_stdio_config(
+                wrapped[0],
+                wrapped[1],
+                env,
+                docker_hardening=docker_hardening,
+                allowed_packages=allowed_packages,
+                interpreter_hardening=interpreter_hardening,
+                _depth=_depth + 1,
+                _seen=_seen,
+            )
