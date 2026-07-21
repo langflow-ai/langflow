@@ -1,6 +1,16 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+try:
+    import toolguard.buildtime.llm  # noqa: F401
+except ImportError:
+    # toolguard is an optional extra (langflow-base[toolguard]). On Python 3.14 the
+    # package may be installed while its runtime deps are still gated off in the
+    # lock, so importing toolguard submodules can fail even when `import toolguard`
+    # succeeds. LangchainModelWrapper imports toolguard at module load.
+    pytest.skip("toolguard runtime not available", allow_module_level=True)
+
 from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, LLMResult
 from lfx.components.models_and_agents.policies.llm_wrapper import LangchainModelWrapper

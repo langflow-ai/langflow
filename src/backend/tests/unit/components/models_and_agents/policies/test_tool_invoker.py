@@ -1,6 +1,16 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+try:
+    import toolguard.runtime  # noqa: F401
+except ImportError:
+    # toolguard is an optional extra (langflow-base[toolguard]). On Python 3.14 the
+    # package may be installed while its runtime deps (e.g. fastmcp) are still
+    # gated off in the lock, so importing toolguard.runtime can fail even when
+    # `import toolguard` succeeds. ToolInvoker imports toolguard at module load.
+    pytest.skip("toolguard runtime not available", allow_module_level=True)
+
 from lfx.components.models_and_agents.policies.tool_invoker import ToolInvoker
 from mcp.types import CallToolResult
 from pydantic import BaseModel
