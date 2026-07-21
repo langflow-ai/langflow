@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import re
 
+import pytest
+
 # ---------------------------------------------------------------------------
 # Helpers — mirror the Makefile one-liners exactly
 # ---------------------------------------------------------------------------
@@ -245,8 +247,9 @@ class TestSdkVersionSubstitution:
         assert 'version = "0.4.0"' in result
         assert 'name = "langflow-sdk"' in result
 
-    def test_updates_lfx_sdk_dependency(self):
-        txt = 'dependencies = ["langflow-sdk~=0.3.0", "orjson>=3.10.0"]'
+    @pytest.mark.parametrize("operator", ["==", ">=", "~="])
+    def test_updates_lfx_sdk_dependency(self, operator):
+        txt = f'dependencies = ["langflow-sdk{operator}0.3.0", "orjson>=3.10.0"]'
         result = _patch_lfx_sdk_dependency(txt, "0.4.0")
         assert '"langflow-sdk>=0.4.0"' in result
         assert '"orjson>=3.10.0"' in result
