@@ -262,6 +262,7 @@ class TestKBIngestionHelperBuildEmbeddings:
         "Failed to connect to Ollama". This test exercises the REAL component (no mock)
         so the resolution path is covered end to end.
         """
+        pytest.importorskip("langchain_ollama")
         from langflow.api.utils.kb_helpers import KBIngestionHelper
 
         monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
@@ -281,6 +282,7 @@ class TestKBIngestionHelperBuildEmbeddings:
     @pytest.mark.asyncio
     async def test_ollama_embeddings_fall_back_to_localhost_when_unconfigured(self, monkeypatch):
         """With no OLLAMA_BASE_URL configured, the localhost fallback is preserved."""
+        pytest.importorskip("langchain_ollama")
         from langflow.api.utils.kb_helpers import KBIngestionHelper
 
         monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
