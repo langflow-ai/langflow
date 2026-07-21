@@ -7,6 +7,9 @@ import re
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from google.auth.exceptions import RefreshError
 from google.oauth2.service_account import Credentials
 from lfx_bundles.google.google_bq_sql_executor import BigQueryExecutorComponent

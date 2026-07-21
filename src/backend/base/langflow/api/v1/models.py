@@ -3,9 +3,10 @@ from __future__ import annotations
 import json
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS
 from lfx.base.models.model_utils import inject_custom_enabled_models, replace_with_live_models
+from lfx.base.models.provider_registry import is_api_key_optional, provider_id_for
 from lfx.base.models.unified_models import (
     get_live_only_providers,
     get_model_provider_metadata,
@@ -19,11 +20,15 @@ from lfx.base.models.unified_models.credentials import (
     model_status_key,
     parse_model_status_key,
 )
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyError,
+    ModelProviderPolicyPurpose,
+    resolve_model_provider_policy,
+)
 from loguru import logger
 from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.services.auth.utils import get_current_active_user
 from langflow.services.authorization import VariableAction, ensure_variable_permission
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import GENERIC_TYPE
@@ -42,6 +47,26 @@ MAX_STRING_LENGTH = 200  # Maximum length for model IDs and provider names
 MAX_BATCH_UPDATE_SIZE = 100  # Maximum number of models that can be updated at once
 
 
+def _resolve_policy(current_user: CurrentActiveUser, purpose: ModelProviderPolicyPurpose):
+    return resolve_model_provider_policy(
+        user_id=current_user.id,
+        providers=get_model_providers(),
+        purpose=purpose,
+    )
+
+
+def _require_provider(
+    current_user: CurrentActiveUser,
+    provider: str,
+    purpose: ModelProviderPolicyPurpose,
+) -> None:
+    try:
+        _resolve_policy(current_user, purpose).require(provider)
+    except ModelProviderPolicyError as exc:
+        # Do not confirm whether a hidden provider is registered or merely blocked.
+        raise HTTPException(status_code=404, detail="Model provider not found") from exc
+
+
 def get_provider_from_variable_name(variable_name: str) -> str | None:
     """Get provider name from a model provider variable name.
 
@@ -51,10 +76,11 @@ def get_provider_from_variable_name(variable_name: str) -> str | None:
     Returns:
         The provider name (e.g., "OpenAI") or None if not a model provider variable
     """
-    provider_mapping = get_model_provider_variable_mapping()
-    # Reverse the mapping to get provider from variable name
-    for provider, var_name in provider_mapping.items():
-        if var_name == variable_name:
+    # Resolve against every declared provider variable, not just the primary
+    # API-key mapping. This remains dynamic so providers registered by an
+    # extension during startup participate without a process restart cache.
+    for provider in get_model_providers():
+        if any(variable.get("variable_key") == variable_name for variable in get_provider_all_variables(provider)):
             return provider
     return None
 
@@ -106,10 +132,11 @@ class ValidateProviderResponse(BaseModel):
     error: str | None = None
 
 
-@router.get("/providers", status_code=200, dependencies=[Depends(get_current_active_user)])
-async def list_model_providers() -> list[str]:
+@router.get("/providers", status_code=200)
+async def list_model_providers(current_user: CurrentActiveUser) -> list[str]:
     """Return available model providers."""
-    return get_model_providers()
+    policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.DISCOVER)
+    return policy.filter(get_model_providers())
 
 
 @router.get("", status_code=200)
@@ -134,7 +161,10 @@ async def list_models(
 
     Pass providers as repeated query params, e.g. `?provider=OpenAI&provider=Anthropic`.
     """
-    selected_providers: list[str] | None = provider
+    provider_policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.DISCOVER)
+    selected_providers: list[str] | None = provider_policy.filter(provider) if provider is not None else None
+    if provider is not None and not selected_providers:
+        return []
     metadata_filters = {
         k: v
         for k, v in {
@@ -192,22 +222,25 @@ async def list_models(
         provider_metadata = get_model_provider_metadata()
         listed_providers = {provider_dict.get("provider") for provider_dict in filtered_models}
         for live_only_provider in get_live_only_providers():
+            if not provider_policy.allows(live_only_provider):
+                continue
             if live_only_provider in listed_providers:
                 continue
             if selected_providers and live_only_provider not in selected_providers:
                 continue
             filtered_models.append(
                 {
+                    **provider_metadata.get(live_only_provider, {}),
                     "provider": live_only_provider,
                     "models": [],
                     "num_models": 0,
-                    **provider_metadata.get(live_only_provider, {}),
                 }
             )
 
     # Run before status is computed so live-only providers appended here (e.g. IBM WatsonX,
     # whose static catalog is fully deprecated) still receive is_enabled/is_configured (#13735).
     configured_providers = {p for p, configured in provider_configured_status.items() if configured}
+    configured_providers = {provider for provider in configured_providers if provider_policy.allows(provider)}
     replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type)
 
     # Merge free-text custom deployments into the catalog (honors list_models filters).
@@ -219,6 +252,9 @@ async def list_models(
         model_type=model_type,
         metadata_filters=metadata_filters or None,
     )
+    filtered_models = [
+        provider_data for provider_data in filtered_models if provider_policy.allows(provider_data.get("provider", ""))
+    ]
 
     # replace_with_live_models iterates every live-capable provider regardless of
     # the ?provider= filter, so it can append providers the caller excluded (e.g.
@@ -229,6 +265,7 @@ async def list_models(
 
     for provider_dict in filtered_models:
         prov_name = provider_dict.get("provider")
+        provider_dict["provider_id"] = provider_id_for(prov_name) if isinstance(prov_name, str) else None
         provider_dict["is_configured"] = provider_configured_status.get(prov_name, False)
         prov_models_status = enabled_models_map.get(prov_name, {})
         has_active_model = any(prov_models_status.values())
@@ -247,7 +284,7 @@ async def list_models(
 
 
 @router.get("/provider-variable-mapping", status_code=200)
-async def get_model_provider_mapping() -> dict[str, list[dict]]:
+async def get_model_provider_mapping(current_user: CurrentActiveUser) -> dict[str, list[dict]]:
     """Return provider variables mapping with full variable info.
 
     Each provider maps to a list of variable objects containing:
@@ -260,7 +297,8 @@ async def get_model_provider_mapping() -> dict[str, list[dict]]:
     - options: Predefined options for dropdowns
     """
     metadata = get_model_provider_metadata()
-    return {provider: meta.get("variables", []) for provider, meta in metadata.items()}
+    policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.CONFIGURE)
+    return {provider: meta.get("variables", []) for provider, meta in metadata.items() if policy.allows(provider)}
 
 
 @router.get("/enabled_providers", status_code=200)
@@ -276,6 +314,7 @@ async def get_enabled_providers(
     API key validation is performed when credentials are saved, not on every read,
     to avoid latency from external API calls.
     """
+    provider_policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.CONFIGURE)
     variable_service = get_variable_service()
     try:
         if not isinstance(variable_service, DatabaseVariableService):
@@ -289,20 +328,33 @@ async def get_enabled_providers(
         # Build a set of all variable names we have
         all_variable_names = {var.name for var in all_variables}
 
-        # Get the provider-variable mapping
         provider_variable_map = get_model_provider_variable_mapping()
+        provider_candidates = [
+            *provider_variable_map,
+            *(
+                provider
+                for provider in get_model_providers()
+                if provider not in provider_variable_map and is_api_key_optional(provider)
+            ),
+        ]
 
         # Check which providers have all required variables saved
         enabled_providers = []
         provider_status = {}
 
-        for provider in provider_variable_map:
+        for provider in provider_candidates:
+            if not provider_policy.allows(provider):
+                continue
             # Get ALL variables for this provider
             provider_vars = get_provider_all_variables(provider)
 
             # Check if all REQUIRED variables are present
             required_vars = [v for v in provider_vars if v.get("required", False)]
-            all_required_present = all(v.get("variable_key") in all_variable_names for v in required_vars)
+            all_required_present = (
+                is_api_key_optional(provider)
+                if not provider_vars
+                else all(v.get("variable_key") in all_variable_names for v in required_vars)
+            )
 
             provider_status[provider] = all_required_present
             if all_required_present:
@@ -339,13 +391,15 @@ async def get_enabled_providers(
 @router.post("/validate-provider", status_code=200, response_model=ValidateProviderResponse)
 async def validate_provider(
     request: ValidateProviderRequest,
-    current_user: CurrentActiveUser,  # noqa: ARG001
+    current_user: CurrentActiveUser,
 ) -> ValidateProviderResponse:
     """Validate provider credentials before saving.
 
     This endpoint checks if the provided credentials are valid by attempting
     to connect to the provider. Use this for real-time validation in the UI.
     """
+    _require_provider(current_user, request.provider, ModelProviderPolicyPurpose.CONFIGURE)
+
     from lfx.base.models.unified_models import validate_model_provider_key
 
     try:
@@ -683,6 +737,7 @@ async def get_enabled_models(
     model_names: Annotated[list[str] | None, Query()] = None,
 ):
     """Get enabled models for the current user."""
+    provider_policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.CONFIGURE)
     all_models_by_provider = get_unified_models_detailed(
         include_unsupported=True,
         include_deprecated=True,
@@ -691,13 +746,25 @@ async def get_enabled_models(
     enabled_providers_result = await get_enabled_providers(session=session, current_user=current_user)
     provider_status = enabled_providers_result.get("provider_status", {})
 
-    configured_providers = {p for p, configured in provider_status.items() if configured}
+    all_models_by_provider = [
+        provider_data
+        for provider_data in all_models_by_provider
+        if provider_policy.allows(provider_data.get("provider", ""))
+    ]
+    configured_providers = {
+        provider for provider, configured in provider_status.items() if configured and provider_policy.allows(provider)
+    }
     replace_with_live_models(all_models_by_provider, current_user.id, configured_providers)
 
     # Get disabled and explicitly enabled models lists
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)
     explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
     inject_custom_enabled_models(all_models_by_provider, explicitly_enabled_models)
+    all_models_by_provider = [
+        provider_data
+        for provider_data in all_models_by_provider
+        if provider_policy.allows(provider_data.get("provider", ""))
+    ]
 
     enabled_models: dict[str, dict[str, bool]] = {}
     enabled_models_by_type: dict[str, dict[str, dict[str, bool]]] = {}
@@ -852,6 +919,7 @@ async def update_enabled_models(
     # For any model being enabled, validate the provider credentials
     for update in updates:
         if update.enabled:
+            _require_provider(current_user, update.provider, ModelProviderPolicyPurpose.CONFIGURE)
             unavailable_reason = unavailable_models.get((update.provider, update.model_id))
             if unavailable_reason:
                 raise HTTPException(
@@ -901,10 +969,21 @@ async def update_enabled_models(
         variable_service, session, current_user, ENABLED_MODELS_VAR, explicitly_enabled_models
     )
 
-    # Return the updated model status
+    # Cleanup of a now-hidden provider remains allowed, but the response must
+    # not echo hidden provider identities from persisted legacy state.
+    provider_policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.CONFIGURE)
+
+    def _visible_status_entries(entries: set[str]) -> list[str]:
+        visible = []
+        for entry in entries:
+            provider, _model_name, _model_type = parse_model_status_key(entry)
+            if provider is None or provider_policy.allows(provider):
+                visible.append(entry)
+        return visible
+
     return {
-        "disabled_models": list(disabled_models),
-        "enabled_models": list(explicitly_enabled_models),
+        "disabled_models": _visible_status_entries(disabled_models),
+        "enabled_models": _visible_status_entries(explicitly_enabled_models),
     }
 
 
@@ -966,6 +1045,9 @@ async def get_default_model(
                 ):
                     logger.warning("Invalid default model format for user %s", current_user.id)
                     return {"default_model": None}
+                policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.USE)
+                if not policy.allows(parsed_value["provider"]):
+                    return {"default_model": None}
                 return {"default_model": parsed_value}
     except ValueError:
         # Variable not found
@@ -981,6 +1063,7 @@ async def set_default_model(
     request: DefaultModelRequest,
 ):
     """Set the default model for the current user."""
+    _require_provider(current_user, request.provider, ModelProviderPolicyPurpose.USE)
     # Creating/updating the default-model Variable is a variable WRITE. Enforce
     # so the external access ceiling caps a "viewer"; the owner with no ceiling
     # fast-paths via owner-override.

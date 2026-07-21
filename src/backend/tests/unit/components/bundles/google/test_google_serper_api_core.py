@@ -1,6 +1,9 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.schema import DataFrame
 from lfx_bundles.google.google_serper_api_core import GoogleSerperAPICore
 

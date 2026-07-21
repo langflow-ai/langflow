@@ -19,7 +19,9 @@ from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 from .provider_queries import (
     get_model_provider_variable_mapping,
+    get_model_providers,
     get_provider_all_variables,
+    get_provider_secret_variable_key,
 )
 
 MODEL_STATUS_KEY_SEPARATOR = "::"
@@ -126,6 +128,14 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
 
     if api_key and api_key.strip():
         var_name = api_key.strip()
+        # A malformed or legacy component can point its api_key field at any
+        # global variable name. Never reinterpret declared non-secret provider
+        # configuration (for example, a base URL) as bearer credentials.
+        if any(
+            variable.get("variable_key") == var_name and not variable.get("is_secret")
+            for variable in get_provider_all_variables(provider)
+        ):
+            return None
         # Names that look like env/global variables (e.g. MY_OPENAI_API_KEY): resolve from env/DB
         if var_name.replace("_", "").isalnum() and var_name[0].isalpha():
             resolved = _resolve_var_name(var_name)
@@ -138,8 +148,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
         return var_name
 
     # Get primary variable (first required secret) from provider metadata
-    provider_variable_map = get_model_provider_variable_mapping()
-    variable_name = provider_variable_map.get(provider)
+    variable_name = get_provider_secret_variable_key(provider)
     if not variable_name:
         return None
 
@@ -295,6 +304,7 @@ def _validate_and_get_enabled_providers(
 
     settings_service = get_settings_service()
     enabled = set()
+    from lfx.base.models.provider_registry import is_api_key_optional
 
     for provider in provider_variable_map:
         provider_vars = get_provider_all_variables(provider)
@@ -345,9 +355,10 @@ def _validate_and_get_enabled_providers(
                 all_required_present = False
 
         if not provider_vars:
-            enabled.add(provider)
-        elif all_required_present and collected_values:
-            if skip_validation:
+            if is_api_key_optional(provider):
+                enabled.add(provider)
+        elif all_required_present and (collected_values or is_api_key_optional(provider)):
+            if skip_validation or not collected_values:
                 # Just check existence - validation was done on save
                 enabled.add(provider)
             else:
@@ -419,13 +430,34 @@ async def _fetch_enabled_providers_for_user(user_id: UUID | str) -> set[str]:
         all_var_names = {var.name for var in all_vars}
 
         provider_variable_map = get_model_provider_variable_mapping()
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+        providers = get_model_providers()
+        provider_policy = resolve_model_provider_policy(
+            user_id=user_id,
+            providers=providers,
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+        from lfx.base.models.provider_registry import is_api_key_optional
+
+        provider_candidates = {
+            **provider_variable_map,
+            **{
+                provider: ""
+                for provider in providers
+                if provider not in provider_variable_map and is_api_key_optional(provider)
+            },
+        }
+        provider_candidates = {
+            provider: variable for provider, variable in provider_candidates.items() if provider_policy.allows(provider)
+        }
 
         # Build dict with raw Variable values (encrypted for secrets, plaintext for others)
         # We need to fetch raw Variable objects because VariableRead has value=None for credentials
         all_provider_variables = {}
         user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
 
-        for provider in provider_variable_map:
+        for provider in provider_candidates:
             # Get ALL variables for this provider (not just the primary one)
             provider_vars = get_provider_all_variables(provider)
 
@@ -452,7 +484,7 @@ async def _fetch_enabled_providers_for_user(user_id: UUID | str) -> set[str]:
                     continue
 
         # Use shared helper to validate and get enabled providers
-        return _validate_and_get_enabled_providers(all_provider_variables, provider_variable_map)
+        return _validate_and_get_enabled_providers(all_provider_variables, provider_candidates)
 
 
 def validate_model_provider_key(provider: str, variables: dict[str, str], model_name: str | None = None) -> None:

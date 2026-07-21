@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 
 import pydantic
 from anyio import BrokenResourceError
@@ -21,6 +22,74 @@ from langflow.api.v1.mcp_utils import (
     handle_mcp_errors,
     handle_read_resource,
 )
+
+
+def _ensure_mcp_root_model_ready(model: type[pydantic.BaseModel], root_type: Any, *, force: bool = False) -> None:
+    """Rebuild an MCP RootModel only when Pydantic left it incomplete.
+
+    Pydantic 2.14.0a1 can lose the generic root annotation when MCP is first
+    imported through Langflow's router stack. Complete models, including those
+    built by stable Pydantic releases, return without mutation.
+    """
+    if model.__pydantic_complete__ and not force:
+        return
+
+    rebuild_kwargs: dict[str, Any] = {"_types_namespace": {"RootModelRootType": root_type}}
+    if force:
+        rebuild_kwargs["force"] = True
+    model.model_rebuild(**rebuild_kwargs)
+
+
+def _ensure_mcp_paginated_request_defaults() -> bool:
+    """Restore optional params defaults lost from MCP paginated request models.
+
+    Pydantic 2.14.0a1 drops the inherited ``params=None`` default when it
+    specializes MCP's generic ``PaginatedRequest``. The MCP client then omits
+    params from list requests, while the server's validator incorrectly treats
+    the field as required and returns JSON-RPC -32602.
+    """
+    repaired = False
+    paginated_requests = (
+        types.ListPromptsRequest,
+        types.ListResourceTemplatesRequest,
+        types.ListResourcesRequest,
+        types.ListTasksRequest,
+        types.ListToolsRequest,
+    )
+    for request_model in paginated_requests:
+        params_field = request_model.model_fields["params"]
+        if not params_field.is_required():
+            continue
+        params_field.default = None
+        request_model.model_rebuild(force=True)
+        repaired = True
+    return repaired
+
+
+def _ensure_mcp_root_models_ready() -> None:
+    """Restore MCP SDK RootModel validators after affected Pydantic imports."""
+    paginated_requests_repaired = _ensure_mcp_paginated_request_defaults()
+    root_models = (
+        (
+            types.JSONRPCMessage,
+            types.JSONRPCRequest | types.JSONRPCNotification | types.JSONRPCResponse | types.JSONRPCError,
+        ),
+        (types.ClientRequest, types.ClientRequestType),
+        (types.ClientNotification, types.ClientNotificationType),
+        (types.ClientResult, types.ClientResultType),
+        (types.ServerRequest, types.ServerRequestType),
+        (types.ServerNotification, types.ServerNotificationType),
+        (types.ServerResult, types.ServerResultType),
+    )
+    for model, root_type in root_models:
+        _ensure_mcp_root_model_ready(
+            model,
+            root_type,
+            force=paginated_requests_repaired and model is types.ClientRequest,
+        )
+
+
+_ensure_mcp_root_models_ready()
 
 router = APIRouter(prefix="/mcp", tags=["mcp"], include_in_schema=False)
 

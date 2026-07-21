@@ -5,6 +5,12 @@ from pathlib import Path
 import pytest
 from lfx.services.base import Service
 from lfx.services.manager import NoFactoryRegisteredError, ServiceManager
+from lfx.services.model_provider_policy import (
+    BaseModelProviderPolicyService,
+    ModelProviderPolicyContext,
+    ModelProviderPolicyPurpose,
+    ModelProviderPolicyService,
+)
 from lfx.services.schema import ServiceType
 from lfx.services.storage.local import LocalStorageService
 from lfx.services.telemetry.service import TelemetryService
@@ -12,6 +18,21 @@ from lfx.services.tracing.service import TracingService
 from lfx.services.variable.service import VariableService
 
 from .conftest import MockSessionService
+
+
+class DenyAllModelProviderPolicyService(BaseModelProviderPolicyService):
+    """Test plugin proving that deployment config replaces the OSS default."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.set_ready()
+
+    @property
+    def name(self) -> str:
+        return ServiceType.MODEL_PROVIDER_POLICY_SERVICE.value
+
+    def get_allowed_provider_ids(self, *, context, candidate_provider_ids, purpose):  # noqa: ARG002
+        return frozenset()
 
 
 @pytest.fixture
@@ -100,6 +121,60 @@ storage_service = "lfx.services.storage.local:LocalStorageService"
 
         assert ServiceType.STORAGE_SERVICE in service_manager.service_classes
         assert service_manager.service_classes[ServiceType.STORAGE_SERVICE] == LocalStorageService
+
+    def test_model_provider_policy_config_overrides_allow_all_default(self, service_manager, temp_config_dir):
+        service_manager.register_service_class(
+            ServiceType.MODEL_PROVIDER_POLICY_SERVICE,
+            ModelProviderPolicyService,
+            override=True,
+        )
+        (temp_config_dir / "lfx.toml").write_text(
+            f"""
+[services]
+model_provider_policy_service = "{__name__}:DenyAllModelProviderPolicyService"
+"""
+        )
+
+        service_manager.discover_plugins(temp_config_dir)
+        service = service_manager.get(ServiceType.MODEL_PROVIDER_POLICY_SERVICE)
+        snapshot = service.resolve(
+            context=ModelProviderPolicyContext(user_id="user-1"),
+            candidate_provider_ids=frozenset({"openai", "anthropic"}),
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+
+        assert isinstance(service, DenyAllModelProviderPolicyService)
+        assert snapshot.allowed_provider_ids == frozenset()
+
+    @pytest.mark.parametrize(
+        ("service_path", "error"),
+        [
+            (
+                "nonexistent.module:MissingModelProviderPolicyService",
+                "could not be loaded",
+            ),
+            (
+                "lfx.services.storage.local:LocalStorageService",
+                "must subclass BaseModelProviderPolicyService",
+            ),
+        ],
+    )
+    def test_invalid_explicit_model_provider_policy_fails_closed(
+        self,
+        service_manager,
+        temp_config_dir,
+        service_path,
+        error,
+    ):
+        (temp_config_dir / "lfx.toml").write_text(
+            f"""
+[services]
+model_provider_policy_service = "{service_path}"
+"""
+        )
+
+        with pytest.raises(RuntimeError, match=error):
+            service_manager.discover_plugins(temp_config_dir)
 
     def test_discover_multiple_services_from_config(self, service_manager, temp_config_dir):
         """Test discovering multiple real services from config."""

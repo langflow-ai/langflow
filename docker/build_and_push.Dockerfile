@@ -152,7 +152,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 ################################
 # SHARED RUNTIME
-# One user, utility, label, and hardening contract for every public target.
+# One user, utility, label, and runtime defaults contract for every public target.
 ################################
 FROM ${PYTHON_IMAGE} AS runtime
 
@@ -196,15 +196,8 @@ ENV PATH="/app/.venv/bin:$PATH" \
     LANGFLOW_HOST=0.0.0.0 \
     LANGFLOW_PORT=7860
 
-# Harden every public target in this shared stage so the settings cannot drift.
-ENV LANGFLOW_AUTO_LOGIN=false \
-    LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false \
-    LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true \
-    LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true \
-    LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK=false \
-    LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true \
-    LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING=true \
-    LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES=mcp-proxy,lfx
+# Keep auto-login disabled in every public target through the shared runtime stage.
+ENV LANGFLOW_AUTO_LOGIN=false
 
 USER user
 WORKDIR /app
