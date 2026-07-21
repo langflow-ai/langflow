@@ -1,0 +1,19 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+langflow:
+  scheme: ${LANGFLOW_SCHEME:http}
+  host: ${LANGFLOW_HOST:localhost}
+  port: ${LANGFLOW_PORT:7860}
+  api-key: ${LANGFLOW_API_KEY:sk-YSiEXy63OkjOupGMmTmpV8Lijm5QHqSwFsTKYv5Ejro}
+#  api-key: ${LANGFLOW_API_KEY}
+  timeout:
+    connect: ${LANGFLOW_CONNECT_TIMEOUT:100s}
+    read: ${LANGFLOW_READ_TIMEOUT:600s}
+    write: ${LANGFLOW_WRITE_TIMEOUT:600s}
+    call: ${LANGFLOW_CALL_TIMEOUT:900s}
+
+logging:
+  level:
+    org.langflow.sdk.http: DEBUG
+    org.langflow.sdk.sse: DEBUG

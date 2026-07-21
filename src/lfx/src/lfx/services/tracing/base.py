@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from lfx.services.base import Service
@@ -16,12 +17,24 @@ if TYPE_CHECKING:
     from lfx.custom.custom_component.component import Component
 
 
+@dataclass
+class LoopIterationTrace:
+    """Mutable result handle yielded while a Loop iteration is running."""
+
+    outputs: dict[str, Any] = field(default_factory=dict)
+
+    def set_outputs(self, outputs: dict[str, Any]) -> None:
+        self.outputs = outputs
+
+
 class BaseTracingService(Service, ABC):
     """Abstract base class for tracing services.
 
     Defines the minimal interface that all tracing service implementations
     must provide, whether minimal (LFX) or full-featured (Langflow).
     """
+
+    supports_loop_iteration_tracing = True
 
     @abstractmethod
     def __init__(self):
@@ -84,6 +97,19 @@ class BaseTracingService(Service, ABC):
         Yields:
             Self for method chaining
         """
+
+    @asynccontextmanager
+    async def trace_loop_iteration(
+        self,
+        *,
+        loop_id: str,
+        iteration_index: int,
+        iteration_count: int,
+        inputs: dict[str, Any],
+    ):
+        """Trace one real Loop iteration; lightweight services may no-op."""
+        _ = loop_id, iteration_index, iteration_count, inputs
+        yield LoopIterationTrace()
 
     @abstractmethod
     def add_log(self, trace_name: str, log: Any) -> None:

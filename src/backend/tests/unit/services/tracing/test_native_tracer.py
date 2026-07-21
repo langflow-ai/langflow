@@ -216,6 +216,54 @@ class TestAddEndTrace:
         assert "prompt_tokens" not in span["attributes"]
         assert "total_tokens" not in span["attributes"]
 
+    def test_loop_component_span_has_unique_id_and_iteration_parent(self):
+        tracer = _make_tracer()
+        metadata = {
+            "langflow.component.id": "parser-1",
+            "langflow.loop.id": "loop-1",
+            "langflow.loop.iteration_index": 1,
+            "langflow.loop.iteration_count": 3,
+            "langflow.loop.iteration_span_id": "loop-1:iteration:1",
+            "langflow.loop.parent_span_id": "loop-1",
+        }
+        span_id = "parser-1:loop:loop-1:iteration:1"
+
+        tracer.add_trace(span_id, "Parser (parser-1)", "parser", {"text": "input"}, metadata=metadata)
+        tracer.end_trace(span_id, "Parser", outputs={"text": "output"})
+
+        span = tracer.completed_spans[0]
+        assert span["id"] == span_id
+        assert span["name"] == "Parser"
+        assert span["parent_span_id"] == "loop-1:iteration:1"
+        assert span["inputs"] == {"text": "input"}
+        assert span["outputs"] == {"text": "output"}
+
+    def test_loop_iteration_is_recorded_as_a_real_span(self):
+        tracer = _make_tracer()
+        metadata = {
+            "langflow.loop.id": "loop-1",
+            "langflow.loop.iteration_index": 0,
+            "langflow.loop.iteration_count": 2,
+            "langflow.loop.is_iteration": True,
+            "langflow.loop.parent_span_id": "loop-1",
+        }
+        tracer.add_trace(
+            "loop-1:iteration:0",
+            "Iteration 1 / 2",
+            "chain",
+            {"item": "input"},
+            metadata=metadata,
+        )
+        tracer.end_trace("loop-1:iteration:0", "Iteration 1 / 2", outputs={"result": "output"})
+
+        iteration = tracer.completed_spans[0]
+        assert iteration["id"] == "loop-1:iteration:0"
+        assert iteration["name"] == "Iteration 1 / 2"
+        assert iteration["parent_span_id"] == "loop-1"
+        assert iteration["span_source"] == "loop_iteration"
+        assert iteration["inputs"] == {"item": "input"}
+        assert iteration["outputs"] == {"result": "output"}
+
 
 # ---------------------------------------------------------------------------
 # _map_trace_type

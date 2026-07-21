@@ -6,11 +6,16 @@
 # Used to build LFX and create our virtual environment
 ################################
 
-# Use an Alpine-based Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.14-alpine AS builder
+# Use a glibc-based image: onnxruntime publishes manylinux wheels but no
+# musllinux wheel, so the former Alpine builder cannot install the locked LFX
+# dependency set.
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS builder
 
-# Install build dependencies needed for some Python packages on Alpine
-RUN apk add --no-cache build-base libaio-dev linux-headers
+# Some optional LFX dependencies may need a compiler during installation.
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -47,15 +52,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.14-alpine AS runtime
+FROM python:3.14-slim-trixie AS runtime
 
-# Create a non-root user
-# -D: Don't assign a password
-# -u: Set user ID
-# -G: Add to group (root)
-# -h: Set home directory
-# -s: Set shell
-RUN adduser -D -u 1000 -G root -h /app/data -s /sbin/nologin lfx
+# Create a non-root user and a writable working directory.
+RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data --shell /usr/sbin/nologin lfx \
+    && mkdir -p /app/data \
+    && chown -R 1000:0 /app \
+    && chmod -R g+rwX /app
 
 # Copy the virtual environment from the builder stage
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
@@ -72,6 +75,25 @@ LABEL org.opencontainers.image.description="LFX - Langflow Executor CLI Tool"
 
 USER lfx
 WORKDIR /app/data
+
+################################
+# RUNNER
+# One-shot image for executing a mounted Langflow flow JSON file.
+# Build this target with: docker build --target runner ...
+################################
+FROM runtime AS runner
+
+# Arguments supplied to `docker run` are appended to this entrypoint, so:
+# docker run ... lfx-runner /flows/my-flow.json "hello"
+# executes: lfx run /flows/my-flow.json "hello"
+ENTRYPOINT ["lfx", "run"]
+CMD ["/flows/flow.json"]
+
+################################
+# DEFAULT
+# Keep the published/default image as the general-purpose LFX CLI image.
+################################
+FROM runtime
 
 # Default command shows LFX help
 CMD ["lfx", "--help"]

@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 from pydantic import Field as PydanticField
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import Index
 from sqlalchemy import types as sa_types
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, Text
 
@@ -153,7 +154,6 @@ class TraceBase(SQLModel):
     flow_id: UUID = Field(
         foreign_key="flow.id",
         ondelete="CASCADE",
-        index=True,
         description="ID of the flow this trace belongs to",
     )
     session_id: str | None = Field(
@@ -180,6 +180,7 @@ class TraceTable(TraceBase, table=True):  # type: ignore[call-arg]
     """Database table for storing execution traces."""
 
     __tablename__ = "trace"
+    __table_args__ = (Index("ix_trace_flow_id_start_time", "flow_id", "start_time"),)
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     spans: list["SpanTable"] = Relationship(
