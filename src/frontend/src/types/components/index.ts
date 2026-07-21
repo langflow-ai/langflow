@@ -378,6 +378,11 @@ export type TriggerProps = {
   children: ReactNode;
   tooltipContent?: ReactNode;
   side?: "top" | "right" | "bottom" | "left";
+  // Forwarded onto the underlying trigger button. Used when the trigger acts
+  // as a toggle (e.g. the admin active/superuser controls) so it is announced
+  // as a named toggle button instead of nesting an interactive role inside it.
+  ariaLabel?: string;
+  ariaPressed?: boolean;
 };
 
 export interface languageMap {
