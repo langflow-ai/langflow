@@ -488,11 +488,17 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
     """Fetch models from a custom OpenAI-compatible endpoint (OPENAI_BASE_URL).
 
     Returns [] when no custom base URL is configured, so api.openai.com
-    users keep the curated static catalog. ``tool_calling`` is assumed
-    True: ``/models`` carries no capability data and the OpenAI wire
-    format implies tools support.
+    users keep the curated static catalog.
+
+    Supports both ``llm`` and ``embeddings`` model types. Custom OpenAI-compatible
+    servers (vLLM / LM Studio / LiteLLM) expose models via the same ``/models``
+    endpoint for chat and embeddings; previously embeddings always short-circuited
+    to [] (issue #14180).
+
+    For ``llm``, ``tool_calling`` is assumed True: ``/models`` carries no
+    capability data and the OpenAI wire format implies tools support.
     """
-    if model_type != "llm":
+    if model_type not in ("llm", "embeddings"):
         return []
 
     base_url = get_provider_variable_value(user_id, "OPENAI_BASE_URL")
@@ -521,13 +527,14 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
     if not isinstance(entries, list):
         return []
 
+    resolved_type = "llm" if model_type == "llm" else "embeddings"
     return [
         create_model_metadata(
             provider="OpenAI",
             name=entry["id"],
             icon="OpenAI",
-            model_type="llm",
-            tool_calling=True,
+            model_type=resolved_type,
+            tool_calling=resolved_type == "llm",
             default=index < MIN_DEFAULT_MODELS,
         )
         for index, entry in enumerate(entries)

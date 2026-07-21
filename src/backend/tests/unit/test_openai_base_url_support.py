@@ -128,10 +128,38 @@ class TestLiveOpenAICompatibleModels:
         assert all(m["tool_calling"] for m in models)
         assert http_get.call_args.args[0] == f"{CUSTOM_BASE_URL}/models"
 
-    def test_should_not_list_embeddings_from_the_custom_server(self):
+    def test_should_list_embeddings_from_the_custom_server(self):
+        """Custom OpenAI-compatible servers expose embeddings via the same /models
+        endpoint as chat models (issue #14180). Live fetch must not short-circuit
+        embeddings to [].
+        """
+        response = MagicMock()
+        response.json.return_value = {
+            "data": [{"id": "BAAI/bge-base-en-v1.5"}, {"id": "text-embedding-3-small"}]
+        }
+        response.raise_for_status.return_value = None
+        with (
+            patch(
+                "lfx.base.models.model_utils.get_provider_variable_value",
+                side_effect=lambda _uid, key: CUSTOM_BASE_URL if key == "OPENAI_BASE_URL" else "sk-test",
+            ),
+            patch("requests.get", return_value=response) as http_get,
+        ):
+            models = fetch_live_openai_compatible_models(USER_ID, "embeddings")
+
+        assert [m["name"] for m in models] == [
+            "BAAI/bge-base-en-v1.5",
+            "text-embedding-3-small",
+        ]
+        assert all(m["model_type"] == "embeddings" for m in models)
+        # embeddings must not advertise tool calling
+        assert all(not m["tool_calling"] for m in models)
+        assert http_get.call_args.args[0] == f"{CUSTOM_BASE_URL}/models"
+
+    def test_should_return_empty_embeddings_when_no_base_url_is_configured(self):
         with patch(
             "lfx.base.models.model_utils.get_provider_variable_value",
-            return_value=CUSTOM_BASE_URL,
+            return_value=None,
         ):
             assert fetch_live_openai_compatible_models(USER_ID, "embeddings") == []
 
