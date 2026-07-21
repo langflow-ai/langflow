@@ -48,6 +48,7 @@ import ViewPage from "./pages/ViewPage";
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
 const ImageAnnotationPage = lazy(() => import("./pages/ImageAnnotationPage"));
+const TextAnnotationPage = lazy(() => import("./pages/TextAnnotationPage"));
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 
 const PlaygroundPage = lazy(() => import("./pages/Playground"));
@@ -199,6 +200,10 @@ const router = createBrowserRouter(
                 <Route path="image-annotation">
                   <Route index element={<ImageAnnotationPage />} />
                   <Route path=":projectId" element={<ImageAnnotationPage />} />
+                </Route>
+                <Route path="text-annotation">
+                  <Route index element={<TextAnnotationPage />} />
+                  <Route path=":projectId" element={<TextAnnotationPage />} />
                 </Route>
               </Route>
               <Route path="flow/:id/">

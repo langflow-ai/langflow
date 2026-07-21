@@ -118,6 +118,21 @@ export const AccountMenu = () => {
               </HeaderMenuItemButton>
             </div>
 
+            <div>
+              <HeaderMenuItemButton
+                onClick={() => {
+                  navigate("/text-annotation");
+                }}
+              >
+                <span
+                  data-testid="menu_text_annotation_button"
+                  id="menu_text_annotation_button"
+                >
+                  {t("account.textAnnotation")}
+                </span>
+              </HeaderMenuItemButton>
+            </div>
+
             {isAdmin && !autoLogin && (
               <div>
                 <HeaderMenuItemButton
