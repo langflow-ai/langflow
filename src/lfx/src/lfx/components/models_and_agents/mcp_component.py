@@ -316,7 +316,10 @@ class MCPToolsComponent(ComponentWithCache):
             info="Placeholder for the tool",
             value="",
             show=False,
-            tool_mode=False,
+            # Tool Mode is a capability of the component, not of the selected
+            # server. Advertising it up front keeps the toolbar from waiting
+            # for the MCP server's tool-discovery request to finish.
+            tool_mode=True,
         ),
     ]
 
@@ -663,7 +666,7 @@ class MCPToolsComponent(ComponentWithCache):
                     build_config["tool"]["options"] = []
                     build_config["tool"]["value"] = ""
                     build_config["tool"]["placeholder"] = ""
-                    build_config["tool_placeholder"]["tool_mode"] = False
+                    build_config["tool_placeholder"]["tool_mode"] = True
                     self.remove_non_default_keys(build_config)
                     return build_config
 

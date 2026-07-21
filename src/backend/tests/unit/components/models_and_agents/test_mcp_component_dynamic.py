@@ -22,6 +22,13 @@ from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
 
 
+def test_tool_mode_capability_is_available_before_server_discovery() -> None:
+    """The toolbar must not wait for an MCP connection to discover Tool Mode."""
+    tool_placeholder = next(input_ for input_ in MCPToolsComponent.inputs if input_.name == "tool_placeholder")
+
+    assert tool_placeholder.tool_mode is True
+
+
 def _make_tool(name: str) -> MagicMock:
     tool = MagicMock()
     tool.name = name
@@ -323,6 +330,14 @@ class TestUpdateBuildConfigRefresh:
         }
         config.update(overrides)
         return config
+
+    @pytest.mark.asyncio
+    async def test_clearing_server_keeps_tool_mode_capability(self) -> None:
+        component = MCPToolsComponent()
+
+        build_config = await component.update_build_config(self._build_config(), {}, "mcp_server")
+
+        assert build_config["tool_placeholder"]["tool_mode"] is True
 
     @pytest.mark.asyncio
     async def test_refresh_bypasses_existing_options(self) -> None:
