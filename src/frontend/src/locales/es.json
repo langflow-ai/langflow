@@ -73,6 +73,7 @@
   "assistant.maxSessionsLabel": "Máx. sesiones",
   "assistant.maxSessionsTooltip": "Se ha alcanzado el límite de sesiones de {{max}}. Elimina una sesión para crear una nueva.",
   "assistant.mentionNoMatches": "No hay componentes coincidentes en el lienzo",
+  "assistant.flowProposalReplaceOnly": "Este flujo incluye un Chat Input o Webhook y tu lienzo ya tiene uno. Un flujo solo puede tener uno. Reemplaza el lienzo para usar este flujo.",
   "assistant.messageCounts": "{{count}} mensajes",
   "assistant.newConversation": "Nueva conversación",
   "assistant.newPill": "Nuevo",

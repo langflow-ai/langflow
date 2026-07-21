@@ -73,6 +73,7 @@
   "assistant.maxSessionsLabel": "Máximo de sessões",
   "assistant.maxSessionsTooltip": "Atingido o limite máximo de {{max}} sessões. Exclua uma sessão para criar uma nova.",
   "assistant.mentionNoMatches": "Não há componentes correspondentes na tela",
+  "assistant.flowProposalReplaceOnly": "Este fluxo inclui um Chat Input ou Webhook e sua tela já possui um. Um fluxo só pode ter um. Substitua a tela para usar este fluxo.",
   "assistant.messageCounts": "{{count}} mensagens",
   "assistant.newConversation": "Nova conversa",
   "assistant.newPill": "Novo",
