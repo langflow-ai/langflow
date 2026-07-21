@@ -207,6 +207,87 @@ async def test_update_flow(client: AsyncClient, logged_in_headers):
     assert result["name"] == updated_name, "The name must be updated"
 
 
+async def test_locked_flow_rejects_api_updates_until_unlocked(client: AsyncClient, logged_in_headers):
+    original_data = {"nodes": [], "edges": []}
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": "locked-flow", "description": "original", "data": original_data, "locked": True},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    created = create_response.json()
+    flow_id = created["id"]
+
+    # Navigation can submit the full current flow even when nothing changed.
+    # A no-op save must succeed so the UI can leave a locked flow cleanly.
+    no_op_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={
+            "name": created["name"],
+            "description": created["description"],
+            "data": created["data"],
+            "folder_id": created["folder_id"],
+            "endpoint_name": created["endpoint_name"],
+            "locked": True,
+        },
+        headers=logged_in_headers,
+    )
+    assert no_op_response.status_code == status.HTTP_200_OK
+    assert no_op_response.json()["locked"] is True
+
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"description": "changed via PATCH"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == status.HTTP_423_LOCKED
+    assert patch_response.json()["detail"] == "Flow is locked. Unlock it before making changes."
+
+    put_response = await client.put(
+        f"api/v1/flows/{flow_id}",
+        json={"name": "changed-via-put", "description": "original", "data": original_data},
+        headers=logged_in_headers,
+    )
+    assert put_response.status_code == status.HTTP_423_LOCKED
+
+    combined_unlock_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"locked": False, "description": "changed while unlocking"},
+        headers=logged_in_headers,
+    )
+    assert combined_unlock_response.status_code == status.HTTP_423_LOCKED
+
+    unchanged_response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert unchanged_response.status_code == status.HTTP_200_OK
+    assert unchanged_response.json()["name"] == "locked-flow"
+    assert unchanged_response.json()["description"] == "original"
+
+    # The UI sends the current flow fields along with the lock toggle. Equal
+    # values must not prevent an unlock-only request from succeeding.
+    unlock_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={
+            "name": created["name"],
+            "description": created["description"],
+            "data": created["data"],
+            "folder_id": created["folder_id"],
+            "endpoint_name": created["endpoint_name"],
+            "locked": False,
+        },
+        headers=logged_in_headers,
+    )
+    assert unlock_response.status_code == status.HTTP_200_OK
+    assert unlock_response.json()["locked"] is False
+
+    update_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"description": "changed after unlock"},
+        headers=logged_in_headers,
+    )
+    assert update_response.status_code == status.HTTP_200_OK
+    assert update_response.json()["description"] == "changed after unlock"
+
+
 async def test_patch_flow_keeps_existing_endpoint_when_not_provided(client: AsyncClient, logged_in_headers):
     """Test that PATCH preserves endpoint_name when the field is omitted."""
     initial_flow = {
