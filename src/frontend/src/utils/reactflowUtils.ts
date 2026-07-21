@@ -125,6 +125,9 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
     // check if the source and target handle still exists
     const sourceHandle = edge.sourceHandle; //right
     const targetHandle = edge.targetHandle; //left
+    // Hold by reference: the target block rewrites edge.id on migration, so a second find-by-id in
+    // the source block would miss it and skip the source-handle migration (DataFrame stays). LE-1929.
+    const edgeInNewEdges = newEdges.find((e) => e.id === edge.id);
     if (targetHandle) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
       const field = targetHandleObject.fieldName;
@@ -199,7 +202,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           isAdvanced) &&
         !isLoopInput
       ) {
-        newEdges = newEdges.filter((e) => e.id !== edge.id);
+        newEdges = newEdges.filter((e) => e !== edgeInNewEdges);
         brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
       } else if (
         targetHandlesMatchResult &&
@@ -207,7 +210,6 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       ) {
         // Handles match via migration but IDs differ — update edge to use current types
         // so React Flow can find the DOM handle
-        const edgeInNewEdges = newEdges.find((e) => e.id === edge.id);
         if (edgeInNewEdges) {
           edgeInNewEdges.targetHandle = expectedTargetHandle;
           if (edgeInNewEdges.data) {
@@ -284,7 +286,6 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             expectedSourceHandle !== sourceHandle
           ) {
             // Handles match via migration but IDs differ — update edge to use current types
-            const edgeInNewEdges = newEdges.find((e) => e.id === edge.id);
             if (edgeInNewEdges) {
               edgeInNewEdges.sourceHandle = expectedSourceHandle;
               if (edgeInNewEdges.data) {
@@ -1901,6 +1902,24 @@ export function processFlowNodes(flow: FlowType) {
     const { nodes, edges } = updateNewOutput(flow.data);
     flow.data.nodes = nodes;
     flow.data.edges = edges;
+  }
+  reconcileStaleGenericNodeDimensions(flow.data.nodes);
+}
+
+/**
+ * Drop persisted width/height on genericNodes so React Flow re-measures the real DOM size.
+ *
+ * The component card is a fixed Tailwind width (`w-80`/`w-48`). Flows saved when that width was
+ * larger (`w-96` = 384px) kept `width: 384`, which React Flow then uses to place the right-side
+ * output handle — landing it ~64px past the visual dot so edges render detached (LE-1929). Only
+ * genericNodes are content-sized; noteNodes are user-resizable and keep their dimensions.
+ */
+export function reconcileStaleGenericNodeDimensions(nodes: AllNodeType[]) {
+  for (const node of nodes) {
+    if (node.type !== "genericNode") continue;
+    delete node.width;
+    delete node.height;
+    delete node.measured;
   }
 }
 
