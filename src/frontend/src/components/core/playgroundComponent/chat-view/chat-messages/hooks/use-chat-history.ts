@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-get-flow-id";
+import { withAnsweredHumanInputCards } from "@/controllers/API/agui/human-input-card";
 import {
   getMessages,
   useGetMessagesQuery,
@@ -70,7 +71,6 @@ export const useChatHistory = (visibleSession: string | null) => {
     refetchOnWindowFocus: false,
   });
 
-  // Initialize cache with backend messages on first load (only if cache is empty)
   useEffect(() => {
     if (queryData && typeof queryData === "object" && "rows" in queryData) {
       const rowsData = queryData.rows as { data?: Message[] } | undefined;
@@ -86,6 +86,12 @@ export const useChatHistory = (visibleSession: string | null) => {
         if (existingCache.length === 0 && backendMessages.length > 0) {
           queryClient.setQueryData(sessionCacheKey, backendMessages);
           offsetRef.current = backendMessages.length;
+        } else if (existingCache.length > 0) {
+          const reconciled = withAnsweredHumanInputCards(
+            existingCache,
+            backendMessages,
+          );
+          if (reconciled) queryClient.setQueryData(sessionCacheKey, reconciled);
         }
       }
     }

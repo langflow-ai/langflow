@@ -393,6 +393,10 @@ See [Configure log options](/logging#log-storage).
 
 See [Use Langflow as an MCP server](/mcp-server).
 
+### A2A agents {#a2a}
+
+See [A2A environment variables](./a2a-server#a2a-environment-variables).
+
 ### Multi-worker deployments
 
 For multi-worker tuning—including the Redis job queue and Gunicorn worker settings—see [Deploy Langflow with multiple workers](./deployment-multi-worker).
@@ -442,8 +446,11 @@ See [Telemetry](/contributing-telemetry).
 | `LANGFLOW_BUNDLE_URLS` | List[String] | `[]` | A list of URLs from which to load custom bundles. Supports GitHub URLs. If `LANGFLOW_AUTO_LOGIN=True`, flows from these bundles are loaded into the database. |
 | `LANGFLOW_COMPONENTS_PATH` | String | Not set | Path to a directory containing custom components. Typically used if you have local custom components or you are building a Docker image with custom components. |
 | `LANGFLOW_COMPONENTS_INDEX_PATH` | String | Not set | File path or URL (`http://` or `https://`) to a prebuilt component index JSON file used to populate built-in components in the visual editor. When not set, Langflow uses the included index. Useful for supplying a curated component index, for example in airgapped deployments. For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx). |
-| `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` | Boolean | `True` | If `false`, disables custom components and in-editor editing of component code. This feature is in beta. For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx). |
+| `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` | Boolean | `True` | If `false`, disables custom components and in-editor editing of component code. This feature is in beta. Official Docker images set this to `false`. For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx) and [Component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening). |
 | `LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE` | Boolean | `True` | When `false` alongside `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`, components contributed by `LANGFLOW_COMPONENTS_PATH` and `LANGFLOW_COMPONENTS_INDEX_PATH` no longer bypass the block. Has no effect when `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true`. For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx). |
+| `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | Boolean | `False` | If `true`, blocks built-in code-execution components (Python Interpreter, REPL/Code tools, Smart Transform, and code-running agents). Official Docker images set this to `true`. See [Component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening). |
+| `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `False` | If `true`, confines built-in file components to the upload storage directory and blocks local-file SQL dialects and local Git clones. Official Docker images set this to `true`. See [Component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening). |
+| `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | Boolean | `False` | If `true`, applies a strict Docker-argument policy to MCP stdio servers that use the `docker` transport. The main `langflowai/langflow` image sets this to `true`. See [Component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening). |
 | `LANGFLOW_LOAD_FLOWS_PATH` | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Typically used when creating a Docker image with prepackaged flows. Requires `LANGFLOW_AUTO_LOGIN=True`. |
 | `LANGFLOW_LOAD_FLOWS_OVERWRITE_ON_NAME_MATCH` | Boolean | `False` | When a flow file in `LANGFLOW_LOAD_FLOWS_PATH` shares a name with an existing DB row but has a different `id`, controls whether to overwrite the existing row. `False` (default) skips with a warning so UI edits are preserved on restart when file UUIDs regenerate. Set to `True` to opt into prepackaged-flows-are-source-of-truth semantics, typically for CI/CD pipelines. |
 | `LANGFLOW_LOAD_FLOWS_PRESERVE_VARIABLE_BINDINGS` | Boolean | `True` | Preserve global-variable bindings configured in the visual editor when an existing flow is reloaded from `LANGFLOW_LOAD_FLOWS_PATH`. Bindings explicitly configured in the flow file still take precedence. Set to `False` to restore blind replacement of the flow data on restart. |
