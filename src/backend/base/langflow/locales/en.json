@@ -5335,7 +5335,7 @@
   "components.parsercomponent.description.61cf5603": "Extracts text using a template.",
   "components.parsercomponent.display_name.51b45e29": "Parser",
   "components.parsercomponent.inputs.input_data.display_name.6f756e77": "JSON or Table",
-  "components.parsercomponent.inputs.input_data.info.012b9280": "Accepts either a DataFrame or a Data object.",
+  "components.parsercomponent.inputs.input_data.info.e682c47c": "Accepts a DataFrame, a Data object, or a list of Data objects.",
   "components.parsercomponent.inputs.mode.display_name.5e23ec6a": "Mode",
   "components.parsercomponent.inputs.mode.info.fe5e29c9": "Convert into raw string instead of using a template.",
   "components.parsercomponent.inputs.pattern.display_name.0575f29d": "Template",

@@ -73,6 +73,7 @@
   "assistant.maxSessionsLabel": "Max. Sitzungen",
   "assistant.maxSessionsTooltip": "Die maximale Anzahl von {{max}} -Sitzungen wurde erreicht. Löschen Sie eine Sitzung, um eine neue zu erstellen.",
   "assistant.mentionNoMatches": "Keine passenden Komponenten auf der Arbeitsfläche",
+  "assistant.flowProposalReplaceOnly": "Dieser Flow enthält einen Chat Input oder Webhook und Ihre Arbeitsfläche hat bereits einen. Ein Flow kann nur einen haben. Ersetzen Sie die Arbeitsfläche, um diesen Flow zu verwenden.",
   "assistant.messageCounts": "{{count}} Nachrichten",
   "assistant.newConversation": "Neue Konversation",
   "assistant.newPill": "Neu",
