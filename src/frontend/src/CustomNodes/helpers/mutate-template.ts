@@ -91,6 +91,15 @@ export const mutateTemplate = async (
     );
   }
 
+  // Enabling Tool Mode mounts the tools_metadata field, which queues its own
+  // debounced refresh. If the user turns Tool Mode off before that refresh
+  // runs, the queued request still carries tool_mode=true and can restore the
+  // Toolset output after the off response. The explicit toggle supersedes that
+  // pending metadata refresh.
+  if (parameterName === "tool_mode") {
+    debouncedFunctions.get(`${nodeId}-tools_metadata`)?.cancel();
+  }
+
   const debouncedFunction = debouncedFunctions.get(debounceKey);
   debouncedFunction?.(
     newValue,
