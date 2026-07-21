@@ -135,6 +135,29 @@ class TestStarterProjects:
         data = load_json_file(json_file)
         assert isinstance(data, dict), f"{json_file.name} should be a valid JSON object"
 
+    def test_prompt_custom_fields_are_materialized(self, json_file: Path):
+        """Prompt variables declared in custom_fields must exist in the serialized template."""
+        data = load_json_file(json_file)
+        missing_fields: list[str] = []
+
+        for node in data.get("data", {}).get("nodes", []):
+            node_data = node.get("data", {}) or {}
+            node_config = node_data.get("node", {}) or {}
+            template = node_config.get("template", {}) or {}
+            custom_fields = node_config.get("custom_fields", {}) or {}
+
+            for field_names in custom_fields.values():
+                if not isinstance(field_names, list):
+                    continue
+                for field_name in field_names:
+                    if field_name not in template:
+                        node_id = node_data.get("id", node.get("id", "<unknown>"))
+                        missing_fields.append(f"{node_id}.{field_name}")
+
+        assert not missing_fields, (
+            f"{json_file.name}: custom prompt fields are missing from the serialized node template: {missing_fields}"
+        )
+
     def test_width_height_at_node_level(self, json_file: Path):
         """Test that width/height are removed from node root level for all node types EXCEPT noteNode.
 

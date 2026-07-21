@@ -53,10 +53,35 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### Breaking changes
 
+- Short `LANGFLOW_SECRET_KEY` upgrade compatibility
+
+    Langflow 1.10.1 changed how secrets shorter than 32 characters derive the Fernet key used for encrypted credentials.
+    Langflow 1.11.x retains read compatibility with credentials encrypted by the earlier derivation while continuing to use the current SHA-256 derivation for all new writes.
+
+    If your deployment uses a `LANGFLOW_SECRET_KEY` shorter than 32 characters, keep it unchanged during the initial upgrade so Langflow can continue to decrypt existing credentials.
+    Langflow logs a startup warning for this configuration because short secrets aren't recommended for production.
+    To replace the key, first record or export the stored credentials, set a randomly generated key of at least 32 characters, and then re-enter the credentials; changing the key directly invalidates ciphertext created with the old key.
+
 - Default superuser password removed
 
     Langflow no longer creates or accepts the legacy `langflow`/`langflow` default superuser credentials.
     If `LANGFLOW_AUTO_LOGIN=False`, set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password before startup.
+
+- Docker images enable component hardening by default
+
+    Official Langflow Docker images now include stricter defaults and include the following environment variables:
+
+    ```bash
+    LANGFLOW_AUTO_LOGIN=false
+    LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false
+    LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true
+    LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true
+    LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true
+    ```
+
+    Existing Langflow containers that rely on custom components, code interpreters, or absolute local file paths must override these variables.
+    Keep the image defaults when users who can build flows on the server are not fully trusted.
+    For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
 
 - Long-tail component bundles are now opt-in
 
@@ -78,6 +103,42 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     **CUGA**, **Code Agents**, and **Docling** local conversion are excluded from the default `uv pip install langflow` installation because they require PyTorch.
 
     To install these components, see [Torch opt-in installs](./components-bundle-components#torch-opt-in).
+
+- Workflow API request schema (Beta)
+
+    The v2 [Workflow API (Beta)](/workflow-api) request body and interaction pattern changes in 1.11.
+    Any client that calls `POST /api/v2/workflows` against 1.10.x must update as follows:
+
+    Example 1.10.x request:
+
+    ```json
+    {
+      "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+      "background": false,
+      "inputs": {
+        "ChatInput-abc.input_value": "what is 2+2",
+        "LLMComponent-123.temperature": 0.7
+      }
+    }
+    ```
+
+    Example 1.11.x request:
+
+    ```json
+    {
+      "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+      "input_value": "what is 2+2",
+      "mode": "stream",
+      "stream_protocol": "agui",
+      "tweaks": {
+        "LLMComponent-123": {
+          "temperature": 0.7
+        }
+      }
+    }
+    ```
+
+    For more information, see [Workflow API (Beta)](/workflow-api).
 
 ### New features and enhancements
 

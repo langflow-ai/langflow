@@ -562,7 +562,7 @@ async def test_set_default_model_viewer_denied(monkeypatch, owner):
 
     svc_spy = MagicMock()
     monkeypatch.setattr(models, "get_variable_service", svc_spy)
-    request = SimpleNamespace(model_type="language", model_name="m", provider="p")
+    request = SimpleNamespace(model_type="language", model_name="m", provider="OpenAI")
 
     set_current_external_access_context(_viewer_ceiling())
     try:
@@ -602,7 +602,7 @@ async def test_set_default_model_owner_proceeds(monkeypatch, owner):
     var_service.get_variable_object = AsyncMock(return_value=SimpleNamespace(id=uuid4()))
     var_service.update_variable_fields = AsyncMock()
     monkeypatch.setattr(models, "get_variable_service", lambda: var_service)
-    request = SimpleNamespace(model_type="language", model_name="m", provider="p")
+    request = SimpleNamespace(model_type="language", model_name="m", provider="OpenAI")
 
     result = await models.set_default_model(session=MagicMock(), current_user=owner, request=request)
 

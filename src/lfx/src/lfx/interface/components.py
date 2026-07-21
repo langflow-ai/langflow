@@ -666,9 +666,8 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     try:
         module = importlib.import_module(modname)
     except ModuleNotFoundError as e:
-        # Expected when a component's optional dependency isn't installed (e.g. litellm and
-        # toolguard are excluded on Python 3.14 images), so a one-line warning is enough --
-        # a full traceback per affected module would flood startup logs for a normal condition.
+        # Expected when a component's optional dependency isn't installed, so a one-line
+        # warning is enough; a full traceback per affected module would flood startup logs.
         logger.warning(f"Skipping component module {modname}: missing optional dependency ({e.name or e})")
         return None
     except Exception as e:  # noqa: BLE001
