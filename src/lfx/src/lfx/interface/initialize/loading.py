@@ -79,7 +79,9 @@ async def get_instance_results(
     from lfx.memory.flow_context import reset_current_flow_id, set_current_flow_id
 
     flow_id = getattr(getattr(vertex, "graph", None), "flow_id", None)
-    flow_scope_token = set_current_flow_id(flow_id) if flow_id is not None else None
+    # Always bind — including None — so a graph without flow_id shadows any outer
+    # flow scope instead of inheriting it (nested runs must stay legacy-unscoped).
+    flow_scope_token = set_current_flow_id(flow_id)
     try:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -90,8 +92,7 @@ async def get_instance_results(
             msg = f"Base type {base_type} not found."
             raise ValueError(msg)
     finally:
-        if flow_scope_token is not None:
-            reset_current_flow_id(flow_scope_token)
+        reset_current_flow_id(flow_scope_token)
 
 
 def get_params(vertex_params):

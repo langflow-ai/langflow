@@ -131,6 +131,37 @@ class _OldStyleMemory(MemoryComponent):
         return cast("Data", list(reversed(stored)))
 
 
+async def test_graph_without_flow_id_shadows_outer_scope(client):  # noqa: ARG001
+    """A graph with no ``flow_id`` must run unscoped, not inherit an outer flow's ambient scope.
+
+    If an outer flow is executing (ambient scope bound) and a nested graph without ``flow_id``
+    runs a legacy memory component, the documented fallback is legacy *unscoped* retrieval —
+    inheriting the outer flow's scope would silently attribute the messages to the wrong flow.
+    """
+    flow_a = uuid4()
+    session_id = "shared-session-13059-shadow"
+    await _store(session_id, flow_a, "SECRET_FROM_A")
+    await _store(session_id, uuid4(), "hello from B")
+
+    probe = _OldStyleMemory(_id="old_memory_shadow")
+    probe.set(session_id=session_id, n_messages=100, order="Ascending")
+    chat_output = ChatOutput(_id="chat_output_shadow")
+    chat_output.set(input_value=probe.retrieve_messages_as_text)
+
+    graph = Graph(probe, chat_output)  # no flow_id
+    outer_token = set_current_flow_id(flow_a)  # simulate an outer flow still bound
+    try:
+        async for _ in graph.async_start():
+            pass
+    finally:
+        reset_current_flow_id(outer_token)
+
+    rendered = chat_output.get_output_by_method(chat_output.message_response).value
+    text = rendered.text if hasattr(rendered, "text") else str(rendered)
+    assert "SECRET_FROM_A" in text, "unscoped legacy retrieval must include Flow A's message"
+    assert "hello from B" in text, "outer flow scope leaked into the flow_id-less graph run"
+
+
 async def test_graph_execution_binds_flow_scope_end_to_end(client):  # noqa: ARG001
     """End-to-end: running Flow B's graph must not surface Flow A's message via unscoped frozen code.
 
