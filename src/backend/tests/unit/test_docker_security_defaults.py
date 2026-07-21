@@ -167,3 +167,9 @@ def test_public_docker_targets_apply_release_version_overrides() -> None:
 
     assert workflow.count("MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}") == 6
     assert workflow.count("CORE_VERSION=${{ needs.determine-main-version.outputs.version }}") == 6
+
+
+def test_full_target_checks_only_default_workspace_distributions() -> None:
+    dockerfile = (REPO_ROOT / "docker" / "build_and_push.Dockerfile").read_text(encoding="utf-8")
+
+    assert 'required = {"langflow", "langflow-core"}' in dockerfile

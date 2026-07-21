@@ -142,7 +142,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     fi \
     && uv sync --frozen --extra postgresql --no-default-groups --no-editable \
     && uv pip check --python /app/.venv/bin/python \
-    && /app/.venv/bin/python -c 'import importlib.metadata as m; names = {d.metadata["Name"].lower() for d in m.distributions()}; required = {"langflow", "langflow-core", "lfx-bundles"}; missing = sorted(required - names); assert not missing, f"missing full distributions: {missing}"' \
+    && /app/.venv/bin/python -c 'import importlib.metadata as m; names = {d.metadata["Name"].lower() for d in m.distributions()}; required = {"langflow", "langflow-core"}; missing = sorted(required - names); assert not missing, f"missing full distributions: {missing}"' \
     && if [ -n "$MAIN_VERSION" ]; then \
         MAIN_VERSION="$MAIN_VERSION" /app/.venv/bin/python -c 'import importlib.metadata as m, os; actual = m.version("langflow"); expected = os.environ["MAIN_VERSION"]; assert actual == expected, f"langflow version {actual} != {expected}"'; \
     fi \
