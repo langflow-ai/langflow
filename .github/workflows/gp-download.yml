@@ -1,6 +1,8 @@
 name: GP Download Translations
 
 on:
+  schedule:
+    - cron: "0 23 * * *" # 11 PM UTC daily — pulls latest translations from GP
   workflow_dispatch:
 
 jobs:
