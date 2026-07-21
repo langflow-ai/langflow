@@ -333,6 +333,104 @@ async def test_mcp_servers_upload_allowed_when_locked_for_superuser(session, sto
 
 
 @pytest.mark.asyncio
+async def test_mcp_servers_upload_rejects_stdio_under_code_execution_lockdown(session, storage_service, current_user):
+    """The raw MCP config upload cannot bypass the code-execution lockdown."""
+    restricted_settings = SimpleNamespace(
+        settings=SimpleNamespace(
+            max_file_size_upload=10,
+            mcp_servers_locked=False,
+            allow_custom_components=False,
+            custom_component_admin_only=False,
+        )
+    )
+    current_user.is_superuser = False
+
+    mcp_file_ext = await get_mcp_file(current_user, extension=True)
+    content = b'{"mcpServers": {"evil": {"command": "uvx", "args": ["attacker-controlled-package"]}}}'
+    file = UploadFile(filename=mcp_file_ext, file=io.BytesIO(content))
+    file.size = len(content)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await upload_user_file(
+            file=file,
+            session=session,
+            current_user=current_user,
+            storage_service=storage_service,
+            settings_service=restricted_settings,
+        )
+
+    assert exc_info.value.status_code == 403
+    assert storage_service._store == {}
+    assert session._db == {}
+
+
+@pytest.mark.asyncio
+async def test_mcp_servers_upload_allows_remote_server_under_code_execution_lockdown(
+    session, storage_service, current_user
+):
+    """Remote MCP configs remain usable because they do not spawn a local process."""
+    restricted_settings = SimpleNamespace(
+        settings=SimpleNamespace(
+            max_file_size_upload=10,
+            mcp_servers_locked=False,
+            allow_custom_components=True,
+            custom_component_admin_only=True,
+        )
+    )
+    current_user.is_superuser = False
+
+    mcp_file_ext = await get_mcp_file(current_user, extension=True)
+    mcp_file = await get_mcp_file(current_user)
+    content = b'{"mcpServers": {"remote": {"url": "https://mcp.example.com"}}}'
+    file = UploadFile(filename=mcp_file_ext, file=io.BytesIO(content))
+    file.size = len(content)
+
+    await upload_user_file(
+        file=file,
+        session=session,
+        current_user=current_user,
+        storage_service=storage_service,
+        settings_service=restricted_settings,
+    )
+
+    expected_path = f"{current_user.id}/{mcp_file}.json"
+    assert storage_service._store[expected_path] == content
+
+
+@pytest.mark.asyncio
+async def test_mcp_servers_upload_allows_stdio_for_superuser_under_code_execution_lockdown(
+    session, storage_service, current_user
+):
+    """Administrators retain access to local MCP processes under admin-only lockdown."""
+    restricted_settings = SimpleNamespace(
+        settings=SimpleNamespace(
+            max_file_size_upload=10,
+            mcp_servers_locked=False,
+            allow_custom_components=False,
+            custom_component_admin_only=True,
+        )
+    )
+    current_user.is_superuser = True
+
+    mcp_file_ext = await get_mcp_file(current_user, extension=True)
+    mcp_file = await get_mcp_file(current_user)
+    content = b'{"mcpServers": {"fetch": {"command": "uvx", "args": ["mcp-server-fetch"]}}}'
+    file = UploadFile(filename=mcp_file_ext, file=io.BytesIO(content))
+    file.size = len(content)
+
+    await upload_user_file(
+        file=file,
+        session=session,
+        current_user=current_user,
+        storage_service=storage_service,
+        settings_service=restricted_settings,
+    )
+
+    expected_path = f"{current_user.id}/{mcp_file}.json"
+    assert storage_service._store[expected_path] == content
+
+
+@pytest.mark.asyncio
 async def test_concurrent_update_server_should_not_lose_servers(tmp_path):
     """Concurrent update_server() calls must not silently drop servers.
 

@@ -39,14 +39,7 @@ def _is_default_storage(storage_name: str) -> bool:
 
 class SaveToFileComponent(Component):
     display_name = "Write File"
-    description = (
-        "Save data to a file. "
-        "Arguments: 'input' — the content to save (pass a DataFrame directly, or a JSON string "
-        "for tabular data, or plain text for messages); "
-        "'file_name' — the name to save as, without extension (e.g. 'report'); "
-        "'file_format' — output format: 'csv', 'json', 'txt', 'html', 'excel', 'markdown' (optional). "
-        "Returns a confirmation with the file path or URL."
-    )
+    description = "Save content to a file in the specified format and return its path."
     documentation: str = "https://docs.langflow.org/write-file"
     icon = "file-text"
     name = "SaveToFile"
@@ -208,7 +201,25 @@ class SaveToFileComponent(Component):
         ),
     ]
 
-    outputs = [Output(display_name="File Path", name="message", method="save_to_file")]
+    outputs = [
+        Output(
+            display_name="File Path",
+            name="message",
+            method="save_to_file",
+            # Tool-facing documentation: ``build_description`` prefers output
+            # ``info`` over the component description when this component is
+            # exposed as an agent tool, so the argument reference lives here
+            # instead of bloating the UI card description.
+            info=(
+                "Save data to a file. "
+                "Arguments: 'input' — the content to save (pass a DataFrame directly, or a JSON string "
+                "for tabular data, or plain text for messages); "
+                "'file_name' — the name to save as, without extension (e.g. 'report'); "
+                "'file_format' — output format: 'csv', 'json', 'txt', 'html', 'excel', 'markdown' (optional). "
+                "Returns a confirmation with the file path or URL."
+            ),
+        )
+    ]
 
     def update_build_config(self, build_config, field_value, field_name=None):
         """Update build configuration to show/hide fields based on storage location selection."""
