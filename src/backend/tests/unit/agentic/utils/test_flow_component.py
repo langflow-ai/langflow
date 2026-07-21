@@ -286,6 +286,39 @@ class TestUpdateComponentFieldValue:
         assert result["success"] is False
         assert "permission" in result["error"].lower()
 
+    @pytest.mark.asyncio
+    async def test_should_reject_update_when_fresh_database_row_is_locked(self):
+        """The direct MCP DB path must honor a lock acquired after lookup."""
+        flow = _make_flow()
+        flow.locked = False
+        db_flow = MagicMock()
+        db_flow.user_id = UUID(USER_ID)
+        db_flow.locked = True
+
+        mock_session = AsyncMock()
+        mock_session.get = AsyncMock(return_value=db_flow)
+
+        @asynccontextmanager
+        async def mock_scope():
+            yield mock_session
+
+        with (
+            patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow),
+            patch(f"{MODULE}.session_scope", mock_scope),
+            patch(f"{MODULE}.logger", _mock_logger()),
+        ):
+            result = await update_component_field_value(
+                "test-flow",
+                "comp-1",
+                "input_value",
+                "blocked value",
+                USER_ID,
+            )
+
+        assert result["success"] is False
+        assert result["error"] == "Flow is locked. Unlock it before making changes."
+        mock_session.commit.assert_not_awaited()
+
 
 class TestListComponentFields:
     """Tests for list_component_fields."""

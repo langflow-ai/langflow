@@ -23,6 +23,7 @@ from langflow.agentic.services.assistant_service import execute_flow_with_valida
 from langflow.agentic.services.flow_types import LANGFLOW_ASSISTANT_FLOW
 from langflow.api.v1.flows import _new_flow, _save_flow_to_fs
 from langflow.initial_setup.setup import get_or_create_default_folder
+from langflow.services.database.models.flow.guards import ensure_flow_unlocked
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.deps import get_storage_service
 
@@ -179,6 +180,10 @@ async def run_assistant_and_persist(
     ``model_name``.
     """
     flow, created_new = await _ensure_flow(session, user_id, flow_id)
+    if not created_new:
+        # Fail before invoking the model. Locked flows are read-only to the
+        # headless assistant just as they are to direct MCP edit tools.
+        ensure_flow_unlocked(flow)
 
     request = AssistantRequest(
         flow_id=str(flow.id),
@@ -205,6 +210,11 @@ async def run_assistant_and_persist(
     canvas, working_snapshot, result_text, error_text, field_edits = await _consume_stream(stream, flow.data)
 
     if canvas.changed:
+        if not created_new:
+            # The assistant can run for a while. Refresh the lock immediately
+            # before persisting so a concurrent lock toggle wins the race.
+            await session.refresh(flow, attribute_names=["locked"])
+            ensure_flow_unlocked(flow)
         flow_data = working_snapshot["data"] if working_snapshot else canvas.data
         # Headless MCP has no UI to apply an edit_field review proposal, so apply
         # each to the working flow here or the text edit is dropped (Bug #13641).
