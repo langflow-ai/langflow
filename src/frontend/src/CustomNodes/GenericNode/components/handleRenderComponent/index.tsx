@@ -1,6 +1,7 @@
 import { type Connection, Handle, Position } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIDataType } from "@/types/api";
@@ -174,6 +175,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   testIdComplement,
   nodeId,
   colorName,
+  minimizedHandleTop,
 }: {
   left: boolean;
   tooltipTitle?: string;
@@ -187,15 +189,19 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   testIdComplement?: string;
   nodeId: string;
   colorName?: string[];
+  minimizedHandleTop?: string;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
 
   const idType = id && "type" in id ? id.type : undefined;
 
-  const isLocked = useFlowStore(
+  const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
   );
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isPermissionReadOnly = useIsFlowReadOnly(currentFlowId);
+  const isLocked = isFlowLocked || isPermissionReadOnly;
 
   const edges = useFlowStore((state) => state.edges);
 
@@ -394,6 +400,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 
   const handleMouseDown = useCallback(
     (event: React.MouseEvent) => {
+      if (isLocked) return;
       if (event.button === 0) {
         setHandleDragging(currentFilter);
         const handleMouseUp = () => {
@@ -403,10 +410,11 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
         document.addEventListener("mouseup", handleMouseUp);
       }
     },
-    [currentFilter, setHandleDragging],
+    [currentFilter, isLocked, setHandleDragging],
   );
 
   const handleClick = useCallback(() => {
+    if (isLocked) return;
     const nodes = useFlowStore.getState().nodes;
     setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
     setFilterType(currentFilter);
@@ -428,6 +436,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     filterOpenHandle,
     filterType,
     onConnect,
+    isLocked,
   ]);
 
   const handleMouseEnter = useCallback(() => setIsHovered(true), []);
@@ -470,6 +479,11 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           )}
           style={{
             ...BASE_HANDLE_STYLES,
+            // LE-1810 (T8): distribute the handles of a minimized node
+            // vertically so they don't overlap at the card center.
+            ...(!showNode && minimizedHandleTop
+              ? { top: minimizedHandleTop }
+              : {}),
             pointerEvents: isLocked ? "none" : "auto",
           }}
           onClick={handleClick}

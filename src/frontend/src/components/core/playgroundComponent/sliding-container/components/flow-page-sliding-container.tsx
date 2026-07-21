@@ -15,6 +15,7 @@ import { ChatInput } from "../../chat-view/chat-input";
 import useDragAndDrop from "../../chat-view/chat-input/hooks/use-drag-and-drop";
 import { Messages } from "../../chat-view/chat-messages";
 import { useChatHistory } from "../../chat-view/chat-messages/hooks/use-chat-history";
+import { shouldForceScrollOnNewMessage } from "../../chat-view/utils/should-force-scroll";
 import { useSessionManager } from "../../hooks/use-session-manager";
 
 type FlowPageSlidingContainerContentProps = {
@@ -89,7 +90,7 @@ export function FlowPageSlidingContainerContent({
       lastId &&
       prevLastMsgIdRef.current !== undefined &&
       lastId !== prevLastMsgIdRef.current &&
-      lastMsg.isSend
+      shouldForceScrollOnNewMessage(lastMsg)
     ) {
       window.dispatchEvent(new Event("langflow-scroll-to-bottom"));
       stickyInstance.scrollToBottom("smooth");

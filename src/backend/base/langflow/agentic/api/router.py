@@ -116,6 +116,11 @@ async def _resolve_assistant_context(
         "PROVIDER": provider,
     }
 
+    # Seeded here (not per-endpoint) so /assist and /execute/{flow_name}
+    # honor the budget the same way /assist/stream does.
+    if request.iterations_limit is not None:
+        global_vars["ITERATIONS_LIMIT"] = str(request.iterations_limit)
+
     # Inject all provider variables into the global context
     global_vars.update(provider_vars)
 
@@ -325,6 +330,7 @@ async def assist_stream(
             model_name=ctx.model_name,
             api_key_var=ctx.api_key_name,
             is_disconnected=http_request.is_disconnected,
+            iterations_limit=request.iterations_limit,
         ),
         media_type="text/event-stream",
         headers={

@@ -13,6 +13,7 @@ from lfx.base.data.docling_utils import coerce_docling_document
 from lfx.inputs import IntInput, NestedDictInput, StrInput, TableInput
 from lfx.inputs.inputs import FloatInput
 from lfx.schema import Data, DataFrame, dotdict
+from lfx.utils.ssrf_httpx import ssrf_protected_httpx_client_kwargs_for_url
 from lfx.utils.util import transform_localhost_url
 
 
@@ -292,9 +293,13 @@ class DoclingRemoteComponent(BaseFileComponent):
         transformed_url = transform_localhost_url(self.api_url)
         base_url = f"{transformed_url}/v1"
 
-        with httpx.Client(headers=self._process_headers()) as client:
+        with self._create_http_client(base_url) as client:
             result = self._poll_and_fetch_result(client, base_url, self.task_id)
             return [result] if result else []
+
+    def _create_http_client(self, base_url: str) -> httpx.Client:
+        client_kwargs, _ = ssrf_protected_httpx_client_kwargs_for_url(base_url)
+        return httpx.Client(headers=self._process_headers(), **client_kwargs)
 
     def load_files_base(self) -> list[Data]:
         """Load and process files, or poll an existing task if task_id is provided.
@@ -331,7 +336,7 @@ class DoclingRemoteComponent(BaseFileComponent):
 
         processed_data: list[Data | None] = []
         with (
-            httpx.Client(headers=self._process_headers()) as client,
+            self._create_http_client(base_url) as client,
             ThreadPoolExecutor(max_workers=self.max_concurrency) as executor,
         ):
             futures: list[tuple[int, Future]] = []

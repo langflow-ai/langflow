@@ -589,7 +589,7 @@ async def test_should_pass_event_manager_on_token_callback_to_process_agent_even
     """
     captured: dict = {}
 
-    async def _capture_process(stream, _agent_message, _send_message_callback, on_token_callback=None):
+    async def _capture_process(stream, _agent_message, _send_message_callback, on_token_callback=None, **_kw):
         # consume the stream so the adapter doesn't leak
         async for _ in stream:
             pass
@@ -619,7 +619,7 @@ async def test_should_pass_none_on_token_callback_when_event_manager_is_absent()
     """Regression guard: no event_manager → on_token_callback must be None, not a stub."""
     captured: dict = {}
 
-    async def _capture_process(stream, _agent_message, _send_message_callback, on_token_callback=None):
+    async def _capture_process(stream, _agent_message, _send_message_callback, on_token_callback=None, **_kw):
         async for _ in stream:
             pass
         captured["on_token"] = on_token_callback
@@ -1479,3 +1479,261 @@ async def test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_tru
         component._get_llm()
 
     assert captured.get("stream") is True
+
+
+def _gated_tool(name: str):
+    """A connected tool whose action was marked 'Require approval' on the tool."""
+    return SimpleNamespace(name=name, metadata={"approval_actions": ["approve", "reject"]})
+
+
+def test_should_attach_hitl_middleware_when_a_tool_is_gated() -> None:
+    """LE-1447 Slice 1: a tool whose action requires approval adds HumanInTheLoopMiddleware."""
+    from langchain.agents.middleware import HumanInTheLoopMiddleware
+
+    component = _build_component()
+    component.set_attributes({"tools": [_gated_tool("search")]})
+
+    middleware = component._build_middleware(MagicMock(name="fake_llm"))
+
+    hitl = [m for m in middleware if isinstance(m, HumanInTheLoopMiddleware)]
+    assert len(hitl) == 1
+    assert component._gated_interrupt_on() == {"search": {"allowed_decisions": ["approve", "reject"]}}
+
+
+def test_should_omit_hitl_middleware_when_no_tools_gated() -> None:
+    """A tool with no approval flag keeps the existing graph shape (no HITL middleware)."""
+    from langchain.agents.middleware import HumanInTheLoopMiddleware
+
+    component = _build_component()
+    component.set_attributes({"tools": [SimpleNamespace(name="search", metadata={})]})
+
+    middleware = component._build_middleware(MagicMock(name="fake_llm"))
+
+    assert not any(isinstance(m, HumanInTheLoopMiddleware) for m in middleware)
+
+
+def test_gates_only_tools_marked_for_approval() -> None:
+    """Only tools whose metadata lists approval_actions are gated; others run freely."""
+    component = _build_component()
+    component.set_attributes(
+        {"tools": [_gated_tool("transfer"), SimpleNamespace(name="search", metadata={"approval_actions": []})]}
+    )
+
+    assert component._gated_interrupt_on() == {"transfer": {"allowed_decisions": ["approve", "reject"]}}
+
+
+def test_gated_interrupt_on_empty_when_no_tool_marked() -> None:
+    component = _build_component()
+    component.set_attributes({"tools": [SimpleNamespace(name="search", metadata=None)]})
+
+    assert component._gated_interrupt_on() == {}
+
+
+def _capture_kwargs(captured: dict):
+    def _capture(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="compiled_state_graph")
+
+    return _capture
+
+
+@pytest.mark.asyncio
+async def test_should_pass_durable_checkpointer_when_gated_with_run_context() -> None:
+    """LE-1447 Slice 3: a gated tool + a per-run id wires the durable saver + thread_id."""
+    from lfx.components.models_and_agents.agent_helpers.job_checkpoint_saver import JobCheckpointSaver
+
+    captured: dict = {}
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
+    with (
+        patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
+    ):
+        component.create_agent_runnable()
+
+    assert isinstance(captured.get("checkpointer"), JobCheckpointSaver)
+    assert component._agent_thread_id() == "job-1"
+
+
+@pytest.mark.asyncio
+async def test_should_omit_checkpointer_when_no_tools_gated() -> None:
+    captured: dict = {}
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes({"tools": [SimpleNamespace(name="transfer", metadata={})]})
+    with (
+        patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
+    ):
+        component.create_agent_runnable()
+
+    assert captured.get("checkpointer") is None
+
+
+@pytest.mark.asyncio
+async def test_should_omit_checkpointer_and_hitl_when_allow_interrupts_false() -> None:
+    """The structured-output path disables interrupts: no checkpointer, no HITL middleware."""
+    from langchain.agents.middleware import HumanInTheLoopMiddleware
+
+    captured: dict = {}
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
+    with (
+        patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
+    ):
+        component.create_agent_runnable(allow_interrupts=False)
+
+    assert captured.get("checkpointer") is None
+    assert not any(isinstance(m, HumanInTheLoopMiddleware) for m in (captured.get("middleware") or []))
+
+
+_INTERRUPT_VALUE = {
+    "action_requests": [{"name": "transfer", "args": {"amount": 100}, "description": "Transfer $100 to Bob"}],
+    "review_configs": [{"action_name": "transfer", "allowed_decisions": ["approve", "reject"]}],
+}
+
+
+def test_should_map_middleware_interrupt_to_tool_approval_request() -> None:
+    """LE-1447 Slice 4: a HumanInTheLoopMiddleware interrupt maps to the HITL pause contract."""
+    component = _build_component()
+    component._vertex = SimpleNamespace(graph=SimpleNamespace(run_id="job-1"))
+
+    request = component._map_interrupt_to_request(_INTERRUPT_VALUE)
+
+    assert request["kind"] == "tool_approval"
+    assert request["request_id"].endswith(":job-1")
+    assert request["prompt"] == "Transfer $100 to Bob"
+    assert request["allowed_decisions"] == ["approve", "reject"]
+    assert request["options"] == [
+        {"action_id": "approve", "label": "Approve"},
+        {"action_id": "reject", "label": "Reject"},
+    ]
+    assert request["action_requests"] == _INTERRUPT_VALUE["action_requests"]
+
+
+@pytest.mark.asyncio
+async def test_should_request_pause_when_agent_stops_on_tool_approval_interrupt() -> None:
+    """LE-1447 Slice 4: a pending interrupt makes run_agent suspend instead of completing.
+
+    The drained stream leaves the interrupt in the checkpointer; `process_agent_events`
+    queries it via the getter and raises, so `run_agent` requests a graph pause carrying
+    the tool-approval request rather than writing a 'complete' message.
+    """
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
+    langflow_graph = MagicMock(run_id="job-1", session_id="11111111-1111-1111-1111-111111111111")
+    component._vertex = SimpleNamespace(graph=langflow_graph)
+    component.send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
+
+    fake_graph = MagicMock(spec=CompiledStateGraph)
+    fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
+    fake_graph.aget_state = AsyncMock(
+        return_value=SimpleNamespace(interrupts=[SimpleNamespace(value=_INTERRUPT_VALUE)], tasks=[])
+    )
+
+    with patch.object(type(component), "_get_shared_callbacks", return_value=[]):
+        result = await component.run_agent(fake_graph)
+
+    langflow_graph.request_pause.assert_called_once()
+    _, kwargs = langflow_graph.request_pause.call_args
+    assert kwargs["reason"] == "human_input_required"
+    assert kwargs["data"]["kind"] == "tool_approval"
+    assert kwargs["data"]["allowed_decisions"] == ["approve", "reject"]
+    assert result.properties.state != "complete"
+
+
+def test_should_translate_each_action_id_to_its_middleware_decision_shape() -> None:
+    """LE-1447 Slice 5: approve/edit/reject/respond map to the HITL middleware resume shape."""
+    component = _build_component()
+    action_request = {"name": "transfer", "args": {"amount": 100}}
+
+    assert component._to_langgraph_decision({"action_id": "approve"}, action_request) == {"type": "approve"}
+    assert component._to_langgraph_decision({"action_id": "reject", "values": {"message": "no"}}, action_request) == {
+        "type": "reject",
+        "message": "no",
+    }
+    assert component._to_langgraph_decision(
+        {"action_id": "respond", "values": {"message": "use 50"}}, action_request
+    ) == {"type": "respond", "message": "use 50"}
+    assert component._to_langgraph_decision(
+        {"action_id": "edit", "values": {"args": {"amount": 50}}}, action_request
+    ) == {
+        "type": "edit",
+        "edited_action": {"name": "transfer", "args": {"amount": 50}},
+    }
+
+
+@pytest.mark.asyncio
+async def test_should_stream_resume_command_when_a_human_decision_is_injected() -> None:
+    """LE-1447 Slice 5: on resume, run_agent feeds the graph a Command(resume=...), not the input.
+
+    The injected decision plus the checkpointed interrupt produce one Decision per pending
+    tool call so LangGraph continues the paused thread instead of starting over.
+    """
+    from langgraph.types import Command
+
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
+    langflow_graph = MagicMock(run_id="job-1", session_id="11111111-1111-1111-1111-111111111111")
+    langflow_graph.human_input_decisions = {f"{component._id}:job-1": {"action_id": "approve"}}
+    component._vertex = SimpleNamespace(graph=langflow_graph)
+    component.send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
+
+    captured: dict = {}
+
+    def _astream(stream_input, *, config, **_kwargs):  # noqa: ARG001
+        captured["input"] = stream_input
+        return _empty_event_stream()
+
+    fake_graph = MagicMock(spec=CompiledStateGraph)
+    fake_graph.astream_events = _astream
+    fake_graph.aget_state = AsyncMock(
+        return_value=SimpleNamespace(interrupts=[SimpleNamespace(value=_INTERRUPT_VALUE)], tasks=[])
+    )
+
+    with patch.object(type(component), "_get_shared_callbacks", return_value=[]):
+        await component.run_agent(fake_graph)
+
+    assert isinstance(captured["input"], Command)
+    assert captured["input"].resume == {"decisions": [{"type": "approve"}]}
+
+
+@pytest.mark.asyncio
+async def test_should_not_probe_interrupts_when_agent_has_no_checkpointer() -> None:
+    """LE-1447 Slice 6: the structured-output path builds without a checkpointer.
+
+    Even on a gated component, run_agent must not query interrupt state (which would
+    raise on a checkpointer-less graph) and must complete normally.
+    """
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
+    langflow_graph = MagicMock(run_id="job-1", session_id="11111111-1111-1111-1111-111111111111")
+    component._vertex = SimpleNamespace(graph=langflow_graph)
+    component.send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
+
+    fake_graph = MagicMock(spec=CompiledStateGraph)
+    fake_graph.checkpointer = None
+    fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
+    fake_graph.aget_state = AsyncMock(side_effect=AssertionError("aget_state must not run without a checkpointer"))
+
+    with patch.object(type(component), "_get_shared_callbacks", return_value=[]):
+        result = await component.run_agent(fake_graph)
+
+    langflow_graph.request_pause.assert_not_called()
+    assert result.properties.state == "complete"

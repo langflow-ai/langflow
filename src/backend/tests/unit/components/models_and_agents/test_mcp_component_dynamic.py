@@ -22,6 +22,13 @@ from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
 
 
+def test_tool_mode_capability_is_available_before_server_discovery() -> None:
+    """The toolbar must not wait for an MCP connection to discover Tool Mode."""
+    tool_placeholder = next(input_ for input_ in MCPToolsComponent.inputs if input_.name == "tool_placeholder")
+
+    assert tool_placeholder.tool_mode is True
+
+
 def _make_tool(name: str) -> MagicMock:
     tool = MagicMock()
     tool.name = name
@@ -86,6 +93,22 @@ class TestCacheKey:
         b.headers = [{"key": "Authorization", "value": "Bearer tenant-b"}]
 
         assert a._mcp_servers_cache_key("srv") != b._mcp_servers_cache_key("srv")
+
+    def test_different_users_produce_different_keys(self) -> None:
+        a = MCPToolsComponent()
+        a._user_id = "tenant-a"
+        b = MCPToolsComponent()
+        b._user_id = "tenant-b"
+
+        assert a._mcp_servers_cache_key("srv") != b._mcp_servers_cache_key("srv")
+
+    def test_same_user_produces_identical_keys(self) -> None:
+        a = MCPToolsComponent()
+        a._user_id = "tenant-a"
+        b = MCPToolsComponent()
+        b._user_id = "tenant-a"
+
+        assert a._mcp_servers_cache_key("srv") == b._mcp_servers_cache_key("srv")
 
     def test_same_headers_produce_identical_keys(self) -> None:
         a = MCPToolsComponent()
@@ -297,7 +320,7 @@ class TestUpdateBuildConfigRefresh:
     @staticmethod
     def _build_config(**overrides):
         config = {
-            "mcp_server": {"value": {"name": "srv", "config": {"command": "uvx test"}}},
+            "mcp_server": {"value": {"name": "srv", "config": {"command": "uvx", "args": ["test"]}}},
             "tool": {"show": True, "options": ["stale"], "value": "", "placeholder": "Select a tool"},
             "tool_placeholder": {"tool_mode": False},
             "tools_metadata": {"show": False},
@@ -309,6 +332,14 @@ class TestUpdateBuildConfigRefresh:
         return config
 
     @pytest.mark.asyncio
+    async def test_clearing_server_keeps_tool_mode_capability(self) -> None:
+        component = MCPToolsComponent()
+
+        build_config = await component.update_build_config(self._build_config(), {}, "mcp_server")
+
+        assert build_config["tool_placeholder"]["tool_mode"] is True
+
+    @pytest.mark.asyncio
     async def test_refresh_bypasses_existing_options(self) -> None:
         component = MCPToolsComponent()
         component.use_cache = True
@@ -318,11 +349,11 @@ class TestUpdateBuildConfigRefresh:
         with patch.object(
             component,
             "update_tool_list",
-            new=AsyncMock(return_value=([tool], {"name": "srv", "config": {"command": "uvx test"}})),
+            new=AsyncMock(return_value=([tool], {"name": "srv", "config": {"command": "uvx", "args": ["test"]}})),
         ) as mocked_update:
             build_config = await component.update_build_config(
                 self._build_config(is_refresh=True),
-                {"name": "srv", "config": {"command": "uvx test"}},
+                {"name": "srv", "config": {"command": "uvx", "args": ["test"]}},
                 "mcp_server",
             )
 
@@ -346,7 +377,7 @@ class TestUpdateBuildConfigRefresh:
             # depend on shared-cache state left by a sibling test (order-dependent under xdist).
             build_config = await component.update_build_config(
                 self._build_config(is_refresh=True),
-                {"name": "srv", "config": {"command": "uvx test"}},
+                {"name": "srv", "config": {"command": "uvx", "args": ["test"]}},
                 "mcp_server",
             )
 

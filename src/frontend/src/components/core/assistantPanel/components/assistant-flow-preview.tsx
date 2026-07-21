@@ -7,7 +7,13 @@ import {
 } from "@xyflow/react";
 import { ArrowRight, Check, GitBranch, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import {
+  evaluatePlacement,
+  getPresentComponentTypes,
+} from "@/utils/componentConstraints";
 import type { FlowProposalStatus } from "../assistant-panel.types";
 import {
   GHOST_PRIMARY_BUTTON,
@@ -114,18 +120,46 @@ function extractReactFlowData(flow: Record<string, unknown>): {
   return { nodes, edges };
 }
 
+function proposalConflictsWithCanvas(
+  flow: Record<string, unknown>,
+  canvasNodes: unknown,
+): boolean {
+  const proposalNodes =
+    (flow.data as { nodes?: { data?: { type?: string } }[] } | undefined)
+      ?.nodes ?? [];
+  if (proposalNodes.length === 0) return false;
+
+  const presentTypes = getPresentComponentTypes(
+    Array.isArray(canvasNodes)
+      ? (canvasNodes as { data?: { type?: string } }[])
+      : [],
+  );
+  return proposalNodes.some(
+    (node) => evaluatePlacement(node.data?.type, presentTypes) !== null,
+  );
+}
+
 export function AssistantFlowPreview({
   flowPreview,
   status,
   onApply,
   onDismiss,
 }: AssistantFlowPreviewProps) {
+  const { t } = useTranslation();
   const [showApproved, setShowApproved] = useState(false);
   const paste = useFlowStore((state) => state.paste);
+  const canvasNodes = useFlowStore((state) => state.nodes);
 
   const { nodes, edges } = useMemo(
     () => extractReactFlowData(flowPreview.flow),
     [flowPreview.flow],
+  );
+
+  // Merging a proposal that carries its own entry point into a canvas that
+  // already has one produces the duplicate COMPONENT_CONSTRAINTS forbids.
+  const addWouldConflict = useMemo(
+    () => proposalConflictsWithCanvas(flowPreview.flow, canvasNodes),
+    [flowPreview.flow, canvasNodes],
   );
 
   // The reported node count is authoritative; fall back to the parsed nodes.
@@ -145,6 +179,9 @@ export function AssistantFlowPreview({
       { nodes: data.nodes as never[], edges: (data.edges ?? []) as never[] },
       { x: 100, y: 100 },
     );
+    // Same reveal rule as the gated apply path: once the flow lands on the canvas,
+    // get the panel out of the way so the user can see it.
+    useAssistantManagerStore.getState().setAssistantSidebarOpen(false);
     setShowApproved(true);
     setTimeout(() => setShowApproved(false), APPROVED_DISPLAY_DURATION_MS);
   }, [flowPreview.flow, paste]);
@@ -198,6 +235,15 @@ export function AssistantFlowPreview({
         </div>
       )}
 
+      {status === "pending" && addWouldConflict && (
+        <div
+          data-testid="assistant-flow-replace-only-notice"
+          className="mb-2 rounded-md border border-dashed border-border bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground"
+        >
+          {t("assistant.flowProposalReplaceOnly")}
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex items-center gap-1">{renderActions()}</div>
     </div>
@@ -210,26 +256,31 @@ export function AssistantFlowPreview({
           {/* Primary action: ADD to canvas. Non-destructive, keeps existing
               nodes/edges intact. Keeps the legacy `assistant-flow-continue-button`
               alias so older E2E specs still find it. */}
-          <button
-            type="button"
-            data-testid="assistant-flow-add-button"
-            data-add-button-alias="assistant-flow-continue-button"
-            className={GHOST_PRIMARY_BUTTON}
-            onClick={() => onApply?.("add")}
-          >
-            <span>Add to canvas</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </button>
-          {/* Secondary action: REPLACE canvas. Destructive — same muted ghost
-              styling as Dismiss; tooltip carries the destructive intent. */}
+          {!addWouldConflict && (
+            <button
+              type="button"
+              data-testid="assistant-flow-add-button"
+              data-add-button-alias="assistant-flow-continue-button"
+              className={GHOST_PRIMARY_BUTTON}
+              onClick={() => onApply?.("add")}
+            >
+              <span>Add to canvas</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {/* Destructive — promoted to primary styling when it is the only
+              way to apply the proposal. */}
           <button
             type="button"
             data-testid="assistant-flow-replace-button"
-            className={GHOST_SECONDARY_BUTTON}
+            className={
+              addWouldConflict ? GHOST_PRIMARY_BUTTON : GHOST_SECONDARY_BUTTON
+            }
             onClick={() => onApply?.("replace")}
             title="Discard the current canvas and replace it with this flow"
           >
             <span>Replace canvas</span>
+            {addWouldConflict && <ArrowRight className="h-3.5 w-3.5" />}
           </button>
           <button
             type="button"

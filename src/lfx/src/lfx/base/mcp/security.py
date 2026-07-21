@@ -21,6 +21,15 @@ from __future__ import annotations
 
 import shlex
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+from lfx.base.mcp.source_policy import (
+    parse_mcp_shell_wrapper,
+    validate_mcp_stdio_source_policy,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
 
 # Env var through which Langflow binds the agentic MCP server to an authenticated user's id.
 # Langflow injects it at spawn time from the request identity; it is in DANGEROUS_ENV_VARS so a
@@ -132,6 +141,14 @@ DANGEROUS_ENV_VARS = frozenset(
     }
 )
 
+# Prefixes whose values can alter command execution or the package source selected by an
+# approved package runner. In particular, UV_* and NPM_CONFIG_* can redirect uvx/npx to an
+# attacker-controlled registry while retaining an allowlisted package name.
+DANGEROUS_ENV_VAR_PREFIXES = ("bash_func_", "npm_config_", "pip_", "uv_")
+
+# Backward-compatible name previously exported by ``lfx.base.mcp.util``.
+DANGEROUS_MCP_ENV_VARS = DANGEROUS_ENV_VARS
+
 # SECURITY: docker-flag policy for MCP stdio servers. ``docker`` is allowlisted but several flags
 # turn a container run into host access. Two modes, selected by LANGFLOW_MCP_SERVER_DOCKER_HARDENING
 # (default off = lenient/previous behavior, on = strict multi-tenant policy) -- the
@@ -144,7 +161,8 @@ DOCKER_DANGEROUS_ARGS = frozenset({"--privileged", "--cap-add"})
 DOCKER_DANGEROUS_ARG_PREFIXES = ("--net=", "--network=", "--pid=", "--cap-add=", "--privileged=")
 
 # -- Hardened (opt-in) --
-# Flags with no safe value: host filesystem / device access and privilege escalation.
+# Flags with no safe value for an MCP stdio transport: host filesystem / device access,
+# Docker API access, host port exposure, persistence, and privilege escalation.
 DOCKER_HARDENED_BLOCKED_FLAGS = frozenset(
     {
         "--privileged",
@@ -155,10 +173,22 @@ DOCKER_HARDENED_BLOCKED_FLAGS = frozenset(
         "--mount",
         "--device",
         "--device-cgroup-rule",
+        "--env-file",
+        "--label-file",
+        "--cidfile",
+        "--gpus",
+        "--use-api-socket",
+        "--link",
+        "--runtime",
+        "-p",
+        "-P",
+        "--publish",
+        "--publish-all",
+        "--restart",
     }
 )
 # Namespace flags: dangerous only when sharing the host's or another container's namespace.
-DOCKER_HARDENED_NAMESPACE_FLAGS = frozenset({"--pid", "--ipc", "--uts"})
+DOCKER_HARDENED_NAMESPACE_FLAGS = frozenset({"--pid", "--ipc", "--uts", "--cgroupns", "--userns"})
 # Network flags: only the default-isolated values are safe. ``host`` / ``container:*`` break
 # isolation, and a *named* network can be the operator's internal bridge (lateral movement), so
 # anything outside this allowlist is rejected.
@@ -173,6 +203,13 @@ SHELL_WRAPPERS = frozenset({"cmd", "sh", "bash"})
 
 # SECURITY: Shell command flags that execute code.
 SHELL_EXEC_FLAGS = frozenset({"-c", "/c"})
+MAX_SHELL_WRAPPER_DEPTH = 4
+
+# Python modules owned by Langflow whose server identity is rebound from the authenticated
+# request in ``update_tools``. No tenant-selected script/module is allowed in interpreter-
+# hardened mode.
+HARDENED_ALLOWED_PYTHON_MODULES = frozenset({"langflow.agentic.mcp", "langflow.agentic.mcp.server"})
+PYTHON_MODULE_MIN_ARGS = 2
 
 
 def _is_shell_exec_flag(arg: str) -> bool:
@@ -180,6 +217,11 @@ def _is_shell_exec_flag(arg: str) -> bool:
     if arg_lower in SHELL_EXEC_FLAGS:
         return True
     return arg_lower.startswith("-") and not arg_lower.startswith("--") and "c" in arg_lower[1:]
+
+
+def _has_leading_shell_exec_flag(args: list[str]) -> bool:
+    """Return whether a shell execution flag appears before every script operand."""
+    return bool(args) and _is_shell_exec_flag(args[0])
 
 
 class MCPStdioSecurityError(ValueError):
@@ -190,13 +232,19 @@ class MCPStdioSecurityError(ValueError):
     """
 
 
+def is_dangerous_mcp_env_var(key: str) -> bool:
+    """Return whether an environment variable can alter MCP process execution."""
+    lower_key = key.lower()
+    return lower_key in DANGEROUS_ENV_VARS or lower_key.startswith(DANGEROUS_ENV_VAR_PREFIXES)
+
+
 def _is_file_path(command: str) -> bool:
     """Whether command looks like a filesystem path (Unix/relative/Windows) vs a bare command name."""
     drive_letter_len = 3
     return (
         command.startswith(("/", "./", "../"))
         or "\\" in command
-        or (len(command) >= drive_letter_len and command[1:3] == ":\\")  # Windows drive letter
+        or (len(command) >= drive_letter_len and command[1:3] in {":\\", ":/"})  # Windows drive letter
     )
 
 
@@ -234,6 +282,60 @@ def _docker_hardening_enabled() -> bool:
         return False
 
 
+def _interpreter_hardening_enabled() -> bool:
+    """Whether direct Python/Node MCP entrypoints are restricted for multi-tenant use."""
+    try:
+        from lfx.services.deps import get_settings_service
+
+        return bool(get_settings_service().settings.mcp_server_interpreter_hardening)
+    except Exception:  # noqa: BLE001 - settings may be unavailable; preserve the legacy default
+        return False
+
+
+def _normalize_package_name(package_spec: str) -> str:
+    """Normalize npm/Python package specs to the package identity used by the allowlist."""
+    package = package_spec.strip().lower()
+    if package.startswith("@"):
+        slash_index = package.find("/")
+        version_index = package.rfind("@")
+        if slash_index >= 0 and version_index > slash_index:
+            package = package[:version_index]
+    else:
+        package = package.split("@", 1)[0]
+
+    for separator in ("==", "~=", ">=", "<=", "!=", ">", "<", "["):
+        package = package.split(separator, 1)[0]
+    return package.strip()
+
+
+def _validate_interpreter_invocation(base_command: str, args: list[str], *, hardened: bool) -> None:
+    """Reject tenant-selected interpreter code while preserving validated wrappers/internal code."""
+    if not hardened:
+        return
+    if base_command in SHELL_WRAPPERS:
+        if _has_leading_shell_exec_flag(args):
+            return
+        msg = (
+            f"Shell command '{base_command}' must wrap an approved MCP command when "
+            "LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING=true. Direct shell scripts are not allowed."
+        )
+        raise MCPStdioSecurityError(msg)
+    if base_command not in {"node", "python", "python3"}:
+        return
+    if (
+        base_command in {"python", "python3"}
+        and len(args) >= PYTHON_MODULE_MIN_ARGS
+        and args[0] == "-m"
+        and args[1] in HARDENED_ALLOWED_PYTHON_MODULES
+    ):
+        return
+    msg = (
+        f"Interpreter command '{base_command}' is not allowed when "
+        "LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING=true. Use an operator-approved package runner instead."
+    )
+    raise MCPStdioSecurityError(msg)
+
+
 def _docker_arg_value(arg: str, args: list[str], index: int) -> str:
     """Return the lowercased value bound to a docker flag token.
 
@@ -251,6 +353,39 @@ def _raise_docker_arg(arg: str) -> None:
     raise MCPStdioSecurityError(msg)
 
 
+def _is_docker_short_volume_flag(arg: str) -> bool:
+    """Return whether a Docker short-option token contains the ``-v`` volume flag.
+
+    Docker accepts the volume value attached to the shorthand (``-v/:/host``) and accepts
+    ``-v`` after bundled boolean flags (``-itv /:/host``). Exact-token matching misses both.
+    """
+    if not arg.startswith("-") or arg.startswith("--"):
+        return False
+    short_flags = arg[1:].split("=", 1)[0]
+    if short_flags.startswith("v"):
+        return True
+    volume_index = short_flags.find("v")
+    return volume_index > 0 and all(flag in {"d", "i", "P", "t"} for flag in short_flags[:volume_index])
+
+
+def _is_docker_short_publish_flag(arg: str) -> bool:
+    """Return whether a Docker short-option token publishes host ports.
+
+    Docker accepts values attached to ``-p`` and bundles boolean flags before it
+    (for example, ``-itp8080:80``), so exact-token checks are insufficient.
+    """
+    if not arg.startswith("-") or arg.startswith("--"):
+        return False
+    short_flags = arg[1:].split("=", 1)[0]
+    for publish_flag in ("p", "P"):
+        publish_index = short_flags.find(publish_flag)
+        if publish_index == 0 or (
+            publish_index > 0 and all(flag in {"d", "i", "t"} for flag in short_flags[:publish_index])
+        ):
+            return True
+    return False
+
+
 def _validate_docker_args_lenient(args: list[str]) -> None:
     """Default policy: only privilege/cap flags and host-namespace ``=`` forms (previous behavior)."""
     for arg in args:
@@ -265,9 +400,20 @@ def _validate_docker_args_hardened(args: list[str]) -> None:
     non-default networks, and sandbox-downgrading ``--security-opt`` -- while allowing benign
     network/namespace/security values.
     """
+    # MCP Docker transports only need ``docker run``. Other subcommands operate on existing
+    # containers/images or invoke broader build/daemon surfaces (e.g. exec/cp/build/context),
+    # which defeats the isolation policy when the Docker socket is available. Requiring run as
+    # the first token also prevents tenant-controlled global daemon selectors such as ``-H``.
+    if not args or args[0].lower() != "run":
+        _raise_docker_arg(args[0] if args else "<missing run subcommand>")
+
     for i, arg in enumerate(args):
         flag = arg.split("=", 1)[0]
-        if flag in DOCKER_HARDENED_BLOCKED_FLAGS:
+        if (
+            flag in DOCKER_HARDENED_BLOCKED_FLAGS
+            or _is_docker_short_volume_flag(arg)
+            or _is_docker_short_publish_flag(arg)
+        ):
             _raise_docker_arg(arg)
         elif flag in DOCKER_HARDENED_NAMESPACE_FLAGS:
             value = _docker_arg_value(arg, args, i)
@@ -282,12 +428,25 @@ def _validate_docker_args_hardened(args: list[str]) -> None:
                 _raise_docker_arg(arg)
 
 
+def _validate_docker_invocation(args: list[str], *, hardened: bool | None) -> None:
+    """Apply the selected Docker policy to top-level and shell-wrapped invocations."""
+    use_hardened_policy = _docker_hardening_enabled() if hardened is None else hardened
+    if use_hardened_policy:
+        _validate_docker_args_hardened(args)
+    else:
+        _validate_docker_args_lenient(args)
+
+
 def validate_mcp_stdio_config(
     command: str | None,
     args: list[str] | None,
     env: dict[str, str] | None,
     *,
     docker_hardening: bool | None = None,
+    allowed_packages: Collection[str] | str | None = None,
+    interpreter_hardening: bool | None = None,
+    _depth: int = 0,
+    _seen: frozenset[tuple[str, tuple[str, ...]]] | None = None,
 ) -> None:
     """Validate an MCP stdio command/args/env triple against the security policy.
 
@@ -302,6 +461,13 @@ def validate_mcp_stdio_config(
             ``LANGFLOW_MCP_SERVER_DOCKER_HARDENING`` setting; pass an explicit bool to override
             (used by tests). ``False`` is the lenient/previous behavior; ``True`` is the
             comprehensive multi-tenant policy.
+        allowed_packages: exact package identities that ``npx``/``uvx`` may execute.
+            ``None`` reads ``LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES``; when neither is set,
+            legacy single-tenant package-runner behavior is preserved.
+        interpreter_hardening: restrict Python/Node entrypoints to Langflow's authenticated
+            internal agentic MCP module. ``None`` reads
+            ``LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING``; the default is disabled for
+            legacy single-tenant compatibility.
 
     Raises:
         MCPStdioSecurityError: If the command is not allowlisted, the args contain shell
@@ -309,20 +475,37 @@ def validate_mcp_stdio_config(
             wraps a non-allowed command, an env var is in the blocklist, or a docker arg
             breaks container isolation.
     """
-    # Split commands with embedded arguments (e.g. "bash -c 'payload'") into separate tokens
-    # so security checks can scan them. Without this, an attacker could bypass validation by
-    # packing everything into the command string with empty args. File paths with spaces
-    # (e.g. "C:\\Program Files\\nodejs\\node.exe") are not split since they're not shell commands.
     args = list(args or [])
-    if command and not _is_file_path(command):
-        try:
-            command_tokens = shlex.split(command)
-        except ValueError:
-            # Unbalanced quotes etc. -- fall back to whitespace splitting (fail toward more checks).
-            command_tokens = command.split()
-        if command_tokens:
-            command = command_tokens[0]
-            args = command_tokens[1:] + args
+    if interpreter_hardening is None:
+        interpreter_hardening = _interpreter_hardening_enabled()
+
+    # The structured command field is exactly one executable. Options belong in args so every
+    # policy layer sees the same argv. Parent-directory spaces remain valid for executable paths.
+    if command:
+        normalized = command.replace("\\", "/")
+        executable_name = normalized.rsplit("/", 1)[-1]
+        first_space = command.find(" ")
+        first_separator = min((index for index, char in enumerate(command) if char in "/\\"), default=-1)
+        invalid_whitespace = command != command.strip() or any(char.isspace() and char != " " for char in command)
+        space_without_path_prefix = first_space >= 0 and not 0 <= first_separator < first_space
+        if (
+            not executable_name
+            or invalid_whitespace
+            or space_without_path_prefix
+            or any(char.isspace() for char in executable_name)
+        ):
+            msg = (
+                "MCP stdio command must be a single executable name or path; "
+                "put options and arguments in the 'args' field"
+            )
+            raise MCPStdioSecurityError(msg)
+
+        signature = (command, tuple(args))
+        seen = _seen or frozenset()
+        if signature in seen:
+            msg = "MCP stdio shell wrapper recursion is not allowed"
+            raise MCPStdioSecurityError(msg)
+        _seen = seen | {signature}
 
     # Command allowlist.
     if command:
@@ -331,24 +514,44 @@ def validate_mcp_stdio_config(
             allowed_list = ", ".join(sorted(ALLOWED_MCP_COMMANDS))
             msg = f"Command '{base_command}' is not allowed for security reasons. Allowed commands: {allowed_list}"
             raise MCPStdioSecurityError(msg)
+        _validate_interpreter_invocation(base_command, args, hardened=interpreter_hardening)
+
+    normalized_allowed_packages: frozenset[str] | None = None
+    if allowed_packages is not None:
+        configured_packages = allowed_packages.split(",") if isinstance(allowed_packages, str) else allowed_packages
+        normalized_allowed_packages = frozenset(
+            _normalize_package_name(str(package)) for package in configured_packages if str(package).strip()
+        )
+    try:
+        validate_mcp_stdio_source_policy(
+            command,
+            args,
+            allowed_packages=normalized_allowed_packages,
+            docker_hardening=docker_hardening,
+            interpreter_hardening=interpreter_hardening,
+        )
+    except ValueError as exc:
+        raise MCPStdioSecurityError(str(exc)) from exc
 
     # Shell-wrapper rules: -c/-/c only with shell wrappers, and a wrapper may only wrap
     # another allowed (non-shell) command. This is what blocks `bash -c '<payload>'`. Checked
     # before the metacharacter scan so a `-c` on a non-shell command is reported as such.
     if command and args:
         base_command = extract_base_command(command)
-        has_shell_exec_flag = any(_is_shell_exec_flag(arg) for arg in args)
+        # Shells and Python interpret ``-c`` as executable code. Package
+        # runners have their own command-aware flag policy; scanning every
+        # single-dash token here would misclassify valid uvx values such as
+        # ``-wmcp-proxy`` merely because the package name contains a ``c``.
+        checks_code_exec_flags = base_command in SHELL_WRAPPERS | {"python", "python3"}
+        has_shell_exec_flag = checks_code_exec_flags and any(_is_shell_exec_flag(arg) for arg in args)
 
         if has_shell_exec_flag and base_command not in SHELL_WRAPPERS:
             msg = f"Flag -c or /c is only allowed with shell wrappers (cmd/sh/bash), not with '{base_command}'"
             raise MCPStdioSecurityError(msg)
 
         if base_command in SHELL_WRAPPERS:
-            wrapped_command = None
-            for i, arg in enumerate(args):
-                if _is_shell_exec_flag(arg) and i + 1 < len(args):
-                    wrapped_command = args[i + 1]
-                    break
+            wrapped_command = args[1] if _has_leading_shell_exec_flag(args) and len(args) > 1 else None
+            wrapped_args = args[2:] if wrapped_command else []
 
             if wrapped_command:
                 wrapped_base = extract_base_command(wrapped_command)
@@ -359,6 +562,20 @@ def validate_mcp_stdio_config(
                         f"Only these commands can be wrapped: {', '.join(sorted(allowed_wrapped))}"
                     )
                     raise MCPStdioSecurityError(msg)
+
+                # Validate the wrapped package runner too. The command may be one string
+                # (``sh -c 'uvx package'``) or split tokens (``cmd /c uvx package``).
+                try:
+                    wrapped_tokens = shlex.split(wrapped_command)
+                except ValueError:
+                    wrapped_tokens = wrapped_command.split()
+                if wrapped_tokens:
+                    nested_command = wrapped_tokens[0]
+                    nested_args = wrapped_tokens[1:] + wrapped_args
+                    nested_base = extract_base_command(nested_command)
+                    _validate_interpreter_invocation(nested_base, nested_args, hardened=interpreter_hardening)
+                    if nested_base == "docker":
+                        _validate_docker_invocation(nested_args, hardened=docker_hardening)
 
     # Argument metacharacters and dangerous keywords.
     if args:
@@ -408,8 +625,7 @@ def validate_mcp_stdio_config(
     # Environment-variable blocklist.
     if env:
         for key in env:
-            lower_key = key.lower()
-            if lower_key in DANGEROUS_ENV_VARS or lower_key.startswith("bash_func_"):
+            if is_dangerous_mcp_env_var(key):
                 msg = f"Environment variable '{key}' is not allowed for security reasons"
                 raise MCPStdioSecurityError(msg)
 
@@ -417,8 +633,24 @@ def validate_mcp_stdio_config(
     # behavior; the opt-in hardened policy adds host filesystem/device/namespace coverage. See
     # the DOCKER_* constants above for the rationale of each set.
     if command and args and extract_base_command(command) == "docker":
-        hardened = _docker_hardening_enabled() if docker_hardening is None else docker_hardening
-        if hardened:
-            _validate_docker_args_hardened(args)
-        else:
-            _validate_docker_args_lenient(args)
+        _validate_docker_invocation(args, hardened=docker_hardening)
+
+    if command and extract_base_command(command) in SHELL_WRAPPERS:
+        try:
+            wrapped = parse_mcp_shell_wrapper(command, args)
+        except ValueError as exc:
+            raise MCPStdioSecurityError(str(exc)) from exc
+        if wrapped:
+            if _depth >= MAX_SHELL_WRAPPER_DEPTH:
+                msg = f"MCP stdio shell wrapper nesting exceeds {MAX_SHELL_WRAPPER_DEPTH} levels"
+                raise MCPStdioSecurityError(msg)
+            validate_mcp_stdio_config(
+                wrapped[0],
+                wrapped[1],
+                env,
+                docker_hardening=docker_hardening,
+                allowed_packages=allowed_packages,
+                interpreter_hardening=interpreter_hardening,
+                _depth=_depth + 1,
+                _seen=_seen,
+            )
