@@ -431,8 +431,9 @@ def test_env_var_round_trip(monkeypatch, env_var, env_value, field, expected):
 
 
 def test_agentic_variables_excluded_when_experience_off(monkeypatch):
-    """Agentic env vars (incl. the ASTRA_TOKEN credential) must NOT be mirrored
-    from the environment while the agentic experience is off (the default).
+    """Agentic env vars must NOT be mirrored from the environment while the experience is off.
+
+    The ASTRA_TOKEN credential is among them, and the agentic experience is off by default.
 
     Regression: the env-mirror list used to be extended with AGENTIC_VARIABLES
     whenever LANGFLOW_AGENTIC_EXPERIENCE was unset, provisioning ASTRA_TOKEN into
