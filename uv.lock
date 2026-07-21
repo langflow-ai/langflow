@@ -27,6 +27,7 @@ resolution-markers = [
 members = [
     "langflow",
     "langflow-base",
+    "langflow-core",
     "langflow-sdk",
     "langflow-stepflow",
     "lfx",
@@ -8128,7 +8129,7 @@ name = "langflow"
 version = "1.12.0"
 source = { editable = "." }
 dependencies = [
-    { name = "langflow-base", extra = ["complete"] },
+    { name = "langflow-core" },
     { name = "lfx-amazon" },
     { name = "lfx-anthropic" },
     { name = "lfx-arxiv" },
@@ -8151,7 +8152,7 @@ dependencies = [
 
 [package.optional-dependencies]
 audio = [
-    { name = "webrtcvad" },
+    { name = "langflow-core", extra = ["audio"] },
 ]
 cassio = [
     { name = "cassio" },
@@ -8180,7 +8181,7 @@ nv-ingest = [
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
 ]
 postgresql = [
-    { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
+    { name = "langflow-core", extra = ["postgresql"] },
 ]
 
 [package.dev-dependencies]
@@ -8232,7 +8233,9 @@ requires-dist = [
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
+    { name = "langflow-core", editable = "src/langflow-core" },
+    { name = "langflow-core", extras = ["audio"], marker = "extra == 'audio'", editable = "src/langflow-core" },
+    { name = "langflow-core", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "src/langflow-core" },
     { name = "lfx-amazon", editable = "src/bundles/amazon" },
     { name = "lfx-anthropic", editable = "src/bundles/anthropic" },
     { name = "lfx-arxiv", editable = "src/bundles/arxiv" },
@@ -8257,9 +8260,6 @@ requires-dist = [
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<26.3.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
-    { name = "webrtcvad", marker = "extra == 'audio'", specifier = ">=2.0.10" },
 ]
 provides-extras = ["docling", "docling-chunking", "docling-image-description", "audio", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
 
@@ -9101,6 +9101,30 @@ dev = [
     { name = "types-markdown", specifier = ">=3.7.0.20240822" },
     { name = "vulture", specifier = ">=2.11" },
 ]
+
+[[package]]
+name = "langflow-core"
+version = "1.12.0"
+source = { editable = "src/langflow-core" }
+dependencies = [
+    { name = "langflow-base", extra = ["complete"] },
+]
+
+[package.optional-dependencies]
+audio = [
+    { name = "langflow-base", extra = ["audio"] },
+]
+postgresql = [
+    { name = "langflow-base", extra = ["postgresql"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langflow-base", extras = ["audio"], marker = "extra == 'audio'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "src/backend/base" },
+]
+provides-extras = ["audio", "postgresql"]
 
 [[package]]
 name = "langflow-sdk"

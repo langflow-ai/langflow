@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.12.0",
+    "langflow-core~=1.12.0",
     # langflow-extensions:bundle-deps-start
     # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
     # curated lfx-* package, never exact pins -- exact pins in reusable library
@@ -99,6 +99,7 @@ explicit = true
 
 [tool.uv.sources]
 langflow-base = { workspace = true }
+langflow-core = { workspace = true }
 langflow = { workspace = true }
 lfx = { workspace = true }
 langflow-sdk = { workspace = true }
@@ -131,6 +132,7 @@ members = [
     "src/backend/base",
     ".",
     "src/lfx",
+    "src/langflow-core",
     "src/langflow-stepflow",
     "src/sdk",
     # langflow-extensions:bundle-members-start
@@ -177,7 +179,7 @@ docling-image-description = [
 ]
 
 audio = [
-    "webrtcvad>=2.0.10",
+    "langflow-core[audio]~=1.12.0",
 ]
 
 
@@ -201,8 +203,7 @@ nv-ingest = [
 ]
 
 postgresql = [
-    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
-    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+    "langflow-core[postgresql]~=1.12.0",
 ]
 
 [tool.uv]
@@ -228,9 +229,6 @@ override-dependencies = [
     "urllib3>=2.7.0,<3.0.0",  # CVE-2026-44431, CVE-2026-44432
     "python-liquid>=2.2.0,<3.0.0",  # CVE-2026-45017
 ]
-
-[project.scripts]
-langflow = "langflow.langflow_launcher:main"
 
 [tool.codespell]
 skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig.,**/node_modules/**,./stuff/*,*.csv'
