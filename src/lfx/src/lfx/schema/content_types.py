@@ -154,6 +154,7 @@ class HumanInputContent(BaseContent):
     fields: list[dict[str, Any]] = Field(default_factory=list)
     allowed_decisions: list[str] = Field(default_factory=list)
     submitted_action: str | None = None
+    superseded: bool = False
 
 
 class ToolContent(BaseContent):

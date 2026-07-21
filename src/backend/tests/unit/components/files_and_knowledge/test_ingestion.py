@@ -106,6 +106,16 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         with pytest.raises(ValueError, match="Column 'nonexistent' not found in DataFrame"):
             component._validate_column_config(data_df)
 
+    @pytest.mark.parametrize("knowledge_base", ["../../outside", "../victim/secret_kb"])
+    async def test_kb_path_rejects_paths_outside_the_current_user_directory(
+        self, component_class, default_kwargs, knowledge_base
+    ):
+        default_kwargs["knowledge_base"] = knowledge_base
+        component = component_class(**default_kwargs)
+
+        with pytest.raises(ValueError, match="KB path escapes root directory"):
+            await component._kb_path()
+
     def test_new_knowledge_dialog_uses_provider_credentials(self, component_class, default_kwargs):
         """Test the create-knowledge dialog no longer exposes a redundant API key override."""
         component = component_class(**default_kwargs)

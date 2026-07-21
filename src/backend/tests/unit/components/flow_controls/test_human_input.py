@@ -57,6 +57,17 @@ class TestHumanInputComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         assert [o.name for o in component.outputs] == ["branch_approve", "branch_reject"]
 
+    def test_hitl_search_keywords_are_registered(self, component_class):
+        """The sidebar's metadata search does substring matching on ``metadata["keywords"]``.
+
+        Fuse alone cannot surface this node for "HITL": its location penalty rejects
+        matches deep inside the description (score ~0.4 > 0.2 threshold), so the
+        keywords list is the mechanism that makes "hitl" find Human Input.
+        """
+        keywords = component_class.metadata["keywords"]
+        assert "hitl" in keywords
+        assert "human-in-the-loop" in keywords
+
     def test_decisions_has_no_options_so_outputs_rebuild_on_load(self, component_class):
         """Decisions must serialize with empty options so the frontend rebuilds outputs on load.
 
@@ -70,7 +81,7 @@ class TestHumanInputComponent(ComponentTestBaseWithoutClient):
         assert decisions.real_time_refresh is True
 
     async def test_update_frontend_node_resyncs_branches_from_saved_decisions(self, component_class):
-        """Loading a saved flow rebuilds the branch outputs from the persisted User Actions."""
+        """Loading a saved flow rebuilds the branch outputs from the persisted User Choices."""
         component = component_class()
         new_frontend_node = {
             "template": {
@@ -86,6 +97,29 @@ class TestHumanInputComponent(ComponentTestBaseWithoutClient):
             "branch_escalate",
             "branch_fallback",
         ]
+
+    def test_timeout_hidden_until_fallback_enabled(self, component_class):
+        """Timeout only matters with a fallback branch to reroute to, so it follows the toggle."""
+        component = component_class()
+        build_config = {"timeout": {"show": False}}
+        component.update_build_config(build_config, field_value=True, field_name="enable_fallback")
+        assert build_config["timeout"]["show"] is True
+        component.update_build_config(build_config, field_value=False, field_name="enable_fallback")
+        assert build_config["timeout"]["show"] is False
+
+    @pytest.mark.parametrize("fallback_on", [True, False])
+    async def test_update_frontend_node_syncs_timeout_visibility(self, component_class, fallback_on):
+        component = component_class()
+        new_frontend_node = {
+            "template": {
+                "decisions": {"value": ["Approve"]},
+                "enable_fallback": {"value": fallback_on},
+                "timeout": {"show": not fallback_on},
+            },
+            "outputs": [],
+        }
+        node = await component.update_frontend_node(new_frontend_node, dict(new_frontend_node))
+        assert node["template"]["timeout"]["show"] is fallback_on
 
     def test_two_decisions_yield_two_branches(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)

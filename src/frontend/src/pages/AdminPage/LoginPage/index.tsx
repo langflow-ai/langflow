@@ -51,7 +51,7 @@ export default function LoginAdminPage() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
+    <main className="flex h-full w-full flex-col items-center justify-center bg-muted">
       <div className="flex w-72 flex-col items-center justify-center gap-2">
         <LangflowLogo
           title={t("common.langflowLogo")}
@@ -62,6 +62,8 @@ export default function LoginAdminPage() {
         </span>
         <Input
           allowAutofill
+          name="username"
+          value={username}
           onChange={({ target: { value } }) => {
             handleInput({ target: { name: "username", value } });
           }}
@@ -71,6 +73,8 @@ export default function LoginAdminPage() {
         <Input
           type="password"
           allowAutofill
+          name="password"
+          value={password}
           onChange={({ target: { value } }) => {
             handleInput({ target: { name: "password", value } });
           }}
@@ -87,6 +91,6 @@ export default function LoginAdminPage() {
           {t("auth.adminLoginButton")}
         </Button>
       </div>
-    </div>
+    </main>
   );
 }

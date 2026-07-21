@@ -53,12 +53,37 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### Breaking changes
 
+- Short `LANGFLOW_SECRET_KEY` upgrade compatibility
+
+    Langflow 1.10.1 changed how secrets shorter than 32 characters derive the Fernet key used for encrypted credentials.
+    Langflow 1.11.x retains read compatibility with credentials encrypted by the earlier derivation while continuing to use the current SHA-256 derivation for all new writes.
+
+    If your deployment uses a `LANGFLOW_SECRET_KEY` shorter than 32 characters, keep it unchanged during the initial upgrade so Langflow can continue to decrypt existing credentials.
+    Langflow logs a startup warning for this configuration because short secrets aren't recommended for production.
+    To replace the key, first record or export the stored credentials, set a randomly generated key of at least 32 characters, and then re-enter the credentials; changing the key directly invalidates ciphertext created with the old key.
+
 - Default superuser password removed
 
     Langflow no longer creates or accepts the legacy `langflow`/`langflow` default superuser credentials.
     If `LANGFLOW_AUTO_LOGIN=False`, set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password before startup.
 
-- Upcoming breaking change: bundle separation
+- Docker images enable component hardening by default
+
+    Official Langflow Docker images now include stricter defaults and include the following environment variables:
+
+    ```bash
+    LANGFLOW_AUTO_LOGIN=false
+    LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false
+    LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true
+    LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true
+    LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true
+    ```
+
+    Existing Langflow containers that rely on custom components, code interpreters, or absolute local file paths must override these variables.
+    Keep the image defaults when users who can build flows on the server are not fully trusted.
+    For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
+
+- Ongoing breaking changes: bundle separation
 
     Langflow 1.10.x introduced the Extension bundles model.
     In Langflow 1.11.x and future releases, bundle separation extends to more component providers.
@@ -77,7 +102,69 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     To install these components, see [Torch opt-in installs](./components-bundle-components#torch-opt-in).
 
+- Workflow API request schema (Beta)
+
+    The v2 [Workflow API (Beta)](/workflow-api) request body and interaction pattern changes in 1.11.
+    Any client that calls `POST /api/v2/workflows` against 1.10.x must update as follows:
+
+    Example 1.10.x request:
+
+    ```json
+    {
+      "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+      "background": false,
+      "inputs": {
+        "ChatInput-abc.input_value": "what is 2+2",
+        "LLMComponent-123.temperature": 0.7
+      }
+    }
+    ```
+
+    Example 1.11.x request:
+
+    ```json
+    {
+      "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+      "input_value": "what is 2+2",
+      "mode": "stream",
+      "stream_protocol": "agui",
+      "tweaks": {
+        "LLMComponent-123": {
+          "temperature": 0.7
+        }
+      }
+    }
+    ```
+
+    For more information, see [Workflow API (Beta)](/workflow-api).
+
 ### New features and enhancements
+
+- Agent2Agent (A2A) protocol support
+
+    Publish a flow as an A2A agent so other agents can discover and call it, and call remote A2A agents from inside a flow with the **A2A Agent** component.
+
+    For more information, see [Use Langflow as an A2A server](./a2a-server) and the [**A2A Agent** component](./a2a-agent-component).
+
+- Human-in-the-Loop (HITL)
+
+    Human-in-the-Loop (HITL) pauses an agent when the agent calls a tool and creates a stateful checkpoint.
+    After a human responds by approving, rejecting, or editing the request, the agent resumes from the checkpoint.
+
+    For more information, see [Human-in-the-Loop](./human-in-the-loop).
+
+- OpenAI Compatible model provider
+
+    Point Langflow's model provider at any OpenAI-compatible endpoint, and Langflow discovers models live from the `/v1/models` endpoint.
+    These models can power flows, Langflow Assistant, and any component that uses Langflow’s global model providers.
+
+    For more information, see [OpenAI Compatible](./bundles-openai-compatible).
+
+- Unified **Data Operations** component
+
+    **Text Operations**, **JSON Operations**, and **Table Operations** are consolidated into a single [**Data Operations** component](./operations).
+    Saved flows that use the separate components continue to work.
+    For more information, see the [**Data Operations** component](./operations).
 
 - AG-UI compatible streaming for the Workflow API
 
@@ -91,8 +178,6 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     IBM watsonx Orchestrate is no longer excluded from Python 3.14 installs.
 
     For more information, see [Deploy flows on watsonx Orchestrate](/deployment-wxo).
-
-- Optional integrations not yet available on Python 3.14
 
     The following optional integrations remain excluded from installations on Python 3.14:
 
@@ -118,12 +203,18 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     The **Paddle** bundle (`lfx-paddle`) adds a **PaddleOCR** component that calls the PaddleOCR AI Studio Job API for layout-aware document parsing into Markdown.
 
     For more information, see [Paddle bundle](./bundles-paddle).
-    
+
 - Oracle Extension bundle
 
     The **Oracle** bundle adds Oracle Database integration for vector search, document loading, and embeddings.
 
     For more information, see [Oracle bundle](./bundles-oracle).
+
+- Valkey bundle
+
+    The **Valkey** bundle adds a vector store and chat memory components for [Valkey](https://valkey.io/), an open-source Redis fork.
+
+    For more information, see [Valkey bundle](./bundles-valkey).
 
 - LFX is now engine-only
 

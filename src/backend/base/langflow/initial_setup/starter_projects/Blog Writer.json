@@ -105,7 +105,8 @@
             "fieldName": "URL",
             "id": "Prompt Template-3URhM",
             "inputTypes": [
-              "Message"
+              "Message",
+              "Text"
             ],
             "type": "str"
           }
@@ -115,7 +116,7 @@
         "source": "ChatInput-w522Z",
         "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-w522Zœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt Template-3URhM",
-        "targetHandle": "{œfieldNameœ: œURLœ, œidœ: œPrompt Template-3URhMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œURLœ, œidœ: œPrompt Template-3URhMœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -210,6 +211,7 @@
               },
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
@@ -516,6 +518,7 @@
               },
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
@@ -897,11 +900,11 @@
                 "dependencies": [
                   {
                     "name": "langchain",
-                    "version": "1.3.11"
+                    "version": "1.3.13"
                   },
                   {
                     "name": "langgraph",
-                    "version": "1.2.8"
+                    "version": "1.2.9"
                   },
                   {
                     "name": "lfx",
@@ -909,7 +912,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.4.8"
+                    "version": "1.4.9"
                   }
                 ],
                 "total_dependencies": 4
@@ -1049,6 +1052,7 @@
               },
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
@@ -1809,9 +1813,33 @@
             "priority": null,
             "replacement": null,
             "template": {
+              "URL": {
+                "advanced": false,
+                "display_name": "URL",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "URL",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
               "_type": "Component",
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
@@ -1976,6 +2004,7 @@
               "_type": "Component",
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",

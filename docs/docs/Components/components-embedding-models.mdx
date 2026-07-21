@@ -25,9 +25,10 @@ This flow loads a text file, splits the text into chunks, generates embeddings f
 2. <PartialGlobalModelProviders />
 
     :::tip My preferred provider or model isn't listed
-    If your preferred embedding model provider or model isn't available in Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models**, you can use any [additional embedding models](#additional-embedding-models) in place of the core component.
+    If your preferred embedding model provider or model isn't available in Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models**, try one of these options:
 
-    Browse <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) or <Icon name="Search" aria-hidden="true" /> **Search** for your preferred provider to find additional embedding models, such as the [**Hugging Face Embeddings Inference** component](/bundles-huggingface#hugging-face-embeddings-inference).
+    * Configure the [**OpenAI Compatible**](./bundles-openai-compatible) provider to point at any OpenAI-compatible embeddings endpoint.
+    * Use any [additional embedding models](#additional-embedding-models) in place of the core component. Browse <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) or <Icon name="Search" aria-hidden="true" /> **Search** for your preferred provider, such as the [**Hugging Face Embeddings Inference** component](/bundles-huggingface#hugging-face-embeddings-inference).
     :::
 
 3. Add the **Embedding Model** core component to your flow, and then select your configured embedding model from the **Embedding Model** dropdown.

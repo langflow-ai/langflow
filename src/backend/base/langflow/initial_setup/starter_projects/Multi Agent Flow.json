@@ -183,6 +183,7 @@
               "_type": "Component",
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
@@ -476,6 +477,7 @@
               },
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
@@ -712,11 +714,11 @@
                 "dependencies": [
                   {
                     "name": "langchain",
-                    "version": "1.3.11"
+                    "version": "1.3.13"
                   },
                   {
                     "name": "langgraph",
-                    "version": "1.2.8"
+                    "version": "1.2.9"
                   },
                   {
                     "name": "lfx",
@@ -724,7 +726,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.4.8"
+                    "version": "1.4.9"
                   }
                 ],
                 "total_dependencies": 4
@@ -864,6 +866,7 @@
               },
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
@@ -1466,11 +1469,11 @@
                 "dependencies": [
                   {
                     "name": "langchain",
-                    "version": "1.3.11"
+                    "version": "1.3.13"
                   },
                   {
                     "name": "langgraph",
-                    "version": "1.2.8"
+                    "version": "1.2.9"
                   },
                   {
                     "name": "lfx",
@@ -1478,7 +1481,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.4.8"
+                    "version": "1.4.9"
                   }
                 ],
                 "total_dependencies": 4
@@ -1618,6 +1621,7 @@
               },
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
@@ -2220,11 +2224,11 @@
                 "dependencies": [
                   {
                     "name": "langchain",
-                    "version": "1.3.11"
+                    "version": "1.3.13"
                   },
                   {
                     "name": "langgraph",
-                    "version": "1.2.8"
+                    "version": "1.2.9"
                   },
                   {
                     "name": "lfx",
@@ -2232,7 +2236,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.4.8"
+                    "version": "1.4.9"
                   }
                 ],
                 "total_dependencies": 4
@@ -2372,6 +2376,7 @@
               },
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
