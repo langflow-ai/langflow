@@ -1812,29 +1812,6 @@
             "priority": null,
             "replacement": null,
             "template": {
-              "URL": {
-                "advanced": false,
-                "display_name": "URL",
-                "dynamic": false,
-                "field_type": "str",
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "URL",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
               "_type": "Component",
               "code": {
                 "advanced": true,
