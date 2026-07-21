@@ -22,9 +22,12 @@ const useSaveFlow = () => {
     const currentFlow = useFlowStore.getState().currentFlow;
     const currentSavedFlow = useFlowsManagerStore.getState().currentFlow;
     const requestedFlow = flow || currentFlow;
+    const isCurrentEditorFlowLocked =
+      currentFlow?.id === requestedFlow?.id && currentFlow?.locked === true;
     const isPersistedFlowLocked =
-      currentSavedFlow?.id === requestedFlow?.id &&
-      currentSavedFlow?.locked === true;
+      isCurrentEditorFlowLocked ||
+      (currentSavedFlow?.id === requestedFlow?.id &&
+        currentSavedFlow?.locked === true);
     const isUnlockingPersistedFlow =
       isPersistedFlowLocked && requestedFlow?.locked === false;
 
