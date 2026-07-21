@@ -8125,7 +8125,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.11.0"
+version = "1.12.0"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
@@ -8307,7 +8307,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.11.0"
+version = "0.12.0"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "a2a-sdk" },
@@ -9104,7 +9104,7 @@ dev = [
 
 [[package]]
 name = "langflow-sdk"
-version = "0.3.0"
+version = "0.4.0"
 source = { editable = "src/sdk" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
@@ -9378,7 +9378,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "1.11.0"
+version = "1.12.0"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "a2wsgi", marker = "sys_platform != 'win32'" },
@@ -9557,7 +9557,7 @@ integration = [
 
 [[package]]
 name = "lfx-amazon"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/amazon" }
 dependencies = [
     { name = "boto3" },
@@ -9574,7 +9574,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-anthropic"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "src/bundles/anthropic" }
 dependencies = [
     { name = "langchain-anthropic" },
@@ -9591,7 +9591,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-arxiv"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "src/bundles/arxiv" }
 dependencies = [
     { name = "defusedxml" },
@@ -9606,7 +9606,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.1.1"
+version = "1.1.2"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -10254,7 +10254,7 @@ provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "b
 
 [[package]]
 name = "lfx-cohere"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/cohere" }
 dependencies = [
     { name = "langchain-cohere" },
@@ -10269,7 +10269,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-datastax"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/datastax" }
 dependencies = [
     { name = "astrapy" },
@@ -10292,7 +10292,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-docling"
-version = "0.1.3"
+version = "0.1.4"
 source = { editable = "src/bundles/docling" }
 dependencies = [
     { name = "docling-core", version = "2.78.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.13.*' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.12' and sys_platform == 'darwin')" },
@@ -10367,7 +10367,7 @@ provides-extras = ["local", "chunking", "image-description", "all"]
 
 [[package]]
 name = "lfx-duckduckgo"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "src/bundles/duckduckgo" }
 dependencies = [
     { name = "ddgs" },
@@ -10384,7 +10384,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-empiriolabs"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/empiriolabs" }
 dependencies = [
     { name = "langchain-openai" },
@@ -10401,7 +10401,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-exa"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/exa" }
 dependencies = [
     { name = "exa-py" },
@@ -10418,7 +10418,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-firecrawl"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/firecrawl" }
 dependencies = [
     { name = "firecrawl-py" },
@@ -10433,7 +10433,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-ibm"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "src/bundles/ibm" }
 dependencies = [
     { name = "ibm-db", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
@@ -10455,7 +10455,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-nextplaid"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/nextplaid" }
 dependencies = [
     { name = "langchain-plaid" },
@@ -10472,7 +10472,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-openai"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/openai" }
 dependencies = [
     { name = "langchain-openai" },
@@ -10489,7 +10489,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-openai-compatible"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/openai-compatible" }
 dependencies = [
     { name = "httpx" },
@@ -10504,7 +10504,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-oracle"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/oracle" }
 dependencies = [
     { name = "langchain-community" },
@@ -10523,7 +10523,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-paddle"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/paddle" }
 dependencies = [
     { name = "httpx" },
@@ -10538,7 +10538,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-valkey"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/valkey" }
 dependencies = [
     { name = "langchain-aws" },
@@ -10561,7 +10561,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-vllm"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/vllm" }
 dependencies = [
     { name = "httpx" },
