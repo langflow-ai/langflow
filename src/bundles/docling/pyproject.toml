@@ -1,6 +1,6 @@
 [project]
 name = "lfx-docling"
-version = "0.1.1"
+version = "0.1.2"
 description = "Docling document processing components as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
