@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 from cryptography.fernet import Fernet
+from langflow.services.auth.service import AuthService
 from langflow.services.auth.utils import ensure_fernet_key
 from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
@@ -25,7 +26,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 @pytest.fixture
 def service():
     settings_service = get_settings_service()
-    return DatabaseVariableService(settings_service)
+    auth_service = AuthService(settings_service)
+    with patch("langflow.services.auth.utils.get_auth_service", return_value=auth_service):
+        yield DatabaseVariableService(settings_service)
 
 
 @pytest.fixture

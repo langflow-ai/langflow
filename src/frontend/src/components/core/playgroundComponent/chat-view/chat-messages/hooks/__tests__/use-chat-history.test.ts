@@ -22,6 +22,8 @@ jest.mock("@/stores/playgroundStore", () => ({
     selector({ isOpen: true }),
 }));
 
+import { findHumanInputContent } from "@/controllers/API/agui/human-input-card";
+import type { Message } from "@/types/messages";
 import { useChatHistory } from "../use-chat-history";
 
 const createWrapper = (queryClient: QueryClient) => {
@@ -102,5 +104,83 @@ describe("useChatHistory message ordering", () => {
 
     expect(prepended).toBe(0);
     expect(mockGetMessages).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("useChatHistory answered HITL cards", () => {
+  const sessionCacheKey = [
+    "useGetMessagesQuery",
+    { id: "flow-1", session_id: "session-1" },
+  ];
+
+  const card = (submittedAction?: string) => ({
+    id: "card-1",
+    flow_id: "flow-1",
+    session_id: "session-1",
+    sender: "Machine",
+    text: "",
+    content_blocks: [
+      {
+        type: "group",
+        contents: [
+          {
+            type: "human_input",
+            request_id: "HumanInput-x:run-1",
+            options: [{ action_id: "tibia", label: "Tibia" }],
+            ...(submittedAction ? { submitted_action: submittedAction } : {}),
+          },
+        ],
+      },
+    ],
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetMessages.mockResolvedValue({ data: [] });
+  });
+
+  it("adopts the answered state when the decision was made on another surface", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    // The playground was open before the pause, so its cache already holds the
+    // unanswered card; the decision was then taken from the canvas badge and only
+    // the backend knows about it.
+    queryClient.setQueryData(sessionCacheKey, [card()]);
+    mockUseGetMessagesQuery.mockReturnValue({
+      data: { rows: { data: [card("world_of_warcraft")] } },
+    });
+
+    renderHook(() => useChatHistory("session-1"), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {});
+
+    const cached = queryClient.getQueryData<Message[]>(sessionCacheKey) ?? [];
+    expect(
+      findHumanInputContent(cached[0]?.content_blocks)?.submitted_action,
+    ).toBe("world_of_warcraft");
+  });
+
+  it("does not clobber a card the cache already answered", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(sessionCacheKey, [card("tibia")]);
+    mockUseGetMessagesQuery.mockReturnValue({
+      data: { rows: { data: [card()] } },
+    });
+
+    renderHook(() => useChatHistory("session-1"), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {});
+
+    const cached = queryClient.getQueryData<Message[]>(sessionCacheKey) ?? [];
+    expect(
+      findHumanInputContent(cached[0]?.content_blocks)?.submitted_action,
+    ).toBe("tibia");
   });
 });

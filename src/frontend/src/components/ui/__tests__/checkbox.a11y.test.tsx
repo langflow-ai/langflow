@@ -22,13 +22,21 @@ describe("Checkbox accessibility", () => {
 });
 
 describe("CheckBoxDiv accessibility", () => {
-  // Known gap (a11y-action-plan 1.3): CheckBoxDiv is a visual-only <div>
-  // with no checkbox role, state, or keyboard support. Fails until the
-  // fix lands.
   it("should_expose_checkbox_role_and_checked_state", () => {
     render(<CheckBoxDiv checked />);
 
     const checkbox = screen.getByRole("checkbox");
     expect(checkbox).toHaveAttribute("aria-checked", "true");
+  });
+
+  // When the wrapping element owns the toggle semantics (e.g. a toggle
+  // button) the indicator must NOT expose an interactive "checkbox" role,
+  // otherwise it nests an interactive role inside another one
+  // (IBM aria_descendant_valid).
+  it("should_be_hidden_from_assistive_tech_when_presentational", () => {
+    const { container } = render(<CheckBoxDiv checked presentational />);
+
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(container.firstChild).toHaveAttribute("aria-hidden", "true");
   });
 });

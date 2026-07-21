@@ -23,8 +23,8 @@ const ProviderListItem = ({
   return (
     <button
       type="button"
-      aria-pressed={isSelected}
       data-testid={`provider-item-${provider.provider}`}
+      aria-pressed={isSelected}
       className={cn(
         "flex w-full items-center justify-between rounded-lg px-2 py-3 text-left transition-colors hover:bg-muted/50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         isSelected && "bg-muted/50",
