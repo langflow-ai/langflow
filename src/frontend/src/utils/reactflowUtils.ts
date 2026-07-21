@@ -279,7 +279,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             sourceHandle,
           );
           if (!sourceMatchResult && !hasAllowsLoop) {
-            newEdges = newEdges.filter((e) => e.id !== edge.id);
+            newEdges = newEdges.filter((e) => e !== edgeInNewEdges);
             brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
           } else if (
             sourceMatchResult &&
@@ -303,13 +303,18 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             }
           }
         } else {
-          newEdges = newEdges.filter((e) => e.id !== edge.id);
+          newEdges = newEdges.filter((e) => e !== edgeInNewEdges);
           brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
         }
       }
     }
 
-    newEdges = filterHiddenFieldsEdges(edge, newEdges, targetNode);
+    // Pass the retained reference: its id/handles reflect any migration above.
+    newEdges = filterHiddenFieldsEdges(
+      edgeInNewEdges ?? edge,
+      newEdges,
+      targetNode,
+    );
   });
 
   return { edges: newEdges, brokenEdges };

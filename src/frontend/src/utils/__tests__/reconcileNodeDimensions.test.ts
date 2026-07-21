@@ -5,11 +5,12 @@
  * React Flow re-measures the real DOM size. noteNodes are user-resizable and must be preserved.
  */
 
+import type { AllNodeType } from "../../types/flow";
 import { reconcileStaleGenericNodeDimensions } from "../reactflowUtils";
 
 describe("reconcileStaleGenericNodeDimensions", () => {
   it("drops stale width/height/measured from genericNodes so React Flow re-measures", () => {
-    const nodes: any[] = [
+    const nodes = [
       {
         id: "Memory-1",
         type: "genericNode",
@@ -19,9 +20,9 @@ describe("reconcileStaleGenericNodeDimensions", () => {
         position: { x: 0, y: 0 },
         data: {},
       },
-    ];
+    ] as unknown as AllNodeType[];
 
-    reconcileStaleGenericNodeDimensions(nodes as any);
+    reconcileStaleGenericNodeDimensions(nodes);
 
     expect(nodes[0].width).toBeUndefined();
     expect(nodes[0].height).toBeUndefined();
@@ -29,7 +30,7 @@ describe("reconcileStaleGenericNodeDimensions", () => {
   });
 
   it("preserves dimensions on noteNodes (they are user-resizable)", () => {
-    const nodes: any[] = [
+    const nodes = [
       {
         id: "note-1",
         type: "noteNode",
@@ -39,9 +40,9 @@ describe("reconcileStaleGenericNodeDimensions", () => {
         position: { x: 0, y: 0 },
         data: {},
       },
-    ];
+    ] as unknown as AllNodeType[];
 
-    reconcileStaleGenericNodeDimensions(nodes as any);
+    reconcileStaleGenericNodeDimensions(nodes);
 
     expect(nodes[0].width).toBe(500);
     expect(nodes[0].height).toBe(300);
