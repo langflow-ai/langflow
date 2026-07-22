@@ -1320,7 +1320,8 @@ class Component(CustomComponent):
         for output in self._get_outputs_to_process():
             self._current_output = output.name
             result = await self._get_output_result(output)
-            results[output.name] = result
+            # Output.value is the private graph-edge cache; results are display-facing copies.
+            results[output.name] = self._sanitize_secret_values(result)
             artifacts[output.name] = self._build_artifact(result)
             self._log_output(output)
 
@@ -1407,7 +1408,7 @@ class Component(CustomComponent):
         ):
             result.set_flow_id(self._vertex.graph.flow_id)
         result = output.apply_options(result)
-        result = self._sanitize_secret_values(result)
+        # Keep the edge value usable. Human-facing copies are sanitized in _build_results.
         output.value = result
 
         return result
@@ -1454,21 +1455,29 @@ class Component(CustomComponent):
         return value
 
     def _sanitize_secret_values(self, value):
+        """Return a sanitized value without mutating caller-owned Message or Data objects."""
         if not self._secret_values:
             return _mask_secret_value(value)
         value = _mask_secret_value(value)
         if isinstance(value, str):
             return self._sanitize_secret_string(value)
         if isinstance(value, Message):
+            sanitized = value.model_copy(
+                update={
+                    "data": self._sanitize_secret_values(value.data),
+                    "content_blocks": list(value.content_blocks),
+                }
+            )
             if isinstance(value.text, str):
-                value.text = self._sanitize_secret_string(value.text)
-            value.data = self._sanitize_secret_values(value.data)
-            return value
+                sanitized.text = self._sanitize_secret_string(value.text)
+            return sanitized
         if isinstance(value, Data):
-            value.data = self._sanitize_secret_values(value.data)
-            if isinstance(value.default_value, str):
-                value.default_value = self._sanitize_secret_string(value.default_value)
-            return value
+            default_value = value.default_value
+            if isinstance(default_value, str):
+                default_value = self._sanitize_secret_string(default_value)
+            return value.model_copy(
+                update={"data": self._sanitize_secret_values(value.data), "default_value": default_value}
+            )
         if isinstance(value, dict):
             return {key: self._sanitize_secret_values(item) for key, item in value.items()}
         if isinstance(value, list):
