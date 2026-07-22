@@ -558,8 +558,8 @@ def _compose_embedding_kwargs(
 
             api_base_value = transform_localhost_url(openai_base_url)
         else:
-            api_base_value = _to_str(os.environ.get("OPENAI_EMBEDDINGS_API_BASE")) or _to_str(
-                os.environ.get("OPENAI_API_BASE")
+            api_base_value = _to_str(_env_if_allowed("OPENAI_EMBEDDINGS_API_BASE")) or _to_str(
+                _env_if_allowed("OPENAI_API_BASE")
             )
 
     kwargs: dict[str, Any] = {}
