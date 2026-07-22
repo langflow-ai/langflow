@@ -8,6 +8,7 @@ from sqlmodel import col, delete, select
 
 from langflow.api.utils import DbSession, custom_params
 from langflow.api.utils.flow_utils import compute_virtual_flow_id
+from langflow.middleware import request_timing_registry
 from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
 from langflow.services.authorization import FlowAction, ensure_flow_permission
@@ -37,6 +38,12 @@ from langflow.services.tracing.langfuse import (
 )
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
+
+
+@router.get("/request_metrics", dependencies=[Depends(get_current_active_superuser)])
+async def request_metrics() -> dict:
+    """Return per-route request-duration statistics for the current worker process."""
+    return request_timing_registry.snapshot()
 
 
 @router.get("/job_queue", dependencies=[Depends(get_current_active_superuser)])

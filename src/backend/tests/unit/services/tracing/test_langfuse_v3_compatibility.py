@@ -79,12 +79,17 @@ class _FakeLangchainCallbackHandler:
         self.public_key = public_key
         self.update_trace = update_trace
         self.trace_context = trace_context
+        self.last_llm_kwargs = None
+        self.last_chain_kwargs = None
+
+    def on_chain_start(self, *args, **kwargs):  # noqa: ARG002
+        self.last_chain_kwargs = kwargs
 
     def on_chat_model_start(self, *args, **kwargs):  # noqa: ARG002
         return None
 
     def on_llm_start(self, *args, **kwargs):  # noqa: ARG002
-        return None
+        self.last_llm_kwargs = kwargs
 
 
 class TestLangfuseV3ApiExists:
@@ -326,6 +331,8 @@ class TestLangfuseTracerFunctionality:
             trace_type="chain",
             project_name="test-project",
             trace_id=uuid.uuid4(),
+            user_id="user-1",
+            session_id="session-1",
         )
 
         tracer.end(
@@ -338,6 +345,10 @@ class TestLangfuseTracerFunctionality:
         mock_langfuse["root_span"].update.assert_called()
         # Should update trace metadata
         assert mock_langfuse["root_span"].update_trace.call_count >= 2  # init + end
+        final_trace_update = mock_langfuse["root_span"].update_trace.call_args.kwargs
+        assert final_trace_update["name"] == "flow-123"
+        assert final_trace_update["user_id"] == "user-1"
+        assert final_trace_update["session_id"] == "session-1"
         # Should end root span
         mock_langfuse["root_span"].end.assert_called()
 
@@ -382,6 +393,54 @@ class TestLangfuseTracerFunctionality:
             handler = tracer.get_langchain_callback()
 
         assert handler.trace_context["parent_span_id"] == "child-span-id"
+
+    def test_langchain_root_run_inherits_session_and_user_metadata(self, mock_langfuse):  # noqa: ARG002
+        """Root LangChain runs retain attribution even if the SDK creates a fallback trace."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        tracer = LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+            user_id="user-1",
+            session_id="session-1",
+        )
+
+        with patch("langfuse.langchain.CallbackHandler", _FakeLangchainCallbackHandler):
+            handler = tracer.get_langchain_callback()
+
+        handler.on_llm_start({}, [], run_id=uuid.uuid4(), parent_run_id=None)
+
+        assert handler.last_llm_kwargs["metadata"] == {
+            "langfuse_session_id": "session-1",
+            "langfuse_user_id": "user-1",
+        }
+
+    def test_langchain_root_chain_uses_otel_parent_without_explicit_trace_context(self, mock_langfuse):
+        """A parented LangChain chain must not be marked as another trace root."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        mock_langfuse["child_span"].id = "b" * 16
+        tracer = LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+            user_id="user-1",
+            session_id="session-1",
+        )
+        tracer.add_trace("comp-1", "Test", "llm", {})
+
+        with patch("langfuse.langchain.CallbackHandler", _FakeLangchainCallbackHandler):
+            handler = tracer.get_langchain_callback()
+
+        assert handler.trace_context is None
+        handler.on_chain_start({}, {}, run_id=uuid.uuid4(), parent_run_id=None)
+        assert handler.last_chain_kwargs["metadata"] == {
+            "langfuse_session_id": "session-1",
+            "langfuse_user_id": "user-1",
+        }
 
 
 class TestLangfuseClientSingleton:
