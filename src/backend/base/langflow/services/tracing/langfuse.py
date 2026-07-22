@@ -201,36 +201,46 @@ def _root_run_reparenting_handler_cls(base_cls: type) -> type:
 
     Why this exists
     ---------------
-    The langfuse v3 LangChain ``CallbackHandler`` only applies its constructor
-    ``trace_context`` on the chain path (``on_chain_start``). When a model runs as
-    the *root* LangChain run — e.g. a bare Ollama / chat-model call with no wrapping
-    chain — the generation path calls ``start_observation`` without that
-    ``trace_context``. With no active OpenTelemetry span in context, the generation
-    starts a brand-new root trace, orphaned from the flow trace and therefore
-    missing ``userId`` / ``sessionId`` and its token-usage metrics.
+    The langfuse v3 LangChain ``CallbackHandler`` marks observations created with
+    its constructor ``trace_context`` as roots, even when a parent span id is
+    supplied. A root chain can then replace the flow span as the source of
+    trace-level input/output. Bare model calls have the opposite problem: without
+    an active OpenTelemetry parent they start a new orphan trace. Both cases can
+    lose the flow's ``userId`` / ``sessionId`` attribution and input/output.
     See https://github.com/langflow-ai/langflow/issues/13429.
 
     The fix
     -------
-    For root LLM runs we activate the flow's component (or root) span as the current
-    OpenTelemetry span while the SDK creates the generation span. The generation then
-    inherits the flow ``trace_id`` and nests under that span, restoring user/session
-    attribution. The handler sets ``run_inline = True``, so these callbacks execute
-    synchronously inside the model invocation and the activation reliably wraps span
-    creation. Non-root runs (wrapping chain/agent present) are left untouched — the
-    SDK already nests those correctly under the chain span.
+    For root chain and model runs we activate the flow's component (or root) span
+    as the current OpenTelemetry span while the SDK creates the observation. It
+    inherits the flow ``trace_id`` without being marked as another root. The
+    handler runs inline, so the activation reliably wraps observation creation.
+    Non-root runs are left untouched because the SDK already nests them under the
+    LangChain parent observation.
 
     Cached per ``base_cls`` so repeated callbacks reuse a single class object.
     """
     from opentelemetry import trace as otel_trace_api
 
     class _RootRunReparentingCallbackHandler(base_cls):  # type: ignore[misc, valid-type]
-        def __init__(self, *, otel_parent: Any = None, **kwargs: Any) -> None:
+        def __init__(
+            self,
+            *,
+            otel_parent: Any = None,
+            trace_attributes: dict[str, str] | None = None,
+            **kwargs: Any,
+        ) -> None:
             super().__init__(**kwargs)
             self._otel_parent = otel_parent
+            self._trace_attributes = trace_attributes or {}
 
         def _reparent(self, method_name: str, args: tuple, kwargs: dict, parent_run_id: UUID | None):
             bound = getattr(super(), method_name)
+            if parent_run_id is None and self._trace_attributes:
+                metadata = dict(kwargs.get("metadata") or {})
+                for key, value in self._trace_attributes.items():
+                    metadata.setdefault(key, value)
+                kwargs["metadata"] = metadata
             if parent_run_id is None and self._otel_parent is not None:
                 # end_on_exit/record_exception False so the parent span is never
                 # mutated or closed by activating it as the current context.
@@ -248,6 +258,9 @@ def _root_run_reparenting_handler_cls(base_cls: type) -> type:
 
         def on_llm_start(self, *args: Any, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
             return self._reparent("on_llm_start", args, kwargs, parent_run_id)
+
+        def on_chain_start(self, *args: Any, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
+            return self._reparent("on_chain_start", args, kwargs, parent_run_id)
 
     return _RootRunReparentingCallbackHandler
 
@@ -440,11 +453,19 @@ class LangFuseTracer(BaseTracer):
             metadata=metadata_ser,
         )
 
-        # Update trace-level data
+        # Reassert stable trace attributes at completion. Root LangChain runs can
+        # update trace-level fields after initialization, so the final write must
+        # restore Langflow's flow name and conversation attribution.
+        trace_metadata = dict(metadata_ser or {})
+        if self.tracing_user_id and self.tracing_user_id != self.user_id:
+            trace_metadata.setdefault("langflow.tracing_user_id", self.tracing_user_id)
         self._root_span.update_trace(
             input=inputs_ser,
             output=outputs_ser,
-            metadata=metadata_ser,
+            name=self.flow_id,
+            user_id=self.user_id,
+            session_id=self.session_id,
+            metadata=trace_metadata or None,
         )
 
         # End the root span
@@ -474,14 +495,31 @@ class LangFuseTracer(BaseTracer):
                 "parent_span_id": parent_span.id,
             }
 
-            # ``trace_context`` alone keeps chain/agent runs nested (the SDK honors
-            # it on the chain path). ``otel_parent`` additionally re-parents *root*
-            # LLM runs (a bare model with no wrapping chain), which the SDK would
-            # otherwise emit as an orphan trace with no user/session and detached
-            # token usage. See https://github.com/langflow-ai/langflow/issues/13429.
+            # Activate the component/root OTel parent for root chain and model
+            # callbacks. This keeps them nested without the SDK's explicit
+            # trace_context path marking them as competing trace roots.
             otel_parent = _build_otel_parent_span(self._trace_context["trace_id"], parent_span.id)
             handler_cls = _root_run_reparenting_handler_cls(CallbackHandler)
-            handler = handler_cls(trace_context=trace_ctx, otel_parent=otel_parent)
+            trace_attributes = {
+                key: value
+                for key, value in {
+                    "langfuse_session_id": self.session_id,
+                    "langfuse_user_id": self.user_id,
+                }.items()
+                if value
+            }
+            # Passing trace_context to the SDK marks the created observation as
+            # AS_ROOT even when parent_span_id is present. That makes a root
+            # LangChain run compete with Langflow's flow span for trace-level
+            # input/output. Prefer an active OTel parent, which preserves nesting
+            # without creating another root. Keep trace_context only as a
+            # compatibility fallback when the parent IDs cannot be activated.
+            handler_kwargs = {"trace_context": trace_ctx} if otel_parent is None else {}
+            handler = handler_cls(
+                **handler_kwargs,
+                otel_parent=otel_parent,
+                trace_attributes=trace_attributes,
+            )
 
         except (ImportError, ValueError, TypeError) as e:
             logger.debug(f"Error creating LangChain callback handler: {e}")

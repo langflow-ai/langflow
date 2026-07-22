@@ -37,7 +37,7 @@ from langflow.initial_setup.setup import (
     load_flows_from_directory,
     sync_flows_from_fs,
 )
-from langflow.middleware import ContentSizeLimitMiddleware
+from langflow.middleware import ContentSizeLimitMiddleware, RequestTimingMiddleware
 from langflow.plugin_routes import load_plugin_routes
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
@@ -661,6 +661,7 @@ def create_app():
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
+    app.add_middleware(RequestTimingMiddleware)
 
     add_sentry_middleware(app)
 
