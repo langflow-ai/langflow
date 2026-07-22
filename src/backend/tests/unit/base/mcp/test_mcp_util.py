@@ -4126,6 +4126,36 @@ class TestCleanupIntervalFloorGuard:
             assert result >= 30
 
 
+class TestCleanupTaskStartup:
+    """The cleanup task must tolerate sync construction and start on first async use."""
+
+    def test_constructor_without_running_loop_defers_cleanup_task(self):
+        manager = MCPSessionManager()
+
+        assert manager._cleanup_task is None
+
+    async def test_get_session_starts_deferred_cleanup_task(self):
+        manager = MCPSessionManager()
+        await manager.cleanup_all()
+        manager._cleanup_task = None
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        mock_session = AsyncMock()
+        mock_task = MagicMock()
+        mock_task.done.return_value = False
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            return mock_session, mock_task, "streamable_http", False
+
+        try:
+            with patch.object(manager, "_create_streamable_http_session", side_effect=fake_create):
+                await manager.get_session("ctx_1", connection_params, "streamable_http")
+
+            assert manager._cleanup_task is not None
+            assert not manager._cleanup_task.done()
+        finally:
+            await manager.cleanup_all()
+
+
 class TestGetSessionNoBlockingHealthCheck:
     """get_session() must NOT call list_tools() on the hot path.
 
