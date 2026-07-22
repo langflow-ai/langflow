@@ -1,6 +1,6 @@
 [project]
 name = "langflow-core"
-version = "1.12.0"
+version = "1.12.0.dev0"
 description = "Langflow's service-complete profile with core components and no provider bundles"
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -28,15 +28,15 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "langflow-base[complete]~=0.12.0",
+    "langflow-base[complete]==1.12.0.dev0",
 ]
 
 [project.optional-dependencies]
 audio = [
-    "langflow-base[audio]~=0.12.0",
+    "langflow-base[audio]==1.12.0.dev0",
 ]
 postgresql = [
-    "langflow-base[postgresql]~=0.12.0",
+    "langflow-base[postgresql]==1.12.0.dev0",
 ]
 
 [project.scripts]
