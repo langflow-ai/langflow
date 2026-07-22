@@ -405,6 +405,10 @@ export const lazyIconsMapping = {
     import("@/icons/ScrapeGraphAI").then((mod) => ({
       default: mod.ScrapeGraph,
     })),
+  SERPdiveIcon: () =>
+    import("@/icons/SERPdive").then((mod) => ({
+      default: mod.SERPdiveIcon,
+    })),
   SearchAPI: () =>
     import("@/icons/SearchAPI").then((mod) => ({ default: mod.SearchAPIIcon })),
   SearchLexical: () =>
