@@ -7730,7 +7730,12 @@ async def test_get_agent_run_falls_back_to_param_run_id(monkeypatch):
 
 
 def test_build_orchestrate_run_payload_uses_message_directly():
-    """build_orchestrate_run_payload passes message from provider_data when present."""
+    """build_orchestrate_run_payload passes message from provider_data when present.
+
+    The run target is always the deployment's own (owner-pinned) resource key: a
+    caller-supplied provider_data["agent_id"] must be ignored so it cannot redirect the
+    run to an arbitrary agent in the owner's WxO tenant.
+    """
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import build_orchestrate_run_payload
 
     message = {"role": "user", "content": "direct message"}
@@ -7739,7 +7744,7 @@ def test_build_orchestrate_run_payload_uses_message_directly():
         deployment_id="dep-fallback",
     )
     assert result["message"] is message
-    assert result["agent_id"] == "a-1"
+    assert result["agent_id"] == "dep-fallback"
     assert len(result) == 2
 
 

@@ -44,26 +44,26 @@ design entirely, so that bundle renaming is no longer needed.
 ## What this PR changes (Approach A — canonical pre-releases)
 
 Publish the nightly under the **canonical** package names as `.devN` pre-releases (`lfx==X.Y.Z.devN`,
-`langflow==…`, `langflow-base==…`, `langflow-sdk==…`) instead of separate `*-nightly` distributions.
+`langflow==…`, `langflow-core==…`, `langflow-base==…`, `langflow-sdk==…`) instead of separate `*-nightly` distributions.
 A single canonical `lfx` then exists, so the stable bundles resolve cleanly — **no bundle changes**.
 
 - **Stop renaming the core.** `update_lfx_version.py`, `update_pyproject_combined.py`,
   `update_sdk_version.py` no longer rename to `*-nightly`; they only set the `.devN` version and
-  re-pin inter-package deps to **exact canonical dev versions** (`langflow-base[complete]==<dev>`,
-  `lfx==<dev>`, `langflow-sdk==<dev>` — via `update_uv_dependency.py` / `update_lf_base_dependency.py`).
+  re-pin inter-package deps to **exact canonical dev versions**
+  (`langflow==<dev>` → `langflow-core==<dev>` → `langflow-base[complete]==<dev>` → `lfx==<dev>`,
+  plus `langflow-sdk==<dev>` — via `update_uv_dependency.py` / `update_lf_base_dependency.py`).
   The exact dev pins also enable pre-release resolution down the tree, so the bundles' `lfx>=…`
   range latches onto the dev `lfx`.
 - **Drop the bundle nightly track.** `update_lfx_dep_in_bundles()` and `rename_bundles_for_nightly()`
   are deleted; bundles keep their stable names + `lfx>=1.10.0,<2.0.0` pins.
 - **Version math.** `pypi_nightly_tag.py` / `lfx_nightly_tag.py` / `sdk_nightly_tag.py` count `.devN`
-  against the **canonical** PyPI histories (`langflow` / `langflow-base` / `lfx` / `langflow-sdk`),
+  against the **canonical** PyPI histories (`langflow` / `langflow-core` / `langflow-base` / `lfx` / `langflow-sdk`),
   not the `*-nightly` projects. The base version is still read from the pyproject of the latest
   `release-*` branch the nightly builds from (see `nightly_build.yml`'s `resolve-release-branch`),
   so it tracks the release cadence automatically.
-- **Publish workflow.** `release_nightly.yml` publishes canonical pre-releases; the bundle build
-  step, the `dist-nightly-bundles` artifact, the `publish-nightly-bundles` job, and its gate in
-  `publish-nightly-main` are removed. Verify steps now expect canonical names; the main wheel glob
-  is `dist/langflow-*.whl`.
+- **Publish workflow.** `release_nightly.yml` publishes canonical pre-releases in dependency order:
+  SDK → LFX → base → core → full. Canonically named bundle wheels are published before full when
+  needed; no separate `*-nightly` bundle projects are created.
 
 ## Activation gate (MUST READ)
 
@@ -126,10 +126,12 @@ re-publish as `0.1.1`.
 
 ## Verification (run against this branch)
 
-- `scripts/ci/test_pypi_nightly_tag.py` passes (15/15) with canonical URLs.
+- `scripts/ci/test_pypi_nightly_tag.py` passes with full/core/base canonical URLs.
 - Tag scripts run live against canonical PyPI and emit `vX.Y.Z.dev0` (no `*-nightly` counted).
 - Dry-run `update_sdk_version.py` / `update_lfx_version.py` / `update_pyproject_combined.py` with
   `v1.11.0.dev0` tags → all packages keep canonical names; versions set; pins become
-  `langflow-base[complete]==1.11.0.dev0`, `lfx==1.11.0.dev0`, `langflow-sdk==…`; **no** `src/bundles/*`
-  file is touched.
-- Both workflows are valid YAML; no `publish-nightly-bundles` job remains.
+  `langflow-core==1.11.0.dev0`, `langflow-base[complete]==1.11.0.dev0`, `lfx==1.11.0.dev0`,
+  `langflow-sdk==…`; **no** `src/bundles/*` file is renamed to a nightly distribution.
+- Stable patch bumps keep minor compatibility floors (`langflow-core~=1.11.0` and
+  `langflow-base[...]~=0.11.0`) so full-only and core-only patch releases can reuse compatible
+  upstream `.0` packages.

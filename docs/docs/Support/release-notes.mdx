@@ -53,23 +53,50 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### Breaking changes
 
+- Short `LANGFLOW_SECRET_KEY` upgrade compatibility
+
+    Langflow 1.10.1 changed how secrets shorter than 32 characters derive the Fernet key used for encrypted credentials.
+    Langflow 1.11.x retains read compatibility with credentials encrypted by the earlier derivation while continuing to use the current SHA-256 derivation for all new writes.
+
+    If your deployment uses a `LANGFLOW_SECRET_KEY` shorter than 32 characters, keep it unchanged during the initial upgrade so Langflow can continue to decrypt existing credentials.
+    Langflow logs a startup warning for this configuration because short secrets aren't recommended for production.
+    To replace the key, first record or export the stored credentials, set a randomly generated key of at least 32 characters, and then re-enter the credentials; changing the key directly invalidates ciphertext created with the old key.
+
 - Default superuser password removed
 
     Langflow no longer creates or accepts the legacy `langflow`/`langflow` default superuser credentials.
     If `LANGFLOW_AUTO_LOGIN=False`, set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password before startup.
 
-- Upcoming breaking change: bundle separation
+- Docker images enable component hardening by default
 
-    Langflow 1.10.x introduced the Extension bundles model.
-    In Langflow 1.11.x and future releases, bundle separation will extend to more component providers.
+    Official Langflow Docker images now include stricter defaults and include the following environment variables:
 
-    Saved flows continue to open normally, but the following may require manual updates before upgrading:
+    ```bash
+    LANGFLOW_AUTO_LOGIN=false
+    LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false
+    LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true
+    LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true
+    LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true
+    ```
 
-    - Code or scripts that reference component class names or `lfx.components.<provider>` import paths.
-    - External tooling that reads component type identifiers from raw flow JSON.
-    - Custom deployment scripts that install or pin individual component packages.
+    Existing Langflow containers that rely on custom components, code interpreters, or absolute local file paths must override these variables.
+    Keep the image defaults when users who can build flows on the server are not fully trusted.
+    For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
 
-    For more information, see [Langflow Extensions overview](./extensions-overview).
+- Long-tail component bundles are now opt-in
+
+    Starting in Langflow 1.11.x, `pip install langflow` no longer installs the long-tail providers in the `lfx-bundles` metapackage.
+    If an existing flow uses components such as Chroma, Ollama, Qdrant, Redis, PGVector, Tavily, Wikipedia, MongoDB, Weaviate, or Milvus, install the metapackage in the same environment after upgrading:
+
+    ```bash
+    pip install lfx-bundles
+    ```
+
+    You can instead install one provider and its dependencies, for example `pip install "lfx-bundles[qdrant]"`.
+    Missing-provider errors use the same install guidance.
+    Graduated providers such as OpenAI, Anthropic, Cohere, and Exa remain part of the default Langflow installation through their standalone `lfx-*` packages.
+
+    For the complete package list and provider-specific commands, see [Extension bundle list](./extensions-bundle-list).
 
 - PyTorch components are opt-in by default
 
@@ -77,7 +104,69 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     To install these components, see [Torch opt-in installs](./components-bundle-components#torch-opt-in).
 
+- Workflow API request schema (Beta)
+
+    The v2 [Workflow API (Beta)](/workflow-api) request body and interaction pattern changes in 1.11.
+    Any client that calls `POST /api/v2/workflows` against 1.10.x must update as follows:
+
+    Example 1.10.x request:
+
+    ```json
+    {
+      "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+      "background": false,
+      "inputs": {
+        "ChatInput-abc.input_value": "what is 2+2",
+        "LLMComponent-123.temperature": 0.7
+      }
+    }
+    ```
+
+    Example 1.11.x request:
+
+    ```json
+    {
+      "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+      "input_value": "what is 2+2",
+      "mode": "stream",
+      "stream_protocol": "agui",
+      "tweaks": {
+        "LLMComponent-123": {
+          "temperature": 0.7
+        }
+      }
+    }
+    ```
+
+    For more information, see [Workflow API (Beta)](/workflow-api).
+
 ### New features and enhancements
+
+- Agent2Agent (A2A) protocol support
+
+    Publish a flow as an A2A agent so other agents can discover and call it, and call remote A2A agents from inside a flow with the **A2A Agent** component.
+
+    For more information, see [Use Langflow as an A2A server](./a2a-server) and the [**A2A Agent** component](./a2a-agent-component).
+
+- Human-in-the-Loop (HITL)
+
+    Human-in-the-Loop (HITL) pauses an agent when the agent calls a tool and creates a stateful checkpoint.
+    After a human responds by approving, rejecting, or editing the request, the agent resumes from the checkpoint.
+
+    For more information, see [Human-in-the-Loop](./human-in-the-loop).
+
+- OpenAI Compatible model provider
+
+    Point Langflow's model provider at any OpenAI-compatible endpoint, and Langflow discovers models live from the `/v1/models` endpoint.
+    These models can power flows, Langflow Assistant, and any component that uses Langflow’s global model providers.
+
+    For more information, see [OpenAI Compatible](./bundles-openai-compatible).
+
+- Unified **Data Operations** component
+
+    **Text Operations**, **JSON Operations**, and **Table Operations** are consolidated into a single [**Data Operations** component](./operations).
+    Saved flows that use the separate components continue to work.
+    For more information, see the [**Data Operations** component](./operations).
 
 - AG-UI compatible streaming for the Workflow API
 
@@ -92,6 +181,17 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For more information, see [Deploy flows on watsonx Orchestrate](/deployment-wxo).
 
+    The following optional integrations remain excluded from installations on Python 3.14:
+
+    - [ALTK](/bundles-altk)
+    - [CUGA](/bundles-cuga)
+    - [LangWatch](/integrations-langwatch)
+    - [Pinecone](/bundles-pinecone)
+    - [OpenDsStar](/bundles-files-ingestion)
+    - [litellm](/bundles-lite-llm)
+    - [opik](/integrations-opik)
+    - [toolguard](/policies)
+
 - NextPlaid multi-vector bundle
 
     The **NextPlaid** bundle adds two new components for ColBERT-style multi-vector retrieval.
@@ -100,19 +200,36 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For more information, see [NextPlaid bundle](./bundles-nextplaid).
 
+- PaddleOCR bundle
+
+    The **Paddle** bundle (`lfx-paddle`) adds a **PaddleOCR** component that calls the PaddleOCR AI Studio Job API for layout-aware document parsing into Markdown.
+
+    For more information, see [Paddle bundle](./bundles-paddle).
+
+- Oracle Extension bundle
+
+    The **Oracle** bundle adds Oracle Database integration for vector search, document loading, and embeddings.
+
+    For more information, see [Oracle bundle](./bundles-oracle).
+
+- Valkey bundle
+
+    The **Valkey** bundle adds a vector store and chat memory components for [Valkey](https://valkey.io/), an open-source Redis fork.
+
+    For more information, see [Valkey bundle](./bundles-valkey).
+
 - LFX is now engine-only
 
     `uv pip install lfx` now installs the LFX executor only, with no bundle components included.
-    `uv pip install langflow` is unchanged.
-    This only affects users who install `lfx` directly.
+    `uv pip install langflow` installs the server and curated standalone providers, but not the long-tail `lfx-bundles` metapackage.
 
-    If you install `lfx` directly and your flows use bundle components, install the required packages in the same environment.
+    If your flows use long-tail bundle components, install the required packages in the same environment.
 
     About 70 long-tail providers ship in the `lfx-bundles` metapackage.
     Install one provider with `uv pip install "lfx-bundles[<bundle-name>]"`, or install every long-tail provider with `uv pip install "lfx[bundles]"`.
     Graduated providers, such as OpenAI, Anthropic, Cohere, and Exa, ship as individual packages and are installed separately with `uv pip install lfx-<provider>`.
 
-    All bundles remain included in `uv pip install langflow` as explicit dependencies.
+    The `lfx-bundles` long tail is opt-in for both `lfx` and `langflow` installations.
     For more information, see [Extensions overview](./extensions-overview).
 
 ## 1.10.x

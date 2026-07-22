@@ -7,7 +7,7 @@ import os
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
-from lfx.base.models.model_utils import _to_str, replace_with_live_models
+from lfx.base.models.model_utils import _to_str, inject_custom_enabled_models, replace_with_live_models
 from lfx.log.logger import logger
 from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain_core.embeddings import Embeddings
+
+    from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
 
 
 def _env_if_allowed(key: str) -> str | None:
@@ -85,6 +87,8 @@ def get_llm(
     watsonx_url=None,
     watsonx_project_id=None,
     ollama_base_url=None,
+    overrides: dict[str, Any] | None = None,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
 ) -> Any:
     # Resolve helpers via package namespace so tests patching
     # lfx.base.models.unified_models.<name> keep working.
@@ -118,6 +122,37 @@ def get_llm(
     provider = model.get("provider")
     metadata = model.get("metadata", {})
 
+    if not isinstance(provider, str) or not provider:
+        msg = (
+            "The selected model is missing a provider. Please reselect a model from the dropdown "
+            "so the component knows which provider to use."
+        )
+        raise ValueError(msg)
+    if provider_policy is None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+        from .provider_queries import get_model_providers
+
+        provider_policy = resolve_model_provider_policy(
+            user_id=user_id,
+            providers=(*get_model_providers(), provider),
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+    provider_policy.require(provider)
+
+    # Policy is evaluated against the submitted identity, then all runtime
+    # wiring for a known provider is resolved from its canonical registry
+    # entry. Stored flow metadata is not authoritative for class or parameter
+    # names: trusting it would let an allowed provider instantiate a denied
+    # provider's client. Unknown legacy providers retain the historical
+    # metadata fallback under the OSS allow-all policy.
+    from lfx.base.models.provider_registry import provider_id_for, provider_name_for_id
+
+    provider_id = provider_id_for(provider)
+    canonical_provider = provider_name_for_id(provider_id) if provider_id is not None else None
+    provider_is_known = canonical_provider is not None
+    provider = canonical_provider or provider
+
     # Stored selections sourced from ``get_unified_models_detailed`` (e.g. the
     # ``GET /api/v1/models`` catalog the frontend uses to augment its dropdown
     # right after a provider is configured, before the backend repopulates
@@ -132,10 +167,14 @@ def get_llm(
     # though the dropdown, connection test, and standalone component all work.
     from lfx.base.models.model_metadata import get_provider_param_mapping
 
-    provider_param_mapping = get_provider_param_mapping(provider) if provider else {}
+    provider_param_mapping = get_provider_param_mapping(provider)
 
     # Get model class and parameter names from metadata
-    api_key_param = metadata.get("api_key_param") or provider_param_mapping.get("api_key_param", "api_key")
+    api_key_param = (
+        provider_param_mapping.get("api_key_param", "api_key")
+        if provider_is_known
+        else metadata.get("api_key_param") or "api_key"
+    )
 
     # Capture the user-supplied api_key BEFORE resolution so we can name
     # it back in the error message if it was a Global Variable reference
@@ -209,7 +248,11 @@ def get_llm(
     # carries the raw ``create_model_metadata`` fields, so we have to derive
     # ``model_class`` from the provider mapping that
     # ``get_language_model_options`` would have used.
-    model_class_name = metadata.get("model_class") or provider_param_mapping.get("model_class")
+    model_class_name = (
+        provider_param_mapping.get("model_class")
+        if provider_is_known
+        else metadata.get("model_class") or provider_param_mapping.get("model_class")
+    )
     if not model_class_name:
         msg = f"No model class defined for {model_name}"
         raise ValueError(msg)
@@ -218,7 +261,11 @@ def get_llm(
     # (``get_language_model_options`` re-keys it to ``model_name_param``); fall
     # back to it so e.g. IBM WatsonX resolves to ``model_id`` rather than the
     # generic ``model``.
-    model_name_param = metadata.get("model_name_param") or provider_param_mapping.get("model_param", "model")
+    model_name_param = (
+        provider_param_mapping.get("model_param", "model")
+        if provider_is_known
+        else metadata.get("model_name_param") or provider_param_mapping.get("model_param", "model")
+    )
 
     # Reasoning models commonly reject sampling parameters such as
     # ``temperature``. Catalog metadata marks these with ``reasoning: True``;
@@ -249,10 +296,13 @@ def get_llm(
             if max_tokens_int >= 1:
                 # Look up provider-specific field name from model metadata first,
                 # then fall back to provider metadata, then default to "max_tokens"
-                max_tokens_param = metadata.get("max_tokens_field_name")
-                if not max_tokens_param:
-                    provider_meta = model_provider_metadata.get(provider, {})
-                    max_tokens_param = provider_meta.get("max_tokens_field_name", "max_tokens")
+                provider_meta = model_provider_metadata.get(provider, {})
+                max_tokens_param = (
+                    provider_meta.get("max_tokens_field_name", "max_tokens")
+                    if provider_is_known
+                    else metadata.get("max_tokens_field_name")
+                    or provider_meta.get("max_tokens_field_name", "max_tokens")
+                )
                 kwargs[max_tokens_param] = max_tokens_int
         except (TypeError, ValueError):
             pass  # Skip invalid max_tokens (e.g. empty string from form input)
@@ -265,9 +315,15 @@ def get_llm(
     if provider in {"IBM WatsonX", "IBM watsonx.ai"}:
         # For watsonx, url and project_id are required parameters
         # Try database first, then component values, then environment variables
-        url_param = metadata.get("url_param") or provider_param_mapping.get("url_param", "url")
-        project_id_param = metadata.get("project_id_param") or provider_param_mapping.get(
-            "project_id_param", "project_id"
+        url_param = (
+            provider_param_mapping.get("url_param", "url")
+            if provider_is_known
+            else metadata.get("url_param") or provider_param_mapping.get("url_param", "url")
+        )
+        project_id_param = (
+            provider_param_mapping.get("project_id_param", "project_id")
+            if provider_is_known
+            else metadata.get("project_id_param") or provider_param_mapping.get("project_id_param", "project_id")
         )
 
         # Get all provider variables from database
@@ -303,7 +359,11 @@ def get_llm(
         # else: neither provided - let ChatWatsonx handle it (will fail with its own error)
     elif provider == "Ollama":
         # For Ollama, handle custom base_url with database > component > env var fallback
-        base_url_param = metadata.get("base_url_param", "base_url")
+        base_url_param = (
+            provider_param_mapping.get("base_url_param", "base_url")
+            if provider_is_known
+            else metadata.get("base_url_param", "base_url")
+        )
 
         # Get all provider variables from database
         provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
@@ -366,6 +426,14 @@ def get_llm(
         # (base_url, attribution headers, etc.) generically from its metadata.
         _apply_registered_provider_connection(provider, user_id, kwargs)
 
+    # Apply overrides discovered from a prior failed call to this model (cache)
+    # plus any the caller passed for this attempt (error-driven remediation).
+    from lfx.base.models.model_remediation import cached_overrides
+
+    kwargs.update(cached_overrides(provider, model_name))
+    if overrides:
+        kwargs.update(overrides)
+
     try:
         return model_class(**kwargs)
     except Exception as e:
@@ -393,6 +461,7 @@ def _get_provider_catalog_models(
         include_unsupported=False,
     )
 
+    explicitly_enabled_models: set[str] = set()
     if user_id:
         with contextlib.suppress(Exception):
             enabled_providers = run_until_complete(_fetch_enabled_providers_for_user(user_id))
@@ -404,6 +473,10 @@ def _get_provider_catalog_models(
                     None,
                     model_provider_metadata,
                 )
+            _, explicitly_enabled_models = run_until_complete(_get_model_status(user_id))
+
+    # Include free-text custom deployments absent from the seed catalog.
+    inject_custom_enabled_models(provider_models, explicitly_enabled_models)
 
     catalog_models: list[dict[str, Any]] = []
     for provider_data in provider_models:
@@ -416,11 +489,13 @@ def _get_provider_catalog_models(
 def _get_provider_enabled_model_names(
     provider: str,
     user_id: UUID | str | None,
+    model_type: str | None = None,
 ) -> list[str]:
     """Return model names enabled for a provider in Model Providers settings.
 
-    Includes both LLM and embedding models (e.g. gpt-5 and text-embedding-3-small).
-    When *user_id* is absent, returns all non-deprecated catalog models for the provider.
+    Includes both LLM and embedding models unless *model_type* restricts the
+    result. When *user_id* is absent, returns all matching non-deprecated
+    catalog models for the provider.
     """
     catalog_models = _get_provider_catalog_models(provider, user_id)
 
@@ -440,23 +515,25 @@ def _get_provider_enabled_model_names(
         model_name = model_data.get("model_name")
         if not model_name:
             continue
+        metadata = model_data.get("metadata", {})
+        row_model_type = metadata.get("model_type") or "llm"
+        if model_type is not None and row_model_type != model_type:
+            continue
 
         if apply_user_prefs:
-            metadata = model_data.get("metadata", {})
             is_default = metadata.get("default", False)
-            if not is_default and not model_status_contains(explicitly_enabled_models, provider, model_name):
+            if not is_default and not model_status_contains(
+                explicitly_enabled_models,
+                provider,
+                model_name,
+                model_type=row_model_type,
+            ):
                 continue
-            if model_status_contains(disabled_models, provider, model_name):
+            if model_status_contains(disabled_models, provider, model_name, model_type=row_model_type):
                 continue
 
         model_names.append(model_name)
     return model_names
-
-
-def _is_embedding_catalog_model(model_data: dict[str, Any]) -> bool:
-    """Return True when a catalog entry is an embedding model."""
-    model_type = model_data.get("metadata", {}).get("model_type", "llm")
-    return model_type == "embeddings"
 
 
 def _get_configured_embedding_providers(
@@ -482,19 +559,7 @@ def _get_provider_embedding_model_names(
     user_id: UUID | str | None,
 ) -> list[str]:
     """Return enabled embedding model names for a single provider."""
-    catalog_by_name = {
-        model_data.get("model_name"): model_data
-        for model_data in _get_provider_catalog_models(provider, user_id)
-        if model_data.get("model_name")
-    }
-
-    model_names: list[str] = []
-    for model_name in _get_provider_enabled_model_names(provider, user_id):
-        model_data = catalog_by_name.get(model_name)
-        if model_data is None or not _is_embedding_catalog_model(model_data):
-            continue
-        model_names.append(model_name)
-    return model_names
+    return _get_provider_enabled_model_names(provider, user_id, model_type="embeddings")
 
 
 def _compose_embedding_kwargs(
@@ -520,9 +585,18 @@ def _compose_embedding_kwargs(
     ollama_base_url: str | None = None,
 ) -> tuple[type, dict[str, Any]] | None:
     """Build kwargs for a provider/model pair. Returns None when credentials are missing."""
-    from lfx.base.models.provider_registry import is_api_key_optional, is_registered
+    from lfx.base.models.provider_registry import (
+        is_api_key_optional,
+        is_registered,
+        provider_id_for,
+        provider_name_for_id,
+    )
 
     metadata = metadata or {}
+    provider_id = provider_id_for(provider)
+    canonical_provider = provider_name_for_id(provider_id) if provider_id is not None else None
+    provider_is_known = canonical_provider is not None
+    provider = canonical_provider or provider
     api_key_override = component_api_key if provider == selected_provider else None
     api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key_override)
     if not api_key and provider != "Ollama" and not is_api_key_optional(provider):
@@ -530,17 +604,28 @@ def _compose_embedding_kwargs(
     if not api_key and is_api_key_optional(provider):
         api_key = "EMPTY"  # pragma: allowlist secret
 
-    embedding_class_name = metadata.get("embedding_class") or EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider)
+    embedding_class_name = (
+        EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider)
+        if provider_is_known
+        else metadata.get("embedding_class") or EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider)
+    )
     if not embedding_class_name:
         return None
 
-    param_mapping: dict[str, str] = metadata.get("param_mapping") or EMBEDDING_PARAM_MAPPINGS.get(provider, {})
+    param_mapping: dict[str, str] = (
+        EMBEDDING_PARAM_MAPPINGS.get(provider, {})
+        if provider_is_known
+        else metadata.get("param_mapping") or EMBEDDING_PARAM_MAPPINGS.get(provider, {})
+    )
     if not param_mapping:
         return None
 
     embedding_class = unified_models_module.get_embedding_class(embedding_class_name)
 
+    # Treat blank MessageTextInput api_base as unset so it cannot wipe provider endpoints.
     api_base_value = _to_str(api_base) if provider == selected_provider else None
+    if isinstance(api_base_value, str) and not api_base_value.strip():
+        api_base_value = None
     if provider == "OpenAI" and not api_base_value:
         api_base_value = _to_str(os.environ.get("OPENAI_EMBEDDINGS_API_BASE")) or _to_str(
             os.environ.get("OPENAI_API_BASE")
@@ -640,15 +725,37 @@ def _compose_embedding_kwargs(
         _apply_registered_provider_connection(provider, user_id, kwargs)
 
     for param_name, param_value in optional_params.items():
-        if param_value is not None and param_name in param_mapping:
-            if (
-                param_name == "request_timeout"
-                and provider == "Google Generative AI"
-                and isinstance(param_value, (int, float))
-            ):
-                kwargs[param_mapping[param_name]] = {"timeout": param_value}
-            else:
-                kwargs[param_mapping[param_name]] = param_value
+        if param_value is None:
+            continue
+        # Skip blank api_base so it does not clobber a provider-resolved base URL.
+        if param_name == "api_base" and isinstance(param_value, str) and not param_value.strip():
+            continue
+        if (
+            param_name == "request_timeout"
+            and provider == "Google Generative AI"
+            and isinstance(param_value, (int, float))
+        ):
+            kwargs[param_mapping[param_name]] = {"timeout": param_value}
+        elif param_name in param_mapping:
+            kwargs[param_mapping[param_name]] = param_value
+
+    # Apply Foundry endpoint last so a blank component api_base cannot wipe it.
+    if provider == "Azure AI Foundry" and "api_base" in param_mapping:
+        foundry_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        endpoint_value = (
+            api_base_value
+            or _to_str(foundry_vars.get("AZURE_AI_FOUNDRY_ENDPOINT"))
+            or _to_str(_env_if_allowed("AZURE_AI_FOUNDRY_ENDPOINT"))
+        )
+        if not endpoint_value:
+            if use_component_overrides:
+                msg = (
+                    "Azure AI Foundry endpoint is required. Configure AZURE_AI_FOUNDRY_ENDPOINT "
+                    "in Settings → Model Providers or set the environment variable."
+                )
+                raise ValueError(msg)
+            return None
+        kwargs[param_mapping["api_base"]] = endpoint_value
 
     return embedding_class, kwargs
 
@@ -674,11 +781,14 @@ def _build_available_embedding_models(
     watsonx_truncate_input_tokens: int | None,
     watsonx_input_text: bool | None,
     ollama_base_url: str | None,
+    provider_policy: ModelProviderPolicySnapshot,
 ) -> dict[str, Embeddings]:
     """Build embedding instances for every enabled embedding model on configured providers."""
     available_models: dict[str, Embeddings] = {primary_model_name: primary_instance}
 
     for provider in _get_configured_embedding_providers(user_id, selected_provider):
+        if not provider_policy.allows(provider):
+            continue
         provider_metadata = metadata if provider == selected_provider else {}
         for model_name in _get_provider_embedding_model_names(provider, user_id):
             if model_name in available_models:
@@ -739,6 +849,7 @@ def get_embeddings(
     watsonx_truncate_input_tokens=None,
     watsonx_input_text=None,
     ollama_base_url=None,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
 ) -> Any:
     """Instantiate an embeddings model from a model selection dict.
 
@@ -773,6 +884,28 @@ def get_embeddings(
     model_name = model_dict.get("name")
     provider = model_dict.get("provider")
     metadata = model_dict.get("metadata", {})
+
+    if not isinstance(provider, str) or not provider:
+        msg = "The selected embedding model is missing a provider"
+        raise ValueError(msg)
+    if provider_policy is None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+        from .provider_queries import get_model_providers
+
+        provider_policy = resolve_model_provider_policy(
+            user_id=user_id,
+            providers=(*get_model_providers(), provider),
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+    provider_policy.require(provider)
+
+    from lfx.base.models.provider_registry import provider_id_for, provider_name_for_id
+
+    provider_id = provider_id_for(provider)
+    canonical_provider = provider_name_for_id(provider_id) if provider_id is not None else None
+    provider_is_known = canonical_provider is not None
+    provider = canonical_provider or provider
 
     # --- resolve API key for the selected provider ---------------------------
     api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
@@ -818,7 +951,11 @@ def get_embeddings(
         ollama_base_url=ollama_base_url,
     )
     if composed is None:
-        embedding_class_name = metadata.get("embedding_class") or EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider)
+        embedding_class_name = (
+            EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider)
+            if provider_is_known
+            else metadata.get("embedding_class") or EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider)
+        )
         if not embedding_class_name:
             msg = (
                 f"No embedding class defined in metadata for {model_name} (provider: {provider}). "
@@ -826,7 +963,11 @@ def get_embeddings(
             )
             raise ValueError(msg)
         unified_models_module.get_embedding_class(embedding_class_name)
-        param_mapping = metadata.get("param_mapping") or EMBEDDING_PARAM_MAPPINGS.get(provider, {})
+        param_mapping = (
+            EMBEDDING_PARAM_MAPPINGS.get(provider, {})
+            if provider_is_known
+            else metadata.get("param_mapping") or EMBEDDING_PARAM_MAPPINGS.get(provider, {})
+        )
         if not param_mapping:
             msg = (
                 f"Parameter mapping not found in metadata for model '{model_name}' (provider: {provider}). "
@@ -870,6 +1011,7 @@ def get_embeddings(
         watsonx_truncate_input_tokens=watsonx_truncate_input_tokens,
         watsonx_input_text=watsonx_input_text,
         ollama_base_url=ollama_base_url,
+        provider_policy=provider_policy,
     )
 
     return EmbeddingsWithModels(

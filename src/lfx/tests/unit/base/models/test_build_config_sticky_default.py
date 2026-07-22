@@ -266,6 +266,91 @@ def test_sticky_default_unchanged_when_no_filters_declared():
     assert injected["metadata"].get("not_enabled_locally") is True
 
 
+def test_sticky_default_preserves_providerless_saved_selection():
+    from lfx.base.models.unified_models import build_config as bc
+
+    saved_value = [{"name": "legacy-custom-model", "metadata": {}}]
+    build_config = {"model": {"value": saved_value, "options": []}}
+
+    result = bc.update_model_options_in_build_config(
+        component=_component(),
+        build_config=build_config,
+        cache_key_prefix="language_model_options",
+        get_options_func=lambda user_id=None: [_llm_option("gpt-4o", provider="OpenAI")],  # noqa: ARG005
+        field_name=None,
+        field_value=None,
+    )
+
+    assert result["model"]["value"] == saved_value
+    assert any(option["name"] == "legacy-custom-model" for option in result["model"]["options"])
+
+
+def test_sticky_default_adds_custom_saved_provider_to_policy_candidates():
+    from lfx.base.models.provider_registry import provider_id_for
+    from lfx.base.models.unified_models import build_config as bc
+    from lfx.services.model_provider_policy import ModelProviderPolicyContext, ModelProviderPolicySnapshot
+
+    captured_providers = []
+
+    def _allow_candidates(*, user_id, providers, purpose):
+        captured_providers.extend(providers)
+        candidate_ids = frozenset(provider_id_for(provider) or provider for provider in providers)
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id),
+            purpose=purpose,
+            candidate_provider_ids=candidate_ids,
+            allowed_provider_ids=candidate_ids,
+        )
+
+    saved_value = [{"name": "custom-model", "provider": "Custom Provider", "metadata": {}}]
+    build_config = {"model": {"value": saved_value, "options": []}}
+
+    with patch("lfx.services.model_provider_policy.resolve_model_provider_policy", side_effect=_allow_candidates):
+        result = bc.update_model_options_in_build_config(
+            component=_component(),
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=lambda user_id=None: [_llm_option("gpt-4o", provider="OpenAI")],  # noqa: ARG005
+            field_name=None,
+            field_value=None,
+        )
+
+    assert "Custom Provider" in captured_providers
+    assert result["model"]["value"] == saved_value
+
+
+def test_sticky_default_drops_policy_hidden_provider_and_uses_allowed_default():
+    from lfx.base.models.unified_models import build_config as bc
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    openai_option = _llm_option("gpt-4o", provider="OpenAI")
+    saved_value = [{"name": "claude-opus-4-7", "provider": "Anthropic", "metadata": {}}]
+    build_config = {"model": {"value": saved_value, "options": []}}
+    snapshot = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(user_id="u-1"),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({"openai", "anthropic"}),
+        allowed_provider_ids=frozenset({"openai"}),
+    )
+
+    with patch("lfx.services.model_provider_policy.resolve_model_provider_policy", return_value=snapshot):
+        result = bc.update_model_options_in_build_config(
+            component=_component(),
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=lambda user_id=None: [openai_option],  # noqa: ARG005
+            field_name=None,
+            field_value=None,
+        )
+
+    assert {(option["provider"], option["name"]) for option in result["model"]["options"]} == {("OpenAI", "gpt-4o")}
+    assert result["model"]["value"] == [openai_option]
+
+
 def test_saved_model_passes_filters_returns_true_for_unknown_models():
     """Unknown models conservatively pass the filter.
 

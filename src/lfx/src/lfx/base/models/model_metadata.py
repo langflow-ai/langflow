@@ -60,6 +60,9 @@ LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter"]
 # Live only with a custom endpoint configured; empty live fetch keeps the static catalog.
 CONDITIONAL_LIVE_MODEL_PROVIDERS: list[str] = ["OpenAI", "Azure AI Foundry"]
 
+# Catalog defaults are suggestions only; users must explicitly enable deployment names.
+EXPLICIT_ENABLE_ONLY_PROVIDERS: frozenset[str] = frozenset({"Azure AI Foundry"})
+
 # Provider metadata configuration
 # Defines the variables (credentials, URLs, etc.) required for each model provider
 #
@@ -89,6 +92,7 @@ CONDITIONAL_LIVE_MODEL_PROVIDERS: list[str] = ["OpenAI", "Azure AI Foundry"]
 #
 MODEL_PROVIDER_METADATA: dict[str, Any] = {
     "OpenAI": {
+        "provider_id": "openai",
         "icon": "OpenAI",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -128,6 +132,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Anthropic": {
+        "provider_id": "anthropic",
         "icon": "Anthropic",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -154,6 +159,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Google Generative AI": {
+        "provider_id": "google-generative-ai",
         "icon": "GoogleGenerativeAI",
         "max_tokens_field_name": "max_output_tokens",
         "variables": [
@@ -180,6 +186,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Ollama": {
+        "provider_id": "ollama",
         "icon": "Ollama",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -206,6 +213,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Groq": {
+        "provider_id": "groq",
         "icon": "Groq",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -232,6 +240,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Azure OpenAI": {
+        "provider_id": "azure-openai",
         "icon": "Azure",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -258,6 +267,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Azure AI Foundry": {
+        "provider_id": "azure-ai-foundry",
         "icon": "Azure",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -281,7 +291,8 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                 "variable_key": "AZURE_AI_FOUNDRY_ENDPOINT",
                 "description": (
                     "OpenAI-compatible endpoint from the Foundry portal (Get endpoint). "
-                    "Example: https://<resource>.services.ai.azure.com/openai/v1"
+                    "Example: https://<resource>.services.ai.azure.com/openai/v1. "
+                    "Enable models using your portal deployment names (not catalog model IDs)."
                 ),
                 "required": True,
                 "is_secret": False,
@@ -297,6 +308,8 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "IBM WatsonX": {
+        "provider_id": "ibm-watsonx",
+        "aliases": ["IBM watsonx.ai"],
         "icon": "WatsonxAI",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -361,6 +374,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "OpenRouter": {
+        "provider_id": "openrouter",
         "icon": "OpenRouter",
         "max_tokens_field_name": "max_tokens",
         "base_url": "https://openrouter.ai/api/v1",

@@ -8,17 +8,19 @@ import uuid
 from dataclasses import dataclass
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from lfx.base.models.provider_registry import is_api_key_optional
 from lfx.base.models.unified_models import (
     get_all_variables_for_provider,
-    get_model_provider_variable_mapping,
     get_provider_required_variable_keys,
+    get_provider_secret_variable_key,
     get_unified_models_detailed,
 )
 from lfx.log.logger import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from langflow.agentic.api.deps import require_agentic_experience
 from langflow.agentic.api.schemas import AssistantRequest
 from langflow.agentic.services.assistant_service import (
     execute_flow_with_validation,
@@ -46,7 +48,7 @@ class _AssistantContext:
 
     provider: str
     model_name: str
-    api_key_name: str
+    api_key_name: str | None
     session_id: str
     global_vars: dict[str, str]
     max_retries: int
@@ -62,7 +64,6 @@ async def _resolve_assistant_context(
     Raises:
         HTTPException: If provider is not configured or API key is missing.
     """
-    provider_variable_map = get_model_provider_variable_mapping()
     enabled_providers, _ = await get_enabled_providers_for_user(user_id, session)
 
     if not enabled_providers:
@@ -86,8 +87,8 @@ async def _resolve_assistant_context(
             detail=f"Provider '{provider}' is not configured. Available providers: {enabled_providers}",
         )
 
-    api_key_name = provider_variable_map.get(provider)
-    if not api_key_name:
+    api_key_name = get_provider_secret_variable_key(provider)
+    if not api_key_name and not is_api_key_optional(provider):
         raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
 
     model_name = request.model_name or get_default_model(provider, user_id=user_id) or ""
@@ -114,6 +115,11 @@ async def _resolve_assistant_context(
         "MODEL_NAME": model_name,
         "PROVIDER": provider,
     }
+
+    # Seeded here (not per-endpoint) so /assist and /execute/{flow_name}
+    # honor the budget the same way /assist/stream does.
+    if request.iterations_limit is not None:
+        global_vars["ITERATIONS_LIMIT"] = str(request.iterations_limit)
 
     # Inject all provider variables into the global context
     global_vars.update(provider_vars)
@@ -154,7 +160,7 @@ async def _validate_flow_access(flow_id: str | None, user_id: UUID, session: Asy
         raise HTTPException(status_code=404, detail="Flow not found.")
 
 
-@router.post("/execute/{flow_name}")
+@router.post("/execute/{flow_name}", dependencies=[Depends(require_agentic_experience)])
 async def execute_named_flow(
     flow_name: str,
     request: AssistantRequest,
@@ -276,7 +282,7 @@ async def check_assistant_config(
     }
 
 
-@router.post("/assist")
+@router.post("/assist", dependencies=[Depends(require_agentic_experience)])
 async def assist(
     request: AssistantRequest,
     current_user: CurrentActiveUser,
@@ -301,7 +307,7 @@ async def assist(
     )
 
 
-@router.post("/assist/stream")
+@router.post("/assist/stream", dependencies=[Depends(require_agentic_experience)])
 async def assist_stream(
     request: AssistantRequest,
     http_request: Request,
@@ -324,6 +330,7 @@ async def assist_stream(
             model_name=ctx.model_name,
             api_key_var=ctx.api_key_name,
             is_disconnected=http_request.is_disconnected,
+            iterations_limit=request.iterations_limit,
         ),
         media_type="text/event-stream",
         headers={

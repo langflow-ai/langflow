@@ -3,11 +3,16 @@ from __future__ import annotations
 import asyncio
 import re
 from copy import deepcopy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
+
+# LangChain resolves these annotations at runtime to inject config and callback managers.
+from langchain_core.callbacks import AsyncCallbackManagerForToolRun, CallbackManagerForToolRun  # noqa: TC002
+from langchain_core.runnables import RunnableConfig  # noqa: TC002
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
+from typing_extensions import override
 
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.log.logger import logger
@@ -27,6 +32,43 @@ if TYPE_CHECKING:
     from lfx.schema.dotdict import dotdict
 
 TOOL_TYPES_SET = {"Tool", "BaseTool", "StructuredTool"}
+
+
+class ComponentStructuredTool(StructuredTool):
+    """StructuredTool that keeps JSON-safe component results as LangChain artifacts."""
+
+    response_format: Literal["content_and_artifact"] = "content_and_artifact"
+
+    @staticmethod
+    def _content_and_artifact(content: Any) -> tuple[Any, Any | None]:
+        artifact = None if isinstance(content, str) else serialize(content)
+        return content, artifact
+
+    @override
+    def _run(
+        self,
+        *args: Any,
+        config: RunnableConfig,
+        run_manager: CallbackManagerForToolRun | None = None,
+        **kwargs: Any,
+    ) -> tuple[Any, Any | None]:
+        content = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
+        return self._content_and_artifact(content)
+
+    @override
+    async def _arun(
+        self,
+        *args: Any,
+        config: RunnableConfig,
+        run_manager: AsyncCallbackManagerForToolRun | None = None,
+        **kwargs: Any,
+    ) -> tuple[Any, Any | None]:
+        if self.coroutine is None:
+            # StructuredTool falls back to self._run, which already returns the
+            # content-and-artifact tuple. Wrapping it again would nest the tuple.
+            return await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+        content = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+        return self._content_and_artifact(content)
 
 
 def _get_input_type(input_: InputTypes):
@@ -358,7 +400,7 @@ class ComponentToolkit:
             event_manager = self.component.get_event_manager()
             if asyncio.iscoroutinefunction(output_method):
                 tools.append(
-                    StructuredTool(
+                    ComponentStructuredTool(
                         name=formatted_name,
                         description=build_description(self.component, output),
                         coroutine=_build_output_async_function(
@@ -376,7 +418,7 @@ class ComponentToolkit:
                 )
             else:
                 tools.append(
-                    StructuredTool(
+                    ComponentStructuredTool(
                         name=formatted_name,
                         description=build_description(self.component, output),
                         func=_build_output_function(self.component, output_method, event_manager, TOOL_OUTPUT_NAME),
@@ -440,6 +482,11 @@ class ComponentToolkit:
                         if tool_metadata.get("status", True):
                             tool.name = tool_metadata.get("name", tool.name)
                             tool.description = tool_metadata.get("description", tool.description)
+                            # Carry the per-action HITL decisions onto the tool so the
+                            # agent gates exactly what the user selected (LE-1447).
+                            if tool.metadata is None:
+                                tool.metadata = {}
+                            tool.metadata["approval_actions"] = tool_metadata.get("approval_actions") or []
                             if tool_metadata.get("commands"):
                                 tool.description = _add_commands_to_tool_description(
                                     tool.description, tool_metadata.get("commands")

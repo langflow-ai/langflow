@@ -1,5 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { useTranslation } from "react-i18next";
+import type { inputHandlerEventType } from "@/types/components";
 import InputComponent from "../../../../../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../../../../../components/ui/button";
 import {
@@ -12,16 +13,14 @@ import {
 } from "../../../../../../components/ui/card";
 
 type PasswordFormComponentProps = {
+  currentPassword: string;
   password: string;
   cnfPassword: string;
-  handleInput: (event: any) => void;
-  handlePatchPassword: (
-    password: string,
-    cnfPassword: string,
-    handleInput: any,
-  ) => void;
+  handleInput: (event: inputHandlerEventType) => void;
+  handlePatchPassword: () => void;
 };
 const PasswordFormComponent = ({
+  currentPassword,
   password,
   cnfPassword,
   handleInput,
@@ -33,7 +32,7 @@ const PasswordFormComponent = ({
       <Form.Root
         aria-label={t("settings.passwordTitle")}
         onSubmit={(event) => {
-          handlePatchPassword(password, cnfPassword, handleInput);
+          handlePatchPassword();
           event.preventDefault();
         }}
       >
@@ -45,7 +44,26 @@ const PasswordFormComponent = ({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex w-full gap-4">
+            <div className="flex w-full flex-col gap-4 md:flex-row">
+              <Form.Field name="currentPassword" className="w-full">
+                <InputComponent
+                  id="currentPassword"
+                  onChange={(value) => {
+                    handleInput({
+                      target: { name: "currentPassword", value },
+                    });
+                  }}
+                  value={currentPassword}
+                  isForm
+                  password={true}
+                  required
+                  placeholder={t("settings.currentPasswordPlaceholder")}
+                  className="w-full"
+                />
+                <Form.Message match="valueMissing" className="field-invalid">
+                  {t("settings.currentPasswordRequired")}
+                </Form.Message>
+              </Form.Field>
               <Form.Field name="password" className="w-full">
                 <InputComponent
                   id="pasword"
@@ -55,6 +73,7 @@ const PasswordFormComponent = ({
                   value={password}
                   isForm
                   password={true}
+                  required
                   placeholder={t("settings.passwordPlaceholder")}
                   className="w-full"
                 />
@@ -73,6 +92,7 @@ const PasswordFormComponent = ({
                   value={cnfPassword}
                   isForm
                   password={true}
+                  required
                   placeholder={t("settings.confirmPasswordPlaceholder")}
                   className="w-full"
                 />

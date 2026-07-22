@@ -5,16 +5,18 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING, Any
 
-from lfx.base.models.model_metadata import get_provider_param_mapping
-from lfx.base.models.model_utils import replace_with_live_models
+from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS, get_provider_param_mapping
+from lfx.base.models.model_utils import inject_custom_enabled_models, replace_with_live_models
 from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
 from .credentials import _fetch_enabled_providers_for_user, _get_model_status, model_status_contains
-from .provider_queries import get_models_detailed, model_provider_metadata
+from .provider_queries import get_model_providers, get_models_detailed, model_provider_metadata
 
 if TYPE_CHECKING:
     from uuid import UUID
+
+    from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
 
 
 def get_unified_models_detailed(
@@ -129,10 +131,10 @@ def get_unified_models_detailed(
     # Format as requested
     return [
         {
+            **model_provider_metadata.get(prov, {}),
             "provider": prov,
             "models": models,
             "num_models": len(models),
-            **model_provider_metadata.get(prov, {}),
         }
         for prov, models in provider_map.items()
     ]
@@ -143,6 +145,7 @@ def get_language_model_options(
     *,
     tool_calling: bool | None = None,
     filters: dict[str, Any] | None = None,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
 ) -> list[dict[str, Any]]:
     """Return available language model providers with their configuration.
 
@@ -164,6 +167,16 @@ def get_language_model_options(
         **metadata_filters,
     )
 
+    if provider_policy is None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+        provider_policy = resolve_model_provider_policy(
+            user_id=user_id,
+            providers=get_model_providers(),
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+    all_models = [provider_data for provider_data in all_models if provider_policy.allows(provider_data["provider"])]
+
     # Get disabled and explicitly enabled models for this user if user_id is provided
     disabled_models: set[str] = set()
     explicitly_enabled_models: set[str] = set()
@@ -176,10 +189,18 @@ def get_language_model_options(
     if user_id:
         with contextlib.suppress(Exception):
             enabled_providers = run_until_complete(_fetch_enabled_providers_for_user(user_id))
+    enabled_providers = {provider for provider in enabled_providers if provider_policy.allows(provider)}
 
     # Replace static defaults with actual available models from configured instances
     if enabled_providers:
         replace_with_live_models(all_models, user_id, enabled_providers, "llm", model_provider_metadata)
+    inject_custom_enabled_models(
+        all_models,
+        explicitly_enabled_models,
+        model_type="llm",
+        metadata_filters=metadata_filters or None,
+    )
+    all_models = [provider_data for provider_data in all_models if provider_policy.allows(provider_data["provider"])]
 
     options = []
 
@@ -208,14 +229,25 @@ def get_language_model_options(
             model_name = model_data.get("model_name")
             metadata = model_data.get("metadata", {})
             is_default = metadata.get("default", False)
+            row_model_type = metadata.get("model_type") or "llm"
 
-            # Determine if model should be shown:
-            # - If not default and not explicitly enabled, skip it
-            # - If in disabled list, skip it
-            # - Otherwise, show it
-            if not is_default and not model_status_contains(explicitly_enabled_models, provider, model_name):
+            # Foundry: only user-enabled deployment names; else defaults or explicit enables.
+            if provider in EXPLICIT_ENABLE_ONLY_PROVIDERS:
+                if not model_status_contains(
+                    explicitly_enabled_models,
+                    provider,
+                    model_name,
+                    model_type=row_model_type,
+                ):
+                    continue
+            elif not is_default and not model_status_contains(
+                explicitly_enabled_models,
+                provider,
+                model_name,
+                model_type=row_model_type,
+            ):
                 continue
-            if model_status_contains(disabled_models, provider, model_name):
+            if model_status_contains(disabled_models, provider, model_name, model_type=row_model_type):
                 continue
 
             # Get parameter mapping for this provider
@@ -263,6 +295,8 @@ def get_language_model_options(
 
 def get_embedding_model_options(
     user_id: UUID | str | None = None,
+    *,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
 ) -> list[dict[str, Any]]:
     """Return available embedding model providers with their configuration."""
     # Get all embedding models (excluding deprecated and unsupported by default)
@@ -271,6 +305,16 @@ def get_embedding_model_options(
         include_deprecated=False,
         include_unsupported=False,
     )
+
+    if provider_policy is None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+        provider_policy = resolve_model_provider_policy(
+            user_id=user_id,
+            providers=get_model_providers(),
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+    all_models = [provider_data for provider_data in all_models if provider_policy.allows(provider_data["provider"])]
 
     # Get disabled and explicitly enabled models for this user if user_id is provided
     disabled_models: set[str] = set()
@@ -284,6 +328,7 @@ def get_embedding_model_options(
     if user_id:
         with contextlib.suppress(Exception):
             enabled_providers = run_until_complete(_fetch_enabled_providers_for_user(user_id))
+    enabled_providers = {provider for provider in enabled_providers if provider_policy.allows(provider)}
 
     # Replace static defaults with actual available models from configured instances
     if enabled_providers:
@@ -294,6 +339,8 @@ def get_embedding_model_options(
             "embeddings",
             model_provider_metadata,
         )
+    inject_custom_enabled_models(all_models, explicitly_enabled_models, model_type="embeddings")
+    all_models = [provider_data for provider_data in all_models if provider_policy.allows(provider_data["provider"])]
 
     options = []
 
@@ -328,14 +375,25 @@ def get_embedding_model_options(
             model_name = model_data.get("model_name")
             metadata = model_data.get("metadata", {})
             is_default = metadata.get("default", False)
+            row_model_type = metadata.get("model_type") or "embeddings"
 
-            # Determine if model should be shown:
-            # - If not default and not explicitly enabled, skip it
-            # - If in disabled list, skip it
-            # - Otherwise, show it
-            if not is_default and not model_status_contains(explicitly_enabled_models, provider, model_name):
+            # Foundry: require explicit enable; else defaults or explicit enables.
+            if provider in EXPLICIT_ENABLE_ONLY_PROVIDERS:
+                if not model_status_contains(
+                    explicitly_enabled_models,
+                    provider,
+                    model_name,
+                    model_type=row_model_type,
+                ):
+                    continue
+            elif not is_default and not model_status_contains(
+                explicitly_enabled_models,
+                provider,
+                model_name,
+                model_type=row_model_type,
+            ):
                 continue
-            if model_status_contains(disabled_models, provider, model_name):
+            if model_status_contains(disabled_models, provider, model_name, model_type=row_model_type):
                 continue
 
             # Build the option dict

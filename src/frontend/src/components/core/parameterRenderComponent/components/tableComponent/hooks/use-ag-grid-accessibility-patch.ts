@@ -96,16 +96,56 @@ export function patchEmptyRowGroups(container: HTMLElement) {
  * its content (IBM `aria_child_tabbable`, WCAG 2.1.1 / 4.1.2). AG Grid keeps all
  * rows at `tabindex="-1"` and relies on its tab guards instead. Apply a roving
  * tabindex: the first rendered body row becomes the grid's single tabbable row,
- * the rest stay `-1`. Actual cell navigation is unchanged (arrow keys / the tab
- * guards still drive focus into cells).
+ * the rest stay `-1`. When the body is empty (e.g. filtered to zero matches) the
+ * header still exposes `role="row"` descendants, so fall back to the first
+ * header row — otherwise IBM flags the treegrid for having no tabbable row.
+ * Actual cell navigation is unchanged (arrow keys / the tab guards still drive
+ * focus into cells).
  */
 export function patchTabbableRow(container: HTMLElement) {
-  const rows = container.querySelectorAll<HTMLElement>(
+  const bodyRows = container.querySelectorAll<HTMLElement>(
     '.ag-center-cols-container [role="row"]',
   );
-  rows.forEach((row, index) => {
+  const headerRows = container.querySelectorAll<HTMLElement>(
+    '.ag-header [role="row"]',
+  );
+
+  if (bodyRows.length > 0) {
+    bodyRows.forEach((row, index) => {
+      setAttributeIfChanged(row, "tabindex", index === 0 ? "0" : "-1");
+    });
+    // Body rows own the roving tab stop — keep header rows out of the tab order.
+    headerRows.forEach((row) => {
+      setAttributeIfChanged(row, "tabindex", "-1");
+    });
+    return;
+  }
+
+  headerRows.forEach((row, index) => {
     setAttributeIfChanged(row, "tabindex", index === 0 ? "0" : "-1");
   });
+
+  container
+    .querySelectorAll<HTMLInputElement>(
+      '.ag-checkbox-input-wrapper input[type="checkbox"]',
+    )
+    .forEach((checkboxInput) => {
+      const cell = checkboxInput.closest<HTMLElement>(
+        '[role="gridcell"], [role="columnheader"]',
+      );
+      const checkboxLabel = checkboxInput.getAttribute("aria-label");
+      if (!cell || !checkboxLabel) return;
+
+      const valueText =
+        cell
+          .querySelector<HTMLElement>(".ag-cell-value, .ag-header-cell-text")
+          ?.textContent?.trim() || "";
+      const combinedLabel = valueText
+        ? `${valueText}, ${checkboxLabel}`
+        : checkboxLabel;
+
+      setAttributeIfChanged(cell, "aria-label", combinedLabel);
+    });
 }
 
 export function patchGridAccessibility(

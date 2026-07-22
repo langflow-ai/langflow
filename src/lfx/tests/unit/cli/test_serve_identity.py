@@ -708,7 +708,7 @@ FLOW_ID = "00000000-0000-0000-0000-000000000001"
 @pytest.fixture
 def real_graph():
     data_dir = Path(__file__).parent.parent.parent / "data"
-    with (data_dir / "simple_chat_no_llm.json").open() as f:
+    with (data_dir / "simple_chat_no_llm.json").open(encoding="utf-8") as f:
         payload = json.load(f)
     return Graph.from_payload(payload, flow_id=FLOW_ID)
 

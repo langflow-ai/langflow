@@ -4,11 +4,10 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
+  closeParametersPanel,
+  openParametersPanel,
 } from "../../utils/open-advanced-options";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 // TODO: This component doesn't have slider needs updating
 test(
@@ -25,6 +24,10 @@ test(
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("ollama");
+    await skipIfComponentUnavailable(
+      page.getByTestId("ollamaOllama"),
+      "Ollama",
+    );
 
     await page.waitForSelector('[data-testid="ollamaOllama"]', {
       timeout: 3000,
@@ -91,35 +94,32 @@ test(
 
     await mutualValidation(page);
 
-    await moveSlider(page, "right", false);
+    await moveSlider(page, "right");
 
     // wait for the slider to update
 
     await page.waitForTimeout(500);
     await adjustScreenView(page, { numberOfZoomOut: 1 });
 
-    await disableInspectPanel(page);
+    // LE-1810: slider values live on the node — the parameters panel only
+    // manages parameter visibility, so a panel round-trip must not disturb
+    // the value shown on the node.
+    await page.getByTestId("title-Ollama").click();
+    await openParametersPanel(page);
 
-    await openAdvancedOptions(page);
-    await expect(
-      page.getByTestId("default_slider_display_value_advanced"),
-    ).toHaveText("19.00");
+    await expect(page.getByTestId("default_slider_display_value")).toHaveText(
+      "19.00",
+    );
 
-    await moveSlider(page, "left", true);
+    await closeParametersPanel(page);
+
+    await moveSlider(page, "left");
     // Wait for any potential updates
     await page.waitForTimeout(500);
-
-    await expect(
-      page.getByTestId("default_slider_display_value_advanced"),
-    ).toHaveText("14.00");
-
-    await closeAdvancedOptions(page);
 
     await expect(page.getByTestId("default_slider_display_value")).toHaveText(
       "14.00",
     );
-
-    await enableInspectPanel(page);
   },
 );
 
@@ -172,17 +172,11 @@ async function mutualValidation(page: Page) {
   await expect(page.getByTestId("icon-pencil-ruler")).toBeVisible();
   await expect(page.getByTestId("icon-palette")).toBeVisible();
 }
-async function moveSlider(
-  page: Page,
-  side: "left" | "right",
-  advanced: boolean = false,
-) {
-  const thumbSelector = `slider_thumb${advanced ? "_advanced" : ""}`;
-  const trackSelector = `slider_track${advanced ? "_advanced" : ""}`;
+async function moveSlider(page: Page, side: "left" | "right") {
+  // LE-1810: the slider renders on the node only — values are edited there.
+  await page.getByTestId("slider_thumb").click();
 
-  await page.getByTestId(thumbSelector).click();
-
-  const trackBoundingBox = await page.getByTestId(trackSelector).boundingBox();
+  const trackBoundingBox = await page.getByTestId("slider_track").boundingBox();
 
   if (trackBoundingBox) {
     const moveDistance =

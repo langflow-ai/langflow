@@ -8,8 +8,9 @@ so the registry never needs to be loaded.
 from __future__ import annotations
 
 import json
+from importlib.metadata import PackageNotFoundError
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 from lfx.cli.validate import (
@@ -19,6 +20,7 @@ from lfx.cli.validate import (
     _check_unused_nodes,
     _check_version_mismatch,
     _expand_paths,
+    _get_lf_version,
     validate_command,
     validate_flow_file,
 )
@@ -58,6 +60,20 @@ def _make_result(issues=None) -> ValidationResult:
     if issues:
         result.issues = issues
     return result
+
+
+def test_installed_version_prefers_core_distribution_over_base():
+    versions = {"langflow-core": "1.11.0", "langflow-base": "0.11.0"}
+
+    def get_version(package: str) -> str:
+        if package not in versions:
+            raise PackageNotFoundError(package)
+        return versions[package]
+
+    with patch("importlib.metadata.version", side_effect=get_version) as version_mock:
+        assert _get_lf_version() == "1.11.0"
+
+    assert version_mock.call_args_list == [call("langflow"), call("langflow-core")]
 
 
 # ---------------------------------------------------------------------------

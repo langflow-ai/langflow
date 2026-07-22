@@ -142,7 +142,9 @@ PROVIDER_DEPS: dict[str, list[str]] = {
         "google-auth-oauthlib>=1.2.0,<2.0.0",
     ],
     "vertexai": ["langchain-google-vertexai>=3.2.0"],
-    "altk": ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"],
+    "altk": [
+        "agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    ],
     "codeagents": [
         "smolagents>=1.8.0",
         "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",  # noqa: E501
@@ -156,7 +158,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     ],
     "nvidia": [
         "langchain-nvidia-ai-endpoints~=1.0.0",
-        "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'",
+        "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'",
         "gassist>=0.0.1; sys_platform == 'win32'",
     ],
     "cuga": [
@@ -243,8 +245,7 @@ def _shim_source(provider: str, slug: str) -> str:
         '    if exc.name is not None and (exc.name == "lfx_bundles" or exc.name.startswith("lfx_bundles.")):\n'
         "        msg = (\n"
         f"            \"The '{provider}' components moved to the 'lfx-bundles' distribution. \"\n"
-        '            "Install it with:  pip install lfx-bundles   "\n'
-        "            \"(or 'pip install langflow', which bundles it).\"\n"
+        '            "Install it with: pip install lfx-bundles."\n'
         "        )\n"
         '        raise ModuleNotFoundError(msg, name="lfx_bundles") from exc\n'
         "    raise\n"

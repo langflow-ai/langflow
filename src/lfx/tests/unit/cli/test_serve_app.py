@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import secrets
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -28,6 +29,98 @@ def _make_settings_service(*, allow_custom_components: bool = False):
             allow_custom_components=allow_custom_components,
         )
     )
+
+
+_MISSING = object()
+
+
+def test_create_multi_serve_app_registers_variable_service():
+    """Regression: building the serve app must register the minimal VariableService.
+
+    The credential resolver (``get_api_key_for_provider``, ``get_all_variables_for_provider``,
+    ``model_utils``, KB connectors) resolves request-scoped ``global_vars`` only *through*
+    ``get_variable_service()``. Standalone lfx ships no VariableService factory, so before
+    this fix the serve worker left it unregistered (``None``) and request-scoped model
+    credentials silently fell through to ``os.environ`` — and to nothing under
+    ``--no-env-fallback``. Building the serve app must register it so all of those paths
+    become request-scope-aware.
+    """
+    from lfx.services.deps import get_variable_service
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+    from lfx.services.variable.service import VariableService
+
+    manager = get_service_manager()
+    prev_class = manager.service_classes.get(ServiceType.VARIABLE_SERVICE, _MISSING)
+    prev_instance = manager.services.get(ServiceType.VARIABLE_SERVICE, _MISSING)
+    manager.services.pop(ServiceType.VARIABLE_SERVICE, None)
+    manager.service_classes.pop(ServiceType.VARIABLE_SERVICE, None)
+    try:
+        assert get_variable_service() is None, "precondition: standalone lfx has no VariableService"
+        create_multi_serve_app(registry=FlowRegistry())
+        assert isinstance(get_variable_service(), VariableService)
+    finally:
+        manager.services.pop(ServiceType.VARIABLE_SERVICE, None)
+        manager.service_classes.pop(ServiceType.VARIABLE_SERVICE, None)
+        if prev_class is not _MISSING:
+            manager.service_classes[ServiceType.VARIABLE_SERVICE] = prev_class
+        if prev_instance is not _MISSING:
+            manager.services[ServiceType.VARIABLE_SERVICE] = prev_instance
+
+
+async def test_serve_app_resolves_request_scoped_credential(monkeypatch):
+    """End-to-end: real registration resolves a request-scoped global_var under ``--no-env-fallback``.
+
+    The serve app's real registration lets a request-scoped global_var resolve through
+    ``get_api_key_for_provider``. Unlike the ``variable_service_registered`` fixture in ``test_credentials.py``, this
+    drives the *actual* registration path (``create_multi_serve_app``) — the exact chain
+    the original bug broke (service unregistered -> request scope never consulted). A
+    different value is left in ``os.environ`` to prove the request scope wins and env is
+    not the source.
+    """
+    from lfx.base.models.unified_models import (
+        get_api_key_for_provider,
+        get_model_provider_variable_mapping,
+    )
+    from lfx.services.deps import get_variable_service
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+    from lfx.services.variable.request_scope import (
+        activate_no_env_fallback,
+        activate_request_variables,
+        reset_no_env_fallback,
+        reset_request_variables,
+    )
+
+    var = get_model_provider_variable_mapping()["OpenAI"]
+    manager = get_service_manager()
+    prev_class = manager.service_classes.get(ServiceType.VARIABLE_SERVICE, _MISSING)
+    prev_instance = manager.services.get(ServiceType.VARIABLE_SERVICE, _MISSING)
+    manager.services.pop(ServiceType.VARIABLE_SERVICE, None)
+    manager.service_classes.pop(ServiceType.VARIABLE_SERVICE, None)
+    monkeypatch.setenv(var, "sk-env-must-not-win")  # pragma: allowlist secret
+
+    scope_token = nofb_token = None
+    try:
+        # The serve app factory performs the registration — no test fixture involved.
+        create_multi_serve_app(registry=FlowRegistry())
+        assert get_variable_service() is not None
+
+        nofb_token = activate_no_env_fallback(disabled=True)
+        scope_token = activate_request_variables({var: "sk-from-request"})  # pragma: allowlist secret
+        resolved = get_api_key_for_provider("11111111-1111-1111-1111-111111111111", "OpenAI", None)
+        assert resolved == "sk-from-request"  # request scope wins; env ignored under no_env_fallback
+    finally:
+        if scope_token is not None:
+            reset_request_variables(scope_token)
+        if nofb_token is not None:
+            reset_no_env_fallback(nofb_token)
+        manager.services.pop(ServiceType.VARIABLE_SERVICE, None)
+        manager.service_classes.pop(ServiceType.VARIABLE_SERVICE, None)
+        if prev_class is not _MISSING:
+            manager.service_classes[ServiceType.VARIABLE_SERVICE] = prev_class
+        if prev_instance is not _MISSING:
+            manager.services[ServiceType.VARIABLE_SERVICE] = prev_instance
 
 
 def _blocked_raw_graph() -> dict:
@@ -934,31 +1027,44 @@ class TestFlowRegistry:
         assert meta.id == json_uuid
 
 
+def _fake_request(expected_api_key=None):
+    """Minimal stand-in for a Starlette Request exposing ``app.state.expected_api_key``.
+
+    ``None`` mimics an app whose key was not snapshotted at startup, so verify_api_key falls
+    back to the one-time live read; a value mimics the startup-snapshotted (cached) key.
+    """
+    from types import SimpleNamespace
+
+    return SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(expected_api_key=expected_api_key)))
+
+
 class TestSecurityFunctions:
     """Test security-related functions."""
 
     def test_verify_api_key_with_query_param(self):
         """Test API key verification with query parameter."""
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key-123"}):  # pragma: allowlist secret
-            result = verify_api_key("test-key-123", None)
+            with patch("lfx.cli.serve_app.secrets.compare_digest", wraps=secrets.compare_digest) as compare_digest:
+                result = verify_api_key(_fake_request(), "test-key-123", None)
             assert result == "test-key-123"
+            compare_digest.assert_called_once_with(b"test-key-123", b"test-key-123")
 
     def test_verify_api_key_with_header_param(self):
         """Test API key verification with header parameter."""
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key-123"}):  # pragma: allowlist secret
-            result = verify_api_key(None, "test-key-123")
+            result = verify_api_key(_fake_request(), None, "test-key-123")
             assert result == "test-key-123"
 
     def test_verify_api_key_query_param_takes_precedence(self):
         """Query param is checked first; when both are provided the query param value is used."""
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key-123"}):  # pragma: allowlist secret
-            result = verify_api_key("test-key-123", "wrong-key")
+            result = verify_api_key(_fake_request(), "test-key-123", "wrong-key")
             assert result == "test-key-123"
 
     def test_verify_api_key_missing(self):
         """Test error when no API key is provided."""
         with pytest.raises(HTTPException) as exc_info:
-            verify_api_key(None, None)
+            verify_api_key(_fake_request(), None, None)
         assert exc_info.value.status_code == 401
         assert exc_info.value.detail == "API key required"
 
@@ -966,7 +1072,7 @@ class TestSecurityFunctions:
         """Test error when API key is invalid."""
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "correct-key"}):  # pragma: allowlist secret
             with pytest.raises(HTTPException) as exc_info:
-                verify_api_key("wrong-key", None)
+                verify_api_key(_fake_request(), "wrong-key", None)
             assert exc_info.value.status_code == 401
             assert exc_info.value.detail == "Invalid API key"
 
@@ -974,9 +1080,26 @@ class TestSecurityFunctions:
         """Test error when environment variable is not set."""
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(HTTPException) as exc_info:
-                verify_api_key("any-key", None)
+                verify_api_key(_fake_request(), "any-key", None)
             assert exc_info.value.status_code == 500
             assert "LANGFLOW_API_KEY environment variable is not set" in exc_info.value.detail
+
+    def test_verify_api_key_uses_cached_startup_key_not_live_env(self):
+        """When the key was snapshotted at startup, auth uses it and never reads live os.environ.
+
+        This is the hardening for the --reset-environ race: even a flow that overwrites the auth
+        key in os.environ cannot flip the auth decision, because verify_api_key reads the cached
+        value, not the live environment.
+        """
+        req = _fake_request(expected_api_key="cached-key")  # pragma: allowlist secret
+        # Empty env would 500 if the check read live; the cached key makes it succeed.
+        with patch.dict(os.environ, {}, clear=True):
+            assert verify_api_key(req, "cached-key", None) == "cached-key"
+        # A live env value cannot override the cached key.
+        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "tampered"}):  # pragma: allowlist secret
+            with pytest.raises(HTTPException) as exc_info:
+                verify_api_key(req, "tampered", None)
+            assert exc_info.value.status_code == 401
 
 
 class TestCreateServeApp:

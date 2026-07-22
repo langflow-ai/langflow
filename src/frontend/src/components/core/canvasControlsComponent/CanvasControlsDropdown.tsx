@@ -107,7 +107,7 @@ const CanvasControlsDropdown = ({
           title={t("canvas.controls")}
         >
           <div className="flex items-center justify-center gap-1">
-            <span className="text-sm text-muted-foreground group-hover:text-foreground">
+            <span className="w-11 pl-1.5 text-left text-sm tabular-nums text-muted-foreground group-hover:text-foreground">
               {formatZoomPercentage(zoom)}
             </span>
             <IconComponent

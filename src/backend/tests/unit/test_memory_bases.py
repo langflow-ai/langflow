@@ -28,6 +28,7 @@ from langflow.services.database.models.memory_base.model import (
     MemoryBaseUpdate,
 )
 from langflow.services.database.models.message.model import MessageTable
+from lfx.services.authorization.base import ResourceVisibilityScope
 
 # ------------------------------------------------------------------ #
 #  Helpers                                                             #
@@ -179,6 +180,24 @@ class TestKBIngestionHelperBuildEmbeddings:
         assert selected["metadata"]["embedding_class"] == "OpenAIEmbeddings"
         assert selected["metadata"]["model_type"] == "embeddings"
         assert "param_mapping" in selected["metadata"]
+        assert kwargs.get("api_base") is None
+        assert kwargs.get("ollama_base_url") is None
+
+    @pytest.mark.asyncio
+    async def test_builds_embeddings_for_azure_ai_foundry(self):
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        with patch("langflow.api.utils.kb_helpers.EmbeddingModelComponent") as mock_component_cls:
+            mock_component_cls.return_value.build_embeddings.return_value = MagicMock()
+            user = MagicMock(id=uuid.uuid4())
+
+            await KBIngestionHelper.build_embeddings("Azure AI Foundry", "text-embedding-3-small", user)
+
+        kwargs = mock_component_cls.call_args.kwargs
+        selected = kwargs["model"][0]
+        assert selected["provider"] == "Azure AI Foundry"
+        assert selected["metadata"]["embedding_class"] == "OpenAIEmbeddings"
+        assert kwargs.get("api_base") is None
 
     @pytest.mark.asyncio
     async def test_builds_embeddings_for_google_gemini_model(self):
@@ -244,6 +263,7 @@ class TestKBIngestionHelperBuildEmbeddings:
         "Failed to connect to Ollama". This test exercises the REAL component (no mock)
         so the resolution path is covered end to end.
         """
+        pytest.importorskip("langchain_ollama")
         from langflow.api.utils.kb_helpers import KBIngestionHelper
 
         monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
@@ -263,6 +283,7 @@ class TestKBIngestionHelperBuildEmbeddings:
     @pytest.mark.asyncio
     async def test_ollama_embeddings_fall_back_to_localhost_when_unconfigured(self, monkeypatch):
         """With no OLLAMA_BASE_URL configured, the localhost fallback is preserved."""
+        pytest.importorskip("langchain_ollama")
         from langflow.api.utils.kb_helpers import KBIngestionHelper
 
         monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
@@ -496,6 +517,129 @@ class TestMemoryBaseCreateFlowOwnership:
         assert exc_info.value.status_code == 404
 
 
+class TestMemoryBaseProviderPolicy:
+    """Provider policy must run before Memory Base filesystem or persistence work."""
+
+    @pytest.fixture
+    def service(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        return MemoryBaseService()
+
+    @staticmethod
+    def _fake_scope(mock_db):
+        class _FakeCtx:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, *_args):
+                pass
+
+        scope = MagicMock()
+        scope.return_value = _FakeCtx()
+        return scope
+
+    @staticmethod
+    def _db_returning(value):
+        result = MagicMock()
+        result.first.return_value = value
+        db = AsyncMock()
+        db.exec = AsyncMock(return_value=result)
+        return db
+
+    @pytest.mark.asyncio
+    async def test_create_denied_embedding_provider_stops_before_initialize_or_persist(self, service):
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        user_id = uuid.uuid4()
+        payload = MemoryBaseCreate(name="mb", flow_id=uuid.uuid4(), embedding_model="denied-embed")
+        db = self._db_returning(object())
+        initialize = AsyncMock()
+        denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="Anthropic"),
+            patch("langflow.services.memory_base.service.require_model_provider", side_effect=denial) as require,
+            patch("langflow.services.memory_base.service.initialize_kb", initialize),
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            await service.create(payload, user_id=user_id)
+
+        require.assert_called_once_with(
+            user_id=user_id,
+            provider="Anthropic",
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        initialize.assert_not_awaited()
+        db.add.assert_not_called()
+        db.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_create_denied_preproc_model_is_rejected_even_when_preprocessing_is_disabled(self, service):
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        user_id = uuid.uuid4()
+        payload = MemoryBaseCreate(
+            name="mb",
+            flow_id=uuid.uuid4(),
+            embedding_model="text-embedding-3-small",
+            preprocessing=False,
+            preproc_model="claude-test",
+        )
+        db = self._db_returning(object())
+        initialize = AsyncMock()
+        denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+
+        def require_provider(*, provider, **_kwargs):
+            if provider == "Anthropic":
+                raise denial
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.infer_llm_provider", return_value="Anthropic"),
+            patch(
+                "langflow.services.memory_base.service.require_model_provider",
+                side_effect=require_provider,
+            ) as require,
+            patch("langflow.services.memory_base.service.initialize_kb", initialize),
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            await service.create(payload, user_id=user_id)
+
+        assert require.call_args.kwargs["purpose"] is ModelProviderPolicyPurpose.CONFIGURE
+        initialize.assert_not_awaited()
+        db.add.assert_not_called()
+        db.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_update_denied_embedding_provider_stops_before_mutation_or_persist(self, service):
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        user_id = uuid.uuid4()
+        mb = _make_mb(user_id=user_id, threshold=10)
+        mb.embedding_model = "denied-embed"
+        db = self._db_returning(mb)
+        denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="Anthropic"),
+            patch("langflow.services.memory_base.service.require_model_provider", side_effect=denial) as require,
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            await service.update(mb.id, user_id, MemoryBaseUpdate(threshold=99))
+
+        require.assert_called_once_with(
+            user_id=user_id,
+            provider="Anthropic",
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        assert mb.threshold == 10
+        db.add.assert_not_called()
+        db.commit.assert_not_awaited()
+
+
 class TestMemoryBaseGuardPassesRealKbIdentity:
     """The ID-bearing guards must pass the REAL kb identity, not actor-as-owner.
 
@@ -537,6 +681,76 @@ class TestMemoryBaseGuardPassesRealKbIdentity:
         assert captured["kb_id"] == mb.id
         assert captured["kb_user_id"] == owner_id, "guard must receive the real owner, not the actor"
         assert captured["kb_name"] == mb.kb_name
+
+    async def test_shared_memory_base_falls_back_to_unscoped_id_lookup(self):
+        from langflow.api.v1.memories import _get_memory_base_for_action
+        from langflow.services.authorization import KnowledgeBaseAction
+        from langflow.services.database.models.user.model import User
+
+        owner_id = uuid.uuid4()
+        mb = _make_mb(user_id=owner_id)
+        actor = User(id=uuid.uuid4(), username="actor")
+        db = AsyncMock()
+        db.get.return_value = mb
+
+        service = MagicMock()
+        service.get = AsyncMock(return_value=None)
+        authz = MagicMock()
+        authz.is_enabled = AsyncMock(return_value=True)
+        authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+        captured = {}
+
+        async def _capture_guard(_user, _act, **kwargs):
+            captured.update(kwargs)
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=service),
+            patch("langflow.api.v1.memories.get_authorization_service", return_value=authz),
+            patch("langflow.api.v1.memories.ensure_knowledge_base_permission", _capture_guard),
+        ):
+            resolved = await _get_memory_base_for_action(
+                db,
+                memory_base_id=mb.id,
+                current_user=actor,
+                action=KnowledgeBaseAction.READ,
+            )
+
+        assert resolved is mb
+        db.get.assert_awaited_once()
+        assert captured["kb_user_id"] == owner_id
+
+    def test_list_statement_unions_owned_and_visible_memory_bases(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        actor_id = uuid.uuid4()
+        shared_id = uuid.uuid4()
+        service = MemoryBaseService()
+        concrete_stmt = service.list_for_user_stmt(
+            actor_id,
+            visibility=ResourceVisibilityScope(resource_ids=(shared_id,)),
+        )
+        concrete_sql = str(concrete_stmt.compile(compile_kwargs={"literal_binds": True}))
+
+        assert actor_id.hex in concrete_sql
+        assert shared_id.hex in concrete_sql
+        assert " OR " in concrete_sql
+
+        for domain_only_scope in (
+            ResourceVisibilityScope(workspace_ids=(uuid.uuid4(),)),
+            ResourceVisibilityScope(project_ids=(uuid.uuid4(),)),
+        ):
+            domain_stmt = service.list_for_user_stmt(actor_id, visibility=domain_only_scope)
+            domain_sql = str(domain_stmt.compile(compile_kwargs={"literal_binds": True}))
+
+            assert actor_id.hex in domain_sql
+            assert " OR " not in domain_sql
+
+        global_stmt = service.list_for_user_stmt(
+            actor_id,
+            visibility=ResourceVisibilityScope(all_resources=True),
+        )
+
+        assert not global_stmt._where_criteria
 
     @pytest.mark.asyncio
     async def test_delete_passes_real_kb_identity_to_guard(self):
@@ -2006,6 +2220,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import check_mismatch
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.check_mismatch = AsyncMock(return_value=True)
         with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
             result = await check_mismatch(memory_base_id=uuid.uuid4(), current_user=mock_user)
@@ -2017,6 +2232,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import check_mismatch
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.check_mismatch = AsyncMock(return_value=False)
         with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
             result = await check_mismatch(memory_base_id=uuid.uuid4(), current_user=mock_user)
@@ -2029,6 +2245,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import check_mismatch
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.check_mismatch = AsyncMock(side_effect=ValueError("not found"))
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
@@ -2284,6 +2501,48 @@ class TestPreprocessingApiKeyValidation:
         ):
             # Should not raise.
             _validate_preprocessing_api_key(uuid.uuid4(), "gpt-4o")
+
+    def test_passes_for_credentialless_provider_without_key_lookup(self):
+        from langflow.services.memory_base.service import _validate_preprocessing_api_key
+
+        with (
+            patch(
+                "langflow.services.memory_base.service.infer_llm_provider",
+                return_value="AmbientAuthCo",
+            ),
+            patch(
+                "langflow.services.memory_base.service.is_api_key_optional",
+                return_value=True,
+            ),
+            patch("langflow.services.memory_base.service.get_api_key_for_provider") as key_lookup,
+        ):
+            _validate_preprocessing_api_key(uuid.uuid4(), "ambient-chat")
+
+        key_lookup.assert_not_called()
+
+    def test_policy_denial_happens_before_api_key_lookup(self):
+        from langflow.services.memory_base.service import _validate_preprocessing_api_key
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        key_lookup = MagicMock()
+        user_id = uuid.uuid4()
+        with (
+            patch("langflow.services.memory_base.service.infer_llm_provider", return_value="Anthropic"),
+            patch(
+                "langflow.services.memory_base.service.require_model_provider",
+                side_effect=ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE),
+            ) as require,
+            patch("langflow.services.memory_base.service.get_api_key_for_provider", key_lookup),
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            _validate_preprocessing_api_key(user_id, "claude-test")
+
+        require.assert_called_once_with(
+            user_id=user_id,
+            provider="Anthropic",
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        key_lookup.assert_not_called()
 
     def test_raises_when_provider_unknown(self):
         from langflow.services.memory_base.service import (

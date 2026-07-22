@@ -16,7 +16,11 @@ import importlib
 
 _MODEL_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {
     "ChatOpenAI": ("langchain_openai", "ChatOpenAI", None),
-    "ChatAnthropic": ("langchain_anthropic", "ChatAnthropic", None),
+    "ChatAnthropic": (
+        "lfx.base.models.anthropic_chat_model",
+        "ChatAnthropicThinkingCompat",
+        "langchain-anthropic",
+    ),
     "ChatGoogleGenerativeAIFixed": (
         "lfx.base.models.google_generative_ai_model",
         "ChatGoogleGenerativeAIFixed",
@@ -59,6 +63,8 @@ EMBEDDING_PROVIDER_CLASS_MAPPING: dict[str, str] = {
     "Ollama": "OllamaEmbeddings",
     "IBM WatsonX": "WatsonxEmbeddings",
     "IBM watsonx.ai": "WatsonxEmbeddings",  # Alias used by MODEL_PROVIDERS_DICT
+    # Foundry: OpenAI-compatible embeddings; deployment name is ``model``.
+    "Azure AI Foundry": "OpenAIEmbeddings",
 }
 
 # Provider → param-name mapping for embedding-model instantiation.
@@ -101,6 +107,15 @@ EMBEDDING_PARAM_MAPPINGS: dict[str, dict[str, str]] = {
         "project_id": "project_id",
         "space_id": "space_id",
         "request_timeout": "request_timeout",
+    },
+    "Azure AI Foundry": {
+        "model": "model",
+        "api_key": "api_key",
+        "api_base": "base_url",
+        "dimensions": "dimensions",
+        "chunk_size": "chunk_size",
+        "request_timeout": "timeout",
+        "max_retries": "max_retries",
     },
 }
 

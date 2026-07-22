@@ -69,7 +69,7 @@ async function expectReadyCheck(page: LangflowPage, check: ReadyCheck) {
     const locator = check.oneOf
       .map((candidate) => locatorForReadyCheck(page, candidate))
       .reduce((combined, candidate) => combined.or(candidate));
-    await expect(locator).toBeVisible({ timeout: TIMEOUTS.standard });
+    await expect(locator.first()).toBeVisible({ timeout: TIMEOUTS.standard });
     return;
   }
 

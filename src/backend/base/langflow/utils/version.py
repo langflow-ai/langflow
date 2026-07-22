@@ -25,6 +25,7 @@ def _get_version_info():
     """
     package_options = [
         ("langflow", "Langflow"),
+        ("langflow-core", "Langflow Core"),
         ("langflow-base", "Langflow Base"),
         ("langflow-nightly", "Langflow Nightly"),
         ("langflow-base-nightly", "Langflow Base Nightly"),

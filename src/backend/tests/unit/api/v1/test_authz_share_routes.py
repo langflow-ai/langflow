@@ -50,9 +50,9 @@ class _FakeAsyncSession:
     async def rollback(self) -> None:
         self.rolled_back += 1
 
-    async def exec(self, _stmt: Any) -> list[Any]:
-        # list_shares is not exercised here; return empty by default.
-        return []
+    async def exec(self, _stmt: Any) -> _ExecResult:
+        # Match SQLModel's result shape so column-pair serialization is real.
+        return _ExecResult([])
 
 
 class _StubAuthz:
@@ -149,6 +149,23 @@ def _payload_for(resource_id: UUID) -> ShareCreate:
         target_id=uuid4(),
         permission_level=SharePermissionLevel.READ.value,
     )
+
+
+async def test_memory_base_resolves_as_knowledge_base_resource_owner():
+    from langflow.services.database.models.memory_base.model import MemoryBase
+
+    owner_id = uuid4()
+    memory_base_id = uuid4()
+    memory_base = SimpleNamespace(id=memory_base_id, user_id=owner_id)
+    session = _FakeAsyncSession({(MemoryBase, memory_base_id): memory_base})
+
+    resolved = await shares_module._resolve_resource_owner(
+        session,
+        resource_type="knowledge_base",
+        resource_id=memory_base_id,
+    )
+
+    assert resolved == owner_id
 
 
 # --------------------------------------------------------------------------- #
@@ -743,3 +760,75 @@ async def test_list_shares_filters_by_visibility_for_non_superuser(patch_authz, 
     ids = {r.id for r in results}
     assert visible.id in ids
     assert hidden.id not in ids
+
+
+@pytest.mark.asyncio
+async def test_list_shares_includes_user_and_team_target_names(patch_authz, silence_audit):  # noqa: ARG001
+    """Share responses expose display names without dropping UUID compatibility."""
+    patch_authz(cross_user=False, enabled=False)
+
+    admin = _make_user(is_superuser=True)
+    owner = _make_user()
+    user_id = uuid4()
+    team_id = uuid4()
+    user_share = _share(scope=ShareScope.USER.value, target_id=user_id, created_by=owner.id)
+    team_share = _share(scope=ShareScope.TEAM.value, target_id=team_id, created_by=owner.id)
+    public_share = _share(scope=ShareScope.PUBLIC.value, target_id=None, created_by=owner.id)
+    session = _QueueSession(
+        exec_queue=[
+            [user_share, team_share, public_share],
+            [(user_id, "alice")],
+            [(team_id, "Platform")],
+        ]
+    )
+
+    results = await shares_module.list_shares(current_user=admin, session=session)
+    by_id = {result.id: result for result in results}
+
+    assert by_id[user_share.id].target_id == user_id
+    assert by_id[user_share.id].target_name == "alice"
+    assert by_id[team_share.id].target_name == "Platform"
+    assert by_id[public_share.id].target_name is None
+
+
+@pytest.mark.asyncio
+async def test_serialize_shares_resolves_names_with_real_sqlmodel_result():
+    """Column-pair results must be consumed via ``.all()`` before building maps."""
+    from langflow.services.database.models.auth import AuthzTeam
+    from langflow.services.database.models.user.model import User
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy.pool import StaticPool
+    from sqlmodel import SQLModel
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    engine = create_async_engine(
+        "sqlite+aiosqlite://",
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
+    )
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(
+                lambda sync_connection: SQLModel.metadata.create_all(
+                    sync_connection,
+                    tables=[User.__table__, AuthzTeam.__table__],
+                )
+            )
+
+        user = User(username="alice", password=str(uuid4()), is_active=True)
+        team = AuthzTeam(team_name="Platform", adom_name="platform")
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            session.add_all([user, team])
+            await session.commit()
+
+            serialized = await shares_module._serialize_shares(
+                session,
+                [
+                    _share(scope=ShareScope.USER.value, target_id=user.id, created_by=user.id),
+                    _share(scope=ShareScope.TEAM.value, target_id=team.id, created_by=user.id),
+                ],
+            )
+
+        assert [share.target_name for share in serialized] == ["alice", "Platform"]
+    finally:
+        await engine.dispose()

@@ -62,7 +62,7 @@ repos:
         pass_filenames: false
       - id: extension-router-trust
         name: Extension router trust - no install/uninstall under /api/v1/extensions
-        entry: python scripts/migrate/check_router_trust.py
+        entry: uv run python scripts/migrate/check_router_trust.py
         language: system
         files: ^src/backend/base/langflow/api/.*\.py$
         pass_filenames: false

@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.0"
+version = "1.1.2"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -14,11 +14,11 @@ keywords = ["langflow", "lfx", "extension", "bundle", "providers"]
 # is an optional extra (see [project.optional-dependencies]); installing
 # lfx-bundles bare gives the provider *code* but defers each provider's SDK to
 # its extra, so a user opts into exactly the providers they need.  The
-# generated ``all`` extra pulls every provider's deps and is what ``langflow``
-# depends on (``lfx-bundles[all]``) so ``pip install langflow`` stays
-# functionally identical to today.
+# generated ``all`` extra pulls every provider's deps for explicit opt-in
+# installs such as ``pip install "lfx[bundles]"`` or
+# ``pip install "lfx-bundles[all]"``.
 dependencies = [
-    "lfx>=1.11.0.dev0,<2.0.0",
+    "lfx>=1.12.0.dev0,<2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -69,7 +69,7 @@ needle = ["needle-python>=0.4.0", "langchain-community>=0.4.1,<1.0.0"]
 notdiamond = []
 notion = ["requests>=2.32.0", "Markdown>=3.8.0"]
 novita = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
-nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0", "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
+nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0", "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
 olivya = []
 ollama = ["langchain-ollama~=0.3.10"]
 openrouter = ["langchain-openai>=1.1.6"]
@@ -260,6 +260,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lfx_bundles"]
+include = [
+    "src/lfx_bundles/**/*.py",
+    "src/lfx_bundles/**/starter_projects/*.json",
+]
 
 [tool.hatch.build.targets.sdist]
 include = [

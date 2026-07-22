@@ -1,4 +1,7 @@
-from types import SimpleNamespace
+import importlib.util
+import socket
+import sys
+from types import ModuleType, SimpleNamespace
 from unittest import mock
 from uuid import uuid4
 
@@ -8,6 +11,24 @@ from httpx import AsyncClient
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 pytestmark = pytest.mark.no_blockbuster
+
+
+@pytest.fixture(autouse=True)
+def fake_langchain_google_genai(monkeypatch):
+    if importlib.util.find_spec("langchain_google_genai") is not None:
+        return
+
+    langchain_google_genai = ModuleType("langchain_google_genai")
+
+    class ChatGoogleGenerativeAI:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def invoke(self, *args, **kwargs):  # noqa: ARG002
+            return "test response"
+
+    langchain_google_genai.ChatGoogleGenerativeAI = ChatGoogleGenerativeAI
+    monkeypatch.setitem(sys.modules, "langchain_google_genai", langchain_google_genai)
 
 
 @pytest.fixture
@@ -410,14 +431,19 @@ async def test_create_variable__ollama_base_url_validation_failure(client: Async
         "default_fields": [],
     }
 
-    # Mock failed Ollama API call
-    with mock.patch("requests.get") as mock_get:
+    # Keep DNS deterministic so SSRF validation reaches the mocked Ollama API call.
+    public_address = [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("93.184.216.34", 0))]
+    with (
+        mock.patch("socket.getaddrinfo", return_value=public_address),
+        mock.patch("requests.get") as mock_get,
+    ):
         mock_get.return_value.status_code = 404
         response = await client.post("api/v1/variables/", json=ollama_variable, headers=logged_in_headers)
         result = response.json()
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Invalid Ollama base URL" in result["detail"]
+        assert mock_get.called
 
 
 @pytest.mark.usefixtures("active_user")
@@ -596,7 +622,7 @@ async def test_delete_provider_credential_cleans_up_enabled_models(client: Async
         enable_response = await client.post(
             "api/v1/models/enabled_models",
             json=[
-                {"provider": "OpenAI", "model_id": "gpt-4-turbo-preview", "enabled": True},
+                {"provider": "OpenAI", "model_id": "gpt-4.1-mini", "enabled": True},
             ],
             headers=logged_in_headers,
         )
@@ -617,7 +643,7 @@ async def test_delete_provider_credential_cleans_up_enabled_models(client: Async
         import json
 
         enabled_models = json.loads(enabled_models_var["value"])
-        assert "gpt-4-turbo-preview" not in enabled_models
+        assert "gpt-4.1-mini" not in enabled_models
 
 
 @pytest.mark.usefixtures("active_user")
