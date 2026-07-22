@@ -8,21 +8,26 @@ if TYPE_CHECKING:
     from .agentql_composio import ComposioAgentQLAPIComponent
     from .agiled_composio import ComposioAgiledAPIComponent
     from .airtable_composio import ComposioAirtableAPIComponent
+    from .apisports_composio import ComposioAPISportsAPIComponent
     from .apollo_composio import ComposioApolloAPIComponent
     from .asana_composio import ComposioAsanaAPIComponent
     from .attio_composio import ComposioAttioAPIComponent
     from .bitbucket_composio import ComposioBitbucketAPIComponent
     from .bolna_composio import ComposioBolnaAPIComponent
+    from .brevo_composio import ComposioBrevoAPIComponent
     from .brightdata_composio import ComposioBrightdataAPIComponent
     from .calendly_composio import ComposioCalendlyAPIComponent
     from .canva_composio import ComposioCanvaAPIComponent
     from .canvas_composio import ComposioCanvasAPIComponent
     from .coda_composio import ComposioCodaAPIComponent
     from .composio_api import ComposioAPIComponent
+    from .connecteam_composio import ComposioConnecteamAPIComponent
     from .contentful_composio import ComposioContentfulAPIComponent
+    from .deepgram_composio import ComposioDeepgramAPIComponent
     from .digicert_composio import ComposioDigicertAPIComponent
     from .discord_composio import ComposioDiscordAPIComponent
     from .elevenlabs_composio import ComposioElevenLabsAPIComponent
+    from .everhour_composio import ComposioEverhourAPIComponent
     from .exa_composio import ComposioExaAPIComponent
     from .figma_composio import ComposioFigmaAPIComponent
     from .finage_composio import ComposioFinageAPIComponent
@@ -40,6 +45,7 @@ if TYPE_CHECKING:
     from .googlemeet_composio import ComposioGooglemeetAPIComponent
     from .googlesheets_composio import ComposioGoogleSheetsAPIComponent
     from .googletasks_composio import ComposioGoogleTasksAPIComponent
+    from .harvest_composio import ComposioHarvestAPIComponent
     from .heygen_composio import ComposioHeygenAPIComponent
     from .instagram_composio import ComposioInstagramAPIComponent
     from .jira_composio import ComposioJiraAPIComponent
@@ -50,23 +56,28 @@ if TYPE_CHECKING:
     from .mem0_composio import ComposioMem0APIComponent
     from .miro_composio import ComposioMiroAPIComponent
     from .missive_composio import ComposioMissiveAPIComponent
+    from .monday_composio import ComposioMondayAPIComponent
     from .notion_composio import ComposioNotionAPIComponent
     from .onedrive_composio import ComposioOneDriveAPIComponent
     from .outlook_composio import ComposioOutlookAPIComponent
     from .pandadoc_composio import ComposioPandadocAPIComponent
     from .peopledatalabs_composio import ComposioPeopleDataLabsAPIComponent
     from .perplexityai_composio import ComposioPerplexityAIAPIComponent
+    from .plain_composio import ComposioPlainAPIComponent
     from .reddit_composio import ComposioRedditAPIComponent
     from .serpapi_composio import ComposioSerpAPIComponent
     from .slack_composio import ComposioSlackAPIComponent
     from .slackbot_composio import ComposioSlackbotAPIComponent
     from .snowflake_composio import ComposioSnowflakeAPIComponent
     from .supabase_composio import ComposioSupabaseAPIComponent
+    from .synthflowai_composio import ComposioSynthFlowAIAPIComponent
     from .tavily_composio import ComposioTavilyAPIComponent
     from .timelinesai_composio import ComposioTimelinesAIAPIComponent
     from .todoist_composio import ComposioTodoistAPIComponent
+    from .typefully_composio import ComposioTypefullyAPIComponent
     from .wrike_composio import ComposioWrikeAPIComponent
     from .youtube_composio import ComposioYoutubeAPIComponent
+    from .zohobooks_composio import ComposioZohoBooksAPIComponent
 
 
 _dynamic_imports = {
@@ -78,7 +89,9 @@ _dynamic_imports = {
     "ComposioSlackbotAPIComponent": "slackbot_composio",
     "ComposioPeopleDataLabsAPIComponent": "peopledatalabs_composio",
     "ComposioPerplexityAIAPIComponent": "perplexityai_composio",
+    "ComposioPlainAPIComponent": "plain_composio",
     "ComposioSupabaseAPIComponent": "supabase_composio",
+    "ComposioSynthFlowAIAPIComponent": "synthflowai_composio",
     "ComposioSerpAPIComponent": "serpapi_composio",
     "ComposioSnowflakeAPIComponent": "snowflake_composio",
     "ComposioTodoistAPIComponent": "todoist_composio",
@@ -87,18 +100,23 @@ _dynamic_imports = {
     "ComposioAgentQLAPIComponent": "agentql_composio",
     "ComposioAgiledAPIComponent": "agiled_composio",
     "ComposioAirtableAPIComponent": "airtable_composio",
+    "ComposioAPISportsAPIComponent": "apisports_composio",
     "ComposioApolloAPIComponent": "apollo_composio",
     "ComposioAsanaAPIComponent": "asana_composio",
     "ComposioAttioAPIComponent": "attio_composio",
     "ComposioBitbucketAPIComponent": "bitbucket_composio",
     "ComposioBolnaAPIComponent": "bolna_composio",
+    "ComposioBrevoAPIComponent": "brevo_composio",
     "ComposioBrightdataAPIComponent": "brightdata_composio",
     "ComposioCalendlyAPIComponent": "calendly_composio",
     "ComposioCanvasAPIComponent": "canvas_composio",
     "ComposioContentfulAPIComponent": "contentful_composio",
+    "ComposioConnecteamAPIComponent": "connecteam_composio",
+    "ComposioDeepgramAPIComponent": "deepgram_composio",
     "ComposioDigicertAPIComponent": "digicert_composio",
     "ComposioDiscordAPIComponent": "discord_composio",
     "ComposioElevenLabsAPIComponent": "elevenlabs_composio",
+    "ComposioEverhourAPIComponent": "everhour_composio",
     "ComposioExaAPIComponent": "exa_composio",
     "ComposioFigmaAPIComponent": "figma_composio",
     "ComposioFinageAPIComponent": "finage_composio",
@@ -116,6 +134,7 @@ _dynamic_imports = {
     "ComposioGooglemeetAPIComponent": "googlemeet_composio",
     "ComposioGoogleSheetsAPIComponent": "googlesheets_composio",
     "ComposioGoogleTasksAPIComponent": "googletasks_composio",
+    "ComposioHarvestAPIComponent": "harvest_composio",
     "ComposioHeygenAPIComponent": "heygen_composio",
     "ComposioInstagramAPIComponent": "instagram_composio",
     "ComposioJiraAPIComponent": "jira_composio",
@@ -126,17 +145,21 @@ _dynamic_imports = {
     "ComposioMem0APIComponent": "mem0_composio",
     "ComposioMiroAPIComponent": "miro_composio",
     "ComposioMissiveAPIComponent": "missive_composio",
+    "ComposioMondayAPIComponent": "monday_composio",
     "ComposioNotionAPIComponent": "notion_composio",
     "ComposioOneDriveAPIComponent": "onedrive_composio",
     "ComposioOutlookAPIComponent": "outlook_composio",
     "ComposioPandadocAPIComponent": "pandadoc_composio",
     "ComposioTimelinesAIAPIComponent": "timelinesai_composio",
+    "ComposioTypefullyAPIComponent": "typefully_composio",
     "ComposioWrikeAPIComponent": "wrike_composio",
+    "ComposioZohoBooksAPIComponent": "zohobooks_composio",
 }
 
 # Always expose all components - individual failures will be handled on import
 __all__ = [
     "ComposioAPIComponent",
+    "ComposioAPISportsAPIComponent",
     "ComposioAgentQLAPIComponent",
     "ComposioAgiledAPIComponent",
     "ComposioAirtableAPIComponent",
@@ -145,16 +168,19 @@ __all__ = [
     "ComposioAttioAPIComponent",
     "ComposioBitbucketAPIComponent",
     "ComposioBolnaAPIComponent",
+    "ComposioBrevoAPIComponent",
     "ComposioBrightdataAPIComponent",
-    "ComposioCalendlyAPIComponent",
     "ComposioCalendlyAPIComponent",
     "ComposioCanvaAPIComponent",
     "ComposioCanvasAPIComponent",
     "ComposioCodaAPIComponent",
+    "ComposioConnecteamAPIComponent",
     "ComposioContentfulAPIComponent",
+    "ComposioDeepgramAPIComponent",
     "ComposioDigicertAPIComponent",
     "ComposioDiscordAPIComponent",
     "ComposioElevenLabsAPIComponent",
+    "ComposioEverhourAPIComponent",
     "ComposioExaAPIComponent",
     "ComposioFigmaAPIComponent",
     "ComposioFinageAPIComponent",
@@ -172,35 +198,39 @@ __all__ = [
     "ComposioGoogleTasksAPIComponent",
     "ComposioGoogleclassroomAPIComponent",
     "ComposioGooglemeetAPIComponent",
+    "ComposioHarvestAPIComponent",
     "ComposioHeygenAPIComponent",
     "ComposioInstagramAPIComponent",
     "ComposioJiraAPIComponent",
     "ComposioJotformAPIComponent",
     "ComposioKlaviyoAPIComponent",
-    "ComposioKlaviyoAPIComponent",
-    "ComposioLinearAPIComponent",
     "ComposioLinearAPIComponent",
     "ComposioListennotesAPIComponent",
     "ComposioMem0APIComponent",
     "ComposioMiroAPIComponent",
     "ComposioMissiveAPIComponent",
+    "ComposioMondayAPIComponent",
     "ComposioNotionAPIComponent",
     "ComposioOneDriveAPIComponent",
     "ComposioOutlookAPIComponent",
     "ComposioPandadocAPIComponent",
     "ComposioPeopleDataLabsAPIComponent",
     "ComposioPerplexityAIAPIComponent",
+    "ComposioPlainAPIComponent",
     "ComposioRedditAPIComponent",
     "ComposioSerpAPIComponent",
     "ComposioSlackAPIComponent",
     "ComposioSlackbotAPIComponent",
     "ComposioSnowflakeAPIComponent",
     "ComposioSupabaseAPIComponent",
+    "ComposioSynthFlowAIAPIComponent",
     "ComposioTavilyAPIComponent",
     "ComposioTimelinesAIAPIComponent",
     "ComposioTodoistAPIComponent",
+    "ComposioTypefullyAPIComponent",
     "ComposioWrikeAPIComponent",
     "ComposioYoutubeAPIComponent",
+    "ComposioZohoBooksAPIComponent",
 ]
 
 
