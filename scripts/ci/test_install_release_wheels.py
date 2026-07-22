@@ -118,11 +118,36 @@ def test_restore_frontend_replaces_wheel_assets(tmp_path: Path, monkeypatch: pyt
     installed_frontend = package_dir / "frontend"
     installed_frontend.mkdir(parents=True)
     (installed_frontend / "index.html").write_text("wheel build", encoding="utf-8")
+
+    commands: list[list[object]] = []
+
+    def find_installed_package(command: list[object], **_kwargs: object) -> str:
+        commands.append(command)
+        return str(package_dir)
+
+    monkeypatch.setattr(
+        "scripts.ci.install_release_wheels.subprocess.check_output",
+        find_installed_package,
+    )
+
+    python = tmp_path / "python"
+    _restore_frontend(python, frontend_source)
+
+    assert commands[0][:3] == [python, "-I", "-c"]
+    assert (installed_frontend / "index.html").read_text(encoding="utf-8") == "docker build"
+
+
+def test_restore_frontend_rejects_source_target_collision(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    package_dir = tmp_path / "langflow"
+    frontend_source = package_dir / "frontend"
+    frontend_source.mkdir(parents=True)
+    (frontend_source / "index.html").write_text("docker build", encoding="utf-8")
     monkeypatch.setattr(
         "scripts.ci.install_release_wheels.subprocess.check_output",
         lambda *_args, **_kwargs: str(package_dir),
     )
 
-    _restore_frontend(tmp_path / "python", frontend_source)
+    with pytest.raises(ValueError, match="must be different"):
+        _restore_frontend(tmp_path / "python", frontend_source)
 
-    assert (installed_frontend / "index.html").read_text(encoding="utf-8") == "docker build"
+    assert (frontend_source / "index.html").read_text(encoding="utf-8") == "docker build"

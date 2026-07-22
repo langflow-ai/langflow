@@ -91,8 +91,14 @@ def _restore_frontend(python: Path, frontend_source: Path) -> None:
         "assert spec is not None and spec.origin is not None; "
         "print(Path(spec.origin).parent)"
     )
-    package_dir = Path(subprocess.check_output([python, "-c", command], text=True).strip())  # noqa: S603
-    frontend_target = package_dir / "frontend"
+    # Isolated mode keeps the Dockerfile's source-tree working directory off
+    # sys.path so find_spec resolves the wheel installed in site-packages.
+    package_dir = Path(subprocess.check_output([python, "-I", "-c", command], text=True).strip())  # noqa: S603
+    frontend_source = frontend_source.resolve()
+    frontend_target = (package_dir / "frontend").resolve()
+    if frontend_source == frontend_target:
+        msg = f"Frontend source and target must be different: {frontend_source}"
+        raise ValueError(msg)
     shutil.rmtree(frontend_target, ignore_errors=True)
     shutil.copytree(frontend_source, frontend_target)
     print(f"Restored Docker-built frontend assets to {frontend_target}")
