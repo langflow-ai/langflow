@@ -45,7 +45,7 @@ class TestResolveAssistantFsRoot:
         monkeypatch.setattr(
             importlib.util,
             "find_spec",
-            lambda name, *a, **kw: (None if name == ISOLATION_MODULE else original_find_spec(name, *a, **kw)),
+            lambda name, *a, **kw: None if name == ISOLATION_MODULE else original_find_spec(name, *a, **kw),
         )
         return fake_home
 

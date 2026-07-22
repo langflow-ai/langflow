@@ -102,7 +102,7 @@ class TestExecuteRealFlows:
 
         # Even in verbose mode, output should have the JSON result
         # When using CliRunner, check result.output which contains combined stdout/stderr
-        json_output = result.stdout if result.stdout else result.output
+        json_output = result.stdout or result.output
 
         # Find the JSON block by looking for lines that start with { and collecting until }
         json_lines = []
@@ -394,7 +394,7 @@ class TestExecuteRealFlows:
         assert result_verbose.exit_code == 0
 
         # output should have pretty-printed JSON (multi-line)
-        json_output = result_verbose.stdout if result_verbose.stdout else result_verbose.output
+        json_output = result_verbose.stdout or result_verbose.output
 
         # Find the JSON block by looking for lines that start with { and collecting until }
         json_lines = []
@@ -497,7 +497,7 @@ class TestAsyncFunctionality:
         assert result.exit_code == 0
 
         # If async_start wasn't working, we'd get an error
-        json_output = result.stdout if result.stdout else result.output
+        json_output = result.stdout or result.output
 
         json_lines = []
         in_json = False

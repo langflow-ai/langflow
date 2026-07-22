@@ -341,7 +341,7 @@ class BaseFileComponent(Component, ABC):
             return getattr(self, cache_attr)
 
         data_list = self.load_files_base()
-        result = data_list if data_list else [Data()]
+        result = data_list or [Data()]
         setattr(self, cache_attr, result)
         setattr(self, cache_paths_attr, current_paths)
         return result
