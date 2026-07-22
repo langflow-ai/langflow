@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.langflow.org/extension/v1.json",
   "id": "lfx-cohere",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "name": "Cohere",
   "description": "Cohere component(s) as a standalone Langflow Extension Bundle.",
   "lfx": {

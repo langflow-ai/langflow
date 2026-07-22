@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.1"
+version = "1.1.2"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -18,7 +18,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "providers"]
 # installs such as ``pip install "lfx[bundles]"`` or
 # ``pip install "lfx-bundles[all]"``.
 dependencies = [
-    "lfx>=1.11.0.dev0,<2.0.0",
+    "lfx>=1.12.0.dev0,<2.0.0",
 ]
 
 [project.optional-dependencies]
