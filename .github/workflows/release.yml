@@ -34,7 +34,7 @@ on:
         type: boolean
         default: false
       release_bundles:
-        description: "Release every src/bundles/* package (select when this release introduces bundle versions not yet on PyPI)"
+        description: "Release/reuse every src/bundles/* package (required before publishing LFX, base, or main)"
         required: false
         type: boolean
         default: false
@@ -181,9 +181,21 @@ jobs:
             exit 1
           fi
 
+          if [ "${{ inputs.release_lfx }}" = "true" ] && [ "${{ inputs.release_bundles }}" = "false" ]; then
+            echo "Error: Cannot release LFX before validating and publishing its required bundles."
+            echo "Please enable 'release_bundles' or disable 'release_lfx'."
+            exit 1
+          fi
+
           if [ "${{ inputs.release_bundles }}" = "true" ] && [ "${{ inputs.release_lfx }}" = "false" ]; then
             echo "Error: Cannot release bundles without releasing LFX."
             echo "Bundle builds are validated against the selected LFX artifact."
+            exit 1
+          fi
+
+          if [ "${{ inputs.release_package_main }}" = "true" ] && [ "${{ inputs.release_bundles }}" = "false" ]; then
+            echo "Error: Cannot release Langflow Main without releasing bundles."
+            echo "Langflow Main pins exact bundle versions (lfx-arxiv, lfx-duckduckgo, ...). Please enable 'release_bundles' or disable 'release_package_main'."
             exit 1
           fi
 
@@ -1406,12 +1418,22 @@ jobs:
 
           requirements = [Requirement(value) for value in metadata.get_all("Requires-Dist", [])]
           dependency_names = {canonicalize_name(requirement.name) for requirement in requirements}
+          bundle_requirements = [
+              requirement
+              for requirement in requirements
+              if canonicalize_name(requirement.name) == "lfx-bundles"
+          ]
           assert metadata["Name"] == "langflow"
           assert "langflow-core" in dependency_names
           assert "langflow-base" not in dependency_names
           assert any(name.startswith("lfx-") for name in dependency_names)
+          assert "bundles" in metadata.get_all("Provides-Extra", [])
+          assert len(bundle_requirements) == 1
+          assert "all-no-torch" in bundle_requirements[0].extras
+          assert bundle_requirements[0].marker is not None
+          assert 'extra == "bundles"' in str(bundle_requirements[0].marker)
           assert not any(name.endswith(".dist-info/entry_points.txt") for name in names)
-          print(f"Verified {wheel.name}: core + bundles, no direct base or console script")
+          print(f"Verified {wheel.name}: curated defaults + opt-in bundles extra, no direct base or console script")
           PY
       - name: Test CLI
         run: |
@@ -1467,67 +1489,16 @@ jobs:
           prune-cache: false
       - name: Install the project
         run: uv sync
-      - name: Set unpublished bundle versions for pre-release
+      - name: Apply content-aware bundle pre-release plan
         if: ${{ inputs.pre_release }}
+        env:
+          LFX_VERSION: ${{ needs.determine-lfx-version.outputs.version }}
+          RC_NUMBER: ${{ needs.determine-rc-number.outputs.rc_number }}
         run: |
-          set -euo pipefail
-
-          pypi_final_exists() {
-            local package_name="$1"
-            local version="$2"
-            local response_file
-            response_file="$(mktemp)"
-            local status
-            status=$(curl --retry 3 --retry-delay 2 --retry-connrefused -sS -o "$response_file" -w "%{http_code}" "https://pypi.org/pypi/${package_name}/${version}/json")
-            if [ "$status" = "200" ]; then
-              return 0
-            fi
-            if [ "$status" = "404" ]; then
-              return 1
-            fi
-            echo "Failed to check PyPI release ${package_name} ${version}: HTTP ${status}" >&2
-            cat "$response_file" >&2 || true
-            exit 1
-          }
-
-          RC_NUMBER="${{ needs.determine-rc-number.outputs.rc_number }}"
-          echo "Setting unpublished bundle pre-release versions with shared rc number: rc$RC_NUMBER"
-          for pyproject in src/bundles/*/pyproject.toml; do
-            read -r PACKAGE_NAME CURRENT_VERSION < <(python3 - "$pyproject" <<'PY'
-          import pathlib
-          import sys
-          import tomllib
-
-          data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text())
-          print(data["project"]["name"], data["project"]["version"])
-          PY
-          )
-            if pypi_final_exists "$PACKAGE_NAME" "$CURRENT_VERSION"; then
-              echo "Keeping ${PACKAGE_NAME} at ${CURRENT_VERSION}: final version is already published."
-              continue
-            fi
-            VERSION=$(uv run ./scripts/ci/langflow_pre_release_tag.py "$CURRENT_VERSION" --rc-number "$RC_NUMBER")
-            sed -i.bak "0,/^version = /s|^version = .*|version = \"$VERSION\"|" "$pyproject"
-            rm -f "${pyproject}.bak"
-            echo "Set ${PACKAGE_NAME} to ${VERSION}."
-          done
-      - name: Relax bundle lfx floor for pre-release
-        if: ${{ inputs.pre_release }}
-        run: |
-          # Bundles floor lfx at the release line (e.g. lfx>=1.10.0). A pre-release
-          # such as 1.10.0rc0 sorts BELOW 1.10.0 under PEP 440, so it fails that
-          # floor and the cross-platform install test cannot resolve. Mirror what
-          # build-base / build-main / build-lfx already do for pre-release: rewrite
-          # the floor to the exact pre-release lfx version, preserving the bundle's
-          # wide <2.0.0 BUNDLE_API cap. Stable source stays at >=1.10.0 -- only the
-          # RC wheels are relaxed, at build time.
-          LFX_VERSION="${{ needs.determine-lfx-version.outputs.version }}"
-          echo "Relaxing bundle lfx floor to pre-release version: $LFX_VERSION"
-          for pyproject in src/bundles/*/pyproject.toml; do
-            sed -i.bak -E "s|\"lfx>=[^\"]*\"|\"lfx>=${LFX_VERSION},<2.0.0\"|" "$pyproject"
-            rm -f "${pyproject}.bak"
-            grep -E '"lfx>=' "$pyproject" | sed "s|^|  ${pyproject}: |"
-          done
+          python3 scripts/ci/bundle_release_plan.py restamp \
+            --rc-number "$RC_NUMBER" \
+            --lfx-version "$LFX_VERSION" \
+            --output bundle-version-plan.json
       - name: Build bundle wheels
         id: build
         run: |
@@ -1547,6 +1518,12 @@ jobs:
           done
           echo "bundles-found=1" >> $GITHUB_OUTPUT
           ls -la bundles-dist/
+      - name: Generate reviewable bundle artifact plan
+        if: steps.build.outputs.bundles-found == '1'
+        run: |
+          python3 scripts/ci/bundle_release_plan.py artifacts \
+            --output bundle-artifact-plan.json \
+            bundles-dist/*.whl
       - name: Record bundle version manifest
         if: ${{ inputs.pre_release }}
         run: |
@@ -1564,6 +1541,15 @@ jobs:
           output.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
           print(output.read_text())
           PY
+      - name: Upload bundle release plans
+        if: steps.build.outputs.bundles-found == '1'
+        uses: actions/upload-artifact@v6
+        with:
+          name: bundle-release-plans
+          path: |
+            bundle-version-plan.json
+            bundle-artifact-plan.json
+          if-no-files-found: error
       - name: Upload bundles artifact
         if: steps.build.outputs.bundles-found == '1'
         uses: actions/upload-artifact@v6
@@ -1588,6 +1574,40 @@ jobs:
       bundles-artifact-name: ${{ needs.build-bundles.result == 'success' && needs.build-bundles.outputs.bundles-found == '1' && 'dist-bundles' || '' }}
       pre_release: ${{ inputs.pre_release }}
 
+  release-inventory:
+    name: Validate release inventories
+    needs:
+      [
+        build-base,
+        build-bundles,
+        build-core,
+        build-lfx,
+        build-main,
+        build-sdk,
+        determine-core-version,
+        determine-main-version,
+        test-cross-platform,
+      ]
+    if: |
+      always() &&
+      !cancelled() &&
+      (needs.test-cross-platform.result == 'success' || needs.test-cross-platform.result == 'skipped') &&
+      (needs.build-core.result == 'success' ||
+       needs.build-main.result == 'success' ||
+       inputs.build_docker_core ||
+       inputs.build_docker_main)
+    uses: ./.github/workflows/release-inventory-gate.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      main-version: ${{ needs.determine-main-version.outputs.version }}
+      core-version: ${{ needs.determine-core-version.outputs.version || needs.determine-main-version.outputs.version }}
+      sdk-artifact-name: ${{ needs.build-sdk.result == 'success' && 'dist-sdk' || '' }}
+      lfx-artifact-name: ${{ needs.build-lfx.result == 'success' && 'dist-lfx' || '' }}
+      base-artifact-name: ${{ needs.build-base.result == 'success' && 'dist-base' || '' }}
+      core-artifact-name: ${{ needs.build-core.result == 'success' && 'dist-core' || '' }}
+      main-artifact-name: ${{ needs.build-main.result == 'success' && 'dist-main' || '' }}
+      bundles-artifact-name: ${{ needs.build-bundles.result == 'success' && needs.build-bundles.outputs.bundles-found == '1' && 'dist-bundles' || '' }}
+
   publish-base:
     name: Publish Langflow Base to PyPI
     if: |
@@ -1596,9 +1616,10 @@ jobs:
       inputs.release_package_base &&
       needs.build-base.result == 'success' &&
       needs.test-cross-platform.result == 'success' &&
+      (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped') &&
       needs.ci.result == 'success' &&
       (needs.publish-lfx.result == 'success' || needs.publish-lfx.result == 'skipped')
-    needs: [build-base, test-cross-platform, ci, publish-lfx]
+    needs: [build-base, test-cross-platform, release-inventory, ci, publish-lfx]
     runs-on: ubuntu-latest
     steps:
       - name: Download base artifact
@@ -1620,13 +1641,14 @@ jobs:
 
   publish-core:
     name: Publish Langflow Core to PyPI
-    needs: [build-core, test-cross-platform, ci, publish-base]
+    needs: [build-core, test-cross-platform, release-inventory, ci, publish-base]
     if: |
       always() &&
       !cancelled() &&
       inputs.release_package_core &&
       needs.build-core.result == 'success' &&
       needs.test-cross-platform.result == 'success' &&
+      needs.release-inventory.result == 'success' &&
       needs.ci.result == 'success' &&
       (needs.publish-base.result == 'success' || needs.publish-base.result == 'skipped')
     runs-on: ubuntu-latest
@@ -1650,7 +1672,7 @@ jobs:
 
   publish-bundles:
     name: Publish Bundles to PyPI
-    needs: [build-bundles, test-cross-platform, ci, publish-lfx]
+    needs: [build-bundles, test-cross-platform, release-inventory, ci]
     if: |
       always() &&
       !cancelled() &&
@@ -1658,10 +1680,15 @@ jobs:
       needs.build-bundles.result == 'success' &&
       needs.build-bundles.outputs.bundles-found == '1' &&
       needs.test-cross-platform.result == 'success' &&
-      needs.ci.result == 'success' &&
-      (needs.publish-lfx.result == 'success' || needs.publish-lfx.result == 'skipped')
+      (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped') &&
+      needs.ci.result == 'success'
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+          persist-credentials: false
       - name: Download bundles artifact
         uses: actions/download-artifact@v7
         with:
@@ -1677,56 +1704,20 @@ jobs:
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          shopt -s nullglob
-          wheels=(bundles-dist/*.whl)
-          if [ ${#wheels[@]} -eq 0 ]; then
-            echo "No bundle wheels to publish."
-            exit 0
-          fi
-          failed=0
-          pypi_publish_delay_seconds=60
-          pypi_publish_max_attempts=5
-          wheel_count=${#wheels[@]}
-          wheel_number=0
-          for wheel in "${wheels[@]}"; do
-            wheel_number=$((wheel_number + 1))
-            echo "Publishing $wheel"
-            attempt=1
-            published=0
-            while true; do
-              # Tolerate "already exists" so reruns -- or a bundle whose version is
-              # unchanged and already on PyPI -- do not fail the job. Matches the
-              # duplicate-tolerant publish in release_bundles.yml.
-              if err=$(uv publish "$wheel" 2>&1); then
-                echo "$err"
-                published=1
-                break
-              fi
-              echo "$err"
-              if echo "$err" | grep -qiE 'already exists|file already exists|HTTP 400|duplicate'; then
-                echo "Skipping $wheel: already published."
-                break
-              fi
-              if echo "$err" | grep -qiE 'HTTP 429|429 Too Many Requests|Too many new projects created'; then
-                if [ "$attempt" -lt "$pypi_publish_max_attempts" ]; then
-                  echo "PyPI rate limited $wheel; sleeping ${pypi_publish_delay_seconds}s before retry $((attempt + 1))/${pypi_publish_max_attempts}."
-                  sleep "$pypi_publish_delay_seconds"
-                  attempt=$((attempt + 1))
-                  continue
-                fi
-              fi
-              echo "Publish failed for $wheel"
-              failed=1
-              break
-            done
-            if [ "$published" = "1" ] && [ "$wheel_number" -lt "$wheel_count" ]; then
-              echo "Sleeping ${pypi_publish_delay_seconds}s before the next PyPI upload."
-              sleep "$pypi_publish_delay_seconds"
-            fi
-          done
-          if [ "$failed" = "1" ]; then
-            exit 1
-          fi
+          python3 scripts/ci/bundle_release_plan.py publish \
+            --publish-attempts 5 \
+            --publish-delay 60 \
+            --verify-attempts 10 \
+            --verify-delay 30 \
+            --output bundle-publish-result.json \
+            bundles-dist/*.whl
+      - name: Upload bundle publish result
+        if: ${{ always() && !inputs.dry_run }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: bundle-publish-result
+          path: bundle-publish-result.json
+          if-no-files-found: ignore
 
   publish-main:
     name: Publish Langflow Main to PyPI
@@ -1736,6 +1727,7 @@ jobs:
       inputs.release_package_main &&
       needs.build-main.result == 'success' &&
       needs.test-cross-platform.result == 'success' &&
+      needs.release-inventory.result == 'success' &&
       needs.ci.result == 'success' &&
       (needs.publish-bundles.result == 'success' || needs.publish-bundles.result == 'skipped') &&
       (needs.publish-core.result == 'success' ||
@@ -1746,6 +1738,7 @@ jobs:
         build-main,
         determine-core-version,
         test-cross-platform,
+        release-inventory,
         publish-base,
         publish-core,
         publish-bundles,
@@ -1772,13 +1765,14 @@ jobs:
 
   publish-sdk:
     name: Publish langflow-sdk to PyPI
-    needs: [build-sdk, test-cross-platform, ci]
+    needs: [build-sdk, test-cross-platform, release-inventory, ci]
     if: |
       always() &&
       !cancelled() &&
       inputs.release_sdk &&
       needs.build-sdk.result == 'success' &&
       needs.ci.result == 'success' &&
+      (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped') &&
       (needs.test-cross-platform.result == 'success' || needs.test-cross-platform.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
@@ -1805,15 +1799,17 @@ jobs:
 
   publish-lfx:
     name: Publish LFX to PyPI
-    needs: [build-lfx, test-cross-platform, ci, publish-sdk]
+    needs: [build-lfx, test-cross-platform, release-inventory, ci, publish-sdk, publish-bundles]
     if: |
       always() &&
       !cancelled() &&
       inputs.release_lfx &&
       needs.build-lfx.result == 'success' &&
       needs.test-cross-platform.result == 'success' &&
+      (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped') &&
       needs.ci.result == 'success' &&
-      (needs.publish-sdk.result == 'success' || needs.publish-sdk.result == 'skipped')
+      (needs.publish-sdk.result == 'success' || needs.publish-sdk.result == 'skipped') &&
+      needs.publish-bundles.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Download LFX artifact
@@ -1835,8 +1831,13 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    if: ${{ inputs.build_docker_base }}
-    needs: [ci, determine-base-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_base &&
+      needs.ci.result == 'success' &&
+      (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped')
+    needs: [ci, determine-base-version, release-inventory]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -1848,8 +1849,13 @@ jobs:
 
   call_docker_build_core:
     name: Call Docker Build Workflow for Langflow Core
-    if: ${{ inputs.build_docker_core }}
-    needs: [ci, determine-core-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_core &&
+      needs.ci.result == 'success' &&
+      needs.release-inventory.result == 'success'
+    needs: [ci, determine-core-version, release-inventory]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -1861,8 +1867,13 @@ jobs:
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci, determine-main-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_main &&
+      needs.ci.result == 'success' &&
+      needs.release-inventory.result == 'success'
+    needs: [ci, determine-main-version, release-inventory]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -1900,8 +1911,13 @@ jobs:
 
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci, determine-main-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_main &&
+      needs.ci.result == 'success' &&
+      needs.release-inventory.result == 'success'
+    needs: [ci, determine-main-version, release-inventory]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -1913,8 +1929,13 @@ jobs:
 
   call_docker_build_main_all:
     name: Call Docker Build Workflow for langflow-all
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci, determine-main-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_main &&
+      needs.ci.result == 'success' &&
+      needs.release-inventory.result == 'success'
+    needs: [ci, determine-main-version, release-inventory]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}

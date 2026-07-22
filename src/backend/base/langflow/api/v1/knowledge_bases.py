@@ -56,6 +56,7 @@ from langflow.services.authorization import (
     KnowledgeBaseAction,
     ensure_knowledge_base_permission,
 )
+from langflow.services.authorization.listing import visible_scope_prefilter
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
@@ -1385,7 +1386,16 @@ async def list_knowledge_bases(
         knowledge_bases: list[KnowledgeBaseInfo] = []
         kb_ids_to_fetch: list[uuid.UUID] = []
 
-        rows = await knowledge_base_service.list_by_user(current_user.id)
+        visibility = await visible_scope_prefilter(
+            current_user,
+            resource_type="knowledge_base",
+            act=KnowledgeBaseAction.READ,
+        )
+        rows = (
+            await knowledge_base_service.list_by_user(current_user.id)
+            if visibility is None
+            else await knowledge_base_service.list_owned_or_visible(current_user.id, visibility)
+        )
 
         if rows:
             for row in rows:
