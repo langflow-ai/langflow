@@ -72,7 +72,7 @@ from langflow.services.authorization import (
     DeploymentAction,
     ensure_deployment_permission,
     filter_visible_resources,
-    visible_id_prefilter,
+    visible_scope_prefilter,
 )
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import _resolve_authz_domain
@@ -690,10 +690,10 @@ async def list_deployments(
     # before the prefilter could widen anything. ``load_from_provider`` lists via
     # the owner's live provider connection, so it always requires an owned account
     # and never consults the prefilter.
-    visible_deployment_ids = (
+    visibility_scope = (
         None
         if load_from_provider
-        else await visible_id_prefilter(
+        else await visible_scope_prefilter(
             current_user,
             resource_type="deployment",
             domain=_resolve_authz_domain(None, project_id),
@@ -709,7 +709,7 @@ async def list_deployments(
     # provider account by id alone so a shared deployment under another user's
     # provider account can be listed; the (owner ⊕ visible) union below still
     # governs which rows actually surface.
-    if visible_deployment_ids:
+    if visibility_scope is not None and visibility_scope.has_cross_user_access:
         provider_account = await get_shared_listing_provider_account_or_404(provider_id=provider_id, db=session)
     else:
         provider_account = await get_owned_provider_account_or_404(
@@ -741,6 +741,7 @@ async def list_deployments(
             deployment_adapter=deployment_adapter,
             deployment_mapper=deployment_mapper,
             user_id=current_user.id,
+            provider_owner_id=provider_account.user_id,
             provider_id=provider_id,
             db=session,
             page=params.page,
@@ -748,7 +749,7 @@ async def list_deployments(
             deployment_type=deployment_type,
             flow_version_ids=effective_flow_version_ids,
             project_id=project_id,
-            allowed_ids=visible_deployment_ids,
+            visibility_scope=visibility_scope,
         )
     # Per-deployment authorization filter. Mirrors GET /flows/ and GET /projects/:
     # the coarse READ check above gates whether the caller can list deployments
@@ -758,7 +759,7 @@ async def list_deployments(
     # skip the per-row enforce. ``total`` may overcount denied items only on this
     # fallback path. ``rows_with_counts`` is ``list[tuple[Deployment, int,
     # list[...]]]`` so the key/domain extractors operate on the first element.
-    if visible_deployment_ids is None:
+    if visibility_scope is None:
         rows_with_counts = await filter_visible_resources(
             current_user,
             resource_type="deployment",
@@ -1631,7 +1632,7 @@ async def delete_deployment(
     await _delete_local_deployment_row_with_commit_retry(
         session=session,
         deployment_id=deployment_row.id,
-        user_id=current_user.id,
+        user_id=deployment_row.user_id,
         resource_key=deployment_row.resource_key,
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -13,6 +13,9 @@ import re
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.components.ollama.ollama_embeddings import OllamaEmbeddingsComponent
 
 from tests.base import ComponentTestBaseWithoutClient

@@ -220,6 +220,7 @@ async def test_list_deployments_page_attachment_count_only_counts_live_flow_vers
     # String-match on compiled SQL because these tests use mocked sessions.
     statement_text = str(db.exec.await_args.args[0]).lower()
     assert "join flow_version" in statement_text
+    assert "flow_version_deployment_attachment.user_id" not in statement_text
 
 
 @pytest.mark.asyncio

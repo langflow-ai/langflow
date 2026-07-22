@@ -58,7 +58,7 @@ describe("ActionPickerComponent add flow", () => {
   it("should show a naming input with a placeholder while adding", () => {
     renderAdding(baseProps);
     expect(
-      screen.getByPlaceholderText("Name this action…"),
+      screen.getByPlaceholderText("Name this choice…"),
     ).toBeInTheDocument();
   });
 

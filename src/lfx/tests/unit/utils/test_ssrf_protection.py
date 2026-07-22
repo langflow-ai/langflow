@@ -137,6 +137,11 @@ class TestIPBlocking:
             "fc00::1",  # ULA
             "fe80::1",  # Link-local
             "ff00::1",  # Multicast
+            # IPv6 transition prefixes whose embedded IPv4 is blocked (decoded + re-checked, SSRF)
+            "2002:a9fe:a9fe::1",  # 6to4 of 169.254.169.254 (metadata)
+            "2002:0a00:0005::1",  # 6to4 of 10.0.0.5 (RFC 1918)
+            "64:ff9b::a9fe:a9fe",  # NAT64 of 169.254.169.254 (metadata)
+            "64:ff9b::169.254.169.254",  # NAT64 dotted form of metadata
         ],
     )
     def test_blocked_ips(self, ip):
@@ -155,6 +160,10 @@ class TestIPBlocking:
             # Public IPv6 addresses
             "2001:4860:4860::8888",  # Google DNS
             "2606:4700:4700::1111",  # Cloudflare DNS
+            # Transition prefixes encoding a *public* IPv4 must stay reachable (IPv6-only / DNS64)
+            "64:ff9b::8.8.8.8",  # NAT64 of 8.8.8.8 (public)
+            "64:ff9b::0808:0808",  # NAT64 of 8.8.8.8, hextet form
+            "2002:0808:0808::1",  # 6to4 of 8.8.8.8 (public)
         ],
     )
     def test_allowed_ips(self, ip):

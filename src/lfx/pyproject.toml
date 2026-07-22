@@ -1,6 +1,6 @@
 [project]
 name = "lfx"
-version = "1.11.0"
+version = "1.12.0"
 description = "Langflow Executor - A lightweight CLI tool for executing and serving Langflow AI flows"
 readme = "README.md"
 authors = [
@@ -42,6 +42,7 @@ dependencies = [
     "defusedxml>=0.7.1,<1.0.0",
     "passlib>=1.7.4,<2.0.0",
     "pydantic-settings>=2.10.1,<3.0.0",
+    "toml>=0.10.2,<1.0.0",
     "tomli>=2.2.1,<3.0.0",
     "pyyaml>=6.0.0,<7.0.0",
     "orjson>=3.11.6,<4.0.0",
@@ -56,9 +57,9 @@ dependencies = [
     "cryptography>=48.0.1",
     "pyjwt>=2.10.0,<3.0.0",
     "ag-ui-protocol>=0.1.10",
-    "langflow-sdk>=0.3.0",
+    "langflow-sdk>=0.4.0",
     "markitdown>=0.1.4,<2.0.0",
-    "setuptools>=80.0.0,<81.0.0",
+    "setuptools>=83.0.0,<84.0.0",
     "wheel>=0.46.2,<1.0.0",
     "mcp>=1.17.0,<2.0.0",
     "psutil>=5.9.0,<8.0.0",  # pre-fork TCP connection check (lfx.fork.find_ghost_connections)
@@ -78,8 +79,7 @@ opendsstar = [
 # Relocated out of langflow-base[complete], where they were the de-facto provider
 # for these lfx-core components after the bundle split.
 cassandra = ["cassio>=0.1.7"]  # Cassandra vector-store / chat-memory components
-# Gated off 3.14 because ToolGuard depends on litellm.
-toolguard = ["toolguard>=0.2.20,<1.0.0; python_version < '3.14'"]  # ToolGuard Policies component
+toolguard = ["toolguard>=0.2.20,<1.0.0"]  # ToolGuard Policies component
 # Engine-only by default: ``pip install lfx`` ships NO bundles.  This optional
 # extra pulls the long-tail metapackage for users who want the provider
 # components without the full ``langflow`` server install:
@@ -127,6 +127,7 @@ dev = [
     "blockbuster>=1.5.25",
     "coverage>=7.9.2",
     "hypothesis>=6.136.3",
+    "langchain-anthropic~=1.4.6",
     "pytest>=9.0.3",
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=7.0.0",

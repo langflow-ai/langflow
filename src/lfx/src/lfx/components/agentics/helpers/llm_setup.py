@@ -11,6 +11,7 @@ from lfx.components.agentics.constants import (
 )
 from lfx.components.agentics.helpers.llm_factory import create_llm
 from lfx.components.agentics.helpers.model_config import validate_model_selection
+from lfx.services.model_provider_policy import require_model_provider
 
 if TYPE_CHECKING:
     from crewai import LLM
@@ -34,6 +35,7 @@ def prepare_llm_from_component(component: Component) -> LLM:
         ValueError: If model is not selected or required API key is missing for the provider.
     """
     model_name, provider = validate_model_selection(component.model)
+    require_model_provider(user_id=component.user_id, provider=provider)
     api_key = get_api_key_for_provider(component.user_id, provider, component.api_key)
 
     if not api_key and provider != PROVIDER_OLLAMA:

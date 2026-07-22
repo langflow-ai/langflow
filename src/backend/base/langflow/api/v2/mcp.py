@@ -39,6 +39,22 @@ def is_mcp_servers_locked(settings: object) -> bool:
     return getattr(settings, "mcp_servers_locked", False) is True
 
 
+def ensure_mcp_stdio_access(server_config: dict, current_user: CurrentActiveUser, settings: object) -> None:
+    """Restrict local MCP processes when custom code execution is restricted."""
+    mode = server_config.get("mode")
+    is_stdio = bool(server_config.get("command")) or (isinstance(mode, str) and mode.lower() == "stdio")
+    code_execution_restricted = (
+        getattr(settings, "allow_custom_components", True) is False
+        or getattr(settings, "custom_component_admin_only", False) is True
+    )
+
+    if is_stdio and code_execution_restricted and getattr(current_user, "is_superuser", False) is not True:
+        raise HTTPException(
+            status_code=403,
+            detail="MCP stdio servers are restricted to administrators when custom code execution is restricted.",
+        )
+
+
 def _enforce_immutable_server_name(server_name: str, server_config: dict) -> dict:
     """Enforce that the server name is owned by the URL path, not the request body.
 
@@ -247,6 +263,9 @@ async def get_servers(
         # Return only the server names, with mode and toolsCount as None
         return [{"name": server_name, "mode": None, "toolsCount": None} for server_name in server_list["mcpServers"]]
 
+    for server_config in server_list["mcpServers"].values():
+        ensure_mcp_stdio_access(server_config, current_user, settings_service.settings)
+
     # Check all of the tool counts for each server concurrently
     async def check_server(server_name: str) -> dict:
         server_info: dict[str, str | int | None] = {"name": server_name, "mode": None, "toolsCount": None}
@@ -402,6 +421,10 @@ async def update_server(
     in-process lock. A concurrent create of the *same* name is caught by the unique
     constraint and folded into an update.
     """
+    settings = getattr(settings_service, "settings", None)
+    if not delete:
+        ensure_mcp_stdio_access(server_config, current_user, settings)
+
     result = await session.exec(
         select(MCPServer).where(MCPServer.user_id == current_user.id, MCPServer.name == server_name)
     )
@@ -426,6 +449,7 @@ async def update_server(
     else:
         new_config = server_config
 
+    ensure_mcp_stdio_access(new_config, current_user, settings)
     encrypted_config = encrypt_mcp_config(new_config)
     transport = _derive_transport(new_config)
 
@@ -455,6 +479,7 @@ async def update_server(
             raise HTTPException(status_code=500, detail="Server already exists.") from None
         if merge_existing:
             merged = {**decrypt_mcp_config(existing.config or {}), **server_config}
+            ensure_mcp_stdio_access(merged, current_user, settings)
             existing.config = encrypt_mcp_config(merged)
             existing.transport = _derive_transport(merged)
         else:

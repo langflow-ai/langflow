@@ -16,12 +16,19 @@ from langflow.api.v1.schemas.authz_shares import ShareCreate, ShareRead, ShareUp
 from langflow.services.authorization import ShareAction, ensure_share_permission
 from langflow.services.authorization.invalidation import safe_invalidate_all, safe_invalidate_user
 from langflow.services.authorization.utils import audit_decision
-from langflow.services.database.models.auth import AuthzShare, AuthzTeamMember, SharePermissionLevel, ShareScope
+from langflow.services.database.models.auth import (
+    AuthzShare,
+    AuthzTeam,
+    AuthzTeamMember,
+    SharePermissionLevel,
+    ShareScope,
+)
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
+from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_authorization_service
@@ -52,9 +59,46 @@ async def _resolve_resource_owner(
         return None
     model, owner_attr = lookup
     row = await session.get(model, resource_id)
+    # Memory Bases share the ``knowledge_base`` authorization namespace, but
+    # their ids live in ``memory_base`` rather than ``knowledge_base``. Keep a
+    # single external resource type while resolving either backing model.
+    if row is None and resource_type == "knowledge_base":
+        row = await session.get(MemoryBase, resource_id)
     if row is None:
         return None
     return getattr(row, owner_attr, None)
+
+
+async def _serialize_shares(session: DbSession, rows: list[AuthzShare]) -> list[ShareRead]:
+    """Serialize shares with human-readable user and team target names.
+
+    ``target_id`` is polymorphic, so the database cannot expose a normal ORM
+    relationship. Resolve each target kind in one query and keep the name
+    optional for deleted or otherwise stale targets.
+    """
+    user_ids = {row.target_id for row in rows if row.scope == ShareScope.USER.value and row.target_id is not None}
+    team_ids = {row.target_id for row in rows if row.scope == ShareScope.TEAM.value and row.target_id is not None}
+
+    user_names: dict[UUID, str] = {}
+    if user_ids:
+        user_rows = await session.exec(select(User.id, User.username).where(User.id.in_(user_ids)))
+        user_names.update(dict(user_rows.all()))
+    team_names: dict[UUID, str] = {}
+    if team_ids:
+        team_rows = await session.exec(select(AuthzTeam.id, AuthzTeam.team_name).where(AuthzTeam.id.in_(team_ids)))
+        team_names.update(dict(team_rows.all()))
+
+    def target_name(row: AuthzShare) -> str | None:
+        if row.scope == ShareScope.USER.value:
+            return user_names.get(row.target_id)
+        if row.scope == ShareScope.TEAM.value:
+            return team_names.get(row.target_id)
+        return None
+
+    return [
+        ShareRead.model_validate(row, from_attributes=True).model_copy(update={"target_name": target_name(row)})
+        for row in rows
+    ]
 
 
 def _share_visible(
@@ -210,7 +254,7 @@ async def create_share(
             detail="Share could not be created: it may already exist or conflict with an existing share.",
         ) from exc
     await session.refresh(row)
-    response = ShareRead.model_validate(row, from_attributes=True)
+    response = (await _serialize_shares(session, [row]))[0]
     await session.commit()
 
     # Refresh policy after commit so plugins using a separate DB connection see
@@ -277,14 +321,14 @@ async def list_shares(
 
     is_superuser = getattr(current_user, "is_superuser", False)
     if is_superuser:
-        return [ShareRead.model_validate(row, from_attributes=True) for row in rows]
+        return await _serialize_shares(session, rows)
 
     # Pre-fetch team memberships (avoid N+1 per row).
     team_membership_stmt = select(AuthzTeamMember.team_id).where(AuthzTeamMember.user_id == current_user.id)
     caller_team_ids: set[UUID] = set(await session.exec(team_membership_stmt))
 
     # Filter rows by visibility rules for non-superusers.
-    visible: list[ShareRead] = []
+    visible: list[AuthzShare] = []
     owner_cache: dict[tuple[str, UUID], UUID | None] = {}
     for row in rows:
         key = (row.resource_type, row.resource_id)
@@ -300,8 +344,8 @@ async def list_shares(
             resource_owner_id=owner_cache[key],
             caller_team_ids=caller_team_ids,
         ):
-            visible.append(ShareRead.model_validate(row, from_attributes=True))
-    return visible
+            visible.append(row)
+    return await _serialize_shares(session, visible)
 
 
 def _row_visible_to(
@@ -355,7 +399,7 @@ async def get_share(
         # UUID privacy: forbidden share → 404.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share not found")
 
-    return ShareRead.model_validate(row, from_attributes=True)
+    return (await _serialize_shares(session, [row]))[0]
 
 
 @router.patch("/{share_id}", response_model=ShareRead)
@@ -405,7 +449,7 @@ async def update_share(
             detail="Share could not be updated: it may conflict with an existing share.",
         ) from exc
     await session.refresh(row)
-    response = ShareRead.model_validate(row, from_attributes=True)
+    response = (await _serialize_shares(session, [row]))[0]
     await session.commit()
 
     await _refresh_policy_for_share(response.scope, response.target_id, op="share:update")
