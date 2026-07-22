@@ -39,7 +39,6 @@ on:
 env:
   POETRY_VERSION: "1.8.3"
   PYTHON_VERSION: "3.13"
-  NIGHTLY_RELEASE_BRANCH: "release-1.11.0"
 
 jobs:
   validate-inputs:
@@ -52,7 +51,7 @@ jobs:
           exit 1
   create-nightly-tag:
     if: github.repository == 'langflow-ai/langflow'
-      needs: [validate-inputs]
+    needs: [validate-inputs]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -69,7 +68,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-            ref: ${{ env.NIGHTLY_RELEASE_BRANCH }}
+          ref: release-1.11.0
           persist-credentials: true
       - name: Confirm branch
         run: git branch --show-current
@@ -202,13 +201,13 @@ jobs:
   frontend-tests-linux:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
     name: Run Frontend Tests - Linux
-      needs: [create-nightly-tag]
+    needs: [create-nightly-tag]
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests"
       release: true
       runs-on: ubuntu-latest
-        ref: ${{ env.NIGHTLY_RELEASE_BRANCH }}
+      ref: release-1.11.0
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
@@ -218,7 +217,7 @@ jobs:
   frontend-tests-windows:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
     name: Run Frontend Tests - Windows
-      needs: [create-nightly-tag]
+    needs: [create-nightly-tag]
     # Windows tests are non-blocking - the release-nightly-build job only checks
     # frontend-tests-linux.result, allowing Windows tests to fail without blocking the build.
     # This gives us visibility into Windows-specific issues while we stabilize the tests.
@@ -227,7 +226,7 @@ jobs:
       tests_folder: "tests"
       release: true
       runs-on: windows-latest
-        ref: ${{ env.NIGHTLY_RELEASE_BRANCH }}
+      ref: release-1.11.0
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
@@ -237,12 +236,12 @@ jobs:
   backend-unit-tests:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_backend_tests
     name: Run Backend Unit Tests
-      needs: [create-nightly-tag]
+    needs: [create-nightly-tag]
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14"]'
       runs-on: ${{ inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
-        ref: ${{ env.NIGHTLY_RELEASE_BRANCH }}
+      ref: release-1.11.0
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -261,10 +260,10 @@ jobs:
   stress-tests:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_backend_tests
     name: Run Stress Tests
-      needs: [create-nightly-tag]
+    needs: [create-nightly-tag]
     uses: ./.github/workflows/stress-tests.yml
     with:
-        ref: ${{ env.NIGHTLY_RELEASE_BRANCH }}
+      ref: release-1.11.0
 
   release-nightly-build:
     if: github.repository == 'langflow-ai/langflow' && always() && needs.create-nightly-tag.result == 'success' && needs.frontend-tests-linux.result != 'failure' && needs.backend-unit-tests.result != 'failure'
