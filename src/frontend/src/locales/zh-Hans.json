@@ -2179,5 +2179,8 @@
   "inspectionPanel.close": "关闭",
   "nodeToolbar.parameters": "参数",
   "canvasControls.minimizeAll": "全部最小化",
-  "canvasControls.expandAll": "全部展开"
+  "canvasControls.expandAll": "全部展开",
+  "handle.ariaLabelInput": "节点 {{node}} 上 {{field}} 的输入句柄",
+  "handle.ariaLabelOutput": "节点 {{node}} 上 {{field}} 的输出句柄",
+  "edge.ariaLabel": "从 {{source}} 到 {{target}} 的 Edge"
 }

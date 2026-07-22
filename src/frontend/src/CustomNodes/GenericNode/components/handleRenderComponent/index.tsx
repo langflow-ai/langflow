@@ -1,5 +1,6 @@
 import { type Connection, Handle, Position } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { useDarkStore } from "@/stores/darkStore";
@@ -191,6 +192,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   colorName?: string[];
   minimizedHandleTop?: string;
 }) {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
 
@@ -447,6 +449,10 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     [],
   );
 
+  const handleAriaLabel = left
+    ? t("handle.ariaLabelInput", { field: title, node: nodeId })
+    : t("handle.ariaLabelOutput", { field: title, node: nodeId });
+
   return (
     <div>
       <ShadTooltip
@@ -492,6 +498,8 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           onMouseDown={handleMouseDown}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          role="button"
+          aria-label={handleAriaLabel}
           data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
             !showNode ? (left ? "target" : "source") : left ? "left" : "right"
           }`}

@@ -2179,5 +2179,8 @@
   "inspectionPanel.close": "Fechar",
   "nodeToolbar.parameters": "Parâmetros",
   "canvasControls.minimizeAll": "Minimizar tudo",
-  "canvasControls.expandAll": "Expandir tudo"
+  "canvasControls.expandAll": "Expandir tudo",
+  "handle.ariaLabelInput": "Identificador de entrada para {{field}} no nó {{node}}",
+  "handle.ariaLabelOutput": "Identificador de saída para {{field}} no nó {{node}}",
+  "edge.ariaLabel": "Edge: de {{source}} para {{target}}"
 }

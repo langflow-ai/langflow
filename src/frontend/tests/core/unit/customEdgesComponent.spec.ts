@@ -61,6 +61,21 @@ test(
     await page.mouse.up();
 
     await expect(page.locator(".react-flow__edge-interaction")).toHaveCount(2);
+
+    // The handles resolved above by testid must also be reachable by their
+    // accessible name — confirms the aria-label targets the same element.
+    await expect(
+      page.getByRole("button", { name: /Output handle for Toolset/ }).first(),
+    ).toHaveCount(1);
+    await expect(
+      page.getByRole("button", { name: /Input handle for Tools/ }).first(),
+    ).toHaveCount(1);
+
+    // The newly created edge exposes an accessible name identifying the
+    // connection's source and target.
+    await expect(
+      page.getByRole("img", { name: /^Edge from .* to .*/ }).last(),
+    ).toBeVisible();
   },
 );
 

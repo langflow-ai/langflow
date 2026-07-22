@@ -2179,5 +2179,8 @@
   "inspectionPanel.close": "Schließen",
   "nodeToolbar.parameters": "Parameter",
   "canvasControls.minimizeAll": "Alles minimieren",
-  "canvasControls.expandAll": "Alles erweitern"
+  "canvasControls.expandAll": "Alles erweitern",
+  "handle.ariaLabelInput": "Eingabe-Handle für „ {{field}} “ am Knoten „ {{node}} “",
+  "handle.ariaLabelOutput": "Ausgabegriff für „ {{field}} “ auf dem Knoten „ {{node}} “",
+  "edge.ariaLabel": "Wechsel von „ {{source}} “ zu „ {{target}} “"
 }

@@ -2179,5 +2179,8 @@
   "inspectionPanel.close": "Fermer",
   "nodeToolbar.parameters": "Paramètres",
   "canvasControls.minimizeAll": "Tout réduire",
-  "canvasControls.expandAll": "Tout développer"
+  "canvasControls.expandAll": "Tout développer",
+  "handle.ariaLabelInput": "Descripteur d'entrée pour la fonction « {{field}} » sur le nœud {{node}}",
+  "handle.ariaLabelOutput": "Poignée de sortie pour {{field}} sur le nœud {{node}}",
+  "edge.ariaLabel": "Passage d' {{source}} à {{target}}"
 }
