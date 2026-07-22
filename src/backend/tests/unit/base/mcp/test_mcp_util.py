@@ -286,6 +286,86 @@ class TestMCPSessionManager:
         # Clean up after test
         await manager.cleanup_all()
 
+    async def test_stdio_session_creation_cancellation_stops_background_task(self, session_manager):
+        """Cancelling session creation must also stop the task that owns the subprocess."""
+        initialize_started = asyncio.Event()
+
+        class BlockingClientSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+            async def initialize(self):
+                initialize_started.set()
+                await asyncio.Event().wait()
+
+        stdio_client = MagicMock()
+        stdio_client.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+        stdio_client.return_value.__aexit__ = AsyncMock(return_value=None)
+        existing_tasks = set(session_manager._background_tasks)
+
+        with (
+            patch("lfx.base.mcp.util.ClientSession", return_value=BlockingClientSession()),
+            patch("mcp.client.stdio.stdio_client", stdio_client),
+        ):
+            creation_task = asyncio.create_task(session_manager._create_stdio_session("test_session", MagicMock()))
+            await asyncio.wait_for(initialize_started.wait(), timeout=1)
+            session_tasks = set(session_manager._background_tasks) - existing_tasks
+            assert len(session_tasks) == 1
+
+            with pytest.raises(asyncio.TimeoutError):
+                await asyncio.wait_for(creation_task, timeout=0.01)
+
+            await asyncio.wait_for(asyncio.gather(*session_tasks, return_exceptions=True), timeout=1)
+
+        assert session_tasks.isdisjoint(session_manager._background_tasks)
+
+    async def test_http_session_creation_cancellation_stops_background_task(self, session_manager):
+        """Cancelling HTTP session creation must also stop the task that owns the transport."""
+        initialize_started = asyncio.Event()
+
+        class BlockingClientSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+            async def initialize(self):
+                initialize_started.set()
+                await asyncio.Event().wait()
+
+        streamable_client = MagicMock()
+        streamable_client.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock(), MagicMock()))
+        streamable_client.return_value.__aexit__ = AsyncMock(return_value=None)
+        connection_params = {
+            "url": "http://test-mcp.example/mcp",
+            "headers": {},
+            "timeout_seconds": 30,
+            "verify_ssl": True,
+        }
+        existing_tasks = set(session_manager._background_tasks)
+
+        with (
+            patch("lfx.base.mcp.util.ClientSession", return_value=BlockingClientSession()),
+            patch("mcp.client.streamable_http.streamablehttp_client", streamable_client),
+        ):
+            creation_task = asyncio.create_task(
+                session_manager._create_streamable_http_session("test_session", connection_params)
+            )
+            await asyncio.wait_for(initialize_started.wait(), timeout=1)
+            session_tasks = set(session_manager._background_tasks) - existing_tasks
+            assert len(session_tasks) == 1
+
+            with pytest.raises(asyncio.TimeoutError):
+                await asyncio.wait_for(creation_task, timeout=0.01)
+
+            await asyncio.wait_for(asyncio.gather(*session_tasks, return_exceptions=True), timeout=1)
+
+        assert session_tasks.isdisjoint(session_manager._background_tasks)
+
     async def test_session_caching(self, session_manager):
         """Test that sessions are properly cached and reused."""
         context_id = "test_context"
