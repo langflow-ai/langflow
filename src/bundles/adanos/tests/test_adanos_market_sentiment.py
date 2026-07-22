@@ -41,6 +41,25 @@ def test_frontend_schema_marks_api_key_as_secret() -> None:
 
     assert node["template"]["api_key"]["password"] is True
     assert node["template"]["symbol"]["tool_mode"] is True
+    assert node["template"]["asset_type"]["real_time_refresh"] is True
+    assert node["template"]["source"]["dynamic"] is True
+
+
+def test_secret_value_unwraps_secret_str_like_object() -> None:
+    secret = Mock()
+    secret.get_secret_value.return_value = "  unwrapped-key  "
+
+    assert AdanosMarketSentimentComponent._secret_value(secret) == "unwrapped-key"
+
+
+@pytest.mark.parametrize(("asset_type", "visibility"), [("Stocks", "visible"), ("Crypto", "hidden")])
+def test_asset_type_controls_stock_source_visibility(asset_type: str, visibility: str) -> None:
+    component = AdanosMarketSentimentComponent()
+    build_config = {"source": {"show": True}}
+
+    result = component.update_build_config(build_config, asset_type, "asset_type")
+
+    assert result["source"]["show"] is (visibility == "visible")
 
 
 @patch(HTTPX_GET)

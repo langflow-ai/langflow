@@ -57,6 +57,7 @@ class AdanosMarketSentimentComponent(Component):
             display_name="Asset Type",
             options=["Stocks", "Crypto"],
             value="Stocks",
+            real_time_refresh=True,
         ),
         DropdownInput(
             name="source",
@@ -64,6 +65,8 @@ class AdanosMarketSentimentComponent(Component):
             options=list(_STOCK_SOURCES),
             value="Reddit",
             info="Used for stocks. Crypto sentiment is currently sourced from Reddit.",
+            dynamic=True,
+            show=True,
         ),
         MessageTextInput(
             name="symbol",
@@ -99,12 +102,14 @@ class AdanosMarketSentimentComponent(Component):
 
     @staticmethod
     def _secret_value(value: Any) -> str:
+        """Return a normalized API key from string or secret input values."""
         if hasattr(value, "get_secret_value"):
             value = value.get_secret_value()
         return str(value or "").strip()
 
     @staticmethod
     def _parse_date(value: str, field_name: str) -> str | None:
+        """Validate and normalize an optional ISO calendar date."""
         normalized = (value or "").strip()
         if not normalized:
             return None
@@ -119,6 +124,7 @@ class AdanosMarketSentimentComponent(Component):
         return parsed_date.isoformat()
 
     def _request_parts(self) -> tuple[str, dict[str, str | int]]:
+        """Build the API path and query parameters for the selected operation."""
         if self.operation not in _OPERATION_PATHS:
             msg = "Unsupported Adanos operation."
             raise ValueError(msg)
@@ -176,7 +182,14 @@ class AdanosMarketSentimentComponent(Component):
 
         return path, params
 
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        """Show the stock source only when the selected asset type is Stocks."""
+        if field_name == "asset_type":
+            build_config["source"]["show"] = field_value == "Stocks"
+        return build_config
+
     def fetch_sentiment(self) -> Data:
+        """Fetch market sentiment from Adanos and return it as Langflow Data."""
         api_key = self._secret_value(self.api_key)
         if not api_key:
             msg = "Adanos API key is required."
