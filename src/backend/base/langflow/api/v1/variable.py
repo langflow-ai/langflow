@@ -175,7 +175,7 @@ async def create_variable(
             raise HTTPException(status_code=400, detail=str(e)) from e
 
     try:
-        return await variable_service.create_variable(
+        created_variable = await variable_service.create_variable(
             user_id=current_user.id,
             name=variable.name,
             value=variable.value,
@@ -187,6 +187,11 @@ async def create_variable(
         if isinstance(e, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
+        response = VariableRead.model_validate(created_variable, from_attributes=True)
+        response.is_owner = True
+        response.can_manage_shares = True
+        return response
 
 
 @router.get("/", response_model=list[VariableRead], status_code=200, include_in_schema=False)
@@ -314,12 +319,21 @@ async def update_variable(
 
         # Mutate against the resolved owner so the owner-scoped service query
         # matches the row a share-aware fetch resolved.
-        return await variable_service.update_variable_fields(
+        updated_variable = await variable_service.update_variable_fields(
             user_id=owner_id,
             variable_id=variable_id,
             variable=variable,
             session=session,
         )
+        is_owner = str(owner_id) == str(current_user.id)
+        response = VariableRead.model_validate(updated_variable, from_attributes=True)
+        response.is_owner = is_owner
+        response.can_manage_shares = is_owner
+        # A shared variable may be used by runtime resolution, but mutation
+        # responses must never disclose the owner's existing stored value when
+        # a recipient patches metadata or omits ``value`` entirely.
+        if not is_owner:
+            response.value = None
     except NoResultFound as e:
         raise HTTPException(status_code=404, detail="Variable not found") from e
     except ValueError as e:
@@ -328,6 +342,8 @@ async def update_variable(
         if isinstance(e, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
+        return response
 
 
 @router.delete("/{variable_id}", status_code=204, include_in_schema=False)

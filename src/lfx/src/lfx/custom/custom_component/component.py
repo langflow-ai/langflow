@@ -56,6 +56,7 @@ if TYPE_CHECKING:
     from lfx.inputs.inputs import InputTypes
     from lfx.schema.dataframe import DataFrame
     from lfx.schema.log import LoggableType
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
 
 logger = logging.getLogger(__name__)
@@ -1282,8 +1283,35 @@ class Component(CustomComponent):
     async def _build_without_tracing(self):
         return await self._build_results()
 
+    def require_model_provider_policy(self, purpose: ModelProviderPolicyPurpose) -> None:
+        """Gate standalone model/embedding components before sensitive work."""
+        # Enforce provider policy before tracing, input setup, output methods,
+        # credential lookup, or provider imports. This closes the legacy saved
+        # standalone-node path that does not use unified_models.get_llm().
+        from lfx.base.embeddings.model import LCEmbeddingsModel
+        from lfx.base.models.model import LCModelComponent
+
+        if isinstance(self, LCModelComponent | LCEmbeddingsModel):
+            from lfx.base.models.provider_registry import (
+                model_component_provider_id,
+                uses_standalone_model_provider_policy,
+            )
+            from lfx.services.model_provider_policy import require_model_provider
+
+            if not uses_standalone_model_provider_policy(self):
+                return
+            require_model_provider(
+                user_id=self.user_id,
+                provider=model_component_provider_id(self),
+                purpose=purpose,
+            )
+
     async def build_results(self):
         """Build the results of the component."""
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        self.require_model_provider_policy(ModelProviderPolicyPurpose.USE)
+
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
         elif hasattr(self, "_session_id"):

@@ -9,6 +9,7 @@ from fastapi import BackgroundTasks, HTTPException
 from langflow.api.v1 import voice_mode
 from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.deps import session_scope
+from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
 
 
 def _flow(*, owner_id, description="Authorized flow"):
@@ -33,6 +34,64 @@ class _DescriptionProbe:
     def description(self):
         self.description_reads += 1
         return "private description"
+
+
+@pytest.mark.asyncio
+async def test_openai_voice_policy_denial_precedes_secret_lookup(monkeypatch):
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    websocket = SimpleNamespace(send_json=AsyncMock())
+    variable_service = SimpleNamespace(
+        get_variable=AsyncMock(side_effect=AssertionError("secret lookup reached after provider denial"))
+    )
+    require_provider = Mock(side_effect=ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.USE))
+    monkeypatch.setattr(voice_mode, "get_variable_service", Mock(return_value=variable_service))
+    monkeypatch.setattr(voice_mode, "require_model_provider", require_provider, raising=False)
+
+    result = await voice_mode.authenticate_and_get_openai_key(SimpleNamespace(), user, websocket)
+
+    assert result == (None, None)
+    require_provider.assert_called_once_with(
+        user_id=user.id,
+        provider="OpenAI",
+        purpose=ModelProviderPolicyPurpose.USE,
+        attributes={"is_superuser": False},
+    )
+    variable_service.get_variable.assert_not_awaited()
+    websocket.send_json.assert_awaited_once_with(
+        {
+            "type": "error",
+            "code": "policy_blocked",
+            "message": "The requested model provider is not available",
+        }
+    )
+
+
+@pytest.mark.asyncio
+async def test_openai_voice_policy_allows_secret_lookup(monkeypatch):
+    user = SimpleNamespace(id=uuid4(), is_superuser=True)
+    session = SimpleNamespace()
+    websocket = SimpleNamespace(send_json=AsyncMock())
+    variable_service = SimpleNamespace(get_variable=AsyncMock(return_value="sk-test"))
+    require_provider = Mock()
+    monkeypatch.setattr(voice_mode, "get_variable_service", Mock(return_value=variable_service))
+    monkeypatch.setattr(voice_mode, "require_model_provider", require_provider, raising=False)
+
+    result = await voice_mode.authenticate_and_get_openai_key(session, user, websocket)
+
+    assert result == (user, "sk-test")
+    require_provider.assert_called_once_with(
+        user_id=user.id,
+        provider="OpenAI",
+        purpose=ModelProviderPolicyPurpose.USE,
+        attributes={"is_superuser": True},
+    )
+    variable_service.get_variable.assert_awaited_once_with(
+        user_id=user.id,
+        name="OPENAI_API_KEY",
+        field="openai_api_key",
+        session=session,
+    )
+    websocket.send_json.assert_not_awaited()
 
 
 @pytest.mark.asyncio

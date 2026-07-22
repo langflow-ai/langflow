@@ -156,6 +156,23 @@ def test_register_exposes_stable_identity_display_name_and_aliases():
     assert MODEL_PROVIDER_METADATA["FakeCo"]["display_name"] == "FakeCo Enterprise"
 
 
+def test_model_component_explicit_identity_wins_over_ambiguous_module_name():
+    class AzureEmbeddingComponent:
+        display_name = "Azure OpenAI Embeddings"
+        model_provider_id = "azure-openai"
+
+    assert provider_registry.model_component_provider_id(AzureEmbeddingComponent()) == "azure-openai"
+
+
+def test_model_component_policy_mode_distinguishes_delegate_and_opt_out():
+    class Component:
+        model_provider_policy_mode = "delegate"
+
+    assert provider_registry.uses_standalone_model_provider_policy(Component()) is False
+    Component.model_provider_policy_mode = "none"
+    assert provider_registry.uses_standalone_model_provider_policy(Component()) is False
+
+
 def test_registry_snapshot_deep_freezes_descriptor_payloads():
     register_provider(_fakeco_spec(provider_id="fakeco"))
 

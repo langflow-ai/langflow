@@ -49,7 +49,7 @@ async def create_default_folder_if_it_doesnt_exist(session: AsyncSession, user_i
                     Flow.user_id == user_id,
                 )
             )
-            .values(folder_id=folder.id)
+            .values(folder_id=folder.id, workspace_id=folder.workspace_id)
         )
     return folder
 

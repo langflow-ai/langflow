@@ -58,6 +58,7 @@ class PoliciesComponent(LCModelComponent):
     when the extra isn't installed.
     """
 
+    model_provider_policy_mode = "delegate"
     display_name = "Policies"
     description = """Component for building tool protection code from textual business policies and instructions.
 Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""

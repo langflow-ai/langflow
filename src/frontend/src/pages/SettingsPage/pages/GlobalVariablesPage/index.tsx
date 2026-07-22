@@ -15,9 +15,14 @@ import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVar
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 import {
+  PermissionsProvider,
+  usePermissions,
+} from "@/contexts/permissionsContext";
+import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
 } from "@/controllers/API/queries/variables";
+import CustomVariableShareAction from "@/customization/components/custom-variable-share-action";
 import type { GlobalVariable } from "@/types/global_variables";
 import IconComponent, {
   ForwardedIconComponent,
@@ -25,6 +30,12 @@ import IconComponent, {
 import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
 import useAlertStore from "../../../../stores/alertStore";
+import {
+  authorizedVariableIds,
+  canMutateVariable,
+  canShareVariable,
+  formatVariableValue,
+} from "./variableAccess";
 
 /** Let onCellKeyDown own Enter/Space so AG Grid does not also toggle selection. */
 function suppressRowActionKeys(params: SuppressKeyboardEventParams) {
@@ -35,7 +46,43 @@ function suppressRowActionKeys(params: SuppressKeyboardEventParams) {
 type FocusedCell = { rowIndex: number; colId: string };
 
 export default function GlobalVariablesPage() {
+  const { data: globalVariables } = useGetGlobalVariables();
+  const resourceIds = useMemo(
+    () => globalVariables?.map((variable) => variable.id) ?? [],
+    [globalVariables],
+  );
+
+  return (
+    <PermissionsProvider
+      resourceType="variable"
+      resourceIds={resourceIds}
+      actions={["read", "write", "delete"]}
+    >
+      <GlobalVariablesPageContent globalVariables={globalVariables} />
+    </PermissionsProvider>
+  );
+}
+
+function GlobalVariablesPageContent({
+  globalVariables,
+}: {
+  globalVariables: GlobalVariable[] | undefined;
+}) {
   const { t } = useTranslation();
+  const {
+    can,
+    isLoading: permissionsLoading,
+    isError: permissionsError,
+    permissions,
+  } = usePermissions();
+  const permissionState = useMemo(
+    () => ({
+      isLoading: permissionsLoading,
+      isError: permissionsError,
+      permissions,
+    }),
+    [permissions, permissionsError, permissionsLoading],
+  );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openModal, setOpenModal] = useState(false);
   const initialData = useRef<GlobalVariable | undefined>(undefined);
@@ -82,12 +129,11 @@ export default function GlobalVariablesPage() {
     {
       field: "value",
       valueFormatter: (params: ValueFormatterParams<GlobalVariable>) => {
-        const isCreditential = params.data?.type === "Credential";
-
-        if (isCreditential) {
-          return "*****";
-        }
-        return params.value ?? "";
+        return formatVariableValue(
+          params.data,
+          params.value,
+          t("globalVars.sharedValueHidden", "Shared value hidden"),
+        );
       },
       suppressKeyboardEvent: suppressRowActionKeys,
     },
@@ -101,11 +147,39 @@ export default function GlobalVariablesPage() {
       resizable: false,
       suppressKeyboardEvent: suppressRowActionKeys,
     },
+    {
+      headerName: t("globalVars.columnAccess", "Access"),
+      colId: "access",
+      cellRenderer: ({ data }: { data?: GlobalVariable }) =>
+        data?.is_owner === false ? (
+          <Badge variant="secondary" size="md" className="font-normal">
+            {t("globalVars.shared", "Shared")}
+          </Badge>
+        ) : null,
+      flex: 1,
+      suppressKeyboardEvent: suppressRowActionKeys,
+    },
+    {
+      headerName: t("globalVars.columnActions", "Actions"),
+      colId: "actions",
+      cellRenderer: ({ data }: { data?: GlobalVariable }) => {
+        if (!data || !canShareVariable(data)) return null;
+        return (
+          <CustomVariableShareAction
+            resourceId={data.id}
+            resourceName={data.name}
+          />
+        );
+      },
+      flex: 1,
+      sortable: false,
+      filter: false,
+      suppressKeyboardEvent: suppressRowActionKeys,
+    },
   ];
 
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  const { data: globalVariables } = useGetGlobalVariables();
   const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
 
   // Get list of provider variable names to identify provider credentials
@@ -163,16 +237,63 @@ export default function GlobalVariablesPage() {
     }
   }, [globalVariables, providerVariableNames, setErrorData]);
 
-  async function removeVariables() {
-    selectedRows.map(async (row) => {
-      const id = globalVariables?.find((variable) => variable.name === row)?.id;
+  const revalidateSelectedRows = useCallback(
+    (ids: readonly string[]) =>
+      authorizedVariableIds(
+        ids,
+        validGlobalVariables,
+        "delete",
+        permissionState,
+        can,
+      ),
+    [can, permissionState, validGlobalVariables],
+  );
+
+  const deselectUnauthorizedRows = useCallback(
+    (authorizedIds: readonly string[]) => {
+      const authorized = new Set(authorizedIds);
+      const api = gridRef.current?.api;
+      if (!api || api.isDestroyed()) return;
+      api.forEachNode((node) => {
+        const id = node.data?.id;
+        if (node.isSelected() && (!id || !authorized.has(id)))
+          node.setSelected(false);
+      });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (selectedRows.length === 0) return;
+    const authorizedIds = revalidateSelectedRows(selectedRows);
+    if (
+      authorizedIds.length === selectedRows.length &&
+      authorizedIds.every((id, index) => id === selectedRows[index])
+    )
+      return;
+
+    deselectUnauthorizedRows(authorizedIds);
+    setSelectedRows(authorizedIds);
+  }, [deselectUnauthorizedRows, revalidateSelectedRows, selectedRows]);
+
+  function removeVariables() {
+    const authorizedIds = revalidateSelectedRows(selectedRows);
+    if (authorizedIds.length !== selectedRows.length) {
+      deselectUnauthorizedRows(authorizedIds);
+      setSelectedRows(authorizedIds);
+    }
+
+    authorizedIds.forEach((id) => {
+      const row = validGlobalVariables.find((variable) => variable.id === id);
       mutateDeleteGlobalVariable(
         { id },
         {
           onError: () => {
             setErrorData({
               title: t("globalVars.errorDeletingVariable"),
-              list: [t("globalVars.errorIdNotFound", { name: row })],
+              list: [
+                t("globalVars.errorIdNotFound", { name: row?.name ?? id }),
+              ],
             });
           },
         },
@@ -229,6 +350,7 @@ export default function GlobalVariablesPage() {
   );
 
   function updateVariables(event: RowClickedEvent<GlobalVariable>) {
+    if (!canMutateVariable(event.data, "write", permissionState, can)) return;
     rememberFocusedCell(event.rowIndex, "name");
     initialData.current = event.data;
     setOpenModal(true);
@@ -251,6 +373,8 @@ export default function GlobalVariablesPage() {
       keyboardEvent.preventDefault();
       keyboardEvent.stopPropagation();
       if (event.data) {
+        if (!canMutateVariable(event.data, "write", permissionState, can))
+          return;
         rememberFocusedCell(event.rowIndex, event.column?.getColId());
         initialData.current = event.data;
         setOpenModal(true);
@@ -261,13 +385,15 @@ export default function GlobalVariablesPage() {
     // Space toggles row selection (checkbox) without opening the edit modal.
     // Scoped to this page via onCellKeyDown — other tables are unchanged.
     if (keyboardEvent.key === " " || keyboardEvent.key === "Spacebar") {
+      if (!canMutateVariable(event.data, "delete", permissionState, can))
+        return;
       keyboardEvent.preventDefault();
       keyboardEvent.stopPropagation();
       const select = !event.node.isSelected();
       event.node.setSelected(select, false);
       // TableOptions.hasSelection is read at render time from the grid API, so
       // sync React state so the delete control updates immediately.
-      setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
+      setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
     }
   }
 
@@ -305,9 +431,12 @@ export default function GlobalVariablesPage() {
           key={"globalVariables"}
           overlayNoRowsTemplate={t("globalVars.noDataAvailable")}
           onSelectionChanged={(event: SelectionChangedEvent) => {
-            setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
+            setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
           }}
           rowSelection="multiple"
+          isRowSelectable={(row) =>
+            Boolean(canMutateVariable(row.data, "delete", permissionState, can))
+          }
           onRowClicked={updateVariables}
           onCellKeyDown={handleCellKeyDown}
           onCellFocused={(event) => {

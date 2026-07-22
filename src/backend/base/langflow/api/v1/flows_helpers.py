@@ -255,22 +255,69 @@ async def _validate_and_assign_folder(
     # from flushing the in-progress folder_id mutation before the guard
     # has validated it.
     with session.no_autoflush:
-        if db_flow.folder_id is not None:
-            folder_exists = (
-                await session.exec(select(Folder).where(Folder.id == db_flow.folder_id, Folder.user_id == user_id))
-            ).first()
-            if not folder_exists:
-                db_flow.folder_id = None
-
-        if db_flow.folder_id is None:
-            db_flow.folder_id = await get_default_folder_id(session, user_id)
-
+        await _canonicalize_flow_destination(
+            session,
+            db_flow,
+            user_id,
+            reject_invalid=db_flow.folder_id is not None,
+        )
         await ensure_flow_move_allowed(
             session,
             flow_id=db_flow.id,
             old_folder_id=old_folder_id,
             new_folder_id=db_flow.folder_id,
         )
+
+
+async def _resolve_flow_destination(
+    session: AsyncSession,
+    user_id: UUID,
+    requested_folder_id: UUID | None,
+    *,
+    fallback_folder_id: UUID | None = None,
+    reject_invalid: bool = False,
+) -> tuple[UUID | None, UUID]:
+    """Resolve the folder/workspace tuple that a flow write will actually use.
+
+    Folder membership is canonical. A missing or stale caller folder keeps the
+    established API behavior of falling back to the user's default folder, but
+    callers must authorize this resolved tuple before writing.
+    """
+    folder_id = requested_folder_id if requested_folder_id is not None else fallback_folder_id
+    folder = None
+    if folder_id is not None:
+        folder = (await session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == user_id))).first()
+        if folder is None and requested_folder_id is not None and reject_invalid:
+            raise HTTPException(status_code=400, detail="Folder not found")
+    if folder is None:
+        default_folder_id = await get_default_folder_id(session, user_id)
+        folder = (
+            await session.exec(select(Folder).where(Folder.id == default_folder_id, Folder.user_id == user_id))
+        ).first()
+    if folder is None:
+        raise HTTPException(status_code=400, detail="Folder not found")
+    return folder.workspace_id, folder.id
+
+
+async def _canonicalize_flow_destination(
+    session: AsyncSession,
+    flow: Flow | FlowCreate | FlowUpdate,
+    user_id: UUID,
+    *,
+    fallback_folder_id: UUID | None = None,
+    reject_invalid: bool = False,
+) -> tuple[UUID | None, UUID]:
+    """Apply the canonical destination tuple to a flow payload or row."""
+    workspace_id, folder_id = await _resolve_flow_destination(
+        session,
+        user_id,
+        flow.folder_id,
+        fallback_folder_id=fallback_folder_id,
+        reject_invalid=reject_invalid,
+    )
+    flow.folder_id = folder_id
+    flow.workspace_id = workspace_id
+    return workspace_id, folder_id
 
 
 async def _new_flow(
@@ -345,6 +392,8 @@ async def _read_flow(
     session: AsyncSession,
     flow_id: UUID,
     user_id: UUID,
+    *,
+    for_update: bool = False,
 ):
     """Read a flow.
 
@@ -362,6 +411,7 @@ async def _read_flow(
         resource_id=flow_id,
         owner_column=Flow.user_id,
         owner_id=user_id,
+        for_update=for_update,
     )
 
 
@@ -498,6 +548,7 @@ async def _update_existing_flow(
         update_data = remove_api_keys(update_data)
 
     _apply_update_data(existing_flow, update_data)
+    await _validate_and_assign_folder(session, existing_flow, owner_user_id)
 
     webhook_component = get_webhook_component_in_flow(existing_flow.data or {})
     existing_flow.webhook = webhook_component is not None
@@ -555,6 +606,11 @@ async def _patch_flow(
             raise HTTPException(
                 status_code=403,
                 detail="Cannot change fs_path of a flow you do not own.",
+            )
+        if "workspace_id" in update_data and update_data["workspace_id"] != db_flow.workspace_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot change workspace of a flow you do not own.",
             )
         if "user_id" in update_data and update_data["user_id"] != owner_user_id:
             raise HTTPException(

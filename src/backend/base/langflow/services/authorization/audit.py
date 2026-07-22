@@ -22,12 +22,21 @@ from uuid import UUID
 
 from lfx.log.logger import logger
 
+from langflow.services.auth.context import (
+    AUTH_METHOD_API_KEY,
+    current_auth_context_for_audit,
+    get_current_auth_context,
+)
 from langflow.services.deps import get_settings_service
 
 # Shared audit result vocabulary.
 AUDIT_ALLOW = "allow"
 AUDIT_DENY = "deny"
 AUDIT_OWNER_OVERRIDE = "owner_override"
+
+AUDIT_ACTOR_API_KEY = "api_key"  # pragma: allowlist secret
+AUDIT_ACTOR_UNKNOWN = "unknown"
+AUDIT_ACTOR_USER = "user"
 
 _AUDIT_QUEUE_MAX = 10_000
 _AUDIT_BATCH_MAX = 100
@@ -53,6 +62,46 @@ def _split_obj(obj: str) -> tuple[str | None, UUID | None]:
         return resource_type, None
 
 
+def _coerce_uuid(value: Any) -> UUID | None:
+    """Return a UUID for trusted or string-like input without raising."""
+    if value is None:
+        return None
+    if isinstance(value, UUID):
+        return value
+    try:
+        return UUID(str(value))
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
+def _resolve_actor(user_id: UUID | None) -> tuple[UUID | None, str, UUID | None]:
+    """Derive durable actor identity from the request credential and owner user."""
+    resolved_user_id = _coerce_uuid(user_id)
+    auth_context = get_current_auth_context()
+    if resolved_user_id is not None and auth_context is not None and auth_context.method == AUTH_METHOD_API_KEY:
+        return resolved_user_id, AUDIT_ACTOR_API_KEY, _coerce_uuid(auth_context.api_key_id)
+    if resolved_user_id is not None:
+        return resolved_user_id, AUDIT_ACTOR_USER, resolved_user_id
+    return None, AUDIT_ACTOR_UNKNOWN, None
+
+
+def _merge_audit_details(
+    details: dict[str, Any] | None,
+    *,
+    include_credential: bool,
+) -> dict[str, Any] | None:
+    """Merge request credential metadata centrally while preserving caller details."""
+    credential_details = current_auth_context_for_audit() if include_credential else {}
+    if details is None and not credential_details:
+        return details
+    merged = {**(details or {}), **credential_details}
+    # These names are reserved for the first-class columns. Keeping caller
+    # values in JSON as well would create a second, spoofable actor identity.
+    merged.pop("actor_type", None)
+    merged.pop("actor_id", None)
+    return merged
+
+
 class _AuditEntry:
     """One pending audit row.
 
@@ -62,18 +111,22 @@ class _AuditEntry:
     ``obj`` into ``(resource_type, resource_id)`` once per batch.
     """
 
-    __slots__ = ("action", "details", "obj", "result", "user_id")
+    __slots__ = ("action", "actor_id", "actor_type", "details", "obj", "result", "user_id")
 
     def __init__(
         self,
         *,
         user_id: UUID | None,
+        actor_type: str,
+        actor_id: UUID | None,
         action: str,
         obj: str,
         result: str,
         details: dict[str, Any] | None,
     ) -> None:
         self.user_id = user_id
+        self.actor_type = actor_type
+        self.actor_id = actor_id
         self.action = action
         self.obj = obj
         self.result = result
@@ -174,6 +227,8 @@ async def _flush_audit_batch(batch: list[_AuditEntry]) -> None:
             session.add(
                 AuthzAuditLog(
                     user_id=entry.user_id,
+                    actor_type=entry.actor_type,
+                    actor_id=entry.actor_id,
                     action=entry.action,
                     resource_type=resource_type,
                     resource_id=resource_id,
@@ -251,12 +306,15 @@ async def audit_decision(
         # likely outside an async context (e.g. a sync test); silently skip.
         return
 
+    resolved_user_id, actor_type, actor_id = _resolve_actor(user_id)
     entry = _AuditEntry(
-        user_id=user_id,
+        user_id=resolved_user_id,
+        actor_type=actor_type,
+        actor_id=actor_id,
         action=action,
         obj=obj,
         result=result,
-        details=details,
+        details=_merge_audit_details(details, include_credential=resolved_user_id is not None),
     )
     try:
         queue.put_nowait(entry)
