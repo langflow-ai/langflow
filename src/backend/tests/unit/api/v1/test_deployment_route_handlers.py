@@ -864,11 +864,12 @@ class TestListDeploymentsSharedPrefilter:
         ]
         mock_get_mapper.return_value = mapper
         mock_synced.return_value = ([(row, 0, [])], 1, {})
+        actor = _fake_user()
 
         result = await list_deployments(
             provider_id=pa.id,
             session=MagicMock(),
-            current_user=_fake_user(),
+            current_user=actor,
             params=SimpleNamespace(page=1, size=20),
             deployment_type=None,
         )
@@ -880,6 +881,8 @@ class TestListDeploymentsSharedPrefilter:
         # The prefilter scope is threaded into the synced query so
         # the (owner ⊕ visible) union actually constrains the page + total.
         assert mock_synced.await_args.kwargs["visibility_scope"] == scope
+        assert mock_synced.await_args.kwargs["user_id"] == actor.id
+        assert mock_synced.await_args.kwargs["provider_owner_id"] == pa.user_id
         assert result.total == 1
         assert result.deployments[0].id == shared_id
 

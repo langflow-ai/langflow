@@ -69,6 +69,44 @@ async def test_project_download_uses_resolved_owner_namespace():
     assert actor_id.hex not in project_sql
 
 
+async def test_shared_project_download_filters_flows_by_read_permission():
+    from langflow.api.v1.projects_files import download_project_flows
+
+    actor_id = uuid4()
+    owner_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Shared Project", user_id=owner_id)
+    allowed_flow = Flow(id=uuid4(), name="Allowed Flow", user_id=owner_id, folder_id=project_id, data={})
+    denied_flow = Flow(id=uuid4(), name="Denied Flow", user_id=owner_id, folder_id=project_id, data={})
+
+    project_result = MagicMock()
+    project_result.first.return_value = project
+    flows_result = MagicMock()
+    flows_result.all.return_value = [allowed_flow, denied_flow]
+    session = AsyncMock()
+    session.exec.side_effect = [project_result, flows_result]
+
+    with patch(
+        "langflow.api.v1.projects_files.filter_visible_resources",
+        new_callable=AsyncMock,
+        create=True,
+        return_value=[allowed_flow],
+    ) as filter_visible:
+        response = await download_project_flows(
+            session=session,
+            project_id=project_id,
+            current_user=SimpleNamespace(id=actor_id),
+            project_owner_id=owner_id,
+        )
+
+    body = b"".join([chunk async for chunk in response.body_iterator])
+    with zipfile.ZipFile(io.BytesIO(body), "r") as archive:
+        assert archive.namelist() == ["Allowed Flow.json"]
+
+    filter_visible.assert_awaited_once()
+    assert filter_visible.await_args.kwargs["candidates"] == [allowed_flow, denied_flow]
+
+
 async def test_create_project(client: AsyncClient, logged_in_headers, basic_case):
     response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
     result = response.json()

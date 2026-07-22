@@ -741,6 +741,7 @@ async def list_deployments(
             deployment_adapter=deployment_adapter,
             deployment_mapper=deployment_mapper,
             user_id=current_user.id,
+            provider_owner_id=provider_account.user_id,
             provider_id=provider_id,
             db=session,
             page=params.page,

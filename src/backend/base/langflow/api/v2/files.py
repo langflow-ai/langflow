@@ -508,10 +508,10 @@ async def list_files(
 
         full_list = list(results)
 
-        # Filter out the _mcp_servers file
-        mcp_file = await get_mcp_file(current_user)
-
-        return [file for file in full_list if file.name != mcp_file]
+        # Reserved MCP configuration files are internal implementation details.
+        # Derive the reserved name from each row's true owner because a widened
+        # visibility scope can return files owned by multiple users.
+        return [file for file in full_list if file.name != f"{MCP_SERVERS_FILE}_{file.user_id!s}"]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing files: {e}") from e
 

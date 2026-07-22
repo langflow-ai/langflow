@@ -682,7 +682,6 @@ class TestMemoryBaseGuardPassesRealKbIdentity:
         assert captured["kb_user_id"] == owner_id, "guard must receive the real owner, not the actor"
         assert captured["kb_name"] == mb.kb_name
 
-    @pytest.mark.asyncio
     async def test_shared_memory_base_falls_back_to_unscoped_id_lookup(self):
         from langflow.api.v1.memories import _get_memory_base_for_action
         from langflow.services.authorization import KnowledgeBaseAction
@@ -725,15 +724,33 @@ class TestMemoryBaseGuardPassesRealKbIdentity:
 
         actor_id = uuid.uuid4()
         shared_id = uuid.uuid4()
-        stmt = MemoryBaseService().list_for_user_stmt(
+        service = MemoryBaseService()
+        concrete_stmt = service.list_for_user_stmt(
             actor_id,
             visibility=ResourceVisibilityScope(resource_ids=(shared_id,)),
         )
-        sql = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        concrete_sql = str(concrete_stmt.compile(compile_kwargs={"literal_binds": True}))
 
-        assert actor_id.hex in sql
-        assert shared_id.hex in sql
-        assert " OR " in sql
+        assert actor_id.hex in concrete_sql
+        assert shared_id.hex in concrete_sql
+        assert " OR " in concrete_sql
+
+        for domain_only_scope in (
+            ResourceVisibilityScope(workspace_ids=(uuid.uuid4(),)),
+            ResourceVisibilityScope(project_ids=(uuid.uuid4(),)),
+        ):
+            domain_stmt = service.list_for_user_stmt(actor_id, visibility=domain_only_scope)
+            domain_sql = str(domain_stmt.compile(compile_kwargs={"literal_binds": True}))
+
+            assert actor_id.hex in domain_sql
+            assert " OR " not in domain_sql
+
+        global_stmt = service.list_for_user_stmt(
+            actor_id,
+            visibility=ResourceVisibilityScope(all_resources=True),
+        )
+
+        assert not global_stmt._where_criteria
 
     @pytest.mark.asyncio
     async def test_delete_passes_real_kb_identity_to_guard(self):

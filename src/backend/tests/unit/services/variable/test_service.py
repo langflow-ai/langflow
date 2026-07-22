@@ -173,6 +173,7 @@ async def test_get_variable_resolves_one_explicitly_shared_runtime_value(service
     authz = MagicMock()
     authz.is_enabled = AsyncMock(return_value=True)
     authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = None
     authz.list_visible_resource_ids = AsyncMock(return_value=[shared.id])
 
     with patch("langflow.services.deps.get_authorization_service", return_value=authz):
@@ -180,6 +181,61 @@ async def test_get_variable_resolves_one_explicitly_shared_runtime_value(service
 
     assert isinstance(result, SecretStr)
     assert result.get_secret_value() == "shared-secret"
+
+
+async def test_get_variable_resolves_scope_native_global_runtime_value(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    await service.create_variable(
+        owner_id,
+        "GLOBAL_SHARED_TOKEN",
+        "shared-secret",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = AsyncMock(return_value=ResourceVisibilityScope(all_resources=True))
+    authz.list_visible_resource_ids = AsyncMock(side_effect=AssertionError("legacy visibility hook used"))
+
+    with patch("langflow.services.deps.get_authorization_service", return_value=authz):
+        result = await service.get_variable(actor_id, "GLOBAL_SHARED_TOKEN", "", session=session)
+
+    assert isinstance(result, SecretStr)
+    assert result.get_secret_value() == "shared-secret"
+    authz.get_resource_visibility.assert_awaited_once()
+    authz.list_visible_resource_ids.assert_not_awaited()
+
+
+async def test_get_variable_fails_closed_for_domain_only_runtime_scope(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    await service.create_variable(
+        owner_id,
+        "DOMAIN_ONLY_TOKEN",
+        "shared-secret",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = AsyncMock(
+        return_value=ResourceVisibilityScope(workspace_ids=(uuid4(),), project_ids=(uuid4(),))
+    )
+    authz.list_visible_resource_ids = AsyncMock(side_effect=AssertionError("legacy visibility hook used"))
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        pytest.raises(ValueError, match="DOMAIN_ONLY_TOKEN variable not found"),
+    ):
+        await service.get_variable(actor_id, "DOMAIN_ONLY_TOKEN", "", session=session)
+
+    authz.get_resource_visibility.assert_awaited_once()
+    authz.list_visible_resource_ids.assert_not_awaited()
 
 
 async def test_get_all_redacts_shared_generic_values(service, session: AsyncSession):

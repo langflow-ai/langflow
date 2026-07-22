@@ -22,12 +22,13 @@ from sqlmodel import select
 
 
 class _CapturingSession:
-    def __init__(self) -> None:
+    def __init__(self, rows=None) -> None:
         self.statement = None
+        self.rows = rows or []
 
     async def exec(self, statement):
         self.statement = statement
-        return []
+        return self.rows
 
 
 @pytest.mark.anyio
@@ -50,6 +51,46 @@ async def test_file_list_uses_global_structured_visibility(monkeypatch):
 
     assert session.statement is not None
     assert UserFile.user_id.key not in str(session.statement.whereclause)
+
+
+@pytest.mark.anyio
+async def test_file_list_excludes_reserved_mcp_file_for_every_owner(monkeypatch):
+    actor_id = uuid4()
+    owner_id = uuid4()
+    actor = SimpleNamespace(id=actor_id)
+    actor_mcp_file = UserFile(
+        id=uuid4(),
+        user_id=actor_id,
+        name=f"{files_api.MCP_SERVERS_FILE}_{actor_id}",
+        path=f"{actor_id}/mcp.json",
+        size=1,
+    )
+    owner_mcp_file = UserFile(
+        id=uuid4(),
+        user_id=owner_id,
+        name=f"{files_api.MCP_SERVERS_FILE}_{owner_id}",
+        path=f"{owner_id}/mcp.json",
+        size=1,
+    )
+    shared_file = UserFile(
+        id=uuid4(),
+        user_id=owner_id,
+        name="shared-notes",
+        path=f"{owner_id}/shared-notes.txt",
+        size=1,
+    )
+    session = _CapturingSession([actor_mcp_file, owner_mcp_file, shared_file])
+
+    monkeypatch.setattr(files_api, "ensure_file_permission", AsyncMock())
+    monkeypatch.setattr(
+        files_api,
+        "visible_scope_prefilter",
+        AsyncMock(return_value=ResourceVisibilityScope(all_resources=True)),
+    )
+
+    result = await files_api.list_files(current_user=actor, session=session)
+
+    assert result == [shared_file]
 
 
 @pytest.mark.anyio

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from lfx.log.logger import logger
+from lfx.services.authorization.base import ResourceVisibilityScope
 from sqlmodel import col, select
 
 from langflow.services.auth import utils as auth_utils
@@ -17,7 +18,6 @@ from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from lfx.services.authorization.base import ResourceVisibilityScope
     from lfx.services.settings.service import SettingsService
     from pydantic import SecretStr
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -225,25 +225,34 @@ class DatabaseVariableService(VariableService, Service):
             authz = get_authorization_service()
             if not await authz.is_enabled() or not await authz.supports_cross_user_fetch():
                 raise
-            visible_ids = await authz.list_visible_resource_ids(
-                user_id=UUID(str(user_id)),
-                resource_type="variable",
-                domain="*",
-                act="read",
-            )
-            if not visible_ids:
+            get_visibility = getattr(authz, "get_resource_visibility", None)
+            if get_visibility is None:
+                # Compatibility for duck-typed authorization services that
+                # predate ResourceVisibilityScope.
+                visible_ids = await authz.list_visible_resource_ids(
+                    user_id=UUID(str(user_id)),
+                    resource_type="variable",
+                    domain="*",
+                    act="read",
+                )
+                visibility = None if visible_ids is None else ResourceVisibilityScope(resource_ids=tuple(visible_ids))
+            else:
+                visibility = await get_visibility(
+                    user_id=UUID(str(user_id)),
+                    resource_type="variable",
+                    domain="*",
+                    act="read",
+                )
+            if visibility is None or not (visibility.all_resources or visibility.resource_ids):
                 raise
-            shared_variables = list(
-                (
-                    await session.exec(
-                        select(Variable).where(
-                            col(Variable.id).in_(visible_ids),
-                            Variable.name == name,
-                            Variable.user_id != user_id,
-                        )
-                    )
-                ).all()
-            )
+
+            shared_clauses = [
+                Variable.name == name,
+                Variable.user_id != user_id,
+            ]
+            if not visibility.all_resources:
+                shared_clauses.append(col(Variable.id).in_(visibility.resource_ids))
+            shared_variables = list((await session.exec(select(Variable).where(*shared_clauses))).all())
             if not shared_variables:
                 raise
             if len(shared_variables) > 1:

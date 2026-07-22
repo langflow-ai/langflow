@@ -151,7 +151,6 @@ def _payload_for(resource_id: UUID) -> ShareCreate:
     )
 
 
-@pytest.mark.asyncio
 async def test_memory_base_resolves_as_knowledge_base_resource_owner():
     from langflow.services.database.models.memory_base.model import MemoryBase
 
