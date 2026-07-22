@@ -374,21 +374,29 @@ def _otel_min_severity() -> int:
     # warnings are routed into logging (logging.captureWarnings) the warning re-enters here.
     # With the cache already set that re-entry returns immediately instead of recursing.
     _otel_min_severity_cache = severity if severity is not None else _INFO_SEVERITY
+    # The notice is best-effort, and deliberately cannot fail the caller. warnings.warn raises
+    # when warnings are escalated to errors (-W error, or filterwarnings("error") in a test or
+    # CI config), and this is reached from inside a structlog processor on the first record it
+    # handles. Letting that propagate would take out logging itself, which is a far worse
+    # outcome than a missing notice -- and the floor is already resolved and cached above, so
+    # the export behaviour is correct either way.
+    with contextlib.suppress(Exception):
+        if severity is None:
+            warnings.warn(
+                f"LANGFLOW_OTEL_LOG_LEVEL: ignoring {raw!r} (expected one of "
+                f"{sorted(_OTEL_LOG_SEVERITY)}); exporting {_OTEL_MIN_LOG_SEVERITY_DEFAULT} and above.",
+                stacklevel=2,
+            )
+        elif severity < _INFO_SEVERITY:
+            warnings.warn(
+                f"LANGFLOW_OTEL_LOG_LEVEL={raw!r} exports DEBUG log records to the configured OTLP "
+                "endpoint. Langflow logs flow inputs and outputs at DEBUG, and log redaction only "
+                "covers known sensitive keys, not free text inside a message, so prompt and "
+                "completion content will reach that backend. Use INFO unless that is intended.",
+                stacklevel=2,
+            )
     if severity is None:
-        warnings.warn(
-            f"LANGFLOW_OTEL_LOG_LEVEL: ignoring {raw!r} (expected one of "
-            f"{sorted(_OTEL_LOG_SEVERITY)}); exporting {_OTEL_MIN_LOG_SEVERITY_DEFAULT} and above.",
-            stacklevel=2,
-        )
         severity = _INFO_SEVERITY
-    elif severity < _INFO_SEVERITY:
-        warnings.warn(
-            f"LANGFLOW_OTEL_LOG_LEVEL={raw!r} exports DEBUG log records to the configured OTLP "
-            "endpoint. Langflow logs flow inputs and outputs at DEBUG, and log redaction only "
-            "covers known sensitive keys, not free text inside a message, so prompt and "
-            "completion content will reach that backend. Use INFO unless that is intended.",
-            stacklevel=2,
-        )
     _otel_min_severity_cache = severity
     return severity
 
