@@ -27,6 +27,7 @@ from lfx.custom import Component
 from lfx.inputs.inputs import IntInput, SecretStrInput, StrInput
 from lfx.interface.initialize.loading import update_params_with_load_from_db_fields
 from lfx.io import Output
+from lfx.schema.data import Data
 from lfx.schema.message import Message
 from pydantic import SecretStr, ValidationError
 
@@ -244,7 +245,6 @@ async def test_credential_variable_accepted_when_use_global_variable_toggled_on(
     assert _LEAKY_SECRET not in str(excinfo.value)
 
 
-@pytest.mark.asyncio
 async def test_secret_value_reaches_connected_component_unmasked_but_masked_for_display():
     """Regression for https://github.com/langflow-ai/langflow/issues/14152.
 
@@ -288,7 +288,6 @@ async def test_secret_value_reaches_connected_component_unmasked_but_masked_for_
     assert results["conn_string"] is not edge_value
 
 
-@pytest.mark.asyncio
 async def test_sanitize_secret_values_returns_masked_copy_without_mutating_source():
     """`_sanitize_secret_values` must be non-mutating.
 
@@ -316,3 +315,38 @@ async def test_sanitize_secret_values_returns_masked_copy_without_mutating_sourc
     assert masked.text == "token=**********"
     # Source is unchanged -- this is what a connected downstream component would receive.
     assert original.text == "token=hunter2"  # pragma: allowlist secret
+
+
+def test_sanitize_secret_values_masks_data_object_without_mutating_source():
+    """`_sanitize_secret_values` masks `Data` on a copy, leaving the source intact.
+
+    Regression for #14152: the `Data` branch must sanitize `data` and `default_value`
+    on an independent copy (via `model_copy`), so the real `Data` an edge delivers to a
+    connected component is never mutated. Complements the `Message` coverage above.
+    """
+
+    class _NoopData(Component):
+        display_name = "NoopData"
+        name = "NoopData"
+        inputs = [SecretStrInput(name="password", display_name="Password")]
+        outputs = [Output(display_name="Output", name="output", method="build_output")]
+
+        def build_output(self) -> Message:
+            return Message(text="unused")
+
+    component = _NoopData(_user_id=str(uuid.uuid4()))
+    component.set_attributes({"password": "hunter2"})  # pragma: allowlist secret
+
+    original = Data(
+        data={"conn": "postgres://user:hunter2@localhost/db"},  # pragma: allowlist secret
+        default_value="token=hunter2",  # pragma: allowlist secret
+    )
+    masked = component._sanitize_secret_values(original)
+
+    # Returned copy is masked in both data and default_value...
+    assert masked is not original
+    assert masked.data["conn"] == "postgres://user:**********@localhost/db"
+    assert masked.default_value == "token=**********"
+    # ...and the source Data (what a connected downstream component receives) is unchanged.
+    assert original.data["conn"] == "postgres://user:hunter2@localhost/db"  # pragma: allowlist secret
+    assert original.default_value == "token=hunter2"  # pragma: allowlist secret
