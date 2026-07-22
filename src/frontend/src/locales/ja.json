@@ -2179,5 +2179,8 @@
   "inspectionPanel.close": "閉じる",
   "nodeToolbar.parameters": "パラメータ",
   "canvasControls.minimizeAll": "すべて最小化",
-  "canvasControls.expandAll": "すべて展開"
+  "canvasControls.expandAll": "すべて展開",
+  "handle.ariaLabelInput": "ノード「 {{node}} 」上の {{field}} 用の入力ハンドル",
+  "handle.ariaLabelOutput": "ノード「 {{node}} 」上の {{field}} の出力ハンドル",
+  "edge.ariaLabel": "{{source}} から {{target}} への Edge"
 }
