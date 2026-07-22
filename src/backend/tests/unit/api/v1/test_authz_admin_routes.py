@@ -185,6 +185,41 @@ def test_role_create_accepts_canonical_permission_slugs():
 
 
 @pytest.mark.parametrize(
+    "permission",
+    [
+        "component:models/openai:read",
+        "component:models/ibm-watsonx:read",
+        "component:models/provider_1.2:read",
+        "component:models/*:read",
+    ],
+)
+def test_role_create_accepts_model_provider_component_permissions(permission):
+    """Provider palette grants use the one deliberately supported three-segment slug."""
+    from langflow.api.v1.schemas.authz_roles import RoleCreate
+
+    assert RoleCreate(name="model-picker", permissions=[permission]).permissions == [permission]
+
+
+@pytest.mark.parametrize(
+    "permission",
+    [
+        "component:tools/openai:read",
+        "component:models/openai:write",
+        "component:models/OpenAI:read",
+        "component:models/:read",
+        "component:models/openai:read:extra",
+    ],
+)
+def test_role_create_rejects_other_nested_component_permissions(permission):
+    """The provider exception must not reopen arbitrary multi-segment permission slugs."""
+    from langflow.api.v1.schemas.authz_roles import RoleCreate
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        RoleCreate(name="bad-model-picker", permissions=[permission])
+
+
+@pytest.mark.parametrize(
     "bad_slug",
     [
         "flow:*:read",  # legacy three-segment form rejected

@@ -14,6 +14,7 @@ from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.services.cache.utils import CACHE_MISS
 from pydantic import ValidationError
+from sqlalchemy import case
 from sqlmodel import and_, col, select
 
 from langflow.api.utils import (
@@ -33,13 +34,16 @@ from langflow.api.v1.authz_route_dependencies import (
 )
 from langflow.api.v1.flows_helpers import (
     _build_flows_download_response,
+    _canonicalize_flow_destination,
     _get_safe_flow_path,
     _new_flow,
     _patch_flow,
     _read_flow,
+    _resolve_flow_destination,
     _save_flow_to_fs,
     _update_existing_flow,
     _upsert_flow_list,
+    _validate_and_assign_folder,
     _verify_fs_path,
 )
 from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
@@ -114,6 +118,11 @@ async def create_flow(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
+        # FastAPI builds the dependency's body model independently from the
+        # handler's body model. Carry the exact destination that was authorized
+        # into the row we persist so stale caller scope fields cannot retarget
+        # the write after the guard has run.
+        flow.workspace_id, flow.folder_id = _create
         return await _new_flow(session=session, flow=flow, user_id=current_user.id, storage_service=storage_service)
     except HTTPException:
         raise
@@ -174,11 +183,15 @@ async def read_flows(
         # owner-scoped and ``filter_visible_resources`` runs unchanged.
         visibility_scope = await visible_scope_prefilter(current_user, resource_type="flow", act=FlowAction.READ)
         if visibility_scope is not None:
+            canonical_workspace = case(
+                (col(Flow.folder_id).is_not(None), Folder.workspace_id),
+                else_=Flow.workspace_id,
+            )
             stmt = restrict_to_owned_or_visible_scope(
-                select(Flow),
+                select(Flow).outerjoin(Folder, Folder.id == Flow.folder_id),
                 id_column=Flow.id,
                 owner_clause=owned_clause,
-                workspace_column=Flow.workspace_id,
+                workspace_expression=canonical_workspace,
                 project_column=Flow.folder_id,
                 visibility=visibility_scope,
             )
@@ -334,13 +347,20 @@ async def update_flow(
 ):
     """Update a flow."""
     try:
-        # Destination check: if the payload moves the flow into a new
-        # workspace/folder, the caller must also be authorized to write at the
-        # destination scope. ``_patch_flow`` applies payload values via
+        # Destination check: resolve the actual owner-folder/workspace tuple
+        # before authorizing a move. ``_patch_flow`` applies payload values via
         # ``model_dump(exclude_unset=True, exclude_none=True)``, so None means
         # "no change" and falls back to the existing scope.
-        target_workspace_id = flow.workspace_id if flow.workspace_id is not None else db_flow.workspace_id
-        target_folder_id = flow.folder_id if flow.folder_id is not None else db_flow.folder_id
+        requested_folder_id = flow.folder_id
+        target_workspace_id, target_folder_id = await _resolve_flow_destination(
+            session,
+            db_flow.user_id,
+            requested_folder_id,
+            fallback_folder_id=db_flow.folder_id,
+        )
+        flow.workspace_id = target_workspace_id
+        if requested_folder_id is not None:
+            flow.folder_id = target_folder_id
         if target_workspace_id != db_flow.workspace_id or target_folder_id != db_flow.folder_id:
             try:
                 await ensure_flow_permission(
@@ -356,13 +376,16 @@ async def update_flow(
 
         # Explicit folder_id=None is ignored here because _patch_flow builds
         # update_data with exclude_none=True, so null folder_id is a no-op.
-        folder_id_will_change = (
-            "folder_id" in flow.model_fields_set and flow.folder_id is not None and flow.folder_id != db_flow.folder_id
-        )
+        folder_id_will_change = target_folder_id != db_flow.folder_id
 
         async def operation() -> FlowRead:
             # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
-            db_flow_for_attempt = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
+            db_flow_for_attempt = await _read_flow(
+                session=session,
+                flow_id=flow_id,
+                user_id=current_user.id,
+                for_update=True,
+            )
             if not db_flow_for_attempt:
                 raise HTTPException(status_code=404, detail="Flow not found")
             # TOCTOU: a concurrent PATCH could have moved this flow to a
@@ -381,10 +404,12 @@ async def update_flow(
                 )
             except HTTPException as exc:
                 raise deny_to_404(exc, detail="Flow not found") from exc
-            attempt_target_workspace_id = (
-                flow.workspace_id if flow.workspace_id is not None else db_flow_for_attempt.workspace_id
+            attempt_target_workspace_id, attempt_target_folder_id = await _resolve_flow_destination(
+                session,
+                db_flow_for_attempt.user_id,
+                flow.folder_id,
+                fallback_folder_id=db_flow_for_attempt.folder_id,
             )
-            attempt_target_folder_id = flow.folder_id if flow.folder_id is not None else db_flow_for_attempt.folder_id
             if (
                 attempt_target_workspace_id != db_flow_for_attempt.workspace_id
                 or attempt_target_folder_id != db_flow_for_attempt.folder_id
@@ -466,13 +491,22 @@ async def upsert_flow(
             except HTTPException as exc:
                 raise deny_to_404(exc, detail="Flow not found") from exc
 
-            # Destination check (see update_flow above): if the payload moves
-            # the flow into a new workspace/folder, also authorize WRITE at the
-            # destination. ``_update_existing_flow`` applies payload values via
+            # Destination check (see update_flow above): resolve the actual
+            # owner-folder/workspace tuple and authorize WRITE there.
+            # ``_update_existing_flow`` applies payload values via
             # ``model_dump(exclude_unset=True, exclude_none=True)``, so None
             # means "keep existing" and a non-None differing value means "move".
-            target_workspace_id = flow.workspace_id if flow.workspace_id is not None else existing_flow.workspace_id
-            target_folder_id = flow.folder_id if flow.folder_id is not None else existing_flow.folder_id
+            requested_folder_id = flow.folder_id
+            target_workspace_id, target_folder_id = await _resolve_flow_destination(
+                session,
+                existing_flow.user_id,
+                requested_folder_id,
+                fallback_folder_id=existing_flow.folder_id,
+                reject_invalid=True,
+            )
+            flow.workspace_id = target_workspace_id
+            if requested_folder_id is not None:
+                flow.folder_id = target_folder_id
             if target_workspace_id != existing_flow.workspace_id or target_folder_id != existing_flow.folder_id:
                 try:
                     await ensure_flow_permission(
@@ -489,17 +523,59 @@ async def upsert_flow(
             # Sync deployment state before folder changes
             # Explicit folder_id=None is ignored here because _update_existing_flow
             # also uses exclude_none=True for update_data.
-            folder_id_will_change = (
-                "folder_id" in flow.model_fields_set
-                and flow.folder_id is not None
-                and flow.folder_id != existing_flow.folder_id
-            )
+            folder_id_will_change = target_folder_id != existing_flow.folder_id
 
             async def update_operation() -> FlowRead:
                 # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
-                existing_flow_for_attempt = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
+                existing_flow_for_attempt = await _read_flow(
+                    session=session,
+                    flow_id=flow_id,
+                    user_id=current_user.id,
+                    for_update=True,
+                )
                 if existing_flow_for_attempt is None:
                     raise HTTPException(status_code=404, detail="Flow not found")
+                # Re-authorize the freshly loaded source and resolved
+                # destination on every attempt. A concurrent move between the
+                # outer check and this write must not let a shared editor carry
+                # stale workspace permission into a different project.
+                try:
+                    await ensure_flow_permission(
+                        current_user,
+                        FlowAction.WRITE,
+                        flow_id=flow_id,
+                        flow_user_id=existing_flow_for_attempt.user_id,
+                        workspace_id=existing_flow_for_attempt.workspace_id,
+                        folder_id=existing_flow_for_attempt.folder_id,
+                    )
+                except HTTPException as exc:
+                    raise deny_to_404(exc, detail="Flow not found") from exc
+
+                attempt_target_workspace_id, attempt_target_folder_id = await _resolve_flow_destination(
+                    session,
+                    existing_flow_for_attempt.user_id,
+                    requested_folder_id,
+                    fallback_folder_id=existing_flow_for_attempt.folder_id,
+                    reject_invalid=requested_folder_id is not None,
+                )
+                flow.workspace_id = attempt_target_workspace_id
+                if requested_folder_id is not None:
+                    flow.folder_id = attempt_target_folder_id
+                if (
+                    attempt_target_workspace_id != existing_flow_for_attempt.workspace_id
+                    or attempt_target_folder_id != existing_flow_for_attempt.folder_id
+                ):
+                    try:
+                        await ensure_flow_permission(
+                            current_user,
+                            FlowAction.WRITE,
+                            flow_id=flow_id,
+                            flow_user_id=existing_flow_for_attempt.user_id,
+                            workspace_id=attempt_target_workspace_id,
+                            folder_id=attempt_target_folder_id,
+                        )
+                    except HTTPException as exc:
+                        raise deny_to_404(exc, detail="Flow not found") from exc
                 return await _update_existing_flow(
                     session=session,
                     existing_flow=existing_flow_for_attempt,
@@ -520,6 +596,7 @@ async def upsert_flow(
             status_code = 200
         else:
             # CREATE path - flow doesn't exist
+            await _canonicalize_flow_destination(session, flow, current_user.id, reject_invalid=True)
             await ensure_flow_permission(
                 current_user, FlowAction.CREATE, workspace_id=flow.workspace_id, folder_id=flow.folder_id
             )
@@ -572,10 +649,10 @@ async def create_flows(
     current_user: CurrentActiveUser,
 ):
     """Create multiple new flows."""
-    # Per-flow CREATE check: each flow's destination (workspace_id + folder_id) is
-    # caller-supplied, so we must authorize the actual target instead of trusting
-    # a single coarse check at the route boundary.
+    # Resolve and authorize every flow's canonical project/workspace instead of
+    # trusting caller-supplied denormalized scope fields.
     for flow in flow_list.flows:
+        await _canonicalize_flow_destination(session, flow, current_user.id)
         await ensure_flow_permission(
             current_user,
             FlowAction.CREATE,
@@ -602,6 +679,7 @@ async def create_flows(
         db_flow = Flow.model_validate(flow.model_dump(exclude={"id"}))
         if flow.id is not None:
             db_flow.id = flow.id
+        await _validate_and_assign_folder(session, db_flow, current_user.id)
         session.add(db_flow)
         db_flows.append(db_flow)
 
@@ -682,17 +760,28 @@ async def upload_file(
     # When implemented, extract raw flow dicts here to read embedded "version"
     # arrays and create FlowVersion entries for each imported flow.
 
-    # Per-flow CREATE check on the effective destination. _upsert_flow_list lets
-    # the query `folder_id` override each flow's `folder_id`, but it preserves
-    # each flow's `workspace_id`, so a payload could otherwise route flows into
-    # workspaces the caller has no create permission on.
+    # Per-flow CREATE check on the effective canonical destination. For owned
+    # upserts with no destination in the payload, preserve the existing project;
+    # new or stale destinations fall back to the user's default project.
     for flow in flow_list.flows:
-        effective_folder_id = folder_id if folder_id is not None else flow.folder_id
+        fallback_folder_id = None
+        if folder_id is not None:
+            flow.folder_id = folder_id
+        elif flow.folder_id is None and flow.id is not None:
+            existing_flow = (await session.exec(select(Flow).where(Flow.id == flow.id))).first()
+            if existing_flow is not None and existing_flow.user_id == current_user.id:
+                fallback_folder_id = existing_flow.folder_id
+        await _canonicalize_flow_destination(
+            session,
+            flow,
+            current_user.id,
+            fallback_folder_id=fallback_folder_id,
+        )
         await ensure_flow_permission(
             current_user,
             FlowAction.CREATE,
             workspace_id=flow.workspace_id,
-            folder_id=effective_folder_id,
+            folder_id=flow.folder_id,
         )
 
     try:

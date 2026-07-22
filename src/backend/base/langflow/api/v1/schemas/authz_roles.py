@@ -46,11 +46,19 @@ _RESOURCE_ACTIONS: dict[str, frozenset[str]] = {
 }
 
 _PERMISSION_SLUG_RE = re.compile(r"^[a-z_]+:[a-z_*]+$")
+_MODEL_COMPONENT_PERMISSION_RE = re.compile(r"^component:models/(?:[a-z0-9][a-z0-9._-]*|\*):read$")
 
 
 def _validate_permission_slug(slug: str) -> str:
     # Pydantic coerces ``list[str]`` so we only ever see strings here; the
     # regex check carries the real format guarantee.
+    # Model-provider palette permissions are the single supported nested
+    # object form. Keep this exception deliberately narrow so accepting
+    # ``component:models/openai:read`` does not make arbitrary three-segment
+    # slugs valid. Provider IDs share the registry's stable-ID alphabet.
+    if _MODEL_COMPONENT_PERMISSION_RE.fullmatch(slug):
+        return slug
+
     if not _PERMISSION_SLUG_RE.fullmatch(slug):
         msg = (
             f"permission {slug!r} is not in the canonical "
@@ -84,7 +92,8 @@ class RoleCreate(BaseModel):
             "Permission slugs in the canonical ``<resource>:<action>`` form — for "
             "example ``flow:read``, ``deployment:execute``, ``share:create``. "
             "Resources must be one of flow, deployment, project, knowledge_base, "
-            "variable, file, share. Actions are constrained per-resource (see "
+            "variable, file, share, plus the narrow model-provider form "
+            "``component:models/<provider-id>:read``. Actions are constrained per-resource (see "
             "``services/authorization/actions.py``): e.g. ``deploy`` is only valid "
             "on ``flow``, ``ingest`` only on ``knowledge_base``, ``update`` only on "
             "``share``. ``*`` (all actions on that resource) is always accepted. "

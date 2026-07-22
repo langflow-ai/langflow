@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
@@ -17,7 +18,8 @@ if TYPE_CHECKING:
     from httpx import AsyncClient
 
 
-def _openai_only_policy(*, user_id, providers, purpose):
+def _openai_only_policy(*, user_id, providers, purpose, attributes=None):
+    _ = attributes
     candidate_ids = frozenset(filter(None, (provider_id_for(provider) for provider in providers)))
     return ModelProviderPolicySnapshot(
         context=ModelProviderPolicyContext(user_id=user_id),
@@ -27,7 +29,8 @@ def _openai_only_policy(*, user_id, providers, purpose):
     )
 
 
-def _allow_all_policy(*, user_id, providers, purpose):
+def _allow_all_policy(*, user_id, providers, purpose, attributes=None):
+    _ = attributes
     candidate_ids = frozenset(provider_id_for(provider) or provider for provider in providers)
     return ModelProviderPolicySnapshot(
         context=ModelProviderPolicyContext(user_id=user_id),
@@ -45,6 +48,7 @@ def _restrict_to_openai(monkeypatch):
 @pytest.mark.usefixtures("active_user")
 async def test_provider_reads_hide_denied_providers(client: AsyncClient, logged_in_headers):
     providers_response = await client.get("api/v1/models/providers", headers=logged_in_headers)
+    descriptors_response = await client.get("api/v1/models/provider-descriptors", headers=logged_in_headers)
     models_response = await client.get("api/v1/models", headers=logged_in_headers)
     mapping_response = await client.get("api/v1/models/provider-variable-mapping", headers=logged_in_headers)
     denied_query_response = await client.get(
@@ -55,6 +59,8 @@ async def test_provider_reads_hide_denied_providers(client: AsyncClient, logged_
 
     assert providers_response.status_code == status.HTTP_200_OK
     assert providers_response.json() == ["OpenAI"]
+    assert descriptors_response.status_code == status.HTTP_200_OK
+    assert descriptors_response.json() == [{"provider_id": "openai", "display_name": "OpenAI", "provider": "OpenAI"}]
 
     assert models_response.status_code == status.HTTP_200_OK
     model_groups = models_response.json()
@@ -65,6 +71,49 @@ async def test_provider_reads_hide_denied_providers(client: AsyncClient, logged_
     assert set(mapping_response.json()) == {"OpenAI"}
     assert denied_query_response.status_code == status.HTTP_200_OK
     assert denied_query_response.json() == []
+
+
+async def test_provider_descriptors_union_stamped_palette_ids_without_duplicates(monkeypatch):
+    from langflow.api.v1 import models as models_module
+
+    captured_candidates = set()
+
+    def _allow_openai_and_mistral(*, user_id, providers, purpose, attributes=None):
+        nonlocal captured_candidates
+        _ = attributes
+        captured_candidates = set(providers)
+        candidate_ids = frozenset(provider_id_for(provider) or provider for provider in providers)
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id),
+            purpose=purpose,
+            candidate_provider_ids=candidate_ids,
+            allowed_provider_ids=frozenset({"openai", "mistral"}) & candidate_ids,
+        )
+
+    palette = {
+        "mixed": {
+            "OpenAIModel": {"metadata": {"model_provider_id": "openai", "model_provider_display_name": "OpenAI"}},
+            "MistralChat": {"metadata": {"model_provider_id": "mistral", "model_provider_display_name": "Mistral"}},
+            "MistralEmbedding": {
+                "metadata": {"model_provider_id": "mistral", "model_provider_display_name": "Mistral"}
+            },
+            "HiddenModel": {
+                "metadata": {"model_provider_id": "hidden-provider", "model_provider_display_name": "Hidden"}
+            },
+            "Utility": {"metadata": {}},
+        }
+    }
+    monkeypatch.setattr(models_module, "resolve_model_provider_policy", _allow_openai_and_mistral)
+    monkeypatch.setattr(models_module, "get_model_providers", lambda: ["OpenAI"])
+    monkeypatch.setattr(models_module, "get_and_cache_all_types_dict", AsyncMock(return_value=palette))
+
+    descriptors = await models_module.list_model_provider_descriptors(SimpleNamespace(id="user-1"))
+
+    assert [descriptor.model_dump() for descriptor in descriptors] == [
+        {"provider_id": "mistral", "display_name": "Mistral", "provider": "mistral"},
+        {"provider_id": "openai", "display_name": "OpenAI", "provider": "OpenAI"},
+    ]
+    assert captured_candidates == {"openai", "mistral", "hidden-provider"}
 
 
 @pytest.mark.usefixtures("active_user")

@@ -255,14 +255,41 @@ class SuperUserMetadataComponent(Component):
 async def test_custom_component_update_admin_only_allows_superuser(
     client: AsyncClient,
     logged_in_headers_super_user: dict,
+    active_super_user,
     monkeypatch,
 ):
+    from langflow.api.v1 import endpoints
     from langflow.services.deps import get_settings_service
+    from lfx.custom.custom_component.component import Component
+    from lfx.services.model_provider_policy import current_model_provider_policy_context
 
     settings_service = get_settings_service()
     admin_only_enabled = True
     monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
     monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    bound_contexts = []
+    reset_tokens = []
+    policy_contexts = []
+    original_set_context = endpoints.set_current_model_provider_policy_context
+    original_reset_context = endpoints.reset_current_model_provider_policy_context
+    original_require_policy = Component.require_model_provider_policy
+
+    def capture_set_context(*, user_id, attributes=None):
+        bound_contexts.append((user_id, attributes))
+        return original_set_context(user_id=user_id, attributes=attributes)
+
+    def capture_reset_context(token):
+        reset_tokens.append(token)
+        original_reset_context(token)
+
+    def capture_require_policy(self, purpose):
+        policy_contexts.append(current_model_provider_policy_context())
+        return original_require_policy(self, purpose)
+
+    monkeypatch.setattr(endpoints, "set_current_model_provider_policy_context", capture_set_context)
+    monkeypatch.setattr(endpoints, "reset_current_model_provider_policy_context", capture_reset_context)
+    monkeypatch.setattr(Component, "require_model_provider_policy", capture_require_policy)
 
     component_code = """
 from lfx.custom import Component
@@ -289,6 +316,12 @@ class SuperUserUpdateMetadataComponent(Component):
     )
 
     assert response.status_code == status.HTTP_200_OK, response.json()
+    assert bound_contexts == [(active_super_user.id, {"is_superuser": True})]
+    assert len(reset_tokens) == 1
+    assert policy_contexts
+    assert policy_contexts[0] is not None
+    assert policy_contexts[0].user_id == active_super_user.id
+    assert policy_contexts[0].attributes["is_superuser"] is True
 
 
 async def test_custom_component_endpoint_returns_metadata(client: AsyncClient, logged_in_headers: dict):

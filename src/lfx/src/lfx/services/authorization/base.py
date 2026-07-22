@@ -35,6 +35,24 @@ class AuthzContext(TypedDict, total=False):
 
 
 @dataclass(frozen=True, slots=True)
+class ShareRuleSnapshot:
+    """Framework-neutral share data needed to remove derived policy rules.
+
+    Delete hooks run after the durable share row is gone, so plugins cannot
+    reload it from the application database. This immutable value object keeps
+    the hook independent of Langflow's ORM model while carrying every field a
+    policy adapter needs to identify the rules that were derived from the row.
+    """
+
+    share_id: UUID
+    resource_type: str
+    resource_id: UUID
+    scope: str
+    target_id: UUID | None
+    permission_level: str
+
+
+@dataclass(frozen=True, slots=True)
 class ResourceVisibilityScope:
     """Compact SQL-prefilter contract for resource-list authorization.
 
@@ -233,6 +251,14 @@ class BaseAuthorizationService(Service, abc.ABC):
 
     async def sync_shares(self) -> None:
         """Refresh policy derived from authz_share rows. Plugin override; OSS no-op."""
+
+    async def sync_share(self, share_id: UUID) -> None:
+        """Refresh policy derived from one durable share row. Plugin override; OSS no-op."""
+        _ = share_id
+
+    async def remove_share_rules(self, snapshot: ShareRuleSnapshot) -> None:
+        """Remove policy derived from a deleted share snapshot. Plugin override; OSS no-op."""
+        _ = snapshot
 
     async def teardown(self) -> None:
         """No resources to release in the base implementation."""

@@ -37,10 +37,13 @@ class DatabaseVariableService(VariableService, Service):
             from lfx.base.models.unified_models import get_model_provider_metadata
             from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
 
+            from langflow.services.database.models.user.model import User
+
             # Build var_to_provider from all variables in metadata (not just primary)
             var_to_provider = {}
             var_to_info = {}  # Maps variable_key to its full info (including is_secret)
             metadata = get_model_provider_metadata()
+            principal = await session.get(User, UUID(str(user_id)))
             for provider, meta in metadata.items():
                 for var in meta.get("variables", []):
                     var_key = var.get("variable_key")
@@ -51,6 +54,7 @@ class DatabaseVariableService(VariableService, Service):
                 user_id=user_id,
                 providers=metadata,
                 purpose=ModelProviderPolicyPurpose.CONFIGURE,
+                attributes={"is_superuser": bool(principal and principal.is_superuser)},
             )
         except Exception:  # noqa: BLE001
             await logger.aexception("Could not resolve model-provider metadata; skipping environment variable import")
@@ -338,6 +342,11 @@ class DatabaseVariableService(VariableService, Service):
 
             # Model validate will set value to None if credential type
             variable_read = VariableRead.model_validate(variable, from_attributes=True)
+            variable_read.is_owner = is_owner
+            # Deliberately conservative: resource owners can manage shares.
+            # Enterprise may authorize additional administrators server-side,
+            # but the list UI must not show a re-share control to recipients.
+            variable_read.can_manage_shares = is_owner
             # Shared values are usable only inside runtime variable resolution;
             # API list responses expose metadata but never plaintext values.
             if variable.type == GENERIC_TYPE and is_owner:
