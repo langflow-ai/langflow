@@ -1,6 +1,6 @@
 [project]
 name = "lfx"
-version = "1.11.0"
+version = "1.12.0"
 description = "Langflow Executor - A lightweight CLI tool for executing and serving Langflow AI flows"
 readme = "README.md"
 authors = [
@@ -57,7 +57,7 @@ dependencies = [
     "cryptography>=48.0.1",
     "pyjwt>=2.10.0,<3.0.0",
     "ag-ui-protocol>=0.1.10",
-    "langflow-sdk>=0.3.0",
+    "langflow-sdk>=0.4.0",
     "markitdown>=0.1.4,<2.0.0",
     "setuptools>=83.0.0,<84.0.0",
     "wheel>=0.46.2,<1.0.0",
@@ -79,8 +79,7 @@ opendsstar = [
 # Relocated out of langflow-base[complete], where they were the de-facto provider
 # for these lfx-core components after the bundle split.
 cassandra = ["cassio>=0.1.7"]  # Cassandra vector-store / chat-memory components
-# Gated off 3.14 because ToolGuard depends on litellm.
-toolguard = ["toolguard>=0.2.20,<1.0.0; python_version < '3.14'"]  # ToolGuard Policies component
+toolguard = ["toolguard>=0.2.20,<1.0.0"]  # ToolGuard Policies component
 # Engine-only by default: ``pip install lfx`` ships NO bundles.  This optional
 # extra pulls the long-tail metapackage for users who want the provider
 # components without the full ``langflow`` server install:

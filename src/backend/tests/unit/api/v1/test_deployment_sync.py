@@ -394,6 +394,51 @@ class TestListDeploymentsSynced:
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
     @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
+    @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
+    async def test_shared_rows_use_provider_owner_namespace_for_sync(
+        self,
+        mock_list,
+        mock_fetch,
+        mock_delete_unbound,
+        mock_count_attachments,
+        mock_count,
+    ):
+        actor_id = uuid4()
+        owner_id = uuid4()
+        provider_id = uuid4()
+        row = _mock_deployment_row("rk-shared", user_id=owner_id)
+        mock_list.return_value = [(row, 0, [])]
+        mock_fetch.return_value = ({"rk-shared"}, _mock_provider_view([SimpleNamespace(id="rk-shared")]))
+        mock_count_attachments.return_value = {row.id: 0}
+        db = _mock_async_db()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
+
+        accepted, total, _ = await list_deployments_synced(
+            deployment_adapter=AsyncMock(),
+            deployment_mapper=_NoSnapshotBindingMapper(),
+            user_id=actor_id,
+            provider_owner_id=owner_id,
+            provider_id=provider_id,
+            db=db,
+            page=1,
+            size=1,
+            deployment_type=None,
+        )
+
+        assert accepted[0][0] is row
+        assert total == 1
+        assert mock_list.await_args.kwargs["user_id"] == actor_id
+        assert mock_fetch.await_args.kwargs["user_id"] == owner_id
+        assert mock_delete_unbound.await_args.kwargs["user_id"] == owner_id
+        assert mock_count_attachments.await_args.kwargs["user_id"] == owner_id
+        assert mock_count.await_args.kwargs["user_id"] == actor_id
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
+    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)

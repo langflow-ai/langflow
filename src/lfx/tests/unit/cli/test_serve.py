@@ -219,6 +219,36 @@ def test_serve_command_inline_json():
         assert isinstance(args[0], dict)
 
 
+def test_serve_command_env_file_overrides_shell_environment(tmp_path):
+    """An explicit --env-file must take precedence over shell environment variables."""
+    env_file = tmp_path / ".env"
+    env_file.write_text("LANGFLOW_API_KEY=from-env-file\n")  # pragma: allowlist secret
+    flow_json = '{"nodes": [], "edges": []}'
+
+    with (
+        patch("lfx.cli.commands.load_flow_from_json") as mock_load,
+        patch("lfx.cli.commands.uvicorn.run"),
+        patch("lfx.cli.commands.is_port_in_use", return_value=False),
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "from-shell"}),  # pragma: allowlist secret
+    ):
+        import typer
+        from lfx.cli.commands import serve_command
+        from typer.testing import CliRunner
+
+        mock_graph = MagicMock()
+        mock_graph.prepare = MagicMock()
+        mock_graph.nodes = {}
+        mock_load.return_value = mock_graph
+
+        app = typer.Typer()
+        app.command()(serve_command)
+
+        result = CliRunner().invoke(app, ["--flow-json", flow_json, "--env-file", str(env_file)])
+
+        assert result.exit_code == 0, result.stdout
+        assert os.environ["LANGFLOW_API_KEY"] == "from-env-file"  # pragma: allowlist secret
+
+
 class TestBuildRegistryFromDirectory:
     def test_loads_all_json_files(self, tmp_path):
         import asyncio

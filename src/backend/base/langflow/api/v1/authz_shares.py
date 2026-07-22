@@ -28,6 +28,7 @@ from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
+from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_authorization_service
@@ -58,6 +59,11 @@ async def _resolve_resource_owner(
         return None
     model, owner_attr = lookup
     row = await session.get(model, resource_id)
+    # Memory Bases share the ``knowledge_base`` authorization namespace, but
+    # their ids live in ``memory_base`` rather than ``knowledge_base``. Keep a
+    # single external resource type while resolving either backing model.
+    if row is None and resource_type == "knowledge_base":
+        row = await session.get(MemoryBase, resource_id)
     if row is None:
         return None
     return getattr(row, owner_attr, None)

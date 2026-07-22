@@ -46,7 +46,9 @@ const InputWrapper = ({
   isAudioSupported,
 }: InputWrapperProps) => {
   const { t } = useTranslation();
-  const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
+  // Padding reserves room for the delete button, which overhangs each
+  // thumbnail and would otherwise be clipped by the scroll container.
+  const classNameFilePreview = `flex w-full items-center gap-3 overflow-auto px-2 pb-2 pt-3`;
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;

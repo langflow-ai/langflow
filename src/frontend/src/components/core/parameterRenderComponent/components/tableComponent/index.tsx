@@ -3,7 +3,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useDarkStore } from "@/stores/darkStore";
 import "@/style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
-import type { ColDef } from "ag-grid-community";
+import type { CellKeyDownEvent, ColDef } from "ag-grid-community";
 import type { TableOptionsTypeAPI } from "@/types/api";
 import { suppressAutofillOnElement } from "@/utils/inputAutofill";
 import { cn } from "@/utils/utils";
@@ -423,14 +423,18 @@ const TableComponent = forwardRef<
           const rect = element.getBoundingClientRect();
           return rect.width > 0 && rect.height > 0;
         });
-        const ordered = backwards ? candidates.reverse() : candidates;
+        if (candidates.length === 0) return false;
         const wantedPosition = backwards
           ? Node.DOCUMENT_POSITION_PRECEDING
           : Node.DOCUMENT_POSITION_FOLLOWING;
-        const target = ordered.find((element) =>
-          Boolean(treeGrid.compareDocumentPosition(element) & wantedPosition),
-        );
-        if (!target) return false;
+        // Prefer the next control in tab direction. When the grid is the last
+        // (or first) focusable region on the page — e.g. Knowledge Bases has no
+        // controls after the table — wrap to the other end so focus never
+        // dead-stops on <body> (WCAG 2.1.2).
+        const target =
+          candidates.find((element) =>
+            Boolean(treeGrid.compareDocumentPosition(element) & wantedPosition),
+          ) ?? (backwards ? candidates[candidates.length - 1] : candidates[0]);
         target.focus();
         // AG Grid's focus service restores focus to the last focused cell on the
         // next tick, so re-apply focus once the grid has settled.
@@ -500,10 +504,23 @@ const TableComponent = forwardRef<
       }
       return params.nextCellPosition;
     };
-    const onCellKeyDown = (event) => {
+    const onCellKeyDown = (event: CellKeyDownEvent) => {
+      const keyboardEvent = event.event as KeyboardEvent | undefined;
+      const keyTarget =
+        keyboardEvent?.target instanceof HTMLElement
+          ? keyboardEvent.target
+          : undefined;
+      const isTextModalTriggerActivation =
+        keyTarget?.closest("[data-langflow-text-cell-trigger]") &&
+        (keyboardEvent?.key === "Enter" || keyboardEvent?.key === " ");
+
+      // When Radix restores focus after the dialog closes, focus lands on the
+      // actual trigger button. Let the button's native Enter/Space activation
+      // handle that case; clicking it again here would toggle the dialog twice.
+      if (isTextModalTriggerActivation) return;
+
       props.onCellKeyDown?.(event);
 
-      const keyboardEvent = event.event as KeyboardEvent | undefined;
       if (
         keyboardEvent?.defaultPrevented ||
         (keyboardEvent?.key !== "Enter" && keyboardEvent?.key !== " ")
@@ -511,10 +528,10 @@ const TableComponent = forwardRef<
         return;
       }
 
-      const eventPath =
+      const eventPath: EventTarget[] =
         "eventPath" in event && Array.isArray(event.eventPath)
           ? event.eventPath
-          : keyboardEvent.composedPath();
+          : (keyboardEvent?.composedPath() ?? []);
       const pathElements = eventPath.filter(
         (element): element is HTMLElement => element instanceof HTMLElement,
       );
@@ -525,7 +542,7 @@ const TableComponent = forwardRef<
         (element) => element.getAttribute("role") === "gridcell",
       );
       const targetGridCell =
-        keyboardEvent.target instanceof HTMLElement
+        keyboardEvent?.target instanceof HTMLElement
           ? keyboardEvent.target.closest<HTMLElement>('[role="gridcell"]')
           : undefined;
       const textModalTrigger =
@@ -537,7 +554,7 @@ const TableComponent = forwardRef<
           "[data-langflow-text-cell-trigger]",
         );
 
-      if (!textModalTrigger) return;
+      if (!textModalTrigger || !keyboardEvent) return;
 
       keyboardEvent.preventDefault();
       textModalTrigger.click();

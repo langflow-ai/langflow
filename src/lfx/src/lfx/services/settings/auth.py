@@ -9,7 +9,12 @@ from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from lfx.log.logger import logger
-from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from lfx.services.settings.constants import (
+    DEFAULT_SUPERUSER,
+    DEFAULT_SUPERUSER_PASSWORD,
+    MINIMUM_SECRET_KEY_LENGTH,
+    SHORT_SECRET_KEY_WARNING,
+)
 from lfx.services.settings.utils import (
     derive_public_key_from_private,
     generate_rsa_key_pair,
@@ -17,6 +22,12 @@ from lfx.services.settings.utils import (
     write_public_key_to_file,
     write_secret_to_file,
 )
+
+
+def _warn_if_secret_key_is_short(value: str | SecretStr) -> None:
+    secret_value = value.get_secret_value() if isinstance(value, SecretStr) else value
+    if len(secret_value) < MINIMUM_SECRET_KEY_LENGTH:
+        logger.warning(SHORT_SECRET_KEY_WARNING)
 
 
 class JWTAlgorithm(str, Enum):
@@ -306,7 +317,9 @@ class AuthSettings(BaseSettings):
 
         if not config_dir:
             logger.debug("No CONFIG_DIR provided, not saving secret key")
-            return value or secrets.token_urlsafe(32)
+            value = value or secrets.token_urlsafe(32)
+            _warn_if_secret_key_is_short(value)
+            return value
 
         secret_key_path = Path(config_dir) / "secret_key"
 
@@ -326,6 +339,7 @@ class AuthSettings(BaseSettings):
             write_secret_to_file(secret_key_path, value)
             logger.debug("Saved secret key")
 
+        _warn_if_secret_key_is_short(value)
         return value if isinstance(value, SecretStr) else SecretStr(value).get_secret_value()
 
     @field_validator("EXTERNAL_AUTH_PROVIDER", mode="before")

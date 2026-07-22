@@ -5,6 +5,7 @@ import {
   addParameterToNode,
   closeParametersPanel,
 } from "../../utils/open-advanced-options";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 test(
   "FloatComponent",
@@ -13,6 +14,10 @@ test(
     await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("nvidia");
+    await skipIfComponentUnavailable(
+      page.getByTestId("nvidiaNVIDIA"),
+      "NVIDIA",
+    );
 
     await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
       timeout: 30000,

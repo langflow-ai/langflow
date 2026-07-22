@@ -9,12 +9,15 @@ from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
     validate_model_provider_key,
 )
+from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 from sqlalchemy.exc import NoResultFound
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.models import (
     DISABLED_MODELS_VAR,
     ENABLED_MODELS_VAR,
+    _require_provider,
+    _resolve_policy,
     build_model_providers_by_name,
     get_provider_from_variable_name,
     normalize_model_status_entries,
@@ -22,6 +25,7 @@ from langflow.api.v1.models import (
 from langflow.api.v1.schemas.deployments import DetectVarsRequest, DetectVarsResponse
 from langflow.services.authorization import VariableAction, ensure_variable_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
+from langflow.services.authorization.listing import visible_scope_prefilter
 from langflow.services.database.models.flow_version.crud import get_flow_version_entries_by_ids
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
@@ -29,7 +33,6 @@ from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
-model_provider_variable_mapping = get_model_provider_variable_mapping()
 logger = logging.getLogger(__name__)
 
 
@@ -151,21 +154,25 @@ async def create_variable(
     if not variable.value:
         raise HTTPException(status_code=400, detail="Variable value cannot be empty")
 
+    # Provider variables contributed by core or extensions are policy-gated
+    # before credential lookup, SDK import, validation, or persistence.
+    provider = get_provider_from_variable_name(variable.name)
+    if provider is not None:
+        _require_provider(current_user, provider, ModelProviderPolicyPurpose.CONFIGURE)
+
     if variable.name in await variable_service.list_variables(user_id=current_user.id, session=session):
         raise HTTPException(status_code=400, detail="Variable name already exists")
 
-    # Check if the variable is a reserved model provider variable
-    if variable.name in model_provider_variable_mapping.values():
-        provider = get_provider_from_variable_name(variable.name)
-        if provider is not None:
-            # Saved provider vars (e.g. OPENAI_BASE_URL) must reach the validator; run off the event loop.
-            provider_vars = await asyncio.to_thread(get_all_variables_for_provider, current_user.id, provider)
-            try:
-                await asyncio.to_thread(
-                    validate_model_provider_key, provider, {**provider_vars, variable.name: variable.value}
-                )
-            except ValueError as e:
-                raise HTTPException(status_code=400, detail=str(e)) from e
+    if provider is not None and variable.name == get_model_provider_variable_mapping().get(provider):
+        provider_vars = await asyncio.to_thread(get_all_variables_for_provider, current_user.id, provider)
+        try:
+            await asyncio.to_thread(
+                validate_model_provider_key,
+                provider,
+                {**provider_vars, variable.name: variable.value},
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
 
     try:
         return await variable_service.create_variable(
@@ -205,17 +212,33 @@ async def read_variables(
         msg = "Variable service is not an instance of DatabaseVariableService"
         raise TypeError(msg)
     try:
-        all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
+        visibility = await visible_scope_prefilter(
+            current_user,
+            resource_type="variable",
+            act=VariableAction.READ,
+        )
+        all_variables = await variable_service.get_all(
+            user_id=current_user.id,
+            session=session,
+            visibility=visibility,
+        )
 
         # Filter out internal variables (those starting and ending with __)
-        filtered_variables = [
-            var for var in all_variables if not (var.name and var.name.startswith("__") and var.name.endswith("__"))
-        ]
+        provider_policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.CONFIGURE)
+        filtered_variables = []
+        for var in all_variables:
+            if var.name and var.name.startswith("__") and var.name.endswith("__"):
+                continue
+            provider = get_provider_from_variable_name(var.name) if var.name else None
+            if provider is not None and not provider_policy.allows(provider):
+                continue
+            filtered_variables.append(var)
 
         # Mark model provider credentials - validation status is based on existence
         # (actual validation happens on create/update)
+        primary_provider_variables = set(get_model_provider_variable_mapping().values())
         for var in filtered_variables:
-            if var.name and var.name in model_provider_variable_mapping.values() and var.type == CREDENTIAL_TYPE:
+            if var.name and var.name in primary_provider_variables and var.type == CREDENTIAL_TYPE:
                 # Credential exists and was validated on save
                 var.is_valid = True
                 var.validation_error = None
@@ -270,17 +293,21 @@ async def update_variable(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="Variable not found") from exc
 
-        # Validate API key if updating a model provider variable
-        if existing_variable.name in model_provider_variable_mapping.values() and variable.value:
-            provider = get_provider_from_variable_name(existing_variable.name)
-            if provider is not None:
+        # Validate provider variables using their effective post-update name.
+        # This closes the rename path from a generic variable into a hidden
+        # provider credential while still allowing rename/delete cleanup.
+        effective_name = variable.name or existing_variable.name
+        provider = get_provider_from_variable_name(effective_name)
+        if provider is not None:
+            _require_provider(current_user, provider, ModelProviderPolicyPurpose.CONFIGURE)
+            if variable.value and effective_name == get_model_provider_variable_mapping().get(provider):
                 # Run validation off the event loop; owner context (not caller) for share-aware updates.
                 provider_vars = await asyncio.to_thread(get_all_variables_for_provider, owner_id, provider)
                 try:
                     await asyncio.to_thread(
                         validate_model_provider_key,
                         provider,
-                        {**provider_vars, existing_variable.name: variable.value},
+                        {**provider_vars, effective_name: variable.value},
                     )
                 except ValueError as e:
                     raise HTTPException(status_code=400, detail=str(e)) from e
@@ -435,4 +462,11 @@ async def detect_env_vars(
         data = _validate_flow_or_422(version_id=version_id, data=version.data)
         candidate_keys.update(_collect_candidate_variable_keys_from_flow_data(data))
 
-    return DetectVarsResponse(variables=sorted(existing_variable_names.intersection(candidate_keys)))
+    provider_policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.CONFIGURE)
+    visible_candidate_keys = {
+        variable_key
+        for variable_key in candidate_keys
+        if (provider := get_provider_from_variable_name(variable_key)) is None or provider_policy.allows(provider)
+    }
+
+    return DetectVarsResponse(variables=sorted(existing_variable_names.intersection(visible_candidate_keys)))

@@ -241,6 +241,11 @@ module.exports = {
             },
             {
               type: "doc",
+              id: "Deployment/downstream-bundle-profiles",
+              label: "Downstream bundle profiles"
+            },
+            {
+              type: "doc",
               id: "Deployment/deployment-caddyfile",
               label: "Deploy Langflow on a remote server"
             },
@@ -448,6 +453,7 @@ module.exports = {
                 "Components/components-models",
                 "Components/components-prompts",
                 "Components/components-agents",
+                "Components/a2a-agent",
                 "Components/mcp-tools",
                 "Components/components-embedding-models",
                 "Components/message-history",

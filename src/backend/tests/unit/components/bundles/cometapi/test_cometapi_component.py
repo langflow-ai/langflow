@@ -2,6 +2,10 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+pytest.importorskip("langchain_openai")
+
 from langchain_openai import ChatOpenAI
 from lfx.components.cometapi.cometapi import CometAPIComponent
 from pydantic.v1 import SecretStr
