@@ -44,6 +44,38 @@ env:
   DOCKER_BUILDKIT: "1"
 
 jobs:
+  downstream-bundle-profiles:
+    name: Downstream bundle profiles
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release profiles
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install profile validator dependency
+        run: python -m pip install --disable-pip-version-check packaging
+
+      - name: Validate profiles and checked-in locks
+        run: python scripts/ci/manage_bundle_profiles.py check
+
+      - name: Generate profile inventory artifacts
+        run: |
+          python scripts/ci/manage_bundle_profiles.py compile \
+            --output-dir bundle-profile-inventories
+
+      - name: Upload profile inventory artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: downstream-bundle-profile-inventories
+          path: bundle-profile-inventories/*.lock.json
+          if-no-files-found: error
+
   python-inventory:
     name: Python ${{ matrix.python-version }} / ${{ matrix.profile }}
     if: ${{ inputs.main-artifact-name != '' }}

@@ -120,8 +120,13 @@ def test_validation_reports_missing_forbidden_and_component_drift() -> None:
 
 
 def test_release_gate_covers_supported_python_and_image_architectures() -> None:
+    profile_job = workflow_job_block(GATE_WORKFLOW_PATH, "downstream-bundle-profiles")
     python_job = workflow_job_block(GATE_WORKFLOW_PATH, "python-inventory")
     image_job = workflow_job_block(GATE_WORKFLOW_PATH, "image-inventory")
+
+    assert "manage_bundle_profiles.py check" in profile_job
+    assert "manage_bundle_profiles.py compile" in profile_job
+    assert "downstream-bundle-profile-inventories" in profile_job
 
     assert 'python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]' in python_job
     assert "profile: [python-default, python-full]" in python_job
