@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 WORKFLOW_PATH = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "release.yml"
+BUNDLE_WORKFLOW_PATH = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "release_bundles.yml"
 NIGHTLY_WORKFLOW_PATH = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "release_nightly.yml"
 CROSS_PLATFORM_WORKFLOW_PATH = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "cross-platform-test.yml"
 DB_MIGRATION_WORKFLOW_PATH = (
@@ -35,15 +36,36 @@ def test_finalized_bundles_do_not_influence_shared_rc_number() -> None:
     assert 'consider_versions "PyPI ${package_name}"' in rc_job
 
 
-def test_bundle_build_only_restamps_unpublished_versions() -> None:
+def test_bundle_build_uses_one_content_aware_prerelease_plan() -> None:
     bundle_job = _job_block("build-bundles", "test-cross-platform")
 
-    assert "Set unpublished bundle versions for pre-release" in bundle_job
-    assert 'if pypi_final_exists "$PACKAGE_NAME" "$CURRENT_VERSION"; then' in bundle_job
-    assert "final version is already published" in bundle_job
-    assert "langflow_pre_release_tag.py" in bundle_job
-    assert "Relax bundle lfx floor for pre-release" in bundle_job
+    assert "Apply content-aware bundle pre-release plan" in bundle_job
+    assert "bundle_release_plan.py restamp" in bundle_job
+    assert "--rc-number" in bundle_job
+    assert "--lfx-version" in bundle_job
+    assert "bundle-version-plan.json" in bundle_job
+    assert "bundle_release_plan.py artifacts" in bundle_job
     assert "bundle-version-manifest.json" in bundle_job
+
+
+def test_bundle_publication_precedes_lfx_and_verifies_public_artifacts() -> None:
+    bundle_job = _job_block("publish-bundles", "publish-main")
+    lfx_job = _job_block("publish-lfx", "call_docker_build_base")
+
+    assert "needs: [build-bundles, test-cross-platform, release-inventory, ci]" in bundle_job
+    assert "bundle_release_plan.py publish" in bundle_job
+    assert "--verify-attempts 10" in bundle_job
+    assert "publish-lfx" not in bundle_job
+    assert "publish-bundles" in lfx_job
+    assert "needs.publish-bundles.result == 'success'" in lfx_job
+
+
+def test_standalone_bundle_workflow_uses_the_same_release_planner() -> None:
+    workflow = BUNDLE_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "bundle_release_plan.py artifacts" in workflow
+    assert "bundle_release_plan.py publish" in workflow
+    assert "Skipping {name} {version}: already published" not in workflow
 
 
 def test_full_release_can_reuse_a_published_core() -> None:
@@ -114,7 +136,9 @@ def test_cli_wheel_gate_checks_published_core() -> None:
 
 if __name__ == "__main__":
     test_finalized_bundles_do_not_influence_shared_rc_number()
-    test_bundle_build_only_restamps_unpublished_versions()
+    test_bundle_build_uses_one_content_aware_prerelease_plan()
+    test_bundle_publication_precedes_lfx_and_verifies_public_artifacts()
+    test_standalone_bundle_workflow_uses_the_same_release_planner()
     test_full_release_can_reuse_a_published_core()
     test_publish_order_is_base_then_core_then_full()
     test_nightly_builds_and_publishes_core_between_base_and_full()
