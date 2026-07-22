@@ -554,7 +554,7 @@ class A2AAgentComponent(Component):
         # An in-project A2A agent is just a flow with chat I/O, so run it in-process (no HTTP, no
         # SSRF, no api key) and read its chat reply. Same three primitives Run Flow uses.
         from lfx.graph.graph.base import Graph
-        from lfx.helpers import get_flow_by_id_or_name, run_flow
+        from lfx.helpers import get_flow_by_id_or_name
 
         agent_name = self.agent_name_selected or None
         if not agent_name:
