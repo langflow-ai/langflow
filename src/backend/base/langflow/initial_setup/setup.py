@@ -113,6 +113,12 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             # skip components that are having dynamic values that need to be persisted for templates
 
             if node_type in SKIPPED_COMPONENTS:
+                # Dynamic component values stay untouched, but metadata describes
+                # the source code we just refreshed above. Keep its code hash and
+                # module in sync so saved starter flows pass upgrade validation.
+                latest_metadata = latest_node.get("metadata")
+                if latest_metadata is not None:
+                    node_data["metadata"] = deepcopy(_merge_node_metadata(node_data.get("metadata"), latest_metadata))
                 continue
 
             is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") in {

@@ -8,6 +8,21 @@ interface VariablePermissionState {
   readonly permissions: Record<string, readonly string[]> | undefined;
 }
 
+interface ConsumableKeyboardEvent {
+  preventDefault: () => void;
+  stopPropagation: () => void;
+}
+
+export function consumeVariableSelectionSpace(
+  event: ConsumableKeyboardEvent,
+  canSelect: boolean,
+  select: () => void,
+): void {
+  event.preventDefault();
+  event.stopPropagation();
+  if (canSelect) select();
+}
+
 export function canMutateVariable(
   variable: GlobalVariable | undefined,
   action: "write" | "delete",

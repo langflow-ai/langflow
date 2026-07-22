@@ -173,6 +173,21 @@ def test_model_component_policy_mode_distinguishes_delegate_and_opt_out():
     assert provider_registry.uses_standalone_model_provider_policy(Component()) is False
 
 
+@pytest.mark.parametrize("mode", ["standalone", "standlone", "", None])
+def test_model_component_policy_mode_fails_closed_for_unknown_modes(mode):
+    class Component:
+        model_provider_policy_mode = mode
+
+    assert provider_registry.uses_standalone_model_provider_policy(Component()) is True
+
+
+def test_model_component_policy_mode_defaults_to_standalone():
+    class Component:
+        pass
+
+    assert provider_registry.uses_standalone_model_provider_policy(Component()) is True
+
+
 def test_registry_snapshot_deep_freezes_descriptor_payloads():
     register_provider(_fakeco_spec(provider_id="fakeco"))
 

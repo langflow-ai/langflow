@@ -17,8 +17,10 @@ from unittest.mock import AsyncMock
 from fastapi import status
 from httpx import AsyncClient
 from langflow.api.v1 import authz_route_dependencies, flows
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.deps import session_scope
 from sqlmodel import select
 
@@ -213,6 +215,32 @@ async def test_create_flow_after_all_folders_deleted_creates_default_folder(
         assert folder is not None
         assert folder.user_id == active_user.id
         assert folder.name == DEFAULT_FOLDER_NAME
+
+
+async def test_default_folder_creation_adopts_existing_orphaned_flow(active_user):
+    """Creating a default folder assigns orphaned flows to that folder."""
+    async with session_scope() as session:
+        folders = (await session.exec(select(Folder).where(Folder.user_id == active_user.id))).all()
+        for folder in folders:
+            await session.delete(folder)
+        await session.commit()
+
+        orphan = Flow(name="Existing orphaned flow", data={}, user_id=active_user.id)
+        session.add(orphan)
+        await session.commit()
+        await session.refresh(orphan)
+        orphan_id = orphan.id
+
+    async with session_scope() as session:
+        folder = await create_default_folder_if_it_doesnt_exist(session, active_user.id)
+        await session.commit()
+        folder_id = folder.id
+        workspace_id = folder.workspace_id
+        adopted_flow = await session.get(Flow, orphan_id)
+
+    assert adopted_flow is not None
+    assert adopted_flow.folder_id == folder_id
+    assert adopted_flow.workspace_id == workspace_id
 
 
 async def test_update_flow_with_nonexistent_folder_id_assigns_default_folder(

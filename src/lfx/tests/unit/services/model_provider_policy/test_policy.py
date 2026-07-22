@@ -154,7 +154,6 @@ def test_embedding_runtime_denies_provider_before_credential_resolution(monkeypa
     assert credential_lookup_called is False
 
 
-@pytest.mark.asyncio
 async def test_standalone_model_component_denied_before_build_method(monkeypatch):
     """Saved legacy model nodes cannot bypass policy by skipping the unified-model helpers."""
     from lfx.base.models.model import LCModelComponent

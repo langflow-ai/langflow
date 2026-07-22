@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 from typing import Any
 from uuid import UUID, uuid4
@@ -126,6 +127,32 @@ class _TargetedAuthz(_SyncingAuthz):
         if self.coarse_raises:
             msg = "coarse sync failed"
             raise RuntimeError(msg)
+
+
+class _HangingTargetedAuthz(_TargetedAuthz):
+    async def sync_share(self, share_id: UUID) -> None:
+        self.synced_share_ids.append(share_id)
+        self.events.append("sync_share")
+        await asyncio.Event().wait()
+
+    async def remove_share_rules(self, snapshot: ShareRuleSnapshot) -> None:
+        self.removed_snapshots.append(snapshot)
+        self.events.append("remove_share_rules")
+        await asyncio.Event().wait()
+
+
+class _HangingCoarseAuthz(_SyncingAuthz):
+    async def sync_shares(self) -> None:
+        self.sync_shares_calls += 1
+        self.events.append("sync_shares")
+        await asyncio.Event().wait()
+
+
+class _HangingInvalidationAuthz(_StubAuthz):
+    async def invalidate_user(self, user_id: UUID, *_args, **_kwargs) -> None:
+        self.invalidated_users.append(user_id)
+        self.events.append("invalidate_user")
+        await asyncio.Event().wait()
 
 
 @pytest.fixture
@@ -790,6 +817,44 @@ async def test_targeted_sync_failure_falls_back_to_coarse_sync(monkeypatch):
     assert stub.invalidated_users == []
 
 
+async def test_targeted_sync_timeout_falls_back_to_coarse_sync(monkeypatch):
+    stub = _HangingTargetedAuthz()
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+    monkeypatch.setattr(shares_module, "_SHARE_POLICY_HOOK_TIMEOUT_SECONDS", 0.01)
+
+    share_id = uuid4()
+    await shares_module._refresh_policy_for_share(share_id, ShareScope.USER.value, uuid4(), op="share:test")
+
+    assert stub.synced_share_ids == [share_id]
+    assert stub.events == ["sync_share", "sync_shares"]
+    assert stub.invalidated_users == []
+
+
+async def test_coarse_sync_timeout_falls_back_to_invalidation(monkeypatch):
+    stub = _HangingCoarseAuthz()
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+    monkeypatch.setattr(shares_module, "_SHARE_POLICY_HOOK_TIMEOUT_SECONDS", 0.01)
+    target_id = uuid4()
+
+    await shares_module._refresh_policy_for_share(uuid4(), ShareScope.USER.value, target_id, op="share:test")
+
+    assert stub.events == ["sync_shares", "invalidate_user"]
+    assert stub.invalidated_users == [target_id]
+
+
+async def test_invalidation_timeout_does_not_block_share_write(monkeypatch):
+    stub = _HangingInvalidationAuthz()
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+    monkeypatch.setattr(shares_module, "_SHARE_POLICY_HOOK_TIMEOUT_SECONDS", 0.01)
+    target_id = uuid4()
+
+    await shares_module._refresh_policy_for_share(uuid4(), ShareScope.USER.value, target_id, op="share:test")
+
+    assert stub.events == ["invalidate_user", "invalidate_all"]
+    assert stub.invalidated_users == [target_id]
+    assert stub.invalidate_all_calls == 1
+
+
 @pytest.mark.asyncio
 async def test_targeted_and_coarse_sync_failure_falls_back_to_invalidation(monkeypatch):
     stub = _TargetedAuthz(targeted_raises=True, coarse_raises=True)
@@ -806,6 +871,26 @@ async def test_targeted_and_coarse_sync_failure_falls_back_to_invalidation(monke
 async def test_targeted_remove_failure_falls_back_to_coarse_sync(monkeypatch):
     stub = _TargetedAuthz(targeted_raises=True)
     monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+    snapshot = ShareRuleSnapshot(
+        share_id=uuid4(),
+        resource_type="flow",
+        resource_id=uuid4(),
+        scope=ShareScope.PUBLIC.value,
+        target_id=None,
+        permission_level=SharePermissionLevel.READ.value,
+    )
+
+    await shares_module._remove_policy_for_share(snapshot, op="share:delete")
+
+    assert stub.removed_snapshots == [snapshot]
+    assert stub.events == ["remove_share_rules", "sync_shares"]
+    assert stub.invalidate_all_calls == 0
+
+
+async def test_targeted_remove_timeout_falls_back_to_coarse_sync(monkeypatch):
+    stub = _HangingTargetedAuthz()
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+    monkeypatch.setattr(shares_module, "_SHARE_POLICY_HOOK_TIMEOUT_SECONDS", 0.01)
     snapshot = ShareRuleSnapshot(
         share_id=uuid4(),
         resource_type="flow",

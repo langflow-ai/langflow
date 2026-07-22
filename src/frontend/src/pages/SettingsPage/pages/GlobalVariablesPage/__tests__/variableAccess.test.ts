@@ -3,6 +3,7 @@ import {
   authorizedVariableIds,
   canMutateVariable,
   canShareVariable,
+  consumeVariableSelectionSpace,
   formatVariableValue,
 } from "../variableAccess";
 
@@ -23,6 +24,34 @@ const loaded = {
 };
 
 describe("shared variable UI policy", () => {
+  it("consumes unauthorized Space without selecting the row", () => {
+    const event = {
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+    };
+    const select = jest.fn();
+
+    consumeVariableSelectionSpace(event, false, select);
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(select).not.toHaveBeenCalled();
+  });
+
+  it("selects the row after consuming authorized Space", () => {
+    const event = {
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+    };
+    const select = jest.fn();
+
+    consumeVariableSelectionSpace(event, true, select);
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(select).toHaveBeenCalledTimes(1);
+  });
+
   it("never displays a shared credential or generic value", () => {
     expect(
       formatVariableValue(variable({ value: "secret" }), "secret", "Hidden"),

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Awaitable
 from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
@@ -14,7 +16,6 @@ from sqlmodel import select
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_shares import ShareCreate, ShareRead, ShareUpdate
 from langflow.services.authorization import ShareAction, ensure_share_permission
-from langflow.services.authorization.invalidation import safe_invalidate_all, safe_invalidate_user
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import (
     AuthzShare,
@@ -34,6 +35,8 @@ from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_authorization_service
 
 router = APIRouter(prefix="/authz/shares", tags=["Authorization"])
+
+_SHARE_POLICY_HOOK_TIMEOUT_SECONDS = 5.0
 
 
 # resource_type slug → (model, owner column).
@@ -159,13 +162,37 @@ async def _user_can_see_share(
     )
 
 
+async def _try_bounded_invalidation(operation: Awaitable[None], *, hook_name: str, op: str) -> bool:
+    """Run one invalidation hook within the post-commit plugin deadline."""
+    try:
+        await asyncio.wait_for(operation, timeout=_SHARE_POLICY_HOOK_TIMEOUT_SECONDS)
+    except Exception as exc:  # noqa: BLE001 - post-commit plugin hooks are best-effort
+        logger.warning("%s failed after %s; cache may be stale: %s", hook_name, op, exc)
+        return False
+    return True
+
+
 async def _invalidate_for_share(scope: str, target_id: UUID | None, *, op: str = "share:write") -> None:
     """Invalidate cached policy after a share write (user scope vs invalidate_all)."""
     authz = get_authorization_service()
     if scope == ShareScope.USER.value and target_id is not None:
-        await safe_invalidate_user(authz, target_id, op=op)
-    else:
-        await safe_invalidate_all(authz, op=op)
+        if await _try_bounded_invalidation(
+            authz.invalidate_user(target_id),
+            hook_name="invalidate_user",
+            op=op,
+        ):
+            return
+        await _try_bounded_invalidation(
+            authz.invalidate_all(),
+            hook_name="invalidate_all fallback",
+            op=op,
+        )
+        return
+    await _try_bounded_invalidation(
+        authz.invalidate_all(),
+        hook_name="invalidate_all",
+        op=op,
+    )
 
 
 def _uses_base_sync_shares(authz: BaseAuthorizationService) -> bool:
@@ -185,7 +212,10 @@ async def _try_coarse_share_sync(authz: BaseAuthorizationService, *, op: str) ->
     sync_shares = getattr(authz, "sync_shares", None)
     if sync_shares is not None and not _uses_base_sync_shares(authz):
         try:
-            await sync_shares()
+            await asyncio.wait_for(
+                sync_shares(),
+                timeout=_SHARE_POLICY_HOOK_TIMEOUT_SECONDS,
+            )
         except Exception as exc:  # noqa: BLE001 - plugin hooks are best-effort post-commit work
             logger.warning("sync_shares failed after %s; falling back to safe invalidation: %s", op, exc)
         else:
@@ -198,7 +228,10 @@ async def _refresh_policy_for_share(share_id: UUID, scope: str, target_id: UUID 
     authz = get_authorization_service()
     if _overrides_share_hook(authz, "sync_share"):
         try:
-            await authz.sync_share(share_id)
+            await asyncio.wait_for(
+                authz.sync_share(share_id),
+                timeout=_SHARE_POLICY_HOOK_TIMEOUT_SECONDS,
+            )
         except Exception as exc:  # noqa: BLE001 - durable share writes must never be rolled back by plugin hooks
             logger.warning("sync_share failed after %s; falling back to sync_shares: %s", op, exc)
         else:
@@ -213,7 +246,10 @@ async def _remove_policy_for_share(snapshot: ShareRuleSnapshot, *, op: str) -> N
     authz = get_authorization_service()
     if _overrides_share_hook(authz, "remove_share_rules"):
         try:
-            await authz.remove_share_rules(snapshot)
+            await asyncio.wait_for(
+                authz.remove_share_rules(snapshot),
+                timeout=_SHARE_POLICY_HOOK_TIMEOUT_SECONDS,
+            )
         except Exception as exc:  # noqa: BLE001 - durable share deletes must never be rolled back by plugin hooks
             logger.warning("remove_share_rules failed after %s; falling back to sync_shares: %s", op, exc)
         else:

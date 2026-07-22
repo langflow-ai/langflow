@@ -1551,6 +1551,10 @@ async def custom_component_update(
                 detail="Custom component creation is disabled",
             )
 
+    policy_context_token = set_current_model_provider_policy_context(
+        user_id=user.id,
+        attributes={"is_superuser": bool(user.is_superuser)},
+    )
     try:
         component = Component(_code=effective_code)
         component_node, cc_instance = build_custom_component_template(
@@ -1627,6 +1631,8 @@ async def custom_component_update(
 
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        reset_current_model_provider_policy_context(policy_context_token)
 
     locale = getattr(request.state, "locale", "en")
     if locale != "en":

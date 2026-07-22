@@ -34,6 +34,7 @@ import {
   authorizedVariableIds,
   canMutateVariable,
   canShareVariable,
+  consumeVariableSelectionSpace,
   formatVariableValue,
 } from "./variableAccess";
 
@@ -385,15 +386,17 @@ function GlobalVariablesPageContent({
     // Space toggles row selection (checkbox) without opening the edit modal.
     // Scoped to this page via onCellKeyDown — other tables are unchanged.
     if (keyboardEvent.key === " " || keyboardEvent.key === "Spacebar") {
-      if (!canMutateVariable(event.data, "delete", permissionState, can))
-        return;
-      keyboardEvent.preventDefault();
-      keyboardEvent.stopPropagation();
-      const select = !event.node.isSelected();
-      event.node.setSelected(select, false);
-      // TableOptions.hasSelection is read at render time from the grid API, so
-      // sync React state so the delete control updates immediately.
-      setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
+      consumeVariableSelectionSpace(
+        keyboardEvent,
+        canMutateVariable(event.data, "delete", permissionState, can),
+        () => {
+          const select = !event.node.isSelected();
+          event.node.setSelected(select, false);
+          // TableOptions.hasSelection is read at render time from the grid API,
+          // so sync React state so the delete control updates immediately.
+          setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
+        },
+      );
     }
   }
 

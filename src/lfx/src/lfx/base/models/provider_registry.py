@@ -659,7 +659,8 @@ def uses_standalone_model_provider_policy(component: object) -> bool:
     the selected provider—not the wrapper's module—is enforced. Local utility
     components can opt out because they do not invoke a model provider.
     """
-    return getattr(component, "model_provider_policy_mode", "standalone") == "standalone"
+    mode = getattr(component, "model_provider_policy_mode", "standalone")
+    return mode not in ("delegate", "none")
 
 
 def provider_name_for_id(provider_id: str) -> str | None:

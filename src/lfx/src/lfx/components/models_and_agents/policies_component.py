@@ -411,7 +411,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             # Settings layer present but service unavailable: fail closed, matching
             # validate_flow_for_current_settings (which raises in this case).
             return False
-        return bool(getattr(settings_service.settings, "allow_custom_components", True))
+        return bool(getattr(settings_service.settings, "allow_custom_components", False))
 
     async def guard_tools(self) -> list[Tool]:
         if self.enabled:
