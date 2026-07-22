@@ -21,6 +21,9 @@ cache_service = "langflow.services.cache.service:ThreadingInMemoryCache"
 auth_service = "langflow.services.auth.service:AuthService"
 session_service = "langflow.services.session.service:SessionService"
 
+# Model Provider Policy (optional; the built-in implementation allows every registered provider)
+# model_provider_policy_service = "acme_langflow.policy:AcmeModelProviderPolicyService"
+
 # Chat & Communication
 chat_service = "langflow.services.chat.service:ChatService"
 

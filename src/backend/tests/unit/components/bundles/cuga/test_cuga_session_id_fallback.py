@@ -19,6 +19,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+pytest.importorskip("lfx_bundles")
+
 # CugaComponent's class body looks up MODELS_METADATA["OpenAI"], so it can only be
 # imported when an OpenAI provider is registered (depends on optional deps in the env).
 # Skip the whole module if the import side-effect fails.

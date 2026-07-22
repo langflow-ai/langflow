@@ -472,6 +472,79 @@ async def test_handle_call_tool_falls_back_when_session_id_blank(monkeypatch):
     assert forwarded_request.session_id != ""
 
 
+async def test_handle_call_tool_forwards_only_advertised_input_fields(monkeypatch):
+    """Advertised MCP arguments must reach only the input nodes that expose them."""
+
+    class _FakeNode:
+        def __init__(self, node_id, *, is_input, template):
+            self.id = node_id
+            self.is_input = is_input
+            self.data = {"node": {"template": template}}
+
+    class _FakeGraph:
+        def __init__(self):
+            self.vertices = [
+                _FakeNode(
+                    "input-a",
+                    is_input=True,
+                    template={
+                        "input_value": {"show": True, "advanced": False},
+                        "backend_token": {"show": True, "advanced": False},
+                        "enabled": {"show": True, "advanced": False},
+                        "hidden": {"show": False, "advanced": False},
+                        "advanced": {"show": True, "advanced": True},
+                    },
+                ),
+                _FakeNode(
+                    "input-b",
+                    is_input=True,
+                    template={
+                        "backend_token": {"show": True, "advanced": False},
+                        "backend_url": {"show": True, "advanced": False},
+                    },
+                ),
+                _FakeNode(
+                    "downstream",
+                    is_input=False,
+                    template={"backend_url": {"show": True, "advanced": False}},
+                ),
+            ]
+
+        @classmethod
+        def from_payload(cls, _flow_data):
+            return cls()
+
+    import lfx.graph.graph.base as graph_base_module
+
+    monkeypatch.setattr(graph_base_module, "Graph", _FakeGraph)
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={
+            "input_value": "test request",
+            "session_id": "thread-1",
+            "backend_token": "example-token",
+            "backend_url": "https://backend.example.com",
+            "enabled": False,
+            "hidden": "must-not-forward",
+            "advanced": "must-not-forward",
+            "unknown": "must-not-forward",
+        },
+    )
+
+    forwarded_request = simple_run_flow_mock.await_args.kwargs["input_request"]
+    assert forwarded_request.input_value == "test request"
+    assert forwarded_request.session_id == "thread-1"
+    assert forwarded_request.tweaks is not None
+    assert forwarded_request.tweaks.root == {
+        "input-a": {"backend_token": "example-token", "enabled": False},
+        "input-b": {
+            "backend_token": "example-token",
+            "backend_url": "https://backend.example.com",
+        },
+    }
+
+
 def test_json_schema_from_flow_includes_optional_session_id(monkeypatch):
     """json_schema_from_flow must advertise session_id so MCP clients can supply it."""
 

@@ -379,6 +379,8 @@ export const lazyIconsMapping = {
     import("@/icons/OpenAi").then((mod) => ({ default: mod.OpenAiIcon })),
   OpenAICopy: () =>
     import("@/icons/OpenAI copy").then((mod) => ({ default: mod.OpenAIIcon })),
+  OpenRAG: () =>
+    import("@/icons/OpenRAG").then((mod) => ({ default: mod.OpenRAGIcon })),
   OpenRouter: () =>
     import("@/icons/OpenRouter").then((mod) => ({
       default: mod.OpenRouterIcon,
@@ -493,6 +495,8 @@ export const lazyIconsMapping = {
     })),
   Upstash: () =>
     import("@/icons/Upstash").then((mod) => ({ default: mod.UpstashSvgIcon })),
+  Valkey: () =>
+    import("@/icons/Valkey").then((mod) => ({ default: mod.ValkeyIcon })),
   Vectara: () =>
     import("@/icons/VectaraIcon").then((mod) => ({ default: mod.VectaraIcon })),
   vLLM: () => import("@/icons/vLLM").then((mod) => ({ default: mod.VllmIcon })),

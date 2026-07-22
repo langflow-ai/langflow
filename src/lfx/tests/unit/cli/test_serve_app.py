@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import secrets
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -1043,8 +1044,10 @@ class TestSecurityFunctions:
     def test_verify_api_key_with_query_param(self):
         """Test API key verification with query parameter."""
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key-123"}):  # pragma: allowlist secret
-            result = verify_api_key(_fake_request(), "test-key-123", None)
+            with patch("lfx.cli.serve_app.secrets.compare_digest", wraps=secrets.compare_digest) as compare_digest:
+                result = verify_api_key(_fake_request(), "test-key-123", None)
             assert result == "test-key-123"
+            compare_digest.assert_called_once_with(b"test-key-123", b"test-key-123")
 
     def test_verify_api_key_with_header_param(self):
         """Test API key verification with header parameter."""

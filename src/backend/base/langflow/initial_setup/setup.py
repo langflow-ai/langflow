@@ -26,6 +26,7 @@ from lfx.base.constants import (
     SKIPPED_COMPONENTS,
     SKIPPED_FIELD_ATTRIBUTES,
 )
+from lfx.extension.bundle_registry import get_default_registry
 from lfx.log.logger import logger
 from lfx.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from lfx.utils.component_aliases import flatten_components_with_aliases
@@ -66,6 +67,7 @@ from langflow.services.deps import (
 # importable via the bundle shims) -- it is what the migration table and the
 # template tests resolve.
 _RUNTIME_EXT_MODULE_PREFIX = "_lfx_ext."
+_PROMPT_COMPONENT_TYPES = frozenset({"Prompt", "Prompt Template"})
 
 
 def _merge_node_metadata(current_metadata, latest_metadata):
@@ -96,6 +98,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
     for node in project_data_copy.get("nodes", []):
         node_data = node.get("data").get("node")
         node_type = node.get("data").get("type")
+        is_prompt_component = node_type in _PROMPT_COMPONENT_TYPES
 
         if node_type in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(node_type)
@@ -142,7 +145,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
 
             if node_data["template"]["_type"] != latest_template["_type"]:
                 node_data["template"]["_type"] = latest_template["_type"]
-                if node_type != "Prompt":
+                if not is_prompt_component:
                     node_data["template"] = deepcopy(latest_template)
                 else:
                     for key, value in latest_template.items():
@@ -227,7 +230,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                             )
                             node_data["template"][field_name][attr] = deepcopy(field_dict[attr])
             # Remove fields that are not in the latest template
-            if node_type != "Prompt":
+            if not is_prompt_component:
                 for field_name in list(node_data["template"].keys()):
                     is_tool_mode_and_field_is_tools_metadata = (
                         node_data.get("tool_mode", False) and field_name == "tools_metadata"
@@ -590,25 +593,70 @@ def log_node_changes(node_changes_log) -> None:
 
 
 async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, dict]]:
+    """Load core starters plus starters owned by discovered manifest-less bundles."""
     starter_projects = []
-    folder = anyio.Path(__file__).parent / "starter_projects"
+    core_folder = anyio.Path(__file__).parent / "starter_projects"
+    bundle_folders = sorted(
+        {
+            anyio.Path(record.source_path) / "starter_projects"
+            for record in get_default_registry().snapshot().values()
+            if record.manifestless and record.source_path is not None
+        },
+        key=str,
+    )
     await logger.adebug("Loading starter projects")
-    async for file in folder.glob("*.json"):
-        attempt = 0
-        while attempt < retries:
-            content = await file.read_text(encoding="utf-8")
-            try:
-                project = orjson.loads(content)
-                starter_projects.append((file, project))
-                break  # Break if load is successful
-            except orjson.JSONDecodeError as e:
-                attempt += 1
-                if attempt >= retries:
-                    msg = f"Error loading starter project {file}: {e}"
-                    raise ValueError(msg) from e
-                await asyncio.sleep(delay)  # Wait before retrying
+    for folder in [core_folder, *bundle_folders]:
+        async for file in folder.glob("*.json"):
+            attempt = 0
+            while attempt < retries:
+                content = await file.read_text(encoding="utf-8")
+                try:
+                    project = orjson.loads(content)
+                    starter_projects.append((file, project))
+                    break  # Break if load is successful
+                except orjson.JSONDecodeError as e:
+                    attempt += 1
+                    if attempt >= retries:
+                        msg = f"Error loading starter project {file}: {e}"
+                        raise ValueError(msg) from e
+                    await asyncio.sleep(delay)  # Wait before retrying
     await logger.adebug(f"Loaded {len(starter_projects)} starter projects")
     return starter_projects
+
+
+def filter_starter_projects_by_available_components(
+    starter_projects: list[tuple[anyio.Path, dict]], all_types_dict: dict
+) -> list[tuple[anyio.Path, dict]]:
+    """Return only starter projects whose component types exist in the live registry."""
+    available_component_types = set(flatten_components_with_aliases(all_types_dict))
+    filtered_projects = []
+
+    for project_path, project in starter_projects:
+        missing_component_types = set()
+        for node in project.get("data", {}).get("nodes", []):
+            node_data = node.get("data", {})
+            node_type = node_data.get("type")
+            component_data = node_data.get("node", {})
+            if not node_type or node_type == "note" or not isinstance(component_data, dict):
+                continue
+
+            metadata = component_data.get("metadata", {})
+            module_name = metadata.get("module") if isinstance(metadata, dict) else None
+            code = component_data.get("template", {}).get("code")
+            code_value = code.get("value") if isinstance(code, dict) else code
+            is_embedded_custom_component = bool(code_value) and not module_name
+
+            if node_type not in available_component_types and not is_embedded_custom_component:
+                missing_component_types.add(node_type)
+
+        if missing_component_types:
+            missing_components = ", ".join(sorted(missing_component_types))
+            project_name = project.get("name", project_path.name)
+            logger.warning(f"Skipping starter project '{project_name}'; unavailable components: {missing_components}")
+            continue
+        filtered_projects.append((project_path, project))
+
+    return filtered_projects
 
 
 async def copy_profile_pictures() -> None:
@@ -1328,6 +1376,7 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
     async with session_scope() as session:
         new_folder = await get_or_create_starter_folder(session)
         starter_projects = await load_starter_projects()
+        starter_projects = filter_starter_projects_by_available_components(starter_projects, all_types_dict)
 
         if get_settings_service().settings.update_starter_projects:
             await logger.adebug("Updating starter projects")

@@ -107,12 +107,11 @@ jobs:
         run: |
           echo "PWD: $(pwd)"
           find . -name "pypi_nightly_tag.py"
-      - name: Generate shared nightly tag (main == base, lockstep)
+      - name: Generate shared nightly tag (main == core == base, lockstep)
         id: generate_shared_tag
         run: |
-          # langflow (nightly .devN pre-release) pins langflow-base[complete]==<exact dev>, so
-          # both tags MUST be identical. Compute them in ONE invocation (single PyPI snapshot)
-          # so they cannot drift across separate calls.
+          # langflow -> langflow-core -> langflow-base uses exact nightly dev pins,
+          # so all three versions MUST be identical. Compute from one PyPI snapshot.
           # NOTE: This outputs the tag with the `v` prefix.
           TAGS_OUTPUT="$(uv run ./scripts/ci/pypi_nightly_tag.py both)"
           RELEASE_TAG="$(printf '%s\n' "$TAGS_OUTPUT" | sed -n '1p')"
@@ -165,13 +164,14 @@ jobs:
           uv run --no-sync ./scripts/ci/update_sdk_version.py $SDK_TAG
           echo "Updating LFX project version to $LFX_TAG"
           uv run --no-sync ./scripts/ci/update_lfx_version.py $LFX_TAG $SDK_TAG
-          echo "Updating base project version to $BASE_TAG and updating main project version to $RELEASE_TAG"
+          echo "Updating base/core/main project versions to the shared nightly tag"
           uv run --no-sync ./scripts/ci/update_pyproject_combined.py main $RELEASE_TAG $BASE_TAG $LFX_TAG
 
           uv lock
           cd src/lfx && uv lock && cd ../..
 
-          git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml src/sdk/pyproject.toml uv.lock
+          git add pyproject.toml src/langflow-core/pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml \
+            src/lfx/src/lfx/_assets/component_index.json src/sdk/pyproject.toml uv.lock
           # The nightly keeps canonical package names and the stable `lfx-*` bundles
           # are not modified (see src/bundles/NIGHTLY.md), so no bundle pyprojects ride this commit.
           git commit -m "Update version for nightly"

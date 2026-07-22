@@ -3,6 +3,10 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+pytest.importorskip("langchain_ollama")
+
 from langchain_ollama import ChatOllama
 from lfx.base.models.ollama_constants import DEFAULT_OLLAMA_API_URL
 from lfx.components.ollama.ollama import ChatOllamaComponent

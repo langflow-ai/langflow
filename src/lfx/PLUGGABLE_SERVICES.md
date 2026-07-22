@@ -260,6 +260,7 @@ Service keys **must** match `ServiceType` enum values exactly:
 
 - `database_service`
 - `auth_service`
+- `model_provider_policy_service`
 - `storage_service`
 - `cache_service`
 - `chat_service`
@@ -276,6 +277,60 @@ Service keys **must** match `ServiceType` enum values exactly:
 - `transaction_service`
 
 **Important:** `settings_service` is **not pluggable** and cannot be overridden. It is always created using the built-in factory and provides the foundational configuration for all other services.
+
+### Model-provider policy service
+
+`model_provider_policy_service` controls which registered providers are exposed through the unified model-provider surfaces. The built-in `ModelProviderPolicyService` allows every candidate provider, preserving the historical OSS behavior. A deployment can replace it with a subclass of `BaseModelProviderPolicyService`:
+
+```python
+from __future__ import annotations
+
+from collections.abc import Collection
+
+from lfx.services.model_provider_policy import (
+    BaseModelProviderPolicyService,
+    ModelProviderPolicyContext,
+    ModelProviderPolicyPurpose,
+)
+
+
+class AcmeModelProviderPolicyService(BaseModelProviderPolicyService):
+    def __init__(self) -> None:
+        super().__init__()
+        self.set_ready()
+
+    def get_allowed_provider_ids(
+        self,
+        *,
+        context: ModelProviderPolicyContext,
+        candidate_provider_ids: frozenset[str],
+        purpose: ModelProviderPolicyPurpose,
+    ) -> Collection[str]:
+        deployment_ceiling = frozenset({"openai", "acme.models"})
+        # A later RBAC implementation can narrow this set using context.user_id,
+        # context.attributes, and purpose in the same batch decision.
+        return candidate_provider_ids & deployment_ceiling
+```
+
+The method receives stable provider IDs for both core and extension-contributed providers and returns the allowed subset. The base service rejects results that widen the candidate set and returns an immutable decision snapshot. Calls are synchronous so configuration and runtime paths can share one batch decision without introducing async work into model construction.
+
+`purpose` identifies the protected operation:
+
+- `discover` filters provider and model listings.
+- `configure` guards credentials, validation, and enabled-model changes.
+- `use` guards model selection, defaults, and runtime instantiation.
+
+Install the package that contains the implementation, then select it through deploy-time configuration:
+
+```toml
+# $LANGFLOW_CONFIG_DIR/lfx.toml
+[services]
+model_provider_policy_service = "acme_langflow.policy:AcmeModelProviderPolicyService"
+```
+
+The equivalent `pyproject.toml` section is `[tool.lfx.services]`. When both files exist, `lfx.toml` is preferred. Config-file registration has higher precedence than the built-in decorator; an `lfx.services` entry point alone does not replace the OSS default. The configured class must inherit `BaseModelProviderPolicyService`; service resolution fails closed for an incompatible implementation.
+
+This policy applies to shared unified model catalogs, configuration APIs, selectors, and runtime helpers. It does not hide provider-specific component classes from the component palette.
 
 ## Creating Custom Services
 

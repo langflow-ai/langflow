@@ -16,6 +16,7 @@ import pytest
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 
 STARTER_PROJECTS_DIR = Path(__file__).parent.parent / "base" / "langflow" / "initial_setup" / "starter_projects"
+BUNDLE_STARTER_PROJECTS_DIR = Path(__file__).parents[2] / "bundles"
 LOCALES_EN_FILE = Path(__file__).parent.parent / "base" / "langflow" / "locales" / "en.json"
 
 # QA observed this exact legacy text in starter project Agents on the cz/default-sys-prompt branch.
@@ -59,12 +60,24 @@ def get_starter_project_files() -> list[Path]:
         msg = f"Starter projects directory not found: {STARTER_PROJECTS_DIR}"
         raise FileNotFoundError(msg) from None
 
-    json_files = sorted(STARTER_PROJECTS_DIR.glob("*.json"))
+    json_files = sorted(
+        [
+            *STARTER_PROJECTS_DIR.glob("*.json"),
+            *BUNDLE_STARTER_PROJECTS_DIR.glob("**/starter_projects/*.json"),
+        ]
+    )
     if not json_files:
         msg = f"No JSON files found in {STARTER_PROJECTS_DIR}"
         raise FileNotFoundError(msg) from None
 
     return json_files
+
+
+def get_starter_project_path(filename: str) -> Path:
+    """Return the unique core or bundle-owned starter project path."""
+    matches = [path for path in get_starter_project_files() if path.name == filename]
+    assert len(matches) == 1, f"Expected one starter template named {filename!r}, found {matches}"
+    return matches[0]
 
 
 def load_json_file(json_file: Path) -> dict:
@@ -121,6 +134,29 @@ class TestStarterProjects:
         """Test that JSON file is valid and can be parsed."""
         data = load_json_file(json_file)
         assert isinstance(data, dict), f"{json_file.name} should be a valid JSON object"
+
+    def test_prompt_custom_fields_are_materialized(self, json_file: Path):
+        """Prompt variables declared in custom_fields must exist in the serialized template."""
+        data = load_json_file(json_file)
+        missing_fields: list[str] = []
+
+        for node in data.get("data", {}).get("nodes", []):
+            node_data = node.get("data", {}) or {}
+            node_config = node_data.get("node", {}) or {}
+            template = node_config.get("template", {}) or {}
+            custom_fields = node_config.get("custom_fields", {}) or {}
+
+            for field_names in custom_fields.values():
+                if not isinstance(field_names, list):
+                    continue
+                for field_name in field_names:
+                    if field_name not in template:
+                        node_id = node_data.get("id", node.get("id", "<unknown>"))
+                        missing_fields.append(f"{node_id}.{field_name}")
+
+        assert not missing_fields, (
+            f"{json_file.name}: custom prompt fields are missing from the serialized node template: {missing_fields}"
+        )
 
     def test_width_height_at_node_level(self, json_file: Path):
         """Test that width/height are removed from node root level for all node types EXCEPT noteNode.
@@ -275,8 +311,7 @@ def test_agent_keeps_template_specific_prompt(template_file: str, agent_id: str,
     change one of these prompts, update the substring in
     TEMPLATES_WITH_CUSTOM_AGENT_PROMPTS in the same change.
     """
-    path = STARTER_PROJECTS_DIR / template_file
-    assert path.exists(), f"Starter template not found: {path}"
+    path = get_starter_project_path(template_file)
 
     data = load_json_file(path)
     for node in data.get("data", {}).get("nodes", []):

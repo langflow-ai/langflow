@@ -158,6 +158,7 @@ export type NodeInputFieldComponentType = {
   isToolMode?: boolean;
   isPrimaryInput?: boolean;
   displayHandle?: boolean;
+  minimizedHandleTop?: string;
 };
 
 export type IOJSONInputComponentType = {
@@ -377,6 +378,11 @@ export type TriggerProps = {
   children: ReactNode;
   tooltipContent?: ReactNode;
   side?: "top" | "right" | "bottom" | "left";
+  // Forwarded onto the underlying trigger button. Used when the trigger acts
+  // as a toggle (e.g. the admin active/superuser controls) so it is announced
+  // as a named toggle button instead of nesting an interactive role inside it.
+  ariaLabel?: string;
+  ariaPressed?: boolean;
 };
 
 export interface languageMap {
@@ -458,6 +464,7 @@ export type loginInputStateType = {
 };
 
 export type patchUserInputStateType = {
+  currentPassword: string;
   password: string;
   cnfPassword: string;
   profilePicture: string;
@@ -626,8 +633,6 @@ export type nodeToolbarPropsType = {
   numberOfOutputHandles: number;
   showNode: boolean;
   name?: string;
-  openAdvancedModal?: boolean;
-  onCloseAdvancedModal?: (close: boolean) => void;
   isOutdated: boolean;
   isUserEdited: boolean;
   hasBreakingChange: boolean;

@@ -97,6 +97,42 @@ def _unbuild_needed_dropped_producers(graph: Graph) -> None:
                 changed = True
 
 
+def resume_graph_with_decision(
+    checkpoint: GraphCheckpoint, store: CheckpointStore, request_id: str | None, decision: dict
+) -> Graph:
+    """Restore a paused graph and inject a HITL decision for ``request_id``.
+
+    The shared "restore + inject + un-build" seam for HITL resume: rebuild the graph from the
+    checkpoint, re-attach the store, record the decision (merged with any checkpoint-restored ones),
+    and un-build the paused vertex so it re-runs and reads the decision. Used by the lfx CLI resume
+    loop (``lfx.run.hitl``) and the A2A resume path. ``build.py``'s background resume keeps its own
+    variant (it adds tracing + predecessor re-run on top).
+    """
+    from lfx.graph.graph.base import Graph
+
+    if not request_id:
+        # No request_id means the decision can't be routed to a paused vertex: it would silently
+        # vanish (no vertex matches) or crash on the startswith below. Fail loud instead.
+        msg = "Cannot resume: pause request is missing request_id"
+        raise RuntimeError(msg)
+
+    graph = Graph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+    graph.checkpointing_enabled = True
+    graph.checkpoint_store = store
+    graph.human_input_decisions = {
+        **(getattr(graph, "human_input_decisions", {}) or {}),
+        request_id: decision,
+    }
+    for vertex in graph.vertices:
+        vertex_request_id = f"{vertex.id}:{graph.run_id}"
+        if request_id == vertex_request_id or request_id.startswith(vertex_request_id + ":"):
+            vertex.built = False
+    # Re-run the fixpoint after un-building the paused vertex so any opaque-dropped
+    # producer it consumes is rebuilt instead of restoring a None value.
+    _unbuild_needed_dropped_producers(graph)
+    return graph
+
+
 def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: CheckpointStore | None = None) -> Graph:
     from lfx.graph.graph.base import Graph
 
