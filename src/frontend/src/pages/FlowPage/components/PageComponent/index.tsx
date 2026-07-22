@@ -14,6 +14,7 @@ import {
   type MouseEvent,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -115,6 +116,17 @@ export default function Page({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const isEmptyFlow = useRef(nodes.length === 0);
+
+  const nodesWithAriaLabel = useMemo(
+    () =>
+      nodes.map((node) => ({
+        ...node,
+        ariaLabel: t("flow.nodeAriaLabel", {
+          name: node.data?.node?.display_name ?? node.data?.type,
+        }),
+      })),
+    [nodes, t],
+  );
 
   const previewLabel = useVersionPreviewStore((s) => s.previewLabel);
   const isPreviewActive = previewLabel !== null;
@@ -918,7 +930,8 @@ export default function Page({
               onClick={handleGroupNode}
             />
             <ReactFlow<AllNodeType, EdgeType>
-              nodes={nodes}
+              aria-label={t("flow.canvasLabel")}
+              nodes={nodesWithAriaLabel}
               edges={edges}
               onNodesChange={onNodesChangeWithHelperLines}
               onEdgesChange={onEdgesChange}

@@ -131,6 +131,10 @@ export const SidebarDraggableComponent = forwardRef(
             }}
             key={itemName}
             data-tooltip-id={itemName}
+            role="button"
+            aria-label={t("sidebar.addComponentToCanvas", {
+              name: display_name,
+            })}
             tabIndex={0}
             onKeyDown={handleKeyDown}
             className="rounded-md outline-none ring-ring focus-visible:ring-1"
