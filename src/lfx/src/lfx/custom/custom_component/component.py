@@ -1320,7 +1320,12 @@ class Component(CustomComponent):
         for output in self._get_outputs_to_process():
             self._current_output = output.name
             result = await self._get_output_result(output)
-            results[output.name] = result
+            # ``result`` (and ``output.value``) is the real value graph edges consume.
+            # Serialize an independent masked copy to the API / event stream / UI so
+            # secrets never surface to a human, without corrupting the value a connected
+            # downstream component receives. ``_build_artifact`` sanitizes internally.
+            # See issue #14152.
+            results[output.name] = self._sanitize_secret_values(result)
             artifacts[output.name] = self._build_artifact(result)
             self._log_output(output)
 
@@ -1407,7 +1412,12 @@ class Component(CustomComponent):
         ):
             result.set_flow_id(self._vertex.graph.flow_id)
         result = output.apply_options(result)
-        result = self._sanitize_secret_values(result)
+        # ``output.value`` is what a connected downstream vertex reads when resolving a
+        # graph edge (see ``ComponentVertex._get_result``). Keep it the real, unmasked
+        # value so a component can legitimately hand a secret (e.g. a connection string
+        # containing a password) to a single connected consumer. Masking for human-facing
+        # surfaces happens separately on the serialized copies in ``_build_results`` /
+        # ``_build_artifact`` / ``_finalize_results``. See issue #14152.
         output.value = result
 
         return result
@@ -1460,15 +1470,22 @@ class Component(CustomComponent):
         if isinstance(value, str):
             return self._sanitize_secret_string(value)
         if isinstance(value, Message):
-            if isinstance(value.text, str):
-                value.text = self._sanitize_secret_string(value.text)
-            value.data = self._sanitize_secret_values(value.data)
-            return value
+            # Copy with an independent ``data`` dict before masking. ``Message.text``'s
+            # setter writes into ``self.data`` and a shallow ``model_copy`` shares that
+            # dict, so masking the copy would otherwise still mutate the original (and
+            # thus ``output.value``). ``model_copy(deep=True)`` is not usable here:
+            # Message/Data inherit a ``__deepcopy__`` that raises TypeError. See #14152.
+            copied = value.model_copy(update={"data": dict(value.data)})
+            if isinstance(copied.text, str):
+                copied.text = self._sanitize_secret_string(copied.text)
+            copied.data = self._sanitize_secret_values(copied.data)
+            return copied
         if isinstance(value, Data):
-            value.data = self._sanitize_secret_values(value.data)
-            if isinstance(value.default_value, str):
-                value.default_value = self._sanitize_secret_string(value.default_value)
-            return value
+            copied = value.model_copy(update={"data": dict(value.data)})
+            copied.data = self._sanitize_secret_values(copied.data)
+            if isinstance(copied.default_value, str):
+                copied.default_value = self._sanitize_secret_string(copied.default_value)
+            return copied
         if isinstance(value, dict):
             return {key: self._sanitize_secret_values(item) for key, item in value.items()}
         if isinstance(value, list):
