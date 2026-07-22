@@ -952,7 +952,7 @@ class MCPSessionManager:
     def __init__(self):
         # Structure: server_key -> {"sessions": {session_id: session_info}, "last_cleanup": timestamp}
         self.sessions_by_server = {}
-        self._background_tasks = set()  # Keep references to background tasks
+        self._background_tasks: set[asyncio.Task[Any]] = set()  # Keep references to background tasks
         # Backwards-compatibility maps: which context_id uses which (server_key, session_id)
         self._context_to_session: dict[str, tuple[str, str]] = {}
         # Reference count for each active (server_key, session_id)
@@ -1270,6 +1270,24 @@ class MCPSessionManager:
 
             return session
 
+    def _abort_session_task(self, task: asyncio.Task[Any]) -> None:
+        """Cancel and reap a transport task when session creation is interrupted."""
+        if task.done():
+            self._background_tasks.discard(task)
+            return
+
+        task.cancel()
+
+        async def reap_task() -> None:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await task
+            self._background_tasks.discard(task)
+
+        # Reap outside the cancelled caller so transport shutdown can finish.
+        reaper = asyncio.create_task(reap_task())
+        self._background_tasks.add(reaper)
+        reaper.add_done_callback(self._background_tasks.discard)
+
     async def _create_stdio_session(self, session_id: str, connection_params):
         """Create a new stdio session as a background task to avoid context issues."""
         import asyncio
@@ -1309,6 +1327,9 @@ class MCPSessionManager:
         # Wait for session to be ready (use longer timeout for remote connections)
         try:
             session = await asyncio.wait_for(session_future, timeout=30.0)
+        except asyncio.CancelledError:
+            self._abort_session_task(task)
+            raise
         except asyncio.TimeoutError as timeout_err:
             # Clean up the failed task
             if not task.done():
@@ -1479,6 +1500,9 @@ class MCPSessionManager:
                 return session, task, transport_used, sse_preference_locked[0]
             msg = f"Session {session_id} established but transport not recorded"
             raise ValueError(msg)
+        except asyncio.CancelledError:
+            self._abort_session_task(task)
+            raise
         except asyncio.TimeoutError as timeout_err:
             if not task.done():
                 task.cancel()
