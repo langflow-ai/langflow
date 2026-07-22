@@ -262,7 +262,7 @@ async def adelete_messages(session_id: str | None = None, context_id: str | None
 
         # Determine which field to filter by
         filter_column = MessageTable.context_id if context_id else MessageTable.session_id
-        filter_value = context_id if context_id else session_id
+        filter_value = context_id or session_id
 
         stmt = (
             delete(MessageTable)

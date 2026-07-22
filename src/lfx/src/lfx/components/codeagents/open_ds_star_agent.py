@@ -972,7 +972,7 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
             model=self.llm,
             temperature=0.0,  # Fixed for now, could be made configurable
             tools=tools,
-            system_prompt=system_prompt if system_prompt else "You are a helpful data science assistant.",
+            system_prompt=system_prompt or "You are a helpful data science assistant.",
             max_steps=max_iterations,
             code_mode=code_mode,
             code_timeout=code_timeout,

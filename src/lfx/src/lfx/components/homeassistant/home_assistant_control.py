@@ -125,7 +125,7 @@ class HomeAssistantControl(LCToolComponent):
         Example: entity_id="switch.unknown_switch_3" -> domain="switch".
         """
         try:
-            domain = entity_id.split(".")[0]  # switch, light, cover, etc.
+            domain = entity_id.split(".", maxsplit=1)[0]  # switch, light, cover, etc.
             url = f"{base_url}/api/services/{domain}/{action}"
 
             headers = {

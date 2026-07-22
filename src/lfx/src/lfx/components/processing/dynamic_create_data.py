@@ -216,7 +216,7 @@ class DynamicCreateDataComponent(Component):
                         name=dynamic_input_name,
                         display_name=display_name,
                         info=f"{help_text} (Accepts: {', '.join(input_types_list) if input_types_list else 'Any'})",
-                        input_types=input_types_list if input_types_list else ["Data", "Text", "Message"],
+                        input_types=input_types_list or ["Data", "Text", "Message"],
                         required=required,
                     )
 
@@ -226,7 +226,7 @@ class DynamicCreateDataComponent(Component):
                         name=dynamic_input_name,
                         display_name=display_name,
                         info=f"{help_text} (Data input)",
-                        input_types=input_types_list if input_types_list else ["Data"],
+                        input_types=input_types_list or ["Data"],
                         required=required,
                     )
 

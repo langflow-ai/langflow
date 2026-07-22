@@ -667,7 +667,7 @@ class Component(CustomComponent):
                 telemetry_values[input_.name] = serialize(input_.value)
 
         # Cache for later O(1) retrieval
-        self._telemetry_input_values = telemetry_values if telemetry_values else None
+        self._telemetry_input_values = telemetry_values or None
 
     def _should_track_input(self, input_obj: InputTypes) -> bool:
         """Check if input should be tracked in telemetry."""
@@ -682,7 +682,7 @@ class Component(CustomComponent):
     def get_telemetry_input_values(self) -> dict[str, Any] | None:
         """Get cached telemetry input values. O(1) lookup, no iteration."""
         # Return all values including descriptive strings and None
-        return self._telemetry_input_values if self._telemetry_input_values else None
+        return self._telemetry_input_values or None
 
     def validate(self, params: dict) -> None:
         """Validates the component parameters.
@@ -1388,6 +1388,24 @@ class Component(CustomComponent):
             result.set_flow_id(self._vertex.graph.flow_id)
         result = output.apply_options(result)
         result = self._sanitize_secret_values(result)
+
+        if getattr(output, "schema_", None) is not None:
+            schema = output.schema_
+            if isinstance(schema, type) and issubclass(schema, BaseModel):
+                try:
+                    if isinstance(result, dict):
+                        result = schema(**result).model_dump()
+                    elif isinstance(result, list) and all(isinstance(x, dict) for x in result):
+                        result = [schema(**x).model_dump() for x in result]
+                    elif isinstance(result, Data):
+                        result.data = schema(**result.data).model_dump()
+                    elif isinstance(result, list) and all(isinstance(x, Data) for x in result):
+                        for x in result:
+                            x.data = schema(**x.data).model_dump()
+                except ValidationError as e:
+                    logger.error(f"Schema validation failed for output {output.name}: {e.errors(include_input=False)}")
+                    raise ValueError(f"Schema validation failed for output {output.name}: {e.errors(include_input=False)}") from e
+
         output.value = result
 
         return result
