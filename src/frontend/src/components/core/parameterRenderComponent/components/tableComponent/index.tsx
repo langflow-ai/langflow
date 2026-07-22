@@ -505,9 +505,22 @@ const TableComponent = forwardRef<
       return params.nextCellPosition;
     };
     const onCellKeyDown = (event: CellKeyDownEvent) => {
+      const keyboardEvent = event.event as KeyboardEvent | undefined;
+      const keyTarget =
+        keyboardEvent?.target instanceof HTMLElement
+          ? keyboardEvent.target
+          : undefined;
+      const isTextModalTriggerActivation =
+        keyTarget?.closest("[data-langflow-text-cell-trigger]") &&
+        (keyboardEvent?.key === "Enter" || keyboardEvent?.key === " ");
+
+      // When Radix restores focus after the dialog closes, focus lands on the
+      // actual trigger button. Let the button's native Enter/Space activation
+      // handle that case; clicking it again here would toggle the dialog twice.
+      if (isTextModalTriggerActivation) return;
+
       props.onCellKeyDown?.(event);
 
-      const keyboardEvent = event.event as KeyboardEvent | undefined;
       if (
         keyboardEvent?.defaultPrevented ||
         (keyboardEvent?.key !== "Enter" && keyboardEvent?.key !== " ")

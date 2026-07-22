@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.langflow.org/extension/v1.json",
   "id": "lfx-exa",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "name": "Exa",
   "description": "Exa web-search and contents tools (exa-py SDK) as a standalone Langflow Extension Bundle.",
   "lfx": {
