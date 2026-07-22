@@ -126,3 +126,77 @@ def test_instrumented_method_mismatch_does_not_500(method):
         assert response.status_code == 405
     finally:
         FastAPIInstrumentor.uninstrument_app(app)
+
+
+def _build_app_with_path_params() -> FastAPI:
+    """Mirror Langflow's shape: a router with path params, lazily included under /api/v1."""
+    router = APIRouter(prefix="/v1")
+
+    @router.get("/flows/{flow_id}")
+    def read_flow(flow_id: str):
+        return {"id": flow_id}
+
+    api = APIRouter(prefix="/api")
+    api.include_router(router)
+    app = FastAPI()
+    app.include_router(api)
+    return app
+
+
+FLOW_ID = "357ea329-0775-4204-8161-d182c8c4edf5"
+
+
+def test_route_label_is_templated_not_the_raw_path():
+    """The identifier must not survive into the route label.
+
+    Under the stable HTTP semantic conventions this value becomes ``http.route``, which is a
+    metric label. Returning the raw path would mint one metric series per flow id. Langflow
+    mounts every API route under a lazily-included router, so this is the common path.
+    """
+    app = _build_app_with_path_params()
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": f"/api/v1/flows/{FLOW_ID}",
+        "headers": [],
+        "app": app,
+    }
+
+    route = _safe_get_route_details(scope)
+
+    assert route == "/api/v1/flows/{flow_id}"
+    assert FLOW_ID not in route
+
+
+def test_route_label_cardinality_is_bounded_by_endpoint_count():
+    """Many distinct ids must collapse onto one label, which is the whole point."""
+    app = _build_app_with_path_params()
+    labels = set()
+    for i in range(50):
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": f"/api/v1/flows/00000000-0000-0000-0000-{i:012d}",
+            "headers": [],
+            "app": app,
+        }
+        labels.add(_safe_get_route_details(scope))
+
+    assert labels == {"/api/v1/flows/{flow_id}"}
+
+
+def test_preflight_on_a_parameterised_route_is_also_templated():
+    """A method mismatch still resolves the endpoint rather than falling back to the path."""
+    app = _build_app_with_path_params()
+    scope = {
+        "type": "http",
+        "method": "OPTIONS",
+        "path": f"/api/v1/flows/{FLOW_ID}",
+        "headers": [],
+        "app": app,
+    }
+
+    route = _safe_get_route_details(scope)
+
+    assert FLOW_ID not in (route or "")
+    assert route in {"/api/v1/flows/{flow_id}", "/api/v1"}

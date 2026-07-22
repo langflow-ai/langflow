@@ -915,6 +915,16 @@ def create_app():
             content={"message": str(exc)},
         )
 
+    # Emit the stable HTTP semantic conventions (http.route, http.request.method,
+    # http.response.status_code) instead of the pre-1.0 names (http.target, http.method,
+    # http.status_code). APMs key their HTTP dashboards and service maps off the stable
+    # names, so the old ones leave the per-endpoint breakdown blank in Instana and New Relic.
+    # An env var is the only way in: the instrumentors read it, there is no keyword argument.
+    # setdefault, so an operator can still ask for "http/dup" during a migration.
+    # This has to precede instrument_app: the opt-in is read once, on first instrumentation,
+    # and cached for the life of the process.
+    os.environ.setdefault("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
+
     # FastAPI >=0.137 lazy include_router puts `_IncludedRouter` wrappers (no `.path`)
     # in `app.routes`, which crashes OTel's span route extraction on partial matches
     # (e.g. CORS preflight). Patch the helper before instrumenting.

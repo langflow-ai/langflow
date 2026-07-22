@@ -22,15 +22,61 @@ from lfx.log.logger import logger
 from starlette.routing import Match, Route
 
 _PATCH_FLAG = "_langflow_route_details_patched"
+# Include nesting is two deep in Langflow (/api -> /v1 -> router). The bound is only here so
+# a cycle in FastAPI internals cannot hang a request.
+_MAX_INCLUDE_DEPTH = 10
+
+
+def _resolve_included_route(included_router, scope, depth=0):
+    """Find the templated path of the route inside a lazily-included router.
+
+    ``_IncludedRouter.effective_candidates()`` returns the router's children with their
+    prefixes already applied: leaves carry ``.path`` (``/api/v1/flows/{flow_id}``) and
+    nested includes are more ``_IncludedRouter`` wrappers, so this recurses. Returns None
+    when nothing matches, which leaves the caller on its existing fallback.
+    """
+    if depth > _MAX_INCLUDE_DEPTH:
+        return None
+    try:
+        candidates = included_router.effective_candidates()
+    except Exception:  # noqa: BLE001 - private FastAPI internals; never fail a request over a span name
+        return None
+
+    partial = None
+    for candidate in candidates:
+        try:
+            match, _ = candidate.matches(scope)
+        except Exception:  # noqa: BLE001, S112 - one odd candidate must not fail the request
+            continue
+        if match == Match.NONE:
+            continue
+        path = getattr(candidate, "path", None)
+        if path is None:
+            path = _resolve_included_route(candidate, scope, depth + 1)
+        if path is None:
+            continue
+        if match == Match.FULL:
+            return path
+        # A method mismatch (CORS preflight, 405) still identifies the endpoint. Keep it,
+        # but let a later full match win.
+        partial = partial or path
+    return partial
 
 
 def _safe_get_route_details(scope):
     """Drop-in replacement for OTel's ``_get_route_details`` that tolerates lazy includes.
 
     Mirrors the upstream loop but guards the ``Match.PARTIAL`` ``route.path`` access the
-    same way upstream already guards the ``Match.FULL`` access. When the matched route is
-    a FastAPI ``_IncludedRouter`` (no ``.path``), it falls back to the include-time prefix
-    if available, otherwise to the raw request path.
+    same way upstream already guards the ``Match.FULL`` access. When the matched route is a
+    FastAPI ``_IncludedRouter`` (no ``.path``), it descends into the router to recover the
+    templated path.
+
+    Recovering the template is not cosmetic. Under the stable HTTP semantic conventions
+    this value becomes ``http.route``, which is a *metric* label, so returning the raw
+    request path would put every flow id, file id and session id into the metric store as
+    its own series. Langflow mounts everything under ``/api/v1``, so on FastAPI >=0.137
+    that is not an edge case, it is every API request. The raw path remains the last
+    resort, since a wrong-but-bounded span name beats failing the request.
     """
     app = scope["app"]
     route = None
@@ -45,17 +91,20 @@ def _safe_get_route_details(scope):
             try:
                 route = starlette_route.path
             except AttributeError:
-                route = scope.get("path")
+                route = _resolve_included_route(starlette_route, scope) or scope.get("path")
             break
         if match == Match.PARTIAL:
             try:
                 route = starlette_route.path
             except AttributeError:
                 # FastAPI >=0.137 lazy include: the matched route is an
-                # `_IncludedRouter` wrapper with no `.path`. Prefer the include
-                # prefix (e.g. "/api/v1"); fall back to the request path.
+                # `_IncludedRouter` wrapper with no `.path`.
                 include_context = getattr(starlette_route, "include_context", None)
-                route = getattr(include_context, "prefix", None) or scope.get("path")
+                route = (
+                    _resolve_included_route(starlette_route, scope)
+                    or getattr(include_context, "prefix", None)
+                    or scope.get("path")
+                )
     return route
 
 
