@@ -28,6 +28,13 @@ try:
 except ImportError:
     _otel_trace = None
 
+try:
+    from opentelemetry import _logs as _otel_logs  # type: ignore[import-not-found]
+    from opentelemetry._logs import SeverityNumber as _OtelSeverity  # type: ignore[import-not-found]
+except ImportError:
+    _otel_logs = None
+    _OtelSeverity = None
+
 VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 # Map log level names to integers
@@ -307,6 +314,72 @@ def add_otel_trace_context(_logger: Any, _method_name: str, event_dict: dict[str
     return event_dict
 
 
+_OTEL_LOG_SEVERITY = {
+    "debug": 5,  # SeverityNumber.DEBUG
+    "info": 9,  # INFO
+    "warning": 13,  # WARN
+    "warn": 13,
+    "error": 17,  # ERROR
+    "critical": 21,  # FATAL
+    "exception": 17,
+}
+
+# Structured keys that describe the record itself rather than the event. They become
+# first-class LogRecord fields or are already covered by the resource, so re-sending them as
+# attributes would just duplicate bytes on every line.
+_OTEL_LOG_SKIP_KEYS = frozenset({"event", "level", "timestamp", "trace_id", "span_id"})
+
+# Do not ship DEBUG to the operator's backend by default.
+#
+# The console is the developer's, the APM is the operator's, and they are not the same trust
+# boundary. Langflow's DEBUG output includes flow payloads (graph/base.py logs "Run outputs:"
+# with the rendered outputs), and the redaction processor only scrubs known sensitive *keys*,
+# not free text inside a message. INFO and above carries no flow content today, so INFO is the
+# floor. An operator who needs DEBUG in their backend can lower it deliberately.
+_OTEL_MIN_LOG_SEVERITY_DEFAULT = "INFO"
+
+
+def _otel_min_severity() -> int:
+    configured = os.getenv("LANGFLOW_OTEL_LOG_LEVEL", _OTEL_MIN_LOG_SEVERITY_DEFAULT).strip().lower()
+    return _OTEL_LOG_SEVERITY.get(configured, _OTEL_LOG_SEVERITY["info"])
+
+
+def emit_to_otel_logs(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    """Ship the record to the configured OTel log pipeline, then hand it back unchanged.
+
+    A pass-through: this sits in the processor chain purely for the side effect, so console
+    and file output are unaffected. When no SDK logger provider is installed -- bare lfx, or
+    Langflow with no OTLP endpoint configured -- ``get_logger`` returns a no-op and this costs
+    one attribute lookup.
+
+    Placed after the redaction processor so anything scrubbed there is scrubbed here too.
+    Trace correlation is left to the SDK, which reads the active span from the context, so a
+    log line emitted inside a flow execution lands on that flow's trace in the APM.
+    """
+    if _otel_logs is None:
+        return event_dict
+
+    severity = _OTEL_LOG_SEVERITY.get(str(event_dict.get("level", "")).lower())
+    if severity is None or severity < _otel_min_severity():
+        return event_dict
+
+    try:
+        otel_logger = _otel_logs.get_logger(event_dict.get("logger") or "lfx")
+        otel_logger.emit(
+            body=str(event_dict.get("event", "")),
+            severity_number=_OtelSeverity(severity),
+            severity_text=str(event_dict.get("level", "")).upper(),
+            attributes={
+                k: v if isinstance(v, str | bool | int | float) else str(v)
+                for k, v in event_dict.items()
+                if k not in _OTEL_LOG_SKIP_KEYS and v is not None
+            },
+        )
+    except Exception:  # noqa: BLE001 - logging must never break on a flaky exporter
+        return event_dict
+    return event_dict
+
+
 def _apply_logger_level_overrides() -> None:
     """Apply ``LANGFLOW_LOG_LEVELS`` env var: ``name=LEVEL,name=LEVEL,...``.
 
@@ -520,6 +593,10 @@ def configure(
     processors.extend(
         [
             redact_processor,
+            # After redaction, before rendering: the APM must not see anything the console
+            # would have scrubbed, and the renderers below replace `event` with a formatted
+            # string, which would lose the structure.
+            emit_to_otel_logs,
             add_serialized,
             buffer_writer,
         ]
@@ -565,6 +642,7 @@ def configure(
                 structlog.processors.TimeStamper(fmt="iso", utc=True),
                 _add_service_info,
                 redact_processor,
+                emit_to_otel_logs,
             ]
             file_json_formatter = structlog.stdlib.ProcessorFormatter(
                 foreign_pre_chain=foreign_pre_chain,

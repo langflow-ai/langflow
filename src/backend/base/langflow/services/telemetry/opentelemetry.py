@@ -7,10 +7,12 @@ from weakref import WeakValueDictionary
 
 from lfx.log.logger import logger
 from lfx.observability import APPLICATION_TRACER_NAME
-from opentelemetry import metrics, trace
+from opentelemetry import _logs, metrics, trace
 from opentelemetry.exporter.prometheus import PrometheusMetricReader
 from opentelemetry.metrics import CallbackOptions, Observation
 from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDownCounter
+from opentelemetry.sdk._logs import LoggerProvider
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import (
     MetricExporter,
@@ -60,8 +62,35 @@ APPLICATION_INSTRUMENTATION_SCOPES = frozenset(
 
 # The same boundary for metrics. Separate from the span set because the meter Langflow
 # records its own counters and histograms on is named "langflow", while its application
-# spans use APPLICATION_TRACER_NAME. Both names are listed so the two signals stay in step.
-APPLICATION_METRIC_SCOPES = APPLICATION_INSTRUMENTATION_SCOPES | {langflow_meter_name}
+# spans use APPLICATION_TRACER_NAME, and because the runtime metrics below have no span
+# equivalent at all.
+APPLICATION_METRIC_SCOPES = APPLICATION_INSTRUMENTATION_SCOPES | {
+    langflow_meter_name,
+    "opentelemetry.instrumentation.system_metrics",
+}
+
+# Runtime health for this process, deliberately not for the host.
+#
+# The instrumentation's default set also covers system-wide CPU, memory, disk and network.
+# Those describe the machine, not the service: under Kubernetes they report the node, which
+# is misleading next to a per-pod request rate, and the disk and network families multiply
+# by device. An operator already has node metrics from their infrastructure agent. What they
+# cannot get anywhere else is what *this* interpreter is doing, so that is what is sent.
+#
+# GC is included because it is the Python-specific failure mode: a service that is slow while
+# CPU looks fine is usually collecting, and without this the trace shows latency with no cause.
+PROCESS_METRICS_CONFIG = {
+    "process.cpu.time": ["user", "system"],
+    "process.cpu.utilization": ["user", "system"],
+    "process.memory.usage": None,
+    "process.memory.virtual": None,
+    "process.thread.count": None,
+    "process.open_file_descriptor.count": None,
+    "process.context_switches": ["involuntary", "voluntary"],
+    "cpython.gc.collections": None,
+    "cpython.gc.collected_objects": None,
+    "cpython.gc.uncollectable_objects": None,
+}
 
 
 class ApplicationOnlySpanProcessor(BatchSpanProcessor):
@@ -324,6 +353,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
     _metrics: dict[str, Counter | ObservableGaugeWrapper | Histogram | UpDownCounter] = {}
     _meter_provider: MeterProvider | None = None
     _tracer_provider: TracerProvider | None = None
+    _logger_provider: LoggerProvider | None = None
     _initialized: bool = False  # Add initialization flag
     prometheus_enabled: bool = True
 
@@ -417,9 +447,64 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             if name not in self._metrics:
                 self._metrics[metric.name] = self._create_metric(metric)
 
+        self._instrument_process_metrics()
         self._configure_tracer_provider_from_environment()
+        self._configure_logger_provider_from_environment()
 
         OpenTelemetry._initialized = True
+
+    def _instrument_process_metrics(self) -> None:
+        """Report this process's CPU, memory, threads, file descriptors and GC.
+
+        Bound to our meter provider explicitly rather than the global one, so these land on
+        the same readers as everything else even if another integration installs a provider
+        later. Failure is non-fatal: missing runtime metrics degrade the dashboard, they do
+        not justify refusing to boot.
+        """
+        try:
+            from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrumentor
+
+            instrumentor = SystemMetricsInstrumentor(config=PROCESS_METRICS_CONFIG)
+            # The instrumentor is a singleton and raises if instrumented twice, which happens
+            # in-process across app restarts and in tests.
+            if not instrumentor.is_instrumented_by_opentelemetry:
+                instrumentor.instrument(meter_provider=self._meter_provider)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Could not start process metrics; runtime health will be missing. {exc}")
+
+    def _configure_logger_provider_from_environment(self) -> None:
+        """Install an OTLP logger provider when the standard OTel env vars opt in.
+
+        This is the third signal, and the one that makes a trace actionable: the operator
+        pivots from a failed request to the log lines emitted inside it. Correlation is
+        automatic because the SDK stamps the active span's trace_id onto every record, and
+        Langflow already runs each flow execution inside a span.
+        """
+        endpoint = os.getenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        if not endpoint:
+            return
+        if os.getenv("OTEL_LOGS_EXPORTER", "otlp").strip().lower() == "none":
+            return
+        if isinstance(_logs.get_logger_provider(), LoggerProvider):
+            logger.warning("A logger provider is already installed; not replacing it.")
+            return
+
+        protocol = _otlp_protocol("logs")
+        try:
+            if protocol == "grpc":
+                from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
+            else:
+                from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+
+            provider = LoggerProvider(resource=_resource())
+            provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter()))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Could not configure the OTLP log exporter; logs will not be shipped. {exc}")
+            return
+
+        _logs.set_logger_provider(provider)
+        self._logger_provider = provider
+        logger.info(f"OTLP log export enabled (protocol={protocol}, endpoint={endpoint}).")
 
     def _configure_tracer_provider_from_environment(self) -> None:
         """Install an OTLP tracer provider when the standard OTel env vars opt in.
@@ -546,5 +631,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             self._meter_provider.shutdown()
         if self._tracer_provider:
             self._tracer_provider.shutdown()
+        if self._logger_provider:
+            self._logger_provider.shutdown()
         self._metrics.clear()
         OpenTelemetry._initialized = False
