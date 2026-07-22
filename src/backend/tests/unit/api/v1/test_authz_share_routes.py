@@ -151,6 +151,23 @@ def _payload_for(resource_id: UUID) -> ShareCreate:
     )
 
 
+async def test_memory_base_resolves_as_knowledge_base_resource_owner():
+    from langflow.services.database.models.memory_base.model import MemoryBase
+
+    owner_id = uuid4()
+    memory_base_id = uuid4()
+    memory_base = SimpleNamespace(id=memory_base_id, user_id=owner_id)
+    session = _FakeAsyncSession({(MemoryBase, memory_base_id): memory_base})
+
+    resolved = await shares_module._resolve_resource_owner(
+        session,
+        resource_type="knowledge_base",
+        resource_id=memory_base_id,
+    )
+
+    assert resolved == owner_id
+
+
 # --------------------------------------------------------------------------- #
 # CREATE — OSS floor must block non-owner / non-superuser
 # --------------------------------------------------------------------------- #

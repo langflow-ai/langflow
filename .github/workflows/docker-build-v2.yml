@@ -795,7 +795,8 @@ jobs:
           build-args: |
             MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
             CORE_VERSION=${{ needs.determine-main-version.outputs.version }}
-          file: ./docker/build_and_push_with_extras.Dockerfile
+          file: ./docker/build_and_push.Dockerfile
+          target: full-bundles
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
@@ -810,7 +811,8 @@ jobs:
           build-args: |
             MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
             CORE_VERSION=${{ needs.determine-main-version.outputs.version }}
-          file: ./docker/build_and_push_with_extras.Dockerfile
+          file: ./docker/build_and_push.Dockerfile
+          target: full-bundles
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false

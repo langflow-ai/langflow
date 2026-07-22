@@ -366,6 +366,35 @@ uv run lfx extension dev src/bundles/<bundle>
 #   - Right-click the <bundle> header -> Reload. No errors.
 ```
 
+### Release-plan and version changes
+
+Any releasable change under `src/bundles/<bundle>/src/` or to the bundle's
+`pyproject.toml` requires a distribution-version increase. Generate the same
+plan CI reviews without changing files:
+
+```bash
+python scripts/ci/bundle_release_plan.py plan \
+  --base-ref origin/release-1.11.0 \
+  --check \
+  --output bundle-release-plan.json
+```
+
+To apply the plan, use the update command instead of editing version fields by
+hand. It bumps affected bundles by one patch by default, synchronizes their
+`extension.json` versions and LFX ranges, raises every matching Langflow
+dependency floor, and regenerates `uv.lock` as one rollback-safe operation:
+
+```bash
+python scripts/ci/bundle_release_plan.py update \
+  --base-ref origin/release-1.11.0 \
+  --output bundle-release-plan.json
+```
+
+Use `--bump minor` or an explicit `--version lfx-<bundle>=X.Y.Z` when a patch
+bump is not appropriate. Release workflows upload the version/artifact plans
+for review and refuse to reuse an existing PyPI version unless its normalized
+wheel content matches the wheel built by the current run.
+
 ---
 
 ## 8. Docker images (only if shipping a new bundle to the runtime image)
