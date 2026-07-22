@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.langflow.org/extension/v1.json",
   "id": "lfx-paddle",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "name": "PaddleOCR",
   "description": "PaddleOCR component (OCR and layout-aware document parsing via the AI Studio async Job API) as a standalone Langflow Extension Bundle.",
   "lfx": {
