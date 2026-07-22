@@ -85,6 +85,17 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv sync --frozen --no-editable --extra postgresql --no-group dev
 
+# Release workflows populate this directory with the exact wheels built for
+# PyPI. Reinstalling them after the source sync keeps Docker-specific frontend
+# compilation while ensuring package code and metadata match the published
+# artifacts. Nightly and local builds leave the directory empty and no-op.
+COPY ./.release-artifacts /tmp/release-artifacts
+COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
+RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
+    --python /app/.venv/bin/python \
+    --mode main \
+    --frontend-source /app/src/backend/langflow/frontend
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only

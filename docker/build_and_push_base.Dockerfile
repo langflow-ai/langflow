@@ -89,6 +89,16 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv sync --frozen --no-dev --no-editable --extra postgresql
 
+# Release workflows populate this directory with the exact core wheels built
+# for PyPI. The base mode deliberately ignores main and bundle wheels so the
+# lean image boundary is preserved. Nightly and local builds no-op.
+COPY ./.release-artifacts /tmp/release-artifacts
+COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
+RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
+    --python /app/.venv/bin/python \
+    --mode base \
+    --frontend-source /app/src/backend/base/langflow/frontend
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only

@@ -173,7 +173,7 @@ jobs:
             exit 1
           fi
           printf 'Installing: %s\n' "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
-          uv pip install --prerelease=allow --python ./test-env/bin/python "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+          uv pip install --prerelease=if-necessary-or-explicit --python ./test-env/bin/python "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
         shell: bash
       - name: Install lfx + bundle wheels (Windows)
         if: matrix.os == 'windows'
@@ -195,7 +195,7 @@ jobs:
             exit 1
           fi
           printf 'Installing: %s\n' "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+          uv pip install --prerelease=if-necessary-or-explicit --python ./test-env/Scripts/python.exe "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
         shell: bash
 
   publish-bundles:
