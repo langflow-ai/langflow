@@ -242,3 +242,77 @@ async def test_credential_variable_accepted_when_use_global_variable_toggled_on(
     assert "Credential-typed global variable" in str(excinfo.value)
     assert "input_value" in str(excinfo.value)
     assert _LEAKY_SECRET not in str(excinfo.value)
+
+
+@pytest.mark.asyncio
+async def test_secret_value_reaches_connected_component_unmasked_but_masked_for_display():
+    """Regression for https://github.com/langflow-ai/langflow/issues/14152.
+
+    Masking must apply only to human-facing surfaces (results / artifacts / status /
+    logs), never to ``output.value`` -- the object a connected downstream component
+    reads when resolving a graph edge (``ComponentVertex._get_result`` prefers
+    ``output.value`` over the ``results`` dict). A component that legitimately embeds a
+    real secret in its output (e.g. a connection string) must hand the *real* value to
+    its connected consumer while still masking every displayed copy.
+    """
+
+    class _BuildConnectionString(Component):
+        display_name = "BuildConnectionString"
+        name = "BuildConnectionString"
+        inputs = [SecretStrInput(name="password", display_name="Password")]
+        outputs = [Output(display_name="Connection String", name="conn_string", method="build_conn_string")]
+
+        def build_conn_string(self) -> Message:
+            return Message(text=f"postgresql://demo_user:{self.password}@localhost:5432/demo_db")
+
+    component = _BuildConnectionString(_user_id=str(uuid.uuid4()))
+    component.set_attributes({"password": "hunter2"})  # pragma: allowlist secret
+
+    results, artifacts = await component._build_results()
+
+    real = "postgresql://demo_user:hunter2@localhost:5432/demo_db"  # pragma: allowlist secret
+    masked = "postgresql://demo_user:**********@localhost:5432/demo_db"
+
+    # (a) The value delivered on a graph edge (``output.value``) is the REAL secret.
+    edge_value = component._outputs_map["conn_string"].value
+    assert edge_value.text == real
+    assert "hunter2" in edge_value.text  # pragma: allowlist secret
+
+    # (b) Every human-facing copy is masked (preserves the guarantee from #12908).
+    assert results["conn_string"].text == masked
+    assert artifacts["conn_string"]["raw"] == masked
+    assert "**********" in artifacts["conn_string"]["repr"]
+    assert "hunter2" not in artifacts["conn_string"]["repr"]  # pragma: allowlist secret
+
+    # The masked, serialized copy must be an independent object -- not the edge value.
+    assert results["conn_string"] is not edge_value
+
+
+@pytest.mark.asyncio
+async def test_sanitize_secret_values_returns_masked_copy_without_mutating_source():
+    """`_sanitize_secret_values` must be non-mutating.
+
+    It returns a masked copy and leaves the source ``Message`` (and therefore
+    ``output.value``) untouched. Regression for #14152: the previous in-place mutation
+    of ``Message.text`` / ``Data.data`` is what corrupted the edge value.
+    """
+
+    class _Noop(Component):
+        display_name = "Noop"
+        name = "Noop"
+        inputs = [SecretStrInput(name="password", display_name="Password")]
+        outputs = [Output(display_name="Output", name="output", method="build_output")]
+
+        def build_output(self) -> Message:
+            return Message(text="unused")
+
+    component = _Noop(_user_id=str(uuid.uuid4()))
+    component.set_attributes({"password": "hunter2"})  # pragma: allowlist secret
+
+    original = Message(text="token=hunter2")  # pragma: allowlist secret
+    masked = component._sanitize_secret_values(original)
+
+    assert masked is not original
+    assert masked.text == "token=**********"
+    # Source is unchanged -- this is what a connected downstream component would receive.
+    assert original.text == "token=hunter2"  # pragma: allowlist secret
