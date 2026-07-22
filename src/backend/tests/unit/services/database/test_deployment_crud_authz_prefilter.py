@@ -134,7 +134,6 @@ async def test_get_provider_account_by_id_unscoped_loads_foreign_account(async_s
     assert await get_provider_account_by_id_unscoped(async_session, provider_id=uuid4()) is None
 
 
-@pytest.mark.asyncio
 async def test_count_deployments_by_provider_reflects_allowed_ids(async_session: AsyncSession):
     """The total count uses the same predicate as the page, so pagination stays consistent."""
     owner, provider, _owned, foreign_visible, _foreign_hidden = await _seed(async_session)

@@ -776,7 +776,12 @@ async def download_file(
         project_user_id=project.user_id,
         workspace_id=project.workspace_id,
     )
-    return await download_project_flows(session=session, project_id=project_id, current_user=current_user)
+    return await download_project_flows(
+        session=session,
+        project_id=project_id,
+        current_user=current_user,
+        project_owner_id=project.user_id,
+    )
 
 
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)

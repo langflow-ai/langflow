@@ -887,6 +887,7 @@ async def list_deployments_synced(
     project_id: UUID | None = None,
     allowed_ids: list[UUID] | None = None,
     visibility_scope: ResourceVisibilityScope | None = None,
+    provider_owner_id: UUID | None = None,
 ) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int, dict[str, dict[str, Any]]]:
     """Return a page of deployments, deleting any DB rows the provider doesn't recognise.
 
@@ -895,11 +896,13 @@ async def list_deployments_synced(
     provider-owned display metadata for rows that still exist. The cursor
     does not advance for deleted rows (deletion shifts subsequent offsets down).
 
-    ``allowed_ids`` is the DB-layer authorization prefilter, threaded into both
-    the page query and the total count so a registered authorization plugin can
-    constrain the listing to (owner ⊕ visible) rows without a per-row enforce.
-    ``None`` (OSS default) keeps the listing owner-scoped exactly as before.
+    ``user_id`` is the actor used for the owner-plus-visible database query.
+    ``provider_owner_id`` is the provider-account owner used for provider calls
+    and attachment synchronization; it defaults to the actor for owner-only
+    callers. Keeping these identities separate prevents shared listings from
+    resolving credentials or mutating attachment state in the actor's namespace.
     """
+    provider_namespace_user_id = provider_owner_id or user_id
     accepted: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]] = []
     accepted_deployment_ids: list[UUID] = []
     provider_bindings: list[ProviderSnapshotBinding] = []
@@ -926,7 +929,7 @@ async def list_deployments_synced(
 
         known, provider_view = await fetch_provider_resource_keys(
             deployment_adapter=deployment_adapter,
-            user_id=user_id,
+            user_id=provider_namespace_user_id,
             provider_id=provider_id,
             db=db,
             resource_keys=[row.resource_key for row, _, _ in batch],
@@ -977,7 +980,7 @@ async def list_deployments_synced(
             async with db.begin_nested():
                 await delete_unbound_attachments(
                     db,
-                    user_id=user_id,
+                    user_id=provider_namespace_user_id,
                     provider_account_id=provider_id,
                     deployment_ids=accepted_deployment_ids,
                     bindings=provider_bindings,
@@ -985,7 +988,7 @@ async def list_deployments_synced(
 
             corrected_counts = await count_attachments_by_deployment_ids(
                 db,
-                user_id=user_id,
+                user_id=provider_namespace_user_id,
                 deployment_ids=accepted_deployment_ids,
             )
             accepted = [(row, corrected_counts[row.id], matched) for row, _attached_count, matched in accepted]

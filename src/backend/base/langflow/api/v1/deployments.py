@@ -741,6 +741,7 @@ async def list_deployments(
             deployment_adapter=deployment_adapter,
             deployment_mapper=deployment_mapper,
             user_id=current_user.id,
+            provider_owner_id=provider_account.user_id,
             provider_id=provider_id,
             db=session,
             page=params.page,
@@ -1631,7 +1632,7 @@ async def delete_deployment(
     await _delete_local_deployment_row_with_commit_retry(
         session=session,
         deployment_id=deployment_row.id,
-        user_id=current_user.id,
+        user_id=deployment_row.user_id,
         resource_key=deployment_row.resource_key,
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

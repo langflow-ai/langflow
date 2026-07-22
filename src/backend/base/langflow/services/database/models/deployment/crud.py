@@ -398,7 +398,6 @@ async def list_deployments_page(
             FlowVersion,
             FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
         )
-        .where(FlowVersionDeploymentAttachment.user_id == user_id)
         .group_by(FlowVersionDeploymentAttachment.deployment_id)
         .subquery()
     )
@@ -422,7 +421,6 @@ async def list_deployments_page(
         matched_deployments_subquery = (
             select(FlowVersionDeploymentAttachment.deployment_id)
             .where(
-                FlowVersionDeploymentAttachment.user_id == user_id,
                 col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
             )
             .group_by(FlowVersionDeploymentAttachment.deployment_id)
@@ -446,7 +444,6 @@ async def list_deployments_page(
                 FlowVersionDeploymentAttachment.flow_version_id,
                 FlowVersionDeploymentAttachment.provider_snapshot_id,
             ).where(
-                FlowVersionDeploymentAttachment.user_id == user_id,
                 col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
                 col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
             )
@@ -577,7 +574,6 @@ async def count_deployments_by_provider(
         matched_deployments_subquery = (
             select(FlowVersionDeploymentAttachment.deployment_id)
             .where(
-                FlowVersionDeploymentAttachment.user_id == user_id,
                 col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
             )
             .group_by(FlowVersionDeploymentAttachment.deployment_id)

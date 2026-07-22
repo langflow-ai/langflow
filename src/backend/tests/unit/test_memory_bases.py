@@ -28,6 +28,7 @@ from langflow.services.database.models.memory_base.model import (
     MemoryBaseUpdate,
 )
 from langflow.services.database.models.message.model import MessageTable
+from lfx.services.authorization.base import ResourceVisibilityScope
 
 # ------------------------------------------------------------------ #
 #  Helpers                                                             #
@@ -680,6 +681,76 @@ class TestMemoryBaseGuardPassesRealKbIdentity:
         assert captured["kb_id"] == mb.id
         assert captured["kb_user_id"] == owner_id, "guard must receive the real owner, not the actor"
         assert captured["kb_name"] == mb.kb_name
+
+    async def test_shared_memory_base_falls_back_to_unscoped_id_lookup(self):
+        from langflow.api.v1.memories import _get_memory_base_for_action
+        from langflow.services.authorization import KnowledgeBaseAction
+        from langflow.services.database.models.user.model import User
+
+        owner_id = uuid.uuid4()
+        mb = _make_mb(user_id=owner_id)
+        actor = User(id=uuid.uuid4(), username="actor")
+        db = AsyncMock()
+        db.get.return_value = mb
+
+        service = MagicMock()
+        service.get = AsyncMock(return_value=None)
+        authz = MagicMock()
+        authz.is_enabled = AsyncMock(return_value=True)
+        authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+        captured = {}
+
+        async def _capture_guard(_user, _act, **kwargs):
+            captured.update(kwargs)
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=service),
+            patch("langflow.api.v1.memories.get_authorization_service", return_value=authz),
+            patch("langflow.api.v1.memories.ensure_knowledge_base_permission", _capture_guard),
+        ):
+            resolved = await _get_memory_base_for_action(
+                db,
+                memory_base_id=mb.id,
+                current_user=actor,
+                action=KnowledgeBaseAction.READ,
+            )
+
+        assert resolved is mb
+        db.get.assert_awaited_once()
+        assert captured["kb_user_id"] == owner_id
+
+    def test_list_statement_unions_owned_and_visible_memory_bases(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        actor_id = uuid.uuid4()
+        shared_id = uuid.uuid4()
+        service = MemoryBaseService()
+        concrete_stmt = service.list_for_user_stmt(
+            actor_id,
+            visibility=ResourceVisibilityScope(resource_ids=(shared_id,)),
+        )
+        concrete_sql = str(concrete_stmt.compile(compile_kwargs={"literal_binds": True}))
+
+        assert actor_id.hex in concrete_sql
+        assert shared_id.hex in concrete_sql
+        assert " OR " in concrete_sql
+
+        for domain_only_scope in (
+            ResourceVisibilityScope(workspace_ids=(uuid.uuid4(),)),
+            ResourceVisibilityScope(project_ids=(uuid.uuid4(),)),
+        ):
+            domain_stmt = service.list_for_user_stmt(actor_id, visibility=domain_only_scope)
+            domain_sql = str(domain_stmt.compile(compile_kwargs={"literal_binds": True}))
+
+            assert actor_id.hex in domain_sql
+            assert " OR " not in domain_sql
+
+        global_stmt = service.list_for_user_stmt(
+            actor_id,
+            visibility=ResourceVisibilityScope(all_resources=True),
+        )
+
+        assert not global_stmt._where_criteria
 
     @pytest.mark.asyncio
     async def test_delete_passes_real_kb_identity_to_guard(self):
@@ -2149,6 +2220,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import check_mismatch
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.check_mismatch = AsyncMock(return_value=True)
         with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
             result = await check_mismatch(memory_base_id=uuid.uuid4(), current_user=mock_user)
@@ -2160,6 +2232,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import check_mismatch
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.check_mismatch = AsyncMock(return_value=False)
         with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
             result = await check_mismatch(memory_base_id=uuid.uuid4(), current_user=mock_user)
@@ -2172,6 +2245,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import check_mismatch
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.check_mismatch = AsyncMock(side_effect=ValueError("not found"))
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),

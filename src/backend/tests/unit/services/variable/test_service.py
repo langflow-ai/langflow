@@ -11,6 +11,7 @@ from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
+from lfx.services.authorization.base import ResourceVisibilityScope
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyContext,
     ModelProviderPolicyPurpose,
@@ -156,6 +157,114 @@ async def test_get_variable__valueerror(service, session: AsyncSession):
 
     with pytest.raises(ValueError, match=f"{name} variable not found."):
         await service.get_variable(user_id, name, field, session=session)
+
+
+async def test_get_variable_resolves_one_explicitly_shared_runtime_value(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    shared = await service.create_variable(
+        owner_id,
+        "SHARED_TOKEN",
+        "shared-secret",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = None
+    authz.list_visible_resource_ids = AsyncMock(return_value=[shared.id])
+
+    with patch("langflow.services.deps.get_authorization_service", return_value=authz):
+        result = await service.get_variable(actor_id, "SHARED_TOKEN", "", session=session)
+
+    assert isinstance(result, SecretStr)
+    assert result.get_secret_value() == "shared-secret"
+
+
+async def test_get_variable_resolves_scope_native_global_runtime_value(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    await service.create_variable(
+        owner_id,
+        "GLOBAL_SHARED_TOKEN",
+        "shared-secret",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = AsyncMock(return_value=ResourceVisibilityScope(all_resources=True))
+    authz.list_visible_resource_ids = AsyncMock(side_effect=AssertionError("legacy visibility hook used"))
+
+    with patch("langflow.services.deps.get_authorization_service", return_value=authz):
+        result = await service.get_variable(actor_id, "GLOBAL_SHARED_TOKEN", "", session=session)
+
+    assert isinstance(result, SecretStr)
+    assert result.get_secret_value() == "shared-secret"
+    authz.get_resource_visibility.assert_awaited_once()
+    authz.list_visible_resource_ids.assert_not_awaited()
+
+
+async def test_get_variable_fails_closed_for_domain_only_runtime_scope(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    await service.create_variable(
+        owner_id,
+        "DOMAIN_ONLY_TOKEN",
+        "shared-secret",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = AsyncMock(
+        return_value=ResourceVisibilityScope(workspace_ids=(uuid4(),), project_ids=(uuid4(),))
+    )
+    authz.list_visible_resource_ids = AsyncMock(side_effect=AssertionError("legacy visibility hook used"))
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        pytest.raises(ValueError, match="DOMAIN_ONLY_TOKEN variable not found"),
+    ):
+        await service.get_variable(actor_id, "DOMAIN_ONLY_TOKEN", "", session=session)
+
+    authz.get_resource_visibility.assert_awaited_once()
+    authz.list_visible_resource_ids.assert_not_awaited()
+
+
+async def test_get_all_redacts_shared_generic_values(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    owned = await service.create_variable(
+        actor_id,
+        "OWNED_VALUE",
+        "owned-plaintext",
+        type_=GENERIC_TYPE,
+        session=session,
+    )
+    shared = await service.create_variable(
+        owner_id,
+        "SHARED_VALUE",
+        "shared-plaintext",
+        type_=GENERIC_TYPE,
+        session=session,
+    )
+
+    rows = await service.get_all(
+        actor_id,
+        session,
+        visibility=ResourceVisibilityScope(resource_ids=(shared.id,)),
+    )
+    by_id = {row.id: row for row in rows}
+
+    assert by_id[owned.id].value == "owned-plaintext"
+    assert by_id[shared.id].value is None
 
 
 async def test_get_variable__typeerror(service, session: AsyncSession):
