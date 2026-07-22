@@ -50,8 +50,8 @@ from langflow.services.authorization import (
     FlowAction,
     ensure_flow_permission,
     filter_visible_resources,
-    restrict_to_owned_or_visible,
-    visible_id_prefilter,
+    restrict_to_owned_or_visible_scope,
+    visible_scope_prefilter,
 )
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import _resolve_authz_domain
@@ -172,10 +172,15 @@ async def read_flows(
         # owner-scoped query to (owned ⊕ visible) in SQL and skip the per-row
         # in-memory filter below. OSS pass-through returns None → the query stays
         # owner-scoped and ``filter_visible_resources`` runs unchanged.
-        visible_flow_ids = await visible_id_prefilter(current_user, resource_type="flow", act=FlowAction.READ)
-        if visible_flow_ids is not None:
-            stmt = restrict_to_owned_or_visible(
-                select(Flow), id_column=Flow.id, owner_clause=owned_clause, visible_ids=visible_flow_ids
+        visibility_scope = await visible_scope_prefilter(current_user, resource_type="flow", act=FlowAction.READ)
+        if visibility_scope is not None:
+            stmt = restrict_to_owned_or_visible_scope(
+                select(Flow),
+                id_column=Flow.id,
+                owner_clause=owned_clause,
+                workspace_column=Flow.workspace_id,
+                project_column=Flow.folder_id,
+                visibility=visibility_scope,
             )
         else:
             stmt = select(Flow).where(fallback_clause)
@@ -200,7 +205,7 @@ async def read_flows(
             # rows in memory (per-flow domain_extractor). When the prefilter is
             # active the SQL union above is already authoritative, so skip the
             # per-row enforce to avoid an N+1.
-            if visible_flow_ids is None:
+            if visibility_scope is None:
                 flows = await filter_visible_resources(
                     current_user,
                     resource_type="flow",
@@ -232,7 +237,7 @@ async def read_flows(
         # was applied before pagination, so ``page.total`` is accurate; the OSS
         # fallback narrows ``page.items`` in memory and ``page.total`` may
         # overcount denied rows (unchanged from before).
-        if visible_flow_ids is None:
+        if visibility_scope is None:
             page.items = await filter_visible_resources(
                 current_user,
                 resource_type="flow",

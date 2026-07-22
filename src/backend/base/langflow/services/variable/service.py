@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from lfx.log.logger import logger
-from sqlmodel import select
+from lfx.services.authorization.base import ResourceVisibilityScope
+from sqlmodel import col, select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
@@ -212,7 +213,52 @@ class DatabaseVariableService(VariableService, Service):
     ) -> str | SecretStr:
         # we get the credential from the database
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
-        variable = await self.get_variable_object(user_id, name, session)
+        try:
+            variable = await self.get_variable_object(user_id, name, session)
+        except ValueError as owned_lookup_error:
+            # Runtime resolution may use an explicitly shared variable, but it
+            # must never broaden administrative get/update/delete lookups. An
+            # owned variable wins on name collisions; otherwise require one
+            # unambiguous READ-visible row from the authorization plugin.
+            from langflow.services.deps import get_authorization_service
+
+            authz = get_authorization_service()
+            if not await authz.is_enabled() or not await authz.supports_cross_user_fetch():
+                raise
+            get_visibility = getattr(authz, "get_resource_visibility", None)
+            if get_visibility is None:
+                # Compatibility for duck-typed authorization services that
+                # predate ResourceVisibilityScope.
+                visible_ids = await authz.list_visible_resource_ids(
+                    user_id=UUID(str(user_id)),
+                    resource_type="variable",
+                    domain="*",
+                    act="read",
+                )
+                visibility = None if visible_ids is None else ResourceVisibilityScope(resource_ids=tuple(visible_ids))
+            else:
+                visibility = await get_visibility(
+                    user_id=UUID(str(user_id)),
+                    resource_type="variable",
+                    domain="*",
+                    act="read",
+                )
+            if visibility is None or not (visibility.all_resources or visibility.resource_ids):
+                raise
+
+            shared_clauses = [
+                Variable.name == name,
+                Variable.user_id != user_id,
+            ]
+            if not visibility.all_resources:
+                shared_clauses.append(col(Variable.id).in_(visibility.resource_ids))
+            shared_variables = list((await session.exec(select(Variable).where(*shared_clauses))).all())
+            if not shared_variables:
+                raise
+            if len(shared_variables) > 1:
+                msg = f"Multiple shared variables named '{name}' are visible; use an owned variable with that name."
+                raise ValueError(msg) from owned_lookup_error
+            variable = shared_variables[0]
 
         if variable.type == CREDENTIAL_TYPE and field == "session_id":
             msg = (
@@ -241,13 +287,33 @@ class DatabaseVariableService(VariableService, Service):
         # GENERIC type - return as-is
         return variable.value
 
-    async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
-        stmt = select(Variable).where(Variable.user_id == user_id)
+    async def get_all(
+        self,
+        user_id: UUID | str,
+        session: AsyncSession,
+        *,
+        visibility: ResourceVisibilityScope | None = None,
+    ) -> list[VariableRead]:
+        stmt = select(Variable)
+        if visibility is None:
+            stmt = stmt.where(Variable.user_id == user_id)
+        else:
+            from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope
+
+            # Variable has no canonical workspace/project columns, so
+            # domain-only grants intentionally remain owner-scoped.
+            stmt = restrict_to_owned_or_visible_scope(
+                stmt,
+                id_column=Variable.id,
+                owner_clause=Variable.user_id == user_id,
+                visibility=visibility,
+            )
         variables = list((await session.exec(stmt)).all())
         variables_read = []
         for variable in variables:
+            is_owner = str(variable.user_id) == str(user_id)
             value = None
-            if variable.type == GENERIC_TYPE:
+            if variable.type == GENERIC_TYPE and is_owner:
                 if not variable.value:
                     await logger.awarning("Variable '%s' has no stored value — skipping.", variable.name)
                     continue
@@ -272,8 +338,12 @@ class DatabaseVariableService(VariableService, Service):
 
             # Model validate will set value to None if credential type
             variable_read = VariableRead.model_validate(variable, from_attributes=True)
-            if variable.type == GENERIC_TYPE:
+            # Shared values are usable only inside runtime variable resolution;
+            # API list responses expose metadata but never plaintext values.
+            if variable.type == GENERIC_TYPE and is_owner:
                 variable_read.value = value
+            elif not is_owner:
+                variable_read.value = None
 
             variables_read.append(variable_read)
         return variables_read

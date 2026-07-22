@@ -166,6 +166,10 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
+bundles = [
+    "lfx-bundles[all-no-torch]>=1.1,<2.0",
+]
+
 docling = [
     "lfx-docling[local]>=0.1.0,<1.0.0",
 ]

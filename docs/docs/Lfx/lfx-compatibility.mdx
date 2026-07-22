@@ -115,7 +115,8 @@ uv pip install "lfx[bundles]"
 
 This is equivalent to installing `lfx` plus `lfx-bundles[all]`, including the torch-pulling long-tail providers **CUGA** and **Code Agents**.
 It does **not** install graduated standalone packages such as `lfx-openai` or `lfx-exa`.
-`uv pip install langflow` instead depends on `lfx-bundles[all-no-torch]` plus the individual `lfx-*` packages, so Langflow stays torch-free by default.
+`uv pip install langflow` installs the curated standalone `lfx-*` packages without `lfx-bundles`.
+Use `uv pip install "langflow[bundles]"` to add the reviewed `lfx-bundles[all-no-torch]` profile while keeping the full Langflow application torch-free.
 For a slimmer image, install only the provider packages a deployment actually executes, for example `uv pip install lfx lfx-openai "lfx-bundles[qdrant]"`.
 There is intentionally no `lfx[all]` extra. Install `lfx-bundles` explicitly for long-tail providers, or install only the provider extras you need to avoid the full torch-inclusive `[all]` set.
 Some components require a [torch opt-in install](./components-bundle-components#torch-opt-in).

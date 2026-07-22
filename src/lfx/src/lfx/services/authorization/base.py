@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import abc
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, TypedDict
 from uuid import UUID as _UUID
 
@@ -31,6 +32,27 @@ class AuthzContext(TypedDict, total=False):
     api_key_id: _UUID | None
     api_key_source: str | None
     external_provider: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class ResourceVisibilityScope:
+    """Compact SQL-prefilter contract for resource-list authorization.
+
+    ``resource_ids`` represents concrete grants such as user/team shares.
+    ``workspace_ids`` and ``project_ids`` represent wildcard role grants at
+    those domains without expanding them to every resource UUID. A global
+    wildcard is represented by ``all_resources``.
+    """
+
+    all_resources: bool = False
+    resource_ids: tuple[UUID, ...] = ()
+    workspace_ids: tuple[UUID, ...] = ()
+    project_ids: tuple[UUID, ...] = ()
+
+    @property
+    def has_cross_user_access(self) -> bool:
+        """Return whether the scope can widen an owner-only query."""
+        return bool(self.all_resources or self.resource_ids or self.workspace_ids or self.project_ids)
 
 
 class BaseAuthorizationService(Service, abc.ABC):
@@ -121,6 +143,33 @@ class BaseAuthorizationService(Service, abc.ABC):
         """
         _ = (user_id, resource_type, domain, act, context)
         return None
+
+    async def get_resource_visibility(
+        self,
+        *,
+        user_id: UUID,
+        resource_type: str,
+        domain: str = "*",
+        act: str = "read",
+        context: dict[str, Any] | None = None,
+    ) -> ResourceVisibilityScope | None:
+        """Return a compact visibility scope, or ``None`` to decline SQL prefiltering.
+
+        The default adapts the original concrete-ID hook so existing plugins
+        remain source-compatible. Plugins with global or domain-wildcard grants
+        should override this method and return ``all_resources`` or domain IDs
+        instead of enumerating every resource row.
+        """
+        visible_ids = await self.list_visible_resource_ids(
+            user_id=user_id,
+            resource_type=resource_type,
+            domain=domain,
+            act=act,
+            context=context,
+        )
+        if visible_ids is None:
+            return None
+        return ResourceVisibilityScope(resource_ids=tuple(visible_ids))
 
     async def get_effective_permissions(
         self,
