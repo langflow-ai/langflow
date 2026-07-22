@@ -150,6 +150,17 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         CORE_VERSION="$CORE_VERSION" /app/.venv/bin/python -c 'import importlib.metadata as m, os; actual = m.version("langflow-core"); expected = os.environ["CORE_VERSION"]; assert actual == expected, f"langflow-core version {actual} != {expected}"'; \
     fi
 
+FROM full-builder AS full-bundles-builder
+
+# The expanded image is an explicit opt-in tier. Re-syncing with the root
+# ``bundles`` extra installs the reviewed all-no-torch long-tail profile while
+# keeping the default ``full-builder`` environment bundle-free.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --extra postgresql --extra bundles \
+        --no-default-groups --no-editable \
+    && uv pip check --python /app/.venv/bin/python \
+    && /app/.venv/bin/python -c 'import importlib.metadata as m; names = {d.metadata["Name"].lower() for d in m.distributions()}; assert "lfx-bundles" in names, "full-bundles image is missing lfx-bundles"'
+
 ################################
 # SHARED RUNTIME
 # One user, utility, label, and runtime defaults contract for every public target.
@@ -214,8 +225,17 @@ COPY --from=core-builder --chown=1000:0 /app/.venv /app/.venv
 LABEL org.opencontainers.image.title=langflow-core
 
 ################################
-# FULL IMAGE (default/final target)
-# Core application plus the curated provider bundle set.
+# FULL-BUNDLES IMAGE
+# Default application plus the reviewed all-no-torch long-tail bundle set.
+################################
+FROM runtime AS full-bundles
+
+COPY --from=full-bundles-builder --chown=1000:0 /app/.venv /app/.venv
+LABEL org.opencontainers.image.title=langflow-all
+
+################################
+# DEFAULT IMAGE (default/final target)
+# Core application plus the curated graduated provider set.
 ################################
 FROM runtime AS full
 

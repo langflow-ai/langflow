@@ -1406,12 +1406,22 @@ jobs:
 
           requirements = [Requirement(value) for value in metadata.get_all("Requires-Dist", [])]
           dependency_names = {canonicalize_name(requirement.name) for requirement in requirements}
+          bundle_requirements = [
+              requirement
+              for requirement in requirements
+              if canonicalize_name(requirement.name) == "lfx-bundles"
+          ]
           assert metadata["Name"] == "langflow"
           assert "langflow-core" in dependency_names
           assert "langflow-base" not in dependency_names
           assert any(name.startswith("lfx-") for name in dependency_names)
+          assert "bundles" in metadata.get_all("Provides-Extra", [])
+          assert len(bundle_requirements) == 1
+          assert "all-no-torch" in bundle_requirements[0].extras
+          assert bundle_requirements[0].marker is not None
+          assert 'extra == "bundles"' in str(bundle_requirements[0].marker)
           assert not any(name.endswith(".dist-info/entry_points.txt") for name in names)
-          print(f"Verified {wheel.name}: core + bundles, no direct base or console script")
+          print(f"Verified {wheel.name}: curated defaults + opt-in bundles extra, no direct base or console script")
           PY
       - name: Test CLI
         run: |
@@ -1588,6 +1598,40 @@ jobs:
       bundles-artifact-name: ${{ needs.build-bundles.result == 'success' && needs.build-bundles.outputs.bundles-found == '1' && 'dist-bundles' || '' }}
       pre_release: ${{ inputs.pre_release }}
 
+  release-inventory:
+    name: Validate release inventories
+    needs:
+      [
+        build-base,
+        build-bundles,
+        build-core,
+        build-lfx,
+        build-main,
+        build-sdk,
+        determine-core-version,
+        determine-main-version,
+        test-cross-platform,
+      ]
+    if: |
+      always() &&
+      !cancelled() &&
+      (needs.test-cross-platform.result == 'success' || needs.test-cross-platform.result == 'skipped') &&
+      (needs.build-core.result == 'success' ||
+       needs.build-main.result == 'success' ||
+       inputs.build_docker_core ||
+       inputs.build_docker_main)
+    uses: ./.github/workflows/release-inventory-gate.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      main-version: ${{ needs.determine-main-version.outputs.version }}
+      core-version: ${{ needs.determine-core-version.outputs.version || needs.determine-main-version.outputs.version }}
+      sdk-artifact-name: ${{ needs.build-sdk.result == 'success' && 'dist-sdk' || '' }}
+      lfx-artifact-name: ${{ needs.build-lfx.result == 'success' && 'dist-lfx' || '' }}
+      base-artifact-name: ${{ needs.build-base.result == 'success' && 'dist-base' || '' }}
+      core-artifact-name: ${{ needs.build-core.result == 'success' && 'dist-core' || '' }}
+      main-artifact-name: ${{ needs.build-main.result == 'success' && 'dist-main' || '' }}
+      bundles-artifact-name: ${{ needs.build-bundles.result == 'success' && needs.build-bundles.outputs.bundles-found == '1' && 'dist-bundles' || '' }}
+
   publish-base:
     name: Publish Langflow Base to PyPI
     if: |
@@ -1596,9 +1640,10 @@ jobs:
       inputs.release_package_base &&
       needs.build-base.result == 'success' &&
       needs.test-cross-platform.result == 'success' &&
+      (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped') &&
       needs.ci.result == 'success' &&
       (needs.publish-lfx.result == 'success' || needs.publish-lfx.result == 'skipped')
-    needs: [build-base, test-cross-platform, ci, publish-lfx]
+    needs: [build-base, test-cross-platform, release-inventory, ci, publish-lfx]
     runs-on: ubuntu-latest
     steps:
       - name: Download base artifact
@@ -1620,13 +1665,14 @@ jobs:
 
   publish-core:
     name: Publish Langflow Core to PyPI
-    needs: [build-core, test-cross-platform, ci, publish-base]
+    needs: [build-core, test-cross-platform, release-inventory, ci, publish-base]
     if: |
       always() &&
       !cancelled() &&
       inputs.release_package_core &&
       needs.build-core.result == 'success' &&
       needs.test-cross-platform.result == 'success' &&
+      needs.release-inventory.result == 'success' &&
       needs.ci.result == 'success' &&
       (needs.publish-base.result == 'success' || needs.publish-base.result == 'skipped')
     runs-on: ubuntu-latest
@@ -1650,7 +1696,7 @@ jobs:
 
   publish-bundles:
     name: Publish Bundles to PyPI
-    needs: [build-bundles, test-cross-platform, ci, publish-lfx]
+    needs: [build-bundles, test-cross-platform, release-inventory, ci, publish-lfx]
     if: |
       always() &&
       !cancelled() &&
@@ -1658,6 +1704,7 @@ jobs:
       needs.build-bundles.result == 'success' &&
       needs.build-bundles.outputs.bundles-found == '1' &&
       needs.test-cross-platform.result == 'success' &&
+      (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped') &&
       needs.ci.result == 'success' &&
       (needs.publish-lfx.result == 'success' || needs.publish-lfx.result == 'skipped')
     runs-on: ubuntu-latest
@@ -1736,6 +1783,7 @@ jobs:
       inputs.release_package_main &&
       needs.build-main.result == 'success' &&
       needs.test-cross-platform.result == 'success' &&
+      needs.release-inventory.result == 'success' &&
       needs.ci.result == 'success' &&
       (needs.publish-bundles.result == 'success' || needs.publish-bundles.result == 'skipped') &&
       (needs.publish-core.result == 'success' ||
@@ -1746,6 +1794,7 @@ jobs:
         build-main,
         determine-core-version,
         test-cross-platform,
+        release-inventory,
         publish-base,
         publish-core,
         publish-bundles,
@@ -1772,13 +1821,14 @@ jobs:
 
   publish-sdk:
     name: Publish langflow-sdk to PyPI
-    needs: [build-sdk, test-cross-platform, ci]
+    needs: [build-sdk, test-cross-platform, release-inventory, ci]
     if: |
       always() &&
       !cancelled() &&
       inputs.release_sdk &&
       needs.build-sdk.result == 'success' &&
       needs.ci.result == 'success' &&
+      (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped') &&
       (needs.test-cross-platform.result == 'success' || needs.test-cross-platform.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
@@ -1805,13 +1855,14 @@ jobs:
 
   publish-lfx:
     name: Publish LFX to PyPI
-    needs: [build-lfx, test-cross-platform, ci, publish-sdk]
+    needs: [build-lfx, test-cross-platform, release-inventory, ci, publish-sdk]
     if: |
       always() &&
       !cancelled() &&
       inputs.release_lfx &&
       needs.build-lfx.result == 'success' &&
       needs.test-cross-platform.result == 'success' &&
+      (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped') &&
       needs.ci.result == 'success' &&
       (needs.publish-sdk.result == 'success' || needs.publish-sdk.result == 'skipped')
     runs-on: ubuntu-latest
@@ -1835,8 +1886,13 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    if: ${{ inputs.build_docker_base }}
-    needs: [ci, determine-base-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_base &&
+      needs.ci.result == 'success' &&
+      (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped')
+    needs: [ci, determine-base-version, release-inventory]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -1848,8 +1904,13 @@ jobs:
 
   call_docker_build_core:
     name: Call Docker Build Workflow for Langflow Core
-    if: ${{ inputs.build_docker_core }}
-    needs: [ci, determine-core-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_core &&
+      needs.ci.result == 'success' &&
+      needs.release-inventory.result == 'success'
+    needs: [ci, determine-core-version, release-inventory]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -1861,8 +1922,13 @@ jobs:
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci, determine-main-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_main &&
+      needs.ci.result == 'success' &&
+      needs.release-inventory.result == 'success'
+    needs: [ci, determine-main-version, release-inventory]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -1900,8 +1966,13 @@ jobs:
 
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci, determine-main-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_main &&
+      needs.ci.result == 'success' &&
+      needs.release-inventory.result == 'success'
+    needs: [ci, determine-main-version, release-inventory]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -1913,8 +1984,13 @@ jobs:
 
   call_docker_build_main_all:
     name: Call Docker Build Workflow for langflow-all
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci, determine-main-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_main &&
+      needs.ci.result == 'success' &&
+      needs.release-inventory.result == 'success'
+    needs: [ci, determine-main-version, release-inventory]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
