@@ -537,38 +537,46 @@ def restamp_unpublished_bundles(
     if rc_number < 0:
         raise PlanError("RC number must be non-negative")
     parse_version(lfx_version)
+    bundles = _discover_bundles(base_dir)
+    paths = {path for bundle in bundles.values() for path in (bundle.pyproject, *bundle.manifest_paths)}
+    originals = {path: path.read_text(encoding="utf-8") for path in paths}
     targets: list[VersionTarget] = []
-    for bundle in _discover_bundles(base_dir).values():
-        if client.get_release(bundle.name, bundle.version) is not None:
+    try:
+        for bundle in bundles.values():
+            if client.get_release(bundle.name, bundle.version) is not None:
+                targets.append(
+                    VersionTarget(
+                        package=bundle.name,
+                        source_version=bundle.version,
+                        build_version=bundle.version,
+                        action="reuse-stable",
+                        lfx_range=_requirement_parts(bundle.lfx_requirement)[1],
+                    )
+                )
+                continue
+            target_version = restamp_version(bundle.version, f"rc{rc_number}")
+            bundle_content = _replace_project_version(originals[bundle.pyproject], target_version)
+            bundle_content = _replace_lfx_floor(bundle_content, lfx_version, exact=True)
+            bundle.pyproject.write_text(bundle_content, encoding="utf-8")
+            for manifest_path in bundle.manifest_paths:
+                manifest_path.write_text(
+                    _replace_manifest_version(originals[manifest_path], target_version),
+                    encoding="utf-8",
+                )
             targets.append(
                 VersionTarget(
                     package=bundle.name,
                     source_version=bundle.version,
-                    build_version=bundle.version,
-                    action="reuse-stable",
-                    lfx_range=_requirement_parts(bundle.lfx_requirement)[1],
+                    build_version=target_version,
+                    action="publish-prerelease",
+                    lfx_range=f">={lfx_version},<{parse_version(lfx_version)[0] + 1}.0.0",
                 )
             )
-            continue
-        target_version = restamp_version(bundle.version, f"rc{rc_number}")
-        bundle_content = _replace_project_version(bundle.pyproject.read_text(encoding="utf-8"), target_version)
-        bundle_content = _replace_lfx_floor(bundle_content, lfx_version, exact=True)
-        bundle.pyproject.write_text(bundle_content, encoding="utf-8")
-        for manifest_path in bundle.manifest_paths:
-            manifest_path.write_text(
-                _replace_manifest_version(manifest_path.read_text(encoding="utf-8"), target_version),
-                encoding="utf-8",
-            )
-        targets.append(
-            VersionTarget(
-                package=bundle.name,
-                source_version=bundle.version,
-                build_version=target_version,
-                action="publish-prerelease",
-                lfx_range=f">={lfx_version},<{parse_version(lfx_version)[0] + 1}.0.0",
-            )
-        )
-    return tuple(sorted(targets, key=lambda item: item.package))
+        return tuple(sorted(targets, key=lambda item: item.package))
+    except Exception:
+        for path, content in originals.items():
+            path.write_text(content, encoding="utf-8")
+        raise
 
 
 def wheel_content_digest(source: Path | bytes) -> str:

@@ -20,12 +20,15 @@ on:
 jobs:
   bundle-release-plan:
     name: Bundle release plan - version and metadata consistency
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5

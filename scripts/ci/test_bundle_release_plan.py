@@ -84,9 +84,12 @@ def _create_repository(tmp_path: Path, versions: dict[str, str]) -> Path:
         lock_packages.append(f'[[package]]\nname = "{name}"\nversion = "{version}"\n')
         package_dir = repo / "src" / "bundles" / directory
         source_dir = package_dir / "src" / name.replace("-", "_")
+        tests_dir = package_dir / "tests"
         source_dir.mkdir(parents=True)
+        tests_dir.mkdir()
         (package_dir / "pyproject.toml").write_text(_bundle_pyproject(name, version), encoding="utf-8")
         (package_dir / "README.md").write_text(f"# {name}\n", encoding="utf-8")
+        (tests_dir / "test_component.py").write_text("VALUE = 1\n", encoding="utf-8")
         (source_dir / "component.py").write_text("VALUE = 1\n", encoding="utf-8")
         (source_dir / "extension.json").write_text(
             json.dumps({"id": name, "version": version}, indent=2) + "\n", encoding="utf-8"
@@ -145,6 +148,7 @@ def _matching_release(wheel: Path) -> dict[str, Any]:
 def test_noop_ignores_bundle_docs_and_tests(tmp_path: Path) -> None:
     repo = _create_repository(tmp_path, {"alpha": "0.1.0"})
     (repo / "src" / "bundles" / "alpha" / "README.md").write_text("docs only\n", encoding="utf-8")
+    (repo / "src" / "bundles" / "alpha" / "tests" / "test_component.py").write_text("VALUE = 2\n", encoding="utf-8")
 
     assert build_change_plan("HEAD", base_dir=repo) == ()
 
@@ -207,6 +211,27 @@ def test_prerelease_restamp_reuses_stable_and_changes_only_unpublished_bundle(tm
     assert '"lfx>=1.11.0.dev0,<2.0.0"' in alpha
     assert 'version = "0.2.0rc3"' in beta
     assert '"lfx>=1.11.0rc3,<2.0.0"' in beta
+
+
+def test_prerelease_restamp_rolls_back_all_files_on_late_failure(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.0", "beta": "0.2.0"})
+    index = FakeIndex()
+    alpha_dir = repo / "src" / "bundles" / "alpha"
+    beta_dir = repo / "src" / "bundles" / "beta"
+    paths = [
+        alpha_dir / "pyproject.toml",
+        alpha_dir / "src" / "lfx_alpha" / "extension.json",
+        beta_dir / "pyproject.toml",
+        beta_dir / "src" / "lfx_beta" / "extension.json",
+    ]
+    beta_manifest = paths[-1]
+    beta_manifest.write_text("{}\n", encoding="utf-8")
+    originals = {path: path.read_text(encoding="utf-8") for path in paths}
+
+    with pytest.raises(PlanError, match=r"Unable to locate extension\.json version"):
+        restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+    assert {path: path.read_text(encoding="utf-8") for path in paths} == originals
 
 
 def test_partial_publication_reuses_matching_and_plans_only_missing(tmp_path: Path) -> None:

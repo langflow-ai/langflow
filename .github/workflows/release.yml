@@ -1491,9 +1491,10 @@ jobs:
         run: uv sync
       - name: Apply content-aware bundle pre-release plan
         if: ${{ inputs.pre_release }}
+        env:
+          LFX_VERSION: ${{ needs.determine-lfx-version.outputs.version }}
+          RC_NUMBER: ${{ needs.determine-rc-number.outputs.rc_number }}
         run: |
-          RC_NUMBER="${{ needs.determine-rc-number.outputs.rc_number }}"
-          LFX_VERSION="${{ needs.determine-lfx-version.outputs.version }}"
           python3 scripts/ci/bundle_release_plan.py restamp \
             --rc-number "$RC_NUMBER" \
             --lfx-version "$LFX_VERSION" \
@@ -1687,6 +1688,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.release_tag }}
+          persist-credentials: false
       - name: Download bundles artifact
         uses: actions/download-artifact@v7
         with:
