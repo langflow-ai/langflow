@@ -334,14 +334,63 @@ _OTEL_LOG_SKIP_KEYS = frozenset({"event", "level", "timestamp", "trace_id", "spa
 # The console is the developer's, the APM is the operator's, and they are not the same trust
 # boundary. Langflow's DEBUG output includes flow payloads (graph/base.py logs "Run outputs:"
 # with the rendered outputs), and the redaction processor only scrubs known sensitive *keys*,
-# not free text inside a message. INFO and above carries no flow content today, so INFO is the
-# floor. An operator who needs DEBUG in their backend can lower it deliberately.
+# not free text inside a message. INFO is the floor because it drops that bulk payload logging.
+#
+# It does NOT make the channel content-free, and this is the one place worth being precise:
+# unlike the span and metric exporters, which allowlist by instrumentation scope, this is a
+# severity threshold and nothing more. Flow-derived text still reaches the backend at ERROR --
+# vertex_types.py:359 interpolates a component's own output value into the message, and a
+# ComponentBuildError carries the underlying provider exception text. Narrowing that means
+# filtering on content, not level, which is a separate piece of work.
+#
+# An operator who needs DEBUG in their backend can lower it deliberately.
 _OTEL_MIN_LOG_SEVERITY_DEFAULT = "INFO"
 
 
+_INFO_SEVERITY = _OTEL_LOG_SEVERITY["info"]
+_otel_min_severity_cache: int | None = None
+
+
 def _otel_min_severity() -> int:
-    configured = os.getenv("LANGFLOW_OTEL_LOG_LEVEL", _OTEL_MIN_LOG_SEVERITY_DEFAULT).strip().lower()
-    return _OTEL_LOG_SEVERITY.get(configured, _OTEL_LOG_SEVERITY["info"])
+    """Resolve the export floor once, and say so out loud when it is lowered past INFO.
+
+    Resolved once rather than per record: this runs on every log line, and the answer cannot
+    change without a restart anyway.
+
+    Lowering it is allowed on purpose -- an operator debugging a live incident may genuinely
+    need DEBUG in their backend, and refusing outright would just get worked around. But it
+    is the one setting that starts sending flow payloads to a third party, and the person who
+    sets it in a Helm chart is often not the person who knows that, so it must never happen
+    quietly. Unknown values fall back to INFO rather than off, so a typo cannot silently open
+    it.
+    """
+    global _otel_min_severity_cache  # noqa: PLW0603
+    if _otel_min_severity_cache is not None:
+        return _otel_min_severity_cache
+
+    raw = os.getenv("LANGFLOW_OTEL_LOG_LEVEL", _OTEL_MIN_LOG_SEVERITY_DEFAULT).strip()
+    severity = _OTEL_LOG_SEVERITY.get(raw.lower())
+    # Cache before warning, not after: this is called from inside a log processor, and if
+    # warnings are routed into logging (logging.captureWarnings) the warning re-enters here.
+    # With the cache already set that re-entry returns immediately instead of recursing.
+    _otel_min_severity_cache = severity if severity is not None else _INFO_SEVERITY
+    if severity is None:
+        warnings.warn(
+            f"LANGFLOW_OTEL_LOG_LEVEL: ignoring {raw!r} (expected one of "
+            f"{sorted(_OTEL_LOG_SEVERITY)}); exporting {_OTEL_MIN_LOG_SEVERITY_DEFAULT} and above.",
+            stacklevel=2,
+        )
+        severity = _INFO_SEVERITY
+    elif severity < _INFO_SEVERITY:
+        warnings.warn(
+            f"LANGFLOW_OTEL_LOG_LEVEL={raw!r} exports DEBUG log records to the configured OTLP "
+            "endpoint. Langflow logs flow inputs and outputs at DEBUG, and log redaction only "
+            "covers known sensitive keys, not free text inside a message, so prompt and "
+            "completion content will reach that backend. Use INFO unless that is intended.",
+            stacklevel=2,
+        )
+    _otel_min_severity_cache = severity
+    return severity
 
 
 def emit_to_otel_logs(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:

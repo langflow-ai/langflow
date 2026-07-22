@@ -242,3 +242,75 @@ def test_a_log_emitted_during_a_request_carries_that_request_trace_id():
     match = [r for r in result["records"] if r["body"] == "payment provider timed out"]
     assert match, result["records"]
     assert match[0]["trace_id"] == result["span_trace_id"]
+
+
+# The DEBUG floor is an override, not a lock: an operator debugging a live incident may
+# genuinely need it. What must not happen is it moving quietly.
+OVERRIDE_PROBE = f"""
+from opentelemetry import _logs
+from opentelemetry.sdk._logs import LoggerProvider
+from opentelemetry.sdk._logs.export import SimpleLogRecordProcessor
+from opentelemetry.sdk._logs._internal.export.in_memory_log_exporter import InMemoryLogExporter
+
+exporter = InMemoryLogExporter()
+provider = LoggerProvider()
+provider.add_log_record_processor(SimpleLogRecordProcessor(exporter))
+_logs.set_logger_provider(provider)
+
+from lfx.log.logger import configure, logger
+
+configure(log_level="DEBUG")
+logger.debug({SENTINEL_DEBUG!r})
+logger.info({SENTINEL_INFO!r})
+provider.force_flush()
+
+bodies = [str(r.log_record.body) for r in exporter.get_finished_logs()]
+print("DEBUG_SHIPPED " + str({SENTINEL_DEBUG!r} in bodies))
+"""
+
+
+def run_override_probe(value: str | None) -> tuple[bool, str]:
+    """Return (was DEBUG exported, whatever went to stderr)."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
+    env.pop("LANGFLOW_OTEL_LOG_LEVEL", None)
+    if value is not None:
+        env["LANGFLOW_OTEL_LOG_LEVEL"] = value
+    env["PYTHONWARNINGS"] = "always"
+    completed = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", OVERRIDE_PROBE],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    shipped = next(ln for ln in completed.stdout.splitlines() if ln.startswith("DEBUG_SHIPPED "))
+    return shipped.endswith("True"), completed.stderr
+
+
+def test_debug_export_is_off_and_silent_by_default():
+    shipped, stderr = run_override_probe(None)
+
+    assert shipped is False
+    assert "LANGFLOW_OTEL_LOG_LEVEL" not in stderr
+
+
+def test_lowering_the_floor_works_but_says_so_loudly():
+    """Refusing outright would just get worked around; the requirement is that it is not quiet."""
+    shipped, stderr = run_override_probe("debug")
+
+    assert shipped is True
+    assert "LANGFLOW_OTEL_LOG_LEVEL" in stderr
+    # The warning has to name the actual consequence, not just report a setting.
+    assert "prompt" in stderr.lower()
+    assert "DEBUG" in stderr
+
+
+def test_an_unrecognised_value_fails_closed_and_warns():
+    """A typo must not be a way to accidentally open the floor."""
+    shipped, stderr = run_override_probe("verbose")
+
+    assert shipped is False
+    assert "LANGFLOW_OTEL_LOG_LEVEL" in stderr
+    assert "verbose" in stderr
