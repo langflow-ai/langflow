@@ -180,7 +180,7 @@ class Message(Data):
                 if file_path and is_image_file(file_path):
                     new_files.append(Image(path=file_path))
                 else:
-                    new_files.append(file_path if file_path else file)
+                    new_files.append(file_path or file)
             elif hasattr(file, "path") and file.path:
                 if is_image_file(file.path):
                     new_files.append(Image(path=file.path))

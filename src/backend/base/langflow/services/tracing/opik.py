@@ -46,7 +46,7 @@ class OpikTracer(BaseTracer):
         self.opik_trace_id = None
         self.user_id = user_id
         self.session_id = session_id
-        self.flow_id = trace_name.split(" - ")[-1]
+        self.flow_id = trace_name.rsplit(" - ", maxsplit=1)[-1]
         self.spans: dict = {}
 
         config = self._get_config()

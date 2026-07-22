@@ -498,7 +498,7 @@ class TextOperations(Component):
         text_str = str(text) if text else ""
 
         # None means strip all whitespace (spaces, tabs, newlines, etc.)
-        chars_to_strip = strip_characters if strip_characters else None
+        chars_to_strip = strip_characters or None
 
         if strip_mode == "left":
             return text_str.lstrip(chars_to_strip)

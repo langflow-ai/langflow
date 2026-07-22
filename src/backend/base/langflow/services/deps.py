@@ -291,3 +291,10 @@ def get_telemetry_writer_service():
     from langflow.services.telemetry_writer.factory import TelemetryWriterServiceFactory
 
     return get_service(ServiceType.TELEMETRY_WRITER_SERVICE, TelemetryWriterServiceFactory())
+
+
+def get_a2a_service():
+    """Return the A2AService instance."""
+    from langflow.services.a2a.factory import A2AServiceFactory
+
+    return get_service(ServiceType.A2A_SERVICE, A2AServiceFactory())

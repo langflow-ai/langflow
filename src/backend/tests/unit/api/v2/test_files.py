@@ -1141,7 +1141,7 @@ class TestStorageFailureHandling:
             storage_service=mock_storage_service,
         )
 
-        expected_file_name = file_path.split("/")[-1]
+        expected_file_name = file_path.rsplit("/", maxsplit=1)[-1]
         mock_storage_service.delete_file.assert_called_once_with(
             flow_id=str(user_id),
             file_name=expected_file_name,
@@ -1190,7 +1190,7 @@ class TestStorageFailureHandling:
         assert exc_info.value.status_code == 500
         assert "Failed to delete file from storage" in exc_info.value.detail
 
-        expected_file_name = file_path.split("/")[-1]
+        expected_file_name = file_path.rsplit("/", maxsplit=1)[-1]
         mock_storage_service.delete_file.assert_called_once_with(
             flow_id=str(user_id),
             file_name=expected_file_name,
