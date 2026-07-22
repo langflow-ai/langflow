@@ -159,6 +159,80 @@ class TestRunAssistantAndPersist:
         assert result["flow_changed"] is True
         assert result["result"] == "Built a simple chat flow."
 
+    async def test_should_reject_locked_flow_before_running_assistant(self):
+        from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
+        from langflow.services.database.models.flow.guards import LockedFlowError
+
+        user_id = uuid4()
+        flow = SimpleNamespace(
+            id=uuid4(),
+            name="Locked Flow",
+            data={"nodes": [], "edges": []},
+            user_id=user_id,
+            locked=True,
+        )
+        session = AsyncMock()
+        session.get = AsyncMock(return_value=flow)
+
+        with (
+            patch(f"{RUNNER_MODULE}._resolve_assistant_context", new_callable=AsyncMock) as resolve_context,
+            patch(f"{RUNNER_MODULE}.execute_flow_with_validation_streaming") as execute_stream,
+            pytest.raises(LockedFlowError, match="Flow is locked"),
+        ):
+            await run_assistant_and_persist(
+                session=session,
+                user_id=user_id,
+                instruction="Modify this flow",
+                flow_id=str(flow.id),
+            )
+
+        resolve_context.assert_not_awaited()
+        execute_stream.assert_not_called()
+
+    async def test_should_reject_flow_locked_during_assistant_execution(self):
+        from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
+        from langflow.services.database.models.flow.guards import LockedFlowError
+
+        user_id = uuid4()
+        flow = SimpleNamespace(
+            id=uuid4(),
+            name="Unlocked Flow",
+            data={"nodes": [], "edges": []},
+            user_id=user_id,
+            locked=False,
+        )
+        session = AsyncMock()
+        session.get = AsyncMock(return_value=flow)
+
+        async def acquire_lock(*_args, **_kwargs):
+            flow.locked = True
+
+        session.refresh = AsyncMock(side_effect=acquire_lock)
+
+        with (
+            patch(
+                f"{RUNNER_MODULE}._resolve_assistant_context",
+                new_callable=AsyncMock,
+                return_value=_context_stub(),
+            ),
+            patch(
+                f"{RUNNER_MODULE}.execute_flow_with_validation_streaming",
+                side_effect=_stream_of(EVENTS_WITH_FLOW),
+            ),
+            patch(f"{RUNNER_MODULE}._save_flow_to_fs", new_callable=AsyncMock) as save_flow,
+            pytest.raises(LockedFlowError, match="Flow is locked"),
+        ):
+            await run_assistant_and_persist(
+                session=session,
+                user_id=user_id,
+                instruction="Modify this flow",
+                flow_id=str(flow.id),
+            )
+
+        session.refresh.assert_awaited_once_with(flow, with_for_update=True)
+        session.commit.assert_not_awaited()
+        save_flow.assert_not_awaited()
+
     @pytest.mark.asyncio
     async def test_should_not_touch_the_flow_when_assistant_only_answers_text(self):
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
