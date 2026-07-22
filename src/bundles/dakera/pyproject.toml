@@ -1,0 +1,43 @@
+[project]
+name = "lfx-dakera"
+version = "0.1.0"
+description = "Dakera persistent memory components as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "dakera", "memory", "vector"]
+
+dependencies = [
+    "lfx>=1.10.0.dev0,<2.0.0",
+    "httpx>=0.27.0,<1.0.0",
+]
+
+[project.urls]
+Homepage = "https://dakera.ai"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+[project.entry-points."langflow.extensions"]
+lfx-dakera = "lfx_dakera"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + components ship inside the lfx_dakera package so
+# ``importlib.metadata.files(dist)`` finds them and the loader resolves
+# bundles[].path relative to the manifest's directory.
+packages = ["src/lfx_dakera"]
+include = ["src/lfx_dakera/extension.json", "src/lfx_dakera/components/**/*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_dakera",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]
