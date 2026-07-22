@@ -15,6 +15,7 @@ import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { APIClassType } from "@/types/api";
+import { filterPlaceableSelection } from "@/utils/componentConstraints";
 import type {
   AssistantMessage,
   AssistantModel,
@@ -781,6 +782,12 @@ export function useAssistantChat(): UseAssistantChatReturn {
             source: string;
             target: string;
           }>) ?? [];
+        // Re-applied here because this merge writes the store directly
+        // instead of going through `paste`, which enforces the same policy.
+        const placeable = filterPlaceableSelection(
+          { nodes: proposalNodes as never[], edges: proposalEdges as never[] },
+          store.nodes as Array<{ data?: { type?: string } }>,
+        );
         const merged = mergeFlowIntoCanvas(
           store.nodes as Array<{
             id: string;
@@ -791,7 +798,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
             source: string;
             target: string;
           }>,
-          { nodes: proposalNodes, edges: proposalEdges },
+          { nodes: placeable.nodes, edges: placeable.edges },
         );
         store.setNodes(merged.nodes as never[]);
         store.setEdges(merged.edges as never[]);

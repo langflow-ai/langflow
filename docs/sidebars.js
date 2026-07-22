@@ -448,6 +448,7 @@ module.exports = {
                 "Components/components-models",
                 "Components/components-prompts",
                 "Components/components-agents",
+                "Components/a2a-agent",
                 "Components/mcp-tools",
                 "Components/components-embedding-models",
                 "Components/message-history",

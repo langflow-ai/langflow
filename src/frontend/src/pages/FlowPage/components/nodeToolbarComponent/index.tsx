@@ -139,6 +139,12 @@ const NodeToolbarComponent = memo(
     );
 
     useEffect(() => {
+      // Keep the optimistic toggle state while the server rebuilds the node.
+      // Other in-flight field refreshes can update the same node first with
+      // its previous tool_mode value; syncing that transient value makes the
+      // toggle appear to turn itself off.
+      if (postToolModeValue.isPending) return;
+
       if (data.node?.tool_mode !== undefined) {
         setToolMode(
           data.node?.tool_mode ||
@@ -148,7 +154,7 @@ const NodeToolbarComponent = memo(
             false,
         );
       }
-    }, [data.node?.tool_mode, data.node?.outputs]);
+    }, [data.node?.tool_mode, data.node?.outputs, postToolModeValue.isPending]);
 
     const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
       data.id,
