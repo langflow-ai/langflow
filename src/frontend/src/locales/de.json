@@ -2179,5 +2179,7 @@
   "inspectionPanel.close": "Schließen",
   "nodeToolbar.parameters": "Parameter",
   "canvasControls.minimizeAll": "Alles minimieren",
-  "canvasControls.expandAll": "Alles erweitern"
+  "canvasControls.expandAll": "Alles erweitern",
+  "input.expandTextEditor": "Texteditor erweitern",
+  "sidebar.addComponentToCanvas": "„ {{name}} “ zur Leinwand hinzufügen"
 }

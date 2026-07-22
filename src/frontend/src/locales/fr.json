@@ -2179,5 +2179,7 @@
   "inspectionPanel.close": "Fermer",
   "nodeToolbar.parameters": "Paramètres",
   "canvasControls.minimizeAll": "Tout réduire",
-  "canvasControls.expandAll": "Tout développer"
+  "canvasControls.expandAll": "Tout développer",
+  "input.expandTextEditor": "Déplier l'éditeur de texte",
+  "sidebar.addComponentToCanvas": "Ajouter « {{name}} » à la toile"
 }

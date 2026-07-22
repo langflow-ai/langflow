@@ -2179,5 +2179,7 @@
   "inspectionPanel.close": "关闭",
   "nodeToolbar.parameters": "参数",
   "canvasControls.minimizeAll": "全部最小化",
-  "canvasControls.expandAll": "全部展开"
+  "canvasControls.expandAll": "全部展开",
+  "input.expandTextEditor": "展开文本编辑器",
+  "sidebar.addComponentToCanvas": "将 {{name}} 添加到画布中"
 }
