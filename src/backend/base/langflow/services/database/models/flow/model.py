@@ -240,6 +240,31 @@ class FlowRead(FlowBase):
     name_key: str | None = Field(None, description="Stable i18n key derived from the original English name")
 
 
+class FlowSummary(BaseModel):
+    """Flow metadata used by list views without loading the graph data."""
+
+    id: UUID
+    name: str
+    description: str | None = None
+    icon: str | None = None
+    icon_bg_color: str | None = None
+    gradient: str | None = None
+    is_component: bool | None = False
+    updated_at: datetime | None = None
+    webhook: bool | None = False
+    endpoint_name: str | None = None
+    tags: list[str] | None = None
+    locked: bool | None = False
+    mcp_enabled: bool | None = False
+    action_name: str | None = None
+    action_description: str | None = None
+    access_type: AccessTypeEnum = AccessTypeEnum.PRIVATE
+    user_id: UUID | None = None
+    folder_id: UUID | None = None
+    workspace_id: UUID | None = None
+    name_key: str | None = None
+
+
 class FlowHeader(BaseModel):
     """Model representing a header for a flow - Without the data."""
 

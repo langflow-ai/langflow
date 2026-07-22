@@ -19,7 +19,8 @@ interface IGetFolder {
 }
 
 const addQueryParams = (url: string, params: IGetFolder): string => {
-  return buildQueryStringUrl(url, params);
+  const { id: _id, ...queryParams } = params;
+  return buildQueryStringUrl(url, queryParams);
 };
 
 export const useGetFolderQuery: useQueryFunctionType<
@@ -49,7 +50,11 @@ export const useGetFolderQuery: useQueryFunctionType<
     const url = addQueryParams(`${getURL("PROJECTS")}/${params.id}`, params);
     const { data } = await api.get<PaginatedFolderType>(url);
 
-    const { flows } = processFlows(data.flows.items);
+    const flowsWithDataDefault = data.flows.items.map((flow) => ({
+      ...flow,
+      data: flow.data ?? null,
+    }));
+    const { flows } = processFlows(flowsWithDataDefault);
 
     const dataProcessed = cloneDeep(data);
     dataProcessed.flows.items = flows;

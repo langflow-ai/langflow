@@ -8,7 +8,7 @@ from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
 from sqlalchemy import or_, update
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import defer, selectinload
 from sqlmodel import select
 
 from langflow.api.utils import (
@@ -46,7 +46,7 @@ from langflow.services.database.models.deployment.exceptions import (
 )
 from langflow.services.database.models.deployment.guards import check_project_has_deployments
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import Flow, FlowRead, FlowSummary
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
     Folder,
@@ -55,7 +55,10 @@ from langflow.services.database.models.folder.model import (
     FolderReadWithFlows,
     FolderUpdate,
 )
-from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
+from langflow.services.database.models.folder.pagination_model import (
+    FolderWithPaginatedFlows,
+    FolderWithPaginatedFlowSummaries,
+)
 from langflow.services.deps import get_service, get_settings_service
 from langflow.services.schema import ServiceType
 
@@ -242,7 +245,11 @@ async def read_projects(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/{project_id}", response_model=FolderWithPaginatedFlows | FolderReadWithFlows, status_code=200)
+@router.get(
+    "/{project_id}",
+    response_model=FolderWithPaginatedFlowSummaries | FolderWithPaginatedFlows | FolderReadWithFlows,
+    status_code=200,
+)
 async def read_project(
     *,
     session: DbSession,
@@ -269,7 +276,9 @@ async def read_project(
         # and widening the lookup would expose foreign projects without any
         # policy check.
         share_aware = await authz.supports_cross_user_fetch() and await authz.is_enabled()
-        stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.id == project_id)
+        stmt = select(Folder).where(Folder.id == project_id)
+        if page is None or size is None:
+            stmt = stmt.options(selectinload(Folder.flows))
         if not share_aware:
             stmt = stmt.where(Folder.user_id == current_user.id)
         project = (await session.exec(stmt)).first()
@@ -302,6 +311,9 @@ async def read_project(
         # Check if pagination is explicitly requested by the user (both page and size provided)
         if page is not None and size is not None:
             stmt = select(Flow).where(Flow.folder_id == project_id)
+            summaries_only = is_flow and not is_component
+            if summaries_only:
+                stmt = stmt.options(defer(Flow.data))
             if not treat_as_shared:
                 stmt = stmt.where(Flow.user_id == current_user.id)
 
@@ -338,6 +350,14 @@ async def read_project(
                     domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
                     owner_extractor=lambda flow: flow.user_id,
                     act=FlowAction.READ,
+                )
+
+            if summaries_only:
+                paginated_flows.items = [
+                    FlowSummary.model_validate(flow, from_attributes=True) for flow in paginated_flows.items
+                ]
+                return FolderWithPaginatedFlowSummaries(
+                    folder=FolderRead.model_validate(project), flows=paginated_flows
                 )
 
             return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=paginated_flows)

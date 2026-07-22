@@ -1509,6 +1509,21 @@ class TestReadProjectBugFix:
         assert "folder" in result
         assert "flows" in result
         assert "items" in result["flows"]
+        flow_item = next(item for item in result["flows"]["items"] if item["id"] == flow_response.json()["id"])
+        assert "data" not in flow_item
+
+        flow_detail_response = await client.get(f"api/v1/flows/{flow_response.json()['id']}", headers=logged_in_headers)
+        assert flow_detail_response.status_code == status.HTTP_200_OK
+        assert flow_detail_response.json()["data"] == flow_payload["data"]
+
+        component_response = await client.get(
+            f"api/v1/projects/{project_id}?is_component=true&page=1&size=10", headers=logged_in_headers
+        )
+        assert component_response.status_code == status.HTTP_200_OK
+        component_item = next(
+            item for item in component_response.json()["flows"]["items"] if item["id"] == comp_response.json()["id"]
+        )
+        assert component_item["data"] == component_payload["data"]
 
     async def test_read_project_consistent_response_structure(self, client: AsyncClient, logged_in_headers, basic_case):
         """Test that read_project returns consistent response structure in all cases."""
