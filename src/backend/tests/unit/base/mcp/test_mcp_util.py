@@ -4126,7 +4126,6 @@ class TestCleanupIntervalFloorGuard:
             assert result >= 30
 
 
-@pytest.mark.asyncio
 class TestGetSessionNoBlockingHealthCheck:
     """get_session() must NOT call list_tools() on the hot path.
 
@@ -4248,7 +4247,6 @@ class TestSettingsCacheNotStale:
         assert second == 20
 
 
-@pytest.mark.asyncio
 class TestPeriodicCleanupSurvivesUnexpectedError:
     """_periodic_cleanup() must keep running even if an unexpected exception fires.
 
