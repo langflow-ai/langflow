@@ -5,11 +5,17 @@ from uuid import uuid4
 
 import pytest
 from cryptography.fernet import Fernet
+from langflow.services.auth.service import AuthService
 from langflow.services.auth.utils import ensure_fernet_key
 from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyContext,
+    ModelProviderPolicyPurpose,
+    ModelProviderPolicySnapshot,
+)
 from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -20,7 +26,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 @pytest.fixture
 def service():
     settings_service = get_settings_service()
-    return DatabaseVariableService(settings_service)
+    auth_service = AuthService(settings_service)
+    with patch("langflow.services.auth.utils.get_auth_service", return_value=auth_service):
+        yield DatabaseVariableService(settings_service)
 
 
 @pytest.fixture
@@ -66,6 +74,65 @@ async def test_initialize_user_variables__skipping_environment_variable_storage(
     service.settings_service.settings.store_environment_variables = False
     await service.initialize_user_variables(uuid4(), session=session)
     assert True
+
+
+async def test_initialize_user_variables_skips_policy_hidden_provider_before_validation(
+    service,
+    session: AsyncSession,
+    monkeypatch,
+):
+    user_id = uuid4()
+    monkeypatch.setattr(
+        service.settings_service.settings,
+        "variables_to_get_from_environment",
+        ["ANTHROPIC_API_KEY"],
+    )
+    snapshot = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(user_id=user_id),
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        candidate_provider_ids=frozenset({"openai", "anthropic"}),
+        allowed_provider_ids=frozenset({"openai"}),
+    )
+
+    with (
+        patch.dict(
+            "os.environ",
+            {"ANTHROPIC_API_KEY": "hidden-secret"},  # pragma: allowlist secret
+            clear=True,
+        ),
+        patch("lfx.services.model_provider_policy.resolve_model_provider_policy", return_value=snapshot),
+        patch(
+            "lfx.base.models.unified_models.validate_model_provider_key",
+            side_effect=AssertionError("hidden provider credential must not be validated"),
+        ),
+    ):
+        await service.initialize_user_variables(user_id=user_id, session=session)
+
+    assert await service.list_variables(user_id, session=session) == []
+
+
+async def test_initialize_user_variables_stops_when_policy_resolution_fails(
+    service,
+    session: AsyncSession,
+    monkeypatch,
+):
+    user_id = uuid4()
+    monkeypatch.setattr(
+        service.settings_service.settings,
+        "variables_to_get_from_environment",
+        ["OPENAI_API_KEY"],
+    )
+
+    with (
+        patch.dict("os.environ", {"OPENAI_API_KEY": "must-not-import"}, clear=True),  # pragma: allowlist secret
+        patch(
+            "lfx.services.model_provider_policy.resolve_model_provider_policy",
+            side_effect=RuntimeError("policy unavailable"),
+        ),
+    ):
+        await service.initialize_user_variables(user_id=user_id, session=session)
+
+    assert await service.list_variables(user_id, session=session) == []
 
 
 async def test_get_variable(service, session: AsyncSession):

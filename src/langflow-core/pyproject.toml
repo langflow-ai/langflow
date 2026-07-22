@@ -1,0 +1,62 @@
+[project]
+name = "langflow-core"
+version = "1.12.0"
+description = "Langflow's service-complete profile with core components and no provider bundles"
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = "MIT"
+keywords = ["langflow", "workflow", "ai", "core", "server"]
+maintainers = [
+    { name = "Carlos Coelho", email = "carlos@langflow.org" },
+    { name = "Cristhian Zanforlin", email = "cristhian.lousa@gmail.com" },
+    { name = "Gabriel Almeida", email = "gabriel@langflow.org" },
+    { name = "Lucas Eduoli", email = "lucaseduoli@gmail.com" },
+    { name = "Otávio Anovazzi", email = "otavio2204@gmail.com" },
+    { name = "Rodrigo Nader", email = "rodrigo@langflow.org" },
+    { name = "Italo dos Anjos", email = "italojohnnydosanjos@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "langflow-base[complete]~=0.12.0",
+]
+
+[project.optional-dependencies]
+audio = [
+    "langflow-base[audio]~=0.12.0",
+]
+postgresql = [
+    "langflow-base[postgresql]~=0.12.0",
+]
+
+[project.scripts]
+langflow = "langflow.langflow_launcher:main"
+langflow-core = "langflow.langflow_launcher:main"
+
+[project.urls]
+Repository = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/langflow_core"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/langflow_core",
+    "README.md",
+    "pyproject.toml",
+]

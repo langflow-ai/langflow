@@ -12,7 +12,7 @@ on:
     inputs:
       python-versions:
         description: "(Optional) Python versions to test"
-        required: true
+        required: false
         type: string
         default: "['3.10', '3.11', '3.12', '3.13', '3.14']"
       ref:
@@ -204,26 +204,36 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
+          # This job intentionally exits before invoking uv when langflow-core
+          # has not been published yet (including its first release).
+          ignore-nothing-to-cache: true
 
       - name: Check Version
         id: check-version
-        # We need to print $3 because langflow-base is a dependency of langflow
-        # For langlow we'd use print $2
+        # The main wheel resolves its direct langflow-core dependency from PyPI.
+        # Skip until the source core version (stable or canonical nightly) exists.
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
-          url="https://pypi.org/pypi/langflow-base/json"
-          if [ ${{ inputs.nightly }} == true ]; then
-            url="https://pypi.org/pypi/langflow-base-nightly/json"
+          version=$(python -c "import pathlib, tomllib; print(tomllib.loads(pathlib.Path('src/langflow-core/pyproject.toml').read_text())['project']['version'])")
+          url="https://pypi.org/pypi/langflow-core/json"
+
+          status=$(curl -sS -o "$RUNNER_TEMP/langflow-core-pypi.json" -w "%{http_code}" "$url")
+          if [ "$status" = "404" ]; then
+            last_released_version=""
+          elif [ "$status" != "200" ]; then
+            echo "Failed to fetch langflow-core releases: HTTP $status"
+            cat "$RUNNER_TEMP/langflow-core-pypi.json"
+            exit 1
+          else
+            last_released_version=$(jq -r '.releases | keys[]' "$RUNNER_TEMP/langflow-core-pypi.json" | sort -V | tail -n 1)
           fi
 
-          last_released_version=$(curl -s $url | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" != "$last_released_version" ]; then
             echo "Version $version has not been released yet. Skipping the rest of the job."
-            echo skipped=true >> $GITHUB_OUTPUT
+            echo skipped=true >> "$GITHUB_OUTPUT"
             exit 0
           else
-            echo version=$version >> $GITHUB_OUTPUT
-            echo skipped=false >> $GITHUB_OUTPUT
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo skipped=false >> "$GITHUB_OUTPUT"
           fi
       - name: Build wheel
         if: steps.check-version.outputs.skipped == 'false'

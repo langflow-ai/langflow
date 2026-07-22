@@ -2,7 +2,11 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from lfx.components.cometapi.cometapi import CometAPIComponent
+
+pytest.importorskip("lfx_bundles")
+pytest.importorskip("langchain_openai")
+
+from lfx_bundles.cometapi.cometapi import CometAPIComponent
 
 
 class TestCometAPIIntegration:
@@ -20,7 +24,7 @@ class TestCometAPIIntegration:
 
     def test_component_import(self):
         """Test that the CometAPI component can be imported."""
-        from lfx.components.cometapi.cometapi import CometAPIComponent
+        from lfx_bundles.cometapi.cometapi import CometAPIComponent
 
         assert CometAPIComponent is not None
 
@@ -69,7 +73,7 @@ class TestCometAPIIntegration:
         assert models == ["gpt-4o-mini", "claude-3-5-haiku-latest", "gemini-2.5-flash"]
         mock_get.assert_called_once()
 
-    @patch("lfx.components.cometapi.cometapi.ChatOpenAI")
+    @patch("lfx_bundles.cometapi.cometapi.ChatOpenAI")
     def test_model_building_integration(self, mock_chat_openai, component, mock_api_key):
         """Test the complete model building flow."""
         # Mock ChatOpenAI
@@ -95,7 +99,7 @@ class TestCometAPIIntegration:
         assert mock_chat_openai.call_count == 1
         _args, kwargs = mock_chat_openai.call_args
         assert kwargs["model"] == "gpt-4o-mini"
-        assert kwargs["api_key"] == "test-cometapi-key"
+        assert kwargs["api_key"] == "test-cometapi-key"  # pragma: allowlist secret
         assert kwargs["max_tokens"] == 1000
         assert kwargs["temperature"] == 0.7
         assert kwargs["model_kwargs"] == {}
@@ -105,7 +109,7 @@ class TestCometAPIIntegration:
         assert kwargs["base_url"] == "https://api.cometapi.com/v1"
         assert model == mock_instance
 
-    @patch("lfx.components.cometapi.cometapi.ChatOpenAI")
+    @patch("lfx_bundles.cometapi.cometapi.ChatOpenAI")
     def test_json_mode_integration(self, mock_chat_openai, component, mock_api_key):
         """Test JSON mode integration."""
         # Mock ChatOpenAI and bind method
@@ -181,10 +185,16 @@ class TestCometAPIIntegration:
     def test_component_serialization(self, component):
         """Test that component can be serialized/deserialized."""
         # Set some values
-        component.set_attributes({"api_key": "test-key", "model_name": "gpt-4o-mini", "temperature": 0.5})
+        component.set_attributes(
+            {
+                "api_key": "test-key",  # pragma: allowlist secret
+                "model_name": "gpt-4o-mini",
+                "temperature": 0.5,
+            }
+        )
 
         # Test that component attributes are accessible
-        assert component.api_key == "test-key"
+        assert component.api_key == "test-key"  # pragma: allowlist secret
         assert component.model_name == "gpt-4o-mini"
         assert component.temperature == 0.5
 
@@ -192,7 +202,12 @@ class TestCometAPIIntegration:
         """Test component input validation."""
         # Test with valid inputs
         component.set_attributes(
-            {"api_key": "valid-key", "model_name": "gpt-4o-mini", "temperature": 0.7, "max_tokens": 1000}
+            {
+                "api_key": "valid-key",  # pragma: allowlist secret
+                "model_name": "gpt-4o-mini",
+                "temperature": 0.7,
+                "max_tokens": 1000,
+            }
         )
 
         # Should not raise any validation errors

@@ -1,0 +1,283 @@
+name: Release inventory gate
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref containing the release contract and Dockerfiles
+        required: true
+        type: string
+      main-version:
+        description: Version to embed in application images
+        required: true
+        type: string
+      core-version:
+        description: Version to embed in core application images
+        required: true
+        type: string
+      sdk-artifact-name:
+        required: false
+        type: string
+        default: ""
+      lfx-artifact-name:
+        required: false
+        type: string
+        default: ""
+      base-artifact-name:
+        required: false
+        type: string
+        default: ""
+      core-artifact-name:
+        required: false
+        type: string
+        default: ""
+      main-artifact-name:
+        required: false
+        type: string
+        default: ""
+      bundles-artifact-name:
+        required: false
+        type: string
+        default: ""
+
+env:
+  DOCKER_BUILDKIT: "1"
+
+jobs:
+  python-inventory:
+    name: Python ${{ matrix.python-version }} / ${{ matrix.profile }}
+    if: ${{ inputs.main-artifact-name != '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        profile: [python-default, python-full]
+    steps:
+      - name: Check out release contract
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+
+      - name: Download SDK wheel
+        if: ${{ inputs.sdk-artifact-name != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.sdk-artifact-name }}
+          path: sdk-dist
+
+      - name: Download LFX wheel
+        if: ${{ inputs.lfx-artifact-name != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.lfx-artifact-name }}
+          path: lfx-dist
+
+      - name: Download base wheel
+        if: ${{ inputs.base-artifact-name != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.base-artifact-name }}
+          path: base-dist
+
+      - name: Download core wheel
+        if: ${{ inputs.core-artifact-name != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.core-artifact-name }}
+          path: core-dist
+
+      - name: Download main wheel
+        if: ${{ inputs.main-artifact-name != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.main-artifact-name }}
+          path: main-dist
+
+      - name: Download bundle wheels
+        if: ${{ inputs.bundles-artifact-name != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.bundles-artifact-name }}
+          path: bundles-dist
+
+      - name: Install release shape from wheels
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          uv venv inventory-env --seed --python "${{ matrix.python-version }}"
+
+          MAIN_WHEELS=(main-dist/langflow-*.whl)
+          [ ${#MAIN_WHEELS[@]} -eq 1 ]
+
+          LOCAL_WHEELS=()
+          for wheel_dir in sdk-dist lfx-dist base-dist core-dist; do
+            if [ -d "$wheel_dir" ]; then
+              while IFS= read -r wheel; do
+                LOCAL_WHEELS+=("$wheel")
+              done < <(find "$wheel_dir" -maxdepth 1 -name '*.whl' -type f | sort)
+            fi
+          done
+          mkdir -p bundles-dist
+
+          MAIN_TARGET="${MAIN_WHEELS[0]}"
+          if [ "${{ matrix.profile }}" = "python-full" ]; then
+            MAIN_TARGET="langflow[bundles] @ file://${PWD}/${MAIN_WHEELS[0]}"
+          fi
+
+          INSTALL_TARGETS=(
+            "${LOCAL_WHEELS[@]}"
+            "$MAIN_TARGET"
+          )
+
+          uv pip install --python inventory-env/bin/python \
+            --prerelease=if-necessary-or-explicit \
+            --find-links bundles-dist \
+            "${INSTALL_TARGETS[@]}"
+          uv pip check --python inventory-env/bin/python
+
+      - name: Validate distribution and component inventory
+        run: |
+          inventory-env/bin/python scripts/ci/check_release_inventory.py \
+            --contract scripts/ci/release_inventory_contract.json \
+            --profile "${{ matrix.profile }}" \
+            --output "inventory-reports/${{ matrix.profile }}-py${{ matrix.python-version }}.json"
+
+      - name: Verify application startup and health
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          inventory-env/bin/python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          server_pid=$!
+          trap 'kill "$server_pid" >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:7860/health_check >/dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              echo "Langflow exited before becoming healthy"
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "Langflow did not become healthy"
+          exit 1
+
+      - name: Upload Python inventory report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: inventory-${{ matrix.profile }}-py${{ matrix.python-version }}
+          path: inventory-reports/*.json
+          if-no-files-found: warn
+
+  image-inventory:
+    name: Images / ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: Langflow-runner
+          - arch: arm64
+            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out release contract
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Download bundle wheels for downstream-image test
+        if: ${{ inputs.bundles-artifact-name != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.bundles-artifact-name }}
+          path: bundles-dist
+
+      - name: Prepare optional bundle-wheel directory
+        run: mkdir -p bundles-dist
+
+      - name: Build core, default, and full application images
+        run: |
+          set -euo pipefail
+          common_args=(
+            --build-arg "MAIN_VERSION=${{ inputs.main-version }}"
+            --build-arg "CORE_VERSION=${{ inputs.core-version }}"
+            -f docker/build_and_push.Dockerfile
+          )
+          docker build "${common_args[@]}" --target core -t "langflow-inventory:core-${{ matrix.arch }}" .
+          docker build "${common_args[@]}" --target full -t "langflow-inventory:default-${{ matrix.arch }}" .
+          docker build "${common_args[@]}" --target full-bundles -t "langflow-inventory:full-${{ matrix.arch }}" .
+
+      - name: Validate image inventory
+        run: |
+          set -euo pipefail
+          mkdir -p inventory-reports
+          for profile in core default full; do
+            docker run --rm --entrypoint python \
+              -v "$PWD/scripts/ci:/inventory:ro" \
+              -v "$PWD/inventory-reports:/reports" \
+              "langflow-inventory:${profile}-${{ matrix.arch }}" \
+              /inventory/check_release_inventory.py \
+              --contract /inventory/release_inventory_contract.json \
+              --profile "image-${profile}" \
+              --output "/reports/image-${profile}-${{ matrix.arch }}.json"
+          done
+
+      - name: Verify image startup and health
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          credential="inventory-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${RANDOM}"
+          for profile in core default full; do
+            image="langflow-inventory:${profile}-${{ matrix.arch }}"
+            container_id=$(docker run -d -e "LANGFLOW_SUPERUSER_PASSWORD=$credential" "$image")
+            healthy=false
+            for _ in $(seq 1 60); do
+              if docker exec "$container_id" curl -fsS http://127.0.0.1:7860/health_check >/dev/null; then
+                healthy=true
+                break
+              fi
+              if [ "$(docker inspect -f '{{.State.Running}}' "$container_id" 2>/dev/null)" != "true" ]; then
+                break
+              fi
+              sleep 2
+            done
+            if [ "$healthy" != "true" ]; then
+              docker logs "$container_id" || true
+              docker rm -f "$container_id" || true
+              echo "$profile image did not become healthy"
+              exit 1
+            fi
+            docker rm -f "$container_id"
+          done
+
+      - name: Verify downstream extension of the core image
+        run: |
+          set -euo pipefail
+          docker build \
+            --build-arg "CORE_IMAGE=langflow-inventory:core-${{ matrix.arch }}" \
+            -f scripts/ci/core_extension.Dockerfile \
+            -t "langflow-inventory:core-extended-${{ matrix.arch }}" .
+          docker run --rm --entrypoint python \
+            "langflow-inventory:core-extended-${{ matrix.arch }}" \
+            -c 'from importlib.metadata import version; print(version("lfx-openai"))'
+
+      - name: Upload image inventory reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: inventory-images-${{ matrix.arch }}
+          path: inventory-reports/*.json
+          if-no-files-found: warn

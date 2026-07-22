@@ -142,10 +142,8 @@ PROVIDER_DEPS: dict[str, list[str]] = {
         "google-auth-oauthlib>=1.2.0,<2.0.0",
     ],
     "vertexai": ["langchain-google-vertexai>=3.2.0"],
-    # ALTK depends on litellm, whose current Rust extension does not build on Python 3.14.
     "altk": [
-        "agent-lifecycle-toolkit>=0.10.1,<1.0; "
-        "(sys_platform != 'darwin' or platform_machine != 'x86_64') and python_version < '3.14'",
+        "agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     ],
     "codeagents": [
         "smolagents>=1.8.0",
@@ -247,8 +245,7 @@ def _shim_source(provider: str, slug: str) -> str:
         '    if exc.name is not None and (exc.name == "lfx_bundles" or exc.name.startswith("lfx_bundles.")):\n'
         "        msg = (\n"
         f"            \"The '{provider}' components moved to the 'lfx-bundles' distribution. \"\n"
-        '            "Install it with:  pip install lfx-bundles   "\n'
-        "            \"(or 'pip install langflow', which bundles it).\"\n"
+        '            "Install it with: pip install lfx-bundles."\n'
         "        )\n"
         '        raise ModuleNotFoundError(msg, name="lfx_bundles") from exc\n'
         "    raise\n"

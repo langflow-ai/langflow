@@ -171,6 +171,28 @@ def is_host_allowed(hostname: str, ip: str | None = None) -> bool:
     return False
 
 
+# Transition prefixes that embed an IPv4 target. Their embedded IPv4 is re-checked against the
+# blocklist (below) rather than blocking the whole prefix, which would cut off legitimate public
+# egress on IPv6-only / DNS64 networks (where public IPv4 services are reached via 64:ff9b::/96).
+_SIXTO4_PREFIX = ipaddress.ip_network("2002::/16")
+_NAT64_WELL_KNOWN_PREFIX = ipaddress.ip_network("64:ff9b::/96")
+
+
+def _embedded_ipv4(ip_obj: ipaddress.IPv6Address) -> ipaddress.IPv4Address | None:
+    """Return the IPv4 embedded in a 6to4 or well-known NAT64 address, else None.
+
+    6to4 (RFC 3056) carries the IPv4 in bytes 2-5 (``2002:AABB:CCDD::/48`` -> ``AA.BB.CC.DD``); the
+    NAT64 well-known ``64:ff9b::/96`` (RFC 6052) carries it in the low 32 bits. Local-use NAT64
+    (``64:ff9b:1::/48``, RFC 8215) uses a deployment-chosen prefix length, so its embedded IPv4
+    can't be located reliably and isn't decoded here.
+    """
+    if ip_obj in _SIXTO4_PREFIX:
+        return ipaddress.IPv4Address(ip_obj.packed[2:6])
+    if ip_obj in _NAT64_WELL_KNOWN_PREFIX:
+        return ipaddress.IPv4Address(ip_obj.packed[12:16])
+    return None
+
+
 def is_ip_blocked(ip: str | ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     """Check if an IP address is in a blocked range.
 
@@ -182,12 +204,23 @@ def is_ip_blocked(ip: str | ipaddress.IPv4Address | ipaddress.IPv6Address) -> bo
     """
     try:
         ip_obj = ipaddress.ip_address(ip) if isinstance(ip, str) else ip
-
-        # Check against all blocked ranges
-        return any(ip_obj in blocked_range for blocked_range in get_blocked_ip_ranges())
     except (ValueError, ipaddress.AddressValueError):
         # If we can't parse the IP, treat it as blocked for safety
         return True
+
+    # Check against all blocked ranges
+    if any(ip_obj in blocked_range for blocked_range in get_blocked_ip_ranges()):
+        return True
+
+    # A 6to4 / NAT64 address is only as safe as the IPv4 it encodes: re-check the embedded IPv4
+    # so a transition prefix can't reach a blocked target, while a public IPv4 target (the
+    # legitimate NAT64/6to4 case) still passes.
+    if isinstance(ip_obj, ipaddress.IPv6Address):
+        embedded = _embedded_ipv4(ip_obj)
+        if embedded is not None:
+            return is_ip_blocked(embedded)
+
+    return False
 
 
 def resolve_hostname(hostname: str) -> list[str]:

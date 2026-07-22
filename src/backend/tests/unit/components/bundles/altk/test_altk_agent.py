@@ -11,6 +11,8 @@ except ImportError:
     # not installed. (Upstream dropped its <3.14 cap in 0.10.1, now requires >=3.10.)
     pytest.skip("altk (agent-lifecycle-toolkit) not available", allow_module_level=True)
 
+pytest.importorskip("lfx_bundles")
+
 from langflow.custom import Component
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
 from lfx.components.tools.calculator import CalculatorToolComponent

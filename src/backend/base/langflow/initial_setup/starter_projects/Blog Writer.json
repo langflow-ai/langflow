@@ -105,7 +105,8 @@
             "fieldName": "URL",
             "id": "Prompt Template-3URhM",
             "inputTypes": [
-              "Message"
+              "Message",
+              "Text"
             ],
             "type": "str"
           }
@@ -115,7 +116,7 @@
         "source": "ChatInput-w522Z",
         "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-w522Zœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt Template-3URhM",
-        "targetHandle": "{œfieldNameœ: œURLœ, œidœ: œPrompt Template-3URhMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œURLœ, œidœ: œPrompt Template-3URhMœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -1812,6 +1813,29 @@
             "priority": null,
             "replacement": null,
             "template": {
+              "URL": {
+                "advanced": false,
+                "display_name": "URL",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "URL",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
               "_type": "Component",
               "code": {
                 "advanced": true,

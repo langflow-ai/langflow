@@ -1,11 +1,11 @@
 ---
-name: ibm-a11y-automation
-description: Run Langflow's local accessibility scanner script against frontend routes from src/frontend/src/routes.tsx and summarize the JSON report.
+name: ibm-a11y-route-scan
+description: Batch-scan Langflow frontend routes for accessibility issues using the Python IBM Equal Access scanner (scripts/a11y/a11y_scan.py) and produce JSON/Markdown/HTML reports. Scans the default-loaded state of each route only (use explicit state files for modals). Use when asked to scan one or more routes, produce an accessibility report for pages, or batch-check static routes. Reports findings only — does not fix code, run Playwright/axe tests, or perform a formal Level 1 audit; see ibm-a11y-testing-guide, ibm-a11y-level1-audit, and ibm-a11y-pr-remediation for those.
 ---
 
-# Langflow Accessibility Scanner
+# IBM Route Scanner
 
-Use this skill when asked to scan Langflow frontend pages for accessibility issues.
+Use this skill when asked to scan Langflow frontend pages for accessibility issues with the local Python scanner. This skill only reports — it does not modify code. For test-writing guidance, formal audits, or PR-wide fixes, see `ibm-a11y-testing-guide`, `ibm-a11y-level1-audit`, and `ibm-a11y-pr-remediation`.
 
 ## Scanner
 
@@ -181,4 +181,4 @@ Use report fields directly:
 - Do not auto-click arbitrary buttons to find modals. Use explicit state actions.
 - Avoid destructive modal actions unless the user explicitly asks and data is safe.
 - If a route has zero API requests, mention that scan quality may be limited.
-- Ask before fixing files unless the user explicitly asks for fixes.
+- This skill reports only; do not edit files. If the user also wants fixes applied, hand off to `ibm-a11y-pr-remediation` or `ibm-a11y-level1-audit`.
