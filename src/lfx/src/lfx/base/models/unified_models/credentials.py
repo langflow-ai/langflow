@@ -505,6 +505,46 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 logger.warning(msg)
                 raise ValueError(msg) from e
 
+        elif provider == "Requesty":
+            from http import HTTPStatus
+
+            import requests
+
+            api_key = variables.get("REQUESTY_API_KEY")
+            if not api_key:
+                return
+
+            # Requesty's ``/v1/models`` is a public catalog (returns 200 for any
+            # bearer, including missing/invalid) and there is no dedicated
+            # auth-check endpoint, so validate against ``/v1/chat/completions``
+            # with a 1-token request. Invalid keys return 401/403; a valid key
+            # returns 200. The tiny completion keeps the round-trip cheap.
+            try:
+                response = requests.post(
+                    "https://router.requesty.ai/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                    json={
+                        "model": "openai/gpt-4o-mini",
+                        "messages": [{"role": "user", "content": "ping"}],
+                        "max_tokens": 1,
+                    },
+                    timeout=10,
+                )
+                if response.status_code in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
+                    msg = "Invalid Requesty API key"
+                    logger.error(msg)
+                    raise ValueError(msg)
+                response.raise_for_status()
+            except ValueError:
+                raise
+            except requests.RequestException as e:
+                # Network/timeout/5xx during validation: surface as ValueError so
+                # the variable API returns a user-facing 400 instead of an
+                # unhandled 500 (api/v1/variable.py only catches ValueError).
+                msg = f"Could not reach Requesty to validate the API key: {e}"
+                logger.warning(msg)
+                raise ValueError(msg) from e
+
         elif provider == "Ollama":
             import requests
 

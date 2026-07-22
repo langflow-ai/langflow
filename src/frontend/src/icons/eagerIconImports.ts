@@ -81,6 +81,7 @@ import { PythonIcon } from "@/icons/Python";
 import { QDrantIcon } from "@/icons/QDrant";
 import { QianFanChatIcon } from "@/icons/QianFanChat";
 import { RedisIcon } from "@/icons/Redis";
+import { RequestyIcon } from "@/icons/Requesty";
 import { SambaNovaIcon } from "@/icons/SambaNova";
 import { ScrapeGraph } from "@/icons/ScrapeGraphAI";
 import { SearchAPIIcon } from "@/icons/SearchAPI";
@@ -204,6 +205,7 @@ export const eagerIconsMapping = {
   QDrant: QDrantIcon,
   QianFanChat: QianFanChatIcon,
   Redis: RedisIcon,
+  Requesty: RequestyIcon,
   SambaNova: SambaNovaIcon,
   ScrapeGraph: ScrapeGraph,
   SearchAPI: SearchAPIIcon,

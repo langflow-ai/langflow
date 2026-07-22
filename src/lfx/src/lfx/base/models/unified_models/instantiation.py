@@ -259,11 +259,12 @@ def get_llm(
         openai_base_url_value = provider_vars.get("OPENAI_BASE_URL") or _env_if_allowed("OPENAI_BASE_URL")
         if openai_base_url_value:
             kwargs["base_url"] = transform_localhost_url(openai_base_url_value)
-    elif provider == "OpenRouter":
-        # OpenRouter speaks the OpenAI wire format. Point ChatOpenAI at the
-        # OpenRouter base URL (declared in MODEL_PROVIDER_METADATA) and forward
-        # any configured attribution headers (HTTP-Referer, X-Title) so usage
-        # shows up correctly in the OpenRouter dashboard.
+    elif provider in {"OpenRouter", "Requesty"}:
+        # OpenRouter and Requesty both speak the OpenAI wire format. Point
+        # ChatOpenAI at the provider base URL (declared in
+        # MODEL_PROVIDER_METADATA) and forward any configured attribution
+        # headers (HTTP-Referer, X-Title) so usage shows up correctly in the
+        # provider dashboard.
         provider_meta = model_provider_metadata.get(provider, {})
         base_url_value = provider_meta.get("base_url")
         if base_url_value:
