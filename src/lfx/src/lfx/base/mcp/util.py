@@ -54,6 +54,7 @@ is_dangerous_mcp_env_var = mcp_security.is_dangerous_mcp_env_var
 
 # MCP Session Manager constants - lazy loaded
 _mcp_settings_cache: dict[str, Any] = {}
+_SESSION_VALIDATION_TIMEOUT_FLOOR = 10.0
 
 
 def _validate_mcp_stdio_env(env: dict[str, str] | None) -> dict[str, str]:
@@ -90,6 +91,14 @@ def _resolve_mcp_tool_execution_timeout(tool_execution_timeout: float | None) ->
 
     configured_timeouts = [float(value) for value in (configured, mcp_server_timeout) if value is not None]
     return max(configured_timeouts) if configured_timeouts else 180.0
+
+
+def get_session_validation_timeout() -> float:
+    """Derive a fast session health-check timeout from the configured connection budget."""
+    connect_timeout = _get_mcp_setting("mcp_server_timeout", None)
+    if connect_timeout is None:
+        return _SESSION_VALIDATION_TIMEOUT_FLOOR
+    return max(_SESSION_VALIDATION_TIMEOUT_FLOOR, float(connect_timeout) / 3.0)
 
 
 def get_max_sessions_per_server() -> int:
@@ -1150,8 +1159,8 @@ class MCPSessionManager:
         """Validate that the session is actually usable by testing a simple operation."""
         try:
             # Try to list tools as a connectivity test (this is a lightweight operation)
-            # Use a shorter timeout for the connectivity test to fail fast
-            response = await asyncio.wait_for(session.list_tools(), timeout=3.0)
+            # Keep the health check shorter than connection setup while honoring its configured budget.
+            response = await asyncio.wait_for(session.list_tools(), timeout=get_session_validation_timeout())
         except Exception as e:  # noqa: BLE001
             # Any failure means the session is not safe to reuse (SDK errors, terminated session, etc.)
             await logger.adebug(f"Session connectivity test failed: {type(e).__name__}: {e}")
