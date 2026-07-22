@@ -14,12 +14,15 @@ Covers:
 """
 
 import asyncio
+from copy import deepcopy
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
+
+from tests.base import ComponentTestBaseWithoutClient
 
 
 def test_tool_mode_capability_is_available_before_server_discovery() -> None:
@@ -133,21 +136,56 @@ class TestCacheKey:
         assert a._mcp_servers_cache_key("srv") == b._mcp_servers_cache_key("srv")
 
 
-class TestTtlToolCacheIsolation:
+class TestTtlToolCacheIsolation(ComponentTestBaseWithoutClient):
     """``_ttl_tool_cache`` must be a per-instance dict, not class-level."""
 
-    def test_fresh_instances_have_independent_dicts(self) -> None:
-        a = MCPToolsComponent()
-        b = MCPToolsComponent()
+    @pytest.fixture
+    def component_class(self):
+        return MCPToolsComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        return {}
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        return []
+
+    def test_fresh_instances_have_independent_dicts(self, component_class, default_kwargs) -> None:
+        a = component_class(**default_kwargs)
+        b = component_class(**default_kwargs)
 
         assert a._ttl_tool_cache is not b._ttl_tool_cache
 
-    def test_write_to_one_instance_does_not_leak_to_another(self) -> None:
-        a = MCPToolsComponent()
-        b = MCPToolsComponent()
+    def test_write_to_one_instance_does_not_leak_to_another(self, component_class, default_kwargs) -> None:
+        a = component_class(**default_kwargs)
+        b = component_class(**default_kwargs)
         a._ttl_tool_cache["k"] = (0.0, [_make_tool("leak")])
 
         assert "k" not in b._ttl_tool_cache
+
+    def test_invocation_copy_shares_cache_with_source_component(self, component_class, default_kwargs) -> None:
+        component = component_class(**default_kwargs)
+
+        invocation_copy = deepcopy(component)
+
+        assert invocation_copy._ttl_tool_cache is component._ttl_tool_cache
+
+    @pytest.mark.asyncio
+    async def test_sequential_invocation_copies_reuse_cached_tools(self, component_class, default_kwargs) -> None:
+        component = component_class(**default_kwargs, mcp_server={"name": "srv"}, headers=[])
+        first_invocation = deepcopy(component)
+        second_invocation = deepcopy(component)
+        tools = [_make_tool("cached")]
+
+        update_tool_list = AsyncMock(return_value=(tools, {"name": "srv", "config": {}}))
+        with patch.object(component_class, "update_tool_list", new=update_tool_list):
+            first_result = await first_invocation._get_tools()
+            second_result = await second_invocation._get_tools()
+
+        assert first_result is tools
+        assert second_result is tools
+        update_tool_list.assert_awaited_once()
 
 
 class TestGetToolsTtlCache:
