@@ -60,8 +60,10 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     The legacy value `langflow` is not allowed, even if `LANGFLOW_AUTO_LOGIN=True`.
 
     ```bash
-    export LANGFLOW_SUPERUSER_PASSWORD='your-strong-password'
+    export LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD
     ```
+
+    Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
 
     If `LANGFLOW_AUTO_LOGIN=true`, setting `LANGFLOW_SUPERUSER_PASSWORD` is optional. If you omit it, Langflow generates a random bootstrap password for the auto-login account.
 
@@ -75,10 +77,12 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
       -e LANGFLOW_HOST=0.0.0.0 \
       -e LANGFLOW_PORT=7860 \
       -e LANGFLOW_AUTO_LOGIN=false \
-      -e LANGFLOW_SUPERUSER_PASSWORD \
+      -e LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD \
       -v langflow-data:/app/langflow \
       ${IMAGE}
     ```
+
+    Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
 
 - Docker images disable auto-login by default
 
