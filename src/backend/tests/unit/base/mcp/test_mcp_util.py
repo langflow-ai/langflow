@@ -4192,6 +4192,7 @@ class TestGetSessionNoBlockingHealthCheck:
                     mock_validate.assert_not_called()
             assert s1 is mock_session
             assert s2 is mock_session
+            mock_session.list_tools.assert_not_awaited()
         finally:
             await manager.cleanup_all()
 
