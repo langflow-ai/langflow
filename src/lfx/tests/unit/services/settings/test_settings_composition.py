@@ -23,6 +23,7 @@ from lfx.services.settings.base import (
     load_settings_from_yaml,
     save_settings_to_yaml,
 )
+from lfx.services.settings.constants import AGENTIC_VARIABLES
 
 
 def test_voice_mode_requires_openai_sdk(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -427,3 +428,28 @@ def test_env_var_round_trip(monkeypatch, env_var, env_value, field, expected):
     monkeypatch.setenv(env_var, env_value)
     settings = Settings()
     assert getattr(settings, field) == expected
+
+
+def test_agentic_variables_excluded_when_experience_off(monkeypatch):
+    """Agentic env vars must NOT be mirrored from the environment while the experience is off.
+
+    The ASTRA_TOKEN credential is among them, and the agentic experience is off by default.
+
+    Regression: the env-mirror list used to be extended with AGENTIC_VARIABLES
+    whenever LANGFLOW_AGENTIC_EXPERIENCE was unset, provisioning ASTRA_TOKEN into
+    the DB for a feature whose endpoints stay 404.
+    """
+    monkeypatch.delenv("LANGFLOW_AGENTIC_EXPERIENCE", raising=False)
+    settings = Settings()
+    assert settings.agentic_experience is False
+    for var in AGENTIC_VARIABLES:
+        assert var not in settings.variables_to_get_from_environment
+
+
+def test_agentic_variables_included_when_experience_on(monkeypatch):
+    """Enabling the agentic experience mirrors its variables from the environment."""
+    monkeypatch.setenv("LANGFLOW_AGENTIC_EXPERIENCE", "true")
+    settings = Settings()
+    assert settings.agentic_experience is True
+    for var in AGENTIC_VARIABLES:
+        assert var in settings.variables_to_get_from_environment
