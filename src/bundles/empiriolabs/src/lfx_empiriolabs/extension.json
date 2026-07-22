@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.langflow.org/extension/v1.json",
   "id": "lfx-empiriolabs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "name": "EmpirioLabs",
   "description": "EmpirioLabs components (OpenAI-compatible chat models and image generation) as a standalone Langflow Extension Bundle.",
   "lfx": {

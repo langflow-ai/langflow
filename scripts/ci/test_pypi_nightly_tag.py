@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import pypi_nightly_tag as nt
 
 MAIN_URL = nt.PYPI_LANGFLOW_URL
+CORE_URL = nt.PYPI_LANGFLOW_CORE_URL
 BASE_URL = nt.PYPI_LANGFLOW_BASE_URL
 
 
@@ -59,9 +60,13 @@ def _build_response(spec):
     return _FakeResponse(releases=spec)
 
 
-def _run(main=None, base=None, *, base_version="1.10.0", build_type="both"):
-    """Compute a tag with mocked PyPI responses for the main and base nightly packages."""
-    responses = {MAIN_URL: _build_response(main), BASE_URL: _build_response(base)}
+def _run(main=None, base=None, *, core=None, base_version="1.10.0", build_type="both"):
+    """Compute a tag with mocked PyPI responses for the full/core/base packages."""
+    responses = {
+        MAIN_URL: _build_response(main),
+        CORE_URL: _build_response(core),
+        BASE_URL: _build_response(base),
+    }
 
     def fake_get(url, timeout=10):  # noqa: ARG001
         return responses[url]
@@ -80,15 +85,20 @@ def test_main_and_base_return_identical_version_given_offset_histories():
     # Live-state analog: langflow-nightly latest dev54, langflow-base-nightly latest dev48.
     main_hist = [f"1.10.0.dev{n}" for n in range(55)]
     base_hist = [f"1.10.0.dev{n}" for n in range(49)]
-    main_tag = _run(main_hist, base_hist, build_type="main")
-    base_tag = _run(main_hist, base_hist, build_type="base")
-    both_tag = _run(main_hist, base_hist, build_type="both")
+    core_hist = [f"1.10.0.dev{n}" for n in range(52)]
+    main_tag = _run(main_hist, base_hist, core=core_hist, build_type="main")
+    base_tag = _run(main_hist, base_hist, core=core_hist, build_type="base")
+    both_tag = _run(main_hist, base_hist, core=core_hist, build_type="both")
     assert main_tag == base_tag == both_tag == "v1.10.0.dev55"  # max(54, 48) + 1
 
 
 def test_aligned_histories_increment_by_one():
     hist = [f"1.10.0.dev{n}" for n in range(43)]  # both latest dev42
-    assert _run(hist, hist) == "v1.10.0.dev43"
+    assert _run(hist, hist, core=hist) == "v1.10.0.dev43"
+
+
+def test_core_history_participates_in_shared_counter():
+    assert _run(["1.10.0.dev3"], ["1.10.0.dev4"], core=["1.10.0.dev8"]) == "v1.10.0.dev9"
 
 
 # --- edge cases -------------------------------------------------------------------------------

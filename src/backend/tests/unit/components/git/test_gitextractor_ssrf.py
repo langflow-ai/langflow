@@ -9,6 +9,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("lfx_bundles")
+
 
 @pytest.fixture
 def ssrf_on():

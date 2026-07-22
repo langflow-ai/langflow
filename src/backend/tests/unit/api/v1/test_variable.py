@@ -1,5 +1,7 @@
+import importlib.util
 import socket
-from types import SimpleNamespace
+import sys
+from types import ModuleType, SimpleNamespace
 from unittest import mock
 from uuid import uuid4
 
@@ -9,6 +11,24 @@ from httpx import AsyncClient
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 pytestmark = pytest.mark.no_blockbuster
+
+
+@pytest.fixture(autouse=True)
+def fake_langchain_google_genai(monkeypatch):
+    if importlib.util.find_spec("langchain_google_genai") is not None:
+        return
+
+    langchain_google_genai = ModuleType("langchain_google_genai")
+
+    class ChatGoogleGenerativeAI:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def invoke(self, *args, **kwargs):  # noqa: ARG002
+            return "test response"
+
+    langchain_google_genai.ChatGoogleGenerativeAI = ChatGoogleGenerativeAI
+    monkeypatch.setitem(sys.modules, "langchain_google_genai", langchain_google_genai)
 
 
 @pytest.fixture

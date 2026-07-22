@@ -12,6 +12,7 @@ import re
 import shutil
 import sys
 from contextlib import suppress
+from typing import get_type_hints
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -3804,6 +3805,26 @@ class TestConvertMcpResult:
         assert converted[0]["type"] == "text"
         # Must be valid JSON
         json.loads(converted[0]["text"])
+
+
+def test_mcp_structured_tool_annotations_resolve_in_util_namespace():
+    """Keep LangChain's inherited forward annotations resolvable for Pydantic."""
+    from langchain_core.tools import StructuredTool
+
+    annotation_proxy = type(
+        "MCPStructuredToolAnnotations",
+        (),
+        {"__annotations__": StructuredTool.__annotations__},
+    )
+
+    resolved = get_type_hints(
+        annotation_proxy,
+        globalns=vars(util),
+        localns=vars(util),
+        include_extras=True,
+    )
+
+    assert set(StructuredTool.__annotations__) <= set(resolved)
 
 
 class TestMCPStructuredToolToolCallId:

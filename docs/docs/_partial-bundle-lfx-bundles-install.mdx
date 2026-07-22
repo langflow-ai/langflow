@@ -1,13 +1,12 @@
 :::tip
-If you installed `lfx` directly with `uv pip install lfx`, install this provider from the long-tail metapackage:
+Long-tail providers are opt-in for both Langflow and standalone LFX installs. Install this provider from the long-tail metapackage:
 
 ```bash
 uv pip install "lfx-bundles[<bundle>]"
 ```
 
 Replace `<bundle>` with this page's provider name, for example `qdrant`.
-To install every long-tail provider at once, run `uv pip install "lfx[bundles]"`.
+For a torch-free full Langflow install, run `uv pip install "langflow[bundles]"`.
+For standalone LFX with every long-tail provider, including torch-based providers, run `uv pip install "lfx[bundles]"`.
 See the [Bundle list](./extensions-bundle-list) for the exact extra name.
-
-If you installed Langflow with `uv pip install langflow`, these bundle components are already included.
 :::
