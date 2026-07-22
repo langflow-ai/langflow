@@ -2181,5 +2181,7 @@
   "canvasControls.minimizeAll": "全部最小化",
   "canvasControls.expandAll": "全部展开",
   "input.expandTextEditor": "展开文本编辑器",
-  "sidebar.addComponentToCanvas": "将 {{name}} 添加到画布中"
+  "sidebar.addComponentToCanvas": "将 {{name}} 添加到画布中",
+  "sidebar.showBetaComponents": "显示测试版组件",
+  "sidebar.showLegacyComponents": "显示旧版组件"
 }

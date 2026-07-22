@@ -2181,5 +2181,7 @@
   "canvasControls.minimizeAll": "Minimizar todo",
   "canvasControls.expandAll": "Expandir todo",
   "input.expandTextEditor": "Ampliar el editor de texto",
-  "sidebar.addComponentToCanvas": "Añadir « {{name}} » al lienzo"
+  "sidebar.addComponentToCanvas": "Añadir « {{name}} » al lienzo",
+  "sidebar.showBetaComponents": "Mostrar componentes beta",
+  "sidebar.showLegacyComponents": "Mostrar componentes heredados"
 }

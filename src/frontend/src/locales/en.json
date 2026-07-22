@@ -849,6 +849,8 @@
   "sidebar.betaLabel": "Beta",
   "sidebar.legacyLabel": "Legacy",
   "sidebar.show": "Show",
+  "sidebar.showBetaComponents": "Show beta components",
+  "sidebar.showLegacyComponents": "Show legacy components",
   "sidebar.removeFilter": "Remove filter",
   "sidebar.nav.search": "Search",
   "sidebar.nav.components": "Components",
