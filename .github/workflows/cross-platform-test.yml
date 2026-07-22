@@ -14,6 +14,10 @@ on:
         description: "Name of the base package artifact"
         required: true
         type: string
+      core-artifact-name:
+        description: "Name of the langflow-core package artifact"
+        required: false
+        type: string
       main-artifact-name:
         description: "Name of the main package artifact"
         required: true
@@ -258,6 +262,13 @@ jobs:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
 
+      - name: Download langflow-core package artifact
+        if: steps.install-method.outputs.method == 'wheel' && inputs.core-artifact-name != ''
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.core-artifact-name }}
+          path: ./core-dist
+
       - name: Download main package artifact
         if: steps.install-method.outputs.method == 'wheel'
         uses: actions/download-artifact@v7
@@ -291,7 +302,7 @@ jobs:
 
           refresh_find_links() {
             FIND_LINKS=()
-            for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+            for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./core-dist ./bundles-dist; do
               if [ -d "$wheel_dir" ]; then
                 FIND_LINKS+=(--find-links "$wheel_dir")
               fi
@@ -324,6 +335,11 @@ jobs:
 
           BASE_WHEELS=(./base-dist/*.whl)
           install_wheels "base" "${BASE_WHEELS[@]}"
+
+          CORE_WHEELS=(./core-dist/*.whl)
+          if [ ${#CORE_WHEELS[@]} -gt 0 ]; then
+            install_wheels "core" "${CORE_WHEELS[@]}"
+          fi
 
           if [ -d ./bundles-dist ]; then
             BUNDLE_WHEELS=(./bundles-dist/*.whl)
@@ -560,6 +576,13 @@ jobs:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
 
+      - name: Download langflow-core package artifact
+        if: steps.install-method.outputs.method == 'wheel' && inputs.core-artifact-name != ''
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.core-artifact-name }}
+          path: ./core-dist
+
       - name: Download main package artifact
         if: steps.install-method.outputs.method == 'wheel'
         uses: actions/download-artifact@v7
@@ -593,7 +616,7 @@ jobs:
 
           refresh_find_links() {
             FIND_LINKS=()
-            for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+            for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./core-dist ./bundles-dist; do
               if [ -d "$wheel_dir" ]; then
                 FIND_LINKS+=(--find-links "$wheel_dir")
               fi
@@ -623,6 +646,11 @@ jobs:
           BASE_WHEELS=(./base-dist/*.whl)
           install_wheels "base" "${BASE_WHEELS[@]}"
 
+          CORE_WHEELS=(./core-dist/*.whl)
+          if [ ${#CORE_WHEELS[@]} -gt 0 ]; then
+            install_wheels "core" "${CORE_WHEELS[@]}"
+          fi
+
           if [ -d ./bundles-dist ]; then
             BUNDLE_WHEELS=(./bundles-dist/*.whl)
             install_wheels "bundle" "${BUNDLE_WHEELS[@]}"
@@ -645,12 +673,12 @@ jobs:
         run: |
           # Expose the local wheel dirs so dependency re-resolution (the
           # pre-release path below drops --no-deps) can find the local
-          # pre-release lfx/base wheels. Without these, uv re-resolves
+          # pre-release lfx/base/core wheels. Without these, uv re-resolves
           # langflow-base's `lfx>=X.Y.Zrc0` constraint against PyPI only, where
           # the matching rc/dev wheel is not published yet, and fails with
           # "No solution found when resolving dependencies".
           FIND_LINKS=()
-          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./core-dist ./bundles-dist; do
             if [ -d "$wheel_dir" ]; then
               FIND_LINKS+=(--find-links "$wheel_dir")
             fi
@@ -706,6 +734,11 @@ jobs:
             fi
             uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/Scripts/python.exe "${INSTALL_WHEELS[@]}"
           fi
+
+          CORE_WHEEL=$(find ./core-dist -name "*.whl" -type f 2>/dev/null | head -1 || true)
+          if [ -n "$CORE_WHEEL" ]; then
+            uv pip install --force-reinstall --no-deps --python ./test-env/Scripts/python.exe "$CORE_WHEEL"
+          fi
         shell: bash
 
       - name: Force reinstall local wheels to prevent downgrades (Unix)
@@ -713,12 +746,12 @@ jobs:
         run: |
           # Expose the local wheel dirs so dependency re-resolution (the
           # pre-release path below drops --no-deps) can find the local
-          # pre-release lfx/base wheels. Without these, uv re-resolves
+          # pre-release lfx/base/core wheels. Without these, uv re-resolves
           # langflow-base's `lfx>=X.Y.Zrc0` constraint against PyPI only, where
           # the matching rc/dev wheel is not published yet, and fails with
           # "No solution found when resolving dependencies".
           FIND_LINKS=()
-          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./core-dist ./bundles-dist; do
             if [ -d "$wheel_dir" ]; then
               FIND_LINKS+=(--find-links "$wheel_dir")
             fi
@@ -773,6 +806,11 @@ jobs:
               INSTALL_WHEELS=("${LOCAL_WHEELS[@]}" "$BASE_WHEEL")
             fi
             uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/bin/python "${INSTALL_WHEELS[@]}"
+          fi
+
+          CORE_WHEEL=$(find ./core-dist -name "*.whl" -type f 2>/dev/null | head -1 || true)
+          if [ -n "$CORE_WHEEL" ]; then
+            uv pip install --force-reinstall --no-deps --python ./test-env/bin/python "$CORE_WHEEL"
           fi
         shell: bash
 
