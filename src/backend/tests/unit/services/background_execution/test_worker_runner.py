@@ -2,8 +2,8 @@
 
 Real JobService against the migrated test DB; the frame source is injected
 (scripted) to stand in for a live graph build, exactly like test_service.py. A
-fake live bus stands in for the redis Streams producer (its wire is proven in
-test_redis_live_bus_realredis.py).
+recording bus stands in for the runner's in-process live bus (durable
+milestones — the cross-replica contract — are asserted on job_events).
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ async def _scripted_source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
 
 
 class _RecordingBus:
-    """Stands in for the redis live bus (publish/close interface JobRunner uses)."""
+    """Stands in for the live bus (publish/close interface JobRunner uses)."""
 
     def __init__(self):
         self.published: list = []

@@ -5,8 +5,6 @@ fakes:
 
 - ``real_services_db_url`` parametrizes over real SQLite (always) and real Postgres
   (only when ``LANGFLOW_TEST_DATABASE_URI`` is set; CI always sets it).
-- ``real_services_redis_url`` yields a real Redis URL from ``LANGFLOW_TEST_REDIS_URL``
-  (skips when unset), flushed clean before and after each test.
 - ``real_services_job_service`` runs the real Alembic migrations against
   ``real_services_db_url`` and binds ``session_scope()`` to it, so store methods are
   exercised on both real SQLite and real Postgres.
@@ -29,13 +27,15 @@ if TYPE_CHECKING:
 
 
 def _async_pg_url(raw: str) -> str:
-    """Normalize a Postgres URL to the async asyncpg dialect (the driver we install)."""
-    if "+asyncpg" in raw or "+psycopg" in raw:
+    """Normalize a Postgres URL to the async psycopg (v3) dialect the project ships."""
+    if "+psycopg" in raw:
         return raw
+    if raw.startswith("postgresql+asyncpg://"):
+        return raw.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
     if raw.startswith("postgresql://"):
-        return raw.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return raw.replace("postgresql://", "postgresql+psycopg://", 1)
     if raw.startswith("postgres://"):
-        return raw.replace("postgres://", "postgresql+asyncpg://", 1)
+        return raw.replace("postgres://", "postgresql+psycopg://", 1)
     return raw
 
 
@@ -97,27 +97,3 @@ async def real_services_job_service(real_services_db_url: str) -> AsyncGenerator
         settings_service.settings.database_url = original_url
         if original_db_service is not None:
             manager.services[ServiceType.DATABASE_SERVICE] = original_db_service
-
-
-@pytest.fixture
-async def real_services_redis_url() -> AsyncGenerator[str, None]:
-    """Yield a real Redis URL from ``LANGFLOW_TEST_REDIS_URL``, flushed clean.
-
-    Skips when ``LANGFLOW_TEST_REDIS_URL`` is unset (CI sets it via the redis:7
-    service). Uses the same ``redis.asyncio`` client ``RedisJobQueueService`` uses,
-    so this exercises the real driver, not fakeredis.
-    """
-    url = os.environ.get("LANGFLOW_TEST_REDIS_URL")
-    if not url:
-        pytest.skip("LANGFLOW_TEST_REDIS_URL not set")
-
-    from redis.asyncio import StrictRedis
-
-    client = StrictRedis.from_url(url)
-    try:
-        await client.flushdb()
-        yield url
-    finally:
-        with contextlib.suppress(Exception):
-            await client.flushdb()
-        await client.aclose()

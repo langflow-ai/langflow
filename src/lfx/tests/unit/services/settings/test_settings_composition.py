@@ -206,7 +206,8 @@ EXPECTED_FIELDS = {
     "background_lease_ttl_s",
     "background_heartbeat_interval_s",
     "background_watchdog_interval_s",
-    "test_redis_url",
+    "background_backend",
+    "background_poll_interval_s",
     # ---- Added in 1.10.1 ----
     # SecuritySettings
     "allow_public_custom_components",

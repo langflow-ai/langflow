@@ -69,10 +69,9 @@ async def test_default_at_most_once_no_double_increment(real_services_job_servic
     )
 
 
-async def test_retry_safe_flow_requeues_and_reincrements(real_services_redis_url, real_services_job_service):
+async def test_retry_safe_flow_requeues_and_reincrements(real_services_job_service):
     """retry_safe=True: the SAME crash path requeues and the real counter hits 2."""
-    from langflow.services.background_execution.redis_backend import RedisBackgroundQueue
-    from redis.asyncio import StrictRedis
+    from langflow.services.background_execution.db_backend import DBBackgroundQueue
 
     job_service = real_services_job_service
     job_id, flow_id = uuid4(), uuid4()
@@ -85,19 +84,11 @@ async def test_retry_safe_flow_requeues_and_reincrements(real_services_redis_url
     assert await _run_real_graph_once(effect_key) == 1
 
     # The retry-safe lease watchdog requeues the IN_PROGRESS orphan (attempt < max)
-    # instead of failing it. Real redis processing list + the real backend branch.
-    client = StrictRedis.from_url(real_services_redis_url)
-    prefix = f"se-retry:{uuid4().hex}:"
-    backend = RedisBackgroundQueue(client=client, job_service=job_service, startup_grace_s=5.0)
-    backend.claim_queue.pending_key = f"{prefix}pending"
-    backend.claim_queue.processing_key = f"{prefix}processing"
-    try:
-        await backend.enqueue(str(job_id))
-        await backend.claim(block_ms=1000)  # strand it on the processing list
-        requeued = await backend.requeue_lost()
-        assert str(job_id) in requeued, "retry-safe orphan was not requeued"
-    finally:
-        await client.aclose()
+    # instead of failing it. The stranded row (stale/absent lease) is all there
+    # is to reconcile — the database is the queue.
+    backend = DBBackgroundQueue(job_service=job_service, owner="worker:reconciler")
+    requeued = await backend.requeue_lost()
+    assert str(job_id) in requeued, "retry-safe orphan was not requeued"
 
     job = await job_service.get_job_by_job_id(job_id)
     assert job.status == JobStatus.QUEUED, f"retry-safe orphan should be requeued QUEUED, got {job.status}"
@@ -113,29 +104,32 @@ async def test_retry_safe_flow_requeues_and_reincrements(real_services_redis_url
 
 
 async def test_concurrent_claims_run_queued_job_exactly_once(real_services_job_service):
-    """Two concurrent claims on one QUEUED job: exactly ONE wins (single-flight guard).
+    """Two concurrent lease-claims on one QUEUED job: exactly ONE wins (single-flight guard).
 
-    This is the claim guard the startup sweep relies on to avoid double-running a
-    QUEUED job across two booting workers. We exercise it directly and
-    deterministically — two concurrent ``claim_queued_job`` calls on the SAME row
-    — so the proof does not depend on executor run timing. Exactly one claim
-    returns True (the side effect would fire exactly once); the loser sees the row
-    already IN_PROGRESS and backs off. Real SQLite + real Postgres.
+    This is the claim guard both the startup sweep and the scaled worker's
+    claim path rely on to avoid double-running a QUEUED job. We exercise it
+    directly and deterministically — two concurrent ``claim_queued_lease`` calls
+    on the SAME row — so the proof does not depend on executor run timing.
+    Exactly one claim returns True (the side effect would fire exactly once);
+    the loser sees the fresh lease and backs off. Real SQLite + real Postgres.
     """
     job_service = real_services_job_service
     job_id, flow_id, user_id = uuid4(), uuid4(), uuid4()
     await job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=user_id)
 
-    # Two booting sweepers race to claim the same QUEUED row.
+    # Two racers (booting sweeper / polling worker) claim the same QUEUED row.
     results = await asyncio.gather(
-        job_service.claim_queued_job(job_id),
-        job_service.claim_queued_job(job_id),
+        job_service.claim_queued_lease(job_id, owner="worker:a", lease_ttl_s=45.0),
+        job_service.claim_queued_lease(job_id, owner="worker:b", lease_ttl_s=45.0),
     )
     winners = [r for r in results if r]
-    assert len(winners) == 1, f"claim guard let {len(winners)} sweepers claim the same job (double-run risk)"
+    assert len(winners) == 1, f"claim guard let {len(winners)} racers claim the same job (double-run risk)"
     job = await job_service.get_job_by_job_id(job_id)
-    assert job.status == JobStatus.IN_PROGRESS, f"claimed job should be IN_PROGRESS, got {job.status}"
+    # The lease-claim leaves the row QUEUED (the runner flips it when it starts)
+    # but stamps exactly one owner.
+    assert job.status == JobStatus.QUEUED, f"lease-claimed job should stay QUEUED, got {job.status}"
+    assert (job.job_metadata or {}).get("owner") in {"worker:a", "worker:b"}
     print(  # noqa: T201
-        f"PROOF[sideeffect/exactly-once]: two concurrent claims on one QUEUED job -> exactly "
+        f"PROOF[sideeffect/exactly-once]: two concurrent lease-claims on one QUEUED job -> exactly "
         f"{len(winners)} winner (single-flight claim guard prevents the double-run)"
     )

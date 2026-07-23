@@ -406,7 +406,7 @@ class JobService(Service):
 
         Portable across SQLite and Postgres: the conditional UPDATE matches the
         JSON-extracted attempt cast to integer, the same single-row-conditional
-        primitive ``claim_queued_job`` relies on.
+        primitive every other single-flight guard here relies on.
         """
         from sqlalchemy import Integer
         from sqlalchemy import cast as sa_cast
@@ -463,8 +463,8 @@ class JobService(Service):
     async def claim_queued_lease(self, job_id: UUID, *, owner: str, lease_ttl_s: float) -> bool:
         """Lease-claim a QUEUED row WITHOUT flipping its status. Returns True if won.
 
-        Single-flight ownership for the default re-enqueue path that, unlike
-        ``claim_queued_job``, does NOT move the row to IN_PROGRESS. Keeping the
+        Single-flight ownership for the claim/re-enqueue path that deliberately
+        does NOT move the row to IN_PROGRESS. Keeping the
         row QUEUED means a re-enqueue that crashes before the runner emits its
         first transition leaves the job re-runnable (the sweep never fails QUEUED
         rows, and the next boot re-claims it once this lease goes stale) instead
@@ -503,34 +503,67 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
-    async def queued_workflow_job_ids(self) -> list[UUID]:
-        """Return the ids of every QUEUED workflow job (for strand recovery)."""
+    async def in_progress_workflow_job_ids(self) -> list[UUID]:
+        """Return the ids of every IN_PROGRESS workflow job (for the watchdog)."""
         async with session_scope() as session:
             stmt = select(Job.job_id).where(
-                Job.status == JobStatus.QUEUED,
+                Job.status == JobStatus.IN_PROGRESS,
                 Job.type == JobType.WORKFLOW,
             )
             result = await session.exec(stmt)
             return list(result.all())
 
-    async def claim_queued_job(self, job_id: UUID) -> bool:
-        """Atomically claim a QUEUED job for execution. Returns True if we won.
+    async def claim_next_queued_lease(self, *, owner: str, lease_ttl_s: float, candidates: int = 5) -> UUID | None:
+        """Lease-claim the oldest claimable QUEUED workflow job. Returns its id, or None.
 
-        Single-flight guard for the startup sweep: a conditional
-        ``UPDATE job SET status=IN_PROGRESS WHERE job_id=? AND status='QUEUED'``
-        means only ONE racer's update affects a row (``rowcount == 1``); every
-        other concurrent sweeper sees ``rowcount == 0`` and must not enqueue.
-        Works identically on SQLite and Postgres (a single-row conditional UPDATE
-        is atomic on both), so two uvicorn workers booting against one DB cannot
-        both re-run the same non-idempotent QUEUED job.
+        The claim itself is ``claim_queued_lease`` — the exact-heartbeat
+        conditional UPDATE that already guarantees single-flight on SQLite and
+        Postgres — so this only adds the FIFO pick: read the oldest QUEUED
+        workflow ids and take the first one whose lease claim wins. A lost race
+        on one candidate falls through to the next, so N workers polling
+        concurrently spread across N distinct jobs instead of all retrying the
+        head of the queue.
+
+        Staleness is enforced by ``claim_queued_lease`` (a QUEUED row with a
+        FRESH lease belongs to a worker that just claimed it and is about to
+        start), so a candidate list slightly larger than the worker fleet is
+        enough; the next poll picks up anything beyond it.
+        """
+        # ponytail: plain SELECT + per-row conditional claim; add FOR UPDATE
+        # SKIP LOCKED on postgres if claim contention ever measurably matters.
+        async with session_scope() as session:
+            stmt = (
+                select(Job.job_id)
+                .where(Job.status == JobStatus.QUEUED, Job.type == JobType.WORKFLOW)
+                .order_by(col(Job.created_timestamp).asc())
+                .limit(candidates)
+            )
+            result = await session.exec(stmt)
+            candidate_ids = list(result.all())
+        for job_id in candidate_ids:
+            if await self.claim_queued_lease(job_id, owner=owner, lease_ttl_s=lease_ttl_s):
+                return job_id
+        return None
+
+    async def fail_in_progress_job(self, job_id: UUID) -> bool:
+        """Atomically flip an IN_PROGRESS job to FAILED. Returns True if we won.
+
+        Single-flight guard for the worker_lost reconcile: a conditional
+        ``UPDATE job SET status=FAILED WHERE job_id=? AND status='IN_PROGRESS'``
+        means only ONE racer's update affects the row (``rowcount == 1``); every
+        other concurrent watchdog sees ``rowcount == 0`` and must not write the
+        error blob or append its own terminal event. Works identically on SQLite
+        and Postgres (a single-row conditional UPDATE is atomic on both), so N
+        workers' periodic watchdogs scanning the same orphan cannot each append
+        a duplicate ``run_failed`` milestone.
         """
         from sqlmodel import update
 
         async with session_scope() as session:
             stmt = (
                 update(Job)
-                .where(Job.job_id == job_id, Job.status == JobStatus.QUEUED)
-                .values(status=JobStatus.IN_PROGRESS)
+                .where(Job.job_id == job_id, Job.status == JobStatus.IN_PROGRESS)
+                .values(status=JobStatus.FAILED, finished_timestamp=datetime.now(timezone.utc))
             )
             result = await session.exec(stmt)  # type: ignore[call-overload]
             await session.flush()

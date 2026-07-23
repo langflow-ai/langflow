@@ -1,4 +1,4 @@
-"""Worker claim loop: reconciles on startup, runs the Runner per claimed id, then completes."""
+"""Worker claim loop: reconciles on startup, runs the Runner per claimed id, survives crashes."""
 
 from __future__ import annotations
 
@@ -9,15 +9,14 @@ from langflow.services.background_execution.worker import run_worker_loop
 
 
 class _FakeBackend:
-    """Real-behavior stand-in for the claim queue side (not a mock of our code).
+    """Real-behavior stand-in for the claim side (not a mock of our code).
 
-    Hands out a fixed list of ids then blocks/returns None, records completes,
-    and records the startup reconcile call.
+    Hands out a fixed list of ids then blocks/returns None, and records the
+    startup reconcile call.
     """
 
     def __init__(self, ids):
         self._ids = list(ids)
-        self.completed: list[str] = []
         self.reconciled = False
 
     async def requeue_lost(self, *, lease_ttl_s=45.0):  # noqa: ARG002 - lease_ttl_s is part of the contract
@@ -28,9 +27,6 @@ class _FakeBackend:
         if self._ids:
             return self._ids.pop(0)
         return None
-
-    async def complete(self, job_id):
-        self.completed.append(job_id)
 
 
 class _RecordingRunner:
@@ -49,7 +45,7 @@ class _RecordingRunner:
 
 
 @pytest.mark.asyncio
-async def test_worker_runs_each_claimed_job_then_completes():
+async def test_worker_runs_each_claimed_job():
     backend = _FakeBackend(["j1", "j2"])
     stop_event = asyncio.Event()
     runner = _RecordingRunner(stop_event=stop_event, stop_after=2)
@@ -58,27 +54,23 @@ async def test_worker_runs_each_claimed_job_then_completes():
 
     assert backend.reconciled is True
     assert runner.ran == ["j1", "j2"]
-    assert backend.completed == ["j1", "j2"]
 
 
 @pytest.mark.asyncio
-async def test_worker_completes_even_when_runner_raises():
-    backend = _FakeBackend(["boom"])
+async def test_worker_survives_a_runner_crash_and_keeps_claiming():
+    backend = _FakeBackend(["boom", "j2"])
     stop_event = asyncio.Event()
 
-    class _Boom:
-        async def run(self, job_id):  # noqa: ARG002 - job_id matches the runner contract
-            msg = "runner blew up"
-            raise RuntimeError(msg)
+    class _BoomThenRecord(_RecordingRunner):
+        async def run(self, job_id):
+            if job_id == "boom":
+                msg = "runner blew up"
+                raise RuntimeError(msg)
+            await super().run(job_id)
 
-    async def stop_soon():
-        await asyncio.sleep(0.2)
-        stop_event.set()
+    runner = _BoomThenRecord(stop_event=stop_event, stop_after=1)
+    await run_worker_loop(backend, runner, stop_event=stop_event, idle_block_ms=10)
 
-    driver = asyncio.create_task(stop_soon())
-    await run_worker_loop(backend, _Boom(), stop_event=stop_event, idle_block_ms=10)
-    await driver
-
-    # A runner crash must still release the lease so the watchdog can reconcile,
-    # not leave the id stuck on the processing list forever.
-    assert backend.completed == ["boom"]
+    # A runner crash must not kill the loop: the durable job row + watchdog own
+    # the crashed job's fate, and the worker moves on to the next claim.
+    assert runner.ran == ["j2"]
