@@ -118,11 +118,9 @@ class FunASRTranscriptionComponent(Component):
 
         audio_file = None
         try:
-            audio_file = requested_path.open("rb")
+            audio_file = resolved_path.open("rb")
             opened_stat = os.fstat(audio_file.fileno())
-            current_path = requested_path.resolve(strict=True)
-            current_path = enforce_local_file_access(current_path, scope_ids=scope_ids)
-            current_stat = current_path.stat()
+            current_stat = resolved_path.stat()
         except (OSError, RuntimeError, TypeError, ValueError) as e:
             if audio_file is not None:
                 audio_file.close()
