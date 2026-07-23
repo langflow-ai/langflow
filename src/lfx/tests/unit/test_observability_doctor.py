@@ -12,6 +12,7 @@ and the rest skip when the extra is absent.
 """
 
 import importlib.util
+import logging
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
@@ -350,6 +351,44 @@ def test_per_signal_headers_replace_the_generic_ones_rather_than_merging(monkeyp
         assert traces_headers.get("authorization") == "t"
         assert "x-generic" not in traces_headers
         assert collector.headers_for("/v1/metrics").get("x-generic") == "g"
+
+
+@requires_otel
+def test_concurrent_capture_windows_restore_the_logger_level():
+    """Overlapping capture windows must not leave the global otel logger at the wrong level.
+
+    The capture temporarily raises the ``opentelemetry`` logger to WARNING. Two windows
+    overlapping means the second snapshots the first's temporary value and restores that
+    instead of the original, permanently quieting or unquieting otel for the whole process.
+    Interleaved deliberately: A enters, B enters, A exits, B exits.
+    """
+    import threading
+    import time
+
+    from lfx.observability_doctor import _capture_exporter_logs
+
+    otel_logger = logging.getLogger("opentelemetry")
+    original = otel_logger.level
+    otel_logger.setLevel(logging.ERROR)  # a host that deliberately quieted otel
+    try:
+
+        def hold(duration):
+            with _capture_exporter_logs():
+                time.sleep(duration)
+
+        first = threading.Thread(target=hold, args=(0.2,))
+        second = threading.Thread(target=hold, args=(0.4,))
+        first.start()
+        time.sleep(0.05)
+        second.start()
+        first.join()
+        second.join()
+
+        assert otel_logger.level == logging.ERROR, (
+            f"logger left at {logging.getLevelName(otel_logger.level)} instead of ERROR"
+        )
+    finally:
+        otel_logger.setLevel(original)
 
 
 @requires_otel
