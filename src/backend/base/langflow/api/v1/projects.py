@@ -140,6 +140,7 @@ async def create_project(
             await register_mcp_servers_for_project(new_project, mcp_auth, current_user, session)
 
         flow_ids_for_sync = list(dict.fromkeys((project.flows_list or []) + (project.components_list or [])))
+        authorized_flow_owner_ids: dict[UUID, UUID] = {}
 
         async def _move_flows_into_project() -> None:
             if project.components_list:
@@ -151,6 +152,7 @@ async def create_project(
                         )
                     )
                 ).all()
+                authorized_flow_owner_ids.update((flow_id, current_user.id) for flow_id, _folder_id in component_flows)
                 await ensure_flow_moves_allowed(
                     session,
                     flow_folder_pairs=list(component_flows),
@@ -172,6 +174,7 @@ async def create_project(
                         )
                     )
                 ).all()
+                authorized_flow_owner_ids.update((flow_id, current_user.id) for flow_id, _folder_id in project_flows)
                 await ensure_flow_moves_allowed(
                     session,
                     flow_folder_pairs=list(project_flows),
@@ -187,7 +190,7 @@ async def create_project(
         if flow_ids_for_sync:
             await retry_flow_operation_on_deployment_guard(
                 db=session,
-                flow_ids=flow_ids_for_sync,
+                flow_owner_ids=authorized_flow_owner_ids,
                 operation=_move_flows_into_project,
             )
         else:
@@ -586,6 +589,7 @@ async def update_project(
 
         my_collection_project = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
         flow_ids_for_sync = list(dict.fromkeys(excluded_flows + concat_project_components))
+        authorized_flow_owner_ids: dict[UUID, UUID] = {}
 
         async def _move_flows_for_project_update() -> None:
             # Both SELECT and UPDATE must scope to the project owner — a
@@ -604,6 +608,9 @@ async def update_project(
                         )
                     )
                 ).all()
+                authorized_flow_owner_ids.update(
+                    (flow_id, project_owner_id) for flow_id, _folder_id in excluded_flow_rows
+                )
                 await ensure_flow_moves_allowed(
                     session,
                     flow_folder_pairs=list(excluded_flow_rows),
@@ -628,6 +635,9 @@ async def update_project(
                         )
                     )
                 ).all()
+                authorized_flow_owner_ids.update(
+                    (flow_id, project_owner_id) for flow_id, _folder_id in component_flow_rows
+                )
                 await ensure_flow_moves_allowed(
                     session,
                     flow_folder_pairs=list(component_flow_rows),
@@ -646,7 +656,7 @@ async def update_project(
         if flow_ids_for_sync:
             await retry_flow_operation_on_deployment_guard(
                 db=session,
-                flow_ids=flow_ids_for_sync,
+                flow_owner_ids=authorized_flow_owner_ids,
                 operation=_move_flows_for_project_update,
             )
         else:

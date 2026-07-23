@@ -9,7 +9,7 @@ request hot paths.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from itertools import groupby
 from typing import TYPE_CHECKING, TypeVar
 from uuid import UUID
@@ -445,25 +445,21 @@ async def sync_project_deployments(
 async def sync_flow_deployment_state_by_owner(
     *,
     db: DbSession,
-    flow_ids: list[UUID],
+    flow_owner_ids: Mapping[UUID, UUID],
 ) -> None:
-    """Sync deployments in each flow owner's namespace.
+    """Sync authorized flows in each owner's deployment namespace.
 
     Deployment rows and attachments are owner-scoped. Under share-aware RBAC the
     actor may differ from the flow owner, so sync must use each flow's owner
     ``user_id`` — never the actor's.
 
-    Today's create/update paths require the same owner id for the flow, flow
-    version, attachment, and deployment, so resolving owners from ``flow_ids``
-    selects the correct deployment namespace for those rows.
+    ``flow_owner_ids`` must be populated from rows the enclosing operation has
+    already scoped and authorized. Accepting that mapping instead of resolving
+    owners from raw request ids prevents guard retries from crossing into an
+    unrelated user's provider namespace.
     """
-    from sqlmodel import col, select
-
-    from langflow.services.database.models.flow.model import Flow
-
-    owner_rows = (await db.exec(select(Flow.id, Flow.user_id).where(col(Flow.id).in_(flow_ids)))).all()
     by_owner: dict[UUID, list[UUID]] = {}
-    for flow_id, owner_id in owner_rows:
+    for flow_id, owner_id in flow_owner_ids.items():
         by_owner.setdefault(owner_id, []).append(flow_id)
 
     for owner_id, owned_flow_ids in by_owner.items():
@@ -476,7 +472,7 @@ async def sync_flow_deployment_state_by_owner(
 async def retry_flow_operation_on_deployment_guard(
     *,
     db: DbSession,
-    flow_ids: list[UUID] | None = None,
+    flow_owner_ids: Mapping[UUID, UUID] | None = None,
     operation: Callable[[], Awaitable[TGuardOperationResult]],
 ) -> TGuardOperationResult:
     """Run *operation* and retry once after flow-scoped deployment sync on guard errors.
@@ -486,8 +482,13 @@ async def retry_flow_operation_on_deployment_guard(
     via ORM/service preflight checks that raise ``DeploymentGuardError``) before
     mutating state. This helper does not add guard checks; it only:
     1) detects ``DeploymentGuardError`` failures from the operation,
-    2) performs best-effort deployment sync in each flow owner's namespace, and
+    2) performs best-effort deployment sync for the authorized flow-owner
+       mapping in each owner's namespace, and
     3) retries the same operation once.
+
+    The operation may populate a mutable ``flow_owner_ids`` mapping while
+    loading and authorizing rows. That state survives a nested-transaction
+    rollback and is then used for the repair pass.
     """
     try:
         async with db.begin_nested():
@@ -497,8 +498,8 @@ async def retry_flow_operation_on_deployment_guard(
         if not guard_error:
             raise
 
-    if flow_ids:
-        await sync_flow_deployment_state_by_owner(db=db, flow_ids=flow_ids)
+    if flow_owner_ids:
+        await sync_flow_deployment_state_by_owner(db=db, flow_owner_ids=flow_owner_ids)
 
     async with db.begin_nested():
         return await operation()
