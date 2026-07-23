@@ -450,7 +450,11 @@ async def auto_configure_starter_projects_mcp(session):
                         "streamablehttp",
                         streamable_http_url,
                     ]
-                server_config = {"command": command, "args": args}
+                server_config = {
+                    "command": command,
+                    "args": args,
+                    "description": user_starter_folder.name,
+                }
 
                 # Add to user's MCP servers configuration
                 await logger.adebug(f"Adding MCP server '{server_name}' for user {user.username}")

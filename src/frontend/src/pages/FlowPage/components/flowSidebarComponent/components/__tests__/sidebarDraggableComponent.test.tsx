@@ -280,6 +280,21 @@ describe("SidebarDraggableComponent", () => {
       expect(screen.getByText("Test Component")).toBeInTheDocument();
     });
 
+    it("should use the custom display name tooltip when provided", () => {
+      render(
+        <SidebarDraggableComponent
+          {...defaultProps}
+          displayNameTooltip="智能报告"
+        />,
+      );
+
+      expect(
+        screen
+          .getAllByTestId("tooltip")
+          .some((tooltip) => tooltip.dataset.content === "智能报告"),
+      ).toBe(true);
+    });
+
     it("should display component icon", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 

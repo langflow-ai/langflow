@@ -1190,6 +1190,7 @@ async def test_init_mcp_servers_reconciles_existing_apikey_project_server_config
         assert "--headers" in server_args
         assert "x-api-key" in server_args
         assert streamable_http_url in server_args
+        assert server_config["description"] == user_test_project.name
     finally:
         await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
 

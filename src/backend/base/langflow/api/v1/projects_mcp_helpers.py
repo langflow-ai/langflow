@@ -103,7 +103,7 @@ async def register_mcp_servers_for_project(
             validation_result.existing_config,
             auth_type,
             streamable_http_url,
-        ):
+        ) and validation_result.existing_config.get("description") == project.name:
             await logger.adebug(
                 "MCP server '%s' already matches auth %s for project %s, skipping",
                 validation_result.server_name,
@@ -138,7 +138,11 @@ async def register_mcp_servers_for_project(
                 streamable_http_url,
             ]
 
-        server_config = {"command": command, "args": args}
+        server_config = {
+            "command": command,
+            "args": args,
+            "description": project.name,
+        }
 
         if validation_result.should_skip:
             await logger.adebug(
@@ -250,7 +254,10 @@ async def handle_mcp_server_rename(
 
                 await update_server(
                     new_validation.server_name,
-                    old_validation.existing_config or {},
+                    {
+                        **(old_validation.existing_config or {}),
+                        "description": new_project_name,
+                    },
                     current_user,
                     session,
                     get_storage_service(),
@@ -267,6 +274,16 @@ async def handle_mcp_server_rename(
                     "Old MCP server '%s' not found for this project, skipping rename",
                     old_validation.server_name,
                 )
+        elif old_validation.server_exists and old_validation.project_id_matches:
+            await update_server(
+                old_validation.server_name,
+                {"description": new_project_name},
+                current_user,
+                session,
+                get_storage_service(),
+                get_settings_service(),
+                merge_existing=True,
+            )
 
     except HTTPException:
         raise

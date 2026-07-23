@@ -135,7 +135,19 @@ const McpSidebarGroup = ({
             hasMcpServers &&
             mcpComponents.map((mcpComponent, idx) => (
               <ShadTooltip
-                content={mcpComponent.display_name || mcpComponent.name}
+                content={
+                  mcpComponent.mcpProjectName ? (
+                    <div className="flex flex-col gap-1">
+                      <span>{mcpComponent.mcpProjectName}</span>
+                      <span className="text-muted-foreground">
+                        {mcpComponent.mcpServerName ??
+                          mcpComponent.display_name}
+                      </span>
+                    </div>
+                  ) : (
+                    mcpComponent.display_name || mcpComponent.name
+                  )
+                }
                 side="right"
                 key={mcpComponent.mcpServerName ?? mcpComponent.display_name}
               >
@@ -166,6 +178,11 @@ const McpSidebarGroup = ({
                   }}
                   disabled={false}
                   disabledTooltip={""}
+                  displayNameTooltip={
+                    mcpComponent.mcpProjectName ??
+                    mcpComponent.mcpServerName ??
+                    mcpComponent.display_name
+                  }
                 />
               </ShadTooltip>
             ))}

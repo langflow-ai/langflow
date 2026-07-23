@@ -63,6 +63,7 @@ SHELL_EXEC_FLAGS = frozenset({"-c", "/c"})
 class MCPServerConfig(BaseModel):
     """Pydantic model for MCP server configuration."""
 
+    description: str | None = None
     command: str | None = None
     args: list[str] | None = None
     env: dict[str, str] | None = None

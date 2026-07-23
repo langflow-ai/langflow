@@ -56,6 +56,33 @@ class TestProjectMCPServerName:
         assert _get_project_mcp_server_name(uuid4(), "unnamed") == "lf-unnamed"
 
 
+class TestMCPServerListMetadata:
+    @pytest.mark.asyncio
+    async def test_server_list_includes_saved_description(self, client: AsyncClient, created_api_key):
+        server_name = "lf-project_metadata"
+        auth_headers = {"x-api-key": created_api_key.api_key}
+        server_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "http://localhost:7860/api/v1/mcp/project/test/sse"],
+            "description": "智能报告",
+        }
+
+        response = await client.post(
+            f"/api/v2/mcp/servers/{server_name}",
+            json=server_config,
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+
+        try:
+            response = await client.get("/api/v2/mcp/servers?action_count=false", headers=auth_headers)
+            assert response.status_code == 200
+            server_info = next(server for server in response.json() if server["name"] == server_name)
+            assert server_info["description"] == "智能报告"
+        finally:
+            await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+
+
 class TestMCPServerValidationResult:
     """Test the MCPServerValidationResult class and its properties."""
 

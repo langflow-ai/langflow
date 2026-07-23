@@ -207,12 +207,26 @@ async def get_servers(
     server_list = await get_server_list(current_user, session, storage_service, settings_service)
 
     if not action_count:
-        # Return only the server names, with mode and toolsCount as None
-        return [{"name": server_name, "mode": None, "toolsCount": None} for server_name in server_list["mcpServers"]]
+        # Return lightweight server metadata without connecting to each server.
+        return [
+            {
+                "name": server_name,
+                "description": server_config.get("description"),
+                "mode": None,
+                "toolsCount": None,
+            }
+            for server_name, server_config in server_list["mcpServers"].items()
+        ]
 
     # Check all of the tool counts for each server concurrently
     async def check_server(server_name: str) -> dict:
-        server_info: dict[str, str | int | None] = {"name": server_name, "mode": None, "toolsCount": None}
+        server_config = server_list["mcpServers"][server_name]
+        server_info: dict[str, str | int | None] = {
+            "name": server_name,
+            "description": server_config.get("description"),
+            "mode": None,
+            "toolsCount": None,
+        }
         # Create clients that we control so we can clean them up after
         mcp_stdio_client = MCPStdioClient()
         mcp_streamable_http_client = MCPStreamableHttpClient()
@@ -247,7 +261,7 @@ async def get_servers(
 
             mode, tool_list, _ = await update_tools(
                 server_name=server_name,
-                server_config=server_list["mcpServers"][server_name],
+                server_config=server_config,
                 mcp_stdio_client=mcp_stdio_client,
                 mcp_streamable_http_client=mcp_streamable_http_client,
                 request_variables=request_variables,
