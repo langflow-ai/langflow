@@ -139,3 +139,19 @@ def test_provider_components_have_migration_targets(provider: str, migration_tar
         f"migration_table.json (no ext:{provider}:<Class>@ target); add a migration "
         "entry so saved flows referencing them upgrade correctly"
     )
+
+
+@pytest.mark.unit
+def test_funasr_import_paths_have_migration_targets() -> None:
+    """Saved FunASR flows using either public import path must upgrade."""
+    table, error = load_migration_table(MIGRATION_TABLE_PATH, use_cache=False)
+    assert error is None, f"migration table failed to load: {error}"
+    assert table is not None
+
+    import_paths = {
+        "lfx_bundles.funasr.funasr_transcription.FunASRTranscriptionComponent",
+        "lfx_bundles.funasr.FunASRTranscriptionComponent",
+    }
+    target = "ext:funasr:FunASRTranscriptionComponent@official"
+    observed = {entry.import_path: entry.target for entry in table.entries if entry.import_path in import_paths}
+    assert observed == dict.fromkeys(import_paths, target)

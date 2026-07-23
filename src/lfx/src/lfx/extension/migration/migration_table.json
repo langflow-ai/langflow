@@ -4915,6 +4915,16 @@
       "bare_class_name": "FunASRTranscriptionComponent",
       "target": "ext:funasr:FunASRTranscriptionComponent@official",
       "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx_bundles.funasr.funasr_transcription.FunASRTranscriptionComponent",
+      "target": "ext:funasr:FunASRTranscriptionComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx_bundles.funasr.FunASRTranscriptionComponent",
+      "target": "ext:funasr:FunASRTranscriptionComponent@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [
