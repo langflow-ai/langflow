@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any
 
 from langchain_core.callbacks import BaseCallbackHandler
 
+from lfx.base.models.llm_callback_utils import detect_provider_from_model, extract_llm_model_name
 from lfx.observability import APPLICATION_METER_NAME
 
 try:
@@ -73,8 +74,8 @@ class LLMProviderMetricsCallbackHandler(BaseCallbackHandler):
         self._runs: dict[UUID, tuple[float, dict[str, str]]] = {}
 
     def _start(self, run_id: UUID, **kwargs: Any) -> None:
-        model = _extract_llm_model_name(kwargs)
-        provider = _detect_provider_from_model(model)
+        model = extract_llm_model_name(kwargs)
+        provider = detect_provider_from_model(model)
         attrs = {
             "gen_ai.provider.name": provider or "unknown",
             "gen_ai.request.model": model or "unknown",
@@ -115,37 +116,6 @@ class LLMProviderMetricsCallbackHandler(BaseCallbackHandler):
         # No start time means the matching start was evicted or never seen; skip the duration point.
         if start is not None:
             self._duration.record(time.monotonic() - start, attrs)
-
-
-# ponytail: byte-for-byte copy of langflow native_callback's provider/model helpers. langflow-base sits
-# above lfx so it could import these from here, but that dedup edits native_callback (out of scope for this
-# stacked PR); keep the copy until a shared lfx home is worth the cross-package churn.
-def _extract_llm_model_name(kwargs: dict[str, Any]) -> str | None:
-    params = kwargs.get("invocation_params") or {}
-    return params.get("model_name") or params.get("model") or None
-
-
-def _detect_provider_from_model(model_name: str | None) -> str | None:
-    if not model_name:
-        return None
-    model_lower = model_name.lower()
-    if "gpt" in model_lower or "o1" in model_lower or model_lower.startswith("text-"):
-        return "openai"
-    if "claude" in model_lower:
-        return "anthropic"
-    if "gemini" in model_lower or "palm" in model_lower:
-        return "google"
-    if "llama" in model_lower:
-        return "meta"
-    if "mistral" in model_lower or "mixtral" in model_lower:
-        return "mistral"
-    if "command" in model_lower or "coral" in model_lower:
-        return "cohere"
-    if "titan" in model_lower or "nova" in model_lower:
-        return "amazon"
-    if "azure" in model_lower:
-        return "azure"
-    return None
 
 
 @lru_cache(maxsize=1)
