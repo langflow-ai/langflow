@@ -114,7 +114,13 @@ class NativeCallbackHandler(BaseCallbackHandler):
 
         model_lower = model_name.lower()
 
-        # Pattern-based detection works across different LangChain integrations
+        # Pattern-based detection works across different LangChain integrations.
+        # Azure is checked before OpenAI because Azure OpenAI model names contain "gpt"
+        # (e.g. "azure/gpt-4"), which would otherwise match the OpenAI branch first.
+        # ponytail: name-based detection can't catch a bare "gpt-4" Azure deployment;
+        # thread the provider from the component/model class if that case matters (LE-1993).
+        if "azure" in model_lower:
+            return "azure"
         if "gpt" in model_lower or "o1" in model_lower or model_lower.startswith("text-"):
             return "openai"
         if "claude" in model_lower:
@@ -129,8 +135,6 @@ class NativeCallbackHandler(BaseCallbackHandler):
             return "cohere"
         if "titan" in model_lower or "nova" in model_lower:
             return "amazon"
-        if "azure" in model_lower:
-            return "azure"
 
         return None
 

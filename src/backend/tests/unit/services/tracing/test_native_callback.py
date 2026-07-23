@@ -689,3 +689,24 @@ class TestAgentCallbacks:
         handler.on_agent_finish(finish, run_id=run_id)
         mock_tracer.add_langchain_span.assert_not_called()
         mock_tracer.end_langchain_span.assert_not_called()
+
+
+class TestProviderDetection:
+    _detect = staticmethod(NativeCallbackHandler._detect_provider_from_model)
+
+    def test_azure_openai_not_mislabeled_openai(self):
+        # LE-1993: "azure/gpt-4" contains "gpt"; azure must win over the openai branch.
+        assert self._detect("azure/gpt-4") == "azure"
+        assert self._detect("gpt-4o") == "openai"
+
+    def test_known_providers(self):
+        assert self._detect("claude-3-5-sonnet") == "anthropic"
+        assert self._detect("gemini-1.5-pro") == "google"
+        assert self._detect("llama-3-70b") == "meta"
+        assert self._detect("mistral-large") == "mistral"
+        assert self._detect("command-r") == "cohere"
+        assert self._detect("titan-text") == "amazon"
+
+    def test_none_and_unknown(self):
+        assert self._detect(None) is None
+        assert self._detect("some-unknown-model") is None
