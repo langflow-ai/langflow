@@ -50,8 +50,10 @@ from langflow.services.authorization.guards import (
     ensure_knowledge_base_permission,
     ensure_permission,
     ensure_project_permission,
+    ensure_provider_account_permission,
     ensure_share_permission,
     ensure_variable_permission,
+    ensure_voice_permission,
     should_apply_owner_override,
 )
 from langflow.services.authorization.listing import (
@@ -101,8 +103,10 @@ __all__ = [
     "ensure_knowledge_base_permission",
     "ensure_permission",
     "ensure_project_permission",
+    "ensure_provider_account_permission",
     "ensure_share_permission",
     "ensure_variable_permission",
+    "ensure_voice_permission",
     "filter_visible_resources",
     "get_authorization_service",
     "get_settings_service",

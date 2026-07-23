@@ -122,12 +122,24 @@ def test_validation_reports_missing_forbidden_and_component_drift() -> None:
 
 def test_release_gate_covers_supported_python_and_image_architectures() -> None:
     profile_job = workflow_job_block(GATE_WORKFLOW_PATH, "downstream-bundle-profiles")
+    core_python_job = workflow_job_block(GATE_WORKFLOW_PATH, "python-core-inventory")
     python_job = workflow_job_block(GATE_WORKFLOW_PATH, "python-inventory")
     image_job = workflow_job_block(GATE_WORKFLOW_PATH, "image-inventory")
 
     assert "manage_bundle_profiles.py check" in profile_job
     assert "manage_bundle_profiles.py compile" in profile_job
     assert "downstream-bundle-profile-inventories" in profile_job
+
+    assert "if: ${{ inputs.core-artifact-name != '' }}" in core_python_job
+    assert 'python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]' in core_python_job
+    assert "--profile python-core" in core_python_job
+    for wheel_dir in ("sdk-dist", "lfx-dist", "base-dist", "core-dist"):
+        assert wheel_dir in core_python_job
+    assert "AuthorizationMutationKind, AuthorizationMutationRejected" in core_python_job
+    assert 'AuthorizationMutationKind.USER_DISABLED.value == "user.disabled"' in core_python_job
+    assert 'AuthorizationMutationRejected("safe detail").public_detail == "safe detail"' in core_python_job
+    assert "main-dist" not in core_python_job
+    assert "bundles-dist" not in core_python_job
 
     assert 'python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]' in python_job
     assert "profile: [python-default, python-full]" in python_job

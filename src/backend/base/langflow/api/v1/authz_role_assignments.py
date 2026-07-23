@@ -14,6 +14,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 from lfx.log.logger import logger
+from lfx.services.authorization import (
+    AuthorizationMutation,
+    AuthorizationMutationKind,
+    AuthorizationMutationRejected,
+)
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
@@ -22,7 +27,11 @@ from langflow.api.v1.schemas.authz_role_assignments import (
     RoleAssignmentCreate,
     RoleAssignmentRead,
 )
-from langflow.services.authorization.invalidation import safe_invalidate_user
+from langflow.services.authorization.lifecycle import (
+    safe_identity_mutation_committed,
+    stage_identity_mutation,
+    validate_identity_mutation,
+)
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
 from langflow.services.database.models.user.model import User
@@ -107,7 +116,20 @@ async def create_assignment(
         assigned_by=current_user.id,
     )
     session.add(assignment)
+    authorization_service = get_authorization_service()
+    mutation = AuthorizationMutation(
+        kind=AuthorizationMutationKind.ROLE_ASSIGNMENT_CREATED,
+        entity_id=assignment.id,
+        actor_user_id=current_user.id,
+        affected_user_ids=(payload.user_id,),
+        role_id=payload.role_id,
+        domain_type=payload.domain_type,
+        domain_id=payload.domain_id,
+        policy_relevant_fields=("user_id", "role_id", "domain_type", "domain_id"),
+    )
     try:
+        await session.flush()
+        await stage_identity_mutation(authorization_service, session, mutation)
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
@@ -115,12 +137,8 @@ async def create_assignment(
             status_code=status.HTTP_409_CONFLICT,
             detail="Assignment already exists for this user/role/domain",
         ) from exc
+    await safe_identity_mutation_committed(authorization_service, mutation)
     await session.refresh(assignment)
-    await safe_invalidate_user(
-        get_authorization_service(),
-        payload.user_id,
-        op="role_assignment:create",
-    )
     await audit_decision(
         user_id=current_user.id,
         action="role_assignment:create",
@@ -159,13 +177,26 @@ async def delete_assignment(
     role_id = assignment.role_id
     domain_type = assignment.domain_type
     domain_id = assignment.domain_id
-    await session.delete(assignment)
-    await session.commit()
-    await safe_invalidate_user(
-        get_authorization_service(),
-        user_id,
-        op="role_assignment:delete",
+    mutation = AuthorizationMutation(
+        kind=AuthorizationMutationKind.ROLE_ASSIGNMENT_DELETED,
+        entity_id=assignment_id,
+        actor_user_id=current_user.id,
+        affected_user_ids=(user_id,),
+        role_id=role_id,
+        domain_type=domain_type,
+        domain_id=domain_id,
+        policy_relevant_fields=("user_id", "role_id", "domain_type", "domain_id"),
     )
+    authorization_service = get_authorization_service()
+    try:
+        await validate_identity_mutation(authorization_service, session, mutation)
+    except AuthorizationMutationRejected as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.public_detail) from exc
+    await session.delete(assignment)
+    await session.flush()
+    await stage_identity_mutation(authorization_service, session, mutation)
+    await session.commit()
+    await safe_identity_mutation_committed(authorization_service, mutation)
     await audit_decision(
         user_id=current_user.id,
         action="role_assignment:delete",

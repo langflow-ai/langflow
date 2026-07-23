@@ -6,8 +6,10 @@ from langflow.services.authorization.actions import (
     FlowAction,
     KnowledgeBaseAction,
     ProjectAction,
+    ProviderAccountAction,
     ShareAction,
     VariableAction,
+    VoiceAction,
 )
 from langflow.services.authorization.audit import (
     audit_decision,
@@ -23,8 +25,10 @@ from langflow.services.authorization.guards import (
     ensure_knowledge_base_permission,
     ensure_permission,
     ensure_project_permission,
+    ensure_provider_account_permission,
     ensure_share_permission,
     ensure_variable_permission,
+    ensure_voice_permission,
     should_apply_owner_override,
 )
 from langflow.services.authorization.listing import (
@@ -46,8 +50,10 @@ __all__ = [
     "KnowledgeBaseAction",
     "LangflowAuthorizationService",
     "ProjectAction",
+    "ProviderAccountAction",
     "ShareAction",
     "VariableAction",
+    "VoiceAction",
     "apply_owned_or_visible_prefilter",
     "apply_owned_or_visible_scope_prefilter",
     "audit_decision",
@@ -61,8 +67,10 @@ __all__ = [
     "ensure_knowledge_base_permission",
     "ensure_permission",
     "ensure_project_permission",
+    "ensure_provider_account_permission",
     "ensure_share_permission",
     "ensure_variable_permission",
+    "ensure_voice_permission",
     "filter_visible_resources",
     "requires_flow_permission",
     "requires_resource_permission",
