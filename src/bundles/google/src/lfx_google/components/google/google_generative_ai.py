@@ -1,6 +1,7 @@
 from typing import Any
 
 import requests
+from google import genai
 from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
 from lfx.base.models.model import LCModelComponent
@@ -96,16 +97,14 @@ class GoogleGenerativeAIComponent(LCModelComponent):
 
     def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
         try:
-            import google.generativeai as genai
-
-            genai.configure(api_key=self.api_key)
-            model_ids = [
-                model.name.replace("models/", "")
-                for model in genai.list_models()
-                if "generateContent" in model.supported_generation_methods
-            ]
+            with genai.Client(api_key=self.api_key) as client:
+                model_ids = [
+                    model.name.removeprefix("models/")
+                    for model in client.models.list()
+                    if model.name and "generateContent" in (model.supported_actions or [])
+                ]
             model_ids.sort(reverse=True)
-        except (ImportError, ValueError) as e:
+        except (genai.errors.APIError, ValueError) as e:
             logger.exception(f"Error getting model names: {e}")
             model_ids = GOOGLE_GENERATIVE_AI_MODELS
         if tool_model_enabled:
@@ -114,13 +113,11 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             except ImportError as e:
                 msg = "langchain_google_genai is not installed."
                 raise ImportError(msg) from e
-            for model in model_ids:
-                model_with_tool = ChatGoogleGenerativeAI(
-                    model=self.model_name,
-                    google_api_key=self.api_key,
-                )
-                if not self.supports_tool_calling(model_with_tool):
-                    model_ids.remove(model)
+            model_ids = [
+                model
+                for model in model_ids
+                if self.supports_tool_calling(ChatGoogleGenerativeAI(model=model, google_api_key=self.api_key))
+            ]
         return model_ids
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -136,7 +133,10 @@ class GoogleGenerativeAIComponent(LCModelComponent):
                         ids = GOOGLE_GENERATIVE_AI_MODELS
                 build_config.setdefault("model_name", {})
                 build_config["model_name"]["options"] = ids
-                build_config["model_name"].setdefault("value", ids[0])
+                if ids:
+                    build_config["model_name"].setdefault("value", ids[0])
+                else:
+                    build_config["model_name"].pop("value", None)
             except Exception as e:
                 msg = f"Error getting model names: {e}"
                 raise ValueError(msg) from e

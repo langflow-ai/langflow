@@ -49,6 +49,10 @@ pip install "lfx-bundles[<provider>]"  # one provider's code + that provider's S
 generated `all` extra pulls every provider's deps for users who explicitly
 install `lfx[bundles]` or `lfx-bundles[all]`.
 
+Deprecated extras for graduated providers may remain as compatibility aliases.
+For example, `lfx-bundles[google]` now installs `lfx-google`, but is excluded
+from the generated aggregate extras because Langflow installs it directly.
+
 ## Adding a provider
 
 Providers are moved here by `scripts/migrate/consolidate_bundles.py`, which also

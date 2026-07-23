@@ -185,6 +185,11 @@ _OPTIONAL_DEPS_HEADER = (
 # the per-provider extras above: cuga -> cuga, codeagents -> smolagents.
 TORCH_EXTRAS = frozenset({"cuga", "codeagents"})
 
+# Deprecated aliases for providers that graduated to standalone bundles. They
+# remain installable for compatibility but are intentionally excluded from the
+# generated aggregate extras because Langflow already installs them directly.
+COMPATIBILITY_EXTRAS = {"google": ["lfx-google>=0.1.0,<1.0.0"]}
+
 
 def normalize_extra(name: str) -> str:
     """PEP 685 extra-name normalization (lowercase, runs of -_. -> single -)."""
@@ -310,6 +315,7 @@ def move_provider(provider: str, *, apply: bool) -> list[tuple[str, str]]:
 
 def _render_optional_deps(extras: dict[str, list[str]]) -> str:
     keys = sorted(k for k in extras if k not in ("all", "all-no-torch"))
+    aggregate_keys = [key for key in keys if key not in COMPATIBILITY_EXTRAS]
     lines = ["[project.optional-dependencies]", _OPTIONAL_DEPS_HEADER]
     for key in keys:
         deps = extras[key]
@@ -319,10 +325,10 @@ def _render_optional_deps(extras: dict[str, list[str]]) -> str:
         else:
             lines.append(f"{key} = []")
     lines.append("all = [")
-    lines.extend(f'    "lfx-bundles[{key}]",' for key in keys)
+    lines.extend(f'    "lfx-bundles[{key}]",' for key in aggregate_keys)
     lines.append("]")
     lines.append("all-no-torch = [")
-    lines.extend(f'    "lfx-bundles[{key}]",' for key in keys if key not in TORCH_EXTRAS)
+    lines.extend(f'    "lfx-bundles[{key}]",' for key in aggregate_keys if key not in TORCH_EXTRAS)
     lines.append("]")
     return "\n".join(lines) + "\n"
 
@@ -336,6 +342,7 @@ def update_bundles_pyproject(new_extras: dict[str, list[str]], *, apply: bool) -
     extras = {k: list(v) for k, v in parsed.get("project", {}).get("optional-dependencies", {}).items()}
     extras.pop("all", None)
     extras.pop("all-no-torch", None)
+    extras.update(COMPATIBILITY_EXTRAS)
     extras.update(new_extras)
 
     section = _render_optional_deps(extras)

@@ -20,6 +20,7 @@ dependencies = [
     "google-auth>=2.38.0,<3.0.0",
     "google-auth-oauthlib>=1.2.0,<2.0.0",
     "google-cloud-bigquery>=3.35,<4.0.0",
+    "google-genai>=1.75.0,<2.0.0",
     "langchain-community>=0.4.1,<1.0.0",
     "langchain-core>=1.2.28,<2.0.0",
     "langchain-google-community~=3.0.2",
