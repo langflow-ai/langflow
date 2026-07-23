@@ -2197,7 +2197,7 @@
   "updateComponents.updatesAvailable_one": "{{count}} コンポーネントのアップデートが利用可能です",
   "updateComponents.updatesAvailable_other": "{{count}} のコンポーネントのアップデートが利用可能です",
   "updateComponents.upgradeRequired": "フローを実行するにはアップグレードが必要です",
-  "version.currentFlow": "電流の流れ",
+  "version.currentFlow": "現在のフロー",
   "version.loadingPreview": "プレビューの読み込み中...",
   "version.previewing": "『 {{label}} 』のプレビュー",
   "version.readOnly": "(読み取り専用)",
