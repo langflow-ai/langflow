@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
 from lfx.base.mcp.util import update_tools
+from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
@@ -27,6 +28,9 @@ from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(tags=["MCP"], prefix="/mcp")
+
+# Retry budget for the version-guarded merge-PATCH path (only same-server merges consume it).
+_MAX_UPSERT_RETRIES = 12
 
 
 def is_mcp_servers_locked(settings: object) -> bool:
@@ -406,7 +410,7 @@ async def update_server(
     server_config: dict,
     current_user: CurrentActiveUser,
     session: DbSession,
-    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],  # noqa: ARG001
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
     *,
     check_existing: bool = False,
@@ -415,83 +419,112 @@ async def update_server(
 ):
     """Create, update, or delete one MCP server row for the user.
 
-    A single-row upsert on ``(user_id, name)`` replaces the file's non-atomic
-    read-modify-write: concurrent edits to *different* servers touch different rows
-    and never contend, so no update is lost at any worker/replica count - without an
-    in-process lock. A concurrent create of the *same* name is caught by the unique
-    constraint and folded into an update.
+    Upserts a single row keyed on ``(user_id, name)`` so concurrent edits to different
+    servers never contend. A merge PATCH guards its write with the row ``version`` and
+    retries on conflict, so two concurrent PATCHes to the same server merge instead of
+    last-writer-wins; a full replace updates unconditionally. ``current_user`` is read
+    once into ``user_id`` because a later commit/rollback can expire it and re-reading it
+    would attempt IO in an async context.
     """
+    user_id = current_user.id
     settings = getattr(settings_service, "settings", None)
     if not delete:
         ensure_mcp_stdio_access(server_config, current_user, settings)
 
-    result = await session.exec(
-        select(MCPServer).where(MCPServer.user_id == current_user.id, MCPServer.name == server_name)
-    )
-    existing = result.first()
-
     if delete:
+        result = await session.exec(
+            select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == server_name)
+        )
+        existing = result.first()
         if existing is None:
-            raise HTTPException(status_code=500, detail="Server not found.")
+            raise HTTPException(status_code=404, detail="Server not found.")
         await session.delete(existing)
         await session.commit()
         _clear_server_cache(server_name)
         return None
 
-    if check_existing and existing is not None:
-        raise HTTPException(status_code=500, detail="Server already exists.")
+    result = await session.exec(select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == server_name))
+    existing = result.first()
 
-    if merge_existing and existing is not None:
-        # PATCH semantics: shallow-merge the new (partial) config over the existing
-        # one at the plaintext level, then re-encrypt (mirrors the file store's
-        # {**existing, **new}).
-        new_config = {**decrypt_mcp_config(existing.config or {}), **server_config}
-    else:
-        new_config = server_config
+    for _ in range(_MAX_UPSERT_RETRIES):
+        if check_existing and existing is not None:
+            raise HTTPException(status_code=409, detail="Server already exists.")
 
-    ensure_mcp_stdio_access(new_config, current_user, settings)
-    encrypted_config = encrypt_mcp_config(new_config)
-    transport = _derive_transport(new_config)
-
-    if existing is None:
-        session.add(MCPServer(user_id=current_user.id, name=server_name, config=encrypted_config, transport=transport))
-    else:
-        existing.config = encrypted_config
-        existing.transport = transport
-        existing.version += 1
-        existing.updated_at = datetime.now(timezone.utc)
-        session.add(existing)
-
-    try:
-        await session.commit()
-    except IntegrityError:
-        # A concurrent request created the same (user, name) first (we came in with
-        # existing=None). Re-apply the create/merge rules against the winning row
-        # instead of overwriting it with our pre-race config.
-        await session.rollback()
-        result = await session.exec(
-            select(MCPServer).where(MCPServer.user_id == current_user.id, MCPServer.name == server_name)
-        )
-        existing = result.first()
         if existing is None:
-            raise
-        if check_existing:
-            raise HTTPException(status_code=500, detail="Server already exists.") from None
+            session.add(
+                MCPServer(
+                    user_id=user_id,
+                    name=server_name,
+                    config=encrypt_mcp_config(server_config),
+                    transport=_derive_transport(server_config),
+                )
+            )
+            try:
+                await session.commit()
+            except IntegrityError:
+                # The expected IntegrityError here is the duplicate-name race: re-read the
+                # winner and fall through to the update path. Any other integrity failure
+                # (e.g. a bad FK) leaves no winning row, so re-raise it instead of masking
+                # it as retries that end in a misleading 409.
+                await session.rollback()
+                result = await session.exec(
+                    select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == server_name)
+                )
+                existing = result.first()
+                if existing is None:
+                    raise
+                continue
+            break
+
         if merge_existing:
             merged = {**decrypt_mcp_config(existing.config or {}), **server_config}
             ensure_mcp_stdio_access(merged, current_user, settings)
-            existing.config = encrypt_mcp_config(merged)
-            existing.transport = _derive_transport(merged)
-        else:
-            existing.config = encrypted_config
-            existing.transport = transport
-        existing.version += 1
-        existing.updated_at = datetime.now(timezone.utc)
-        session.add(existing)
+            updated = await session.execute(
+                update(MCPServer)
+                .where(MCPServer.id == existing.id, MCPServer.version == existing.version)
+                .values(
+                    config=encrypt_mcp_config(merged),
+                    transport=_derive_transport(merged),
+                    version=existing.version + 1,
+                    updated_at=datetime.now(timezone.utc),
+                )
+            )
+            await session.commit()
+            if updated.rowcount == 1:
+                break
+            # Version moved under us: expire and re-read so a concurrent delete reads as None.
+            session.expire(existing)
+            result = await session.exec(
+                select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == server_name)
+            )
+            existing = result.first()
+            if existing is None:
+                raise HTTPException(status_code=404, detail="Server not found.")
+            continue
+
+        # Full replace: last-writer-wins on config, but bump the version DB-side
+        # (version = version + 1) so it stays strictly monotonic even when our ORM copy
+        # is stale. An ORM `+= 1` off a stale read could reuse a version a concurrent
+        # PATCH already consumed, letting a later guarded PATCH pass its version check.
+        await session.execute(
+            update(MCPServer)
+            .where(MCPServer.id == existing.id)
+            .values(
+                config=encrypt_mcp_config(server_config),
+                transport=_derive_transport(server_config),
+                version=MCPServer.version + 1,
+                updated_at=datetime.now(timezone.utc),
+            )
+        )
         await session.commit()
+        break
+    else:
+        raise HTTPException(status_code=409, detail="MCP server was updated concurrently; please retry.")
 
     _clear_server_cache(server_name)
-    return await get_server(server_name, current_user, session, storage_service, settings_service)
+    result = await session.exec(select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == server_name))
+    row = result.first()
+    return decrypt_mcp_config(row.config or {}) if row is not None else None
 
 
 @router.post("/servers/{server_name}")

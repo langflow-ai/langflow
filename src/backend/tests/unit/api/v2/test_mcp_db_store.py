@@ -11,6 +11,7 @@ Run:  uv run pytest src/backend/tests/unit/api/v2/test_mcp_db_store.py -v -s
 """
 
 import asyncio
+import sqlite3
 import uuid
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -329,3 +330,117 @@ async def test_get_server_list_preserves_insertion_order():
 
     await engine.dispose()
     assert list(servers.keys()) == names, f"expected insertion order {names}, got {list(servers.keys())}"
+
+
+@pytest.mark.asyncio
+async def test_concurrent_merge_patches_preserve_all_fields(tmp_path):
+    """Concurrent merge PATCHes to the SAME server each set a distinct field; the version lock keeps all of them.
+
+    Without the version-guarded retry, all writers read the same base config and the last
+    commit wins, silently dropping the other fields (the gap flagged in review of #13976).
+    """
+    engine = await _file_engine(tmp_path / "mcp.db")
+    user = SimpleNamespace(id=uuid.uuid4())
+
+    with patch.multiple("langflow.api.v2.mcp", **CACHE_PATCH):
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            await update_server("svc", {"url": "https://x", "k0": "base"}, user, session, None, None)
+
+        async def patch_field(i: int):
+            async with AsyncSession(engine, expire_on_commit=False) as session:
+                await update_server("svc", {f"k{i}": str(i)}, user, session, None, None, merge_existing=True)
+
+        results = await asyncio.gather(*[patch_field(i) for i in range(1, 9)], return_exceptions=True)
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            final = await get_server("svc", user, session, None, None)
+
+    await engine.dispose()
+    errors = [r for r in results if isinstance(r, Exception)]
+    assert not errors, f"concurrent PATCHes raised: {errors}"
+    assert final["url"] == "https://x"
+    for i in range(1, 9):
+        assert final.get(f"k{i}") == str(i), f"lost concurrently-patched field k{i}; final={final}"
+
+
+@pytest.mark.asyncio
+async def test_patch_losing_to_concurrent_delete_returns_404(tmp_path):
+    """A merge PATCH whose row is deleted between its read and its guarded write returns 404, not a raw DB error."""
+    from fastapi import HTTPException
+
+    engine = await _file_engine(tmp_path / "mcp.db")
+    db_path = str(tmp_path / "mcp.db")
+    user = SimpleNamespace(id=uuid.uuid4())
+
+    import langflow.api.v2.mcp as mcp_mod
+
+    real_decrypt = mcp_mod.decrypt_mcp_config
+    fired = {"done": False}
+
+    def decrypt_then_delete(config):
+        # The PATCH calls decrypt between its read and its version-guarded UPDATE. Delete
+        # the row right there (raw sqlite = synchronous) so the guarded UPDATE matches 0
+        # rows and the re-read finds nothing -> a clean 404 rather than a raw DB error.
+        if not fired["done"]:
+            fired["done"] = True
+            con = sqlite3.connect(db_path, timeout=30)
+            con.execute("DELETE FROM mcp_server WHERE name = 'svc'")
+            con.commit()
+            con.close()
+        return real_decrypt(config)
+
+    with patch.multiple("langflow.api.v2.mcp", **CACHE_PATCH):
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            await update_server("svc", {"url": "https://x", "a": "1"}, user, session, None, None)
+
+        with patch.object(mcp_mod, "decrypt_mcp_config", decrypt_then_delete):
+            async with AsyncSession(engine, expire_on_commit=False) as session:
+                with pytest.raises(HTTPException) as exc:
+                    await update_server("svc", {"b": "2"}, user, session, None, None, merge_existing=True)
+
+    assert exc.value.status_code == 404, f"expected 404, got {exc.value.status_code}"
+    async with AsyncSession(engine, expire_on_commit=False) as session:
+        gone = (await session.exec(select(MCPServer).where(MCPServer.name == "svc"))).first()
+    await engine.dispose()
+    assert gone is None, "DELETE should have removed the row"
+
+
+@pytest.mark.asyncio
+async def test_full_replace_bumps_version_db_side_under_concurrent_write(tmp_path):
+    """Replace racing a concurrent write must bump the version DB-side (monotonic), not reuse a stale value.
+
+    The bug only fires when another writer advances the row between the replace's own read and its write
+    (a sequential PATCH-then-replace re-reads fresh and can't trigger it). So we inject the concurrent
+    version advance at exactly that point - inside `_derive_transport`, which the replace calls between its
+    read and its UPDATE - via a synchronous raw-sqlite write (a concurrent PATCH's effect on the version).
+    A naive ORM `+= 1` off the stale read would write 2 (reused); a DB-side `version + 1` writes 6.
+    """
+    engine = await _file_engine(tmp_path / "mcp.db")
+    db_path = str(tmp_path / "mcp.db")
+    user = SimpleNamespace(id=uuid.uuid4())
+
+    import langflow.api.v2.mcp as mcp_mod
+
+    real_derive = mcp_mod._derive_transport
+    raced = {"done": False}
+
+    def derive_then_advance(config):
+        if not raced["done"]:
+            raced["done"] = True
+            con = sqlite3.connect(db_path, timeout=30)
+            con.execute("UPDATE mcp_server SET version = 5 WHERE name = 'svc'")
+            con.commit()
+            con.close()
+        return real_derive(config)
+
+    with patch.multiple("langflow.api.v2.mcp", **CACHE_PATCH):
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            await update_server("svc", {"url": "https://x"}, user, session, None, None)  # version 1
+        with patch.object(mcp_mod, "_derive_transport", derive_then_advance):
+            async with AsyncSession(engine, expire_on_commit=False) as session:
+                await update_server("svc", {"url": "https://y", "replaced": "yes"}, user, session, None, None)
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            row = (await session.exec(select(MCPServer).where(MCPServer.name == "svc"))).first()
+
+    await engine.dispose()
+    assert row.version == 6, f"replace must bump DB-side (5 + 1 = 6), got {row.version} (stale/reused version)"
+    assert row.config.get("replaced") == "yes", "replace must overwrite the config"
