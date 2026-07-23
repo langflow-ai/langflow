@@ -1,12 +1,13 @@
 """Real-process real-service harness: a REAL ``langflow worker`` OS subprocess.
 
-Phase 4 proved the scaled claim/run/reattach/stop paths in-process (same event
-loop). This closes that honest caveat with an ACTUAL separate process:
+The scaled claim/run/reattach/stop paths are proven in-process (same event
+loop) by the other files here. This closes that honest caveat with an ACTUAL
+separate process:
 
-* Real Postgres (``LANGFLOW_TEST_DATABASE_URI``) as the durable store, shared
-  between the test-side API facade and the worker subprocess.
-* Real Redis (``LANGFLOW_TEST_REDIS_URL``, a dedicated DB index) as the claim
-  queue + Streams live bus + cancel pub/sub.
+* Real Postgres (``LANGFLOW_TEST_DATABASE_URI``) as the durable store AND the
+  work queue, shared between the test-side API facade and the worker
+  subprocess — the whole scaled backend is the database, so no broker is
+  involved anywhere.
 * A real no-LLM flow (ChatInput -> ChatOutput) seeded into the shared DB, so the
   worker's PRODUCTION ``_default_frame_source_factory`` builds and runs a real
   graph — not a scripted source.
@@ -23,17 +24,11 @@ import os
 import subprocess
 import uuid
 from dataclasses import dataclass, field
-from urllib.parse import urlparse, urlunparse
 
 # Async driver the project actually ships for Postgres (see pyproject:
 # sqlalchemy[postgresql_psycopg]). psycopg v3 accepts the ``options`` connect
 # arg the DatabaseService sets for Postgres; asyncpg does not.
 _PSYCOPG_PREFIX = "postgresql+psycopg://"
-
-# The pending claim-queue key the worker drains (RedisJobClaimQueue default). The
-# test-side harness enqueues to this same key; isolation comes from a dedicated
-# redis DB index that is flushed per test.
-_PENDING_KEY = "langflow:bg:pending"
 
 
 def psycopg_url(raw: str) -> str:
@@ -46,21 +41,13 @@ def psycopg_url(raw: str) -> str:
     return raw
 
 
-def redis_db_url(base_url: str, db_index: int) -> str:
-    """Return ``base_url`` pointed at a specific redis DB index (path = /N)."""
-    parsed = urlparse(base_url)
-    return urlunparse(parsed._replace(path=f"/{db_index}"))
-
-
 @dataclass
 class WorkerHarness:
     """Bound state for a real-process worker proof. Build via ``setup``."""
 
     db_url: str
-    redis_url: str
     job_service: object
     procs: list[subprocess.Popen] = field(default_factory=list)
-    _client: object | None = None
     _prior_db_env: str | None = None
     _prior_db_env_set: bool = False
     _prior_db_service: object | None = None
@@ -119,41 +106,31 @@ class WorkerHarness:
         return user_id, flow_id
 
     async def submit_job(self, *, flow_id: uuid.UUID, user_id: uuid.UUID, input_value: str = "hello") -> uuid.UUID:
-        """Persist a QUEUED job + its request and enqueue it on the claim queue.
+        """Persist a QUEUED job + its request. The row IS the queue entry.
 
         Mirrors exactly what the scaled facade ``submit`` does (create_job +
-        update_job_metadata({"request": ...}) + LPUSH), so the worker hydrates a
-        production-shaped job row.
+        update_job_metadata({"request": ...})), so the worker hydrates a
+        production-shaped job row off the shared database.
         """
         job_id = uuid.uuid4()
         await self.job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=user_id)
         request = {"flow_id": str(flow_id), "stream_protocol": "langflow", "input_value": input_value}
         await self.job_service.update_job_metadata(job_id, {"request": request})
-        await self.client.lpush(_PENDING_KEY, str(job_id))
         return job_id
-
-    @property
-    def client(self):
-        if self._client is None:
-            from redis.asyncio import StrictRedis
-
-            self._client = StrictRedis.from_url(self.redis_url)
-        return self._client
 
     def spawn_worker(self, *, idle_block_ms: int = 200) -> subprocess.Popen:
         """Launch a REAL ``langflow worker`` OS subprocess against the shared store."""
         env = dict(os.environ)
-        env["LANGFLOW_JOB_QUEUE_TYPE"] = "redis"
+        env["LANGFLOW_BACKGROUND_BACKEND"] = "scaled"
         env["LANGFLOW_DATABASE_URL"] = self.db_url
-        env["LANGFLOW_REDIS_QUEUE_URL"] = self.redis_url
         # Keep the worker quiet + deterministic; no telemetry/tracing.
         env["LANGFLOW_DEACTIVATE_TRACING"] = "true"
         env["DO_NOT_TRACK"] = "true"
-        # A REAL OS subprocess is the whole point of this proof (closes the Phase
-        # 4 in-process caveat); the argv is a fixed literal, not untrusted input.
-        # ``start_new_session`` puts the worker in its OWN process group: ``uv run``
-        # spawns a child python that does NOT inherit a SIGTERM sent to ``uv``, so
-        # we signal the whole group (see ``_kill_proc``) to avoid leaking workers.
+        # A REAL OS subprocess is the whole point of this proof; the argv is a
+        # fixed literal, not untrusted input. ``start_new_session`` puts the
+        # worker in its OWN process group: ``uv run`` spawns a child python that
+        # does NOT inherit a SIGTERM sent to ``uv``, so we signal the whole
+        # group (see ``signal_group``) to avoid leaking workers.
         proc = subprocess.Popen(  # noqa: S603
             ["uv", "run", "langflow", "worker", "--idle-block-ms", str(idle_block_ms)],  # noqa: S607
             env=env,
@@ -222,11 +199,6 @@ class WorkerHarness:
                 self.signal_group(proc, signal.SIGKILL)
                 with contextlib.suppress(Exception):
                     proc.wait(timeout=5)
-        if self._client is not None:
-            with contextlib.suppress(Exception):
-                await self._client.flushdb()
-            with contextlib.suppress(Exception):
-                await self._client.aclose()
         # Tear down the pg engine and restore the manager's DB service + settings
         # url + env var so this harness does not leak state to later tests.
         from langflow.services.deps import get_settings_service
@@ -248,12 +220,12 @@ class WorkerHarness:
             os.environ.pop("LANGFLOW_DATABASE_URL", None)
 
 
-async def setup_worker_harness(pg_uri: str, redis_base_url: str, *, redis_db: int = 14) -> WorkerHarness:
+async def setup_worker_harness(pg_uri: str) -> WorkerHarness:
     """Stand up the shared store + a JobService bound to it. Caller owns teardown.
 
     Migrates (creates) the schema on the shared Postgres via the async psycopg
     engine and binds ``session_scope`` to it, so both the test-side facade and
-    the worker subprocess read the SAME durable store.
+    the worker subprocess read the SAME durable store — which is also the queue.
     """
     from langflow.services.database.factory import DatabaseServiceFactory
     from langflow.services.deps import get_settings_service
@@ -262,7 +234,6 @@ async def setup_worker_harness(pg_uri: str, redis_base_url: str, *, redis_db: in
     from lfx.services.schema import ServiceType
 
     db_url = psycopg_url(pg_uri)
-    redis_url = redis_db_url(redis_base_url, redis_db)
 
     # The Settings.database_url ``mode='before'`` validator discards a directly
     # assigned value and re-derives a config-dir sqlite path UNLESS
@@ -281,9 +252,8 @@ async def setup_worker_harness(pg_uri: str, redis_base_url: str, *, redis_db: in
     manager.services[ServiceType.DATABASE_SERVICE] = db_service
     await db_service.create_db_and_tables()
 
-    harness = WorkerHarness(
+    return WorkerHarness(
         db_url=db_url,
-        redis_url=redis_url,
         job_service=JobService(),
         _prior_db_env=prior_db_env,
         _prior_db_env_set=prior_db_env_set,
@@ -291,6 +261,3 @@ async def setup_worker_harness(pg_uri: str, redis_base_url: str, *, redis_db: in
         _prior_settings_url=prior_settings_url,
         _db_service=db_service,
     )
-    # Flush the dedicated redis DB so a prior run cannot leak claim-queue ids.
-    await harness.client.flushdb()
-    return harness

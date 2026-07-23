@@ -1,29 +1,34 @@
-"""The facade factory selects the scaled redis backend when configured."""
+"""The facade factory selects the scaled DB backend when configured."""
 
 from __future__ import annotations
 
 import pytest
+from langflow.services.background_execution.db_backend import DBBackgroundQueue
 from langflow.services.background_execution.factory import select_background_backend
-from langflow.services.background_execution.redis_backend import RedisBackgroundQueue
 from langflow.services.background_execution.service import BackgroundExecutionService
 from langflow.services.deps import get_settings_service
 
 
-def test_factory_selects_scaled_backend_when_configured():
-    class _Settings:
-        background_backend_is_scaled = True
+class _ScaledSettings:
+    background_backend_is_scaled = True
+    background_lease_ttl_s = 45.0
+    background_poll_interval_s = 0.5
 
-    backend = select_background_backend(_Settings(), client=object(), job_service=object())
-    assert isinstance(backend, RedisBackgroundQueue)
+
+class _DefaultSettings:
+    background_backend_is_scaled = False
+
+
+def test_factory_selects_scaled_backend_when_configured():
+    backend = select_background_backend(_ScaledSettings(), job_service=object(), owner="worker:test")
+    assert isinstance(backend, DBBackgroundQueue)
+    assert backend._owner == "worker:test"
 
 
 def test_factory_returns_none_for_default_backend():
-    class _Settings:
-        background_backend_is_scaled = False
-
     # The default (in-process) backend is owned by the facade itself, so the
     # selector returns None: "no scaled backend, use the in-process path".
-    backend = select_background_backend(_Settings(), client=object(), job_service=object())
+    backend = select_background_backend(_DefaultSettings(), job_service=object())
     assert backend is None
 
 
@@ -31,17 +36,17 @@ def test_factory_returns_none_for_default_backend():
 def test_facade_builds_scaled_backend_from_settings():
     settings_service = get_settings_service()
     settings = settings_service.settings
-    original = settings.job_queue_type
+    original = settings.background_backend
     try:
-        # Default (asyncio): no scaled backend behind the facade.
-        settings.job_queue_type = "asyncio"
+        # Default: no scaled backend behind the facade.
+        settings.background_backend = "default"
         default_facade = BackgroundExecutionService(settings_service=settings_service)
         assert default_facade._scaled is False
 
-        # Scaled (redis): the facade builds the redis backend itself.
-        settings.job_queue_type = "redis"
+        # Scaled: the facade builds the DB backend itself.
+        settings.background_backend = "scaled"
         scaled_facade = BackgroundExecutionService(settings_service=settings_service)
         assert scaled_facade._scaled is True
-        assert isinstance(scaled_facade._backend, RedisBackgroundQueue)
+        assert isinstance(scaled_facade._backend, DBBackgroundQueue)
     finally:
-        settings.job_queue_type = original
+        settings.background_backend = original

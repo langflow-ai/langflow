@@ -845,14 +845,17 @@ def print_banner(host: str, port: int, protocol: str) -> None:
 def worker(
     log_level: str | None = typer.Option(None, help="Logging level."),
     env_file: Path | None = typer.Option(None, help="Path to the .env file."),
-    idle_block_ms: int = typer.Option(1000, help="Claim blocking-pop window in milliseconds."),
+    idle_block_ms: int = typer.Option(
+        1000, help="Claim poll window in milliseconds (idle sleep between claim attempts)."
+    ),
 ) -> None:
-    """Run a Langflow background worker that drains the redis job-claim queue.
+    """Run a Langflow background worker that drains queued jobs off the database.
 
-    Requires LANGFLOW_JOB_QUEUE_TYPE=redis. Each worker claims queued jobs, runs
-    them through the background JobRunner (publishing live frames to redis
-    Streams so any API replica can reattach), and releases the lease. Run as many
-    worker processes as you need horizontal capacity for.
+    Requires LANGFLOW_BACKGROUND_BACKEND=scaled and the same database as the
+    API. Each worker lease-claims QUEUED workflow jobs off the shared job table,
+    runs them through the background JobRunner (durable milestones land in
+    job_events, which any API replica's event tail reads), and releases the
+    lease. Run as many worker processes as you need horizontal capacity for.
     """
     if env_file:
         load_dotenv(env_file, override=True)
@@ -865,7 +868,7 @@ def worker(
         await initialize_services()
         settings = get_settings_service().settings
         if not settings.background_backend_is_scaled:
-            typer.echo("LANGFLOW_JOB_QUEUE_TYPE must be 'redis' to run a worker.")
+            typer.echo("LANGFLOW_BACKGROUND_BACKEND must be 'scaled' to run a worker.")
             raise typer.Exit(code=1)
 
         from uuid import uuid4
@@ -882,7 +885,7 @@ def worker(
         for sig in (signal.SIGTERM, signal.SIGINT):
             with suppress(NotImplementedError):
                 loop.add_signal_handler(sig, stop_event.set)
-        logger.info("Langflow worker started; draining the redis job-claim queue.")
+        logger.info("Langflow worker started; draining queued jobs off the database.")
         try:
             await run_worker_loop(
                 backend,

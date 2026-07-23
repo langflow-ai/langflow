@@ -22,18 +22,22 @@ class BackgroundExecutionServiceFactory(ServiceFactory):
         return BackgroundExecutionService(settings_service)
 
 
-def select_background_backend(settings, *, client, job_service):
+def select_background_backend(settings, *, job_service, owner=None):
     """Pick the scaled background backend per settings, or None for the default.
 
-    Scaled (redis) when ``settings.background_backend_is_scaled`` is True — a
-    separate ``langflow worker`` process drains the claim queue and publishes
-    live frames to redis Streams. Otherwise return None: the facade owns the
-    in-process executor + in-memory bus path directly (no separate backend
-    object). Backend selection follows the existing job_queue_type/redis
-    settings; see ``Settings.background_backend_is_scaled``.
+    Scaled when ``settings.background_backend == "scaled"``: the durable job
+    table is the work queue and separate ``langflow worker`` processes
+    lease-claim rows off the shared database. Otherwise return None: the facade
+    owns the in-process executor + in-memory bus path directly (no separate
+    backend object).
     """
     if settings.background_backend_is_scaled:
-        from langflow.services.background_execution.redis_backend import RedisBackgroundQueue
+        from langflow.services.background_execution.db_backend import DBBackgroundQueue
 
-        return RedisBackgroundQueue(client=client, job_service=job_service)
+        return DBBackgroundQueue(
+            job_service=job_service,
+            owner=owner,
+            lease_ttl_s=settings.background_lease_ttl_s,
+            poll_interval_s=settings.background_poll_interval_s,
+        )
     return None

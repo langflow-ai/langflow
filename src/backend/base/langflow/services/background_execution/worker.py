@@ -1,11 +1,11 @@
-"""The ``langflow worker`` process: claim jobs off redis and run the JobRunner.
+"""The ``langflow worker`` process: lease-claim jobs off the database and run them.
 
-In the scaled backend the API process only enqueues; this separate process
-drains the claim queue. On startup it reconciles orphaned leases
-(``requeue_lost``), then loops: claim a job id (blocking pop with a timeout so it
-can observe the stop event), run the runner, release the lease. A runner crash
-still releases the lease so the id does not get stuck on the processing list —
-the watchdog reconciles the durable job row separately.
+In the scaled backend the API process only persists QUEUED job rows; this
+separate process claims them off the SAME database. On startup it reconciles
+orphaned leases (``requeue_lost``), then loops: claim a job id (a poll that
+sleeps out its block window so it can observe the stop event), run the runner,
+release. The durable job row is the only queue state, so a runner crash leaves
+nothing to clean up beyond what the watchdog already reconciles.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
 
+from langflow.services.background_execution.db_backend import _coerce_uuid
 from langflow.services.background_execution.runner import JobRunner
 
 if TYPE_CHECKING:
@@ -30,8 +31,8 @@ class WorkerJobRunner:
     Given only a ``job_id``, this hydrates the persisted request + owner from the
     durable job row (exactly what ``submit`` stored under
     ``job_metadata['request']``), builds the SAME StreamAdapter + frame source the
-    API would have used, and drives the SAME ``JobRunner`` — but publishing live
-    frames to the redis Streams bus so any API replica can reattach.
+    API would have used, and drives the SAME ``JobRunner``. Durable milestones
+    land in ``job_events``, which any API replica's event tail reads.
 
     The frame source factory is injected so tests can script a build; production
     passes the v1 build loop (``_default_frame_source_factory``).
@@ -107,7 +108,6 @@ class WorkerJobRunner:
 
 async def _watchdog_loop(
     backend: Any,
-    job_service: Any,
     *,
     stop_event: asyncio.Event,
     lease_ttl_s: float,
@@ -116,36 +116,20 @@ async def _watchdog_loop(
     """Periodically reconcile orphaned leases until *stop_event* is set.
 
     This is the running watchdog the design calls for: a worker that died
-    mid-run leaves a stale-lease id on the processing list, and under a steady
-    fleet (no restarts) nothing else reconciles it. Running ``requeue_lost`` on
-    an interval reaps it WITHOUT requiring a new worker process to boot. Each
-    pass is best-effort so a transient error never kills the loop. When a DB is
-    wired (``job_service``), it also re-enqueues QUEUED rows stranded off redis.
+    mid-run leaves a stale-lease IN_PROGRESS row, and under a steady fleet (no
+    restarts) nothing else reconciles it. Running ``requeue_lost`` on an
+    interval reaps it WITHOUT requiring a new worker process to boot. Each pass
+    is best-effort so a transient error never kills the loop. QUEUED rows need
+    no recovery pass: the durable row is the queue, so a stale-leased QUEUED
+    row is directly re-claimable.
     """
     while not stop_event.is_set():
         with contextlib.suppress(Exception):
             await backend.requeue_lost(lease_ttl_s=lease_ttl_s)
-            if job_service is not None:
-                await _recover_stranded_queued(backend)
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=interval_s)
         except asyncio.TimeoutError:
             continue
-
-
-async def _recover_stranded_queued(backend: Any) -> None:
-    """Re-enqueue QUEUED workflow rows that are on neither redis list.
-
-    Covers the API-crash window between persisting a QUEUED row and the LPUSH:
-    such a row is invisible to ``requeue_lost`` (it only scans the processing
-    list). Each row is claimed atomically so two workers cannot double-enqueue.
-    The backend's claim guard only re-pushes ids that truly are not already
-    pending/processing.
-    """
-    recover = getattr(backend, "recover_stranded_queued", None)
-    if recover is None:
-        return
-    await recover()
 
 
 async def run_worker_loop(
@@ -162,15 +146,13 @@ async def run_worker_loop(
     """Claim-and-run loop with a periodic lease watchdog. Returns on *stop_event*.
 
     Args:
-        backend: object exposing requeue_lost(lease_ttl_s=), claim(block_ms=),
-            complete(id), and (optionally) recover_stranded_queued().
+        backend: object exposing requeue_lost(lease_ttl_s=) and claim(block_ms=).
         runner: object exposing run(job_id).
         stop_event: set by the signal handler for cooperative shutdown.
         idle_block_ms: how long claim() blocks waiting for work each iteration;
             kept short so the loop notices stop_event promptly.
         job_service: durable store; when set, the worker stamps a heartbeat on
-            claim (so a just-claimed job's lease is fresh while it starts) and
-            the watchdog also recovers QUEUED rows stranded off redis.
+            claim (so a just-claimed job's lease is fresh while it starts).
         owner: process-unique token stamped on the claim heartbeat.
         lease_ttl_s: lease window the watchdog uses to decide "dead".
         watchdog_interval_s: how often the periodic watchdog runs; None disables
@@ -178,16 +160,12 @@ async def run_worker_loop(
     """
     # Startup reconcile: requeue work lost by a previously-crashed worker.
     await backend.requeue_lost(lease_ttl_s=lease_ttl_s)
-    if job_service is not None:
-        with contextlib.suppress(Exception):
-            await _recover_stranded_queued(backend)
 
     watchdog_task: asyncio.Task | None = None
     if watchdog_interval_s is not None:
         watchdog_task = asyncio.create_task(
             _watchdog_loop(
                 backend,
-                job_service,
                 stop_event=stop_event,
                 lease_ttl_s=lease_ttl_s,
                 interval_s=watchdog_interval_s,
@@ -198,8 +176,8 @@ async def run_worker_loop(
         while not stop_event.is_set():
             job_id = await backend.claim(block_ms=idle_block_ms)
             if job_id is None:
-                # claim() blocks up to idle_block_ms on a real redis, but a backend
-                # that returns None promptly (empty queue, error path, test double)
+                # claim() sleeps out its block window on an empty queue, but a
+                # backend that returns None promptly (error path, test double)
                 # must not hot-spin — yield so the stop signal and other tasks run.
                 await asyncio.sleep(0)
                 continue
@@ -214,12 +192,10 @@ async def run_worker_loop(
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001
+                # The durable job row + watchdog decide whether the work should
+                # be retried; there is no separate lease to release — the row's
+                # status and heartbeat are the only queue state.
                 await logger.aexception(f"Worker: runner failed for job {job_id}: {exc}")
-            finally:
-                # Always release the lease — the durable job row + watchdog decide
-                # whether the work should be retried; a stuck processing-list entry
-                # would block reconcile forever.
-                await backend.complete(job_id)
     finally:
         if watchdog_task is not None:
             watchdog_task.cancel()
@@ -227,59 +203,33 @@ async def run_worker_loop(
                 await watchdog_task
 
 
-def _coerce_uuid(job_id: Any) -> Any:
-    from uuid import UUID
-
-    if isinstance(job_id, UUID):
-        return job_id
-    with contextlib.suppress(ValueError, AttributeError, TypeError):
-        return UUID(job_id)
-    return job_id
-
-
-def _build_redis_client(settings: Settings) -> Any:
-    """Construct a StrictRedis client for the job queue, mirroring RedisJobQueueService.
-
-    URL wins; otherwise host/port fall back to the cache redis settings and the
-    job-queue DB (default 1). The worker shares this exact resolution so its
-    claim queue + Streams bus point at the same redis the API enqueues to.
-    """
-    from redis.asyncio import StrictRedis
-
-    if settings.redis_queue_url:
-        return StrictRedis.from_url(settings.redis_queue_url)
-    host = settings.redis_queue_host or settings.redis_host
-    port = settings.redis_queue_port or settings.redis_port
-    return StrictRedis(host=host, port=port, db=settings.redis_queue_db)
-
-
 async def build_worker(*, owner: str | None = None):
-    """Construct the redis backend, the WorkerJobRunner, and a teardown callable.
+    """Construct the DB backend, the WorkerJobRunner, and a teardown callable.
 
-    Reads the live services (settings, jobs, redis client) so the worker process
-    shares the same configuration as the API. The runner publishes live frames to
-    the redis Streams bus (RedisStreamLiveBus) so any API replica can reattach.
-    ``owner`` is the process-unique token the in-flight runner stamps on the job
-    heartbeat. Returns ``(backend, runner, teardown)``.
+    Reads the live services (settings, jobs) so the worker process shares the
+    same database as the API. Cross-replica visibility needs no live bus: every
+    durable milestone lands in ``job_events``, which any API replica's event
+    tail polls. The runner still publishes to an in-process bus so its close
+    semantics (and any in-process subscriber) keep working. ``owner`` is the
+    process-unique token the in-flight runner stamps on the job heartbeat.
+    Returns ``(backend, runner, teardown)``.
     """
-    from langflow.services.background_execution.redis_backend import RedisBackgroundQueue
-    from langflow.services.background_execution.redis_live_bus import RedisStreamLiveBus
+    from langflow.services.background_execution.db_backend import DBBackgroundQueue
+    from langflow.services.background_execution.live_bus import InMemoryLiveBus
     from langflow.services.deps import get_job_service, get_settings_service
 
     settings = get_settings_service().settings
-    client = _build_redis_client(settings)
     job_service = get_job_service()
 
-    backend = RedisBackgroundQueue(
-        client=client,
+    backend = DBBackgroundQueue(
         job_service=job_service,
-        stream_ttl=settings.redis_queue_ttl,
-        startup_grace_s=settings.redis_queue_startup_grace_s,
+        owner=owner,
+        lease_ttl_s=settings.background_lease_ttl_s,
+        poll_interval_s=settings.background_poll_interval_s,
     )
-    live_bus = RedisStreamLiveBus(client, ttl=settings.redis_queue_ttl)
-    runner = WorkerJobRunner(settings=settings, live_bus=live_bus, owner=owner)
+    runner = WorkerJobRunner(settings=settings, live_bus=InMemoryLiveBus(), owner=owner)
 
     async def teardown() -> None:
-        await client.aclose()
+        """Nothing to close: the worker holds no broker connection."""
 
     return backend, runner, teardown
