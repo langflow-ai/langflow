@@ -22,6 +22,7 @@ from langflow.api.v1.mappers.deployments.helpers import (
     apply_flow_version_patch_attachments,
     attach_flow_versions,
     deployment_pagination_params,
+    ensure_flow_deploy_for_version_ids,
     flow_version_ids_for_flows,
     get_deployment_row_or_404,
     get_deployment_synced,
@@ -77,6 +78,7 @@ from langflow.services.authorization import (
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.database.models.deployment.crud import (
+    UNCONFIRMED_DELETE_ROWCOUNT,
     count_deployments_by_provider,
     delete_deployment_by_id,
     get_deployment_by_resource_key,
@@ -230,6 +232,7 @@ async def _count_provider_deployments_after_reconciliation(
     deployment_count = await count_deployments_by_provider(
         session,
         user_id=user_id,
+        row_owner_id=user_id,
         deployment_provider_account_id=provider_account.id,
     )
     if deployment_count <= 0:
@@ -243,6 +246,7 @@ async def _count_provider_deployments_after_reconciliation(
                 deployment_adapter=deployment_adapter,
                 deployment_mapper=deployment_mapper,
                 user_id=user_id,
+                row_owner_id=user_id,
                 provider_id=provider_account.id,
                 db=session,
                 page=1,
@@ -259,7 +263,30 @@ async def _count_provider_deployments_after_reconciliation(
     return deployment_count
 
 
-async def _delete_local_deployment_row_with_commit_retry(
+async def _delete_deployment_strictly_or_raise(
+    *,
+    session: DbSession,
+    deployment_id: UUID,
+    user_id: UUID,
+) -> None:
+    """Delete exactly one deployment row by PK + owner scope, or raise.
+
+    Raises:
+        HTTPException: 404 when the driver confirmed zero rows matched; 500 when
+            the affected-row count could not be confirmed
+            (:data:`UNCONFIRMED_DELETE_ROWCOUNT`).
+    """
+    deleted = await delete_deployment_by_id(session, user_id=user_id, deployment_id=deployment_id)
+    if deleted is UNCONFIRMED_DELETE_ROWCOUNT:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Deployment delete could not be confirmed.",
+        )
+    if deleted == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found.")
+
+
+async def _delete_local_deployment_row(
     *,
     session: DbSession,
     deployment_id: UUID,
@@ -268,36 +295,47 @@ async def _delete_local_deployment_row_with_commit_retry(
 ) -> None:
     """Delete the local deployment row, retrying once if the commit fails.
 
-    Delete is provider-first, so by the time this helper runs the provider
-    resource is already gone (or was already missing). If the first DB commit
-    fails, retry the local delete once after a rollback so we do not strand a
-    stale Langflow row that still blocks later reads or provider-account
-    deletion.
+    When ``include_provider`` was true on the route, the provider resource is
+    already gone (or was already missing) before this helper runs. Either way,
+    if the first DB commit fails, retry the local delete once after a rollback
+    so we do not strand a stale Langflow row.
+
+    Requires exactly one row deleted (PK + owner scope). A zero-row delete
+    means the local row was already gone or the owner scope was wrong — raise
+    404 rather than returning success.
     """
     try:
-        await delete_deployment_by_id(session, user_id=user_id, deployment_id=deployment_id)
+        await _delete_deployment_strictly_or_raise(session=session, user_id=user_id, deployment_id=deployment_id)
         await session.commit()
+    except HTTPException:
+        raise
     except Exception:  # noqa: BLE001
         await session.rollback()
         logger.warning(
-            "Local deployment cleanup failed for deployment %s (resource_key=%s) after provider delete; retrying.",
+            "Local deployment cleanup failed for deployment %s (resource_key=%s); retrying.",
             deployment_id,
             resource_key,
             exc_info=True,
         )
         try:
-            await delete_deployment_by_id(session, user_id=user_id, deployment_id=deployment_id)
+            await _delete_deployment_strictly_or_raise(session=session, user_id=user_id, deployment_id=deployment_id)
             await session.commit()
+        except HTTPException:
+            raise
         except Exception as exc:
             await session.rollback()
             logger.exception(
-                "Retrying local deployment cleanup failed for deployment %s (resource_key=%s) after provider delete.",
+                "Retrying local deployment cleanup failed for deployment %s (resource_key=%s).",
                 deployment_id,
                 resource_key,
             )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Deployment was deleted from the provider, but local cleanup failed. Retry the delete request.",
+                detail=(
+                    "Failed to delete the tracked deployment in Langflow. "
+                    "It may already have been deleted from the provider. "
+                    "Retry the delete request."
+                ),
             ) from exc
 
 
@@ -487,6 +525,27 @@ async def create_deployment(
 
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
+
+    # Authorize create (and flow:deploy) before any provider get/create so a
+    # denied caller cannot trigger provider reads, rate limits, or provider-side
+    # audit events via the existing-resource onboarding probe.
+    project_id = await resolve_project_id_for_deployment_create(payload=payload, user_id=current_user.id, db=session)
+    await ensure_deployment_permission(current_user, DeploymentAction.CREATE, project_id=project_id)
+    flow_version_ids = deployment_mapper.util_create_flow_version_ids(payload)
+    await validate_project_scoped_flow_version_ids(
+        flow_version_ids=flow_version_ids,
+        user_id=current_user.id,
+        project_id=project_id,
+        db=session,
+    )
+    await ensure_flow_deploy_for_version_ids(
+        user=current_user,
+        flow_version_ids=flow_version_ids,
+        owner_id=current_user.id,
+        db=session,
+        project_id=project_id,
+    )
+
     existing_resource_key = deployment_mapper.util_existing_deployment_resource_key_for_create(payload)
     existing_provider_resource: DeploymentGetResult | None = None
     if existing_resource_key is not None:
@@ -510,15 +569,6 @@ async def create_deployment(
                 db=session,
             )
     should_create_provider_resource = existing_resource_key is None
-    project_id = await resolve_project_id_for_deployment_create(payload=payload, user_id=current_user.id, db=session)
-    await ensure_deployment_permission(current_user, DeploymentAction.CREATE, project_id=project_id)
-    flow_version_ids = deployment_mapper.util_create_flow_version_ids(payload)
-    await validate_project_scoped_flow_version_ids(
-        flow_version_ids=flow_version_ids,
-        user_id=current_user.id,
-        project_id=project_id,
-        db=session,
-    )
     if should_create_provider_resource:
         adapter_payload = await deployment_mapper.resolve_deployment_create(
             user_id=current_user.id,
@@ -621,7 +671,9 @@ async def list_deployments(
     load_from_provider: Annotated[
         bool,
         Query(
-            description=("When true, list deployments directly from the provider (bypassing Langflow deployment rows).")
+            description=(
+                "When true, list deployments directly from the provider (bypassing Langflow-tracked deployments)."
+            )
         ),
     ] = False,
     flow_version_ids: Annotated[
@@ -741,7 +793,7 @@ async def list_deployments(
             deployment_adapter=deployment_adapter,
             deployment_mapper=deployment_mapper,
             user_id=current_user.id,
-            provider_owner_id=provider_account.user_id,
+            row_owner_id=provider_account.user_id,
             provider_id=provider_id,
             db=session,
             page=params.page,
@@ -1280,6 +1332,14 @@ async def update_snapshot(
         project_id=deployment.project_id,
         db=session,
     )
+    await ensure_flow_deploy_for_version_ids(
+        user=current_user,
+        flow_version_ids=[body.flow_version_id],
+        owner_id=owner_id,
+        db=session,
+        project_id=deployment.project_id,
+        workspace_id=deployment.workspace_id,
+    )
 
     provider_account = await get_owned_provider_account_or_404(
         provider_id=deployment.deployment_provider_account_id,
@@ -1502,12 +1562,6 @@ async def update_deployment(
     # owner's scope. ``current_user`` is still the actor for authorization
     # and audit, but the data plane operates in the owner's namespace.
     owner_id = deployment_row.user_id
-    adapter_payload = await deployment_mapper.resolve_deployment_update(
-        user_id=owner_id,
-        deployment_db_id=deployment_row_id,
-        db=session,
-        payload=payload,
-    )
     added_flow_version_ids, remove_flow_version_ids = resolve_flow_version_patch_for_update(
         deployment_mapper=deployment_mapper,
         payload=payload,
@@ -1517,6 +1571,25 @@ async def update_deployment(
         user_id=owner_id,
         project_id=deployment_row.project_id,
         db=session,
+    )
+    # Only newly published versions need flow:deploy; removals are gated by
+    # deployment:write alone today. There is no flow:undeploy (or similar) in
+    # FlowAction yet — consider adding one if detaching a version from a
+    # deployment should require its own grant. Authorize before
+    # resolve_deployment_update reads flow data.
+    await ensure_flow_deploy_for_version_ids(
+        user=current_user,
+        flow_version_ids=added_flow_version_ids,
+        owner_id=owner_id,
+        db=session,
+        project_id=deployment_row.project_id,
+        workspace_id=deployment_row.workspace_id,
+    )
+    adapter_payload = await deployment_mapper.resolve_deployment_update(
+        user_id=owner_id,
+        deployment_db_id=deployment_row_id,
+        db=session,
+        payload=payload,
     )
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(deployment_provider_account_id):
         update_result: DeploymentUpdateResult = await deployment_adapter.update(
@@ -1561,7 +1634,7 @@ async def update_deployment(
         # Roll back the session to discard any pending DB changes (or reset
         # it from the "inactive" state after a failed commit) so the mapper
         # can query the original attachment rows and build a compensating
-        # payload.
+        # payload. Compensating update must stay in the owner's namespace.
         await session.rollback()
         await rollback_provider_update(
             deployment_adapter=deployment_adapter,
@@ -1569,7 +1642,7 @@ async def update_deployment(
             deployment_db_id=deployment_row_id,
             deployment_resource_key=deployment_resource_key,
             deployment_provider_account_id=deployment_provider_account_id,
-            user_id=current_user.id,
+            user_id=owner_id,
             db=session,
         )
         if isinstance(exc, AttachmentConflictError):
@@ -1629,7 +1702,7 @@ async def delete_deployment(
                 deployment_row.resource_key,
                 deployment_row.deployment_provider_account_id,
             )
-    await _delete_local_deployment_row_with_commit_retry(
+    await _delete_local_deployment_row(
         session=session,
         deployment_id=deployment_row.id,
         user_id=deployment_row.user_id,

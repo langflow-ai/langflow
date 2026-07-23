@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -30,6 +31,7 @@ from langflow.services.authorization.actions import (
 from langflow.services.deps import get_authorization_service, get_settings_service
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from uuid import UUID
 
     from langflow.services.database.models.user.model import User, UserRead
@@ -435,6 +437,158 @@ async def ensure_flow_permission(
         },
         domain_override=domain,
     )
+
+
+async def _audit_flow_decision_batch(
+    *,
+    user_id: UUID | None,
+    act_str: str,
+    domain: str,
+    flow_results: Sequence[tuple[UUID, str]],
+) -> None:
+    """Audit one allow/deny/owner-override decision per flow id concurrently."""
+    await asyncio.gather(
+        *(
+            _audit.audit_decision(
+                user_id=user_id,
+                action=f"flow:{act_str}",
+                obj=f"flow:{flow_id}",
+                result=result,
+                details={"domain": domain, **_auth_audit_details()},
+            )
+            for flow_id, result in flow_results
+        )
+    )
+
+
+async def ensure_flows_permission(
+    user: User | UserRead,
+    act: FlowAction | str,
+    *,
+    flow_ids: Sequence[UUID],
+    flow_user_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+    folder_id: UUID | None = None,
+) -> None:
+    """Authorize ``act`` on every flow id via batched plugin enforce.
+
+    Mirrors :func:`ensure_flow_permission` semantics (external-access ceiling,
+    owner override, domain resolution, audit) but issues one
+    ``batch_enforce`` call instead of N individual ``enforce`` round-trips.
+    ``flow_user_id`` / ``workspace_id`` / ``folder_id`` apply to the whole
+    batch (same owner-namespace / domain for every id). Raises HTTP 403 if any
+    flow is denied.
+    """
+    if not flow_ids:
+        return
+
+    act_str = _coerce_action(act)
+    user_id = getattr(user, "id", None)
+    resolved_domain = _resolve_authz_domain(workspace_id, folder_id)
+
+    external_context = get_current_external_access_context()
+    if external_context is not None and not external_access_allows(act_str, external_context):
+        # Same fail-closed path as the single-flow guard; audit the ceiling deny
+        # once rather than per flow.
+        await _audit.audit_decision(
+            user_id=user_id,
+            action=f"flow:{act_str}",
+            obj="flow:*",
+            result=_audit.AUDIT_DENY,
+            details={
+                "domain": resolved_domain,
+                "external_auth_provider": external_context.provider,
+                "external_access_level": external_context.level,
+                "flow_count": len(flow_ids),
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="External credentials do not allow this action",
+        )
+
+    settings = get_settings_service()
+    if not settings.auth_settings.AUTHZ_ENABLED:
+        await _audit_flow_decision_batch(
+            user_id=user_id,
+            act_str=act_str,
+            domain=resolved_domain,
+            flow_results=[(flow_id, _audit.AUDIT_ALLOW) for flow_id in flow_ids],
+        )
+        return
+
+    auth_context = _auth_context(user)
+    owner_override_enabled = await should_apply_owner_override()
+    if owner_override_enabled and user_id is not None and flow_user_id == user_id:
+        await _audit_flow_decision_batch(
+            user_id=user_id,
+            act_str=act_str,
+            domain=resolved_domain,
+            flow_results=[(flow_id, _audit.AUDIT_OWNER_OVERRIDE) for flow_id in flow_ids],
+        )
+        return
+
+    authz = get_authorization_service()
+    requests = [(f"flow:{flow_id}", act_str) for flow_id in flow_ids]
+    try:
+        results = await authz.batch_enforce(
+            user_id=user_id,
+            domain=resolved_domain,
+            requests=requests,
+            context=auth_context,
+        )
+    except Exception as exc:
+        logger.exception("Authorization plugin raised during batch_enforce; failing closed")
+        await _audit.audit_decision(
+            user_id=user_id,
+            action=f"flow:{act_str}",
+            obj="flow:*",
+            result=_audit.AUDIT_DENY,
+            details={"domain": resolved_domain, "error": str(exc), **_auth_audit_details()},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=_DEFAULT_DENY_DETAIL,
+        ) from exc
+
+    if len(results) != len(flow_ids):
+        logger.error(
+            "Authorization plugin returned %d batch results for %d flow ids; failing closed",
+            len(results),
+            len(flow_ids),
+        )
+        await _audit.audit_decision(
+            user_id=user_id,
+            action=f"flow:{act_str}",
+            obj="flow:*",
+            result=_audit.AUDIT_DENY,
+            details={
+                "domain": resolved_domain,
+                "error": "batch_enforce result count mismatch",
+                "expected_results": len(flow_ids),
+                "actual_results": len(results),
+                **_auth_audit_details(),
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=_DEFAULT_DENY_DETAIL,
+        )
+
+    await _audit_flow_decision_batch(
+        user_id=user_id,
+        act_str=act_str,
+        domain=resolved_domain,
+        flow_results=[
+            (flow_id, _audit.AUDIT_ALLOW if allowed else _audit.AUDIT_DENY)
+            for flow_id, allowed in zip(flow_ids, results, strict=True)
+        ],
+    )
+    if not all(results):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=_DEFAULT_DENY_DETAIL,
+        )
 
 
 async def ensure_deployment_permission(
