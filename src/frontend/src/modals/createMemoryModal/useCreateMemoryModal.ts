@@ -1,8 +1,17 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent/types";
+import {
+  type AvailableDBProviderId,
+  type DBProviderConfigValue,
+  getDBProviderOption,
+  getDefaultDBProviderConfig,
+  isDBProviderConfigured,
+  toAPIBackendType,
+} from "@/constants/dbProviderConstants";
 import { useCreateMemory } from "@/controllers/API/queries/memories/use-create-memory";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
 
@@ -28,8 +37,63 @@ export function useCreateMemoryModal({
   >([]);
   const [preprocessingPrompt, setPreprocessingPrompt] = useState("");
 
+  // Vector-store backend for the Memory Base's backing KB. Config is derived
+  // entirely from DB Providers settings (global variables) — there is no per-MB
+  // config to fill in — so the only gate is whether the chosen provider is
+  // configured. Mirrors the Knowledge Base upload modal's provider selection.
+  const [backendType, setBackendType] =
+    useState<AvailableDBProviderId>("chroma");
+  const [backendConfig, setBackendConfig] = useState<
+    Record<string, DBProviderConfigValue>
+  >({});
+  // Cache per-provider config so switching away and back restores the user's
+  // (settings-derived) selection instead of resetting it.
+  const perProviderConfigsRef = useRef<
+    Partial<
+      Record<AvailableDBProviderId, Record<string, DBProviderConfigValue>>
+    >
+  >({});
+  const hasAppliedBackendDefaults = useRef(false);
+
   const { t } = useTranslation();
   const { data: modelProviders = [] } = useGetModelProviders({});
+  const { data: globalVariables = [], isFetched: areGlobalVariablesFetched } =
+    useGetGlobalVariables();
+
+  // Default to the platform's active DB provider (Chroma Cloud / OpenSearch when
+  // configured), falling back to local Chroma — identical to Knowledge Bases.
+  const defaultBackendSelection = useMemo(
+    () => getDefaultDBProviderConfig(globalVariables),
+    [globalVariables],
+  );
+
+  // Seed the selector from the active provider once global variables load.
+  useEffect(() => {
+    if (hasAppliedBackendDefaults.current || !areGlobalVariablesFetched) {
+      return;
+    }
+    hasAppliedBackendDefaults.current = true;
+    setBackendType(defaultBackendSelection.backendType);
+    setBackendConfig(defaultBackendSelection.backendConfig);
+  }, [areGlobalVariablesFetched, defaultBackendSelection]);
+
+  const handleBackendProviderChange = useCallback(
+    (
+      newType: AvailableDBProviderId,
+      freshConfig: Record<string, DBProviderConfigValue>,
+    ) => {
+      perProviderConfigsRef.current[backendType] = backendConfig;
+      const restored = perProviderConfigsRef.current[newType] ?? freshConfig;
+      setBackendType(newType);
+      setBackendConfig(restored);
+    },
+    [backendType, backendConfig],
+  );
+
+  const backendConfigured = isDBProviderConfigured(
+    backendType,
+    globalVariables,
+  );
   const { setErrorData, setSuccessData } = useAlertStore((state) => ({
     setErrorData: state.setErrorData,
     setSuccessData: state.setSuccessData,
@@ -82,6 +146,11 @@ export function useCreateMemoryModal({
     setPreprocessingEnabled(false);
     setSelectedPreprocessingModel([]);
     setPreprocessingPrompt("");
+    perProviderConfigsRef.current = {};
+    // Re-seed from the active provider the next time the modal opens.
+    hasAppliedBackendDefaults.current = false;
+    setBackendType(defaultBackendSelection.backendType);
+    setBackendConfig(defaultBackendSelection.backendConfig);
   };
 
   const createMemoryMutation = useCreateMemory({
@@ -139,6 +208,21 @@ export function useCreateMemoryModal({
       return;
     }
 
+    // Block creation only when a *remote* backend isn't configured in DB
+    // Providers settings. `isDBProviderConfigured` returns true unconditionally
+    // for local Chroma, so the default/local path is never blocked here.
+    if (!backendConfigured) {
+      setErrorData({
+        title: t("memory.validationError"),
+        list: [
+          t("memory.dbProviderNotConfigured", {
+            provider: getDBProviderOption(backendType).label,
+          }),
+        ],
+      });
+      return;
+    }
+
     const parsedThreshold = Math.max(1, parseInt(batchSizeInput, 10) || 1);
     const embeddingSelection = selectedEmbeddingModel[0];
 
@@ -155,6 +239,10 @@ export function useCreateMemoryModal({
       preproc_instructions: preprocessingEnabled
         ? preprocessingPrompt.trim()
         : undefined,
+      // `chroma_cloud` collapses to `chroma` for the API; the server
+      // discriminates local vs cloud via `backend_config.mode`.
+      backend_type: toAPIBackendType(backendType),
+      backend_config: backendConfig,
     });
   };
 
@@ -178,6 +266,10 @@ export function useCreateMemoryModal({
     setPreprocessingPrompt,
     embeddingModelOptions,
     llmModelOptions,
+    backendType,
+    handleBackendProviderChange,
+    globalVariables,
+    backendConfigured,
     createMemoryMutation,
     handleSubmit,
     handleClose,

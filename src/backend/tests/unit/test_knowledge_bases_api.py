@@ -356,16 +356,22 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 422
         assert "unknown vector-store backend" in response.text.lower()
 
-    async def test_create_knowledge_base_rejects_missing_backend_config(self, client: AsyncClient, logged_in_headers):
-        # OpenSearch is the only non-Chroma backend exposed for new KB
-        # creation in this phase (mongodb / astra / postgres are stubbed),
-        # so it's the one path where ``_REQUIRED_BACKEND_CONFIG`` still
-        # rejects an empty ``backend_config``.
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_create_knowledge_base_opensearch_without_index_name(
+        self, mock_root, mock_fresh_client, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        # OpenSearch KBs no longer require an ``index_name`` in
+        # ``backend_config``: the backend derives a unique index per KB from
+        # its name and creates it lazily on first write. An empty
+        # ``backend_config`` must therefore be accepted, not rejected.
+        mock_fresh_client.return_value = MagicMock()
+        mock_root.return_value = tmp_path
         response = await client.post(
             "api/v1/knowledge_bases",
             headers=logged_in_headers,
             json={
-                "name": "Missing_Backend_Config_KB",
+                "name": "OpenSearch_No_Index_KB",
                 "embedding_provider": "OpenAI",
                 "embedding_model": "text-embedding-3-small",
                 "backend_type": "opensearch",
@@ -373,8 +379,11 @@ class TestKnowledgeBaseAPI:
             },
         )
 
-        assert response.status_code == 422
-        assert "index_name" in response.text
+        assert response.status_code == 201, response.text
+        data = response.json()
+        assert data["backend_type"] == "opensearch"
+        # No shared index pinned into the config — the index is derived per-KB.
+        assert "index_name" not in data["backend_config"]
 
     async def test_create_knowledge_base_rejects_stubbed_backend(self, client: AsyncClient, logged_in_headers):
         """Stubbed backends fail at the schema layer with a "not enabled" message.
@@ -433,14 +442,19 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 422
         assert "unknown vector-store backend" in response.text.lower()
 
-    async def test_test_connection_rejects_missing_required_field(self, client: AsyncClient, logged_in_headers):
+    async def test_test_connection_does_not_require_index_name(self, client: AsyncClient, logged_in_headers):
+        # ``index_name`` is no longer a required field — the index is derived
+        # per-KB and created lazily — so a config without it must pass request
+        # validation (no 422) and reach the connectivity check. With no
+        # OPENSEARCH_URL secret configured in the test env, that check reports
+        # ok=False, but the request itself is accepted.
         response = await client.post(
             "api/v1/knowledge_bases/test-connection",
             headers=logged_in_headers,
             json={"backend_type": "opensearch", "backend_config": {}},
         )
-        assert response.status_code == 422
-        assert "index_name" in response.text
+        assert response.status_code == 200, response.text
+        assert response.json()["ok"] is False
 
     async def test_test_connection_returns_failure_for_unreachable_opensearch(
         self, client: AsyncClient, logged_in_headers
@@ -1176,14 +1190,14 @@ class TestKnowledgeBaseAPI:
         assert "NonExistent" in data["not_found"]
         assert mock_delete.called
 
-    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
+    @patch("langflow.api.utils.knowledge_base_service.get_by_user_and_name")
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_bulk_delete_skips_memory_base_kbs(
         self,
         mock_root,
         mock_delete,
-        mock_meta,
+        mock_get_record,
         client: AsyncClient,
         logged_in_headers,
         tmp_path,
@@ -1191,27 +1205,24 @@ class TestKnowledgeBaseAPI:
         # Memory-Base KBs in a bulk request must be reported back as
         # ``memory_base_skipped`` and NOT touched on disk; non-MB KBs in
         # the same request still delete normally.
+        #
+        # Detection is DB-backed: Memory Bases no longer write the on-disk
+        # sidecar, so the marker is read from the ``knowledge_base`` row's
+        # ``source_types`` (via ``get_by_user_and_name``), not ``get_metadata``.
         mock_root.return_value = tmp_path
         kb_user_path = tmp_path / "activeuser"
         kb_user_path.mkdir(parents=True)
         (kb_user_path / "PlainKB").mkdir()
         (kb_user_path / "MBKB").mkdir()
 
-        def fake_meta(kb_path, **_kwargs):
-            if kb_path.name == "MBKB":
-                return {
-                    "id": "00000000-0000-0000-0000-0000000000cc",
-                    "embedding_provider": "OpenAI",
-                    "embedding_model": "text-embedding-3-small",
-                    "source_types": ["memory"],
-                }
-            return {
-                "id": "00000000-0000-0000-0000-0000000000dd",
-                "embedding_provider": "OpenAI",
-                "embedding_model": "text-embedding-3-small",
-            }
+        def fake_record(_user_id, name):
+            if name == "MBKB":
+                # ``user_id`` a non-UUID so ``_guard_kb_action`` keeps the actor
+                # as the owner; ``source_types`` carries the Memory-Base marker.
+                return MagicMock(id=uuid.uuid4(), user_id=MagicMock(), source_types=["memory"])
+            return None
 
-        mock_meta.side_effect = fake_meta
+        mock_get_record.side_effect = fake_record
 
         response = await client.request(
             "DELETE",
@@ -1227,6 +1238,49 @@ class TestKnowledgeBaseAPI:
         deleted_paths = [call.args[0].name for call in mock_delete.call_args_list]
         assert "PlainKB" in deleted_paths
         assert "MBKB" not in deleted_paths
+
+    @patch("langflow.api.v1.knowledge_bases._cleanup_orphan_db_row")
+    @patch("langflow.api.utils.knowledge_base_service.get_by_user_and_name")
+    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_bulk_delete_skips_memory_base_with_missing_local_dir(
+        self,
+        mock_root,
+        mock_delete,
+        mock_get_record,
+        mock_orphan,
+        client: AsyncClient,
+        logged_in_headers,
+        tmp_path,
+    ):
+        # A remote-backed Memory Base whose local directory is gone must still
+        # be protected: the DB-backed guard runs BEFORE path resolution and the
+        # orphan-row cleanup, so the cleanup (which would drop the remote
+        # collection + KB row with no MB check) never runs for it.
+        mock_root.return_value = tmp_path
+        kb_user_path = tmp_path / "activeuser"
+        kb_user_path.mkdir(parents=True)  # note: no "MBKB" subdir → path resolves 404
+
+        def fake_record(_user_id, name):
+            if name == "MBKB":
+                return MagicMock(id=uuid.uuid4(), user_id=MagicMock(), source_types=["memory"])
+            return None
+
+        mock_get_record.side_effect = fake_record
+
+        response = await client.request(
+            "DELETE",
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={"kb_names": ["MBKB"]},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["deleted_count"] == 0
+        assert data.get("memory_base_skipped") == "MBKB"
+        # The orphan-row cleanup must never fire for a Memory-Base KB.
+        mock_orphan.assert_not_called()
+        mock_delete.assert_not_called()
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_bulk_delete_path_traversal_single_level(
