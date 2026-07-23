@@ -138,6 +138,37 @@ def test_forwards_optional_gateway_key_language_and_full_endpoint(
     }
 
 
+def test_opens_the_validated_resolved_audio_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requested_file = tmp_path / "requested.wav"
+    requested_file.write_bytes(b"untrusted-audio")
+    allowed_file = tmp_path / "allowed.wav"
+    allowed_file.write_bytes(b"validated-audio")
+    observed_body = b""
+
+    def allow_validated_path(_path: str | Path, *, scope_ids: tuple[str, ...]) -> Path:
+        del scope_ids
+        return allowed_file
+
+    def fake_post(_url: str, **kwargs: Any) -> httpx.Response:
+        nonlocal observed_body
+        observed_body = kwargs["files"]["file"][1].read()
+        return _response(200, {"text": "validated transcript"})
+
+    monkeypatch.setattr(
+        "lfx_bundles.funasr.funasr_transcription.enforce_local_file_access",
+        allow_validated_path,
+    )
+    monkeypatch.setattr("lfx_bundles.funasr.funasr_transcription.ssrf_safe_httpx_post", fake_post)
+
+    result = _component(requested_file).transcribe()
+
+    assert result.text == "validated transcript"
+    assert observed_body == b"validated-audio"
+
+
 def test_rejects_untrusted_audio_before_request(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
