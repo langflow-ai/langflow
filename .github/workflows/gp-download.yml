@@ -2,7 +2,7 @@ name: GP Download Translations
 
 on:
   schedule:
-    - cron: "0 23 * * *" # 11 PM UTC — 1h before nightly build at midnight
+    - cron: "0 23 * * *" # 11 PM UTC daily — pulls latest translations from GP
   workflow_dispatch:
 
 jobs:
@@ -53,24 +53,29 @@ jobs:
           GP_BUNDLE: ${{ vars.GP_BUNDLE }}
         run: python download.py --target frontend --output ../../src/frontend/src/locales/
 
-      - name: Close stale translation PRs
+      - name: Close stale translation PRs targeting old release branches
         uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const latestRelease = '${{ steps.resolve-branch.outputs.branch }}';
             const { data: pulls } = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              state: 'open'
+              state: 'open',
+              head: `${context.repo.owner}:translations/update-gp`
             });
             for (const pull of pulls) {
-              if (pull.title === "chore: update translations from Globalization Pipeline") {
+              if (pull.base.ref !== latestRelease) {
                 await github.rest.pulls.update({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   pull_number: pull.number,
                   state: 'closed'
                 });
+                console.log(`Closed PR #${pull.number} — was targeting ${pull.base.ref}, now targeting ${latestRelease}`);
+              } else {
+                console.log(`PR #${pull.number} already targets ${latestRelease}, will update in place`);
               }
             }
 
@@ -89,7 +94,6 @@ jobs:
             This PR was automatically created by the `gp-download` workflow.
             If no files changed, this PR will be empty and can be closed.
           branch: translations/update-gp
-          branch-suffix: timestamp
           delete-branch: true
           maintainer-can-modify: true
           add-paths: src/frontend/src/locales/*.json
@@ -154,24 +158,29 @@ jobs:
           GP_BACKEND_BUNDLE: ${{ vars.GP_BACKEND_BUNDLE }}
         run: python download.py --target backend
 
-      - name: Close stale backend translation PRs
+      - name: Close stale backend translation PRs targeting old release branches
         uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const latestRelease = '${{ steps.resolve-branch.outputs.branch }}';
             const { data: pulls } = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              state: 'open'
+              state: 'open',
+              head: `${context.repo.owner}:translations/update-backend-gp`
             });
             for (const pull of pulls) {
-              if (pull.title === "chore: update backend translations from Globalization Pipeline") {
+              if (pull.base.ref !== latestRelease) {
                 await github.rest.pulls.update({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   pull_number: pull.number,
                   state: 'closed'
                 });
+                console.log(`Closed PR #${pull.number} — was targeting ${pull.base.ref}, now targeting ${latestRelease}`);
+              } else {
+                console.log(`PR #${pull.number} already targets ${latestRelease}, will update in place`);
               }
             }
 
@@ -190,7 +199,6 @@ jobs:
             This PR was automatically created by the `gp-download` workflow.
             If no files changed, this PR will be empty and can be closed.
           branch: translations/update-backend-gp
-          branch-suffix: timestamp
           delete-branch: true
           maintainer-can-modify: true
           add-paths: src/backend/base/langflow/locales/*.json
