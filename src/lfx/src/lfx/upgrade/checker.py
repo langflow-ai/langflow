@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 COMPONENTS_TO_IGNORE_UPDATE: frozenset[str] = frozenset({"CustomComponent"})
+TRANSIENT_TEMPLATE_KEYS: frozenset[str] = frozenset({"is_refresh", "tools_metadata"})
 
 NodeStatusLiteral = Literal["ok", "outdated_safe", "outdated_breaking", "blocked"]
 
@@ -83,8 +84,13 @@ def _outputs_are_compatible(registry_outputs: list[dict], flow_outputs: list[dic
     return True
 
 
+def _structural_template_keys(template: Mapping[str, Any]) -> set[str]:
+    """Return component fields while excluding frontend-only runtime metadata."""
+    return {key for key in template if not key.startswith("_") and key not in TRANSIENT_TEMPLATE_KEYS}
+
+
 def _template_keys_equal(original: dict, user: dict) -> bool:
-    return sorted(original) == sorted(user)
+    return _structural_template_keys(original) == _structural_template_keys(user)
 
 
 def _input_types_contained(registry_template: dict, flow_template: dict) -> bool:
