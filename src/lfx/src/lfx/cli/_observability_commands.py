@@ -36,7 +36,10 @@ def doctor_command(
     ),
 ) -> None:
     """Confirm telemetry actually reaches the backend, instead of trusting a silent exporter."""
+    import math
+
     from rich.console import Console
+    from rich.markup import escape
 
     from lfx.observability_doctor import FAILED, OK, SKIPPED, run_doctor
 
@@ -44,29 +47,35 @@ def doctor_command(
     # auto-highlighting turns the one thing the operator needs to read into confetti.
     console = Console(highlight=False)
 
-    if timeout is not None and timeout <= 0:
+    if timeout is not None and not (timeout > 0 and math.isfinite(timeout)):
         # The exporters resolve the timeout as `timeout or <env/default>`, so a zero would be
-        # silently replaced by the default rather than failing fast. Reject it here instead.
-        console.print("[red]--timeout must be greater than 0.[/red]")
+        # silently replaced by the default rather than failing fast. nan and inf pass a bare
+        # `<= 0` check and then fail deep inside the transport as a bogus pipeline error.
+        console.print("[red]--timeout must be a finite number greater than 0.[/red]")
         raise typer.Exit(2)
 
     report = run_doctor(timeout=timeout)
 
     if report.error:
-        console.print(f"[red]{report.error}[/red]")
+        console.print(f"[red]{escape(report.error)}[/red]")
         raise typer.Exit(1)
 
-    console.print(f"service.name: [cyan]{report.service_name}[/cyan]\n")
+    # Everything below that came from the environment or from a server goes through escape().
+    # Markup is on, and these strings routinely contain square brackets: an IPv6 endpoint like
+    # http://[fd00::1]:4318 would otherwise render as http://:4318, silently deleting the address
+    # in the one tool whose job is naming which end is wrong, and an unbalanced tag in a server's
+    # reason phrase would abort the whole report with a MarkupError.
+    console.print(f"service.name: [cyan]{escape(report.service_name)}[/cyan]\n")
 
     marks = {OK: "[green]OK[/green]", FAILED: "[red]FAILED[/red]", SKIPPED: "[yellow]SKIPPED[/yellow]"}
     for signal in report.signals:
-        console.print(f"{marks[signal.status]} {signal.signal}: {signal.detail}")
+        console.print(f"{marks[signal.status]} {signal.signal}: {escape(signal.detail)}")
         # Per signal, because a per-signal header variable replaces the generic one rather than
         # adding to it. "traces authenticate, metrics 401" is exactly what this disambiguates.
         if signal.header_keys:
-            console.print(f"    [dim]headers: {', '.join(signal.header_keys)}[/dim]")
+            console.print(f"    [dim]headers: {escape(', '.join(signal.header_keys))}[/dim]")
         for message in signal.exporter_logs:
-            console.print(f"    [dim]{message}[/dim]")
+            console.print(f"    [dim]{escape(message)}[/dim]")
 
     if not report.ok:
         raise typer.Exit(1)
@@ -78,7 +87,9 @@ def doctor_command(
         console.print("\n[yellow]Every signal is disabled, so nothing was sent.[/yellow]")
         raise typer.Exit(1)
 
-    console.print(f"\nLook for [cyan]{report.service_name}[/cyan] items named [cyan]lfx.observability.doctor[/cyan].")
+    console.print(
+        f"\nLook for [cyan]{escape(report.service_name)}[/cyan] items named [cyan]lfx.observability.doctor[/cyan]."
+    )
     # A green result means this process can reach the backend with this configuration. It does
     # not mean a separate running server installed its providers: bootstrap declines traces and
     # logs when another provider is already present, which only that process can observe.
