@@ -52,22 +52,24 @@ SUPPORTED_OTLP_PROTOCOLS = ("grpc", "http/protobuf")
 # carry prompt and completion text, which must never reach the operator's APM, so anything
 # not named here is dropped.
 #
-# The rule for adding to this list: only scopes the runtime itself instruments against its own
-# provider. A scope is NOT safe merely because it sounds like infrastructure. The LLM vendor
-# SDKs call bare Instrumentor().instrument() with no tracer_provider, which binds them to
-# whatever global provider exists, i.e. ours. requests and urllib3 were on this list and had
-# to be removed for exactly that reason: traceloop-sdk instruments both, so every outbound
-# LLM API call produced a span here, carrying the request URL, and provider keys passed as
-# query parameters travelled with it. Langflow's own uses of those two pass tracer_provider=
-# explicitly, so they never route through this processor. Redis is deliberately absent for
-# the same reason: traceloop-sdk instruments it and the runtime does not. sqlalchemy and httpx
-# are listed ahead of the instrumentation the runtime adds for them, and carry no LLM content.
+# The rule for adding to this list: only scopes the runtime instruments *right now*, against
+# its own provider. A scope is NOT safe merely because it sounds like infrastructure, and it is
+# NOT safe to list speculatively "for when we instrument it". The LLM vendor SDKs call bare
+# Instrumentor().instrument() with no tracer_provider, which binds them to whatever global
+# provider exists, i.e. ours. requests and urllib3 were on this list and had to be removed for
+# exactly that reason: traceloop-sdk instruments both, so every outbound LLM API call produced
+# a span here, carrying the request URL, and provider keys passed as query parameters travelled
+# with it. httpx is the same trap and is the transport the openai and anthropic SDKs ride on,
+# so it is deliberately absent until the runtime instruments it with an explicit
+# tracer_provider=. sqlalchemy and redis are absent for the same reason: nothing here
+# instruments them today, so listing them would only open a hole for a global instrumentor.
+# Only asgi and fastapi (installed by instrument_fastapi_app) and APPLICATION_TRACER_NAME (the
+# flow span) are emitted against our provider, so only they are listed. Re-add a scope the same
+# commit that wires its instrumentor with tracer_provider=, never before.
 APPLICATION_INSTRUMENTATION_SCOPES = frozenset(
     {
         "opentelemetry.instrumentation.asgi",
         "opentelemetry.instrumentation.fastapi",
-        "opentelemetry.instrumentation.httpx",
-        "opentelemetry.instrumentation.sqlalchemy",
         APPLICATION_TRACER_NAME,
     }
 )

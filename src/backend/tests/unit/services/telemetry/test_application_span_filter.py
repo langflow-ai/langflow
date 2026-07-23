@@ -83,33 +83,42 @@ def test_application_and_llm_spans_together_export_only_the_application_span(exp
 def test_child_of_a_dropped_span_is_still_exported_and_orphaned(exporter_and_provider):
     """Pins a known consequence rather than asserting it is desirable.
 
-    An outbound call made inside an LLM component still reaches the APM, but its parent
-    does not, so the trace renders with a gap. Documented in ApplicationOnlySpanProcessor.
+    An application span nested inside a dropped LLM span (a sub-flow run from inside an agent
+    component) still reaches the APM, but its parent does not, so the trace renders with a
+    gap. Documented in ApplicationOnlySpanProcessor.
     """
     from opentelemetry.trace import use_span
 
     exporter, provider = exporter_and_provider
     llm_span = provider.get_tracer("opentelemetry.instrumentation.openai").start_span("openai.chat")
     with use_span(llm_span, end_on_exit=False):
-        provider.get_tracer("opentelemetry.instrumentation.httpx").start_span("POST api.openai.com").end()
+        provider.get_tracer(APPLICATION_TRACER_NAME).start_span("flow.execute").end()
     llm_span.end()
 
     provider.force_flush()
     finished = exporter.get_finished_spans()
-    assert [s.name for s in finished] == ["POST api.openai.com"]
+    assert [s.name for s in finished] == ["flow.execute"]
     exported_ids = {s.context.span_id for s in finished}
     assert finished[0].parent is not None
     assert finished[0].parent.span_id not in exported_ids, "parent should be absent, not silently re-parented"
 
 
-@pytest.mark.parametrize("scope", ["opentelemetry.instrumentation.requests", "opentelemetry.instrumentation.urllib3"])
+@pytest.mark.parametrize(
+    "scope",
+    [
+        "opentelemetry.instrumentation.requests",
+        "opentelemetry.instrumentation.urllib3",
+        "opentelemetry.instrumentation.httpx",
+    ],
+)
 def test_outbound_http_client_scopes_are_not_allowlisted(scope):
     """The LLM vendor SDKs instrument these globally, so they carry outbound LLM API calls.
 
-    traceloop-sdk calls RequestsInstrumentor().instrument() and the urllib3 equivalent with no
-    tracer_provider, which binds them to our global provider. Allowlisting them produced one
-    span per outbound LLM call, carrying the request URL, and provider keys passed as query
-    parameters travelled with it. Langflow's own uses pass tracer_provider= explicitly.
+    traceloop-sdk calls RequestsInstrumentor().instrument() and the urllib3/httpx equivalents
+    with no tracer_provider, which binds them to our global provider. Allowlisting them would
+    produce one span per outbound LLM call, carrying the request URL, and provider keys passed
+    as query parameters would travel with it. httpx especially: it is the transport the openai
+    and anthropic SDKs use. The runtime's own uses pass tracer_provider= explicitly.
     """
     assert scope not in APPLICATION_INSTRUMENTATION_SCOPES
 
