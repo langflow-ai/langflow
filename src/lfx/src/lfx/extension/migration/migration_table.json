@@ -4910,6 +4910,11 @@
       "legacy_slot": "ext:valkey:ValkeyIndexChatMemory@official-pre-a",
       "target": "ext:valkey:ValkeyIndexChatMemory@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "FunASRTranscriptionComponent",
+      "target": "ext:funasr:FunASRTranscriptionComponent@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [
