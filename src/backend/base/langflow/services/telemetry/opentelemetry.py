@@ -1,260 +1,52 @@
-import os
 import threading
 from collections.abc import Mapping
 from enum import Enum
 from typing import Any
 from weakref import WeakValueDictionary
 
-from lfx.log.logger import logger
-from lfx.observability import APPLICATION_TRACER_NAME
-from opentelemetry import _logs, metrics, trace
-from opentelemetry.exporter.prometheus import PrometheusMetricReader
+from lfx.observability import (
+    APPLICATION_INSTRUMENTATION_SCOPES,
+    APPLICATION_METER_NAME,
+    APPLICATION_METRIC_SCOPES,
+    APPLICATION_TRACER_NAME,
+    DEFAULT_SERVICE_NAME,
+    PROCESS_METRICS_CONFIG,
+    SUPPORTED_OTLP_PROTOCOLS,
+    ApplicationOnlyMetricExporter,
+    ApplicationOnlySpanProcessor,
+    ApplicationTelemetry,
+    bootstrap_application_telemetry,
+)
+from opentelemetry import metrics
 from opentelemetry.metrics import CallbackOptions, Observation
 from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDownCounter
 from opentelemetry.sdk._logs import LoggerProvider
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import (
-    MetricExporter,
-    MetricExportResult,
-    MetricsData,
-    PeriodicExportingMetricReader,
-    ResourceMetrics,
-)
-from opentelemetry.sdk.resources import SERVICE_NAME, OTELResourceDetector, Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+# The provider bootstrap, the export filters and the runtime metrics now live in
+# lfx.observability, so that lfx serve and lfx run get the same application observability as
+# the full langflow app. They are re-exported above only so existing importers of this module
+# keep working. What stays here is the langflow-specific metric registry (the custom counters
+# and gauges below) and the singleton that installs them on the bootstrapped meter provider.
 
 # a default OpenTelemetry meter name
-langflow_meter_name = "langflow"
+langflow_meter_name = APPLICATION_METER_NAME
 
-
-DEFAULT_SERVICE_NAME = "langflow"
-SUPPORTED_OTLP_PROTOCOLS = ("grpc", "http/protobuf")
-
-# Instrumentation scopes whose spans describe the service itself. This is an allowlist, not
-# a denylist, because the LLM instrumentors ship inside the very same
-# opentelemetry.instrumentation.* namespace as the application ones (openai, anthropic,
-# langchain, bedrock, ... are all installed alongside fastapi and sqlalchemy). Their spans
-# carry prompt and completion text, which must never reach the operator's APM, so anything
-# not named here is dropped.
-#
-# The rule for adding to this list: only scopes Langflow itself instruments against its own
-# provider. A scope is NOT safe merely because it sounds like infrastructure. The LLM vendor
-# SDKs call bare Instrumentor().instrument() with no tracer_provider, which binds them to
-# whatever global provider exists, i.e. ours. requests and urllib3 were on this list and had
-# to be removed for exactly that reason: traceloop-sdk instruments both, so every outbound
-# LLM API call produced a span here, carrying the request URL, and provider keys passed as
-# query parameters travelled with it. Langflow's own uses of those two live in
-# services/tracing/http_instrumentation.py and pass tracer_provider= explicitly, so they
-# never route through this processor. Redis is deliberately absent for the same reason:
-# traceloop-sdk instruments it and Langflow does not. sqlalchemy and httpx are listed ahead
-# of the instrumentation Langflow adds for them, and carry no LLM content either way.
-APPLICATION_INSTRUMENTATION_SCOPES = frozenset(
-    {
-        "opentelemetry.instrumentation.asgi",
-        "opentelemetry.instrumentation.fastapi",
-        "opentelemetry.instrumentation.httpx",
-        "opentelemetry.instrumentation.sqlalchemy",
-        APPLICATION_TRACER_NAME,
-    }
-)
-
-# The same boundary for metrics. Separate from the span set because the meter Langflow
-# records its own counters and histograms on is named "langflow", while its application
-# spans use APPLICATION_TRACER_NAME, and because the runtime metrics below have no span
-# equivalent at all.
-APPLICATION_METRIC_SCOPES = APPLICATION_INSTRUMENTATION_SCOPES | {
-    langflow_meter_name,
-    "opentelemetry.instrumentation.system_metrics",
-}
-
-# Runtime health for this process, deliberately not for the host.
-#
-# The instrumentation's default set also covers system-wide CPU, memory, disk and network.
-# Those describe the machine, not the service: under Kubernetes they report the node, which
-# is misleading next to a per-pod request rate, and the disk and network families multiply
-# by device. An operator already has node metrics from their infrastructure agent. What they
-# cannot get anywhere else is what *this* interpreter is doing, so that is what is sent.
-#
-# GC is included because it is the Python-specific failure mode: a service that is slow while
-# CPU looks fine is usually collecting, and without this the trace shows latency with no cause.
-PROCESS_METRICS_CONFIG = {
-    "process.cpu.time": ["user", "system"],
-    "process.cpu.utilization": ["user", "system"],
-    "process.memory.usage": None,
-    "process.memory.virtual": None,
-    "process.thread.count": None,
-    "process.open_file_descriptor.count": None,
-    "process.context_switches": ["involuntary", "voluntary"],
-    "cpython.gc.collections": None,
-    "cpython.gc.collected_objects": None,
-    "cpython.gc.uncollectable_objects": None,
-}
-
-
-class ApplicationOnlySpanProcessor(BatchSpanProcessor):
-    """Exports only spans that describe the application, dropping everything else.
-
-    Langflow installs a global tracer provider, so any library that takes a tracer from it
-    ends up exporting through this processor. That includes the LLM tracing integrations,
-    whose spans carry prompts and completions. Filtering on the way out keeps the boundary
-    in one place and costs the vendor integrations nothing.
-
-    Drops are logged once per scope at debug level; they are the expected case for LLM
-    instrumentation, and logging every one would be noise.
-
-    Known consequence: an exported span whose parent was dropped arrives at the APM with a
-    parent that never shows up, so the trace renders with a gap. That follows from the
-    requirement of zero component spans in the APM, and it cannot be repaired here because
-    a child ends before its parent, so there is no way to know at the child's on_end that
-    the parent will be dropped. Scrubbing attributes instead of dropping would keep the
-    tree intact, but the requirement is no component spans, not merely no content.
-    """
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self._dropped_scopes: set[str] = set()
-
-    def on_end(self, span) -> None:
-        scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
-        if scope in APPLICATION_INSTRUMENTATION_SCOPES:
-            super().on_end(span)
-            return
-        if scope not in self._dropped_scopes:
-            self._dropped_scopes.add(scope)
-            logger.debug(f"Not exporting spans from {scope!r}; only application telemetry is sent to the APM.")
-
-
-class ApplicationOnlyMetricExporter(MetricExporter):
-    """Pushes only the service's own metrics, dropping every other instrumentation scope.
-
-    The metrics counterpart of ApplicationOnlySpanProcessor, and it exists for the same
-    reason: Langflow installs a global meter provider, and the LLM instrumentors take their
-    meters from it with a bare get_meter, so their gen_ai token and duration metrics would
-    otherwise be pushed to the operator's APM alongside the service's own. Those belong to
-    the LLM tracing integrations and their separate backends.
-
-    Only the push exporter is wrapped. The local Prometheus endpoint is the flow author's
-    own process and keeps seeing everything.
-    """
-
-    def __init__(self, exporter: MetricExporter) -> None:
-        # Read off the wrapped exporter rather than defaulted: the temporality preference is
-        # how OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta reaches the reader, and
-        # New Relic rejects cumulative. These are the same private attributes
-        # PeriodicExportingMetricReader itself reads from an exporter.
-        super().__init__(
-            preferred_temporality=exporter._preferred_temporality,  # noqa: SLF001
-            preferred_aggregation=exporter._preferred_aggregation,  # noqa: SLF001
-        )
-        self._exporter = exporter
-        self._dropped_scopes: set[str] = set()
-
-    def _allowed(self, scope_name: str) -> bool:
-        if scope_name in APPLICATION_METRIC_SCOPES:
-            return True
-        if scope_name not in self._dropped_scopes:
-            self._dropped_scopes.add(scope_name)
-            logger.debug(f"Not exporting metrics from {scope_name!r}; only application telemetry is sent to the APM.")
-        return False
-
-    def export(self, metrics_data: MetricsData, timeout_millis: float = 10_000, **kwargs) -> MetricExportResult:
-        resource_metrics = []
-        for rm in metrics_data.resource_metrics:
-            scope_metrics = [sm for sm in rm.scope_metrics if self._allowed(sm.scope.name if sm.scope else "")]
-            if scope_metrics:
-                resource_metrics.append(
-                    ResourceMetrics(resource=rm.resource, scope_metrics=scope_metrics, schema_url=rm.schema_url)
-                )
-        # Nothing survived the filter; an empty export is a wasted round trip, not a failure.
-        if not resource_metrics:
-            return MetricExportResult.SUCCESS
-        return self._exporter.export(MetricsData(resource_metrics=resource_metrics), timeout_millis, **kwargs)
-
-    def force_flush(self, timeout_millis: float = 10_000) -> bool:
-        return self._exporter.force_flush(timeout_millis)
-
-    def shutdown(self, timeout_millis: float = 30_000, **kwargs) -> None:
-        self._exporter.shutdown(timeout_millis, **kwargs)
-
-
-def _resource() -> Resource:
-    """Build the resource, letting OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES win.
-
-    Resource.create() gives explicit attributes precedence over both env vars, so passing
-    service.name unconditionally would make them unsettable. Ask the SDK's own detector
-    whether the environment supplied one, and only fall back to our default when it did
-    not. Parsing the env ourselves gets keys that merely end in service.name
-    (k8s.service.name=...) and values with spaces around the = wrong.
-    """
-    if OTELResourceDetector().detect().attributes.get(SERVICE_NAME):
-        return Resource.create()
-    return Resource.create({SERVICE_NAME: DEFAULT_SERVICE_NAME})
-
-
-def _otlp_protocol(signal: str) -> str:
-    """Resolve the OTLP protocol, per-signal variable first, then the generic one.
-
-    The SDK's own auto-configuration strips whitespace and rejects unknown values; match
-    that leniency so a stray space does not silently route gRPC traffic at an HTTP exporter.
-    """
-    protocol = (
-        os.getenv(f"OTEL_EXPORTER_OTLP_{signal.upper()}_PROTOCOL")
-        or os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL")
-        or "http/protobuf"
-    ).strip()
-    if protocol not in SUPPORTED_OTLP_PROTOCOLS:
-        logger.warning(
-            f"Unsupported OTLP protocol {protocol!r}; falling back to http/protobuf. "
-            f"Supported values: {', '.join(SUPPORTED_OTLP_PROTOCOLS)}."
-        )
-        return "http/protobuf"
-    return protocol
-
-
-def _otlp_span_exporter(protocol: str):
-    """Build the OTLP span exporter; it reads endpoint, headers and timeout from the environment."""
-    if protocol == "grpc":
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-    else:
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-    return OTLPSpanExporter()
-
-
-def _otlp_metric_reader() -> PeriodicExportingMetricReader | None:
-    """Build the OTLP push reader when the standard OTel env vars opt in.
-
-    The exporter and the reader take no arguments on purpose: endpoint, headers, timeout,
-    compression, export interval and OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
-    (New Relic requires delta) all come from the environment, and passing any of them here
-    would make the corresponding variable unsettable.
-
-    The final flush on exit needs no wiring: MeterProvider registers its own atexit handler
-    (shutdown_on_exit defaults to True), which shuts the reader down and drains it.
-    """
-    endpoint = os.getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-    if not endpoint:
-        return None
-
-    # The operator's documented way to turn metrics off while leaving a shared endpoint set.
-    if os.getenv("OTEL_METRICS_EXPORTER", "otlp").strip().lower() == "none":
-        return None
-
-    protocol = _otlp_protocol("metrics")
-    try:
-        if protocol == "grpc":
-            from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-        else:
-            from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-        reader = PeriodicExportingMetricReader(ApplicationOnlyMetricExporter(OTLPMetricExporter()))
-    except Exception:  # noqa: BLE001
-        logger.warning("Could not configure the OTLP metric exporter; metrics will not be pushed.")
-        return None
-
-    # Without this, a protocol/port mismatch is indistinguishable from never having booted.
-    logger.info(f"OTLP metric export enabled (protocol={protocol}, endpoint={endpoint}).")
-    return reader
+# Re-exported for backwards compatibility; the definitions live in lfx.observability.
+__all__ = [
+    "APPLICATION_INSTRUMENTATION_SCOPES",
+    "APPLICATION_METRIC_SCOPES",
+    "APPLICATION_TRACER_NAME",
+    "DEFAULT_SERVICE_NAME",
+    "PROCESS_METRICS_CONFIG",
+    "SUPPORTED_OTLP_PROTOCOLS",
+    "ApplicationOnlyMetricExporter",
+    "ApplicationOnlySpanProcessor",
+    "MetricType",
+    "OpenTelemetry",
+    "langflow_meter_name",
+]
 
 
 """
@@ -414,29 +206,14 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         if not self._metrics_registry:
             self._register_metric()
 
-        if self._meter_provider is None:
-            # Get existing meter provider if any
-            existing_provider = metrics.get_meter_provider()
-
-            # Reuse a concrete SDK provider installed by another integration. The
-            # default API proxy also returns meters, but it has no readers and must
-            # be replaced so Prometheus can collect Langflow metrics.
-            if isinstance(existing_provider, MeterProvider):
-                self._meter_provider = existing_provider
-            else:
-                resource = _resource()
-                metric_readers = []
-                if self.prometheus_enabled:
-                    metric_readers.append(PrometheusMetricReader())
-
-                # Prometheus is a pull endpoint, so it cannot cover a process that exits
-                # between scrapes. Both readers sit on the one provider.
-                otlp_reader = _otlp_metric_reader()
-                if otlp_reader is not None:
-                    metric_readers.append(otlp_reader)
-
-                self._meter_provider = MeterProvider(resource=resource, metric_readers=metric_readers)
-                metrics.set_meter_provider(self._meter_provider)
+        # The whole provider bootstrap (meter, tracer and logger providers, the OTLP
+        # exporters, the export filters and the runtime metrics) lives in lfx now, so that
+        # lfx serve and lfx run get identical application observability. This installs it and
+        # hands back the meter provider our custom metrics register on.
+        telemetry: ApplicationTelemetry = bootstrap_application_telemetry(prometheus_enabled=prometheus_enabled)
+        self._meter_provider = telemetry.meter_provider
+        self._tracer_provider = telemetry.tracer_provider
+        self._logger_provider = telemetry.logger_provider
 
         self.meter = self._meter_provider.get_meter(langflow_meter_name)
 
@@ -447,103 +224,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             if name not in self._metrics:
                 self._metrics[metric.name] = self._create_metric(metric)
 
-        self._instrument_process_metrics()
-        self._configure_tracer_provider_from_environment()
-        self._configure_logger_provider_from_environment()
-
         OpenTelemetry._initialized = True
-
-    def _instrument_process_metrics(self) -> None:
-        """Report this process's CPU, memory, threads, file descriptors and GC.
-
-        Bound to our meter provider explicitly rather than the global one, so these land on
-        the same readers as everything else even if another integration installs a provider
-        later. Failure is non-fatal: missing runtime metrics degrade the dashboard, they do
-        not justify refusing to boot.
-        """
-        try:
-            from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrumentor
-
-            instrumentor = SystemMetricsInstrumentor(config=PROCESS_METRICS_CONFIG)
-            # The instrumentor is a singleton and raises if instrumented twice, which happens
-            # in-process across app restarts and in tests.
-            if not instrumentor.is_instrumented_by_opentelemetry:
-                instrumentor.instrument(meter_provider=self._meter_provider)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(f"Could not start process metrics; runtime health will be missing. {exc}")
-
-    def _configure_logger_provider_from_environment(self) -> None:
-        """Install an OTLP logger provider when the standard OTel env vars opt in.
-
-        This is the third signal, and the one that makes a trace actionable: the operator
-        pivots from a failed request to the log lines emitted inside it. Correlation is
-        automatic because the SDK stamps the active span's trace_id onto every record, and
-        Langflow already runs each flow execution inside a span.
-        """
-        endpoint = os.getenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-        if not endpoint:
-            return
-        if os.getenv("OTEL_LOGS_EXPORTER", "otlp").strip().lower() == "none":
-            return
-        if isinstance(_logs.get_logger_provider(), LoggerProvider):
-            logger.warning("A logger provider is already installed; not replacing it.")
-            return
-
-        protocol = _otlp_protocol("logs")
-        try:
-            if protocol == "grpc":
-                from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-            else:
-                from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-
-            provider = LoggerProvider(resource=_resource())
-            provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter()))
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(f"Could not configure the OTLP log exporter; logs will not be shipped. {exc}")
-            return
-
-        _logs.set_logger_provider(provider)
-        self._logger_provider = provider
-        logger.info(f"OTLP log export enabled (protocol={protocol}, endpoint={endpoint}).")
-
-    def _configure_tracer_provider_from_environment(self) -> None:
-        """Install an OTLP tracer provider when the standard OTel env vars opt in.
-
-        Nothing sets a tracer provider otherwise, so spans go nowhere. If application code
-        or opentelemetry-instrument already installed one, leave it alone.
-        """
-        endpoint = os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-        if not endpoint:
-            return
-
-        # The operator's documented way to turn traces off while leaving a shared endpoint set.
-        if os.getenv("OTEL_TRACES_EXPORTER", "otlp").strip().lower() == "none":
-            return
-
-        if trace.get_tracer_provider().__class__.__name__ != "ProxyTracerProvider":
-            # Someone else owns tracing (opentelemetry-instrument, the OTel operator, or app
-            # code). Installing over it would break them, but it also means our export filter
-            # is not in the path, so nothing stops the LLM tracer integrations from sending
-            # prompt content to that provider's exporter. Say so rather than implying a
-            # boundary we are not enforcing.
-            logger.warning(
-                "A tracer provider is already installed, so Langflow is not configuring OTLP export. "
-                "LLM tracing integrations may export prompt and completion content through it."
-            )
-            return
-
-        protocol = _otlp_protocol("traces")
-        try:
-            tracer_provider = TracerProvider(resource=_resource())
-            tracer_provider.add_span_processor(ApplicationOnlySpanProcessor(_otlp_span_exporter(protocol)))
-        except Exception:  # noqa: BLE001
-            logger.warning("Could not configure the OTLP tracer provider; traces will not be exported.")
-            return
-
-        trace.set_tracer_provider(tracer_provider)
-        self._tracer_provider = tracer_provider
-        # Without this, a protocol/port mismatch is indistinguishable from never having booted.
-        logger.info(f"OTLP trace export enabled (protocol={protocol}, endpoint={endpoint}).")
 
     def _create_metric(self, metric):
         # Remove _created_instruments check

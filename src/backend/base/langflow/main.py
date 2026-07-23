@@ -21,7 +21,7 @@ from fastapi_pagination import add_pagination
 from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from lfx.observability import instrument_fastapi_app
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -49,7 +49,6 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.schema import ServiceType
-from langflow.services.tracing.otel_fastapi_patch import patch_otel_fastapi_route_details
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
@@ -915,21 +914,10 @@ def create_app():
             content={"message": str(exc)},
         )
 
-    # Emit the stable HTTP semantic conventions (http.route, http.request.method,
-    # http.response.status_code) instead of the pre-1.0 names (http.target, http.method,
-    # http.status_code). APMs key their HTTP dashboards and service maps off the stable
-    # names, so the old ones leave the per-endpoint breakdown blank in Instana and New Relic.
-    # An env var is the only way in: the instrumentors read it, there is no keyword argument.
-    # setdefault, so an operator can still ask for "http/dup" during a migration.
-    # This has to precede instrument_app: the opt-in is read once, on first instrumentation,
-    # and cached for the life of the process.
-    os.environ.setdefault("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
-
-    # FastAPI >=0.137 lazy include_router puts `_IncludedRouter` wrappers (no `.path`)
-    # in `app.routes`, which crashes OTel's span route extraction on partial matches
-    # (e.g. CORS preflight). Patch the helper before instrumenting.
-    patch_otel_fastapi_route_details()
-    FastAPIInstrumentor.instrument_app(app)
+    # Instrument this app for HTTP server telemetry (stable semconv + the FastAPI >=0.137
+    # lazy-include route patch + instrument_app). The helper lives in lfx so lfx serve
+    # instruments its own app the same way.
+    instrument_fastapi_app(app)
 
     add_pagination(app)
 
