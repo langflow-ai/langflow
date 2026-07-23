@@ -50,6 +50,7 @@ cuga = ["cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.1
 deepseek = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"]
 elastic = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-py==2.8.0"]
 faiss = ["faiss-cpu==1.9.0.post1; python_version < '3.14'", "faiss-cpu>=1.13.2; python_version >= '3.14'", "langchain-community>=0.4.1,<1.0.0"]
+funasr = []
 git = ["GitPython>=3.1.58", "langchain-community>=0.4.1,<1.0.0"]
 glean = []
 google = ["lfx-google>=0.1.0,<1.0.0"]
@@ -122,6 +123,7 @@ all = [
     "lfx-bundles[deepseek]",
     "lfx-bundles[elastic]",
     "lfx-bundles[faiss]",
+    "lfx-bundles[funasr]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
     "lfx-bundles[groq]",
@@ -191,6 +193,7 @@ all-no-torch = [
     "lfx-bundles[deepseek]",
     "lfx-bundles[elastic]",
     "lfx-bundles[faiss]",
+    "lfx-bundles[funasr]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
     "lfx-bundles[groq]",
