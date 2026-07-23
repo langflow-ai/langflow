@@ -793,7 +793,7 @@ jobs:
           if [ -d "./sdk-dist" ]; then
             FIND_LINKS="$FIND_LINKS --find-links ./sdk-dist"
           fi
-          uv pip install $FIND_LINKS --prerelease=allow -e src/backend/base
+          uv pip install $FIND_LINKS --prerelease=if-necessary-or-explicit -e src/backend/base
       - name: Check for dependency incompatibility
         if: ${{ inputs.run_pip_check }}
         run: uv pip check
@@ -815,31 +815,11 @@ jobs:
         run: |
           LFX_VERSION="${{ needs.determine-lfx-version.outputs.version }}"
           echo "Updating lfx dependency to allow pre-release version: $LFX_VERSION"
-          cd src/backend/base
+          python3 scripts/ci/update_lfx_pre_release_dependency.py \
+            src/backend/base/pyproject.toml "$LFX_VERSION"
 
-          # Extract current lfx constraint from pyproject.toml
-          CURRENT_CONSTRAINT=$(grep -E '^\s*"lfx' pyproject.toml | head -1)
-          echo "Current constraint: $CURRENT_CONSTRAINT"
-
-          # Extract the major.minor version (e.g., "1.10" from "~=1.10.0", or from the
-          # lower bound of the range form ">=1.10.0,<1.11.dev0"). Anchor to the FIRST
-          # version in the line so a greedy match can't pick up the range's upper bound.
-          MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/^[^0-9]*([0-9]+\.[0-9]+).*/\1/')
-          MAJOR=${MAJOR_MINOR%.*}
-          MINOR=${MAJOR_MINOR#*.}
-          NEXT_MINOR=$((MINOR + 1))
-
-          # Create new constraint: >=LFX_VERSION,<MAJOR.(MINOR+1).dev0
-          NEW_CONSTRAINT="\"lfx>=$LFX_VERSION,<$MAJOR.$NEXT_MINOR.dev0\""
-
-          echo "New constraint: $NEW_CONSTRAINT"
-
-          # Replace the constraint
-          sed -i.bak "s|\"lfx[^\"]*\"|$NEW_CONSTRAINT|" pyproject.toml
-
-          # Verify the change
           echo "Updated lfx dependency:"
-          grep "lfx" pyproject.toml
+          grep "lfx" src/backend/base/pyproject.toml
       - name: Build project for distribution
         run: make build base=true args="--wheel"
       - name: Verify built version
@@ -945,7 +925,7 @@ jobs:
           if [ -d "./sdk-dist" ]; then
             FIND_LINKS="$FIND_LINKS --find-links ./sdk-dist"
           fi
-          uv pip install $FIND_LINKS --prerelease=allow -e .
+          uv pip install $FIND_LINKS --prerelease=if-necessary-or-explicit -e .
       - name: Check for dependency incompatibility
         if: ${{ inputs.run_pip_check }}
         run: uv pip check
@@ -1232,19 +1212,44 @@ jobs:
             exit 0
           fi
           failed=0
+          pypi_publish_delay_seconds=60
+          pypi_publish_max_attempts=5
+          wheel_count=${#wheels[@]}
+          wheel_number=0
           for wheel in "${wheels[@]}"; do
+            wheel_number=$((wheel_number + 1))
             echo "Publishing $wheel"
-            # Tolerate "already exists" so reruns -- or a bundle whose version is
-            # unchanged and already on PyPI -- do not fail the job. Matches the
-            # duplicate-tolerant publish in release_bundles.yml.
-            if ! err=$(uv publish "$wheel" 2>&1); then
+            attempt=1
+            published=0
+            while true; do
+              # Tolerate "already exists" so reruns -- or a bundle whose version is
+              # unchanged and already on PyPI -- do not fail the job. Matches the
+              # duplicate-tolerant publish in release_bundles.yml.
+              if err=$(uv publish "$wheel" 2>&1); then
+                echo "$err"
+                published=1
+                break
+              fi
               echo "$err"
               if echo "$err" | grep -qiE 'already exists|file already exists|HTTP 400|duplicate'; then
                 echo "Skipping $wheel: already published."
-              else
-                echo "Publish failed for $wheel"
-                failed=1
+                break
               fi
+              if echo "$err" | grep -qiE 'HTTP 429|429 Too Many Requests|Too many new projects created'; then
+                if [ "$attempt" -lt "$pypi_publish_max_attempts" ]; then
+                  echo "PyPI rate limited $wheel; sleeping ${pypi_publish_delay_seconds}s before retry $((attempt + 1))/${pypi_publish_max_attempts}."
+                  sleep "$pypi_publish_delay_seconds"
+                  attempt=$((attempt + 1))
+                  continue
+                fi
+              fi
+              echo "Publish failed for $wheel"
+              failed=1
+              break
+            done
+            if [ "$published" = "1" ] && [ "$wheel_number" -lt "$wheel_count" ]; then
+              echo "Sleeping ${pypi_publish_delay_seconds}s before the next PyPI upload."
+              sleep "$pypi_publish_delay_seconds"
             fi
           done
           if [ "$failed" = "1" ]; then
@@ -1347,27 +1352,42 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    if: ${{ inputs.build_docker_base }}
-    needs: [ci, determine-base-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_base &&
+      needs.ci.result == 'success' &&
+      needs.determine-base-version.result == 'success' &&
+      (!inputs.release_package_base || needs.build-base.result == 'success')
+    needs: [ci, determine-base-version, build-base]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: base
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-base-version.outputs.version }}
+      release_artifacts: ${{ needs.build-base.result == 'success' }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci, determine-main-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_main &&
+      needs.ci.result == 'success' &&
+      needs.determine-main-version.result == 'success' &&
+      (!inputs.release_package_main || needs.build-main.result == 'success') &&
+      (!inputs.release_bundles || needs.build-bundles.result == 'success')
+    needs: [ci, determine-main-version, build-main, build-bundles]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
+      release_artifacts: ${{ needs.build-main.result == 'success' }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
@@ -1399,27 +1419,37 @@ jobs:
 
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci, determine-main-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_main &&
+      needs.call_docker_build_main.result == 'success'
+    needs: [call_docker_build_main, determine-main-version, build-main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main-ep
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
+      release_artifacts: ${{ needs.build-main.result == 'success' }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main_all:
     name: Call Docker Build Workflow for langflow-all
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci, determine-main-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_main &&
+      needs.call_docker_build_main.result == 'success'
+    needs: [call_docker_build_main, determine-main-version, build-main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main-all
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
+      release_artifacts: ${{ needs.build-main.result == 'success' }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 

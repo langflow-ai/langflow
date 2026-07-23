@@ -1,4 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
+import { v5 as uuidv5 } from "uuid";
 
 // Mock all the complex dependencies
 jest.mock("@xyflow/react", () => ({
@@ -50,15 +51,24 @@ jest.mock("../darkStore", () => ({
   },
 }));
 
-jest.mock("../flowsManagerStore", () => ({
-  __esModule: true,
-  default: {
-    getState: () => ({
-      setCurrentFlow: jest.fn(),
-      takeSnapshot: jest.fn(),
-    }),
-  },
-}));
+jest.mock("../flowsManagerStore", () => {
+  const state: { currentFlow: { id: string; name: string } | undefined } = {
+    currentFlow: undefined,
+  };
+  return {
+    __esModule: true,
+    default: {
+      getState: () => ({
+        ...state,
+        setCurrentFlow: jest.fn(),
+        takeSnapshot: jest.fn(),
+      }),
+      __setCurrentFlow: (flow: { id: string; name: string } | undefined) => {
+        state.currentFlow = flow;
+      },
+    },
+  };
+});
 
 jest.mock("../globalVariablesStore/globalVariables", () => ({
   useGlobalVariablesStore: {
@@ -90,11 +100,34 @@ jest.mock("@/utils/utils", () => ({
   brokenEdgeMessage: jest.fn(),
 }));
 
+// runFlowAGUI is exercised end-to-end in its own bridge tests; here we just
+// need a controllable replacement so the buildFlow integration can be tested
+// without touching the network.
+jest.mock("@/controllers/API/agui/run-flow-bridge", () => ({
+  runFlowAGUI: jest.fn(),
+}));
+
+// Keep reactflowUtils' real behaviour for the rest of the suite; only flip
+// validateNodes / validateEdge to no-ops so the buildFlow analytics tests can
+// reach the runFlowAGUI call with an empty (test-fixture) graph.
+jest.mock("../../utils/reactflowUtils", () => {
+  const actual = jest.requireActual("../../utils/reactflowUtils");
+  return {
+    ...actual,
+    validateNodes: jest.fn(() => []),
+    validateEdge: jest.fn(() => []),
+  };
+});
+
 // Note: Some utility modules may not exist in test environment
 // The store should handle missing utilities gracefully
 
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
+import type { LogsLogType, VertexBuildTypeAPI } from "@/types/api";
 import type { AllNodeType, EdgeType } from "@/types/flow";
+import { scapedJSONStringfy } from "../../utils/reactflowUtils";
+import useAlertStore from "../alertStore";
+import useAuthStore from "../authStore";
 import useFlowStore, {
   completeNodeUpdate,
   recomputeComponentsToUpdateIfNeeded,
@@ -867,9 +900,8 @@ describe("useFlowStore", () => {
     const createEdge = (
       id: string,
       sourceHandleId: string,
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-      overrides: Partial<any> = {},
-    ) =>
+      overrides: Partial<EdgeType> = {},
+    ): EdgeType =>
       ({
         id,
         source: `src-${id}`,
@@ -878,8 +910,7 @@ describe("useFlowStore", () => {
         className: "",
         data: { sourceHandle: { id: sourceHandleId } },
         ...overrides,
-        // biome-ignore lint/suspicious/noExplicitAny: legacy
-      }) as any;
+      }) as unknown as EdgeType;
 
     it("should clear all edge animations when no nextIds provided", () => {
       const { result } = renderHook(() => useFlowStore());
@@ -988,15 +1019,13 @@ describe("useFlowStore", () => {
       id: "node-1",
       data: { results: {} },
       valid: true,
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-    } as any;
+    } as unknown as VertexBuildTypeAPI;
 
     const mockVertexData2 = {
       id: "node-1",
       data: { results: { other: true } },
       valid: true,
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-    } as any;
+    } as unknown as VertexBuildTypeAPI;
 
     it("should add data to new nodeId entry", () => {
       const { result } = renderHook(() => useFlowStore());
@@ -1043,14 +1072,16 @@ describe("useFlowStore", () => {
   });
 
   describe("appendLogToFlowPool", () => {
-    // biome-ignore lint/suspicious/noExplicitAny: legacy
-    const mockLog = { name: "Test Log", message: "hello", type: "info" } as any;
+    const mockLog = {
+      name: "Test Log",
+      message: "hello",
+      type: "info",
+    } as unknown as LogsLogType;
     const mockLog2 = {
       name: "Second Log",
       message: "world",
       type: "info",
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-    } as any;
+    } as unknown as LogsLogType;
 
     it("creates a new pool entry with the log when no entry exists for nodeId", () => {
       const { result } = renderHook(() => useFlowStore());
@@ -1106,6 +1137,266 @@ describe("useFlowStore", () => {
       const latest = result.current.flowPool["node-99"].at(-1)!.data.logs;
       expect(latest["output_a"]).toEqual([mockLog]);
       expect(latest["output_b"]).toEqual([mockLog2]);
+    });
+  });
+
+  describe("buildFlow analytics — trackFlowBuild integration", () => {
+    let mockedRunFlow: jest.Mock;
+    let trackFlowBuildMock: jest.Mock;
+
+    beforeAll(() => {
+      // Cast through unknown so the test does not depend on the bridge module's
+      // public type — we only care about controlling the side effect.
+      const bridge = jest.requireMock(
+        "@/controllers/API/agui/run-flow-bridge",
+      ) as { runFlowAGUI: jest.Mock };
+      mockedRunFlow = bridge.runFlowAGUI;
+
+      const analytics = jest.requireMock("@/customization/utils/analytics") as {
+        trackFlowBuild: jest.Mock;
+      };
+      trackFlowBuildMock = analytics.trackFlowBuild;
+
+      // Make `currentFlow` resolvable inside buildFlow.
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "flow-abc",
+        name: "Test Flow",
+      });
+    });
+
+    beforeEach(() => {
+      mockedRunFlow.mockReset();
+      trackFlowBuildMock.mockReset();
+      useAuthStore.setState({
+        isAuthenticated: false,
+        autoLogin: null,
+        userData: null,
+      });
+      useUtilityStore.setState({ clientId: "" });
+      act(() => {
+        useFlowStore.setState({
+          nodes: [],
+          edges: [],
+          buildInfo: null,
+          flowBuildStatus: {},
+          isBuilding: false,
+          componentsToUpdate: [],
+        });
+      });
+    });
+
+    it("fires trackFlowBuild with isError=false after a successful run", async () => {
+      mockedRunFlow.mockImplementation(async () => {
+        // The bridge writes success into the store on `RUN_FINISHED`.
+        useFlowStore.setState({ buildInfo: { success: true } });
+      });
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+      expect(trackFlowBuildMock).toHaveBeenCalledWith("Test Flow", false, {
+        flowId: "flow-abc",
+      });
+    });
+
+    it("fires trackFlowBuild with isError=true and the error list after a failure", async () => {
+      const errorList = ["boom"];
+      mockedRunFlow.mockImplementation(async () => {
+        useFlowStore.setState({
+          buildInfo: { success: false, error: errorList },
+        });
+      });
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+      expect(trackFlowBuildMock).toHaveBeenCalledWith("Test Flow", true, {
+        flowId: "flow-abc",
+        error: errorList,
+      });
+    });
+
+    it("passes silent and sets the active building session before the AG-UI run", async () => {
+      mockedRunFlow.mockImplementation(async () => {
+        const state = useFlowStore.getState();
+        expect(state.buildingFlowId).toBe("flow-abc");
+        expect(state.buildingSessionId).toBe("session-123");
+        useFlowStore.setState({ buildInfo: null });
+      });
+
+      await useFlowStore.getState().buildFlow({
+        silent: true,
+        session: "session-123",
+      });
+
+      expect(mockedRunFlow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flowId: "flow-abc",
+          threadId: "session-123",
+          silent: true,
+        }),
+      );
+      expect(trackFlowBuildMock).toHaveBeenCalledWith("Test Flow", false, {
+        flowId: "flow-abc",
+      });
+    });
+
+    it("uses the public playground virtual flow id for the active building session", async () => {
+      const expectedFlowId = uuidv5("client-123_flow-abc", uuidv5.DNS);
+
+      useUtilityStore.setState({ clientId: "client-123" });
+      useAuthStore.setState({
+        isAuthenticated: false,
+        autoLogin: true,
+        userData: null,
+      });
+      useFlowStore.setState({ playgroundPage: true });
+      mockedRunFlow.mockImplementation(async () => {
+        const state = useFlowStore.getState();
+        expect(state.buildingFlowId).toBe(expectedFlowId);
+        expect(state.buildingSessionId).toBe("session-123");
+        useFlowStore.setState({ buildInfo: null });
+      });
+
+      await useFlowStore.getState().buildFlow({
+        session: "session-123",
+      });
+
+      expect(mockedRunFlow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flowId: "flow-abc",
+          threadId: "session-123",
+        }),
+      );
+    });
+  });
+
+  describe("setNode broken-edge warning", () => {
+    const sourceHandle = scapedJSONStringfy({
+      id: "hitl",
+      name: "branch_fallback",
+      output_types: ["Message"],
+      dataType: "HumanInput",
+    });
+    const targetHandle = scapedJSONStringfy({
+      type: "str",
+      fieldName: "input_value",
+      id: "co",
+      inputTypes: ["Message"],
+    });
+
+    const humanInputNode = (
+      outputs: { name: string; display_name: string }[],
+    ): AllNodeType =>
+      ({
+        id: "hitl",
+        type: "genericNode",
+        position: { x: 0, y: 0 },
+        data: {
+          id: "hitl",
+          type: "HumanInput",
+          node: {
+            display_name: "Human Input",
+            template: {},
+            outputs: outputs.map((output) => ({
+              ...output,
+              types: ["Message"],
+              group_outputs: true,
+            })),
+          },
+        },
+      }) as unknown as AllNodeType;
+
+    const chatOutputNode = {
+      id: "co",
+      type: "genericNode",
+      position: { x: 0, y: 0 },
+      data: {
+        id: "co",
+        type: "ChatOutput",
+        node: {
+          display_name: "Chat Output",
+          template: {
+            input_value: {
+              type: "str",
+              input_types: ["Message"],
+              display_name: "Inputs",
+            },
+          },
+          outputs: [],
+        },
+      },
+    } as unknown as AllNodeType;
+
+    const fallbackEdge = {
+      id: "edge-fallback",
+      source: "hitl",
+      target: "co",
+      sourceHandle,
+      targetHandle,
+    } as unknown as EdgeType;
+
+    const bothBranches = [
+      { name: "branch_approve", display_name: "Approve" },
+      { name: "branch_fallback", display_name: "Fallback" },
+    ];
+
+    const spyOnErrorData = () => {
+      const setErrorData = jest.fn();
+      jest.spyOn(useAlertStore, "getState").mockReturnValue({
+        setErrorData,
+        setSuccessData: jest.fn(),
+      } as unknown as ReturnType<typeof useAlertStore.getState>);
+      return setErrorData;
+    };
+
+    const seedFlow = () => {
+      act(() => {
+        useFlowStore.setState({
+          nodes: [humanInputNode(bothBranches), chatOutputNode],
+          edges: [fallbackEdge],
+        });
+      });
+    };
+
+    it("warns when a node edit drops a wired edge", () => {
+      const setErrorData = spyOnErrorData();
+      seedFlow();
+
+      act(() => {
+        useFlowStore
+          .getState()
+          .setNode(
+            "hitl",
+            humanInputNode([
+              { name: "branch_approve", display_name: "Approve" },
+            ]),
+          );
+      });
+
+      expect(useFlowStore.getState().edges).toHaveLength(0);
+      expect(setErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "flow.brokenEdgesWarning" }),
+      );
+    });
+
+    it("does not warn when the edit keeps every wired handle", () => {
+      const setErrorData = spyOnErrorData();
+      seedFlow();
+
+      act(() => {
+        useFlowStore.getState().setNode("hitl", humanInputNode(bothBranches));
+      });
+
+      expect(useFlowStore.getState().edges).toHaveLength(1);
+      expect(setErrorData).not.toHaveBeenCalled();
     });
   });
 });

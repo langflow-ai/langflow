@@ -69,15 +69,32 @@ def generate_rsa_key_pair() -> tuple[str, str]:
     return private_key_pem, public_key_pem
 
 
+def _get_windows_process_user_sid():
+    """Return the SID of the user that owns the current process token.
+
+    Resolving the user by name (``LookupAccountName("", GetUserName())``) is
+    ambiguous: when the machine name equals the username, the bare name
+    resolves to the machine-domain object (SidTypeDomain, no user RID), and a
+    DACL granting only that SID locks the real user out of the file. The
+    process token needs no name resolution and always yields the user SID.
+    """
+    import win32api
+    import win32con
+    import win32security
+
+    token = win32security.OpenProcessToken(win32api.GetCurrentProcess(), win32con.TOKEN_QUERY)
+    sid, _attributes = win32security.GetTokenInformation(token, win32security.TokenUser)
+    return sid
+
+
 def set_secure_permissions(file_path: Path) -> None:
     if platform.system() in {"Linux", "Darwin"}:  # Unix/Linux/Mac
         file_path.chmod(0o600)
     elif platform.system() == "Windows":
-        import win32api
         import win32con
         import win32security
 
-        user, _, _ = win32security.LookupAccountName("", win32api.GetUserName())
+        user = _get_windows_process_user_sid()
         sd = win32security.GetFileSecurity(str(file_path), win32security.DACL_SECURITY_INFORMATION)
         dacl = win32security.ACL()
 
@@ -102,7 +119,17 @@ def write_secret_to_file(path: Path, value: str) -> None:
 
 
 def read_secret_from_file(path: Path) -> str:
-    return path.read_text(encoding="utf-8")
+    try:
+        return path.read_text(encoding="utf-8")
+    except PermissionError:
+        if platform.system() != "Windows":
+            raise
+        # Self-heal files whose DACL was written by a version affected by the
+        # machine-name/username collision: the file owner keeps implicit
+        # WRITE_DAC, so the ACL can be rewritten even with no read access.
+        logger.warning(f"Permission denied reading secret file at {path}; rewriting its ACL and retrying")
+        set_secure_permissions(path)
+        return path.read_text(encoding="utf-8")
 
 
 def write_public_key_to_file(path: Path, value: str) -> None:

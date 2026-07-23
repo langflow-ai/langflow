@@ -270,14 +270,12 @@ class TestVariableService:
     @pytest.mark.asyncio
     async def test_get_variable_absorbs_extra_kwargs(self, variables):
         """Extra kwargs are accepted for compatibility with langflow call signature."""
-        os.environ["LFX_KWARG_TEST"] = "value-from-env"
+        os.environ["KWARG_TEST"] = "value-from-env"
         try:
-            value = await variables.get_variable(
-                user_id="random-uuid", name="LFX_KWARG_TEST", field="value", session=None
-            )
+            value = await variables.get_variable(user_id="random-uuid", name="KWARG_TEST", field="value", session=None)
             assert value == "value-from-env"
         finally:
-            del os.environ["LFX_KWARG_TEST"]
+            del os.environ["KWARG_TEST"]
 
     @pytest.mark.asyncio
     async def test_strict_no_bearer_token_from_access_token_env(self, variables):

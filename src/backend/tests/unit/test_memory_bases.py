@@ -179,6 +179,24 @@ class TestKBIngestionHelperBuildEmbeddings:
         assert selected["metadata"]["embedding_class"] == "OpenAIEmbeddings"
         assert selected["metadata"]["model_type"] == "embeddings"
         assert "param_mapping" in selected["metadata"]
+        assert kwargs.get("api_base") is None
+        assert kwargs.get("ollama_base_url") is None
+
+    @pytest.mark.asyncio
+    async def test_builds_embeddings_for_azure_ai_foundry(self):
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        with patch("langflow.api.utils.kb_helpers.EmbeddingModelComponent") as mock_component_cls:
+            mock_component_cls.return_value.build_embeddings.return_value = MagicMock()
+            user = MagicMock(id=uuid.uuid4())
+
+            await KBIngestionHelper.build_embeddings("Azure AI Foundry", "text-embedding-3-small", user)
+
+        kwargs = mock_component_cls.call_args.kwargs
+        selected = kwargs["model"][0]
+        assert selected["provider"] == "Azure AI Foundry"
+        assert selected["metadata"]["embedding_class"] == "OpenAIEmbeddings"
+        assert kwargs.get("api_base") is None
 
     @pytest.mark.asyncio
     async def test_builds_embeddings_for_google_gemini_model(self):
@@ -494,6 +512,164 @@ class TestMemoryBaseCreateFlowOwnership:
             )
 
         assert exc_info.value.status_code == 404
+
+
+class TestMemoryBaseGuardPassesRealKbIdentity:
+    """The ID-bearing guards must pass the REAL kb identity, not actor-as-owner.
+
+    Previously the five F20 guards called ensure_knowledge_base_permission with
+    kb_user_id=current_user.id and no kb_id, so the owner-override path always
+    fired (a registered plugin's enforce never ran) and audit rows lacked the kb
+    id. The fix resolves the memory base first (via the owner-scoped service.get)
+    and passes kb_id / kb_user_id (the real owner) / kb_name so owner-override is
+    taken only for genuine owners.
+    """
+
+    @pytest.mark.asyncio
+    async def test_update_passes_real_kb_identity_to_guard(self):
+        from langflow.api.v1.memories import update_memory_base
+        from langflow.services.database.models.user.model import User
+
+        owner_id = uuid.uuid4()
+        mb = _make_mb(user_id=owner_id)
+        actor = User(id=uuid.uuid4(), username="actor")
+
+        mock_service = MagicMock()
+        mock_service.get = AsyncMock(return_value=mb)
+        mock_service.update = AsyncMock(return_value=mb)
+        captured = {}
+
+        async def _capture_guard(_user, _act, **kwargs):
+            captured.update(kwargs)
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+            patch("langflow.api.v1.memories.ensure_knowledge_base_permission", _capture_guard),
+        ):
+            await update_memory_base(
+                memory_base_id=mb.id,
+                current_user=actor,
+                patch=MemoryBaseUpdate(threshold=99),
+            )
+
+        assert captured["kb_id"] == mb.id
+        assert captured["kb_user_id"] == owner_id, "guard must receive the real owner, not the actor"
+        assert captured["kb_name"] == mb.kb_name
+
+    @pytest.mark.asyncio
+    async def test_delete_passes_real_kb_identity_to_guard(self):
+        from langflow.api.v1.memories import delete_memory_base
+        from langflow.services.database.models.user.model import User
+
+        owner_id = uuid.uuid4()
+        mb = _make_mb(user_id=owner_id)
+        actor = User(id=uuid.uuid4(), username="actor")
+
+        mock_service = MagicMock()
+        mock_service.get = AsyncMock(return_value=mb)
+        mock_service.delete = AsyncMock(return_value=True)
+        captured = {}
+
+        async def _capture_guard(_user, _act, **kwargs):
+            captured.update(kwargs)
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+            patch("langflow.api.v1.memories.ensure_knowledge_base_permission", _capture_guard),
+        ):
+            await delete_memory_base(memory_base_id=mb.id, current_user=actor)
+
+        assert captured["kb_id"] == mb.id
+        assert captured["kb_user_id"] == owner_id
+        assert captured["kb_name"] == mb.kb_name
+
+    @pytest.mark.asyncio
+    async def test_flush_passes_real_kb_identity_to_guard(self):
+        from langflow.api.v1.memories import FlushRequest, flush_memory_base
+        from langflow.services.database.models.user.model import User
+
+        owner_id = uuid.uuid4()
+        mb = _make_mb(user_id=owner_id)
+        actor = User(id=uuid.uuid4(), username="actor")
+
+        mock_service = MagicMock()
+        mock_service.get = AsyncMock(return_value=mb)
+        mock_service.trigger_ingestion = AsyncMock(return_value="job-1")
+        captured = {}
+
+        async def _capture_guard(_user, _act, **kwargs):
+            captured.update(kwargs)
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+            patch("langflow.api.v1.memories.ensure_knowledge_base_permission", _capture_guard),
+        ):
+            await flush_memory_base(
+                memory_base_id=mb.id,
+                current_user=actor,
+                body=FlushRequest(session_id="sess-1"),
+            )
+
+        assert captured["kb_id"] == mb.id
+        assert captured["kb_user_id"] == owner_id
+        assert captured["kb_name"] == mb.kb_name
+
+    @pytest.mark.asyncio
+    async def test_regenerate_passes_real_kb_identity_to_guard(self):
+        from langflow.api.v1.memories import regenerate_memory_base
+        from langflow.services.database.models.user.model import User
+
+        owner_id = uuid.uuid4()
+        mb = _make_mb(user_id=owner_id)
+        actor = User(id=uuid.uuid4(), username="actor")
+
+        mock_service = MagicMock()
+        mock_service.get = AsyncMock(return_value=mb)
+        mock_service.regenerate = AsyncMock(return_value=["job-1"])
+        captured = {}
+
+        async def _capture_guard(_user, _act, **kwargs):
+            captured.update(kwargs)
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+            patch("langflow.api.v1.memories.ensure_knowledge_base_permission", _capture_guard),
+        ):
+            await regenerate_memory_base(memory_base_id=mb.id, current_user=actor)
+
+        assert captured["kb_id"] == mb.id
+        assert captured["kb_user_id"] == owner_id
+        assert captured["kb_name"] == mb.kb_name
+
+    @pytest.mark.asyncio
+    async def test_update_returns_404_when_memory_base_not_found(self):
+        """If the resolve lookup returns None, the handler 404s before the guard runs."""
+        from fastapi import HTTPException
+        from langflow.api.v1.memories import update_memory_base
+        from langflow.services.database.models.user.model import User
+
+        actor = User(id=uuid.uuid4(), username="actor")
+        mock_service = MagicMock()
+        mock_service.get = AsyncMock(return_value=None)
+        guard_called = False
+
+        async def _guard(*_a, **_k):
+            nonlocal guard_called
+            guard_called = True
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+            patch("langflow.api.v1.memories.ensure_knowledge_base_permission", _guard),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await update_memory_base(
+                memory_base_id=uuid.uuid4(),
+                current_user=actor,
+                patch=MemoryBaseUpdate(threshold=1),
+            )
+
+        assert exc_info.value.status_code == 404
+        assert not guard_called, "guard must not run for a non-existent memory base"
 
 
 class TestMemoryBaseServiceConcurrency:
@@ -1555,11 +1731,14 @@ class TestMemoriesAPIRouting:
         """trigger_ingestion raising RuntimeError should map to HTTP 409."""
         from langflow.api.v1.memories import flush_memory_base
 
-        patched_service.trigger_ingestion = AsyncMock(side_effect=RuntimeError("already in progress"))
-
         # We call the handler directly to test the error mapping
         mock_user = MagicMock()
         mock_user.id = uuid.uuid4()
+
+        # The guard now resolves the memory base first; let it pass through so the
+        # error mapping under test (trigger_ingestion -> 409) is exercised.
+        patched_service.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
+        patched_service.trigger_ingestion = AsyncMock(side_effect=RuntimeError("already in progress"))
 
         from fastapi import HTTPException
         from langflow.api.v1.memories import FlushRequest
@@ -1652,6 +1831,7 @@ class TestMemoriesAPIHandlers:
         from langflow.services.memory_base.service import PreprocessingValidationError
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.update = AsyncMock(side_effect=PreprocessingValidationError("No API key found for provider 'OpenAI'"))
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
@@ -1709,6 +1889,7 @@ class TestMemoriesAPIHandlers:
         mb = _make_mb(user_id=mock_user.id, threshold=99)
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=mb)
         svc.update = AsyncMock(return_value=mb)
         with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
             result = await update_memory_base(
@@ -1725,6 +1906,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import update_memory_base
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.update = AsyncMock(return_value=None)
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
@@ -1747,6 +1929,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import delete_memory_base
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.delete = AsyncMock(return_value=True)
         with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
             result = await delete_memory_base(memory_base_id=uuid.uuid4(), current_user=mock_user)
@@ -1759,6 +1942,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import delete_memory_base
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.delete = AsyncMock(return_value=False)
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
@@ -1779,6 +1963,7 @@ class TestMemoriesAPIHandlers:
         job_id = str(uuid.uuid4())
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.trigger_ingestion = AsyncMock(return_value=job_id)
         with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
             result = await flush_memory_base(
@@ -1795,6 +1980,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import FlushRequest, flush_memory_base
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.trigger_ingestion = AsyncMock(side_effect=ValueError("memory base not found"))
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
@@ -1815,6 +2001,7 @@ class TestMemoriesAPIHandlers:
         from langflow.services.jobs import DuplicateJobError
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.trigger_ingestion = AsyncMock(side_effect=DuplicateJobError("already running"))
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
@@ -1880,6 +2067,7 @@ class TestMemoriesAPIHandlers:
         job_ids = [str(uuid.uuid4()), str(uuid.uuid4())]
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.regenerate = AsyncMock(return_value=job_ids)
         with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
             result = await regenerate_memory_base(memory_base_id=uuid.uuid4(), current_user=mock_user)
@@ -1892,6 +2080,7 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import regenerate_memory_base
 
         svc = MagicMock()
+        svc.get = AsyncMock(return_value=_make_mb(user_id=mock_user.id))
         svc.regenerate = AsyncMock(side_effect=ValueError("not found"))
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),

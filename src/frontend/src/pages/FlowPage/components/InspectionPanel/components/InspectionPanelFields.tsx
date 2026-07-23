@@ -1,104 +1,38 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useShallow } from "zustand/react/shallow";
-import {
-  isCodeField,
-  isInternalField,
-  isToolModeEnabled,
-  shouldRenderInspectionPanelField,
-} from "@/CustomNodes/helpers/parameter-filtering";
+import { isManageableParameter } from "@/CustomNodes/helpers/parameter-filtering";
 import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
 import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import useFlowStore from "@/stores/flowStore";
-import type { NodeDataType, targetHandleType } from "@/types/flow";
-import { scapeJSONParse } from "@/utils/reactflowUtils";
-import { HIDDEN_FIELDS, INSPECTION_PANEL_ONLY_FIELDS } from "./hidden-fields";
-import InspectionPanelEditField from "./InspectionPanelEditField";
-import InspectionPanelField from "./InspectionPanelField";
+import type { NodeDataType } from "@/types/flow";
+import InspectionPanelParameterRow from "./InspectionPanelParameterRow";
 
 interface InspectionPanelFieldsProps {
   data: NodeDataType;
-  isEditingFields?: boolean;
 }
 
 export default function InspectionPanelFields({
   data,
-  isEditingFields = false,
 }: InspectionPanelFieldsProps) {
   const { t } = useTranslation();
   const isToolMode = data.node?.tool_mode;
 
-  const connectedFieldNames = useFlowStore(
-    useShallow(
-      (state) =>
-        state.edges
-          .filter((e) => e.target === data.id && e.targetHandle)
-          .map(
-            (e) =>
-              (scapeJSONParse(e.targetHandle!) as targetHandleType).fieldName,
-          )
-          .filter(Boolean) as string[],
-    ),
-  );
-
-  const connectedFields = useMemo(
-    () => new Set(connectedFieldNames),
-    [connectedFieldNames],
-  );
-
-  // Get all editable fields (for edit mode)
-  const allEditableFields = useMemo(() => {
-    return Object.keys(data.node?.template || {})
+  // LE-1810: the panel manages parameters instead of editing values, so it
+  // lists every manageable parameter — the ones shown on the node first,
+  // then the hidden (advanced) ones — each with add/remove and API actions.
+  const manageableFields = useMemo(() => {
+    const template = data.node?.template || {};
+    return Object.keys(template)
       .filter((templateField) => {
-        const template = data.node?.template[templateField];
-        if (isInternalField(templateField)) return false;
-        if (HIDDEN_FIELDS[data.type]?.includes(templateField)) return false;
-        if (INSPECTION_PANEL_ONLY_FIELDS[data.type]?.includes(templateField))
-          return false;
         if (
           data.type === "APIRequest" &&
           templateField === "body" &&
           data.node?.template?.method?.value === "GET"
         )
           return false;
-        if (!template?.show) return false;
-        if (isCodeField(templateField, template)) return false;
-        if (isToolModeEnabled(template) && isToolMode) return false;
-        if (connectedFields.has(templateField)) return false;
-        return true;
-      })
-      .sort((a, b) =>
-        sortToolModeFields(
-          a,
-          b,
-          data.node!.template,
-          data.node?.field_order ?? [],
-          false,
-        ),
-      );
-  }, [
-    data.node?.template,
-    data.node?.field_order,
-    isToolMode,
-    connectedFields,
-  ]);
-
-  // Get only advanced fields (for normal mode)
-  const advancedFields = useMemo(() => {
-    return Object.keys(data.node?.template || {})
-      .filter((templateField) => {
-        const template = data.node?.template[templateField];
-        if (HIDDEN_FIELDS[data.type]?.includes(templateField)) return false;
-        if (
-          data.type === "APIRequest" &&
-          templateField === "body" &&
-          data.node?.template?.method?.value === "GET"
-        )
-          return false;
-        return shouldRenderInspectionPanelField(
+        return isManageableParameter(
           templateField,
-          template,
+          template[templateField],
           isToolMode,
         );
       })
@@ -111,81 +45,41 @@ export default function InspectionPanelFields({
           false,
         ),
       );
-  }, [data.node?.template, data.node?.field_order, isToolMode]);
+  }, [data.node?.template, data.node?.field_order, data.type, isToolMode]);
 
-  // Edit mode - show all fields with simplified edit UI
-  if (isEditingFields) {
-    if (allEditableFields.length === 0) {
-      return (
-        <div className="flex items-center justify-center p-8 text-sm text-muted-foreground">
-          {t("inspectionPanel.noEditableFields")}
-        </div>
-      );
-    }
-
-    return (
-      <div className="pb-2">
-        <div className="px-1">
-          {allEditableFields.map((templateField) => {
-            const template = data.node?.template[templateField];
-            return (
-              <InspectionPanelEditField
-                key={`${data.id}-${templateField}-edit`}
-                data={data}
-                name={templateField}
-                title={getFieldTitle(data.node?.template!, templateField)}
-                description={template.info || ""}
-                isOnCanvas={!template.advanced}
-              />
-            );
-          })}
-        </div>
-      </div>
+  const orderedFields = useMemo(() => {
+    const onCanvas = manageableFields.filter(
+      (field) => !(data.node?.template[field]?.advanced ?? false),
     );
-  }
+    const offCanvas = manageableFields.filter(
+      (field) => data.node?.template[field]?.advanced ?? false,
+    );
+    return [...onCanvas, ...offCanvas];
+  }, [manageableFields, data.node?.template]);
 
-  // Normal mode - show only advanced fields with full input UI
-  if (advancedFields.length === 0) {
+  if (orderedFields.length === 0) {
     return (
       <div className="flex flex-col gap-2 items-center justify-center p-10 pb-12 text-sm text-muted-foreground">
         <ForwardedIconComponent
           name="Settings2"
           className="text-input w-6 h-6"
         />
-        {t("inspectionPanel.noAdvancedSettings")}
+        {t("inspectionPanel.noParameters")}
       </div>
     );
   }
 
-  const renderField = (templateField: string) => {
-    const template = data.node?.template[templateField];
-
-    return (
-      <InspectionPanelField
-        key={`${data.id}-${templateField}`}
-        data={data}
-        title={getFieldTitle(data.node?.template!, templateField)}
-        info={template.info!}
-        name={templateField}
-        required={template.required}
-        id={{
-          inputTypes: template.input_types,
-          type: template.type,
-          id: data.id,
-          fieldName: templateField,
-        }}
-        proxy={template.proxy}
-        showNode={true}
-        isToolMode={false}
-        showAdvanced={false}
-      />
-    );
-  };
-
   return (
     <div className="pb-2">
       <div className="px-1">
-        {advancedFields.map((field) => renderField(field))}
+        {orderedFields.map((templateField) => (
+          <InspectionPanelParameterRow
+            key={`${data.id}-${templateField}`}
+            data={data}
+            name={templateField}
+            title={getFieldTitle(data.node?.template!, templateField)}
+          />
+        ))}
       </div>
     </div>
   );

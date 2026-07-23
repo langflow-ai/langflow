@@ -22,9 +22,11 @@ from mcp import types
 from sqlmodel import select
 
 from langflow.api.v1.endpoints import simple_run_flow
+from langflow.api.v1.run_validation import HITL_UNSUPPORTED_DETAIL, flow_requires_hitl
 from langflow.api.v1.schemas import SimplifiedAPIRequest
-from langflow.helpers.flow import json_schema_from_flow
+from langflow.helpers.flow import get_flow_input_tweaks, json_schema_from_flow
 from langflow.schema.message import Message
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models import Flow
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.user.model import User
@@ -287,6 +289,21 @@ async def handle_call_tool(
             msg = f"Flow '{name}' not found in project {project_id}"
             raise ValueError(msg)
 
+        # Enforce execute permission (owner override + external access ceiling)
+        # before running the flow. Without this an external "viewer" could run a
+        # flow as a tool, escaping the deny-only access ceiling.
+        await ensure_flow_permission(
+            current_user,
+            FlowAction.EXECUTE,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            workspace_id=flow.workspace_id,
+            folder_id=flow.folder_id,
+        )
+
+        if flow_requires_hitl(flow.data or {}):
+            raise RuntimeError(HITL_UNSUPPORTED_DETAIL)
+
         # Process inputs
         processed_inputs = dict(arguments)
 
@@ -297,7 +314,13 @@ async def handle_call_tool(
             )
 
         session_id = processed_inputs.pop("session_id", None) or str(uuid4())
-        input_request = SimplifiedAPIRequest(input_value=processed_inputs.get("input_value", ""), session_id=session_id)
+        input_value = processed_inputs.pop("input_value", "")
+        tweaks = get_flow_input_tweaks(flow, processed_inputs) if processed_inputs else None
+        input_request = SimplifiedAPIRequest(
+            input_value=input_value,
+            session_id=session_id,
+            tweaks=tweaks or None,
+        )
 
         async def send_progress_updates(progress_token):
             try:

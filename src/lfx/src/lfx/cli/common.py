@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import contextlib
+import contextvars
 import importlib.metadata as importlib_metadata
 import io
 import os
@@ -12,6 +13,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import uuid
 import zipfile
 from io import StringIO
@@ -29,6 +31,7 @@ from lfx.cli.script_loader import (
     find_graph_variable,
     load_graph_from_script,
 )
+from lfx.execution import get_default_coordinator
 from lfx.load import load_flow_from_json
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars
 from lfx.schema.schema import InputValueRequest
@@ -59,6 +62,83 @@ _LANGFLOW_NAMESPACE_UUID = uuid.UUID("3c091057-e799-4e32-8ebc-27bc31e1108c")
 
 # Environment variable for GitHub token
 _GITHUB_TOKEN_ENV = "GITHUB_TOKEN"
+
+
+class _StreamCaptureBinding:
+    """Shared capture state inherited by child execution contexts."""
+
+    def __init__(self, target) -> None:
+        self.target = target
+        self.active = True
+
+    def deactivate(self) -> None:
+        """Stop routing writes and release the completed capture buffer."""
+        self.active = False
+        self.target = None
+
+
+class _ContextualTextStream:
+    """Route writes to a task-local stream while preserving a process fallback.
+
+    ``sys.stdout`` and ``sys.stderr`` are process globals, so replacing either
+    around an ``await`` lets concurrent requests overwrite one another's capture
+    target. A stable proxy keeps the process-global object unchanged while a
+    ContextVar selects the destination for the current request and any child
+    tasks (or context-propagating worker threads).
+    """
+
+    def __init__(self, fallback, *, context_name: str) -> None:
+        self._fallback = fallback
+        self._binding: contextvars.ContextVar[_StreamCaptureBinding | None] = contextvars.ContextVar(
+            context_name, default=None
+        )
+
+    def _current(self):
+        binding = self._binding.get()
+        return self._fallback if binding is None or not binding.active else binding.target
+
+    def activate(self, target) -> tuple[contextvars.Token[_StreamCaptureBinding | None], _StreamCaptureBinding]:
+        binding = _StreamCaptureBinding(target)
+        return self._binding.set(binding), binding
+
+    def reset(
+        self,
+        activation: tuple[contextvars.Token[_StreamCaptureBinding | None], _StreamCaptureBinding],
+    ) -> None:
+        token, binding = activation
+        binding.deactivate()
+        self._binding.reset(token)
+
+    def write(self, data):
+        return self._current().write(data)
+
+    def flush(self) -> None:
+        self._current().flush()
+
+    def writelines(self, lines) -> None:
+        self._current().writelines(lines)
+
+    def __getattr__(self, name: str):
+        return getattr(self._current(), name)
+
+
+_STREAM_PROXY_LOCK = threading.Lock()
+
+
+def _ensure_contextual_streams() -> tuple[_ContextualTextStream, _ContextualTextStream]:
+    """Install stdout/stderr proxies once for the current process stream pair."""
+    with _STREAM_PROXY_LOCK:
+        stdout = sys.stdout
+        if not isinstance(stdout, _ContextualTextStream):
+            stdout = _ContextualTextStream(stdout, context_name="lfx_request_stdout")
+            sys.stdout = stdout
+
+        stderr = sys.stderr
+        if not isinstance(stderr, _ContextualTextStream):
+            stderr = _ContextualTextStream(stderr, context_name="lfx_request_stderr")
+            sys.stderr = stderr
+
+    return stdout, stderr
 
 
 def create_verbose_printer(*, verbose: bool):
@@ -307,7 +387,13 @@ def prepare_graph(graph, verbose_print):
         raise typer.Exit(1) from e
 
 
-async def execute_graph_with_capture(graph, input_value: str | None, session_id: str | None = None):
+async def execute_graph_with_capture(
+    graph,
+    input_value: str | None,
+    session_id: str | None = None,
+    event_manager=None,
+    user_id: str | None = None,
+):
     """Execute a graph and capture output.
 
     Args:
@@ -317,6 +403,17 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
             message-store paths (which validate session_id) succeed; an empty or
             whitespace-only string is rejected with ``ValueError`` to surface
             shell/env-var typos (see ``lfx.run._defaults.validate_provided_id``).
+        event_manager: Optional ``EventManager``. When provided it is threaded
+            into the run so components emit token/message/error events to its
+            queue as the run progresses (used by the streaming workflow
+            endpoint). ``None`` keeps the non-streaming behavior.
+        user_id: Optional verified caller identity (e.g. forwarded by an edge
+            gateway via a verified JWT — see ``lfx.cli.serve_identity``). ``None``
+            keeps any ``user_id`` already pinned on the graph, and auto-generates
+            a throwaway UUID when the graph has none (components require a
+            non-empty user_id, but lfx's variable service is env-backed so the
+            value is not used for scoping). A non-``None`` value overwrites the
+            graph's value (the verified identity is authoritative).
 
     Returns:
         Tuple of (results, captured_logs)
@@ -325,31 +422,39 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
         Exception: Re-raises any exception that occurs during graph execution
     """
     # Apply session_id, user_id, and Memory-vertex propagation defaults via the
-    # shared helper (same logic as run_flow). user_id is not exposed in this
-    # entry point, so any pre-existing graph.user_id is preserved.
-    apply_run_defaults(graph, session_id=session_id, user_id=None, overwrite_user_id=False)
+    # shared helper (same logic as run_flow). A supplied (verified) user_id
+    # overwrites any graph-pinned value; when None (off mode / CLI runs) the
+    # graph's existing user_id is kept, or a UUID auto-generated if it has none —
+    # the same result as calling this function before user_id was a parameter.
+    apply_run_defaults(graph, session_id=session_id, user_id=user_id, overwrite_user_id=user_id is not None)
 
     # Create input request
     inputs = InputValueRequest(input_value=input_value) if input_value else None
 
-    # Capture output during execution
+    # Capture output during execution. The process-global streams remain stable
+    # proxies; only this request's ContextVars point at these buffers.
     captured_stdout = StringIO()
     captured_stderr = StringIO()
-
-    # Redirect stdout and stderr during graph execution
-    original_stdout = sys.stdout
-    original_stderr = sys.stderr
+    stdout_router, stderr_router = _ensure_contextual_streams()
 
     fallback_to_env_vars = resolve_fallback_to_env_vars()
 
     scope_vars = build_request_variables_from_global_vars(graph.context.get("request_variables"))
     scope_token = activate_request_variables(scope_vars or None)
     no_env_fallback_token = activate_no_env_fallback(disabled=bool(graph.context.get("no_env_fallback")))
+    stdout_token = stdout_router.activate(captured_stdout)
+    stderr_token = stderr_router.activate(captured_stderr)
 
     try:
-        sys.stdout = captured_stdout
-        sys.stderr = captured_stderr
-        results = [result async for result in graph.async_start(inputs, fallback_to_env_vars=fallback_to_env_vars)]
+        results = [
+            payload
+            async for payload in get_default_coordinator().stream(
+                graph,
+                initial_inputs=inputs,
+                fallback_to_env_vars=fallback_to_env_vars,
+                event_manager=event_manager,
+            )
+        ]
     except Exception as exc:
         # Capture any error output that was written to stderr
         error_output = captured_stderr.getvalue()
@@ -358,11 +463,12 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
             exc.args = (f"{exc.args[0] if exc.args else str(exc)}\n\nCaptured stderr:\n{error_output}",)
         raise
     finally:
-        reset_no_env_fallback(no_env_fallback_token)
-        reset_request_variables(scope_token)
-        # Restore original stdout/stderr
-        sys.stdout = original_stdout
-        sys.stderr = original_stderr
+        try:
+            reset_no_env_fallback(no_env_fallback_token)
+            reset_request_variables(scope_token)
+        finally:
+            stderr_router.reset(stderr_token)
+            stdout_router.reset(stdout_token)
 
     # Get captured logs
     captured_logs = captured_stdout.getvalue() + captured_stderr.getvalue()

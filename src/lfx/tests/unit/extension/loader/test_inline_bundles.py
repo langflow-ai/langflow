@@ -122,6 +122,18 @@ def test_skips_dot_directories(tmp_path: Path) -> None:
     assert [r.bundle for r in results] == ["real"]
 
 
+def test_skips_marked_component_compat_shims(tmp_path: Path) -> None:
+    parent = tmp_path / "p"
+    parent.mkdir()
+    shim = parent / "knowledge_bases"
+    shim.mkdir()
+    (shim / "__init__.py").write_text("# lfx-compat-shim\n", encoding="utf-8")
+    make_inline_bundle(parent, "real")
+
+    results = discover_inline_bundles([parent])
+    assert [r.bundle for r in results] == ["real"]
+
+
 def test_respects_bundle_json(tmp_path: Path) -> None:
     parent = tmp_path / "p"
     parent.mkdir()

@@ -12,7 +12,6 @@ import {
   writeAssistantDiscovered,
 } from "@/components/core/assistantPanel/hooks/assistant-discovery-storage";
 import { Button } from "@/components/ui/button";
-import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import useFlowStore from "@/stores/flowStore";
@@ -20,6 +19,8 @@ import { usePlaygroundStore } from "@/stores/playgroundStore";
 import type { AllNodeType } from "@/types/flow";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
 import HelpDropdown from "./HelpDropdown";
+import useMinimizeAllAndAlign from "./hooks/use-minimize-all-and-align";
+import { useDismissOnTabBoundary } from "./utils/use-dismiss-on-tab-boundary";
 
 // Delay before the "Try the new Langflow Assistant!" tooltip surfaces, in ms.
 // Long enough that an active user mid-task isn't interrupted; short enough
@@ -37,17 +38,17 @@ const CanvasControls = ({
 }) => {
   const { t } = useTranslation();
   const reactFlowStoreApi = useStoreApi();
+  const { allMinimized, hasGenericNodes, toggleMinimizeAllAndAlign } =
+    useMinimizeAllAndAlign();
   const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
   );
+  const locked = Boolean(effectiveLocked ?? isFlowLocked);
   const setAssistantSidebarOpen = useAssistantManagerStore(
     (state) => state.setAssistantSidebarOpen,
   );
   const assistantSidebarOpen = useAssistantManagerStore(
     (state) => state.assistantSidebarOpen,
-  );
-  const inspectionPanelVisible = useFlowStore(
-    (state) => state.inspectionPanelVisible,
   );
   // While the FlowBuilderWelcome overlay is open, suppress the onboarding
   // tooltip — it renders via Portal and would float over the welcome.
@@ -56,9 +57,6 @@ const CanvasControls = ({
   // renders above the canvas, but the tooltip's Portal escapes that stacking
   // context and would float on top of the playground.
   const isPlaygroundOpen = usePlaygroundStore((state) => state.isOpen);
-  const setInspectionPanelVisible = useFlowStore(
-    (state) => state.setInspectionPanelVisible,
-  );
 
   // Discovery state — once true, the "New" pill + onboarding tooltip never
   // surface again on this browser. Two paths flip it: opening the assistant
@@ -85,6 +83,7 @@ const CanvasControls = ({
   }, []);
 
   const handleAssistantClick = () => {
+    if (locked) return;
     if (!discovered) markDiscovered();
     setAssistantSidebarOpen(!assistantSidebarOpen);
   };
@@ -98,21 +97,24 @@ const CanvasControls = ({
     },
     [markDiscovered],
   );
+  const {
+    containerRef: onboardingTooltipRef,
+    handleTabBoundary: handleOnboardingTooltipTabBoundary,
+  } = useDismissOnTabBoundary<HTMLDivElement>(markDiscovered);
 
   const [isAddNoteActive, setIsAddNoteActive] = useState(false);
 
   const handleAddNote = useCallback(() => {
+    if (locked) return;
     window.dispatchEvent(new Event("lf:start-add-note"));
     setIsAddNoteActive(true);
-  }, []);
+  }, [locked]);
 
   useEffect(() => {
     const onEnd = () => setIsAddNoteActive(false);
     window.addEventListener("lf:end-add-note", onEnd);
     return () => window.removeEventListener("lf:end-add-note", onEnd);
   }, []);
-
-  const locked = effectiveLocked ?? isFlowLocked;
 
   // Single source of truth for the onboarding moment — both the popover
   // tooltip and the "New" pill key off this so they appear together.
@@ -121,6 +123,7 @@ const CanvasControls = ({
     !assistantSidebarOpen &&
     !isWelcomeOpen &&
     !isPlaygroundOpen &&
+    !locked &&
     tooltipVisible;
 
   useEffect(() => {
@@ -148,11 +151,12 @@ const CanvasControls = ({
           <PopoverPrimitive.Anchor asChild>
             <div className="group relative">
               {/* "New" discovery pill — surfaces ONLY on hover, hidden when
-                  the panel is open (active state shouldn't carry the nudge).
-                  The pill keeps appearing on hover indefinitely; only the
-                  lateral tooltip respects the persisted ``discovered`` flag.
+                  the panel is open (active state shouldn't carry the nudge)
+                  and gone for good once the user has opened the assistant
+                  (persisted ``discovered`` flag) — a feature the user already
+                  found isn't "new" to them anymore.
                   Uses the brand token from index.css. */}
-              {!assistantSidebarOpen && (
+              {!assistantSidebarOpen && !discovered && !locked && (
                 <span
                   data-testid="assistant-button-new-pill"
                   // Visibility logic: stays in lock-step with the onboarding
@@ -160,10 +164,10 @@ const CanvasControls = ({
                   // pinned open; otherwise it falls back to the hover-only
                   // behavior so power users still see it as a hint without
                   // it being intrusive.
-                  className={`absolute -top-4 -left-1 z-10 flex items-center gap-0.5 rounded bg-accent-assistant-brand px-1 py-0.5 text-[9px] font-medium leading-none text-white transition-all duration-200 ${
+                  className={`absolute -top-4 -left-1 z-10 flex items-center gap-0.5 rounded bg-accent-assistant-brand px-1 py-0.5 text-[9px] font-medium leading-none text-white transition-opacity duration-200 ${
                     onboardingActive
-                      ? "opacity-100 scale-100"
-                      : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100"
+                      ? "opacity-100"
+                      : "opacity-0 group-hover:opacity-100"
                   }`}
                 >
                   <ForwardedIconComponent
@@ -177,8 +181,10 @@ const CanvasControls = ({
                 unstyled
                 size="icon"
                 data-testid="assistant-button"
-                className="group/btn relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md hover:bg-muted"
+                className="group/btn relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={handleAssistantClick}
+                disabled={locked}
+                title={locked ? t("version.readOnly") : undefined}
               >
                 {/* Idle state — uses the design-tuned
                     ``langflow_assistant_idle.svg`` (noise filter + brand tint
@@ -208,6 +214,7 @@ const CanvasControls = ({
           </PopoverPrimitive.Anchor>
           <PopoverPrimitive.Portal>
             <PopoverPrimitive.Content
+              ref={onboardingTooltipRef}
               side="left"
               // Breathing room between the tooltip and the assistant button.
               // 4px reads as "touching"; 12px gives a clear visual separation
@@ -219,7 +226,10 @@ const CanvasControls = ({
               // break their flow.
               onOpenAutoFocus={(e) => e.preventDefault()}
               onCloseAutoFocus={(e) => e.preventDefault()}
+              onFocusOutside={markDiscovered}
+              onEscapeKeyDown={markDiscovered}
               data-testid="assistant-onboarding-tooltip"
+              onKeyDown={handleOnboardingTooltipTabBoundary}
               // Canvas-level stacking: kept BELOW the z-50 modal/dialog/dropdown
               // layer so the onboarding tooltip never floats in front of an open
               // modal (e.g. "My Files"). The Portal still lifts it clear of the
@@ -253,9 +263,10 @@ const CanvasControls = ({
           unstyled
           size="icon"
           data-testid="canvas-add-note-button"
-          className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-          title={t("canvas.addStickyNote")}
+          className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          title={locked ? t("version.readOnly") : t("canvas.addStickyNote")}
           onClick={handleAddNote}
+          disabled={locked}
         >
           <ForwardedIconComponent
             name="sticky-note"
@@ -266,38 +277,35 @@ const CanvasControls = ({
             }`}
           />
         </Button>
+        <Button
+          unstyled
+          size="icon"
+          data-testid="canvas_controls_minimize_all"
+          aria-pressed={allMinimized}
+          disabled={locked || !hasGenericNodes}
+          className={`group flex h-8 w-8 items-center justify-center rounded-md ${
+            allMinimized ? "bg-muted text-foreground" : "hover:bg-muted"
+          } ${locked || !hasGenericNodes ? "cursor-not-allowed opacity-50" : ""}`}
+          title={
+            locked
+              ? t("version.readOnly")
+              : allMinimized
+                ? t("canvasControls.expandAll")
+                : t("canvasControls.minimizeAll")
+          }
+          onClick={toggleMinimizeAllAndAlign}
+        >
+          <ForwardedIconComponent
+            name={allMinimized ? "Maximize2" : "Minimize2"}
+            className={`h-[18px] w-[18px] transition-colors ${
+              allMinimized
+                ? "text-foreground"
+                : "text-muted-foreground group-hover:text-foreground"
+            }`}
+          />
+        </Button>
         <HelpDropdown />
         {children}
-        {ENABLE_INSPECTION_PANEL && (
-          <Button
-            unstyled
-            size="icon"
-            data-testid="canvas_controls_toggle_inspector"
-            aria-pressed={inspectionPanelVisible}
-            className={`group flex h-8 w-8 items-center justify-center rounded-md ${
-              inspectionPanelVisible
-                ? "bg-muted text-foreground"
-                : "hover:bg-muted"
-            }`}
-            title={
-              !selectedNode
-                ? "Select a node to open the Inspector Panel"
-                : inspectionPanelVisible
-                  ? "Hide Inspector Panel"
-                  : "Show Inspector Panel"
-            }
-            onClick={() => setInspectionPanelVisible(!inspectionPanelVisible)}
-          >
-            <ForwardedIconComponent
-              name="SlidersHorizontal"
-              className={`!h-5 !w-5 ${
-                inspectionPanelVisible
-                  ? "text-foreground"
-                  : "text-muted-foreground group-hover:text-foreground"
-              }`}
-            />
-          </Button>
-        )}
       </Panel>
     </>
   );

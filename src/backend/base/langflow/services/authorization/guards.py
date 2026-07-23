@@ -8,7 +8,16 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, status
 from lfx.log.logger import logger
 
+from langflow.services.auth.context import (
+    current_auth_context_for_audit,
+    current_auth_context_for_authz,
+    current_auth_is_api_key,
+)
 from langflow.services.authorization import audit as _audit
+from langflow.services.authorization.access_ceiling import (
+    external_access_allows,
+    get_current_external_access_context,
+)
 from langflow.services.authorization.actions import (
     DeploymentAction,
     FileAction,
@@ -56,7 +65,40 @@ _DEFAULT_DENY_DETAIL = "Permission denied"
 
 def _auth_context(user: User | UserRead) -> dict[str, Any]:
     """Build the base context dict passed to authorization enforce calls."""
-    return {"is_superuser": getattr(user, "is_superuser", False)}
+    return {
+        **current_auth_context_for_authz(),
+        "is_superuser": getattr(user, "is_superuser", False),
+    }
+
+
+def _auth_audit_details() -> dict[str, str]:
+    """Build JSON-friendly auth context for audit details."""
+    return current_auth_context_for_audit()
+
+
+async def _api_key_scopes_require_plugin_enforcement() -> bool:
+    """Return True when owner override must not hide API-key caveats."""
+    if not current_auth_is_api_key():
+        return False
+
+    settings = get_settings_service()
+    if not settings.auth_settings.AUTHZ_ENABLED:
+        return False
+
+    authz = get_authorization_service()
+    supports_api_key_scopes = getattr(authz, "supports_api_key_scopes", None)
+    if supports_api_key_scopes is None:
+        return False
+    try:
+        return bool(await supports_api_key_scopes())
+    except Exception:  # noqa: BLE001
+        logger.exception("Authorization plugin failed API-key scope capability check; preserving owner override")
+        return False
+
+
+async def should_apply_owner_override() -> bool:
+    """Return True when Langflow should apply the built-in owner override."""
+    return not await _api_key_scopes_require_plugin_enforcement()
 
 
 def _coerce_action(
@@ -105,19 +147,29 @@ async def ensure_permission(
     intentionally generic so a missing ``deny_to_404`` wrap cannot leak the
     resource UUID — see review item I2 on PR #13153.
     """
-    settings = get_settings_service()
-    if not settings.auth_settings.AUTHZ_ENABLED:
-        return
-
-    authz = get_authorization_service()
     # Caller context first; user auth fields cannot be overwritten.
     merged_context = {**(context or {}), **_auth_context(user)}
-    # Fail closed when enforce() raises (deny + audit, not HTTP 500).
     audit_action = f"{obj.split(':', 1)[0]}:{act}" if ":" in obj else act
-    audit_details: dict[str, Any] = {"domain": domain}
+    audit_details: dict[str, Any] = {"domain": domain, **_auth_audit_details()}
     for owner_key in _OWNER_CONTEXT_KEYS:
         if owner_key in merged_context and merged_context[owner_key] is not None:
             audit_details[owner_key] = str(merged_context[owner_key])
+
+    settings = get_settings_service()
+    if not settings.auth_settings.AUTHZ_ENABLED:
+        # Auditing is independently configurable so operators can observe the
+        # allow-by-disabled-enforcement path before turning RBAC on.
+        await _audit.audit_decision(
+            user_id=user.id,
+            action=audit_action,
+            obj=obj,
+            result=_audit.AUDIT_ALLOW,
+            details=audit_details,
+        )
+        return
+
+    authz = get_authorization_service()
+    # Fail closed when enforce() raises (deny + audit, not HTTP 500).
     deny_detail = detail if detail is not None else _DEFAULT_DENY_DETAIL
     try:
         allowed = await authz.enforce(
@@ -162,6 +214,7 @@ async def _ensure_resource_permission(
     resource_type: str,
     resource_id: UUID | str | None,
     owner_id: UUID | None,
+    owner_override_allowed: bool,
     act_str: str,
     resolved_domain: str,
     extra_context: dict[str, Any],
@@ -169,13 +222,36 @@ async def _ensure_resource_permission(
     """Build object key, apply owner override, else delegate to ensure_permission."""
     obj = f"{resource_type}:{resource_id}" if resource_id else f"{resource_type}:*"
 
-    if owner_id is not None and getattr(user, "id", None) == owner_id:
+    external_context = get_current_external_access_context()
+    if external_context is not None and not external_access_allows(act_str, external_context):
+        await _audit.audit_decision(
+            user_id=user.id,
+            action=f"{resource_type}:{act_str}",
+            obj=obj,
+            result=_audit.AUDIT_DENY,
+            details={
+                "domain": resolved_domain,
+                "external_auth_provider": external_context.provider,
+                "external_access_level": external_context.level,
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="External credentials do not allow this action",
+        )
+
+    if (
+        owner_override_allowed
+        and owner_id is not None
+        and getattr(user, "id", None) == owner_id
+        and await should_apply_owner_override()
+    ):
         await _audit.audit_decision(
             user_id=user.id,
             action=f"{resource_type}:{act_str}",
             obj=obj,
             result=_audit.AUDIT_OWNER_OVERRIDE,
-            details={"domain": resolved_domain},
+            details={"domain": resolved_domain, **_auth_audit_details()},
         )
         return
 
@@ -209,6 +285,10 @@ class _ResourceSpec:
     scope_kw: str | None
     # Extra kwargs forwarded verbatim into ``extra_context`` (no domain effect).
     extra_context_kws: tuple[str, ...] = ()
+    # CREATE normally has no existing resource owner, so caller-supplied owner
+    # ids must not trigger the owner override. Resource families whose CREATE
+    # action targets an existing owned resource may opt in explicitly.
+    owner_override_on_create: bool = False
 
 
 _RESOURCE_SPECS: dict[str, _ResourceSpec] = {
@@ -261,6 +341,9 @@ _RESOURCE_SPECS: dict[str, _ResourceSpec] = {
         id_kw="share_id",
         workspace_kw=None,
         scope_kw=None,
+        # Creating a share authorizes against the already-existing target
+        # resource owner, not the prospective share-row owner.
+        owner_override_on_create=True,
     ),
 }
 
@@ -315,6 +398,7 @@ async def _ensure_typed(
         resource_type=spec.resource_type,
         resource_id=resource_id,
         owner_id=owner_id,
+        owner_override_allowed=act_str != "create" or spec.owner_override_on_create,
         act_str=act_str,
         resolved_domain=resolved_domain,
         extra_context=extra_context,

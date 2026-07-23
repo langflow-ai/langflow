@@ -15,6 +15,7 @@ from lfx.cli.script_loader import (
     load_graph_from_script,
 )
 from lfx.cli.validation import validate_global_variables_for_env
+from lfx.execution import get_default_coordinator
 from lfx.log.logger import logger
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars, validate_provided_id
 from lfx.schema.schema import InputValueRequest
@@ -34,6 +35,57 @@ class RunError(Exception):
     def __init__(self, message: str, exception: Exception | None = None):
         super().__init__(message)
         self.original_exception = exception
+
+
+def _preflight_dependencies(
+    *,
+    flow_dict: dict | None,
+    script_path: Path | None,
+    verbose: bool,
+) -> None:
+    """Fail fast when a JSON flow needs packages that are not installed.
+
+    Runs before the graph load (and the component imports it triggers) so a
+    missing provider SDK surfaces as a single actionable ``pip install ...``
+    message instead of a deep ``ModuleNotFoundError`` mid-build.
+
+    Best-effort and conservative: it analyzes only JSON flows (``.py`` scripts
+    declare deps via PEP 723 inline metadata, handled elsewhere), and any
+    analysis error is logged and skipped so a runnable flow is never blocked by
+    the check itself. Disabled with ``--no-check-dependencies``.
+
+    Raises:
+        RunError: when one or more required packages are positively missing.
+    """
+    # Normalize to the ``{"data": {"nodes": [...]}}`` shape the analyzer expects.
+    if flow_dict is not None:
+        analysis_flow: dict = {"data": flow_dict}
+    elif script_path is not None and script_path.suffix.lower() == ".json":
+        try:
+            raw = json.loads(script_path.read_text(encoding="utf-8"))
+            _, inner = split_flow_envelope(raw)
+        except (OSError, json.JSONDecodeError, TypeError):
+            # Unreadable/invalid JSON: let the graph loader report it precisely.
+            return
+        analysis_flow = {"data": inner}
+    else:
+        # .py script or no JSON source: nothing to analyze here.
+        return
+
+    try:
+        from lfx.utils.flow_requirements import find_missing_dependencies
+
+        missing = find_missing_dependencies(analysis_flow)
+    except Exception as e:  # noqa: BLE001 - never let analysis crash a runnable flow
+        logger.debug(f"Dependency preflight skipped (analysis error: {e})")
+        return
+
+    if missing:
+        from lfx.utils.flow_requirements import format_missing_dependencies_error
+
+        error_msg = format_missing_dependencies_error(missing)
+        output_error(error_msg, verbose=verbose)
+        raise RunError(error_msg, None)
 
 
 def output_error(error_message: str, *, verbose: bool, exception: Exception | None = None) -> dict:
@@ -152,6 +204,7 @@ async def run_flow(
     *,
     stdin: bool = False,
     check_variables: bool = True,
+    check_dependencies: bool = True,
     verbose: bool = False,
     verbose_detailed: bool = False,
     verbose_full: bool = False,
@@ -161,6 +214,7 @@ async def run_flow(
     session_id: str | None = None,
     event_manager: "EventManager | None" = None,
     upgrade_flow: str | None = None,
+    human_input: bool | None = None,
 ) -> dict:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -175,6 +229,8 @@ async def run_flow(
         flow_json: Inline JSON flow content as a string
         stdin: Read JSON flow content from stdin
         check_variables: Check global variables for environment compatibility
+        check_dependencies: Preflight the flow's required packages and fail fast
+            with install guidance when any are missing (JSON flows only)
         verbose: Show basic progress information
         verbose_detailed: Show detailed progress and debug information
         verbose_full: Show full debugging output including component logs
@@ -186,6 +242,10 @@ async def run_flow(
         upgrade_flow: Component compatibility mode. ``'check'`` refuses to run if any
             component is outdated or blocked. ``'safe'`` auto-applies safe upgrades and
             aborts on breaking or blocked components.
+        human_input: Interactive human-in-the-loop. ``None`` (default) auto-enables it
+            when the flow has a pausing node (e.g. HumanInput) and stdin is a TTY;
+            ``True``/``False`` force it on/off. When active the flow runs via the
+            pause/resume driver, prompting at the terminal for each decision.
 
     Returns:
         dict: Result data containing the execution results, logs, and optionally timing info
@@ -221,7 +281,7 @@ async def run_flow(
         output_error(error_msg, verbose=verbose, exception=e)
         raise RunError(error_msg, e) from e
 
-    start_time = time.time() if timing else None
+    start_time = time.monotonic() if timing else None
 
     # Use either positional input_value or --input-value option
     final_input_value = input_value or input_value_option
@@ -265,6 +325,11 @@ async def run_flow(
         if applied and verbose:
             sys.stderr.write(f"Applied {applied} safe component upgrade(s).\n")
     # --- end upgrade gate ---
+
+    # --- dependency preflight (fail fast before component imports) ---
+    if check_dependencies:
+        _preflight_dependencies(flow_dict=flow_dict, script_path=script_path, verbose=verbose)
+    # --- end dependency preflight ---
 
     try:
         # Handle direct JSON dict (from stdin or --flow-json)
@@ -362,7 +427,7 @@ async def run_flow(
     inputs = InputValueRequest(input_value=final_input_value) if final_input_value else None
 
     # Mark end of loading phase if timing
-    load_end_time = time.time() if timing else None
+    load_end_time = time.monotonic() if timing else None
 
     if verbosity > 0:
         sys.stderr.write("Preparing graph for execution...\n")
@@ -411,7 +476,7 @@ async def run_flow(
         raise RunError(error_msg, e) from e
 
     logger.info("Executing graph...")
-    execution_start_time = time.time() if timing else None
+    execution_start_time = time.monotonic() if timing else None
     if verbose:
         logger.debug("Setting up execution environment")
         if inputs:
@@ -443,34 +508,67 @@ async def run_flow(
         # fall through to os.environ on miss instead of erroring the build).
         fallback_to_env_vars = resolve_fallback_to_env_vars()
 
-        async for result in graph.async_start(
-            inputs, event_manager=event_manager, fallback_to_env_vars=fallback_to_env_vars
-        ):
-            result_count += 1
-            if verbosity > 0:
-                logger.debug(f"Processing result #{result_count}")
-                if hasattr(result, "vertex") and hasattr(result.vertex, "display_name"):
-                    logger.debug(f"Component: {result.vertex.display_name}")
-            if timing:
-                step_end_time = time.time()
-                step_duration = step_end_time - execution_step_start
+        from lfx.run.hitl import flow_has_pausing_node
 
-                # Extract component information
-                if hasattr(result, "vertex"):
-                    component_name = getattr(result.vertex, "display_name", "Unknown")
-                    component_id = getattr(result.vertex, "id", "Unknown")
-                    component_timings.append(
-                        {
-                            "component": component_name,
-                            "component_id": component_id,
-                            "duration": step_duration,
-                            "cumulative_time": step_end_time - execution_start_time,
-                        }
-                    )
+        # None auto-enables only for a known pausing node on an interactive terminal.
+        hitl_active = human_input if human_input is not None else (flow_has_pausing_node(graph) and sys.stdin.isatty())
+        if hitl_active:
+            from lfx.run.hitl import run_graph_with_human_input, terminal_decision_provider
 
-                execution_step_start = step_end_time
+            # Restore real stderr so the interactive prompt reaches the terminal.
+            sys.stderr = original_stderr
+            try:
+                results = await run_graph_with_human_input(
+                    graph,
+                    decision_provider=terminal_decision_provider,
+                    input_value=final_input_value,
+                    event_manager=event_manager,
+                    fallback_to_env_vars=fallback_to_env_vars,
+                )
+            finally:
+                if verbosity < VERBOSITY_FULL:
+                    sys.stderr = captured_stderr
+            result_count = len(results)
+        else:
+            if flow_has_pausing_node(graph):
+                # Real stderr: the captured one is swallowed at default verbosity, and this must be loud.
+                original_stderr.write(
+                    "Warning: this flow has a Human Input (pausing) node, but the run is "
+                    "non-interactive, so it will NOT pause for a decision. CLI HITL is "
+                    "interactive-session only (in-memory, no durable resume). Run in a "
+                    "terminal or pass --human-input to enable the interactive prompts.\n"
+                )
+            async for result in get_default_coordinator().stream(
+                graph,
+                initial_inputs=inputs,
+                event_manager=event_manager,
+                fallback_to_env_vars=fallback_to_env_vars,
+            ):
+                result_count += 1
+                if verbosity > 0:
+                    logger.debug(f"Processing result #{result_count}")
+                    if hasattr(result, "vertex") and hasattr(result.vertex, "display_name"):
+                        logger.debug(f"Component: {result.vertex.display_name}")
+                if timing:
+                    step_end_time = time.monotonic()
+                    step_duration = step_end_time - execution_step_start
 
-            results.append(result)
+                    # Extract component information
+                    if hasattr(result, "vertex"):
+                        component_name = getattr(result.vertex, "display_name", "Unknown")
+                        component_id = getattr(result.vertex, "id", "Unknown")
+                        component_timings.append(
+                            {
+                                "component": component_name,
+                                "component_id": component_id,
+                                "duration": step_duration,
+                                "cumulative_time": step_end_time - execution_start_time,
+                            }
+                        )
+
+                    execution_step_start = step_end_time
+
+                results.append(result)
 
         logger.info(f"Graph execution completed. Processed {result_count} results")
 
@@ -536,7 +634,7 @@ async def run_flow(
         sys.stdout = original_stdout
         sys.stderr = original_stderr
 
-    execution_end_time = time.time() if timing else None
+    execution_end_time = time.monotonic() if timing else None
 
     captured_logs = captured_stdout.getvalue() + captured_stderr.getvalue()
 

@@ -6,65 +6,8 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "Memory",
-            "id": "Memory-MKGtC",
-            "name": "messages_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "memory",
-            "id": "Prompt-9wc4j",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Memory-MKGtC{œdataTypeœ:œMemoryœ,œidœ:œMemory-MKGtCœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-9wc4j{œfieldNameœ:œmemoryœ,œidœ:œPrompt-9wc4jœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Memory-MKGtC",
-        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-MKGtCœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-9wc4j",
-        "targetHandle": "{œfieldNameœ: œmemoryœ, œidœ: œPrompt-9wc4jœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-9wc4j",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_message",
-            "id": "LanguageModelComponent-n8KRg",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-9wc4j{œdataTypeœ:œPromptœ,œidœ:œPrompt-9wc4jœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-n8KRg{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-n8KRgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-9wc4j",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-9wc4jœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-n8KRg",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-n8KRgœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-xLWhw",
+            "id": "ChatInput-oQkLS",
             "name": "message",
             "output_types": [
               "Message"
@@ -72,35 +15,63 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-n8KRg",
+            "id": "Agent-AlLub",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-xLWhw{œdataTypeœ:œChatInputœ,œidœ:œChatInput-xLWhwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-n8KRg{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-n8KRgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-oQkLS{œdataTypeœ:œChatInputœ,œidœ:œChatInput-oQkLSœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-AlLub{œfieldNameœ:œinput_valueœ,œidœ:œAgent-AlLubœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-xLWhw",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-xLWhwœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-n8KRg",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-n8KRgœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-oQkLS",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-oQkLSœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-AlLub",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-AlLubœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-n8KRg",
-            "name": "text_output",
+            "dataType": "MemoryBase",
+            "id": "MemoryBase-xePih",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-AlLub",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-MemoryBase-xePih{œdataTypeœ:œMemoryBaseœ,œidœ:œMemoryBase-xePihœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-AlLub{œfieldNameœ:œtoolsœ,œidœ:œAgent-AlLubœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "MemoryBase-xePih",
+        "sourceHandle": "{œdataTypeœ: œMemoryBaseœ, œidœ: œMemoryBase-xePihœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-AlLub",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-AlLubœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-AlLub",
+            "name": "response",
             "output_types": [
               "Message"
             ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-2ljRT",
+            "id": "ChatOutput-65zjS",
             "inputTypes": [
               "Data",
               "JSON",
@@ -111,18 +82,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-n8KRg{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-n8KRgœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-2ljRT{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-2ljRTœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-AlLub{œdataTypeœ:œAgentœ,œidœ:œAgent-AlLubœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-65zjS{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-65zjSœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "LanguageModelComponent-n8KRg",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-n8KRgœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-2ljRT",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-2ljRTœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-AlLub",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-AlLubœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-65zjS",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-65zjSœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-xLWhw",
+          "id": "ChatInput-oQkLS",
           "node": {
             "base_classes": [
               "Message"
@@ -146,7 +117,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.4.3",
+            "lf_version": "1.10.1rc3",
             "metadata": {
               "code_hash": "7a26c54d89ed",
               "dependencies": {
@@ -182,6 +153,7 @@
               "_type": "Component",
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
@@ -283,7 +255,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "what is my name"
+                "value": ""
               },
               "sender": {
                 "_input_type": "DropdownInput",
@@ -373,14 +345,14 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-xLWhw",
+        "id": "ChatInput-oQkLS",
         "measured": {
-          "height": 234,
+          "height": 206,
           "width": 320
         },
         "position": {
-          "x": 2321.5543981677606,
-          "y": 374.0457826421628
+          "x": 2153.952010643146,
+          "y": 864.4333264931514
         },
         "positionAbsolute": {
           "x": 2321.5543981677606,
@@ -393,7 +365,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-2ljRT",
+          "id": "ChatOutput-65zjS",
           "node": {
             "base_classes": [
               "Message"
@@ -418,7 +390,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.4.3",
+            "lf_version": "1.10.1rc3",
             "metadata": {
               "code_hash": "84009527d08c",
               "dependencies": {
@@ -480,6 +452,7 @@
               },
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
@@ -652,15 +625,15 @@
           },
           "type": "ChatOutput"
         },
-        "dragging": true,
-        "id": "ChatOutput-2ljRT",
+        "dragging": false,
+        "id": "ChatOutput-65zjS",
         "measured": {
-          "height": 234,
+          "height": 206,
           "width": 320
         },
         "position": {
-          "x": 3113.9880204333917,
-          "y": 769.7618411016429
+          "x": 3104.328520123746,
+          "y": 840.598176705712
         },
         "positionAbsolute": {
           "x": 3101.965731391458,
@@ -671,22 +644,22 @@
       },
       {
         "data": {
-          "id": "note-hLqzd",
+          "id": "note-HK9YV",
           "node": {
-            "description": "# 📖 README\nThis flow extends the **Basic Prompting** template by adding a **Message History** component that can retrieve up to 100 previous chat messages as context for the current conversation.\n\n## Quick start\n1. Configure your **Model Provider** with your API credentials.\n2. Open the **Playground**, and then tell the LLM your name.\n3. Start a new chat session in the Playground, and then ask, `what is my name`. The LLM is able to retrieve your name from the stored chat history.\n\n## About the Message History component\nThe **Language Model** and **Agent** components have built-in chat memory that is enabled by default and functionally the same as the **Message History** component.\nOnly use the **Message History** component when you want to store or retrieve chat memory from an external chat memory database, or when you need to retrieve chat memory outside of the current session context, such as in a non-chat flow or by supplying memories from other chats to a different session. For more information, see [Store chat memory](https://docs.langflow.org/memory#store-chat-memory).",
+            "description": "# 📖 README\nThis flow is a chatbot with **long-term memory**. An **Agent** answers the user, and a **Memory Base** component lets it **store and recall facts across conversations** — so it remembers what you told it even in a brand-new chat session.\n\n## Quick start\n1. Configure your **Model Provider** with your API credentials in the **Agent**.\n2. Open the **Playground**, and then tell the agent something about yourself (e.g. your name).\n3. Start a **new chat session** in the Playground, and then ask, `what is my name`. The agent recalls it from the **Memory Base** — not just from the current session's history.\n\n## About the Memory Base component\nThe **Agent** and **Language Model** components have built-in chat memory for the **current session**, enabled by default. **Memory Base** goes further: it persists **long-term memories** to a memory store and lets the agent retrieve them **across sessions** (and even across other flows). The agent uses Memory Base as a tool — writing new memories as you chat and reading the relevant ones when it answers.\n\nIn this flow, **Memory Base** has session filtering turned **off**, so memories are shared across sessions — that's why a new chat can still recall your name.\n\nUse **Memory Base** when you need memory that outlives a single chat session — personalization, user facts, or supplying memories from other chats. For session-only context, the built-in chat memory is enough. For more information, see [Memory](https://docs.langflow.org/memory).\n",
             "display_name": "",
             "documentation": "",
-            "i18n_key": "template_notes.memory_chatbot.07ea6a8e",
+            "i18n_key": "template_notes.memory_chatbot.160f4633",
             "template": {}
           },
           "type": "note"
         },
         "dragging": false,
-        "height": 666,
-        "id": "note-hLqzd",
+        "height": 772,
+        "id": "note-HK9YV",
         "measured": {
-          "height": 666,
-          "width": 383
+          "height": 772,
+          "width": 529
         },
         "position": {
           "x": 1462.894231659186,
@@ -703,67 +676,103 @@
           "width": 324
         },
         "type": "noteNode",
-        "width": 383
+        "width": 529
       },
       {
         "data": {
-          "id": "Prompt-9wc4j",
+          "_connectionMode": false,
+          "id": "Agent-AlLub",
           "node": {
             "base_classes": [
+              "Data",
+              "JSON",
               "Message"
             ],
             "beta": false,
             "conditional_paths": [],
-            "custom_fields": {
-              "template": [
-                "memory"
-              ]
-            },
-            "description": "Create a prompt template with dynamic variables.",
-            "display_name": "Prompt Template",
-            "documentation": "",
+            "custom_fields": {},
+            "description": "Define the agent's instructions, then enter a task to complete using tools.",
+            "display_name": "Agent",
+            "documentation": "https://docs.langflow.org/agents",
             "edited": false,
-            "error": null,
             "field_order": [
-              "template",
-              "use_double_brackets",
-              "tool_placeholder"
+              "model",
+              "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
+              "system_prompt",
+              "context_id",
+              "n_messages",
+              "max_tokens",
+              "format_instructions",
+              "output_schema",
+              "tools",
+              "input_value",
+              "handle_parsing_errors",
+              "max_iterations",
+              "stream",
+              "add_current_date_tool",
+              "add_calculator_tool"
             ],
             "frozen": false,
-            "full_path": null,
-            "icon": "prompts",
-            "is_composition": null,
-            "is_input": null,
-            "is_output": null,
+            "icon": "bot",
+            "last_updated": "2026-06-23T18:53:59.793Z",
             "legacy": false,
-            "lf_version": "1.4.3",
+            "lf_version": "1.10.1rc3",
             "metadata": {
-              "code_hash": "3d3fd7b8a36f",
+              "code_hash": "fd007e4b71a0",
               "dependencies": {
                 "dependencies": [
                   {
+                    "name": "langchain",
+                    "version": "1.3.13"
+                  },
+                  {
+                    "name": "langgraph",
+                    "version": "1.2.9"
+                  },
+                  {
                     "name": "lfx",
                     "version": null
+                  },
+                  {
+                    "name": "langchain_core",
+                    "version": "1.4.9"
                   }
                 ],
-                "total_dependencies": 1
+                "total_dependencies": 4
               },
-              "module": "lfx.components.models_and_agents.prompt.PromptComponent"
+              "module": "lfx.components.models_and_agents.agent.AgentComponent"
             },
-            "name": "",
+            "minimized": false,
             "output_types": [],
             "outputs": [
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Prompt",
+                "display_name": "Response",
                 "group_outputs": false,
-                "method": "build_prompt",
-                "name": "prompt",
+                "method": "message_response",
+                "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
                   "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Structured Response",
+                "group_outputs": false,
+                "method": "json_response",
+                "name": "structured_response",
+                "selected": "JSON",
+                "tool_mode": true,
+                "types": [
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -771,98 +780,18 @@
             "pinned": false,
             "template": {
               "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from typing import Any\n\nfrom lfx.base.prompts.api_utils import process_prompt_template\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.input_mixin import FieldTypes\nfrom lfx.inputs.inputs import DefaultPromptField\nfrom lfx.io import BoolInput, MessageTextInput, Output, PromptInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.dotdict import dotdict\nfrom lfx.schema.message import Message\nfrom lfx.template.utils import update_template_values\nfrom lfx.utils.mustache_security import validate_mustache_template\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt Template\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    documentation: str = \"https://docs.langflow.org/components-prompts\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt Template\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        BoolInput(\n            name=\"use_double_brackets\",\n            display_name=\"Use Double Brackets\",\n            value=False,\n            advanced=True,\n            info=\"Use {{variable}} syntax instead of {variable}.\",\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            show=False,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        \"\"\"Update the template field type based on the selected mode.\"\"\"\n        if field_name == \"use_double_brackets\":\n            # Change the template field type based on mode\n            is_mustache = field_value is True\n            if is_mustache:\n                build_config[\"template\"][\"type\"] = FieldTypes.MUSTACHE_PROMPT.value\n            else:\n                build_config[\"template\"][\"type\"] = FieldTypes.PROMPT.value\n\n            # Re-process the template to update variables when mode changes\n            template_value = build_config.get(\"template\", {}).get(\"value\", \"\")\n            if template_value:\n                # Ensure custom_fields is properly initialized\n                if \"custom_fields\" not in build_config:\n                    build_config[\"custom_fields\"] = {}\n\n                # Clean up fields from the OLD mode before processing with NEW mode\n                # This ensures we don't keep fields with wrong syntax even if validation fails\n                old_custom_fields = build_config[\"custom_fields\"].get(\"template\", [])\n                for old_field in list(old_custom_fields):\n                    # Remove the field from custom_fields and template\n                    if old_field in old_custom_fields:\n                        old_custom_fields.remove(old_field)\n                    build_config.pop(old_field, None)\n\n                # Try to process template with new mode to add new variables\n                # If validation fails, at least we cleaned up old fields\n                try:\n                    # Validate mustache templates for security\n                    if is_mustache:\n                        validate_mustache_template(template_value)\n\n                    # Re-process template with new mode to add new variables\n                    _ = process_prompt_template(\n                        template=template_value,\n                        name=\"template\",\n                        custom_fields=build_config[\"custom_fields\"],\n                        frontend_node_template=build_config,\n                        is_mustache=is_mustache,\n                    )\n                except ValueError as e:\n                    # If validation fails, we still updated the mode and cleaned old fields\n                    # User will see error when they try to save\n                    logger.debug(f\"Template validation failed during mode switch: {e}\")\n        return build_config\n\n    async def build_prompt(self) -> Message:\n        use_double_brackets = self.use_double_brackets if hasattr(self, \"use_double_brackets\") else False\n        template_format = \"mustache\" if use_double_brackets else \"f-string\"\n        prompt = await Message.from_template_and_variables(template_format=template_format, **self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        use_double_brackets = frontend_node[\"template\"].get(\"use_double_brackets\", {}).get(\"value\", False)\n        is_mustache = use_double_brackets is True\n\n        try:\n            # Validate mustache templates for security\n            if is_mustache:\n                validate_mustache_template(prompt_template)\n\n            custom_fields = frontend_node[\"custom_fields\"]\n            frontend_node_template = frontend_node[\"template\"]\n            _ = process_prompt_template(\n                template=prompt_template,\n                name=\"template\",\n                custom_fields=custom_fields,\n                frontend_node_template=frontend_node_template,\n                is_mustache=is_mustache,\n            )\n        except ValueError as e:\n            # If validation fails, don't add variables but allow component to be created\n            logger.debug(f\"Template validation failed in _update_template: {e}\")\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        use_double_brackets = frontend_node[\"template\"].get(\"use_double_brackets\", {}).get(\"value\", False)\n        is_mustache = use_double_brackets is True\n\n        try:\n            # Validate mustache templates for security\n            if is_mustache:\n                validate_mustache_template(template)\n\n            # Kept it duplicated for backwards compatibility\n            _ = process_prompt_template(\n                template=template,\n                name=\"template\",\n                custom_fields=frontend_node[\"custom_fields\"],\n                frontend_node_template=frontend_node[\"template\"],\n                is_mustache=is_mustache,\n            )\n        except ValueError as e:\n            # If validation fails, don't add variables but allow component to be updated\n            logger.debug(f\"Template validation failed in update_frontend_node: {e}\")\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
-              },
-              "memory": {
-                "advanced": false,
-                "display_name": "memory",
-                "dynamic": false,
-                "field_type": "str",
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "memory",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "template": {
-                "_input_type": "PromptInput",
-                "advanced": false,
-                "display_name": "Template",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "template",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "type": "prompt",
-                "value": "You are a helpful assistant that answer questions.\n\nUse markdown to format your answer, properly embedding images and urls.\n\nHistory: \n\n{memory}\n"
-              },
-              "tool_placeholder": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Tool Placeholder",
-                "dynamic": false,
-                "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "tool_placeholder",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "use_double_brackets": {
+              "add_calculator_tool": {
                 "_input_type": "BoolInput",
                 "advanced": true,
-                "display_name": "Use Double Brackets",
+                "display_name": "Calculator",
                 "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
+                "info": "If true, adds a zero-config arithmetic calculator tool to the agent (safe: only +, -, *, /, ** operators via AST).",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
-                "name": "use_double_brackets",
+                "name": "add_calculator_tool",
                 "override_skip": false,
                 "placeholder": "",
-                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
@@ -870,511 +799,37 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "bool",
-                "value": false
-              }
-            },
-            "tool_mode": false
-          },
-          "selected_output": "prompt",
-          "type": "Prompt"
-        },
-        "dragging": false,
-        "id": "Prompt-9wc4j",
-        "measured": {
-          "height": 347,
-          "width": 320
-        },
-        "position": {
-          "x": 2351.863651394379,
-          "y": 636.2759646634735
-        },
-        "positionAbsolute": {
-          "x": 2327.422938009026,
-          "y": 675.992123914672
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "Memory-MKGtC",
-          "node": {
-            "base_classes": [
-              "DataFrame",
-              "Table"
-            ],
-            "beta": false,
-            "category": "helpers",
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Stores or retrieves stored chat messages from Langflow tables or an external memory.",
-            "display_name": "Message History",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "mode",
-              "message",
-              "memory",
-              "sender_type",
-              "sender",
-              "sender_name",
-              "n_messages",
-              "session_id",
-              "context_id",
-              "order",
-              "template"
-            ],
-            "frozen": false,
-            "icon": "message-square-more",
-            "key": "Memory",
-            "legacy": false,
-            "lf_version": "1.4.3",
-            "metadata": {
-              "code_hash": "5619cf9008d5",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
+                "value": true
               },
-              "module": "lfx.components.models_and_agents.memory.MemoryComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Messages",
-                "group_outputs": false,
-                "method": "retrieve_messages_as_text",
-                "name": "messages_text",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Table",
-                "group_outputs": false,
-                "method": "retrieve_messages_dataframe",
-                "name": "dataframe",
-                "selected": "Table",
-                "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "score": 0.007568328950209746,
-            "template": {
-              "_type": "Component",
-              "code": {
+              "add_current_date_tool": {
+                "_input_type": "BoolInput",
                 "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from typing import Any, cast\nfrom uuid import UUID\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.helpers.data import data_to_text\nfrom lfx.inputs.inputs import DropdownInput, HandleInput, IntInput, MessageTextInput, MultilineInput, TabInput\nfrom lfx.log.logger import logger\nfrom lfx.memory import aget_messages, astore_message\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.dotdict import dotdict\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\nfrom lfx.utils.component_utils import set_current_fields, set_field_display\nfrom lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER\n\n# Cap on rows we will pull from the DB when the caller has not supplied an\n# explicit ``n_messages`` limit. This is a guardrail against unbounded fetches\n# (DB pressure, memory) on sessions that accumulate huge histories. The\n# trade-off is that sessions with more rows than this cap will not surface\n# their oldest messages when no ``n_messages`` is set. See ``aget_messages``\n# usage sites below for how this interacts with ordering.\nMAX_CHAT_HISTORY_FETCH_LIMIT = 10_000\n\n\ndef _coerce_flow_id_to_uuid(flow_id: str | UUID | None) -> UUID | None:\n    \"\"\"Coerce a graph flow_id (typically str) to UUID for DB filtering.\n\n    Returns ``None`` when ``flow_id`` is missing or cannot be parsed. The\n    caller then falls back to the previous **unscoped** retrieval, which\n    re-introduces the cross-flow leak that motivated PR #13087. We emit a\n    structured ``error`` log on that path (rather than ``warning``) so\n    observability can alert on it — see issue #13059 / PR #13087.\n    \"\"\"\n    if flow_id is None or flow_id == \"\":\n        return None\n    if isinstance(flow_id, UUID):\n        return flow_id\n    try:\n        return UUID(str(flow_id))\n    except (ValueError, TypeError, AttributeError):\n        # Loud, structured signal — this path means chat history is being\n        # served without flow-scoping, which is the privacy bug PR #13087\n        # was created to close. Anything matching this event is a candidate\n        # for an observability alert.\n        logger.error(\n            \"memory_flow_id_unscoped: flow_id %r is not a valid UUID; \"\n            \"chat history will NOT be scoped by flow_id. This re-enables \"\n            \"cross-flow leakage (issue #13059) for this request.\",\n            flow_id,\n            extra={\"event\": \"memory_flow_id_unscoped\", \"flow_id_repr\": repr(flow_id)},\n        )\n        return None\n\n\ndef _safe_graph_flow_id(component: Component) -> str | UUID | None:\n    \"\"\"Best-effort lookup of the component's graph flow_id.\n\n    ``Component.graph`` is a property that reaches into ``self._vertex.graph``;\n    when a MemoryComponent is constructed ad-hoc (e.g. by the Agent component\n    via ``MemoryComponent(**self.get_base_args())``), ``_vertex`` is ``None`` and\n    accessing the property raises ``AttributeError``. Swallow that here so\n    retrieval falls back to the previous unscoped behavior rather than crashing.\n    \"\"\"\n    try:\n        graph = component.graph\n    except AttributeError:\n        return None\n    return getattr(graph, \"flow_id\", None)\n\n\nasync def aget_agent_chat_history(\n    *,\n    session_id: str | UUID | None,\n    flow_id: str | UUID | None,\n    context_id: str | None = None,\n    n_messages: int | None = None,\n) -> list[Message]:\n    \"\"\"Fetch chat history for an agent, scoped to a single flow.\n\n    Centralizes the contract previously implemented by\n    ``MemoryComponent.retrieve_messages`` for agent callers:\n\n    * Returns ``[]`` when ``n_messages == 0`` (memory explicitly disabled).\n      Without this short-circuit, the bounded query would still execute and\n      the caller's ``messages[-0:]`` would return everything.\n    * Scopes by ``flow_id`` (coerced to ``UUID``) so default playground\n      session names cannot leak history across flows (issue #13059).\n    * Returns up to ``n_messages`` most recent messages in ascending order.\n      Queries in ``DESC`` order with ``limit=n_messages`` so sessions with\n      more than ``MAX_CHAT_HISTORY_FETCH_LIMIT`` rows still see the genuine\n      most-recent slice, not the chronological first window.\n    \"\"\"\n    if n_messages == 0:\n        return []\n    fetch_limit = n_messages if n_messages else MAX_CHAT_HISTORY_FETCH_LIMIT\n    messages = await aget_messages(\n        session_id=session_id,\n        context_id=context_id,\n        flow_id=_coerce_flow_id_to_uuid(flow_id),\n        limit=fetch_limit,\n        order=\"DESC\",\n    )\n    if not n_messages and len(messages) == MAX_CHAT_HISTORY_FETCH_LIMIT:\n        # We hit the unbounded-fetch ceiling. The caller will likely see\n        # stale \"most-recent\" history. Flag this so on-call has something\n        # to grep when a user reports forgotten context.\n        logger.warning(\n            \"memory_chat_history_limit_reached: hit MAX_CHAT_HISTORY_FETCH_LIMIT=%d \"\n            \"without an explicit n_messages; older messages were not returned.\",\n            MAX_CHAT_HISTORY_FETCH_LIMIT,\n            extra={\"event\": \"memory_chat_history_limit_reached\"},\n        )\n    # ``aget_messages`` returned DESC; reverse to ASC for the agent's prompt.\n    return list(reversed(messages))\n\n\nclass MemoryComponent(Component):\n    display_name = \"Message History\"\n    description = \"Stores or retrieves stored chat messages from Langflow tables or an external memory.\"\n    documentation: str = \"https://docs.langflow.org/message-history\"\n    icon = \"message-square-more\"\n    name = \"Memory\"\n    default_keys = [\"mode\", \"memory\", \"session_id\", \"context_id\"]\n    mode_config = {\n        \"Store\": [\"message\", \"memory\", \"sender\", \"sender_name\", \"session_id\", \"context_id\"],\n        \"Retrieve\": [\"n_messages\", \"order\", \"template\", \"memory\", \"session_id\", \"context_id\"],\n    }\n\n    inputs = [\n        TabInput(\n            name=\"mode\",\n            display_name=\"Mode\",\n            options=[\"Retrieve\", \"Store\"],\n            value=\"Retrieve\",\n            info=\"Operation mode: Store messages or Retrieve messages.\",\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"message\",\n            display_name=\"Message\",\n            info=\"The chat message to be stored.\",\n            tool_mode=True,\n            dynamic=True,\n            show=False,\n        ),\n        HandleInput(\n            name=\"memory\",\n            display_name=\"External Memory\",\n            input_types=[\"Memory\"],\n            info=\"Retrieve messages from an external memory. If empty, it will use the Langflow tables.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender_type\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER, \"Machine and User\"],\n            value=\"Machine and User\",\n            info=\"Filter by sender type.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender\",\n            display_name=\"Sender\",\n            info=\"The sender of the message. Might be Machine or User. \"\n            \"If empty, the current sender parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Filter by sender name.\",\n            advanced=True,\n            show=False,\n        ),\n        IntInput(\n            name=\"n_messages\",\n            display_name=\"Number of Messages\",\n            value=100,\n            info=\"Number of messages to retrieve.\",\n            advanced=True,\n            show=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            value=\"\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"order\",\n            display_name=\"Order\",\n            options=[\"Ascending\", \"Descending\"],\n            value=\"Ascending\",\n            info=\"Order of the messages.\",\n            advanced=True,\n            tool_mode=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {sender} or any other key in the message data.\",\n            value=\"{sender_name}: {text}\",\n            advanced=True,\n            show=False,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Messages\",\n            name=\"messages_text\",\n            method=\"retrieve_messages_as_text\",\n            types=[\"Message\"],\n            selected=\"Message\",\n            dynamic=True,\n        ),\n        Output(\n            display_name=\"Table\",\n            name=\"dataframe\",\n            method=\"retrieve_messages_dataframe\",\n            types=[\"Table\"],\n            selected=\"Table\",\n            dynamic=True,\n        ),\n    ]\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n        \"\"\"Dynamically show only the relevant output based on the selected output type.\"\"\"\n        if field_name == \"mode\":\n            # Start with empty outputs\n            frontend_node[\"outputs\"] = []\n            if field_value == \"Store\":\n                frontend_node[\"outputs\"] = [\n                    Output(\n                        display_name=\"Stored Messages\",\n                        name=\"stored_messages\",\n                        method=\"store_message\",\n                        types=[\"Message\"],\n                        selected=\"Message\",\n                        hidden=True,\n                        dynamic=True,\n                    )\n                ]\n            if field_value == \"Retrieve\":\n                frontend_node[\"outputs\"] = [\n                    Output(\n                        display_name=\"Messages\",\n                        name=\"messages_text\",\n                        method=\"retrieve_messages_as_text\",\n                        types=[\"Message\"],\n                        selected=\"Message\",\n                        dynamic=True,\n                    ),\n                    Output(\n                        display_name=\"Table\",\n                        name=\"dataframe\",\n                        method=\"retrieve_messages_dataframe\",\n                        types=[\"Table\"],\n                        selected=\"Table\",\n                        dynamic=True,\n                    ),\n                ]\n        return frontend_node\n\n    async def store_message(self) -> Message:\n        message = Message(text=self.message) if isinstance(self.message, str) else self.message\n\n        message.context_id = self.context_id or message.context_id\n        message.session_id = self.session_id or message.session_id\n        message.sender = self.sender or message.sender or MESSAGE_SENDER_AI\n        message.sender_name = self.sender_name or message.sender_name or MESSAGE_SENDER_NAME_AI\n\n        stored_messages: list[Message] = []\n\n        if self.memory:\n            self.memory.context_id = message.context_id\n            self.memory.session_id = message.session_id\n            lc_message = message.to_lc_message()\n            await self.memory.aadd_messages([lc_message])\n\n            stored_messages = await self.memory.aget_messages() or []\n\n            stored_messages = [Message.from_lc_message(m) for m in stored_messages] if stored_messages else []\n\n            if message.sender:\n                stored_messages = [m for m in stored_messages if m.sender == message.sender]\n        else:\n            # Single coerced scope used for both the write and the read-back,\n            # so a missing/ad-hoc ``_vertex`` cannot crash the write half while\n            # the read half degrades gracefully. See PR #13087 review I1.\n            flow_id_scope = _coerce_flow_id_to_uuid(_safe_graph_flow_id(self))\n            await astore_message(message, flow_id=flow_id_scope)\n            stored_messages = (\n                await aget_messages(\n                    session_id=message.session_id,\n                    context_id=message.context_id,\n                    sender_name=message.sender_name,\n                    sender=message.sender,\n                    flow_id=flow_id_scope,\n                )\n                or []\n            )\n\n        if not stored_messages:\n            msg = \"No messages were stored. Please ensure that the session ID and sender are properly set.\"\n            raise ValueError(msg)\n\n        stored_message = stored_messages[0]\n        self.status = stored_message\n        return stored_message\n\n    async def retrieve_messages(self) -> Data:\n        sender_type = self.sender_type\n        sender_name = self.sender_name\n        session_id = self.session_id\n        context_id = self.context_id\n        n_messages = self.n_messages\n        order = \"DESC\" if self.order == \"Descending\" else \"ASC\"\n\n        if sender_type == \"Machine and User\":\n            sender_type = None\n\n        if self.memory and not hasattr(self.memory, \"aget_messages\"):\n            memory_name = type(self.memory).__name__\n            err_msg = f\"External Memory object ({memory_name}) must have 'aget_messages' method.\"\n            raise AttributeError(err_msg)\n        # Check if n_messages is None or 0\n        if n_messages == 0:\n            stored = []\n        elif self.memory:\n            # override session_id\n            self.memory.session_id = session_id\n            self.memory.context_id = context_id\n\n            stored = await self.memory.aget_messages()\n            # langchain memories are supposed to return messages in ascending order\n\n            if n_messages:\n                stored = stored[-n_messages:]  # Get last N messages first\n\n            if order == \"DESC\":\n                stored = stored[::-1]  # Then reverse if needed\n\n            stored = [Message.from_lc_message(m) for m in stored]\n            if sender_type:\n                expected_type = MESSAGE_SENDER_AI if sender_type == MESSAGE_SENDER_AI else MESSAGE_SENDER_USER\n                stored = [m for m in stored if m.type == expected_type]\n        else:\n            # For internal memory, fetch the last N messages by ordering DESC at the\n            # DB layer so sessions with more than ``MAX_CHAT_HISTORY_FETCH_LIMIT``\n            # rows still return the genuine most-recent slice rather than the\n            # chronological first window. See PR #13087 review I2.\n            #\n            # Scope by flow_id so default session names (e.g. \"New Session 0\") do not\n            # leak chat history across unrelated flows. See issue #13059.\n            flow_id_scope = _coerce_flow_id_to_uuid(_safe_graph_flow_id(self))\n            fetch_limit = n_messages if n_messages else MAX_CHAT_HISTORY_FETCH_LIMIT\n            stored = await aget_messages(\n                sender=sender_type,\n                sender_name=sender_name,\n                session_id=session_id,\n                context_id=context_id,\n                flow_id=flow_id_scope,\n                limit=fetch_limit,\n                order=\"DESC\",\n            )\n            if not n_messages and len(stored) == MAX_CHAT_HISTORY_FETCH_LIMIT:\n                logger.warning(\n                    \"memory_chat_history_limit_reached: hit MAX_CHAT_HISTORY_FETCH_LIMIT=%d \"\n                    \"without an explicit n_messages; older messages were not returned.\",\n                    MAX_CHAT_HISTORY_FETCH_LIMIT,\n                    extra={\"event\": \"memory_chat_history_limit_reached\"},\n                )\n            # Honor the user-selected order: we fetched DESC, reverse if ASC requested.\n            if order == \"ASC\":\n                stored = list(reversed(stored))\n\n        # self.status = stored\n        return cast(\"Data\", stored)\n\n    async def retrieve_messages_as_text(self) -> Message:\n        stored_text = data_to_text(self.template, await self.retrieve_messages())\n        # self.status = stored_text\n        return Message(text=stored_text)\n\n    async def retrieve_messages_dataframe(self) -> DataFrame:\n        \"\"\"Convert the retrieved messages into a DataFrame.\n\n        Returns:\n            DataFrame: A DataFrame containing the message data.\n        \"\"\"\n        messages = await self.retrieve_messages()\n        return DataFrame(messages)\n\n    def update_build_config(\n        self,\n        build_config: dotdict,\n        field_value: Any,  # noqa: ARG002\n        field_name: str | None = None,  # noqa: ARG002\n    ) -> dotdict:\n        return set_current_fields(\n            build_config=build_config,\n            action_fields=self.mode_config,\n            selected_action=build_config[\"mode\"][\"value\"],\n            default_fields=self.default_keys,\n            func=set_field_display,\n        )\n"
-              },
-              "context_id": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Context ID",
+                "display_name": "Current Date",
                 "dynamic": false,
-                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "info": "If true, will add a tool to the agent that returns the current date.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "context_id",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "memory": {
-                "_input_type": "HandleInput",
-                "advanced": true,
-                "display_name": "External Memory",
-                "dynamic": false,
-                "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": [
-                  "Memory"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "memory",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "message": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Message",
-                "dynamic": true,
-                "info": "The chat message to be stored.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "message",
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "mode": {
-                "_input_type": "TabInput",
-                "advanced": false,
-                "display_name": "Mode",
-                "dynamic": false,
-                "info": "Operation mode: Store messages or Retrieve messages.",
-                "name": "mode",
-                "options": [
-                  "Retrieve",
-                  "Store"
-                ],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "tab",
-                "value": "Retrieve"
-              },
-              "n_messages": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Number of Messages",
-                "dynamic": false,
-                "info": "Number of messages to retrieve.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "n_messages",
+                "name": "add_current_date_tool",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "type": "int",
-                "value": 100
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
               },
-              "order": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Order",
-                "dynamic": false,
-                "info": "Order of the messages.",
-                "name": "order",
-                "options": [
-                  "Ascending",
-                  "Descending"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Ascending"
-              },
-              "sender": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Sender",
-                "dynamic": false,
-                "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
-                "name": "sender",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Machine and User"
-              },
-              "sender_name": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Sender Name",
-                "dynamic": false,
-                "info": "Filter by sender name.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "sender_name",
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "sender_type": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Sender Type",
-                "dynamic": false,
-                "info": "Filter by sender type.",
-                "name": "sender_type",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Machine and User"
-              },
-              "session_id": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Session ID",
-                "dynamic": false,
-                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "session_id",
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "template": {
-                "_input_type": "MultilineInput",
-                "advanced": true,
-                "copy_field": false,
-                "display_name": "Template",
-                "dynamic": false,
-                "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "template",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "{sender_name}: {text}"
-              }
-            },
-            "tool_mode": false
-          },
-          "selected_output": "messages_text",
-          "showNode": true,
-          "type": "Memory"
-        },
-        "dragging": false,
-        "id": "Memory-MKGtC",
-        "measured": {
-          "height": 218,
-          "width": 320
-        },
-        "position": {
-          "x": 1872.1863138733531,
-          "y": 662.4809140460989
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "LanguageModelComponent-n8KRg",
-          "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Runs a language model given a specified provider.",
-            "display_name": "Language Model",
-            "documentation": "https://docs.langflow.org/components-models",
-            "edited": false,
-            "field_order": [
-              "model",
-              "model_name",
-              "provider",
-              "api_key",
-              "base_url_ibm_watsonx",
-              "project_id",
-              "ollama_base_url",
-              "input_value",
-              "system_message",
-              "stream",
-              "temperature",
-              "max_tokens"
-            ],
-            "frozen": false,
-            "icon": "brain-circuit",
-            "last_updated": "2025-12-11T21:29:10.202Z",
-            "legacy": false,
-            "lf_version": "1.7.0",
-            "metadata": {
-              "code_hash": "4942994b24a6",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "keywords": [
-                "model",
-                "llm",
-                "language model",
-                "large language model"
-              ],
-              "module": "lfx.components.models_and_agents.language_model.LanguageModelComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Model Response",
-                "group_outputs": false,
-                "loop_types": null,
-                "method": "text_response",
-                "name": "text_output",
-                "options": null,
-                "required_inputs": null,
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Language Model",
-                "group_outputs": false,
-                "loop_types": null,
-                "method": "build_model",
-                "name": "model_output",
-                "options": null,
-                "required_inputs": null,
-                "selected": "LanguageModel",
-                "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "priority": 0,
-            "template": {
-              "_frontend_node_flow_id": {
-                "value": "524f71dc-cc58-441a-a009-c71d6755765f"
-              },
-              "_frontend_node_folder_id": {
-                "value": "afaca9ee-97e3-4211-8569-722a4058ea5e"
-              },
-              "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
                 "advanced": true,
                 "display_name": "API Key",
                 "dynamic": false,
-                "info": "Model Provider API key",
+                "info": "Overrides global provider settings. Leave blank to use your pre-configured API Key.",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "override_skip": false,
                 "password": true,
@@ -1390,12 +845,13 @@
               "base_url_ibm_watsonx": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
-                "combobox": false,
+                "combobox": true,
                 "dialog_inputs": {},
                 "display_name": "watsonx API Endpoint",
                 "dynamic": false,
                 "external_options": {},
                 "info": "The base URL of the API (IBM watsonx.ai only)",
+                "input_types": [],
                 "name": "base_url_ibm_watsonx",
                 "options": [
                   "https://us-south.ml.cloud.ibm.com",
@@ -1421,6 +877,7 @@
               },
               "code": {
                 "advanced": true,
+                "api_editable": false,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
@@ -1435,21 +892,21 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from lfx.base.models.model import LCModelComponent\nfrom lfx.base.models.unified_models import (\n    get_language_model_options,\n    get_llm,\n    handle_model_input_update,\n)\nfrom lfx.base.models.watsonx_constants import IBM_WATSONX_URLS\nfrom lfx.components.models_and_agents.model_selection import apply_model_overrides\nfrom lfx.field_typing.constants import LanguageModel\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, StrInput\nfrom lfx.io import IntInput, MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput\n\nDEFAULT_OLLAMA_URL = \"http://localhost:11434\"\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-models\"\n    icon = \"brain-circuit\"\n    category = \"models\"\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n        ),\n        StrInput(\n            name=\"model_name\",\n            display_name=\"Model Name Override\",\n            info=(\n                \"Optional model name to use instead of the selected model. \"\n                \"Can be set from a global variable for runtime model selection.\"\n            ),\n            advanced=True,\n            load_from_db=False,\n        ),\n        StrInput(\n            name=\"provider\",\n            display_name=\"Provider Override\",\n            info=(\n                \"Optional provider to use with Model Name Override. Leave blank to use the selected model's provider.\"\n            ),\n            advanced=True,\n            load_from_db=False,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Overrides global provider settings. Leave blank to use your pre-configured API Key.\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            combobox=True,\n            show=False,\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"project_id\",\n            display_name=\"watsonx Project ID\",\n            info=\"The project ID associated with the foundation model (IBM watsonx.ai only)\",\n            show=False,\n            required=False,\n        ),\n        StrInput(\n            name=\"ollama_base_url\",\n            display_name=\"Ollama API URL\",\n            info=f\"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}\",\n            value=DEFAULT_OLLAMA_URL,\n            show=False,\n            real_time_refresh=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=False,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            info=\"Maximum number of tokens to generate. Field name varies by provider.\",\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=128000, step=1, step_type=\"int\"),\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        model = apply_model_overrides(\n            self.model,\n            model_name=getattr(self, \"model_name\", None),\n            provider=getattr(self, \"provider\", None),\n            user_id=self.user_id,\n            get_options=get_language_model_options,\n        )\n        return get_llm(\n            model=model,\n            user_id=self.user_id,\n            api_key=self.api_key,\n            temperature=self.temperature,\n            stream=self.stream,\n            max_tokens=getattr(self, \"max_tokens\", None),\n            watsonx_url=getattr(self, \"base_url_ibm_watsonx\", None),\n            watsonx_project_id=getattr(self, \"project_id\", None),\n            ollama_base_url=getattr(self, \"ollama_base_url\", None),\n        )\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        return handle_model_input_update(self, build_config, field_value, field_name)\n"
+                "value": "from __future__ import annotations\n\nimport uuid\nfrom contextlib import contextmanager\nfrom datetime import datetime, timezone\nfrom typing import TYPE_CHECKING, Any, cast\n\nfrom langchain.agents import create_agent\nfrom langchain.agents.middleware import (\n    HumanInTheLoopMiddleware,\n    ModelCallLimitMiddleware,\n    ToolRetryMiddleware,\n)\nfrom langgraph.types import Command\n\nfrom lfx.components.models_and_agents.agent_helpers.graph_event_adapter import (\n    adapt_graph_events_to_executor_shape,\n)\nfrom lfx.components.models_and_agents.agent_helpers.messages_input_builder import (\n    build_initial_messages,\n)\nfrom lfx.components.models_and_agents.agent_helpers.placeholder_corrective_middleware import (\n    WatsonXPlaceholderMiddleware,\n)\nfrom lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware import (\n    SingleToolCallMiddleware,\n)\nfrom lfx.components.models_and_agents.agent_helpers.tool_approval import ToolApprovalMixin\nfrom lfx.components.models_and_agents.agent_helpers.tool_call_id_middleware import ToolCallIDMiddleware\nfrom lfx.components.models_and_agents.memory import MemoryComponent, _safe_graph_user_id, aget_agent_chat_history\n\nif TYPE_CHECKING:\n    from langchain_core.tools import Tool\n\n    from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType\n\nfrom lfx.base.agents.agent import LCToolsAgentComponent\nfrom lfx.base.agents.callback import AgentAsyncHandler\nfrom lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE\nfrom lfx.base.agents.events import AgentPausedError, ExceptionWithMessageError, process_agent_events\nfrom lfx.base.agents.token_callback import TokenUsageCallbackHandler\nfrom lfx.base.agents.utils import get_chat_output_sender_name\nfrom lfx.base.constants import STREAM_INFO_TEXT\nfrom lfx.base.models.unified_models import (\n    get_language_model_options,\n    get_llm,\n    handle_model_input_update,\n)\nfrom lfx.base.models.watsonx_constants import IBM_WATSONX_URLS\nfrom lfx.components.agentics.helpers.model_config import validate_model_selection\nfrom lfx.components.helpers import CalculatorComponent, CurrentDateComponent\nfrom lfx.components.langchain_utilities.ibm_granite_handler import is_watsonx_model\nfrom lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom lfx.custom.custom_component.component import get_component_toolkit\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, ModelInput, StrInput\nfrom lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput\nfrom lfx.log.logger import logger\nfrom lfx.memory import delete_message\nfrom lfx.schema.data import Data\nfrom lfx.schema.dotdict import dotdict\nfrom lfx.schema.message import Message\nfrom lfx.schema.table import EditMode\nfrom lfx.utils.constants import MESSAGE_SENDER_AI\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\ndef _agent_base_inputs():\n    \"\"\"Return base inputs tailored to AgentComponent's create_agent path.\n\n    `get_base_inputs()` returns a shared list — replace, don't mutate. We drop\n    inputs that are no-ops here and override info text on the inputs whose\n    semantics shifted under create_agent.\n\n    `verbose` is dropped because the create_agent event stream already surfaces\n    every agent step via the \"Agent Steps\" content blocks; the legacy boolean\n    has nothing to toggle. Saved flows that still carry a `verbose` value just\n    ignore it on load (the schema no longer declares it).\n    \"\"\"\n    drop = {\"verbose\"}\n    overrides = {\n        \"handle_parsing_errors\": BoolInput(\n            name=\"handle_parsing_errors\",\n            display_name=\"Handle Parse Errors\",\n            value=True,\n            advanced=True,\n            info=(\n                \"Adds tool-execution retry as a safety net. `create_agent` already \"\n                \"feeds tool-call validation errors back to the LLM automatically; \"\n                \"this flag layers `ToolRetryMiddleware` on top so transient tool \"\n                \"runtime failures are retried (max 2 retries).\"\n            ),\n        ),\n        \"max_iterations\": IntInput(\n            name=\"max_iterations\",\n            display_name=\"Max Iterations\",\n            value=15,\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=128000, step=1, step_type=\"int\"),\n            info=(\n                \"Maximum number of model calls the agent can make before stopping \"\n                \"(maps to `ModelCallLimitMiddleware.run_limit` on the create_agent \"\n                \"path). Must be at least 1 — it is a safety cap, never 'unlimited'.\"\n            ),\n        ),\n    }\n    return [overrides.get(inp.name, inp) for inp in LCToolsAgentComponent.get_base_inputs() if inp.name not in drop]\n\n\ndef _extract_text_content(value) -> str:\n    \"\"\"Pull a string payload from a Message-like, AIMessage-like, or string value.\"\"\"\n    if isinstance(value, str):\n        return value\n    text = getattr(value, \"text\", None)\n    if isinstance(text, str):\n        return text\n    content = getattr(value, \"content\", None)\n    if isinstance(content, str):\n        return content\n    return str(value) if value is not None else \"\"\n\n\n@contextmanager\ndef _suppress_send_message(component: Any):\n    \"\"\"Temporarily replace component.send_message with a no-op for the duration of the block.\n\n    Used during the structured-output prompt fallback: run_agent streams the agent's\n    final answer through self.send_message (correct for message_response), but in\n    json_response the orchestrator parses that text into structured Data which the\n    downstream Chat Output emits — leaving the original emission in place produces a\n    duplicate message in the playground. The original method is always restored on exit,\n    even when the wrapped call raises.\n    \"\"\"\n    original = component.send_message\n\n    async def _noop(message, *_args, **_kwargs):\n        return message\n\n    component.send_message = _noop\n    try:\n        yield\n    finally:\n        component.send_message = original\n\n\nclass AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    documentation: str = \"https://docs.langflow.org/agents\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n            # Agents require tool calling — the filter is honored by\n            # ``handle_model_input_update`` so models that can't run with\n            # tools never reach the picker (and any saved selection that\n            # no longer satisfies the constraint is auto-replaced).\n            filters={\"tool_calling\": True},\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Overrides global provider settings. Leave blank to use your pre-configured API Key.\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            combobox=True,\n            show=False,\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"project_id\",\n            display_name=\"watsonx Project ID\",\n            info=\"The project ID associated with the foundation model (IBM watsonx.ai only)\",\n            show=False,\n            required=False,\n        ),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=(\n                \"System Prompt: Initial instructions and context provided to guide the agent's behavior. \"\n                \"Supports dynamic placeholders: {current_date}, {model_name}, {optional_user_context}.\"\n            ),\n            value=DEFAULT_SYSTEM_PROMPT_TEMPLATE,\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"n_messages\",\n            display_name=\"Number of Chat History Messages\",\n            value=100,\n            info=\"Number of chat history messages to retrieve.\",\n            advanced=True,\n            show=True,\n        ),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            info=\"Maximum number of tokens to generate. Field name varies by provider.\",\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=128000, step=1, step_type=\"int\"),\n        ),\n        MultilineInput(\n            name=\"format_instructions\",\n            display_name=\"Output Format Instructions\",\n            info=\"Generic Template for structured output formatting. Valid only with Structured response.\",\n            value=(\n                \"You are an AI that extracts structured JSON objects from unstructured text. \"\n                \"Use a predefined schema with expected types (str, int, float, bool, dict). \"\n                \"Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. \"\n                \"Fill missing or ambiguous values with defaults: null for missing values. \"\n                \"Remove exact duplicates but keep variations that have different field values. \"\n                \"Always return valid JSON in the expected format, never throw errors. \"\n                \"If multiple objects can be extracted, return them all in the structured format.\"\n            ),\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=(\n                \"Schema Validation: Define the structure and data types for structured output. \"\n                \"No validation if no output schema.\"\n            ),\n            advanced=True,\n            required=False,\n            value=[],\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n        ),\n        *_agent_base_inputs(),\n        # removed memory inputs from agent component\n        # *memory_inputs,\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=STREAM_INFO_TEXT,\n            value=True,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n        BoolInput(\n            name=\"add_calculator_tool\",\n            display_name=\"Calculator\",\n            advanced=True,\n            info=(\n                \"If true, adds a zero-config arithmetic calculator tool to the agent \"\n                \"(safe: only +, -, *, /, ** operators via AST).\"\n            ),\n            value=True,\n        ),\n    ]\n    outputs = [\n        Output(name=\"response\", display_name=\"Response\", method=\"message_response\"),\n        Output(\n            name=\"structured_response\",\n            display_name=\"Structured Response\",\n            method=\"json_response\",\n            types=[\"Data\"],\n        ),\n    ]\n\n    def _resolve_selected_model(self):\n        \"\"\"Resolve the selected model, including legacy agent_llm/model_name inputs.\"\"\"\n        try:\n            from langchain_core.language_models import BaseLanguageModel\n\n            if isinstance(self.model, BaseLanguageModel):\n                return self.model\n        except ImportError:\n            pass\n\n        if isinstance(self.model, list) and self.model:\n            return self.model\n\n        legacy_provider = getattr(self, \"agent_llm\", None)\n        legacy_model_name = getattr(self, \"model_name\", None)\n        if not legacy_provider or not legacy_model_name:\n            return self.model\n\n        options = get_language_model_options(user_id=self.user_id)\n        for option in options:\n            if option.get(\"provider\") == legacy_provider and option.get(\"name\") == legacy_model_name:\n                return [option]\n\n        return [\n            {\n                \"name\": legacy_model_name,\n                \"provider\": legacy_provider,\n                \"metadata\": {},\n            }\n        ]\n\n    def _get_max_tokens_value(self):\n        \"\"\"Return the user-supplied max_tokens or None when unset/zero.\"\"\"\n        val = getattr(self, \"max_tokens\", None)\n        if val in {\"\", 0}:\n            return None\n        return val\n\n    def _get_llm(self):\n        \"\"\"Override parent to include max_tokens from the Agent's input field.\n\n        Streaming is mandatory for AgentComponent: ``runnable.astream_events(v2)`` only\n        emits ``on_chat_model_stream`` chunks when the underlying chat model is\n        instantiated with ``streaming=True``. Unlike the LanguageModel component (where\n        ``stream`` is a user-facing toggle), the Agent has no opt-out — the toggle is\n        kept in the UI for backwards compatibility but is intentionally ignored here.\n        Without ``stream=True``, the chat model accumulates the whole response and\n        only emits ``on_chat_model_end``, silently disabling the Playground's live-\n        typing view and breaking the streaming contract on the /events surface.\n        \"\"\"\n        return get_llm(\n            model=self.model,\n            user_id=self.user_id,\n            api_key=getattr(self, \"api_key\", None),\n            stream=True,\n            max_tokens=self._get_max_tokens_value(),\n            watsonx_url=getattr(self, \"base_url_ibm_watsonx\", None),\n            watsonx_project_id=getattr(self, \"project_id\", None),\n            overrides=getattr(self, \"_model_overrides\", None),\n        )\n\n    async def get_agent_requirements(self):\n        \"\"\"Get the agent requirements for the agent.\"\"\"\n        from langchain_core.tools import StructuredTool\n\n        selected_model = self._resolve_selected_model()\n        try:\n            from langchain_core.language_models import BaseLanguageModel\n\n            is_connected_model = isinstance(selected_model, BaseLanguageModel)\n        except ImportError:\n            is_connected_model = False\n\n        if not is_connected_model:\n            validate_model_selection(selected_model)\n\n        # Ensure _get_llm() uses the resolved model (e.g. from legacy agent_llm/model_name)\n        self.model = selected_model\n        llm_model = self._get_llm()\n        if llm_model is None:\n            msg = \"No language model selected. Please choose a model to proceed.\"\n            raise ValueError(msg)\n\n        # Get memory data\n        self.chat_history = await self.get_memory_data()\n        await logger.adebug(f\"Retrieved {len(self.chat_history)} chat history messages\")\n        if isinstance(self.chat_history, Message):\n            self.chat_history = [self.chat_history]\n\n        # Add current date tool if enabled\n        if self.add_current_date_tool:\n            if not isinstance(self.tools, list):  # type: ignore[has-type]\n                self.tools = []\n            current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n\n            if not isinstance(current_date_tool, StructuredTool):\n                msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                raise TypeError(msg)\n            # Skip if an externally-connected tool already provides the same name.\n            # Duplicate tool names are rejected by Anthropic/Gemini with HTTP 400.\n            if not any(getattr(t, \"name\", None) == current_date_tool.name for t in self.tools):\n                self.tools.append(current_date_tool)\n\n        # Add calculator tool if enabled (zero-config arithmetic)\n        if getattr(self, \"add_calculator_tool\", False):\n            if not isinstance(self.tools, list):  # type: ignore[has-type]\n                self.tools = []\n            calculator_tool = (await CalculatorComponent(**self.get_base_args()).to_toolkit()).pop(0)\n\n            if not isinstance(calculator_tool, StructuredTool):\n                msg = \"CalculatorComponent must be converted to a StructuredTool\"\n                raise TypeError(msg)\n            # Skip if an externally-connected tool already provides the same name.\n            # Duplicate tool names are rejected by Anthropic/Gemini with HTTP 400.\n            if not any(getattr(t, \"name\", None) == calculator_tool.name for t in self.tools):\n                self.tools.append(calculator_tool)\n\n        # Set shared callbacks for tracing the tools used by the agent\n        self.set_tools_callbacks(self.tools, self._get_shared_callbacks())\n\n        return llm_model, self.chat_history, self.tools\n\n    def _get_resolved_model_name(self) -> str:\n        \"\"\"Best-effort human-readable model name for {model_name} injection.\"\"\"\n        try:\n            from langchain_core.language_models import BaseLanguageModel\n\n            if isinstance(self.model, BaseLanguageModel):\n                return type(self.model).__name__\n        except ImportError:\n            pass\n\n        if isinstance(self.model, list) and self.model:\n            first = self.model[0]\n            if isinstance(first, dict):\n                name = first.get(\"name\")\n                if isinstance(name, str) and name:\n                    return name\n\n        legacy_model_name = getattr(self, \"model_name\", None)\n        if isinstance(legacy_model_name, str) and legacy_model_name:\n            return legacy_model_name\n        return \"\"\n\n    def _inject_dynamic_prompt_values(self, prompt: Any | None) -> str | None:\n        \"\"\"Replace known env placeholders in the system prompt.\n\n        Handles {current_date}, {model_name}, and {optional_user_context} (the\n        last one ships with the structured DEFAULT_SYSTEM_PROMPT_TEMPLATE and\n        is currently unused at the AgentComponent layer, so it resolves to \"\").\n        Uses str.replace (not str.format) so user prompts containing literal\n        braces such as JSON examples ({\"key\": 1}) never break the agent.\n\n        `system_prompt` is a connectable MultilineInput, so the value can arrive\n        as a Message (e.g. a Prompt node wired in). Normalize it to text first —\n        a raw Message has no `.replace` and used to crash the agent build.\n        \"\"\"\n        if prompt is None:\n            return None\n        prompt = _extract_text_content(prompt)\n        if not prompt:\n            return prompt\n        replacements = {\n            \"{current_date}\": datetime.now(tz=timezone.utc).strftime(\"%Y-%m-%d %H:%M:%S UTC\"),\n            \"{model_name}\": self._get_resolved_model_name(),\n            \"{optional_user_context}\": \"\",\n        }\n        for placeholder, value in replacements.items():\n            prompt = prompt.replace(placeholder, value)\n        return prompt\n\n    def create_agent_runnable(self, *, allow_interrupts: bool = True):\n        \"\"\"Build the LangGraph `CompiledStateGraph` via `langchain.agents.create_agent`.\n\n        Replaces the legacy `AgentExecutor` runnable inherited from\n        `ToolCallingAgentComponent`. Other agent components (tool_calling, csv, json,\n        openapi, sql*, vector_store_router) keep the legacy path — only AgentComponent\n        runs on the new graph API.\n\n        `max_iterations` and `handle_parsing_errors` (legacy AgentExecutor knobs) are\n        translated to LangGraph middleware. Without that translation those user inputs\n        would silently become no-ops on the new API.\n\n        Provider notes:\n        - WatsonX/Granite work natively with create_agent — `ChatWatsonx.bind_tools`\n          handles tool_choice correctly. The legacy `create_granite_agent` path was\n          dropped because it hardcoded `tool_choice='required'`, which the WatsonX\n          API now rejects.\n        - Ollama and other small/local models often emit malformed tool args. The\n          ToolRetryMiddleware (default `retry_on=(Exception,)`, `on_failure='continue'`)\n          catches Pydantic ValidationErrors from bad args and feeds the error back\n          to the LLM as a retry signal, so the agent recovers gracefully.\n        \"\"\"\n        llm = self._get_llm()\n        tools = self.tools or []\n\n        # Eager bind_tools validation. `create_agent(...)` is lazy — without this,\n        # an LLM that doesn't support tool calling fails on the first user message\n        # instead of when the user wires up the component, which is a much worse UX.\n        # Gated on a non-empty tools list so a no-tool Agent on a plain chat model\n        # (which legitimately has no `bind_tools`) isn't shut out at flow-build time.\n        # Providers signal \"no tool calling\" inconsistently — `NotImplementedError`\n        # (langchain default), `AttributeError` (no `bind_tools` attr), or `TypeError`\n        # (signature mismatch). Treat all three as the same UX failure.\n        if tools:\n            try:\n                llm.bind_tools(tools)\n            except (NotImplementedError, AttributeError, TypeError) as exc:\n                # Include the underlying error so a broken tool schema or a\n                # provider implementation bug is not silently disguised as a\n                # \"model can't call tools\" UX error.\n                msg = (\n                    f\"{self.display_name} does not support tool calling, \"\n                    \"or one of the connected tools failed to bind. \"\n                    \"Please connect a tool-calling capable language model and \"\n                    f\"verify your tools are well-formed. Underlying error: {exc!s}\"\n                )\n                raise NotImplementedError(msg) from exc\n\n        middleware = self._build_middleware(llm, allow_interrupts=allow_interrupts)\n        checkpointer = self._build_agent_checkpointer() if allow_interrupts else None\n        return create_agent(\n            model=llm,\n            tools=tools,\n            system_prompt=self.system_prompt or \"\",\n            middleware=middleware or None,\n            checkpointer=checkpointer,\n        )\n\n    def _compute_recursion_limit(self) -> int:\n        \"\"\"Derive the LangGraph recursion_limit from the user-set max_iterations.\n\n        Mirrors the clamp in `_build_middleware` (max(1, max_iterations)) so a\n        saved 0 or negative value cannot under-cap the graph below one full\n        iteration. The +5 buffer covers start/end/router overhead.\n        \"\"\"\n        raw = getattr(self, \"max_iterations\", None)\n        run_limit = max(1, int(raw)) if raw is not None else 15\n        return run_limit * 2 + 5\n\n    def _build_middleware(self, llm: Any, *, allow_interrupts: bool = True) -> list:\n        # `llm` is passed in (rather than re-fetched via `self._get_llm()`)\n        # because some providers do credential resolution / client instantiation\n        # lazily on each call. The caller — `create_agent_runnable` — already\n        # resolved it once for `bind_tools`, so reuse that instance here.\n        middleware: list = []\n        # LangChain accepts missing IDs on AIMessage.tool_calls, but LangGraph's\n        # invalid-call path and ToolRetryMiddleware both require a string when\n        # they construct an error ToolMessage. Normalize at the model boundary\n        # so either recovery path can return the error to the model instead of\n        # crashing the flow.\n        if self.tools:\n            middleware.append(ToolCallIDMiddleware())\n        max_iterations = getattr(self, \"max_iterations\", None)\n        if max_iterations is not None:\n            # `max_iterations` is a safety cap, not an \"unlimited\" toggle. A saved\n            # 0 or negative value (falsy) must NOT silently drop the limiter and\n            # allow an unbounded model/tool loop — clamp it to a real minimum.\n            run_limit = max(1, int(max_iterations))\n            middleware.append(ModelCallLimitMiddleware(run_limit=run_limit))\n        # ToolRetryMiddleware only matters when there ARE tools to retry. Attaching\n        # it on a no-tools agent inflates the compiled graph and adds per-invocation\n        # middleware overhead for nothing, which is a measurable contributor to\n        # trivial-prompt latency (QA UI-003).\n        if getattr(self, \"handle_parsing_errors\", False) and self.tools:\n            middleware.append(ToolRetryMiddleware(max_retries=2))\n        # WatsonX models have two known platform quirks; both still reproduce on\n        # the current API, so we keep the protections from the legacy\n        # `create_granite_agent` path.\n        # 1. Multi-tool-call assistant turns are rejected (\"This model only\n        #    supports single tool-calls at once!\"). Clamp to one per turn.\n        # 2. Tool args occasionally come back as literal placeholder strings\n        #    (e.g. `<result-from-search>`). Re-invoke once with a corrective\n        #    SystemMessage.\n        # Order: SingleToolCallMiddleware first (outermost) so the clamp is\n        # applied to the final response, including any corrective re-invoke\n        # produced by WatsonXPlaceholderMiddleware.\n        if is_watsonx_model(llm):\n            middleware.append(SingleToolCallMiddleware())\n            middleware.append(WatsonXPlaceholderMiddleware())\n        # Human-in-the-loop: attach only when a tool is gated AND interrupts are allowed\n        # (the structured-output path disables them), keeping ungated flows unchanged.\n        interrupt_on = self._gated_interrupt_on() if allow_interrupts else {}\n        if interrupt_on:\n            middleware.append(HumanInTheLoopMiddleware(interrupt_on=interrupt_on))\n        return middleware\n\n    async def run_agent(self, agent) -> Message:\n        \"\"\"Run the LangGraph `CompiledStateGraph` and return the final agent Message.\n\n        Overrides the legacy `LCAgentComponent.run_agent` (which builds an\n        `{\"input\": str, \"chat_history\": [...]}` dict for `AgentExecutor`). The graph\n        wants `{\"messages\": [BaseMessage, ...]}`. The event stream is wrapped with\n        `adapt_graph_events_to_executor_shape` so the legacy `process_agent_events`\n        (in `lfx.base.agents.events`) can be reused unchanged.\n        \"\"\"\n        messages = build_initial_messages(\n            input_value=self.input_value,\n            chat_history=getattr(self, \"chat_history\", None),\n        )\n        input_dict = {\"messages\": messages}\n\n        agent_message = self._build_initial_agent_message()\n        token_usage_handler = TokenUsageCallbackHandler()\n\n        # Stream tokens to the event manager when running inside the Langflow runtime.\n        # This is what powers the live-typing view in the chat UI.\n        on_token_callback: OnTokenFunctionType | None = None\n        if getattr(self, \"_event_manager\", None):\n            on_token_callback = cast(\"OnTokenFunctionType\", self._event_manager.on_token)\n\n        # Align LangGraph's `recursion_limit` with `max_iterations` so the\n        # middleware cap (ModelCallLimitMiddleware) is what bounds the loop —\n        # not LangGraph's default 25-step guard, which fires at ~12 model+tool\n        # iterations and raises a raw GraphRecursionError (QA UI-009/UI-010).\n        # Each iteration is ~2 graph steps (model node + tools node); add 5\n        # for start/end overhead.\n        recursion_limit = self._compute_recursion_limit()\n\n        agent_config: dict[str, Any] = {\n            \"callbacks\": [\n                AgentAsyncHandler(self.log),\n                token_usage_handler,\n                *self._get_shared_callbacks(),\n            ],\n            \"recursion_limit\": recursion_limit,\n        }\n        # The durable checkpointer keys on the per-run thread_id; it must be in the\n        # astream_events config (not just create_agent) for both initial run and resume.\n        thread_id = self._agent_thread_id()\n        get_pending_interrupt = None\n        stream_input: Any = input_dict\n        # A checkpointer is only present when the agent was built with interrupts enabled\n        # (the structured-output path builds without one); never probe its state otherwise.\n        interrupts_enabled = getattr(agent, \"checkpointer\", None) is not None\n        if interrupts_enabled and thread_id and self._gated_interrupt_on():\n            agent_config[\"configurable\"] = {\"thread_id\": thread_id}\n            get_pending_interrupt = self._pending_interrupt_getter(agent, agent_config)\n            if self._has_candidate_decision(thread_id):\n                # The injected decision must match the pending interrupt's nonce, so read\n                # the interrupt first; a matched decision resumes the checkpointed thread.\n                value, interrupt_id = await self._read_pending_interrupt(agent, agent_config)\n                decision = self._injected_agent_decision(thread_id, interrupt_id)\n                if decision is not None:\n                    action_requests = (value or {}).get(\"action_requests\") or []\n                    stream_input = Command(\n                        resume={\"decisions\": self._build_resume_decisions(decision, action_requests)}\n                    )\n        stream = adapt_graph_events_to_executor_shape(\n            agent.astream_events(stream_input, config=agent_config, version=\"v2\")\n        )\n        try:\n            result = await process_agent_events(\n                stream,\n                agent_message,\n                cast(\"SendMessageFunctionType\", self.send_message),\n                on_token_callback,\n                get_pending_interrupt=get_pending_interrupt,\n            )\n        except AgentPausedError as e:\n            # Why: retract the empty partial bubble (leaks as \"[]\"); the HITL card supersedes it, resume re-emits it.\n            paused_message = e.agent_message or agent_message\n            msg_id = paused_message.get_id()\n            if msg_id:\n                await delete_message(id_=msg_id)\n            await self._send_message_event(paused_message, category=\"remove_message\")\n            return self._suspend_for_tool_approval(e.request, paused_message)\n        except ExceptionWithMessageError as e:\n            # Drop the half-stored partial message from the DB (only if it was\n            # actually persisted) and tell the frontend to remove the stale bubble.\n            if hasattr(e, \"agent_message\"):\n                msg_id = e.agent_message.get_id()\n                if msg_id:\n                    await delete_message(id_=msg_id)\n                await self._send_message_event(e.agent_message, category=\"remove_message\")\n            logger.error(f\"ExceptionWithMessageError: {e}\")\n            raise\n\n        usage_data = token_usage_handler.get_usage()\n        if usage_data:\n            self._token_usage = usage_data\n            result.properties.usage = usage_data\n            # Only round-trip the DB when the message was stored (Chat Output wired).\n            # `_should_skip_message=True` leaves `result.get_id()` empty; persisting\n            # then would create a phantom row.\n            if result.get_id():\n                stored_result = await self._update_stored_message(result)\n                await self._send_message_event(stored_result)\n                result = stored_result\n\n        self.status = result\n        return result\n\n    def _build_initial_agent_message(self) -> Message:\n        \"\"\"Construct the placeholder agent Message that `process_agent_events` mutates.\"\"\"\n        if hasattr(self, \"graph\"):\n            session_id = self.graph.session_id\n        elif hasattr(self, \"_session_id\"):\n            session_id = self._session_id\n        else:\n            session_id = None\n\n        sender_name = get_chat_output_sender_name(self) or self.display_name or \"AI\"\n        return Message(\n            sender=MESSAGE_SENDER_AI,\n            sender_name=sender_name,\n            properties={\"icon\": \"Bot\", \"state\": \"partial\"},\n            # `text=\"\"` sentinel so MessageTable's no_content check accepts\n            # an in-flight agent message whose content_blocks haven't been\n            # populated yet. Mirrors ChatInput's convention.\n            text=\"\",\n            # Flat chronological event log; see lfx.base.agents.events.\n            content_blocks=[],\n            session_id=session_id or uuid.uuid4(),\n        )\n\n    def _selected_provider_and_model(self) -> tuple[str | None, str | None]:\n        \"\"\"Provider/name of the selected model, for error-driven remediation.\"\"\"\n        try:\n            selected = self._resolve_selected_model()\n            if isinstance(selected, list) and selected and isinstance(selected[0], dict):\n                return selected[0].get(\"provider\"), selected[0].get(\"name\")\n        except (AttributeError, TypeError, KeyError, ImportError):\n            pass\n        return None, None\n\n    async def message_response(self) -> Message:\n        from lfx.base.models.model_remediation import find_remediation, remember\n\n        provider, model_name = self._selected_provider_and_model()\n        applied: set[str] = set()\n        while True:\n            try:\n                llm_model, self.chat_history, self.tools = await self.get_agent_requirements()\n                # Set up and run agent\n                self.set(\n                    llm=llm_model,\n                    tools=self.tools or [],\n                    chat_history=self.chat_history,\n                    input_value=self.input_value,\n                    system_prompt=self._inject_dynamic_prompt_values(self.system_prompt),\n                )\n                agent = self.create_agent_runnable()\n                result = await self.run_agent(agent)\n                self._agent_result = result\n            except (ValueError, TypeError, KeyError) as e:\n                await logger.aerror(f\"{type(e).__name__}: {e!s}\")\n                raise\n            except Exception as e:\n                # Error-driven remediation (see model_remediation): run_agent wraps\n                # the provider error in ExceptionWithMessageError, so match the chain.\n                error_text = f\"{e} {getattr(e, '__cause__', '') or ''}\"\n                remediation = find_remediation(error_text, provider, already_applied=applied)\n                if remediation is None:\n                    label = type(e).__name__\n                    await logger.aerror(f\"{label}: {e!s}\")\n                    raise\n                applied.add(remediation.name)\n                self._model_overrides = {**(getattr(self, \"_model_overrides\", None) or {}), **remediation.overrides}\n                await logger.awarning(\n                    f\"model.remediation.applied name={remediation.name} provider={provider} model={model_name}\"\n                )\n                continue\n            else:\n                if getattr(self, \"_model_overrides\", None):\n                    remember(provider, model_name, self._model_overrides)\n                return result\n\n    async def json_response(self) -> Data:\n        \"\"\"Produce structured Data via native LLM structured output, with prompt-based fallback.\n\n        Native path (no tools, llm has with_structured_output) bypasses the agent loop and\n        returns provider-validated JSON. When tools are attached, falls back to running the\n        agent with a schema-augmented system prompt and parsing the final message content.\n        \"\"\"\n        from lfx.components.models_and_agents.structured_output.structured_output_orchestrator import (\n            orchestrate_structured_output,\n        )\n\n        try:\n            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()\n        except (ValueError, TypeError) as exc:\n            await logger.aerror(f\"json_response.requirements_failed: {exc}\")\n            return Data(data={\"content\": \"\", \"error\": str(exc)})\n\n        injected_system_prompt = self._inject_dynamic_prompt_values(getattr(self, \"system_prompt\", \"\") or \"\") or \"\"\n        format_instructions = getattr(self, \"format_instructions\", \"\") or \"\"\n        output_schema = getattr(self, \"output_schema\", None) or []\n        has_tools = bool(self.tools)\n\n        async def _run_agent_for_fallback(augmented_prompt: str) -> str:\n            self.set(\n                llm=llm_model,\n                tools=self.tools or [],\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=augmented_prompt,\n            )\n            # Structured output cannot suspend mid-parse: disable tool-approval interrupts.\n            agent_runnable = self.create_agent_runnable(allow_interrupts=False)\n            with _suppress_send_message(self):\n                result = await self.run_agent(agent_runnable)\n            return _extract_text_content(result)\n\n        try:\n            return await orchestrate_structured_output(\n                llm=llm_model,\n                output_schema=output_schema,\n                system_prompt=injected_system_prompt,\n                format_instructions=format_instructions,\n                input_value=_extract_text_content(self.input_value),\n                run_prompt_fallback=_run_agent_for_fallback,\n                prefer_native=not has_tools,\n            )\n        except (\n            ExceptionWithMessageError,\n            ValueError,\n            TypeError,\n            NotImplementedError,\n            AttributeError,\n        ) as exc:\n            await logger.aerror(f\"json_response.orchestration_failed: {exc}\")\n            return Data(data={\"content\": \"\", \"error\": str(exc)})\n\n    async def get_memory_data(self):\n        # Scope by flow_id so default playground session names (e.g. \"New Session 0\")\n        # cannot leak chat history across unrelated flows. See issue #13059.\n        # The helper also returns [] when n_messages == 0, preserving the\n        # explicit \"memory disabled\" contract from MemoryComponent.retrieve_messages.\n        messages = await aget_agent_chat_history(\n            session_id=self.graph.session_id,\n            flow_id=getattr(self.graph, \"flow_id\", None),\n            context_id=self.context_id,\n            n_messages=self.n_messages,\n            user_id=_safe_graph_user_id(self),\n        )\n        return [\n            message for message in messages if getattr(message, \"id\", None) != getattr(self.input_value, \"id\", None)\n        ]\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self,\n        build_config: dotdict,\n        field_value: list[dict],\n        field_name: str | None = None,\n    ) -> dotdict:\n        # Update model options with caching (for all field changes).\n        # The tool-calling constraint lives on the ModelInput's ``filters``\n        # field (declared above); ``handle_model_input_update`` reads it\n        # and applies the filter to both the dropdown options and the\n        # sticky-default re-injection path.\n        build_config = handle_model_input_update(\n            component=self,\n            build_config=dict(build_config),\n            field_value=field_value,\n            field_name=field_name,\n        )\n        build_config = dotdict(build_config)\n\n        if field_name == \"model\":\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys. `verbose` was dropped from the input set\n            # (see `_agent_base_inputs` — the create_agent event stream already\n            # surfaces every step), so it is intentionally NOT required here.\n            # Saved flows that still carry a `verbose` value just ignore it on\n            # load.\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"model\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"add_calculator_tool\",\n                \"system_prompt\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n\n    async def _get_tools(self) -> list[Tool]:\n        component_toolkit = get_component_toolkit()\n\n        tools = component_toolkit(component=self).get_tools(\n            tool_name=\"Call_Agent\",\n            # here we do not use the shared callbacks as we are exposing the agent as a tool\n            callbacks=self.get_langchain_callbacks(),\n        )\n        if hasattr(self, \"tools_metadata\"):\n            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)\n\n        return tools\n"
               },
-              "input_value": {
-                "_input_type": "MessageInput",
-                "advanced": false,
-                "display_name": "Input",
+              "context_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Context ID",
                 "dynamic": false,
-                "info": "The input text to send to the model",
+                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
                 "input_types": [
                   "Message"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
-                "name": "input_value",
+                "name": "context_id",
                 "override_skip": false,
                 "placeholder": "",
                 "required": false,
@@ -1462,22 +919,124 @@
                 "type": "str",
                 "value": ""
               },
-              "is_refresh": false,
+              "format_instructions": {
+                "_input_type": "MultilineInput",
+                "advanced": true,
+                "ai_enabled": false,
+                "copy_field": false,
+                "display_name": "Output Format Instructions",
+                "dynamic": false,
+                "info": "Generic Template for structured output formatting. Valid only with Structured response.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "format_instructions",
+                "override_skip": false,
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "You are an AI that extracts structured JSON objects from unstructured text. Use a predefined schema with expected types (str, int, float, bool, dict). Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. Fill missing or ambiguous values with defaults: null for missing values. Remove exact duplicates but keep variations that have different field values. Always return valid JSON in the expected format, never throw errors. If multiple objects can be extracted, return them all in the structured format."
+              },
+              "handle_parsing_errors": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Handle Parse Errors",
+                "dynamic": false,
+                "info": "Adds tool-execution retry as a safety net. `create_agent` already feeds tool-call validation errors back to the LLM automatically; this flag layers `ToolRetryMiddleware` on top so transient tool runtime failures are retried (max 2 retries).",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "handle_parsing_errors",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              },
+              "input_value": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "The input provided by the user for the agent to process.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "max_iterations": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Iterations",
+                "dynamic": false,
+                "info": "Maximum number of model calls the agent can make before stopping (maps to `ModelCallLimitMiddleware.run_limit` on the create_agent path). Must be at least 1 — it is a safety cap, never 'unlimited'.",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_iterations",
+                "override_skip": false,
+                "placeholder": "",
+                "range_spec": {
+                  "max": 128000,
+                  "min": 1,
+                  "step": 1,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 15
+              },
               "max_tokens": {
                 "_input_type": "IntInput",
                 "advanced": true,
                 "display_name": "Max Tokens",
                 "dynamic": false,
                 "info": "Maximum number of tokens to generate. Field name varies by provider.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_tokens",
                 "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
-                  "max": 128000.0,
-                  "min": 1.0,
-                  "step": 1.0,
+                  "max": 128000,
+                  "min": 1,
+                  "step": 1,
                   "step_type": "int"
                 },
                 "required": false,
@@ -1505,6 +1064,9 @@
                     }
                   }
                 },
+                "filters": {
+                  "tool_calling": true
+                },
                 "info": "Select your model provider",
                 "input_types": [
                   "LanguageModel"
@@ -1513,7 +1075,243 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [],
+                "options": [
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.5-pro"
+                      ]
+                    },
+                    "name": "gpt-5.5-pro",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.5"
+                      ]
+                    },
+                    "name": "gpt-5.5",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4-nano"
+                      ]
+                    },
+                    "name": "gpt-5.4-nano",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4-mini"
+                      ]
+                    },
+                    "name": "gpt-5.4-mini",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4"
+                      ]
+                    },
+                    "name": "gpt-5.4",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3.5-flash",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3.1-flash-lite",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemma-4-31b-it",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemma-4-26b-a4b-it",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "qwen2.5:0.5b",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "qwen2.5:7b",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "api_key_param": "apikey",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatWatsonx",
+                      "model_name_param": "model_id",
+                      "project_id_param": "project_id",
+                      "url_param": "url"
+                    },
+                    "name": "ibm/granite-4-h-small",
+                    "provider": "IBM WatsonX"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "api_key_param": "apikey",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatWatsonx",
+                      "model_name_param": "model_id",
+                      "project_id_param": "project_id",
+                      "url_param": "url"
+                    },
+                    "name": "ibm/granite-8b-code-instruct",
+                    "provider": "IBM WatsonX"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "api_key_param": "apikey",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatWatsonx",
+                      "model_name_param": "model_id",
+                      "project_id_param": "project_id",
+                      "url_param": "url"
+                    },
+                    "name": "ibm/granite-guardian-3-8b",
+                    "provider": "IBM WatsonX"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "api_key_param": "apikey",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatWatsonx",
+                      "model_name_param": "model_id",
+                      "project_id_param": "project_id",
+                      "url_param": "url"
+                    },
+                    "name": "meta-llama/llama-3-3-70b-instruct",
+                    "provider": "IBM WatsonX"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "api_key_param": "apikey",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatWatsonx",
+                      "model_name_param": "model_id",
+                      "project_id_param": "project_id",
+                      "url_param": "url"
+                    },
+                    "name": "meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
+                    "provider": "IBM WatsonX"
+                  }
+                ],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -1527,16 +1325,16 @@
                 "type": "model",
                 "value": ""
               },
-              "model_name": {
-                "_input_type": "StrInput",
+              "n_messages": {
+                "_input_type": "IntInput",
                 "advanced": true,
-                "display_name": "Model Name Override",
+                "display_name": "Number of Chat History Messages",
                 "dynamic": false,
-                "info": "Optional model name to use instead of the selected model. Can be set from a global variable for runtime model selection.",
+                "info": "Number of chat history messages to retrieve.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "model_name",
+                "name": "n_messages",
                 "override_skip": false,
                 "placeholder": "",
                 "required": false,
@@ -1544,35 +1342,81 @@
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": false,
-                "type": "str",
-                "value": ""
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 100
               },
-              "ollama_base_url": {
-                "_input_type": "MessageInput",
-                "advanced": false,
-                "display_name": "Ollama API URL",
+              "output_schema": {
+                "_input_type": "TableInput",
+                "advanced": true,
+                "display_name": "Output Schema",
                 "dynamic": false,
-                "info": "Endpoint of the Ollama API (Ollama only). Defaults to http://localhost:11434",
+                "info": "Schema Validation: Define the structure and data types for structured output. No validation if no output schema.",
                 "input_types": [
-                  "Message"
+                  "DataFrame",
+                  "Table"
                 ],
-                "list": false,
+                "is_list": true,
                 "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "ollama_base_url",
+                "name": "output_schema",
                 "override_skip": false,
                 "placeholder": "",
-                "real_time_refresh": true,
                 "required": false,
-                "show": false,
+                "show": true,
+                "table_icon": "Table",
+                "table_schema": [
+                  {
+                    "default": "field",
+                    "description": "Specify the name of the output field.",
+                    "display_name": "Name",
+                    "edit_mode": "inline",
+                    "formatter": "text",
+                    "name": "name",
+                    "type": "str"
+                  },
+                  {
+                    "default": "description of field",
+                    "description": "Describe the purpose of the output field.",
+                    "display_name": "Description",
+                    "edit_mode": "popover",
+                    "formatter": "text",
+                    "name": "description",
+                    "type": "str"
+                  },
+                  {
+                    "default": "str",
+                    "description": "Indicate the data type of the output field (e.g., str, int, float, bool, dict).",
+                    "display_name": "Type",
+                    "edit_mode": "inline",
+                    "formatter": "text",
+                    "name": "type",
+                    "options": [
+                      "str",
+                      "int",
+                      "float",
+                      "bool",
+                      "dict"
+                    ],
+                    "type": "str"
+                  },
+                  {
+                    "default": "False",
+                    "description": "Set to True if this output field should be a list of the specified type.",
+                    "display_name": "As List",
+                    "edit_mode": "inline",
+                    "formatter": "text",
+                    "name": "multiple",
+                    "type": "boolean"
+                  }
+                ],
                 "title_case": false,
                 "tool_mode": false,
-                "trace_as_input": true,
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
-                "type": "str",
-                "value": ""
+                "trigger_icon": "Table",
+                "trigger_text": "Open table",
+                "type": "table",
+                "value": []
               },
               "project_id": {
                 "_input_type": "StrInput",
@@ -1580,6 +1424,7 @@
                 "display_name": "watsonx Project ID",
                 "dynamic": false,
                 "info": "The project ID associated with the foundation model (IBM watsonx.ai only)",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1595,33 +1440,13 @@
                 "type": "str",
                 "value": ""
               },
-              "provider": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "Provider Override",
-                "dynamic": false,
-                "info": "Optional provider to use with Model Name Override. Leave blank to use the selected model's provider.",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "provider",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": false,
-                "type": "str",
-                "value": ""
-              },
               "stream": {
                 "_input_type": "BoolInput",
                 "advanced": true,
                 "display_name": "Stream",
                 "dynamic": false,
-                "info": "Whether to stream the response",
+                "info": "Stream the response from the model. Streaming works only in Chat.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "stream",
@@ -1634,16 +1459,16 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "bool",
-                "value": false
+                "value": true
               },
-              "system_message": {
+              "system_prompt": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
                 "ai_enabled": false,
                 "copy_field": false,
-                "display_name": "System Message",
+                "display_name": "Agent Instructions",
                 "dynamic": false,
-                "info": "A system message that helps set the behavior of the assistant",
+                "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior. Supports dynamic placeholders: {current_date}, {model_name}, {optional_user_context}.",
                 "input_types": [
                   "Message"
                 ],
@@ -1651,8 +1476,9 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
-                "name": "system_message",
+                "name": "system_prompt",
                 "override_skip": false,
+                "password": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1662,70 +1488,337 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": ""
+                "value": "You are a friendly conversational assistant with long-term memory.\n\nA Memory Base is attached as a tool and holds what you've learned about the user across\nALL past conversations. Use it like this:\n- When a message depends on what you already know about the user (their name, preferences,\n  past topics or decisions), FIRST call the memory tool with a short, focused query\n  (e.g. \"user's name\", \"user's preferences\") and base your answer on what it returns.\n- If the memory has nothing relevant, say you don't know that yet and ask — never invent\n  or guess a memory.\n- For questions that don't need past context, just answer directly.\n\nYou don't need to save anything: new information the user shares is written to the Memory\nBase automatically. Keep replies concise and natural, and don't mention the memory tool\nunless asked."
               },
-              "temperature": {
-                "_input_type": "SliderInput",
-                "advanced": true,
-                "display_name": "Temperature",
+              "tools": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Tools",
                 "dynamic": false,
-                "info": "Controls randomness in responses",
-                "max_label": "",
-                "max_label_icon": "",
-                "min_label": "",
-                "min_label_icon": "",
-                "name": "temperature",
+                "info": "These are the tools that the agent can use to help with tasks.",
+                "input_types": [
+                  "Tool"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "tools",
                 "override_skip": false,
                 "placeholder": "",
-                "range_spec": {
-                  "max": 1,
-                  "min": 0,
-                  "step": 0.01,
-                  "step_type": "float"
-                },
                 "required": false,
                 "show": true,
-                "slider_buttons": false,
-                "slider_buttons_options": [],
-                "slider_input": false,
                 "title_case": false,
-                "tool_mode": false,
+                "trace_as_metadata": true,
                 "track_in_telemetry": false,
-                "type": "slider",
-                "value": 0.1
+                "type": "other",
+                "value": ""
               }
             },
             "tool_mode": false
           },
-          "selected_output": "text_output",
+          "selected_output": "response",
           "showNode": true,
-          "type": "LanguageModelComponent"
+          "type": "Agent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-n8KRg",
+        "id": "Agent-AlLub",
         "measured": {
-          "height": 534,
+          "height": 430,
           "width": 320
         },
         "position": {
-          "x": 2726.7653522717746,
-          "y": 453.1927474431865
+          "x": 2638.9257253925325,
+          "y": 506.12025672778464
+        },
+        "selected": true,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "MemoryBase-xePih",
+          "node": {
+            "base_classes": [
+              "Table"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Retrieve long-term memory from a Memory Base attached to this workflow. When 'Filter by Session' is off, queries run across all sessions.",
+            "display_name": "Memory Base",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "memory_base",
+              "search_query",
+              "top_k",
+              "include_metadata",
+              "filter_by_session"
+            ],
+            "frozen": false,
+            "icon": "brain",
+            "last_updated": "2026-06-23T18:54:25.543Z",
+            "legacy": false,
+            "lf_version": "1.10.1rc3",
+            "metadata": {
+              "code_hash": "0871b1fe79e7",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "chromadb",
+                    "version": "1.5.9"
+                  },
+                  {
+                    "name": "numpy",
+                    "version": "2.4.6"
+                  },
+                  {
+                    "name": "langchain_chroma",
+                    "version": "0.2.6"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": null
+                  },
+                  {
+                    "name": "sqlmodel",
+                    "version": "0.0.39"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 6
+              },
+              "module": "lfx.components.files_and_knowledge.memory_retrieval.MemoryBaseComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "group_outputs": false,
+                "hidden": null,
+                "loop_types": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"Memory Base retrieval component.\n\nQueries the auto-provisioned Chroma KB backing a Memory Base, scoped to the\ncurrent flow's request session. Additional option to filter by session_id if the\ndeveloper wants to turn that on. The component will auto filter based on session_id then.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport uuid\nfrom typing import TYPE_CHECKING, Any\n\nimport chromadb\nimport chromadb.api.client\nimport numpy as np\nfrom langchain_chroma import Chroma\nfrom langflow.api.utils.kb_helpers import KBIngestionHelper\nfrom langflow.services.database.models.memory_base.model import MemoryBase\nfrom langflow.services.database.models.user.crud import get_user_by_id\nfrom langflow.services.memory_base.kb_path_helpers import hash_session_id, validate_kb_path\nfrom sqlmodel import select\n\nfrom lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs\nfrom lfx.components.files_and_knowledge._kb_paths import (\n    get_knowledge_bases_root_path,\n    load_kb_metadata,\n)\nfrom lfx.custom import Component\nfrom lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.services.deps import session_scope\n\nif TYPE_CHECKING:\n    from pathlib import Path\n\n    from langflow.services.database.models.user.model import User\n    from sqlmodel.ext.asyncio.session import AsyncSession\n\n\ndef _coerce_uuid(value: Any) -> uuid.UUID | None:\n    if value is None:\n        return None\n    if isinstance(value, uuid.UUID):\n        return value\n    try:\n        return uuid.UUID(str(value))\n    except (ValueError, TypeError):\n        return None\n\n\ndef _distance_to_similarity(distance: float) -> float:\n    \"\"\"Chroma returns a distance; flip the sign so larger == more similar.\"\"\"\n    return -1 * distance\n\n\ndef _to_python_scalar(value: Any) -> Any:\n    \"\"\"Convert numpy scalars (int64, float64, bool_, …) to Python primitives.\n\n    Chroma persists integer/float metadata as numpy scalars, which break JSON\n    serialization when this component is consumed as an Agent tool — LangChain's\n    tool-output path calls ``vars()`` / iterates the value, both of which fail\n    on numpy C-extension scalars. Coerce at the boundary so downstream stays\n    primitive-only.\n    \"\"\"\n    if isinstance(value, np.generic):\n        return value.item()\n    return value\n\n\nclass MemoryBaseComponent(Component):\n    display_name = \"Memory Base\"\n    description = (\n        \"Retrieve long-term memory from a Memory Base attached to this workflow. \"\n        \"When 'Filter by Session' is off, queries run across all sessions.\"\n    )\n    icon = \"brain\"\n    name = \"MemoryBase\"\n\n    inputs = [\n        DropdownInput(\n            name=\"memory_base\",\n            display_name=\"Memory Base\",\n            info=\"Memory Base whose captured conversation history will be searched.\",\n            required=True,\n            options=[],\n            refresh_button=True,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"search_query\",\n            display_name=\"Search Query\",\n            info=\"Query used for semantic retrieval against the memory base.\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"top_k\",\n            display_name=\"Top K Results\",\n            info=\"Number of top results to return.\",\n            value=5,\n            advanced=True,\n            required=False,\n        ),\n        BoolInput(\n            name=\"include_metadata\",\n            display_name=\"Include Metadata\",\n            info=\"Include chunk metadata (session_id, sender, timestamp, …) on each row.\",\n            value=True,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"filter_by_session\",\n            display_name=\"Filter by Session\",\n            info=(\n                \"If enabled, only memories from the current session will be retrieved. \"\n                \"Disable to allow retrieval across every session ingested into this \"\n                \"Memory Base (useful for cross-conversation recall).\"\n            ),\n            value=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"retrieve_data\",\n            display_name=\"Results\",\n            method=\"retrieve_memory\",\n            info=(\n                \"Returns matching memory chunks. Scoped to the current session by \"\n                \"default; turn 'Filter by Session' off to retrieve across sessions.\"\n            ),\n        ),\n    ]\n\n    def _build_where_clause(self, *, session_id: str | None = None) -> dict | None:\n        \"\"\"Compose the Chroma ``where`` clause based on opt-in filters and manual params.\n\n        Uses the canonical ``$eq`` operator form rather than the implicit\n        ``{\"key\": \"value\"}`` shorthand. Both are accepted by chromadb, but the\n        explicit form is unambiguous across versions and tooling.\n        \"\"\"\n        predicates: list[dict] = []\n        # Defensive bool() — BoolInput coerces strings, but if this attribute is\n        # ever overridden externally with a non-bool value, ``\"false\"`` would be\n        # truthy and silently disable the toggle.\n        if bool(self.filter_by_session) and session_id:\n            predicates.append({\"session_id\": {\"$eq\": str(session_id)}})\n\n        if not predicates:\n            return None\n        if len(predicates) == 1:\n            return predicates[0]\n        return {\"$and\": predicates}\n\n    async def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002\n        if field_name != \"memory_base\":\n            return build_config\n\n        flow_id = _coerce_uuid(self._get_runtime_or_frontend_node_attr(\"flow_id\"))\n        user_uuid = _coerce_uuid(self.user_id)\n        if flow_id is None or user_uuid is None:\n            build_config[\"memory_base\"][\"options\"] = []\n            build_config[\"memory_base\"][\"value\"] = None\n            return build_config\n\n        # At design time self.user_id == the flow developer == MB owner, so this\n        # filters to the same set a Flow-lookup would return but without relying\n        # on the Flow row being persisted yet.\n        async with session_scope() as db:\n            stmt = select(MemoryBase).where(\n                MemoryBase.flow_id == flow_id,\n                MemoryBase.user_id == user_uuid,\n            )\n            mbs = list((await db.exec(stmt)).all())\n\n        options = sorted(mb.name for mb in mbs)\n        build_config[\"memory_base\"][\"options\"] = options\n        if build_config[\"memory_base\"].get(\"value\") not in options:\n            build_config[\"memory_base\"][\"value\"] = None\n        return build_config\n\n    async def _resolve_attached_mb(\n        self,\n        db: AsyncSession,\n        selected: str,\n        flow_id: uuid.UUID,\n    ) -> tuple[MemoryBase, User]:\n        \"\"\"Look up the MB row scoped to the current flow and resolve its owner.\"\"\"\n        mb = (\n            await db.exec(\n                select(MemoryBase).where(\n                    MemoryBase.name == selected,\n                    MemoryBase.flow_id == flow_id,\n                )\n            )\n        ).first()\n        if mb is None:\n            msg = f\"Memory Base '{selected}' is not attached to this flow.\"\n            raise ValueError(msg)\n\n        owner = await get_user_by_id(db, mb.user_id)\n        if owner is None:\n            msg = \"Memory Base owner account could not be resolved.\"\n            raise ValueError(msg)\n        return mb, owner\n\n    def _resolve_kb_location(self, owner_username: str, kb_name: str) -> Path:\n        \"\"\"Build and validate the on-disk KB path for the given owner.\"\"\"\n        kb_root = get_knowledge_bases_root_path()\n        kb_path = kb_root / owner_username / kb_name\n        try:\n            validate_kb_path(kb_root, kb_path)\n        except ValueError as exc:\n            msg = \"Memory Base path is not accessible.\"\n            raise ValueError(msg) from exc\n        return kb_path\n\n    async def _build_chroma(\n        self,\n        kb_path: Path,\n        owner: User,\n        metadata: dict,\n        kb_name: str,\n    ) -> Chroma:\n        \"\"\"Construct a Chroma client wired to the KB's embedding function.\"\"\"\n        provider = metadata.get(\"embedding_provider\")\n        model = metadata.get(\"embedding_model\")\n        embedding_function = await KBIngestionHelper.build_embeddings(provider, model, owner)\n\n        chromadb.api.client.SharedSystemClient.clear_system_cache()\n        return Chroma(\n            persist_directory=str(kb_path),\n            embedding_function=embedding_function,\n            collection_name=kb_name,\n            **chroma_langchain_collection_kwargs(),\n        )\n\n    def _format_results(self, results: list[tuple]) -> DataFrame:\n        \"\"\"Convert Chroma (doc, score) tuples into the component's DataFrame output.\n\n        Metadata values are coerced from numpy scalars to Python primitives so the\n        resulting DataFrame is JSON-serializable when the component is invoked as\n        an Agent tool.\n        \"\"\"\n        data_list: list[Data] = []\n        for doc, score in results:\n            kwargs: dict = {\"content\": doc.page_content}\n            if self.search_query:\n                kwargs[\"_score\"] = _to_python_scalar(_distance_to_similarity(score))\n            if self.include_metadata:\n                for key, value in (doc.metadata or {}).items():\n                    kwargs[key] = _to_python_scalar(value)\n            data_list.append(Data(**kwargs))\n        return DataFrame(data=data_list)\n\n    async def retrieve_memory(self) -> DataFrame:\n        \"\"\"Retrieve chunks from the selected Memory Base.\n\n        Scoped to the current ``session_id`` when ``filter_by_session`` is true; when\n        false, every chunk in the Memory Base is queryable so the agent can recall\n        context from prior conversations across all sessions.\n        \"\"\"\n        session_id = getattr(self.graph, \"session_id\", None)\n        if bool(self.filter_by_session) and not session_id:\n            # Only required when filtering is on, since the value gates the where clause.\n            msg = (\n                \"A session_id is required on the flow request when 'Filter by Session' \"\n                \"is enabled — disable the toggle to allow cross-session retrieval.\"\n            )\n            raise ValueError(msg)\n\n        flow_id = _coerce_uuid(getattr(self.graph, \"flow_id\", None))\n        if flow_id is None:\n            msg = \"flow_id is not available on the graph context; Memory Base retrieval is unavailable.\"\n            raise ValueError(msg)\n\n        selected = self.memory_base\n        if not selected:\n            msg = \"No Memory Base is selected.\"\n            raise ValueError(msg)\n\n        async with session_scope() as db:\n            mb, owner = await self._resolve_attached_mb(db, selected, flow_id)\n            owner_username = owner.username\n            kb_name = mb.kb_name\n\n        kb_path = self._resolve_kb_location(owner_username, kb_name)\n        metadata = load_kb_metadata(kb_path, log_label=f\"memory base '{selected}'\")\n        if not metadata:\n            msg = f\"Memory Base '{selected}' has no embedding metadata on disk.\"\n            raise ValueError(msg)\n\n        chroma = await self._build_chroma(kb_path, owner, metadata, kb_name)\n        where = self._build_where_clause(session_id=session_id)\n\n        logger.debug(\n            \"MemoryBase retrieval mb=%s session_hash=%s where=%s top_k=%s\",\n            selected,\n            hash_session_id(session_id) if session_id else \"<none>\",\n            where,\n            self.top_k,\n        )\n\n        if not self.search_query:\n            # Embedding providers may reject empty input; skip the round-trip entirely.\n            return DataFrame(data=[])\n\n        results = chroma.similarity_search_with_score(\n            query=self.search_query,\n            k=self.top_k,\n            filter=where,\n        )\n        return self._format_results(results)\n"
+              },
+              "filter_by_session": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Filter by Session",
+                "dynamic": false,
+                "info": "If enabled, only memories from the current session will be retrieved. Disable to allow retrieval across every session ingested into this Memory Base (useful for cross-conversation recall).",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "filter_by_session",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              },
+              "include_metadata": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Include Metadata",
+                "dynamic": false,
+                "info": "Include chunk metadata (session_id, sender, timestamp, …) on each row.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "include_metadata",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              },
+              "memory_base": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Memory Base",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Memory Base whose captured conversation history will be searched.",
+                "name": "memory_base",
+                "options": [],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": null
+              },
+              "search_query": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Search Query",
+                "dynamic": false,
+                "info": "Query used for semantic retrieval against the memory base.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "search_query",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "tools_metadata": {
+                "_input_type": "ToolsInput",
+                "advanced": false,
+                "display_name": "Actions",
+                "dynamic": false,
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "tools_metadata",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "tools",
+                "value": [
+                  {
+                    "args": {
+                      "search_query": {
+                        "default": "",
+                        "description": "Query used for semantic retrieval against the memory base.",
+                        "title": "Search Query",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Returns matching memory chunks. Scoped to the current session by default; turn 'Filter by Session' off to retrieve across sessions.",
+                    "display_description": "Returns matching memory chunks. Scoped to the current session by default; turn 'Filter by Session' off to retrieve across sessions.",
+                    "display_name": "retrieve_memory",
+                    "name": "retrieve_memory",
+                    "readonly": false,
+                    "status": true,
+                    "tags": [
+                      "retrieve_memory"
+                    ]
+                  }
+                ]
+              },
+              "top_k": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Top K Results",
+                "dynamic": false,
+                "info": "Number of top results to return.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "top_k",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 5
+              }
+            },
+            "tool_mode": true
+          },
+          "showNode": true,
+          "type": "MemoryBase"
+        },
+        "dragging": false,
+        "id": "MemoryBase-xePih",
+        "measured": {
+          "height": 324,
+          "width": 320
+        },
+        "position": {
+          "x": 2152.2185184733175,
+          "y": 486.59797677086067
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -903.7157907161627,
-      "y": 4.769953886051155,
-      "zoom": 0.6492225868554724
+      "x": -983.1103016047296,
+      "y": -184.85675138853026,
+      "zoom": 0.7198813686005942
     }
   },
   "description": "Create a chatbot that saves and references previous messages, enabling the model to maintain context throughout the conversation.",
   "endpoint_name": null,
-  "id": "abdc8216-e400-48c4-8d11-0f21441b50ea",
+  "id": "ea80d83d-67d1-4d89-84a9-014b6b97c8a7",
   "is_component": false,
-  "last_tested_version": "1.4.3",
+  "last_tested_version": "1.10.1rc3",
+  "locked": false,
   "name": "Memory Chatbot",
   "tags": [
     "chatbots",

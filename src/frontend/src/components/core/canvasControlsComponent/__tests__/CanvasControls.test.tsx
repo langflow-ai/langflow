@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import CanvasControls from "../CanvasControls";
 
 // The modal/dialog/dropdown overlay layer in the app all sits at `z-50`
@@ -33,6 +34,7 @@ jest.mock("@xyflow/react", () => ({
     </div>
   ),
   useReactFlow: () => reactFlowFns,
+  useUpdateNodeInternals: () => jest.fn(),
   useStore: () => ({
     isInteractive: true,
     minZoomReached: false,
@@ -44,7 +46,15 @@ jest.mock("@xyflow/react", () => ({
 
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: jest.fn(() => false),
+  default: jest.fn((selector) => {
+    const state = {
+      nodes: [],
+      edges: [],
+      setNodes: jest.fn(),
+      currentFlow: { locked: false },
+    };
+    return typeof selector === "function" ? selector(state) : false;
+  }),
 }));
 
 jest.mock("@/stores/flowsManagerStore", () => ({
@@ -132,6 +142,31 @@ describe("CanvasControls", () => {
     expect(screen.getByAltText("Langflow Assistant")).toBeInTheDocument();
   });
 
+  it("should_hide_new_badge_when_assistant_already_discovered", () => {
+    localStorage.setItem("langflow-assistant-discovered", "true");
+    try {
+      render(<CanvasControls selectedNode={null} />);
+
+      expect(screen.queryByText("New")).not.toBeInTheDocument();
+    } finally {
+      localStorage.clear();
+    }
+  });
+
+  it("should_keep_new_badge_hidden_after_assistant_opened_and_closed", () => {
+    localStorage.clear();
+    render(<CanvasControls selectedNode={null} />);
+    expect(screen.getByText("New")).toBeInTheDocument();
+
+    // Open then close the assistant — the panel-open state alone hid the
+    // badge before this fix, so the badge must stay gone once the panel is
+    // closed again for the ``discovered`` gating to be proven.
+    fireEvent.click(screen.getByTestId("assistant-button"));
+    fireEvent.click(screen.getByTestId("assistant-button"));
+
+    expect(screen.queryByText("New")).not.toBeInTheDocument();
+  });
+
   it("should_render_sticky_note_button", () => {
     render(<CanvasControls selectedNode={null} />);
 
@@ -148,6 +183,20 @@ describe("CanvasControls", () => {
     expect(mockDispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({ type: "lf:start-add-note" }),
     );
+  });
+
+  it("should_disable_canvas_mutation_controls_when_read_only", () => {
+    render(<CanvasControls selectedNode={null} effectiveLocked />);
+
+    expect(screen.getByTestId("assistant-button")).toBeDisabled();
+    expect(screen.getByTestId("canvas-add-note-button")).toBeDisabled();
+    expect(screen.getByTestId("canvas-add-note-button")).toHaveAttribute(
+      "title",
+      "(Read-Only)",
+    );
+
+    fireEvent.click(screen.getByTestId("canvas-add-note-button"));
+    expect(mockDispatchEvent).not.toHaveBeenCalled();
   });
 
   it("should_render_children_when_provided", () => {
@@ -197,6 +246,37 @@ describe("CanvasControls", () => {
       expect(zIndex).not.toBeNull();
       expect(zIndex as number).toBeLessThan(MODAL_LAYER_Z_INDEX);
     } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("should_allow_tab_to_leave_onboarding_tooltip", async () => {
+    localStorage.clear();
+    jest.useFakeTimers();
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    const nextButton = document.createElement("button");
+    nextButton.textContent = "Next focus target";
+
+    try {
+      render(<CanvasControls selectedNode={null} />);
+
+      act(() => {
+        jest.advanceTimersByTime(ONBOARDING_TOOLTIP_DELAY_MS);
+      });
+
+      document.body.appendChild(nextButton);
+
+      screen.getByTestId("assistant-onboarding-dismiss").focus();
+      await user.tab();
+      expect(screen.getByTestId("assistant-onboarding-open")).toHaveFocus();
+      await user.tab();
+
+      expect(nextButton).toHaveFocus();
+      expect(
+        screen.queryByTestId("assistant-onboarding-tooltip"),
+      ).not.toBeInTheDocument();
+    } finally {
+      nextButton.remove();
       jest.useRealTimers();
     }
   });

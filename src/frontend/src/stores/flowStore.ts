@@ -6,19 +6,17 @@ import {
   type Node,
   type NodeChange,
 } from "@xyflow/react";
-import { cloneDeep, zip } from "lodash";
+import { cloneDeep } from "lodash";
+import { v5 as uuidv5 } from "uuid";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { queryClient } from "@/contexts";
 import {
-  ENABLE_DATASTAX_LANGFLOW,
-  ENABLE_INSPECTION_PANEL,
-} from "@/customization/feature-flags";
-import {
-  track,
-  trackDataLoaded,
-  trackFlowBuild,
-} from "@/customization/utils/analytics";
+  runFlowAGUI,
+  runFlowHITL,
+} from "@/controllers/API/agui/run-flow-bridge";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
+import { track, trackFlowBuild } from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import i18n from "../i18n";
@@ -36,7 +34,6 @@ import type {
   FlowStoreType,
   VertexLayerElementType,
 } from "../types/zustand/flow";
-import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import { filterPlaceableSelection } from "../utils/componentConstraints";
 import {
   buildPositionDictionary,
@@ -53,6 +50,7 @@ import {
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
+import useAuthStore from "./authStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
@@ -175,6 +173,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   nodes: [],
   edges: [],
   isBuilding: false,
+  awaitingInput: false,
   buildStartTime: null,
   buildDuration: null,
   buildingFlowId: null,
@@ -188,8 +187,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ isBuilding: false });
     get().revertBuiltStatusFromBuilding();
     useAlertStore.getState().setErrorData({
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-      title: (i18n as any).t("alerts.buildStopped"),
+      title: i18n.t("alerts.buildStopped"),
     });
   },
   isPending: true,
@@ -376,6 +374,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       buildingSessionId: !isBuilding ? null : current.buildingSessionId,
     });
   },
+  setAwaitingInput: (awaitingInput) => {
+    set({ awaitingInput });
+  },
   setBuildStartTime: (time) => {
     set({ buildStartTime: time });
   },
@@ -466,7 +467,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       return node;
     });
 
-    const { edges: newEdges } = cleanEdges(newNodes, get().edges);
+    const { edges: newEdges, brokenEdges } = cleanEdges(newNodes, get().edges);
+
+    // An edit that reshapes a node's handles (e.g. disabling Human Input's fallback
+    // with a wired branch) strands the downstream node; surface it like resetFlow does.
+    if (brokenEdges.length > 0) {
+      useAlertStore.getState().setErrorData({
+        title: i18n.t("flow.brokenEdgesWarning"),
+        list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
+      });
+    }
 
     set((state) => {
       if (callback) {
@@ -555,9 +565,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       selection.edges = selection.edges.concat(existingEdgesToCopy);
     }
 
-    // Enforce component placement constraints (singleton + mutual exclusivity)
-    // on paste so they cannot be bypassed by copy/paste, matching the sidebar.
-    // The filter is side-effect free; surfacing the notice is the caller's job.
+    // Enforce placement constraints (singleton + mutual exclusivity) on paste so
+    // they cannot be bypassed by copy/paste; surfacing the notice is the caller's job.
     const placeable = filterPlaceableSelection(selection, get().nodes);
     selection.nodes = placeable.nodes;
     selection.edges = placeable.edges;
@@ -732,29 +741,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   onConnect: (connection) => {
     const _dark = useDarkStore.getState().dark;
-    // const commonMarkerProps = {
-    //   type: MarkerType.ArrowClosed,
-    //   width: 20,
-    //   height: 20,
-    //   color: dark ? "#555555" : "#000000",
-    // };
 
     // const inputTypes = INPUT_TYPES;
     // const outputTypes = OUTPUT_TYPES;
-
-    // const findNode = useFlowStore
-    //   .getState()
-    //   .nodes.find(
-    //     (node) => node.id === connection.source || node.id === connection.target
-    //   );
-
-    // const sourceType = findNode?.data?.type;
-    // let isIoIn = false;
-    // let isIoOut = false;
-    // if (sourceType) {
-    //   isIoIn = inputTypes.has(sourceType);
-    //   isIoOut = outputTypes.has(sourceType);
-    // }
 
     let newEdges: EdgeType[] = [];
     get().setEdges((oldEdges) => {
@@ -820,7 +809,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       },
       buildInfo: null,
     });
-    const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
     set({ flowBuildStatus: {} });
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
@@ -881,9 +869,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // then immediately clicked "Run") before checking outdated state.
     await waitForNodeUpdates();
 
-    // Block build when custom components are disabled and there are outdated components
-    // Recalculate from current nodes to avoid stale componentsToUpdate
-    // (setNode does not trigger updateComponentsToUpdate, only setNodes does)
+    // Block build when custom components are disabled and outdated components exist;
+    // recalculate from current nodes (setNode does not run updateComponentsToUpdate).
     get().updateComponentsToUpdate(get().nodes);
     const allowCustomComponents =
       useUtilityStore.getState().allowCustomComponents;
@@ -927,201 +914,63 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
     }
 
-    function validateSubgraph() {}
-    function handleBuildUpdate(
-      vertexBuildData: VertexBuildTypeAPI,
-      status: BuildStatus,
-      runId: string,
-    ) {
-      if (vertexBuildData && vertexBuildData.inactivated_vertices) {
-        get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
-        if (vertexBuildData.inactivated_vertices.length > 0) {
-          get().updateBuildStatus(
-            vertexBuildData.inactivated_vertices,
-            BuildStatus.INACTIVE,
-          );
-        }
-      }
+    // One AbortController per build so stopBuilding cancels only the in-flight run;
+    // the signal reaches runFlowAGUI so Stop aborts the actual SSE request.
+    const buildController = new AbortController();
+    get().setBuildController(buildController);
 
-      if (vertexBuildData.next_vertices_ids) {
-        // next_vertices_ids is a list of vertices that are going to be built next
-        // verticesLayers is a list of list of vertices ids, where each list is a layer of vertices
-        // we want to add a new layer (next_vertices_ids) to the list of layers (verticesLayers)
-        // and the values of next_vertices_ids to the list of vertices ids (verticesIds)
-
-        // const nextVertices will be the zip of vertexBuildData.next_vertices_ids and
-        // vertexBuildData.top_level_vertices
-        // the VertexLayerElementType as {id: next_vertices_id, layer: top_level_vertex}
-
-        // next_vertices_ids should be next_vertices_ids without the inactivated vertices
-        const next_vertices_ids = vertexBuildData.next_vertices_ids.filter(
-          (id) => !vertexBuildData.inactivated_vertices?.includes(id),
-        );
-        const top_level_vertices = vertexBuildData.top_level_vertices.filter(
-          (vertex) => !vertexBuildData.inactivated_vertices?.includes(vertex),
-        );
-        let nextVertices: VertexLayerElementType[] = zip(
-          next_vertices_ids,
-          top_level_vertices,
-        ).map(([id, reference]) => ({ id: id!, reference }));
-
-        // Now we filter nextVertices to remove any vertices that are in verticesLayers
-        // because they are already being built
-        // each layer is a list of vertexlayerelementtypes
-        const lastLayer =
-          get().verticesBuild!.verticesLayers[
-            get().verticesBuild!.verticesLayers.length - 1
-          ];
-
-        nextVertices = nextVertices.filter(
-          (vertexElement) =>
-            !lastLayer.some(
-              (layerElement) =>
-                layerElement.id === vertexElement.id &&
-                layerElement.reference === vertexElement.reference,
-            ),
-        );
-        const newLayers = [
-          ...get().verticesBuild!.verticesLayers,
-          nextVertices,
-        ];
-        const newIds = [
-          ...get().verticesBuild!.verticesIds,
-          ...next_vertices_ids,
-        ];
-        if (
-          ENABLE_DATASTAX_LANGFLOW &&
-          vertexBuildData?.id?.includes("AstraDB")
-        ) {
-          const search_results: LogsLogType[] = Object.values(
-            vertexBuildData?.data?.logs?.search_results,
-          );
-          search_results.forEach((log) => {
-            if (
-              log.message.includes("Adding") &&
-              log.message.includes("documents") &&
-              log.message.includes("Vector Store")
-            ) {
-              trackDataLoaded(
-                get().currentFlow?.id,
-                get().currentFlow?.name,
-                "AstraDB Vector Store",
-                vertexBuildData?.id,
-              );
-            }
-          });
-        }
-        get().updateVerticesBuild({
-          verticesIds: newIds,
-          verticesLayers: newLayers,
-          runId: runId,
-          verticesToRun: get().verticesBuild!.verticesToRun,
-        });
-
-        get().updateBuildStatus(top_level_vertices, BuildStatus.TO_BUILD);
-      }
-
-      get().addDataToFlowPool(
-        { ...vertexBuildData, run_id: runId },
-        vertexBuildData.id,
-      );
-      if (status !== BuildStatus.ERROR) {
-        get().updateBuildStatus([vertexBuildData.id], status);
-      }
+    // Playground runs are namespaced by visitor id so unsaved tweaks run as the user sees them.
+    let buildingFlowId = currentFlow!.id;
+    if (get().playgroundPage) {
+      const authState = useAuthStore.getState();
+      const visitorId =
+        authState.isAuthenticated &&
+        authState.autoLogin === false &&
+        authState.userData?.id
+          ? authState.userData.id
+          : useUtilityStore.getState().clientId;
+      buildingFlowId = uuidv5(`${visitorId}_${currentFlow!.id}`, uuidv5.DNS);
     }
+    get().setBuildingSession(buildingFlowId, session ?? null);
 
-    await buildFlowVerticesWithFallback({
-      session,
-      input_value,
-      files,
+    // Only the durable background path supports a mid-run pause/resume.
+    const runArgs = {
       flowId: currentFlow!.id,
-      startNodeId,
-      stopNodeId,
-      onGetOrderSuccess: () => {},
-      onBuildComplete: (allNodesValid) => {
-        if (!silent) {
-          if (allNodesValid) {
-            get().setBuildInfo({ success: true });
-          }
-        }
-        get().updateEdgesRunningByNodes(
-          get().nodes.map((n) => n.id),
-          false,
-        );
-        get().setIsBuilding(false);
-        // Invalidate KB-related caches so any KnowledgeIngestion node
-        // that ran inside this build surfaces its updated stats / runs
-        // the next time the user opens the assets/knowledge-bases tab.
-        // Cheap when no subscribers are mounted; the queries only
-        // refetch if a component is actively reading them.
-        queryClient.invalidateQueries({ queryKey: ["useGetKnowledgeBases"] });
-        queryClient.invalidateQueries({ queryKey: ["useGetIngestionRuns"] });
-        queryClient.invalidateQueries({
-          queryKey: ["useGetKnowledgeBaseChunks"],
-        });
-        trackFlowBuild(get().currentFlow?.name ?? "Unknown", false, {
-          flowId: get().currentFlow?.id,
-        });
-      },
-      onBuildUpdate: handleBuildUpdate,
-      onBuildError: (title: string, list: string[], elementList) => {
-        const idList =
-          (elementList
-            ?.map((element) => element.id)
-            .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
-        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
-        const isCustomComponentBlocked = list.some((msg) =>
-          msg.toLowerCase().includes("custom components are not allowed"),
-        );
-        if (!isCustomComponentBlocked && get().componentsToUpdate.length > 0)
-          setErrorData({
-            title: i18n.t("errors.blockedComponents"),
-          });
-        get().updateEdgesRunningByNodes(
-          get().nodes.map((n) => n.id),
-          false,
-        );
-        get().setBuildInfo({ error: list, success: false });
-        useAlertStore.getState().addNotificationToHistory({
-          title: title,
-          type: "error",
-          list: list,
-        });
-        get().setIsBuilding(false);
-        get().buildController.abort();
-        trackFlowBuild(get().currentFlow?.name ?? "Unknown", true, {
-          flowId: get().currentFlow?.id,
-          error: list,
-        });
-      },
-      onBuildStart: (elementList) => {
-        const idList = elementList
-          // reference is the id of the vertex or the id of the parent in a group node
-          .map((element) => element.reference)
-          .filter(Boolean) as string[];
-        get().updateBuildStatus(idList, BuildStatus.BUILDING);
-
-        const edges = get().edges;
-        const newEdges = edges.map((edge) => {
-          if (
-            edge.data?.targetHandle &&
-            idList.includes(edge.data.targetHandle.id ?? "")
-          ) {
-            edge.className = "ran";
-          }
-          return edge;
-        });
-        set({ edges: newEdges });
-      },
-      onValidateNodes: validateSubgraph,
-      nodes: get().nodes || undefined,
-      edges: get().edges || undefined,
-      logBuilds: get().onFlowPage,
-      playgroundPage,
-      eventDelivery,
+      message: input_value,
+      threadId: session,
+      startComponentId: startNodeId,
+      stopComponentId: stopNodeId,
+      flowData: { nodes: get().nodes, edges: get().edges },
+      files,
+      signal: buildController.signal,
+      silent,
+    };
+    const canSuspend = get().nodes.some((node) => {
+      if (node.data?.type === "HumanInput") return true;
+      const rows = node.data?.node?.template?.tools_metadata?.value;
+      return (
+        Array.isArray(rows) &&
+        rows.some((row) => (row?.approval_actions?.length ?? 0) > 0)
+      );
     });
-    get().setIsBuilding(false);
-    get().revertBuiltStatusFromBuilding();
+    await (canSuspend ? runFlowHITL(runArgs) : runFlowAGUI(runArgs));
+
+    // Invalidate KB caches so a KnowledgeIngestion run surfaces updated stats on the
+    // next read; cheap when no subscribers are mounted (queries refetch only if read).
+    queryClient.invalidateQueries({ queryKey: ["useGetKnowledgeBases"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetIngestionRuns"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetKnowledgeBaseChunks"] });
+
+    // Mirror v1 build analytics: every attempt logs success/error. runFlowAGUI always
+    // resolves and writes failures into buildInfo; a null buildInfo counts as success.
+    const finalBuildInfo = get().buildInfo;
+    const hasError = finalBuildInfo?.success === false;
+    trackFlowBuild(currentFlow?.name ?? "Unknown", hasError, {
+      flowId: currentFlow?.id,
+      ...(hasError && finalBuildInfo?.error
+        ? { error: finalBuildInfo.error }
+        : {}),
+    });
   },
   getFlow: () => {
     return {
@@ -1329,9 +1178,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ helperLineEnabled });
   },
   inspectionPanelVisible: ENABLE_INSPECTION_PANEL
-    ? localStorage.getItem("inspectionPanelVisible") !== null
-      ? localStorage.getItem("inspectionPanelVisible") === "true"
-      : true
+    ? localStorage.getItem("inspectionPanelVisible") === "true"
     : false,
   setInspectionPanelVisible: (visible: boolean) => {
     if (!ENABLE_INSPECTION_PANEL) return;
@@ -1404,9 +1251,8 @@ export function syncNodeTranslations(): void {
         : (normalizedToRegistryKey[normalizeComponentKey(nodeType)] ??
           nodeType);
 
-    // Resolve definition: normal path first, then fall back to templates which
-    // has legacy aliases pre-resolved (e.g. "Prompt" → Prompt Template definition,
-    // "parser" → ParserComponent definition).
+    // Resolve definition: normal path first, then templates which has legacy aliases
+    // pre-resolved (e.g. "Prompt" -> Prompt Template, "parser" -> ParserComponent).
     const freshDef =
       category && typesData[category]?.[registryKey]
         ? typesData[category][registryKey]
@@ -1414,9 +1260,8 @@ export function syncNodeTranslations(): void {
 
     if (!freshDef) return node;
 
-    // Determine whether display_name / description are default (safe to translate)
-    // or user-customized (leave alone). A value is "default" if it appears in the
-    // known-translations set for this component type across any supported locale.
+    // display_name/description are translated only when the saved value is a known
+    // default in the translations set for this type; user-customized values stay.
     const normKey = normalizeComponentKey(nodeType);
     const knownNames = componentDisplayNames[normKey]?.display_name ?? [];
     const knownDescs = componentDisplayNames[normKey]?.description ?? [];
@@ -1427,12 +1272,8 @@ export function syncNodeTranslations(): void {
       node.data.node!.description,
     );
 
-    // Update input field display_names, info (tooltips), and placeholders.
-    // Before overwriting a field's display_name, verify that the currently
-    // saved value is a known translatable string for that field (i.e. it
-    // matches one of the locale translations we collected at startup).
-    // If the saved value is not in the known set it was user-customized in
-    // the component code and must not be overwritten.
+    // Update field display_names/info/placeholders only when the saved value matches
+    // a known locale translation; anything else is user-customized and kept as-is.
     const updatedTemplate = { ...node.data.node!.template };
     const knownFields = componentDisplayNames[normKey]?.fields ?? {};
     for (const fieldName of Object.keys(updatedTemplate)) {
@@ -1443,7 +1284,7 @@ export function syncNodeTranslations(): void {
           knownFields[fieldName]?.display_name ?? [];
         const isKnownTranslation =
           knownFieldDisplayNames.length === 0 ||
-          knownFieldDisplayNames.includes(currentDisplayName);
+          knownFieldDisplayNames.includes(currentDisplayName!);
         if (isKnownTranslation) {
           updatedTemplate[fieldName] = {
             ...updatedTemplate[fieldName],

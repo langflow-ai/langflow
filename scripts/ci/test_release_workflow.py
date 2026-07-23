@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-WORKFLOW_PATH = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "release.yml"
-NIGHTLY_BUILD_PATH = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "nightly_build.yml"
-NIGHTLY_RELEASE_PATH = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "release_nightly.yml"
-CROSS_PLATFORM_PATH = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "cross-platform-test.yml"
+WORKFLOWS_DIR = Path(__file__).resolve().parents[2] / ".github" / "workflows"
+WORKFLOW_PATH = WORKFLOWS_DIR / "release.yml"
+NIGHTLY_BUILD_PATH = WORKFLOWS_DIR / "nightly_build.yml"
+NIGHTLY_RELEASE_PATH = WORKFLOWS_DIR / "release_nightly.yml"
+CROSS_PLATFORM_PATH = WORKFLOWS_DIR / "cross-platform-test.yml"
 
 
 def _job_block(start_job: str, end_job: str) -> str:
@@ -50,8 +51,23 @@ def test_nightly_coordinates_core_from_tag_commit_through_publish() -> None:
     assert "./core-dist" in cross_platform
 
 
+def test_release_docker_builds_consume_built_wheels() -> None:
+    main_docker_job = _job_block("call_docker_build_main", "call_docker_build_main_backend")
+    base_docker_job = _job_block("call_docker_build_base", "call_docker_build_main")
+    docker_workflow = (WORKFLOWS_DIR / "docker-build-v2.yml").read_text(encoding="utf-8")
+
+    assert "build-main" in main_docker_job
+    assert "build-bundles" in main_docker_job
+    assert "release_artifacts: ${{ needs.build-main.result == 'success' }}" in main_docker_job
+    assert "build-base" in base_docker_job
+    assert "release_artifacts: ${{ needs.build-base.result == 'success' }}" in base_docker_job
+    assert "pattern: dist-*" in docker_workflow
+    assert "path: .release-artifacts" in docker_workflow
+
+
 if __name__ == "__main__":
     test_finalized_bundles_do_not_influence_shared_rc_number()
     test_bundle_build_only_restamps_unpublished_versions()
     test_nightly_coordinates_core_from_tag_commit_through_publish()
+    test_release_docker_builds_consume_built_wheels()
     print("All release workflow tests passed.")

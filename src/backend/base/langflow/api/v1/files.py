@@ -21,6 +21,7 @@ from langflow.api.utils import (
     build_content_disposition,
 )
 from langflow.api.v1.schemas import UploadFileResponse
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
@@ -84,9 +85,20 @@ async def upload_file(
     *,
     file: UploadFile,
     flow: Annotated[Flow, Depends(get_flow)],
+    current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
+    # Writing a file to a flow's storage is a flow mutation: enforce WRITE so
+    # the external access ceiling (e.g. a "viewer") cannot upload via this route.
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.WRITE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
     try:
         max_file_size_upload = settings_service.settings.max_file_size_upload
     except Exception as e:
@@ -167,7 +179,15 @@ async def download_image(
 
     try:
         file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)
-        return StreamingResponse(BytesIO(file_content), media_type=content_type)
+        # Defense-in-depth: a tenant-uploaded SVG/HTML served inline with a renderable content type
+        # would execute scripts in the app origin if opened directly. nosniff stops MIME sniffing
+        # and Content-Disposition: attachment forces a download on direct navigation (so any script
+        # cannot run in-origin). <img>/blob embedding -- the intended use -- is unaffected.
+        return StreamingResponse(
+            BytesIO(file_content),
+            media_type=content_type,
+            headers={"X-Content-Type-Options": "nosniff", "Content-Disposition": "attachment"},
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -290,8 +310,19 @@ async def list_files(
 async def delete_file(
     file_name: ValidatedFileName,
     flow: Annotated[Flow, Depends(get_flow)],
+    current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
+    # Deleting a file from a flow's storage mutates the flow's attachments;
+    # enforce WRITE so the external access ceiling (e.g. a "viewer") is honored.
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.WRITE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
     try:
         await storage_service.delete_file(flow_id=str(flow.id), file_name=file_name)
     except Exception as e:

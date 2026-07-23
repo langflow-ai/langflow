@@ -2,12 +2,13 @@ import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
+import type { ModelTypeFilter } from "@/types/models";
 import ModelProvidersContent from "./components/ModelProvidersContent";
 
 interface ModelProviderModalProps {
   open: boolean;
   onClose: (opts?: { hasChanges?: boolean }) => void;
-  modelType: "llm" | "embeddings" | "all";
+  modelType: ModelTypeFilter;
 }
 
 const ModelProviderModal = ({

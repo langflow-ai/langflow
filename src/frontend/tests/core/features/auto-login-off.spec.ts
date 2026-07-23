@@ -1,13 +1,15 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
-import { waitForNewProjectButton } from "../../utils/flow/new-project-flow";
+import {
+  openTemplatesModal,
+  waitForNewProjectButton,
+} from "../../utils/flow/new-project-flow";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
   "when auto_login is false, admin can CRUD user's and should see just your own flows",
-  { tag: ["@release", "@api", "@database", "@mainpage"] },
+  { tag: ["@release", "@api", "@database"] },
   async ({ page }) => {
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
@@ -38,6 +40,9 @@ test(
     const secondRandomName = Math.random().toString(36).substring(5);
     const randomFlowName = Math.random().toString(36).substring(5);
     const secondRandomFlowName = Math.random().toString(36).substring(5);
+    const userRow = page.getByRole("row").filter({
+      has: page.getByText(randomName, { exact: true }),
+    });
 
     await page.goto("/");
 
@@ -92,7 +97,7 @@ test(
       timeout: 2000,
     });
 
-    await page.getByTestId("icon-Trash2").last().click();
+    await userRow.getByTestId("icon-Trash2").click();
     await page.getByText(TEXTS.delete, { exact: true }).last().click();
 
     await page.waitForSelector("text=user deleted", { timeout: 30000 });
@@ -121,17 +126,8 @@ test(
 
     await page.waitForSelector("text=new user added", { timeout: 30000 });
 
-    const searchResponse = page.waitForResponse(
-      (response) =>
-        response.url().includes("/api/v1/users") && response.status() === 200,
-    );
-    await page
-      .getByPlaceholder(TEXTS.placeholderUsername)
-      .last()
-      .fill(randomName);
-    await searchResponse;
-
-    await page.getByTestId("icon-Pencil").last().click();
+    await expect(userRow).toBeVisible({ timeout: 30000 });
+    await userRow.getByTestId("icon-Pencil").click();
 
     await page
       .getByPlaceholder(TEXTS.placeholderUsername)
@@ -157,7 +153,11 @@ test(
 
     await waitForNewProjectButton(page);
 
-    await awaitBootstrapTest(page, { skipGoto: true });
+    await openTemplatesModal(page, {
+      fromEmptyPage: await page
+        .getByTestId("new_project_btn_empty_page")
+        .isVisible(),
+    });
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page
@@ -231,7 +231,11 @@ test(
 
     await page.waitForTimeout(2000);
 
-    await awaitBootstrapTest(page, { skipGoto: true });
+    await openTemplatesModal(page, {
+      fromEmptyPage: await page
+        .getByTestId("new_project_btn_empty_page")
+        .isVisible(),
+    });
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page
