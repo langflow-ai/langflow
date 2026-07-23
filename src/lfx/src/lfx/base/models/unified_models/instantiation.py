@@ -309,7 +309,7 @@ def get_llm(
         # Get all provider variables from database
         provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
 
-        # Priority: component value > database value > env var > default fallback
+        # Priority: component value > database value > env var > default fallback (localhost)
         ollama_base_url_value = (
             ollama_base_url
             if ollama_base_url
