@@ -7110,7 +7110,7 @@
                 },
                 {
                   "name": "googleapiclient",
-                  "version": null
+                  "version": "2.198.0"
                 }
               ],
               "total_dependencies": 4
@@ -9807,7 +9807,7 @@
                 },
                 {
                   "name": "googleapiclient",
-                  "version": null
+                  "version": "2.198.0"
                 }
               ],
               "total_dependencies": 7
@@ -30452,7 +30452,7 @@
                 },
                 {
                   "name": "langchain_google_community",
-                  "version": null
+                  "version": "3.0.5"
                 }
               ],
               "total_dependencies": 3
@@ -32655,6 +32655,6 @@
     "num_components": 131,
     "num_modules": 17
   },
-  "sha256": "dde807327e05b226666970c815da2fb58571c95c60891bc43622087ad55e7360",
+  "sha256": "055f45ffc0efe4cd9f13d369a623677ec1a08047130e5398b667a9e2e290bf5d",
   "version": "1.12.0"
 }
