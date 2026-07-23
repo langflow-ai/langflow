@@ -100,6 +100,37 @@ def _validate_preprocessing_api_key(user_id: uuid.UUID, preproc_model: str | Non
         raise PreprocessingValidationError(msg)
 
 
+async def _create_kb_record_for_memory_base(
+    *,
+    user_id: uuid.UUID,
+    kb_name: str,
+    embedding_provider: str,
+    embedding_model: str,
+    backend_type: str,
+    backend_config: dict,
+) -> None:
+    """Persist the ``knowledge_base`` row backing a Memory Base.
+
+    Memory Bases used to exist only as a directory plus a sidecar file, so their
+    vector-store backend could not be resolved on a replica that had never
+    touched that directory — every read path fell back to local Chroma. This row
+    is now the single source of truth: embedding config, backend, cached stats,
+    and the ``source_types=["memory"]`` marker all live here, so Memory Bases are
+    first-class Knowledge Bases with no dependency on local disk (no sidecar is
+    written at all).
+    """
+    from langflow.api.utils import knowledge_base_service
+
+    await knowledge_base_service.create_record(
+        user_id=user_id,
+        name=kb_name,
+        model_selection={"name": embedding_model, "provider": embedding_provider},
+        backend_type=backend_type,
+        backend_config=backend_config,
+        source_types=["memory"],
+    )
+
+
 class MemoryBaseService(Service):
     """Service layer for MemoryBase CRUD and session state management."""
 
@@ -142,12 +173,26 @@ class MemoryBaseService(Service):
         # 3. Auto-generate kb_name: sanitized_name_<8hex>
         kb_name = f"{sanitize_kb_name(payload.name)}_{uuid.uuid4().hex[:8]}"
 
-        # 4. Create KB directory and embedding_metadata.json on disk.
+        # 4. Provision the backing KB: the vector-store collection plus its
+        #    ``knowledge_base`` row. The row is what every read path resolves the
+        #    backend from, so it has to exist before any ingestion runs —
+        #    otherwise a replica without the on-disk sidecar cannot tell a
+        #    remote-backed Memory Base from a local one.
+        embedding_provider = infer_embedding_provider(payload.embedding_model)
         await initialize_kb(
             kb_name=kb_name,
             kb_username=kb_username,
+            user_id=user_id,
+            backend_type=payload.backend_type,
+            backend_config=payload.backend_config,
+        )
+        await _create_kb_record_for_memory_base(
+            user_id=user_id,
+            kb_name=kb_name,
             embedding_provider=embedding_provider,
             embedding_model=payload.embedding_model,
+            backend_type=payload.backend_type,
+            backend_config=payload.backend_config,
         )
 
         # 5. Uniqueness check + insert.
@@ -162,7 +207,9 @@ class MemoryBaseService(Service):
                 raise ValueError(msg)
 
             mb = MemoryBase(
-                **payload.model_dump(exclude={"user_id"}),
+                # ``backend_type``/``backend_config`` live on the knowledge_base
+                # row created above, not on this table.
+                **payload.model_dump(exclude={"user_id", "backend_type", "backend_config"}),
                 user_id=user_id,
                 kb_name=kb_name,
             )
@@ -266,6 +313,19 @@ class MemoryBaseService(Service):
 
             await db.delete(mb)
             await db.commit()
+
+        # Delete the backing knowledge_base row — it's the authoritative record for
+        # this Memory Base, so leaving it would orphan the row (and keep the KB's
+        # memory-base guards active for a name the user just freed). Best-effort:
+        # the memory_base row is already committed.
+        from langflow.api.utils import knowledge_base_service
+
+        try:
+            await knowledge_base_service.delete_by_user_and_name(user_id, kb_name)
+        except Exception:  # noqa: BLE001
+            from lfx.log.logger import logger
+
+            await logger.awarning("Could not delete knowledge_base row for Memory Base kb_name=%s", kb_name)
 
         # Delete the corresponding KB from disk (best-effort — DB already committed)
         await delete_kb(kb_name=kb_name, kb_username=kb_username)

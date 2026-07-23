@@ -41,6 +41,14 @@ class MemoryBase(MemoryBaseBase, table=True):  # type: ignore[call-arg]
 class MemoryBaseCreate(MemoryBaseBase):
     user_id: UUID | None = None  # Derived from auth token in the endpoint; not required in request body
 
+    # Vector-store selection for the Memory Base's backing KB. Declared on the
+    # create payload rather than on ``MemoryBaseBase`` so no column is added to
+    # the ``memory_base`` table: the values are persisted on the
+    # ``knowledge_base`` row this Memory Base creates, which is what every read
+    # path resolves against. Defaults keep existing callers on local Chroma.
+    backend_type: str = "chroma"
+    backend_config: dict = Field(default_factory=dict)
+
     @model_validator(mode="after")
     def preprocessing_defaults(self) -> "MemoryBaseCreate":
         if self.preprocessing and not self.preproc_model:

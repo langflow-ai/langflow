@@ -274,6 +274,19 @@ def get_lifespan(*, fix_migration=False, version=None):
             except Exception as exc:  # noqa: BLE001
                 await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
 
+            # Memory Bases resolve their backend + embedding purely from the
+            # knowledge_base row (no on-disk sidecar), so ensure every Memory Base
+            # has one. Sourced from the memory_base table, not disk, so it's
+            # replica-safe; only Memory Bases missing a row are touched.
+            try:
+                from langflow.api.utils import knowledge_base_service
+
+                mb_inserted = await knowledge_base_service.backfill_memory_base_rows()
+                if mb_inserted:
+                    await logger.adebug(f"Memory Base row reconciliation inserted {mb_inserted} rows")
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning("Memory Base row reconciliation skipped after startup error: %s", exc)
+
             if get_settings_service().settings.prometheus_enabled:
                 try:
                     from prometheus_client import start_http_server

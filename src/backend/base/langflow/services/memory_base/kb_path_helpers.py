@@ -7,20 +7,18 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 import re
-import uuid
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from lfx.base.vectorstores.chroma_security import chroma_client_create_collection_kwargs
+from lfx.base.knowledge_bases.backends import create_backend
 from lfx.log.logger import logger
 from sqlmodel import select
 
-from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBStorageHelper
+from langflow.api.utils.kb_helpers import KBStorageHelper
 from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:
+    import uuid
     from pathlib import Path
 
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -71,68 +69,56 @@ async def resolve_kb_username_by_user_id(user_id: uuid.UUID) -> str:
         return await resolve_kb_username(db, user_id)
 
 
-def resolve_embedding(kb_name: str, kb_username: str) -> tuple[str, str]:
-    """Read embedding provider/model from KB metadata.json, with sane defaults."""
-    kb_root = KBStorageHelper.get_root_path()
-    if not kb_root:
-        return "OpenAI", "text-embedding-3-small"
-    kb_path: Path = kb_root / kb_username / kb_name
-    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-    provider = metadata.get("embedding_provider") or "OpenAI"
-    model = metadata.get("embedding_model") or "text-embedding-3-small"
-    return provider, model
-
-
 async def initialize_kb(
     *,
     kb_name: str,
     kb_username: str,
-    embedding_provider: str,
-    embedding_model: str,
+    user_id: uuid.UUID | None = None,
+    backend_type: str = "chroma",
+    backend_config: dict | None = None,
 ) -> None:
-    """Create KB directory, initialize Chroma, and write embedding_metadata.json.
+    """Provision a Memory Base's vector-store collection.
 
-    Mirrors the logic in knowledge_bases.py:create_knowledge_base so Memory Base
-    KBs are immediately visible with the correct metadata (including is_memory_base: true).
+    Memory Bases are DB-driven: their identity, embedding config, backend, and
+    cached stats all live on the ``knowledge_base`` row (written by the caller via
+    ``_create_kb_record_for_memory_base``). This function only touches the vector
+    store — it no longer writes an on-disk ``embedding_metadata.json`` sidecar, so
+    a Memory Base provisioned on a remote backend needs no local disk at all and
+    works identically across replicas.
+
+    Collection setup goes through ``create_backend`` so a Memory Base can be
+    provisioned on any registered backend. For a local-Chroma backend the Chroma
+    client creates its own persistence directory; for remote backends nothing
+    touches the local filesystem. Best-effort throughout: every backend creates the
+    collection lazily on first write anyway, so a provisioning failure here must not
+    block Memory Base creation.
     """
-    import chromadb
-
     kb_root = KBStorageHelper.get_root_path()
     if not kb_root:
-        await logger.awarning("KB root path not configured — Memory Base KB will not be initialized on disk.")
+        await logger.awarning("KB root path not configured — Memory Base collection will not be pre-provisioned.")
         return
 
     kb_path: Path = kb_root / kb_username / kb_name
     validate_kb_path(kb_root, kb_path)
-    await asyncio.to_thread(kb_path.mkdir, parents=True, exist_ok=True)
 
-    # Initialize Chroma collection so the directory is non-empty and readable
-    try:
-        client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-        client.create_collection(name=kb_name, **chroma_client_create_collection_kwargs())
-    except (OSError, ValueError, chromadb.errors.ChromaError) as exc:
-        await logger.awarning("Initial Chroma setup for %s failed: %s", kb_name, exc)
-    finally:
-        client = None  # type: ignore[assignment]
-        KBStorageHelper.release_chroma_resources(kb_path)
-
-    embedding_metadata = {
-        "id": str(uuid.uuid4()),
-        "embedding_provider": embedding_provider,
-        "embedding_model": embedding_model,
-        "is_memory_base": True,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "chunks": 0,
-        "words": 0,
-        "characters": 0,
-        "avg_chunk_size": 0.0,
-        "size": 0,
-        "source_types": ["memory"],
-    }
-    await asyncio.to_thread(
-        (kb_path / "embedding_metadata.json").write_text,
-        json.dumps(embedding_metadata, indent=2),
+    # Touch the collection so it exists before the first ingestion. Best-effort:
+    # every backend creates the collection lazily on write anyway, so a failure
+    # here (including a missing/unwritable local dir on a remote-backed KB) must
+    # not block Memory Base creation.
+    backend = create_backend(
+        backend_type,
+        kb_name=kb_name,
+        kb_path=kb_path,
+        backend_config=backend_config or {},
+        user_id=user_id,
     )
+    try:
+        await backend.ensure_ready()
+        _ = backend.vector_store
+    except Exception as exc:  # noqa: BLE001 — provisioning is best-effort
+        await logger.awarning("Initial %s setup for %s failed: %s", backend_type, kb_name, exc)
+    finally:
+        await backend.teardown()
 
 
 async def delete_kb(*, kb_name: str, kb_username: str) -> None:

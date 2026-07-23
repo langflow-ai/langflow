@@ -911,8 +911,8 @@ class TestMemoryBaseServiceConcurrency:
             ),
             patch("langflow.services.memory_base.ingestion.resolve_kb_username", AsyncMock(return_value="testuser")),
             patch(
-                "langflow.services.memory_base.ingestion.resolve_embedding",
-                return_value=("OpenAI", "text-embedding-3-small"),
+                "langflow.services.memory_base.ingestion.resolve_embedding_selection",
+                AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
             ),
             patch("langflow.services.memory_base.ingestion.get_job_service", return_value=mock_job_svc),
             pytest.raises(DuplicateJobError),
@@ -940,8 +940,8 @@ class TestMemoryBaseServiceConcurrency:
             ),
             patch("langflow.services.memory_base.ingestion.resolve_kb_username", AsyncMock(return_value="testuser")),
             patch(
-                "langflow.services.memory_base.ingestion.resolve_embedding",
-                return_value=("OpenAI", "text-embedding-3-small"),
+                "langflow.services.memory_base.ingestion.resolve_embedding_selection",
+                AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
             ),
             patch("langflow.services.memory_base.ingestion.get_job_service", return_value=mock_job_svc),
             patch("langflow.services.memory_base.ingestion.get_task_service", return_value=mock_task_svc),
@@ -985,6 +985,11 @@ class TestMemoryBaseServiceMismatch:
     async def test_mismatch_detected_when_processed_but_empty_store(self, service, tmp_path):
         mb = _make_mb()
 
+        # Backend + embedding resolve from the DB row now; the store reports 0
+        # chunks despite total_processed=10 → mismatch.
+        fake_backend = AsyncMock()
+        fake_backend.count = AsyncMock(return_value=0)
+
         with (
             patch.object(service, "get_memory_base_or_404", AsyncMock(return_value=mb)),
             patch(
@@ -994,9 +999,18 @@ class TestMemoryBaseServiceMismatch:
             patch("langflow.services.memory_base.ingestion.session_scope") as mock_scope,
             patch("langflow.services.memory_base.ingestion.KBStorageHelper.get_root_path", return_value=tmp_path),
             patch(
-                "langflow.services.memory_base.ingestion.KBAnalysisHelper.get_metadata",
-                return_value={"chunks": 0},
+                "langflow.services.memory_base.ingestion.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
+            patch(
+                "langflow.services.memory_base.ingestion.resolve_embedding_selection",
+                AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.KBIngestionHelper.build_embeddings",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch("langflow.services.memory_base.ingestion.create_backend", return_value=fake_backend),
         ):
             # Simulate session_scope returns total_processed=10
             mock_db = AsyncMock()
@@ -1077,7 +1091,7 @@ class TestMemoryBaseServicePurgeSessionData:
         assert result == 0
 
     @pytest.mark.asyncio
-    async def test_purge_deletes_chroma_chunks_and_tracking_rows(self, service, tmp_path):
+    async def test_purge_deletes_vector_chunks_and_tracking_rows(self, service, tmp_path):
         mb = _make_mb()
         mbs = _make_session(memory_base_id=mb.id, session_id="sess-x")
 
@@ -1106,9 +1120,7 @@ class TestMemoryBaseServicePurgeSessionData:
         kb_root = tmp_path / "kb"
         (kb_root / "alice" / mb.kb_name).mkdir(parents=True)
 
-        adelete_mock = AsyncMock()
-        fake_chroma = MagicMock()
-        fake_chroma.adelete = adelete_mock
+        fake_backend = AsyncMock()
 
         with (
             patch(
@@ -1120,26 +1132,30 @@ class TestMemoryBaseServicePurgeSessionData:
                 return_value=kb_root,
             ),
             patch(
-                "langflow.services.memory_base.ingestion.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
-            ),
-            patch("langflow.services.memory_base.ingestion.KBStorageHelper.release_chroma_resources"),
-            patch(
                 "langflow.services.memory_base.ingestion.KBIngestionHelper.build_embeddings",
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.ingestion.resolve_embedding",
-                return_value=("OpenAI", "text-embedding-3-small"),
+                "langflow.services.memory_base.ingestion.resolve_embedding_selection",
+                AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
             ),
-            patch("langflow.services.memory_base.ingestion.Chroma", return_value=fake_chroma),
-            patch("langflow.services.memory_base.ingestion._sync_metrics_after_purge"),
+            patch(
+                "langflow.services.memory_base.ingestion.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.create_backend",
+                return_value=fake_backend,
+            ),
+            patch("langflow.services.memory_base.ingestion._sync_metrics_after_purge", AsyncMock()),
         ):
             result = await service.purge_session_data(mb.user_id, ["sess-x"])
 
         assert result == 1
-        # Chroma was asked to drop chunks for the deleted session using $eq form.
-        adelete_mock.assert_awaited_once_with(where={"session_id": {"$eq": "sess-x"}})
+        # The filter must be the FLAT {key: value} form. Chroma's explicit
+        # {"$eq": ...} operator dict is not portable — a remote backend treats it
+        # as a literal value and silently matches nothing.
+        fake_backend.delete_by.assert_awaited_once_with({"session_id": "sess-x"})
         # Tracking-row deletes were committed.
         assert second_db.commit.await_count == 1
 
@@ -1333,12 +1349,15 @@ class TestIngestMemoryTask:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(side_effect=RuntimeError("Chroma exploded")),
             ),
             patch(
@@ -1349,7 +1368,6 @@ class TestIngestMemoryTask:
                 "langflow.services.memory_base.task.KBStorageHelper.get_root_path",
                 return_value=tmp_path / "kb",
             ),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
             pytest.raises(RuntimeError, match="Chroma exploded"),
         ):
             await ingest_memory_task(
@@ -1373,7 +1391,7 @@ class TestIngestMemoryTask:
 
     @pytest.mark.asyncio
     async def test_metadata_synced_on_success(self, tmp_path):
-        """embedding_metadata.json must be updated after a successful ingestion."""
+        """KB row stats must be refreshed after a successful ingestion."""
         from langflow.services.memory_base.task import IngestionRequest, ingest_memory_task
 
         flow_id = uuid.uuid4()
@@ -1383,9 +1401,10 @@ class TestIngestMemoryTask:
 
         sync_called_with: dict = {}
 
-        def fake_sync_kb_metadata(*, kb_path, chroma):
-            sync_called_with["kb_path"] = kb_path
-            sync_called_with["chroma"] = chroma
+        async def fake_sync_kb_metadata(*, user_id, kb_name, backend):
+            sync_called_with["user_id"] = user_id
+            sync_called_with["kb_name"] = kb_name
+            sync_called_with["backend"] = backend
 
         with (
             patch(
@@ -1411,22 +1430,24 @@ class TestIngestMemoryTask:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(return_value=1),
             ),
-            patch("langflow.services.memory_base.task.sync_kb_metadata", side_effect=fake_sync_kb_metadata),
+            patch("langflow.services.memory_base.task.sync_kb_stats_to_record", side_effect=fake_sync_kb_metadata),
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
             patch(
                 "langflow.services.memory_base.task.KBStorageHelper.get_root_path",
                 return_value=tmp_path / "kb",
             ),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
         ):
             await ingest_memory_task(
                 request=IngestionRequest(
@@ -1444,7 +1465,7 @@ class TestIngestMemoryTask:
                 ),
             )
 
-        assert "kb_path" in sync_called_with, "sync_kb_metadata was not called on success"
+        assert "kb_name" in sync_called_with, "sync_kb_stats_to_record was not called on success"
 
     @pytest.mark.asyncio
     async def test_metadata_not_synced_when_cancelled(self, tmp_path):
@@ -1485,22 +1506,24 @@ class TestIngestMemoryTask:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
-            # write_documents_to_chroma returns fewer docs than sent → cancelled
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
+            # write_documents_to_backend returns fewer docs than sent → cancelled
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(return_value=0),
             ),
-            patch("langflow.services.memory_base.task.sync_kb_metadata", side_effect=fake_sync),
+            patch("langflow.services.memory_base.task.sync_kb_stats_to_record", side_effect=fake_sync),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
             patch(
                 "langflow.services.memory_base.task.KBStorageHelper.get_root_path",
                 return_value=tmp_path / "kb",
             ),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
         ):
             result = await ingest_memory_task(
                 request=IngestionRequest(
@@ -1561,22 +1584,24 @@ class TestIngestMemoryTask:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(return_value=1),
             ),
-            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock(side_effect=fake_advance_cursor)),
             patch(
                 "langflow.services.memory_base.task.KBStorageHelper.get_root_path",
                 return_value=tmp_path / "kb",
             ),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
         ):
             result = await ingest_memory_task(
                 request=IngestionRequest(
@@ -1748,8 +1773,8 @@ class TestOnFlowOutputHook:
                 "langflow.services.memory_base.kb_path_helpers.resolve_kb_username", AsyncMock(return_value="testuser")
             ),
             patch(
-                "langflow.services.memory_base.ingestion.resolve_embedding",
-                return_value=("OpenAI", "text-embedding-3-small"),
+                "langflow.services.memory_base.ingestion.resolve_embedding_selection",
+                AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
             ),
             patch("langflow.services.memory_base.ingestion.get_job_service", return_value=mock_job_svc),
             patch("langflow.services.memory_base.ingestion.get_task_service", return_value=mock_task_svc),
@@ -2776,3 +2801,108 @@ class TestMemoryBaseBodyValidation:
         """POST /memories with no body -> 422 (not 500); same root cause as flush."""
         response = await client.post("api/v1/memories", headers=logged_in_headers)
         assert response.status_code == 422, response.text
+
+
+class TestMemoryBaseDBDriven:
+    """DB-driven resolution for Memory Bases.
+
+    Embedding, backend, stats, and lifecycle come from the ``knowledge_base`` row,
+    never the on-disk sidecar — so a Memory Base works on a cloud/replica whose
+    local disk never held the KB directory.
+    """
+
+    def _fake_scope(self, mock_db):
+        class _FakeCtx:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, *a):
+                pass
+
+        scope = MagicMock()
+        scope.return_value = _FakeCtx()
+        return scope
+
+    @pytest.mark.asyncio
+    async def test_resolve_embedding_selection_prefers_row(self):
+        """Embedding provider/model come from the row's model_selection, no disk."""
+        from langflow.api.utils.kb_helpers import resolve_embedding_selection
+
+        record = MagicMock(model_selection={"name": "text-embedding-3-large", "provider": "OpenAI"})
+        with patch(
+            "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+            AsyncMock(return_value=record),
+        ):
+            provider, model = await resolve_embedding_selection(user_id=uuid.uuid4(), kb_name="mb_kb", kb_path=None)
+        assert (provider, model) == ("OpenAI", "text-embedding-3-large")
+
+    @pytest.mark.asyncio
+    async def test_resolve_embedding_selection_defaults_without_row_or_sidecar(self):
+        """No row and no sidecar (kb_path=None) falls back to the safe default."""
+        from langflow.api.utils.kb_helpers import resolve_embedding_selection
+
+        with patch(
+            "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+            AsyncMock(return_value=None),
+        ):
+            provider, model = await resolve_embedding_selection(user_id=uuid.uuid4(), kb_name="mb_kb", kb_path=None)
+        assert provider == "OpenAI"
+        assert model == "text-embedding-3-small"
+
+    @pytest.mark.asyncio
+    async def test_delete_removes_knowledge_base_row(self):
+        """Deleting a Memory Base also deletes its backing knowledge_base row."""
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        service = MemoryBaseService()
+        user_id = uuid.uuid4()
+        mb = _make_mb(user_id=user_id)
+
+        exec_result = MagicMock()
+        exec_result.first.return_value = mb
+        mock_db = AsyncMock()
+        mock_db.exec = AsyncMock(return_value=exec_result)
+
+        delete_row = AsyncMock()
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(mock_db)),
+            patch("langflow.services.memory_base.service.resolve_kb_username", AsyncMock(return_value="testuser")),
+            patch("langflow.services.memory_base.service.cancel_active_jobs", AsyncMock()),
+            patch("langflow.services.memory_base.service.delete_kb", AsyncMock()),
+            patch("langflow.api.utils.knowledge_base_service.delete_by_user_and_name", delete_row),
+        ):
+            result = await service.delete(mb.id, user_id=user_id)
+
+        assert result is True
+        delete_row.assert_awaited_once_with(user_id, mb.kb_name)
+
+    @pytest.mark.asyncio
+    async def test_backfill_creates_row_for_orphan_memory_base(self):
+        """Startup backfill creates a knowledge_base row from the memory_base table."""
+        from langflow.api.utils import knowledge_base_service
+
+        orphan = MagicMock(
+            kb_name="mymemory_ab12cd34",
+            user_id=uuid.uuid4(),
+            embedding_model="text-embedding-3-small",
+        )
+        exec_result = MagicMock()
+        exec_result.all.return_value = [orphan]
+        mock_session = AsyncMock()
+        mock_session.exec = AsyncMock(return_value=exec_result)
+
+        create_row = AsyncMock()
+        with (
+            patch("langflow.api.utils.knowledge_base_service.session_scope", self._fake_scope(mock_session)),
+            patch("langflow.api.utils.knowledge_base_service.create_record", create_row),
+        ):
+            inserted = await knowledge_base_service.backfill_memory_base_rows()
+
+        assert inserted == 1
+        create_row.assert_awaited_once()
+        kwargs = create_row.await_args.kwargs
+        assert kwargs["user_id"] == orphan.user_id
+        assert kwargs["name"] == "mymemory_ab12cd34"
+        assert kwargs["backend_type"] == "chroma"
+        assert kwargs["source_types"] == ["memory"]
+        assert kwargs["model_selection"]["name"] == "text-embedding-3-small"

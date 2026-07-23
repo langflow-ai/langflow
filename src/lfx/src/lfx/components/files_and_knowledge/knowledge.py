@@ -894,14 +894,21 @@ class KnowledgeComponent(Component):
         return BackendType.CHROMA.value, {}
 
     @staticmethod
-    def _get_backend_from_metadata(kb_path: Path) -> tuple[str, dict[str, Any]]:
+    def _get_backend_from_metadata(kb_path: Path) -> tuple[str, dict[str, Any]] | None:
+        """Read ``(backend_type, backend_config)`` off the on-disk sidecar.
+
+        Returns ``None`` — never a Chroma default — when the sidecar is absent or
+        unreadable. "Could not resolve" has to stay distinguishable from
+        "explicitly local", or a replica that merely lacks the file writes a
+        remote-backed KB into a local store. See ``_resolve_backend_config``.
+        """
         metadata_path = kb_path / "embedding_metadata.json"
         if not metadata_path.exists():
-            return BackendType.CHROMA.value, {}
+            return None
         try:
             metadata = json.loads(metadata_path.read_text())
         except (OSError, json.JSONDecodeError):
-            return BackendType.CHROMA.value, {}
+            return None
 
         backend_type = str(metadata.get("backend_type") or BackendType.CHROMA.value)
         backend_config = metadata.get("backend_config") or {}
@@ -995,7 +1002,7 @@ class KnowledgeComponent(Component):
             raise ValueError(msg)
         vector_store_dir.mkdir(parents=True, exist_ok=True)
 
-        backend_type, backend_config = self._get_backend_from_metadata(vector_store_dir)
+        backend_type, backend_config = await self._resolve_backend_config(vector_store_dir)
         backend = create_backend(
             backend_type,
             kb_name=self.knowledge_base,
@@ -1555,25 +1562,49 @@ class KnowledgeComponent(Component):
             require_api_key=require_api_key,
         )
 
-    async def _resolve_backend(self, *, kb_user: str) -> tuple[str, dict[str, Any]]:  # noqa: ARG002
-        """Return ``(backend_type, backend_config)`` for this KB."""
+    async def _backend_from_record(self) -> tuple[str, dict[str, Any]] | None:
+        """Read ``(backend_type, backend_config)`` off the KB's database row.
+
+        Returns ``None`` when there is no row to read — a legacy KB predating the
+        record, or bare lfx with no langflow installed. A lookup that *fails* is a
+        different situation and is allowed to propagate: guessing a backend after a
+        database error is how vectors end up in a store nothing queries.
+        """
         try:
             from langflow.api.utils import knowledge_base_service
+        except ImportError:
+            return None
 
-            user_uuid = self._user_uuid
-            if user_uuid is None:
-                return BackendType.CHROMA.value, {}
-            record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("KB record lookup failed: %s", exc)
-            return BackendType.CHROMA.value, {}
-
+        user_uuid = self._user_uuid
+        if user_uuid is None:
+            return None
+        record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
         if record is None:
-            return BackendType.CHROMA.value, {}
-        return (
-            record.backend_type or BackendType.CHROMA.value,
-            record.backend_config or {},
-        )
+            return None
+        return record.backend_type or BackendType.CHROMA.value, record.backend_config or {}
+
+    async def _resolve_backend_config(self, kb_path: Path) -> tuple[str, dict[str, Any]]:
+        """Resolve this KB's backend — database row first, on-disk sidecar second.
+
+        Ingestion used to read the sidecar while retrieval read the row. Across
+        replicas those disagree: a pod without the sidecar fell back to local
+        Chroma and wrote vectors there, while queries followed the row to the
+        configured remote backend and found nothing — silently. Both paths resolve
+        here now, and a backend that cannot be resolved raises rather than
+        defaulting to local storage.
+        """
+        resolved = await self._backend_from_record()
+        if resolved is None:
+            resolved = self._get_backend_from_metadata(kb_path)
+        if resolved is None:
+            msg = (
+                f"Cannot determine the vector-store backend for knowledge base "
+                f"'{self.knowledge_base}': it has no database record and no readable "
+                f"embedding metadata. Refusing to fall back to local storage, which "
+                f"would write to a different store than queries read from."
+            )
+            raise ValueError(msg)
+        return resolved
 
     def _resolve_model_selection(self, metadata: dict[str, Any]) -> list[dict[str, Any]]:
         """Resolve the ``get_embeddings``-compatible model selection from metadata."""
@@ -1675,7 +1706,7 @@ class KnowledgeComponent(Component):
             chunk_size=chunk_size,
         )
 
-        backend_type, backend_config = await self._resolve_backend(kb_user=kb_user)
+        backend_type, backend_config = await self._resolve_backend_config(kb_path)
         backend = create_backend(
             backend_type,
             kb_name=self.knowledge_base,

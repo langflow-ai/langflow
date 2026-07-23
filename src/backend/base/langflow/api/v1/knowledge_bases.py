@@ -330,55 +330,51 @@ def _is_memory_base_associated(metadata: dict[str, Any]) -> bool:
     return isinstance(source_types, list) and "memory" in source_types
 
 
-def _check_memory_base_association(kb_name: str, current_user: CurrentActiveUser) -> None:
+def _record_is_memory_base_associated(record) -> bool:
+    """Return True if a ``knowledge_base`` row is Memory-Base-managed.
+
+    Reads ``source_types`` straight off the row, which is where a Memory Base's
+    ``["memory"]`` marker is authoritatively recorded (``create_record`` /
+    ``_create_kb_record_for_memory_base``). No disk access — so the guard holds on
+    a replica whose local filesystem never held the KB directory.
+    """
+    return record is not None and isinstance(record.source_types, list) and "memory" in record.source_types
+
+
+async def _check_memory_base_association(kb_name: str, current_user: CurrentActiveUser) -> None:
     """Raise 403 if the KB is associated with a Memory Base (FastAPI dep).
 
     Owner-scoped early gate — runs as ``Depends(...)`` before the route
     body and only sees the actor. For shared KBs reached through an
-    shared grant the actor has no same-named local KB so this
+    shared grant the actor has no same-named ``knowledge_base`` row so this
     dep returns early; the route body then re-runs the check against the
     resolved owner via :func:`_assert_kb_not_memory_base` so a shared
     Memory-Base-managed KB still gets blocked.
 
-    A missing local directory is NOT treated as a 404 here because the
-    delete route handles the orphan-DB-row case downstream. This dep
-    only blocks Memory-Base-managed KBs from being touched; an
-    orphan row can't have Memory-Base metadata because that metadata
-    lives in the on-disk ``embedding_metadata.json`` which is gone.
+    The Memory-Base marker is read from the ``knowledge_base`` row's
+    ``source_types``, not the on-disk ``embedding_metadata.json`` — Memory Bases
+    no longer write a sidecar, and the row-based check works on any replica.
     """
-    try:
-        kb_path = _resolve_kb_path(kb_name, current_user)
-    except HTTPException as exc:
-        if exc.status_code == HTTPStatus.NOT_FOUND:
-            return  # Let the route body handle the missing-dir case.
-        raise
-
-    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-    if _is_memory_base_associated(metadata):
+    record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+    if _record_is_memory_base_associated(record):
         raise HTTPException(
             status_code=403,
             detail=f"Access denied: knowledge base '{kb_name}' is managed by a Memory Base.",
         )
 
 
-def _assert_kb_not_memory_base(kb_name: str, owner_user) -> None:
+async def _assert_kb_not_memory_base(kb_name: str, owner_user) -> None:
     """Post-resolution memory-base check.
 
     The FastAPI dep :func:`_check_memory_base_association` only sees the
     actor; for cross-user-reached KBs (a non-owner with a share grant) it
-    short-circuits because the actor has no same-named local KB. Route
-    bodies call this helper after :func:`_guard_kb_action` resolves the
+    short-circuits because the actor has no same-named ``knowledge_base`` row.
+    Route bodies call this helper after :func:`_guard_kb_action` resolves the
     real owner so Memory-Base-managed KBs are still blocked even when
-    reached through a share.
+    reached through a share. Reads ``source_types`` from the DB row (not disk).
     """
-    try:
-        kb_path = _resolve_kb_path(kb_name, owner_user)
-    except HTTPException as exc:
-        if exc.status_code == HTTPStatus.NOT_FOUND:
-            return
-        raise
-    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-    if _is_memory_base_associated(metadata):
+    record = await knowledge_base_service.get_by_user_and_name(owner_user.id, kb_name)
+    if _record_is_memory_base_associated(record):
         raise HTTPException(
             status_code=403,
             detail=f"Access denied: knowledge base '{kb_name}' is managed by a Memory Base.",
@@ -1076,7 +1072,7 @@ async def ingest_files_to_knowledge_base(
     so the UI can surface the rejection inline.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.INGEST, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
         settings = get_settings_service().settings
         max_file_size_upload = settings.max_file_size_upload
@@ -1253,7 +1249,7 @@ async def ingest_folder_to_knowledge_base(
     via ``/task/{id}`` or the ``GET /{kb_name}`` endpoint.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.INGEST, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
         # Validate user-supplied metadata before resolving the KB path so a
         # malformed payload responds with 422 rather than 404 if the KB name
@@ -1512,7 +1508,7 @@ async def list_connectors(_current_user: CurrentActiveUser) -> list[ConnectorCat
 async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:
     """Get detailed information about a specific knowledge base."""
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
         # Use the resolved owner — a non-owner reaching this route via a
         # share grant must see the owner's KB row, not their own same-named.
@@ -1588,7 +1584,7 @@ async def get_knowledge_base_chunks(
     invasive middleware changes.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     kb_path: Path | None = None
     backend = None
     backend_type_value: str = BackendType.CHROMA.value
@@ -1768,7 +1764,7 @@ async def get_knowledge_base_metadata_keys(
     (same trade-off as the chunks-endpoint post-filter pass).
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     kb_path: Path | None = None
     backend = None
     backend_type_value: str = BackendType.CHROMA.value
@@ -1876,7 +1872,7 @@ async def ingest_via_connector(
     file-upload + folder already use.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.INGEST, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
         kb_path = _resolve_kb_path(kb_name, _kb_guard.owner_user)
 
@@ -2092,7 +2088,7 @@ async def delete_knowledge_base(
 ) -> dict[str, str]:
     """Delete a specific knowledge base."""
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.DELETE, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     # All KB data lives in the owner's namespace (disk path, DB row, remote
     # collection, in-flight job). Route the cleanup helpers through the
     # owner so a non-owner with a delete share grant actually clears the
@@ -2323,7 +2319,7 @@ async def cancel_ingestion(
 ) -> dict[str, str]:
     """Cancel the ongoing ingestion task for a knowledge base."""
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.WRITE, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
         kb_path = _resolve_kb_path(kb_name, _kb_guard.owner_user)
 

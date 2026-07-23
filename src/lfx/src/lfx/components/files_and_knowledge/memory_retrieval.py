@@ -10,20 +10,16 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, Any
 
-import chromadb
-import chromadb.api.client
 import numpy as np
-from langchain_chroma import Chroma
-from langflow.api.utils.kb_helpers import KBIngestionHelper
+from langflow.api.utils.kb_helpers import KBIngestionHelper, resolve_backend_selection, resolve_embedding_selection
 from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.memory_base.kb_path_helpers import hash_session_id, validate_kb_path
 from sqlmodel import select
 
-from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
+from lfx.base.knowledge_bases.backends import create_backend
 from lfx.components.files_and_knowledge._kb_paths import (
     get_knowledge_bases_root_path,
-    load_kb_metadata,
 )
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output
@@ -37,6 +33,8 @@ if TYPE_CHECKING:
 
     from langflow.services.database.models.user.model import User
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+    from lfx.base.knowledge_bases.backends.base import BaseVectorStoreBackend
 
 
 def _coerce_uuid(value: Any) -> uuid.UUID | None:
@@ -135,24 +133,22 @@ class MemoryBaseComponent(Component):
     ]
 
     def _build_where_clause(self, *, session_id: str | None = None) -> dict | None:
-        """Compose the Chroma ``where`` clause based on opt-in filters and manual params.
+        """Compose the metadata filter based on opt-in filters and manual params.
 
-        Uses the canonical ``$eq`` operator form rather than the implicit
-        ``{"key": "value"}`` shorthand. Both are accepted by chromadb, but the
-        explicit form is unambiguous across versions and tooling.
+        Emits a flat ``{key: value}`` dict, which is the contract every
+        ``BaseVectorStoreBackend`` accepts: Chroma reads it as ``$eq`` shorthand
+        and OpenSearch translates it into a bool query. Chroma's explicit
+        ``{"$eq": ...}`` operator form is NOT portable — a remote backend would
+        treat the operator dict as a literal value and silently match nothing.
         """
-        predicates: list[dict] = []
+        predicates: dict = {}
         # Defensive bool() — BoolInput coerces strings, but if this attribute is
         # ever overridden externally with a non-bool value, ``"false"`` would be
         # truthy and silently disable the toggle.
         if bool(self.filter_by_session) and session_id:
-            predicates.append({"session_id": {"$eq": str(session_id)}})
+            predicates["session_id"] = str(session_id)
 
-        if not predicates:
-            return None
-        if len(predicates) == 1:
-            return predicates[0]
-        return {"$and": predicates}
+        return predicates or None
 
     async def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
         if field_name != "memory_base":
@@ -217,25 +213,36 @@ class MemoryBaseComponent(Component):
             raise ValueError(msg) from exc
         return kb_path
 
-    async def _build_chroma(
+    async def _build_backend(
         self,
         kb_path: Path,
         owner: User,
-        metadata: dict,
         kb_name: str,
-    ) -> Chroma:
-        """Construct a Chroma client wired to the KB's embedding function."""
-        provider = metadata.get("embedding_provider")
-        model = metadata.get("embedding_model")
+    ) -> BaseVectorStoreBackend:
+        """Construct the KB's configured backend, wired to its embedding function.
+
+        Both the embedding config and the backend are resolved from the
+        ``knowledge_base`` row (sidecar only as a legacy fallback), so a Memory
+        Base provisioned on OpenSearch or Chroma Cloud is queried there — and with
+        the right embedding model — even on a replica whose local disk never held
+        the KB directory or its ``embedding_metadata.json``.
+        """
+        provider, model = await resolve_embedding_selection(user_id=owner.id, kb_name=kb_name, kb_path=kb_path)
         embedding_function = await KBIngestionHelper.build_embeddings(provider, model, owner)
 
-        chromadb.api.client.SharedSystemClient.clear_system_cache()
-        return Chroma(
-            persist_directory=str(kb_path),
-            embedding_function=embedding_function,
-            collection_name=kb_name,
-            **chroma_langchain_collection_kwargs(),
+        backend_type, backend_config = await resolve_backend_selection(
+            user_id=owner.id, kb_name=kb_name, kb_path=kb_path
         )
+        backend = create_backend(
+            backend_type,
+            kb_name=kb_name,
+            kb_path=kb_path,
+            backend_config=backend_config,
+            embedding_function=embedding_function,
+            user_id=owner.id,
+        )
+        await backend.ensure_ready()
+        return backend
 
     def _format_results(self, results: list[tuple]) -> DataFrame:
         """Convert Chroma (doc, score) tuples into the component's DataFrame output.
@@ -286,13 +293,13 @@ class MemoryBaseComponent(Component):
             owner_username = owner.username
             kb_name = mb.kb_name
 
+        # ``kb_path`` is still needed for a local-Chroma backend (that's where its
+        # vectors live), but embedding + backend now resolve from the DB row, so a
+        # missing on-disk ``embedding_metadata.json`` is no longer fatal — a
+        # remote-backed Memory Base is fully queryable on a replica with no local
+        # KB directory.
         kb_path = self._resolve_kb_location(owner_username, kb_name)
-        metadata = load_kb_metadata(kb_path, log_label=f"memory base '{selected}'")
-        if not metadata:
-            msg = f"Memory Base '{selected}' has no embedding metadata on disk."
-            raise ValueError(msg)
 
-        chroma = await self._build_chroma(kb_path, owner, metadata, kb_name)
         where = self._build_where_clause(session_id=session_id)
 
         logger.debug(
@@ -307,9 +314,14 @@ class MemoryBaseComponent(Component):
             # Embedding providers may reject empty input; skip the round-trip entirely.
             return DataFrame(data=[])
 
-        results = chroma.similarity_search_with_score(
-            query=self.search_query,
-            k=self.top_k,
-            filter=where,
-        )
+        backend = await self._build_backend(kb_path, owner, kb_name)
+        try:
+            results = await backend.similarity_search(
+                query=self.search_query,
+                k=self.top_k,
+                filter=where,
+                with_scores=True,
+            )
+        finally:
+            await backend.teardown()
         return self._format_results(results)
