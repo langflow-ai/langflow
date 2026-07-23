@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import numpy as np
@@ -80,6 +80,26 @@ class TestSerializationHypothesis:
     def test_datetime_serialization(self, dt: datetime) -> None:
         result: str = serialize(dt)
         assert result == dt.replace(tzinfo=timezone.utc).isoformat()
+
+    def test_datetime_serialization_aware_non_utc_is_converted(self) -> None:
+        """Timezone-aware datetimes must be converted to UTC, not relabeled.
+
+        ``datetime.replace(tzinfo=utc)`` keeps the wall-clock time and only
+        swaps the offset, silently shifting the represented instant. Conversion
+        must use ``astimezone`` so the encoded instant is preserved.
+        """
+        # 12:00 at +05:00 is 07:00 UTC.
+        dt = datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone(timedelta(hours=5)))
+        assert serialize(dt) == "2023-01-01T07:00:00+00:00"
+
+        # 22:00 at -08:00 rolls over to 06:00 the next day in UTC.
+        dt = datetime(2023, 1, 1, 22, 0, 0, tzinfo=timezone(timedelta(hours=-8)))
+        assert serialize(dt) == "2023-01-02T06:00:00+00:00"
+
+    def test_datetime_serialization_naive_assumed_utc(self) -> None:
+        """Naive datetimes are assumed to already be in UTC."""
+        dt = datetime(2023, 1, 1, 12, 0, 0)  # noqa: DTZ001
+        assert serialize(dt) == "2023-01-01T12:00:00+00:00"
 
     @settings(max_examples=100)
     @given(dec=decimal_strategy)
