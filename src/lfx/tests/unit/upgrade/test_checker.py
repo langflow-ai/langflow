@@ -88,6 +88,20 @@ def test_outdated_safe_when_code_changed_but_structure_compatible():
     assert report.nodes[0].status == "outdated_safe"
 
 
+def test_outdated_safe_when_flow_has_transient_template_metadata():
+    node = _node(
+        code=REGISTRY_CODE_V1,
+        template_extra={
+            "_frontend_node_flow_id": {"value": "flow-1"},
+            "_frontend_node_folder_id": {"value": "folder-1"},
+            "is_refresh": True,
+            "tools_metadata": {"value": []},
+        },
+    )
+    report = check_flow_compatibility(_flow(node), _registry(code=REGISTRY_CODE_V2))
+    assert report.nodes[0].status == "outdated_safe"
+
+
 def test_outdated_breaking_when_output_removed():
     old_outputs = [
         {"name": "out", "display_name": "Output", "types": ["Message"], "method": "run", "allows_loop": False},
