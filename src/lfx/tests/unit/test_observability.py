@@ -3,8 +3,13 @@
 This is the point of the module living in lfx: ``lfx serve`` and ``lfx run`` are the production
 runtime, so the provider bootstrap and the export boundary must be reachable and correct
 without the full langflow app. The subprocess probes import only ``lfx.observability``.
+
+OpenTelemetry is an optional lfx extra (``lfx[otel]``), so bare lfx installs it without otel.
+The first test asserts that path stays a safe no-op; the rest need the exporters and skip when
+the extra is absent.
 """
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -12,10 +17,46 @@ import sys
 
 import pytest
 
+_HAS_OTEL = importlib.util.find_spec("opentelemetry") is not None
+requires_otel = pytest.mark.skipif(not _HAS_OTEL, reason="requires the lfx[otel] extra")
+
+
+def _run(probe: str, env_overrides: dict[str, str]) -> subprocess.CompletedProcess:
+    # Start from a clean slate so the developer's own OTEL_* vars cannot skew the result.
+    env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
+    env.update(env_overrides)
+    return subprocess.run(  # noqa: S603
+        [sys.executable, "-c", probe],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=180,
+        check=False,
+    )
+
+
+def test_bootstrap_is_safe_without_endpoint_or_otel():
+    """Bootstrap must import and no-op without otel and without an endpoint.
+
+    This probe imports ONLY lfx.observability -- never opentelemetry -- so it runs whether or
+    not the otel extra is installed, and proves the guarded no-op path bare lfx relies on.
+    """
+    probe = (
+        "from lfx.observability import bootstrap_application_telemetry, ApplicationTelemetry\n"
+        "result = bootstrap_application_telemetry(prometheus_enabled=False)\n"
+        "assert isinstance(result, ApplicationTelemetry)\n"
+        "assert result.tracer_provider is None  # no endpoint -> nothing installed\n"
+        "print('BOOTSTRAP_OK')\n"
+    )
+    completed = _run(probe, {})
+    assert completed.returncode == 0, completed.stderr
+    assert "BOOTSTRAP_OK" in completed.stdout
+
+
 # Installs a process-global tracer provider, so anything touching env-driven installation runs
-# in a subprocess. The probe imports ONLY lfx.observability -- if that quietly needed langflow,
-# this would fail to import.
-PROBE = """
+# in a subprocess. The probe imports only lfx.observability -- if that quietly needed langflow,
+# these would fail to import.
+_PROVIDER_PROBE = """
 import json
 from lfx.observability import bootstrap_application_telemetry
 from opentelemetry import trace
@@ -32,48 +73,42 @@ print("PROBE_RESULT " + json.dumps(out))
 """
 
 
-def _run_probe(env_overrides: dict[str, str]) -> dict:
-    # Start from a clean slate so the developer's own OTEL_* vars cannot skew the result.
-    env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
-    env.update(env_overrides)
-    completed = subprocess.run(  # noqa: S603
-        [sys.executable, "-c", PROBE],
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=180,
-        check=False,
-    )
+def _run_provider_probe(env_overrides: dict[str, str]) -> dict:
+    completed = _run(_PROVIDER_PROBE, env_overrides)
     assert completed.returncode == 0, completed.stderr
     line = next(ln for ln in completed.stdout.splitlines() if ln.startswith("PROBE_RESULT "))
     return json.loads(line.removeprefix("PROBE_RESULT "))
 
 
+@requires_otel
 def test_no_endpoint_installs_no_provider():
     """No OTEL_* env means no export, from lfx just as from langflow."""
-    result = _run_probe({})
+    result = _run_provider_probe({})
     assert result["provider"] == "ProxyTracerProvider"
     assert result["tracer_provider_returned"] is False
 
 
+@requires_otel
 @pytest.mark.parametrize("endpoint_var", ["OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"])
 def test_endpoint_installs_filtered_provider(endpoint_var):
     """An endpoint installs a real provider whose processor is the application-only filter."""
-    result = _run_probe({endpoint_var: "http://localhost:4318"})
+    result = _run_provider_probe({endpoint_var: "http://localhost:4318"})
     assert result["provider"] == "TracerProvider"
     assert result["tracer_provider_returned"] is True
     assert "ApplicationOnlySpanProcessor" in result["processors"]
     assert result["service_name"] == "langflow"
 
 
+@requires_otel
 def test_traces_exporter_none_disables_export():
     """OTEL_TRACES_EXPORTER=none turns traces off even with a shared endpoint set."""
-    result = _run_probe(
+    result = _run_provider_probe(
         {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318", "OTEL_TRACES_EXPORTER": "none"},
     )
     assert result["provider"] == "ProxyTracerProvider"
 
 
+@requires_otel
 def test_span_filter_drops_llm_scopes():
     """The export boundary: application spans pass, LLM-instrumentation spans are dropped.
 
@@ -97,6 +132,7 @@ def test_span_filter_drops_llm_scopes():
     assert exported == {"flow.execute"}
 
 
+@requires_otel
 def test_instrument_fastapi_app_sets_stable_semconv():
     """The shared FastAPI helper opts into the stable HTTP conventions before instrumenting."""
     os.environ.pop("OTEL_SEMCONV_STABILITY_OPT_IN", None)
