@@ -70,7 +70,7 @@ env:
   # Define the directory where Playwright browsers will be installed.
   # This path is used for caching across workflows
   PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
-  PLAYWRIGHT_VERSION: "1.59.1"
+  PLAYWRIGHT_VERSION: "1.60.0"
   LANGFLOW_FEATURE_WXO_DEPLOYMENTS: "true"
 
 jobs:
@@ -495,12 +495,13 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           path: all-blob-reports
-          pattern: blob-report-*
+          pattern: blob-report-${{ runner.os }}-*
           merge-multiple: true
 
       - name: Merge into JSON report
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: flaky-report.json
+        shell: bash
         # Pinned to the repo's Playwright version: blob format is
         # version-sensitive and bare npx would fetch latest.
         run: |
@@ -508,11 +509,11 @@ jobs:
             echo "No blob reports downloaded; skipping flaky report."
             exit 0
           fi
-          npx playwright@1.60.0 merge-reports --reporter json ./all-blob-reports
+          npx playwright@"${PLAYWRIGHT_VERSION}" merge-reports --reporter json ./all-blob-reports
 
       - name: Upload flaky report
         uses: actions/upload-artifact@v6
         with:
-          name: flaky-report--attempt-${{ github.run_attempt }}
+          name: flaky-report-${{ runner.os }}--attempt-${{ github.run_attempt }}
           path: flaky-report.json
           retention-days: 30
