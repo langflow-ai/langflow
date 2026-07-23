@@ -449,13 +449,9 @@ if _OTEL_AVAILABLE:
 
         protocol = _otlp_protocol("logs")
         try:
-            if protocol == "grpc":
-                from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-            else:
-                from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-
             provider = LoggerProvider(resource=_resource())
-            provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter()))
+            exporter = otlp_exporter_class("logs", protocol)()
+            provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"Could not configure the OTLP log exporter; logs will not be shipped. {exc}")
             return None
