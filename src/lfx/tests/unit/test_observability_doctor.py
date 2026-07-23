@@ -12,6 +12,7 @@ and the rest skip when the extra is absent.
 """
 
 import importlib.util
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 
@@ -29,20 +30,22 @@ class _CollectorStub:
 
     def __init__(self, status: int = 200) -> None:
         self.status = status
-        self.received: list[tuple[str, dict[str, str]]] = []
+        # (path, headers, body_length). Recorded rather than asserted in the handler: an assert
+        # raised on the server thread is routed to socketserver's handle_error, the client still
+        # sees its response, and the test passes regardless. Assertions belong on the test thread.
+        self.received: list[tuple[str, dict[str, str], int]] = []
         received = self.received
         status_code = status
 
         class Handler(BaseHTTPRequestHandler):
             def do_POST(self) -> None:
                 body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
-                received.append((self.path, dict(self.headers)))
+                received.append((self.path, dict(self.headers), len(body)))
                 # A zero-length body keeps the exporter from waiting on a protobuf response it
                 # does not need in order to read the status.
                 self.send_response(status_code)
                 self.send_header("Content-Length", "0")
                 self.end_headers()
-                assert body  # a signal with an empty payload would make the check meaningless
 
             def log_message(self, *_args) -> None:
                 """Silence the default stderr access log."""
@@ -66,14 +69,18 @@ class _CollectorStub:
 
     @property
     def paths(self) -> set[str]:
-        return {path for path, _headers in self.received}
+        return {path for path, _headers, _length in self.received}
+
+    def body_length(self, path: str) -> int:
+        return next(length for received_path, _headers, length in self.received if received_path == path)
+
+    def headers_for(self, path: str) -> dict[str, str]:
+        return next(headers for received_path, headers, _length in self.received if received_path == path)
 
 
 @pytest.fixture
 def clean_otel_env(monkeypatch):
     """Drop the developer's own OTEL_* vars so their APM config cannot skew a result."""
-    import os
-
     for name in [key for key in os.environ if key.startswith("OTEL_")]:
         monkeypatch.delenv(name, raising=False)
 
@@ -104,6 +111,7 @@ def test_no_endpoint_skips_every_signal():
     assert all("No endpoint configured" in signal.detail for signal in report.signals)
     # Nothing failed, so ok stays True. The CLI is what turns an all-skipped run into exit 1.
     assert report.ok
+    assert not report.configured
 
 
 @requires_otel
@@ -119,6 +127,58 @@ def test_delivers_all_three_signals_to_a_live_endpoint(monkeypatch):
         # Each signal must reach its own path; a doctor that posted everything to /v1/traces
         # would pass while metrics and logs silently went nowhere.
         assert collector.paths == OTLP_PATHS
+        # And each request must actually carry a payload. An empty body still returns 200.
+        for path in OTLP_PATHS:
+            assert collector.body_length(path) > 0, f"{path} received an empty payload"
+
+
+@requires_otel
+@pytest.mark.usefixtures("clean_otel_env")
+def test_a_sampler_that_drops_the_probe_is_not_reported_as_delivered(monkeypatch):
+    """A non-recording probe span means nothing was sent, and OK there is the worst failure mode.
+
+    OTEL_TRACES_SAMPLER=always_off makes the probe span non-recording, so the batch is empty.
+    An empty OTLP request still returns 200, so without an explicit guard the command reports
+    delivery and tells the operator to go look for an item that was never sent.
+    """
+    with _CollectorStub(status=200) as collector:
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", collector.endpoint)
+        monkeypatch.setenv("OTEL_TRACES_SAMPLER", "always_off")
+        report = run_doctor(timeout=5)
+
+        traces = _by_signal(report)["traces"]
+        assert traces.status == FAILED
+        assert "OTEL_TRACES_SAMPLER=always_off" in traces.detail
+        assert not report.ok
+        # Nothing should have been posted to the traces path at all.
+        assert "/v1/traces" not in collector.paths
+        # The other two signals are unaffected by the trace sampler.
+        assert _by_signal(report)["metrics"].status == OK
+        assert _by_signal(report)["logs"].status == OK
+
+
+@requires_otel
+@pytest.mark.usefixtures("clean_otel_env")
+def test_metric_probe_uses_the_configured_temporality(monkeypatch):
+    """A cumulative probe against a delta-only backend passes while production is rejected.
+
+    PeriodicExportingMetricReader takes its temporality from the exporter, so the runtime sends
+    delta when asked to. A probe left on InMemoryMetricReader's cumulative default would test a
+    differently shaped point than the one production sends.
+    """
+    from lfx.observability import _resource
+    from lfx.observability_doctor import _probe_metrics
+    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+    from opentelemetry.sdk.metrics import Counter
+
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE", "delta")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318")
+
+    exporter = OTLPMetricExporter()
+    data = _probe_metrics(_resource(), exporter)
+    point = data.resource_metrics[0].scope_metrics[0].metrics[0].data
+
+    assert point.aggregation_temporality == exporter._preferred_temporality[Counter]
 
 
 @requires_otel
@@ -156,6 +216,25 @@ def test_unreachable_endpoint_names_the_transport_error(monkeypatch):
 
 @requires_otel
 @pytest.mark.usefixtures("clean_otel_env")
+def test_every_failure_names_the_endpoint_and_protocol(monkeypatch):
+    """Which end is wrong is the question, so the route belongs on failures that never sent.
+
+    A bad certificate path raises inside the exporter constructor, before any request. That
+    path must still report where it was trying to send and how.
+    """
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "https://127.0.0.1:4318")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", "/nonexistent/ca.pem")
+
+    report = run_doctor(timeout=2)
+
+    for signal in report.signals:
+        assert signal.status == FAILED
+        assert "127.0.0.1:4318" in signal.detail, signal.detail
+        assert signal.protocol in signal.detail, signal.detail
+
+
+@requires_otel
+@pytest.mark.usefixtures("clean_otel_env")
 def test_per_signal_disable_is_reported_as_disabled_not_broken(monkeypatch):
     """OTEL_TRACES_EXPORTER=none is a deliberate choice and must not read as a failure."""
     with _CollectorStub(status=200) as collector:
@@ -170,6 +249,25 @@ def test_per_signal_disable_is_reported_as_disabled_not_broken(monkeypatch):
         assert signals["logs"].status == OK
         assert report.ok
         assert "/v1/traces" not in collector.paths
+
+
+@requires_otel
+@pytest.mark.usefixtures("clean_otel_env")
+def test_disabled_everywhere_is_distinguishable_from_unconfigured(monkeypatch):
+    """An endpoint with every signal off is a deliberate setup, not a missing endpoint.
+
+    Both render as SKIPPED, so the summary has to key off whether an endpoint resolved at all,
+    or it contradicts the three lines printed above it.
+    """
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318")
+    for signal in ("TRACES", "METRICS", "LOGS"):
+        monkeypatch.setenv(f"OTEL_{signal}_EXPORTER", "none")
+
+    report = run_doctor(timeout=2)
+
+    assert [signal.status for signal in report.signals] == [SKIPPED] * 3
+    # This is what separates the two summaries in the CLI.
+    assert report.configured
 
 
 @requires_otel
@@ -198,13 +296,37 @@ def test_headers_are_sent_but_their_values_are_never_reported(monkeypatch):
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_HEADERS", "api-key=super-secret-value")
         report = run_doctor(timeout=5)
 
-        assert report.header_keys == ["api-key"]
+        assert all(signal.header_keys == ["api-key"] for signal in report.signals)
         # The header must actually reach the wire, otherwise a passing doctor would not prove auth works.
-        _path, headers = collector.received[0]
-        assert headers.get("api-key") == "super-secret-value"
+        assert collector.headers_for("/v1/traces").get("api-key") == "super-secret-value"
 
-        rendered = f"{report.header_keys}{[s.detail for s in report.signals]}"
+        rendered = f"{[s.header_keys for s in report.signals]}{[s.detail for s in report.signals]}"
         assert "super-secret-value" not in rendered
+
+
+@requires_otel
+@pytest.mark.usefixtures("clean_otel_env")
+def test_per_signal_headers_replace_the_generic_ones_rather_than_merging(monkeypatch):
+    """The SDK falls back, it does not merge, so a merged report points at the wrong end.
+
+    An operator debugging "traces authenticate, metrics 401" needs to see that metrics carries
+    the generic header and traces carries only its own.
+    """
+    with _CollectorStub(status=200) as collector:
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", collector.endpoint)
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_HEADERS", "x-generic=g")
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_TRACES_HEADERS", "authorization=t")
+        report = run_doctor(timeout=5)
+
+        signals = _by_signal(report)
+        assert signals["traces"].header_keys == ["authorization"]
+        assert signals["metrics"].header_keys == ["x-generic"]
+
+        # And that is what actually went over the wire.
+        traces_headers = collector.headers_for("/v1/traces")
+        assert traces_headers.get("authorization") == "t"
+        assert "x-generic" not in traces_headers
+        assert collector.headers_for("/v1/metrics").get("x-generic") == "g"
 
 
 @requires_otel
@@ -223,11 +345,18 @@ def test_service_name_follows_the_otel_environment(monkeypatch):
 @pytest.mark.usefixtures("clean_otel_env")
 def test_the_doctor_installs_nothing_globally(monkeypatch):
     """It has to be safe to run beside a live process; hijacking the global provider is not."""
+    import atexit
+
     from opentelemetry import trace
 
     before = trace.get_tracer_provider()
+    atexit_before = atexit._ncallbacks()
+
     with _CollectorStub(status=200) as collector:
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", collector.endpoint)
         run_doctor(timeout=5)
+        run_doctor(timeout=5)
 
     assert trace.get_tracer_provider() is before
+    # Throwaway providers must not register atexit handlers that outlive the check.
+    assert atexit._ncallbacks() == atexit_before
