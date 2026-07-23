@@ -4,9 +4,17 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent))
 
-from check_authz_endpoint_matrix import DEFAULT_MATRIX, REQUIRED_PERSONAS, validate_matrix
+from check_authz_endpoint_matrix import (
+    DEFAULT_MATRIX,
+    REQUIRED_PERSONAS,
+    VALID_ACTIONS,
+    _parse_matrix_route,
+    validate_matrix,
+)
 
 
 def test_authz_endpoint_matrix_matches_every_decorated_route() -> None:
@@ -24,6 +32,25 @@ def test_authz_endpoint_matrix_has_required_persona_and_safety_dimensions() -> N
         assert contract["frontend"]
         assert contract["test_references"]
         assert set(matrix["persona_presets"][contract["personas"]]) >= REQUIRED_PERSONAS
+
+
+@pytest.mark.parametrize("action", sorted(VALID_ACTIONS))
+def test_authz_endpoint_matrix_accepts_every_canonical_action(action: str) -> None:
+    """Every concrete action remains valid, including deploy/update absent from today's matrix."""
+    _route, parsed_action, _access = _parse_matrix_route(
+        "api/v1/example.py",
+        f"POST|/example|example|{action}|authenticated",
+    )
+    assert parsed_action == action
+
+
+def test_authz_endpoint_matrix_rejects_unknown_action() -> None:
+    """A typo must fail the release contract instead of becoming an unenforced action."""
+    with pytest.raises(ValueError, match="unknown authorization action 'raed'"):
+        _parse_matrix_route(
+            "api/v1/flows.py",
+            "GET|/|read_flows|raed|authenticated",
+        )
 
 
 def test_authz_endpoint_matrix_rejects_a_new_unclassified_route(tmp_path: Path, monkeypatch) -> None:

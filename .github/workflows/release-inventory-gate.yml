@@ -51,6 +51,7 @@ jobs:
       - name: Check out release profiles
         uses: actions/checkout@v6
         with:
+          persist-credentials: false
           ref: ${{ inputs.ref }}
 
       - name: Set up Python
@@ -88,6 +89,7 @@ jobs:
       - name: Check out release contract
         uses: actions/checkout@v6
         with:
+          persist-credentials: false
           ref: ${{ inputs.ref }}
 
       - name: Set up Python
@@ -222,6 +224,7 @@ jobs:
       - name: Check out release contract
         uses: actions/checkout@v6
         with:
+          persist-credentials: false
           ref: ${{ inputs.ref }}
 
       - name: Set up Python
@@ -361,6 +364,7 @@ jobs:
       - name: Check out release contract
         uses: actions/checkout@v6
         with:
+          persist-credentials: false
           ref: ${{ inputs.ref }}
 
       - name: Download bundle wheels for downstream-image test

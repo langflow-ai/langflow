@@ -30,7 +30,8 @@ services:
     image: langflowai/langflow:core-1.12.0
 ```
 
-The moving tags are `core-latest`, `latest`, and `langflow-all:latest`,
+The moving tags are `langflowai/langflow:core-latest`,
+`langflowai/langflow:latest`, and `langflowai/langflow-all:latest`,
 respectively. They are convenient for local evaluation, but they can select a
 new release without a configuration change. Production deployments should pin
 a version tag and, when reproducibility is required, the registry digest:

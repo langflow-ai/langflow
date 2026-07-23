@@ -14,6 +14,7 @@ DEFAULT_MATRIX = REPO_ROOT / "scripts" / "ci" / "authz_endpoint_matrix.json"
 API_ROOT = REPO_ROOT / "src" / "backend" / "base" / "langflow"
 HTTP_METHODS = {"get", "post", "put", "patch", "delete", "websocket"}
 ACCESS_MODES = {"authenticated", "conditional", "deprecated", "public"}
+VALID_ACTIONS = {"create", "delete", "deploy", "execute", "ingest", "read", "update", "write"}
 REQUIRED_PERSONAS = {
     "viewer",
     "developer",
@@ -91,6 +92,9 @@ def _parse_matrix_route(source: str, raw: str) -> tuple[Route, str, str]:
         raise ValueError(msg) from exc
     if not method or not handler or not action:
         msg = f"{source}: incomplete route entry {raw!r}"
+        raise ValueError(msg)
+    if action not in VALID_ACTIONS:
+        msg = f"{source}:{handler}: unknown authorization action {action!r}"
         raise ValueError(msg)
     if access not in ACCESS_MODES:
         msg = f"{source}:{handler}: unknown access mode {access!r}"

@@ -62,7 +62,7 @@ from lfx.schema.workflow import (
 from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
 from lfx.utils.ssrf_transport import create_ssrf_protected_client
 from lfx.workflow.converters import parse_workflow_run_request, run_response_to_workflow_response
-from sqlalchemy import case, delete
+from sqlalchemy import case, delete, false
 from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -83,6 +83,7 @@ from langflow.services.authorization import (
     ensure_flow_permission,
     filter_visible_resources,
     restrict_to_owned_or_visible_scope,
+    should_apply_owner_override,
     visible_scope_prefilter,
 )
 from langflow.services.authorization.fetch import deny_to_404
@@ -701,7 +702,7 @@ async def list_a2a_agents(request: Request, session: DbSession, current_user: Cu
         stmt = restrict_to_owned_or_visible_scope(
             select(Flow).outerjoin(Folder, Folder.id == Flow.folder_id),
             id_column=Flow.id,
-            owner_clause=owned_clause,
+            owner_clause=owned_clause if await should_apply_owner_override() else false(),
             workspace_expression=canonical_workspace,
             project_column=Flow.folder_id,
             visibility=visibility,

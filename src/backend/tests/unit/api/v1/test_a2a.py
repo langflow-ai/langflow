@@ -444,6 +444,48 @@ async def test_list_agents_includes_direct_team_and_scoped_grants(
     assert str(denied_flow) not in visible_ids
 
 
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_list_agents_scoped_api_key_does_not_inherit_owner_override(
+    client: AsyncClient,
+    active_user,
+    created_api_key,
+    flow_data,
+):
+    """An API-key scope remains authoritative even for resources owned by the key's user."""
+    scoped_folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "none"})
+    scoped_flow = await _create_flow(active_user.id, data=flow_data, folder_id=scoped_folder_id)
+    unscoped_flow = await _create_flow(active_user.id, data=flow_data)
+
+    async with session_scope() as session:
+        role = AuthzRole(
+            name=f"a2a-scoped-key-reader-{uuid.uuid4().hex[:8]}",
+            permissions=["flow:read"],
+            is_system=False,
+        )
+        session.add(role)
+        await session.flush()
+        session.add(
+            AuthzRoleAssignment(
+                user_id=active_user.id,
+                role_id=role.id,
+                domain_type="project",
+                domain_id=scoped_folder_id,
+            )
+        )
+        await session.commit()
+
+    with install_policy_authz(get_settings_service()):
+        response = await client.get(
+            "api/v1/a2a/agents",
+            headers={"x-api-key": created_api_key.api_key},
+        )
+
+    assert response.status_code == 200
+    visible_ids = {agent["id"] for agent in response.json()}
+    assert str(scoped_flow) in visible_ids
+    assert str(unscoped_flow) not in visible_ids
+
+
 async def test_list_agents_flag_off_returns_404(client: AsyncClient):
     """The registry looks unmounted (404) when the flag is off, before auth runs (no 403 leak)."""
     response = await client.get("api/v1/a2a/agents")
