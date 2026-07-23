@@ -219,8 +219,8 @@ def test_unreachable_endpoint_names_the_transport_error(monkeypatch):
 def test_every_failure_names_the_endpoint_and_protocol(monkeypatch):
     """Which end is wrong is the question, so the route belongs on failures that never sent.
 
-    A bad certificate path raises inside the exporter constructor, before any request. That
-    path must still report where it was trying to send and how.
+    An unreadable certificate path fails when the export is attempted rather than when the
+    exporter is built, so this covers the raise-during-export branch.
     """
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "https://127.0.0.1:4318")
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", "/nonexistent/ca.pem")
@@ -231,6 +231,29 @@ def test_every_failure_names_the_endpoint_and_protocol(monkeypatch):
         assert signal.status == FAILED
         assert "127.0.0.1:4318" in signal.detail, signal.detail
         assert signal.protocol in signal.detail, signal.detail
+
+
+@requires_otel
+@pytest.mark.usefixtures("clean_otel_env")
+def test_an_unbuildable_exporter_is_reported_with_its_route(monkeypatch):
+    """The other failure branch: the exporter cannot even be constructed.
+
+    A malformed OTEL_EXPORTER_OTLP_TIMEOUT is a plausible operator typo and raises inside the
+    constructor, before any probe payload exists. That path must name the endpoint, the
+    protocol and the underlying error rather than reporting a bare exception.
+    """
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_TIMEOUT", "abc")
+
+    report = run_doctor()
+
+    assert not report.ok
+    for signal in report.signals:
+        assert signal.status == FAILED
+        assert "Could not build the exporter" in signal.detail, signal.detail
+        assert "127.0.0.1:4318" in signal.detail, signal.detail
+        assert signal.protocol in signal.detail, signal.detail
+        assert "abc" in signal.detail, signal.detail
 
 
 @requires_otel
