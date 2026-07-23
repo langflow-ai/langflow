@@ -571,6 +571,19 @@ describe("SidebarDraggableComponent", () => {
       expect(container).toHaveAttribute("tabIndex", "0");
     });
 
+    it("should expose role=button and an accessible name on the draggable container", () => {
+      render(<SidebarDraggableComponent {...defaultProps} />);
+
+      const container = screen.getByTestId(
+        "testsection_test component_draggable",
+      );
+      expect(container).toHaveAttribute("role", "button");
+      expect(container).toHaveAttribute(
+        "aria-label",
+        "Add Test Component to canvas",
+      );
+    });
+
     it("should have add button with tabIndex -1", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
