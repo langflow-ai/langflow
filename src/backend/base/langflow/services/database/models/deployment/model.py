@@ -7,10 +7,14 @@ from lfx.services.adapters.deployment.schema import DeploymentType
 from pydantic import field_validator
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import ForeignKey, UniqueConstraint
-from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
+from sqlmodel import Column, DateTime, Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
-from langflow.services.database.utils import validate_non_empty_string, validate_non_empty_string_preserve_value
+from langflow.services.database.utils import (
+    utc_now,
+    validate_non_empty_string,
+    validate_non_empty_string_preserve_value,
+)
 
 if TYPE_CHECKING:
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
@@ -112,13 +116,19 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
             index=True,
         ),
     )
+    # Column-level Python default/onupdate (not server_default=func.now()):
+    # on SQLite, func.now() stores second-level precision. When that value is
+    # loaded into Python and SQLAlchemy later sends it as a query parameter,
+    # it is formatted with microseconds — stored column text vs the parameter
+    # then diverge. Field stays default=None so the ORM attribute is unset
+    # until flush; SQLAlchemy fills via Column default.
     created_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
+        sa_column=Column(DateTime(timezone=True), default=utc_now, nullable=False),
     )
     updated_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False),
+        sa_column=Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False),
     )
 
     user: "User" = Relationship(back_populates="deployments")
