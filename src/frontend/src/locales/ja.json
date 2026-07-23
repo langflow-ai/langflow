@@ -2183,5 +2183,9 @@
   "inspectionPanel.close": "閉じる",
   "nodeToolbar.parameters": "パラメータ",
   "canvasControls.minimizeAll": "すべて最小化",
-  "canvasControls.expandAll": "すべて展開"
+  "canvasControls.expandAll": "すべて展開",
+  "input.expandTextEditor": "テキストエディタを展開する",
+  "sidebar.addComponentToCanvas": "{{name}} をキャンバスに追加する",
+  "sidebar.showBetaComponents": "ベータ版コンポーネントを表示",
+  "sidebar.showLegacyComponents": "レガシーコンポーネントを表示する"
 }

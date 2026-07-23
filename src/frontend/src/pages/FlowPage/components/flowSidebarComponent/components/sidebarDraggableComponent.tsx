@@ -211,6 +211,9 @@ export const SidebarDraggableComponent = forwardRef(
                     variant="ghost"
                     size="icon"
                     tabIndex={-1}
+                    aria-label={t("sidebar.addComponentToCanvas", {
+                      name: display_name,
+                    })}
                     className="text-primary"
                     onClick={() => addComponent(apiClass, itemName)}
                   >

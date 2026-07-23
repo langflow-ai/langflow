@@ -2183,5 +2183,9 @@
   "inspectionPanel.close": "Fechar",
   "nodeToolbar.parameters": "Parâmetros",
   "canvasControls.minimizeAll": "Minimizar tudo",
-  "canvasControls.expandAll": "Expandir tudo"
+  "canvasControls.expandAll": "Expandir tudo",
+  "input.expandTextEditor": "Expandir o editor de texto",
+  "sidebar.addComponentToCanvas": "Adicionar “ {{name}} ” à tela",
+  "sidebar.showBetaComponents": "Mostrar componentes beta",
+  "sidebar.showLegacyComponents": "Mostrar componentes legados"
 }
