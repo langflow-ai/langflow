@@ -11,8 +11,15 @@
 # dependency set.
 FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS builder
 
+ARG DEBIAN_MIRROR=mirrors.tuna.tsinghua.edu.cn
+ARG UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple
+
+ENV UV_DEFAULT_INDEX=${UV_DEFAULT_INDEX}
+
 # Some optional LFX dependencies may need a compiler during installation.
-RUN apt-get update \
+RUN sed -i "s|deb.debian.org|${DEBIAN_MIRROR}|g; s|security.debian.org|${DEBIAN_MIRROR}|g" \
+        /etc/apt/sources.list.d/debian.sources \
+    && apt-get update \
     && apt-get install --no-install-recommends -y build-essential \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*

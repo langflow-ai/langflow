@@ -12,11 +12,18 @@ FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS builder
 
 WORKDIR /app
 
+ARG DEBIAN_MIRROR=mirrors.tuna.tsinghua.edu.cn
+ARG UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple
+
+
 # Required for apify-client
 ENV RUSTFLAGS='--cfg reqwest_unstable'
+ENV UV_DEFAULT_INDEX=${UV_DEFAULT_INDEX}
 
 # Install build dependencies
-RUN apt-get update \
+RUN sed -i "s|deb.debian.org|${DEBIAN_MIRROR}|g; s|security.debian.org|${DEBIAN_MIRROR}|g" \
+        /etc/apt/sources.list.d/debian.sources \
+    && apt-get update \
     && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
         build-essential \
@@ -54,8 +61,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ################################
 FROM python:3.14-slim-trixie AS runtime
 
+ARG DEBIAN_MIRROR=mirrors.tuna.tsinghua.edu.cn
+
 # Install minimal runtime dependencies
-RUN apt-get update \
+RUN sed -i "s|deb.debian.org|${DEBIAN_MIRROR}|g; s|security.debian.org|${DEBIAN_MIRROR}|g" \
+        /etc/apt/sources.list.d/debian.sources \
+    && apt-get update \
     && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
         curl \
