@@ -627,9 +627,16 @@ def _compose_embedding_kwargs(
     if isinstance(api_base_value, str) and not api_base_value.strip():
         api_base_value = None
     if provider == "OpenAI" and not api_base_value:
-        api_base_value = _to_str(os.environ.get("OPENAI_EMBEDDINGS_API_BASE")) or _to_str(
-            os.environ.get("OPENAI_API_BASE")
-        )
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        openai_base_url = _to_str(provider_vars.get("OPENAI_BASE_URL")) or _to_str(_env_if_allowed("OPENAI_BASE_URL"))
+        if openai_base_url:
+            from lfx.utils.util import transform_localhost_url
+
+            api_base_value = transform_localhost_url(openai_base_url)
+        else:
+            api_base_value = _to_str(_env_if_allowed("OPENAI_EMBEDDINGS_API_BASE")) or _to_str(
+                _env_if_allowed("OPENAI_API_BASE")
+            )
 
     kwargs: dict[str, Any] = {}
     if "model" in param_mapping:

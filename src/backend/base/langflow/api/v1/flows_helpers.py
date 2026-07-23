@@ -24,6 +24,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.api.utils import build_content_disposition, normalize_flow_for_export, remove_api_keys
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
+from langflow.services.database.models.flow.guards import (
+    LockedFlowError,
+    ensure_flow_update_allowed,
+    lock_flow_for_update,
+)
 from langflow.services.database.models.flow.model import (
     Flow,
     FlowCreate,
@@ -151,6 +156,14 @@ def _apply_update_data(target: Flow, update_data: dict[str, Any]) -> None:
 def _endpoint_name_was_explicitly_cleared(flow: FlowCreate | FlowUpdate) -> bool:
     """Return whether the request explicitly asked to clear the endpoint name."""
     return "endpoint_name" in flow.model_fields_set and flow.endpoint_name in (None, "")
+
+
+def _ensure_api_flow_update_allowed(db_flow: Flow, update_data: dict[str, Any]) -> None:
+    """Translate the domain lock guard into the API's 423 response."""
+    try:
+        ensure_flow_update_allowed(db_flow, update_data)
+    except LockedFlowError as exc:
+        raise HTTPException(status_code=423, detail=str(exc)) from exc
 
 
 async def _verify_fs_path(path: str | None, user_id: UUID, storage_service: StorageService) -> None:
@@ -437,6 +450,8 @@ async def _update_existing_flow(
     actor. This mirrors the cross-user semantics already enforced by
     ``_patch_flow``.
     """
+    await lock_flow_for_update(session, existing_flow)
+
     settings_service = get_settings_service()
     actor_user_id = current_user.id
     owner_user_id: UUID = existing_flow.user_id
@@ -544,6 +559,8 @@ async def _update_existing_flow(
             new_folder_id=update_data["folder_id"],
         )
 
+    _ensure_api_flow_update_allowed(existing_flow, update_data)
+
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
 
@@ -579,6 +596,8 @@ async def _patch_flow(
     silently move the flow into the actor's folder or write into the actor's
     fs namespace; the actor cannot change ownership-bound state at all.
     """
+    await lock_flow_for_update(session, db_flow)
+
     settings_service = get_settings_service()
 
     owner_user_id: UUID = db_flow.user_id
@@ -591,6 +610,8 @@ async def _patch_flow(
     # Preserve the existing endpoint unless the request explicitly clears it.
     if _endpoint_name_was_explicitly_cleared(flow):
         update_data["endpoint_name"] = None
+
+    _ensure_api_flow_update_allowed(db_flow, update_data)
 
     # A non-owner editing a shared flow must not be able to relocate the
     # flow into folders or storage they own. Reject ownership-bound mutations

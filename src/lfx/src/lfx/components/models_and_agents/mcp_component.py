@@ -6,7 +6,7 @@ import json
 import time
 import uuid
 from types import UnionType
-from typing import Any, get_args, get_origin
+from typing import Any, cast, get_args, get_origin
 
 from langchain_core.tools import StructuredTool  # noqa: TC002
 from pydantic import BaseModel
@@ -79,7 +79,7 @@ class MCPToolsComponent(ComponentWithCache):
     # distinct from the "Use Cached Server" (``use_cache``) toggle which only
     # controls the shared cross-request server cache.
     TOOL_TTL_SECS: int = 30
-    # Upper bound on the per-instance TTL cache. Oldest entries are evicted
+    # Upper bound on the per-component-lineage TTL cache. Oldest entries are evicted
     # when the cap is reached. Keeps memory bounded for flows where the same
     # component handles many rotating auth contexts (e.g. per-tenant tokens).
     TOOL_TTL_MAX_ENTRIES: int = 32
@@ -108,11 +108,22 @@ class MCPToolsComponent(ComponentWithCache):
         # One MCP stdio/streamable client pair per component; concurrent update_tool_list calls
         # otherwise race (session DELETE vs POST) and the MCP SDK surfaces HTTP 404 as "Session terminated".
         self._update_tool_list_lock = asyncio.Lock()
-        # Per-instance TTL cache for ``_get_tools``: {cache_key: (monotonic_ts, tools)}.
-        # Declared here (not at class scope) so every component gets its own dict —
-        # a class-level dict would be shared across every MCPToolsComponent in the process,
-        # leaking tool lists across tenants that happen to hash to the same key.
+        # Per-component-lineage TTL cache for ``_get_tools``:
+        # {cache_key: (monotonic_ts, tools)}. Freshly instantiated components get their own
+        # dict; ``__deepcopy__`` shares it only with that component's invocation copies.
+        # A class-level dict would instead expose entries to every MCPToolsComponent in the
+        # process, leaking tool lists across tenants that happen to hash to the same key.
         self._ttl_tool_cache: dict[str, tuple[float, list]] = {}
+
+    def __deepcopy__(self, memo: dict) -> MCPToolsComponent:
+        """Keep the per-component tool cache available to isolated invocation copies."""
+        component_copy = cast("MCPToolsComponent", super().__deepcopy__(memo))
+        # Component tools are deep-copied for every invocation to isolate mutable inputs.
+        # Those copies belong to the same component execution lineage, so sharing this
+        # bounded, auth-scoped cache preserves its TTL without exposing it to independently
+        # instantiated components.
+        component_copy._ttl_tool_cache = self._ttl_tool_cache  # noqa: SLF001
+        return component_copy
 
     def _ensure_cache_structure(self):
         """Ensure the cache has the required structure."""
@@ -1070,9 +1081,9 @@ class MCPToolsComponent(ComponentWithCache):
 
         A short-lived TTL cache (``TOOL_TTL_SECS``, header-hash-keyed) skips the MCP
         round-trip when the same auth context is re-queried quickly (e.g. parallel agent
-        steps sharing the same tweaked headers). The cache is per component instance and
-        bounded by ``TOOL_TTL_MAX_ENTRIES``; it is distinct from the "Use Cached Server"
-        (``use_cache``) toggle which controls the shared cross-request cache.
+        steps sharing the same tweaked headers). The cache is per component lineage (including
+        isolated invocation copies) and bounded by ``TOOL_TTL_MAX_ENTRIES``; it is distinct from
+        the "Use Cached Server" (``use_cache``) toggle which controls the shared cross-request cache.
         """
         mcp_server = getattr(self, "mcp_server", None)
         srv = mcp_server.get("name") if isinstance(mcp_server, dict) else mcp_server
