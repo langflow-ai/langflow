@@ -240,7 +240,7 @@ class TestStarterProjects:
 
         assert not offenders, f"{json_file.name}: blocked model options found: {sorted(set(offenders))}"
 
-    def test_ollama_base_url_uses_current_default_metadata(self, json_file: Path):
+    def test_ollama_base_url_uses_current_metadata(self, json_file: Path):
         """Serialized Language Model fields should match the current Ollama URL input shape."""
         data = load_json_file(json_file)
         fields = [field for field in iter_dicts(data) if field.get("name") == "ollama_base_url"]
@@ -249,7 +249,8 @@ class TestStarterProjects:
             assert field.get("_input_type") == "StrInput"
             assert field.get("input_types") == []
             assert field.get("type") == "str"
-            assert field.get("value") == "http://localhost:11434"
+            assert field.get("info") == "Endpoint of the Ollama API (Ollama only)"
+            assert field.get("value") == ""
 
     def test_knowledge_base_selectors_do_not_ship_fixture_defaults(self, json_file: Path):
         """Knowledge selectors should start empty instead of pointing at local test fixture names."""
