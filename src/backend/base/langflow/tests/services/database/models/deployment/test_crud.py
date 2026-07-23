@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.deployment.crud import (
+    UNCONFIRMED_DELETE_ROWCOUNT,
     DeploymentMetadataUpdate,
     create_deployment,
     delete_deployment_by_id,
@@ -173,6 +174,7 @@ async def test_list_deployments_page_negative_offset_raises():
         await list_deployments_page(
             db,
             user_id=uuid4(),
+            row_owner_id=uuid4(),
             deployment_provider_account_id=uuid4(),
             offset=-1,
             limit=10,
@@ -186,6 +188,7 @@ async def test_list_deployments_page_zero_limit_raises():
         await list_deployments_page(
             db,
             user_id=uuid4(),
+            row_owner_id=uuid4(),
             deployment_provider_account_id=uuid4(),
             offset=0,
             limit=0,
@@ -199,6 +202,7 @@ async def test_list_deployments_page_negative_limit_raises():
         await list_deployments_page(
             db,
             user_id=uuid4(),
+            row_owner_id=uuid4(),
             deployment_provider_account_id=uuid4(),
             offset=0,
             limit=-5,
@@ -212,6 +216,7 @@ async def test_list_deployments_page_attachment_count_only_counts_live_flow_vers
     await list_deployments_page(
         db,
         user_id=uuid4(),
+        row_owner_id=uuid4(),
         deployment_provider_account_id=uuid4(),
         offset=0,
         limit=20,
@@ -220,7 +225,7 @@ async def test_list_deployments_page_attachment_count_only_counts_live_flow_vers
     # String-match on compiled SQL because these tests use mocked sessions.
     statement_text = str(db.exec.await_args.args[0]).lower()
     assert "join flow_version" in statement_text
-    assert "flow_version_deployment_attachment.user_id" not in statement_text
+    assert "flow_version_deployment_attachment.user_id" in statement_text
 
 
 @pytest.mark.asyncio
@@ -237,7 +242,7 @@ async def test_update_deployment_empty_display_name_raises():
 
 
 @pytest.mark.asyncio
-async def test_delete_by_resource_key_none_rowcount_logs_error():
+async def test_delete_by_resource_key_none_rowcount_returns_unconfirmed():
     db = _make_db()
     lookup_result = MagicMock()
     lookup_result.first.return_value = uuid4()
@@ -256,7 +261,7 @@ async def test_delete_by_resource_key_none_rowcount_logs_error():
             resource_key="rk-1",
         )
 
-    assert count == 0
+    assert count is UNCONFIRMED_DELETE_ROWCOUNT
     assert db.exec.await_count == 3
     lookup_stmt = str(db.exec.await_args_list[0].args[0]).lower()
     attachment_stmt = str(db.exec.await_args_list[1].args[0]).lower()
@@ -296,7 +301,7 @@ async def test_delete_by_resource_key_missing_row_skips_attachment_delete():
 
 
 @pytest.mark.asyncio
-async def test_delete_by_id_none_rowcount_logs_error():
+async def test_delete_by_id_none_rowcount_returns_unconfirmed():
     db = _make_db()
     attachment_delete_result = MagicMock()
     attachment_delete_result.rowcount = 1
@@ -312,12 +317,33 @@ async def test_delete_by_id_none_rowcount_logs_error():
             deployment_id=uuid4(),
         )
 
-    assert count == 0
+    assert count is UNCONFIRMED_DELETE_ROWCOUNT
     assert db.exec.await_count == 2
     attachment_stmt = str(db.exec.await_args_list[0].args[0]).lower()
     deployment_stmt = str(db.exec.await_args_list[1].args[0]).lower()
     assert "delete from flow_version_deployment_attachment" in attachment_stmt
     assert "delete from deployment" in deployment_stmt
+    mock_logger.aerror.assert_awaited_once()
+
+
+async def test_delete_by_id_negative_rowcount_returns_unconfirmed():
+    """PEP 249 / SQLAlchemy use -1 when the driver did not determine rowcount."""
+    db = _make_db()
+    attachment_delete_result = MagicMock()
+    attachment_delete_result.rowcount = 1
+    mock_result = MagicMock()
+    mock_result.rowcount = -1
+    db.exec.side_effect = [attachment_delete_result, mock_result]
+
+    with patch("langflow.services.database.models.deployment.crud.logger") as mock_logger:
+        mock_logger.aerror = AsyncMock()
+        count = await delete_deployment_by_id(
+            db,
+            user_id=uuid4(),
+            deployment_id=uuid4(),
+        )
+
+    assert count is UNCONFIRMED_DELETE_ROWCOUNT
     mock_logger.aerror.assert_awaited_once()
 
 
@@ -624,7 +650,9 @@ async def test_update_deployment_metadata_batch_matches_owner_per_row(
     folder: Folder,
     provider_account: DeploymentProviderAccount,
 ):
-    other_user_id = uuid4()
+    other_user = User(username=f"other-{uuid4()}", password=_TEST_PASSWORD, is_active=True)
+    db.add(other_user)
+    await db.flush()
     owner_row = await create_deployment(
         db,
         user_id=user.id,
@@ -636,7 +664,7 @@ async def test_update_deployment_metadata_batch_matches_owner_per_row(
         deployment_type=DeploymentType.AGENT,
     )
     other_row = Deployment(
-        user_id=other_user_id,
+        user_id=other_user.id,
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-metadata-other-row",

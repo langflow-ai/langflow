@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from lfx.services.authorization.base import ResourceVisibilityScope
-from sqlalchemy import Select
+from sqlalchemy import Select, false
 from sqlmodel import col, or_
 
 from langflow.services.authorization.actions import FlowAction
@@ -13,6 +13,7 @@ from langflow.services.authorization.guards import (
     _api_key_scopes_require_plugin_enforcement,
     _auth_context,
     _coerce_action,
+    should_apply_owner_override,
 )
 from langflow.services.deps import get_authorization_service, get_settings_service
 
@@ -223,6 +224,29 @@ def restrict_to_owned_or_visible(
     return stmt.where(or_(col(id_column).in_(list(visible_ids)), owner_clause))
 
 
+async def apply_owned_or_visible_prefilter(
+    stmt: StatementT,
+    *,
+    id_column: InstrumentedAttribute,
+    owner_clause: ColumnElement[bool],
+    visible_ids: Sequence[UUID],
+) -> StatementT:
+    """Apply a concrete visible-id prefilter, respecting owner override.
+
+    When :func:`should_apply_owner_override` is true, delegates to
+    :func:`restrict_to_owned_or_visible` (owner ⊕ ``visible_ids``). When override
+    is off, constrains to ``visible_ids`` alone.
+    """
+    if await should_apply_owner_override():
+        return restrict_to_owned_or_visible(
+            stmt,
+            id_column=id_column,
+            owner_clause=owner_clause,
+            visible_ids=visible_ids,
+        )
+    return stmt.where(col(id_column).in_(list(visible_ids)))
+
+
 def restrict_to_owned_or_visible_scope(
     stmt: StatementT,
     *,
@@ -248,6 +272,29 @@ def restrict_to_owned_or_visible_scope(
     if project_column is not None and visibility.project_ids:
         clauses.append(col(project_column).in_(visibility.project_ids))
     return stmt.where(or_(*clauses))
+
+
+async def apply_owned_or_visible_scope_prefilter(
+    stmt: StatementT,
+    *,
+    id_column: InstrumentedAttribute,
+    owner_clause: ColumnElement[bool],
+    visibility: ResourceVisibilityScope,
+    workspace_column: InstrumentedAttribute | None = None,
+    workspace_expression: ColumnElement[Any] | None = None,
+    project_column: InstrumentedAttribute | None = None,
+) -> StatementT:
+    """Apply a structured visibility prefilter, respecting owner override."""
+    effective_owner_clause = owner_clause if await should_apply_owner_override() else false()
+    return restrict_to_owned_or_visible_scope(
+        stmt,
+        id_column=id_column,
+        owner_clause=effective_owner_clause,
+        visibility=visibility,
+        workspace_column=workspace_column,
+        workspace_expression=workspace_expression,
+        project_column=project_column,
+    )
 
 
 def resource_visible_in_scope(

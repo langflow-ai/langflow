@@ -21,6 +21,7 @@ from langflow.services.authorization.guards import (
     ensure_deployment_permission,
     ensure_file_permission,
     ensure_flow_permission,
+    ensure_flows_permission,
     ensure_knowledge_base_permission,
     ensure_permission,
     ensure_project_permission,
@@ -31,6 +32,8 @@ from langflow.services.authorization.guards import (
     should_apply_owner_override,
 )
 from langflow.services.authorization.listing import (
+    apply_owned_or_visible_prefilter,
+    apply_owned_or_visible_scope_prefilter,
     filter_visible_resources,
     resource_visible_in_scope,
     restrict_to_owned_or_visible,
@@ -51,6 +54,8 @@ __all__ = [
     "ShareAction",
     "VariableAction",
     "VoiceAction",
+    "apply_owned_or_visible_prefilter",
+    "apply_owned_or_visible_scope_prefilter",
     "audit_decision",
     "authorized_or_owner_scoped",
     "deny_to_404",
@@ -58,6 +63,7 @@ __all__ = [
     "ensure_deployment_permission",
     "ensure_file_permission",
     "ensure_flow_permission",
+    "ensure_flows_permission",
     "ensure_knowledge_base_permission",
     "ensure_permission",
     "ensure_project_permission",
