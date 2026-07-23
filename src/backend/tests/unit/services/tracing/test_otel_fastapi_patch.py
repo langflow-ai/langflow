@@ -10,7 +10,7 @@ pass on both eager (<=0.136) and lazy (>=0.137) inclusion.
 import pytest
 from fastapi import APIRouter, FastAPI
 from fastapi.testclient import TestClient
-from langflow.services.tracing.otel_fastapi_patch import (
+from lfx.observability_fastapi import (
     _safe_get_route_details,
     patch_otel_fastapi_route_details,
 )
