@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 import jwt
-from cryptography.fernet import Fernet
 from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
@@ -55,6 +54,7 @@ from langflow.services.deps import session_scope
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
+    from cryptography.fernet import Fernet, MultiFernet
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -984,10 +984,14 @@ class AuthService(BaseAuthService):
         return user
 
     def _get_fernet(self) -> Fernet:
-        from langflow.services.auth.utils import ensure_fernet_key
+        from langflow.services.auth.utils import get_fernet
 
-        secret_key: str = self.settings.auth_settings.SECRET_KEY.get_secret_value()
-        return Fernet(ensure_fernet_key(secret_key))
+        return get_fernet(self.settings)
+
+    def _get_decryption_fernet(self) -> Fernet | MultiFernet:
+        from langflow.services.auth.utils import get_fernet_for_decryption
+
+        return get_fernet_for_decryption(self.settings)
 
     def encrypt_api_key(self, api_key: str) -> str:
         fernet = self._get_fernet()
@@ -1016,7 +1020,7 @@ class AuthService(BaseAuthService):
         if not encrypted_api_key.startswith("gAAAAA"):
             return encrypted_api_key
 
-        fernet = self._get_fernet()
+        fernet = self._get_decryption_fernet()
         try:
             return fernet.decrypt(encrypted_api_key.encode()).decode()
         except Exception as primary_exception:  # noqa: BLE001

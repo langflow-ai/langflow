@@ -3,13 +3,14 @@ import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
+import type { ModelTypeFilter } from "@/types/models";
 import { cn } from "@/utils/utils";
 import { useProviderConfiguration } from "../hooks/useProviderConfiguration";
 import ModelSelection from "./ModelSelection";
 import ProviderConfigurationForm from "./ProviderConfigurationForm";
 
 interface ModelProvidersContentProps {
-  modelType: "llm" | "embeddings" | "all";
+  modelType: ModelTypeFilter;
   onFlushRef?: React.MutableRefObject<(() => Promise<void>) | null>;
   onHasChangesRef?: React.MutableRefObject<(() => boolean) | null>;
 }

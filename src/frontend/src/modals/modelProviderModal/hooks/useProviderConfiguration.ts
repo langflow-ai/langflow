@@ -18,6 +18,7 @@ import {
 } from "@/controllers/API/queries/variables";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import useAlertStore from "@/stores/alertStore";
+import type { ModelType } from "@/types/models";
 import { Provider } from "../components/types";
 import { useModelToggleQueue } from "./useModelToggleQueue";
 
@@ -48,7 +49,11 @@ interface UseProviderConfigurationReturn {
   handleDisconnect: () => Promise<void>;
   handleActivateProvider: () => void;
   validateCredentials: () => Promise<boolean>;
-  handleModelToggle: (modelName: string, enabled: boolean) => void;
+  handleModelToggle: (
+    modelName: string,
+    enabled: boolean,
+    modelType: ModelType,
+  ) => void;
   flushPendingChanges: () => Promise<void>;
   hasUserMadeChanges: () => boolean;
 
@@ -600,10 +605,10 @@ export const useProviderConfiguration = ({
     });
 
   const handleModelToggle = useCallback(
-    (modelName: string, enabled: boolean) => {
+    (modelName: string, enabled: boolean, modelType: ModelType) => {
       if (!syncedSelectedProvider?.provider) return;
       hasUserMadeChangesRef.current = true;
-      queueModelToggle(modelName, enabled);
+      queueModelToggle(modelName, enabled, modelType);
     },
     [syncedSelectedProvider, queueModelToggle],
   );

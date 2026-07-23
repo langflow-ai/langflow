@@ -95,6 +95,7 @@ class TestMCPComponentOutputProcessing:
         mock_content_item3 = MagicMock()
         mock_content_item3.model_dump.return_value = {"type": "text", "text": "42"}
 
+        mock_result.isError = False
         mock_result.content = [mock_content_item1, mock_content_item2, mock_content_item3]
         mock_tool.coroutine = AsyncMock(return_value=mock_result)
 
@@ -132,6 +133,37 @@ class TestMCPComponentOutputProcessing:
         assert result.iloc[2]["type"] == "text"
 
     @pytest.mark.asyncio
+    async def test_build_output_raises_on_iserror_tool_result(self, component):
+        """A tool result with isError=True is a FAILED call and must raise, not become data.
+
+        The HITL guard (and any MCP server error) reports failure via CallToolResult.isError
+        with the explanation in content; swallowing it returns the error text as a valid
+        DataFrame and the run looks successful.
+        """
+        component.tool = "test_tool"
+        component.tools = []
+
+        error_item = MagicMock()
+        error_item.model_dump.return_value = {
+            "type": "text",
+            "text": "This flow uses Human-in-the-Loop and cannot run as an MCP tool.",
+        }
+        mock_result = MagicMock()
+        mock_result.isError = True
+        mock_result.content = [error_item]
+        mock_tool = MagicMock()
+        mock_tool.coroutine = AsyncMock(return_value=mock_result)
+
+        component._tool_cache = {"test_tool": mock_tool}
+        component.update_tool_list = AsyncMock(return_value=([], None))
+        component.get_inputs_for_all_tools = MagicMock(return_value={"test_tool": []})
+
+        with pytest.raises(ValueError, match="Human-in-the-Loop") as excinfo:
+            await component.build_output()
+
+        assert "test_tool" in str(excinfo.value)
+
+    @pytest.mark.asyncio
     async def test_build_output_with_no_tool_selected(self, component):
         """Test that build_output returns error DataFrame when no tool is selected."""
         component.tool = ""
@@ -158,6 +190,7 @@ class TestMCPComponentOutputProcessing:
         mock_tool = MagicMock()
         mock_tool.name = "list_tool"
         mock_result = MagicMock()
+        mock_result.isError = False
         mock_result.content = [
             MagicMock(model_dump=MagicMock(return_value={"type": "text", "text": '{"results": []}'}))
         ]

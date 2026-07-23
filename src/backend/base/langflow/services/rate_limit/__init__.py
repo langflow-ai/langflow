@@ -7,6 +7,11 @@ key-based rate limiting with configurable storage backends.
 
 from __future__ import annotations
 
-from langflow.services.rate_limit.service import get_limiter_key, get_rate_limit_string, get_rate_limiter
+from langflow.services.rate_limit.service import (
+    check_rate_limit,
+    get_limiter_key,
+    get_rate_limit_string,
+    get_rate_limiter,
+)
 
-__all__ = ["get_limiter_key", "get_rate_limit_string", "get_rate_limiter"]
+__all__ = ["check_rate_limit", "get_limiter_key", "get_rate_limit_string", "get_rate_limiter"]

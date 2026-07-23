@@ -46,10 +46,11 @@ def _build_async_client(*, tags_payload: dict, show_results: dict) -> AsyncMock:
 
 
 @pytest.fixture(autouse=True)
-def _clear_ollama_cache():
+def _clear_ollama_cache(monkeypatch: pytest.MonkeyPatch):
     """Reset the in-process Ollama model-list cache between tests."""
     from lfx.base.models.model_utils import _ollama_cache_clear
 
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "localhost,other-host,ollama.com")
     _ollama_cache_clear()
     yield
     _ollama_cache_clear()

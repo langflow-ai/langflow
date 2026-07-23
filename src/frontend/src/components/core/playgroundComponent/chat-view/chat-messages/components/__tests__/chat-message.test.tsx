@@ -203,6 +203,46 @@ describe("ChatMessage Component", () => {
     // Empty user message with no files should render as BotMessage
     expect(screen.getByTestId("div-chat-message")).toBeInTheDocument();
   });
+
+  it("hides an empty partial placeholder that is not the building last message", () => {
+    const placeholderProps = {
+      ...defaultProps,
+      lastMessage: false,
+      chat: {
+        ...mockChat,
+        isSend: false,
+        message: "",
+        files: [],
+        content_blocks: [],
+        properties: { ...mockChat.properties, state: "partial" },
+      },
+    };
+
+    render(<ChatMessage {...placeholderProps} />);
+    expect(screen.queryByTestId("div-chat-message")).not.toBeInTheDocument();
+  });
+
+  it("hides a partial placeholder whose Agent Steps block has only non-tool content", () => {
+    // The paused-agent bubble carries an "Agent Steps" block with a text 'Input' content
+    // (no tool_use), which renders nothing — it must still be hidden, not left as an empty bubble.
+    const placeholderProps = {
+      ...defaultProps,
+      lastMessage: false,
+      chat: {
+        ...mockChat,
+        isSend: false,
+        message: "",
+        files: [],
+        content_blocks: [
+          { title: "Agent Steps", contents: [{ type: "text", text: "Input" }] },
+        ],
+        properties: { ...mockChat.properties, state: "partial" },
+      },
+    };
+
+    render(<ChatMessage {...placeholderProps} />);
+    expect(screen.queryByTestId("div-chat-message")).not.toBeInTheDocument();
+  });
 });
 
 describe("ThinkingMessage Component", () => {

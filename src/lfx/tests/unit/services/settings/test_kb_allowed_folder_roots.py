@@ -1,4 +1,4 @@
-"""Tests for the ``kb_allowed_folder_roots`` setting.
+"""Tests for the server-owned Knowledge Base folder security settings.
 
 The folder-ingestion route (``POST /{kb_name}/ingest/folder``) gates which
 server-side directories it may read via ``settings.kb_allowed_folder_roots``.
@@ -9,10 +9,13 @@ HTTP 500), and ``LANGFLOW_KB_ALLOWED_FOLDER_ROOTS`` bound to nothing because
 configured and the endpoint was unusable.
 
 These tests exercise the *real* Settings model (the endpoint unit tests inject
-a mocked settings object, so they never caught the missing field).
+a mocked settings object, so they never caught the missing root field). The
+file-size tests likewise pin the operator-owned default and environment binding.
 """
 
+import pytest
 from lfx.services.settings.base import Settings
+from pydantic import ValidationError
 
 
 def test_kb_allowed_folder_roots_field_is_declared(monkeypatch):
@@ -42,3 +45,21 @@ def test_kb_allowed_folder_roots_parses_comma_separated_env(monkeypatch):
     monkeypatch.setenv("LANGFLOW_KB_ALLOWED_FOLDER_ROOTS", "/srv/docs,/data/shared")
     settings = Settings()
     assert settings.kb_allowed_folder_roots == ["/srv/docs", "/data/shared"]
+
+
+def test_kb_folder_max_file_size_bytes_defaults_to_25_mib(monkeypatch):
+    monkeypatch.delenv("LANGFLOW_KB_FOLDER_MAX_FILE_SIZE_BYTES", raising=False)
+    settings = Settings()
+    assert settings.kb_folder_max_file_size_bytes == 25 * 1024 * 1024
+
+
+def test_kb_folder_max_file_size_bytes_binds_from_env(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_KB_FOLDER_MAX_FILE_SIZE_BYTES", "1048576")
+    settings = Settings()
+    assert settings.kb_folder_max_file_size_bytes == 1_048_576
+
+
+def test_kb_folder_max_file_size_bytes_must_be_positive(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_KB_FOLDER_MAX_FILE_SIZE_BYTES", "0")
+    with pytest.raises(ValidationError):
+        Settings()

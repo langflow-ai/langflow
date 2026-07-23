@@ -2,16 +2,17 @@
 
 When langflow-ide logs through litellm (e.g. to langfuse), litellm imports
 its proxy server module, which in turn needs `apscheduler` and `cryptography`
-at runtime. These are normally shipped via `litellm[proxy]`, but that extra
-pins `boto3` in a way that conflicts with our `aioboto3` transitives. We
-therefore add the specific modules directly to the `litellm` optional
-dependency group — this test guards against them being dropped.
+at runtime. These are normally shipped via the much larger `litellm[proxy]`
+extra. We add the specific modules directly to the `litellm` optional
+dependency group, and this test guards against them being dropped.
 """
 
 from __future__ import annotations
 
 import sys
 from pathlib import Path
+
+from packaging.requirements import Requirement
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -50,3 +51,19 @@ def test_litellm_optional_dependency_includes_runtime_proxy_modules() -> None:
         f"These are needed when langflow-ide invokes litellm's proxy server module for logging "
         f"(see issue #12228). Current specs: {litellm_specs}"
     )
+
+
+def test_litellm_dependent_extras_are_available_on_python_314() -> None:
+    """LiteLLM and the extras that require it must not retain a Python 3.14 gate."""
+    optional = _load_base_pyproject()["project"]["optional-dependencies"]
+
+    litellm = next(Requirement(spec) for spec in optional["litellm"] if Requirement(spec).name == "litellm")
+    assert any(spec.operator == ">=" and spec.version == "1.93.0" for spec in litellm.specifier)
+    assert litellm.marker is None
+
+    opik = next(Requirement(spec) for spec in optional["opik"] if Requirement(spec).name == "opik")
+    assert opik.marker is None
+
+    toolguard = next(Requirement(spec) for spec in optional["toolguard"] if Requirement(spec).name == "lfx")
+    assert "toolguard" in toolguard.extras
+    assert toolguard.marker is None

@@ -111,7 +111,7 @@ CASE_CONVERTERS: dict[str, Any] = {
 
 
 class OperationsComponent(Component):
-    display_name = "Operations"
+    display_name = "Data Operations"
     description = "Perform operations on Text, JSON, and Tables from a single component."
     documentation: str = "https://docs.langflow.org/components-processing#operations"
     icon = "wand-sparkles"

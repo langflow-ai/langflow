@@ -1,5 +1,6 @@
 """MCP Authentication encryption utilities for secure credential storage."""
 
+from copy import deepcopy
 from typing import Any
 
 from cryptography.fernet import InvalidToken
@@ -12,6 +13,10 @@ SENSITIVE_FIELDS = [
     "oauth_client_secret",
     "api_key",
 ]
+
+# Sub-maps of an ``mcpServers`` entry whose *values* carry secrets (API keys,
+# bearer tokens) and must be encrypted at rest in the mcp_server table.
+MCP_SECRET_CONFIG_MAPS = ("env", "headers")
 
 
 def encrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -86,6 +91,51 @@ def decrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
                 logger.debug(f"Field {field} appears to be plaintext, keeping original value")
 
     return decrypted_settings
+
+
+def encrypt_mcp_config(config: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Encrypt secret-bearing values inside an ``mcpServers`` entry for storage.
+
+    Encrypts every value in the entry's ``env`` and ``headers`` maps (where API
+    keys and bearer tokens live) and leaves structural fields (``command``,
+    ``args``, ``url``, transport, and any extra keys) untouched. Idempotent:
+    already-encrypted values are left as-is, so re-encrypting a stored config is a
+    no-op. Returns a copy; the input is not mutated.
+    """
+    if not config:
+        return config
+
+    encrypted = deepcopy(config)
+    for map_name in MCP_SECRET_CONFIG_MAPS:
+        values = encrypted.get(map_name)
+        if not isinstance(values, dict):
+            continue
+        for key, value in values.items():
+            if isinstance(value, str) and value and not is_encrypted(value):
+                values[key] = auth_utils.encrypt_api_key(value)
+    return encrypted
+
+
+def decrypt_mcp_config(config: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Decrypt an ``mcpServers`` entry read from storage into a runnable config.
+
+    Inverse of :func:`encrypt_mcp_config`. ``decrypt_api_key`` returns non-token
+    input unchanged, so plaintext values (e.g. rows written before encryption
+    shipped, or imported legacy files) pass through untouched for backward
+    compatibility. Returns a copy; the input is not mutated.
+    """
+    if not config:
+        return config
+
+    decrypted = deepcopy(config)
+    for map_name in MCP_SECRET_CONFIG_MAPS:
+        values = decrypted.get(map_name)
+        if not isinstance(values, dict):
+            continue
+        for key, value in values.items():
+            if isinstance(value, str) and value:
+                values[key] = auth_utils.decrypt_api_key(value)
+    return decrypted
 
 
 def is_encrypted(value: str) -> bool:  # pragma: allowlist secret

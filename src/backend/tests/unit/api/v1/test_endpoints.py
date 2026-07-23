@@ -482,6 +482,8 @@ async def test_get_config_authenticated_returns_full_config(client: AsyncClient,
     assert "auto_saving_interval" in result, "Authenticated response must contain 'auto_saving_interval'"
     assert "health_check_max_retries" in result, "Authenticated response must contain 'health_check_max_retries'"
     assert "feature_flags" in result, "Authenticated response must contain 'feature_flags'"
+    # The publish-as-agent UI reads this to explain, rather than 404, when A2A is off server-side.
+    assert "a2a_enabled" in result, "Authenticated response must expose the a2a server flag"
 
 
 async def test_get_config_embedded_mode_cascades_hide_flags(client: AsyncClient, logged_in_headers: dict, monkeypatch):

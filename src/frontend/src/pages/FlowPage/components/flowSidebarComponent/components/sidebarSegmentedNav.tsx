@@ -17,6 +17,15 @@ import { NAV_ITEMS } from "./sidebar-nav-items";
 export type { SidebarSection };
 export { NAV_ITEMS };
 
+// The feature-view tabs (per-flow surfaces) sit below the separator. "agent" is
+// the first of them; the separator is drawn before it so there's never a stray
+// divider or a double one.
+const FEATURE_SECTION_IDS = new Set<SidebarSection>([
+  "agent",
+  "memories",
+  "traces",
+]);
+
 type SidebarSegmentedNavProps = {
   hiddenFromTabOrder?: boolean;
 };
@@ -31,6 +40,11 @@ const SidebarSegmentedNav = ({
   const setPlaygroundFullscreen = usePlaygroundStore(
     (state) => state.setIsFullscreen,
   );
+  // The Agent tab is always available; it handles eligibility inside the tab.
+  const items = NAV_ITEMS;
+  const firstFeatureIndex = items.findIndex((item) =>
+    FEATURE_SECTION_IDS.has(item.id),
+  );
 
   return (
     <div
@@ -38,9 +52,9 @@ const SidebarSegmentedNav = ({
       aria-hidden={hiddenFromTabOrder || undefined}
     >
       <SidebarMenu className="gap-2 py-1">
-        {NAV_ITEMS.map((item) => (
+        {items.map((item, index) => (
           <Fragment key={item.id}>
-            {item.id === "memories" && (
+            {index === firstFeatureIndex && (
               <li
                 role="separator"
                 aria-hidden="true"
@@ -59,7 +73,7 @@ const SidebarSegmentedNav = ({
 
                     setSearch?.("");
                     if (activeSection === item.id && open) {
-                      if (item.id === "traces" || item.id === "memories") {
+                      if (FEATURE_SECTION_IDS.has(item.id)) {
                         setActiveSection("components");
                       } else {
                         toggleSidebar();

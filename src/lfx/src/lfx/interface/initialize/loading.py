@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import inspect
-import os
 import warnings
 from typing import TYPE_CHECKING, Any
 
@@ -14,6 +13,7 @@ from lfx.schema.artifact import get_artifact_type, post_process_raw
 from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.session import NoopSession
+from lfx.utils.env_var_security import safe_getenv
 
 TABLE_LOAD_FROM_DB_FIELDS = "__load_from_db_fields"
 
@@ -41,8 +41,14 @@ def instantiate_class(
         msg = "No base type provided for vertex"
         raise ValueError(msg)
 
+    from lfx.utils.flow_validation import resolve_trusted_code_for_build
+
     custom_params = get_params(vertex.params)
     code = custom_params.pop("code")
+    # Restricted-mode hardening (allow_custom_components=False): exec the server's trusted copy
+    # keyed by this code's hash, never the node's stored bytes, to close the 48-bit hash-collision
+    # RCE on the authenticated build path. No-op in permissive mode (the default).
+    code = resolve_trusted_code_for_build(code)
     class_object: type[CustomComponent | Component] = eval_custom_component_code(code)
     custom_component: CustomComponent | Component = class_object(
         _user_id=user_id,
@@ -70,14 +76,23 @@ async def get_instance_results(
         vertex.load_from_db_fields,
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
-        if base_type == "custom_components":
-            return await build_custom_component(params=custom_params, custom_component=custom_component)
-        if base_type == "component":
-            return await build_component(params=custom_params, custom_component=custom_component)
-        msg = f"Base type {base_type} not found."
-        raise ValueError(msg)
+    from lfx.memory.flow_context import reset_current_flow_id, set_current_flow_id
+
+    flow_id = getattr(getattr(vertex, "graph", None), "flow_id", None)
+    # Always bind — including None — so a graph without flow_id shadows any outer
+    # flow scope instead of inheriting it (nested runs must stay legacy-unscoped).
+    flow_scope_token = set_current_flow_id(flow_id)
+    try:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
+            if base_type == "custom_components":
+                return await build_custom_component(params=custom_params, custom_component=custom_component)
+            if base_type == "component":
+                return await build_component(params=custom_params, custom_component=custom_component)
+            msg = f"Base type {base_type} not found."
+            raise ValueError(msg)
+    finally:
+        reset_current_flow_id(flow_scope_token)
 
 
 def get_params(vertex_params):
@@ -135,7 +150,9 @@ def load_from_env_vars(params, load_from_db_fields, context=None):
                     f"env fallback is disabled. Setting to None."
                 )
             else:
-                key = os.getenv(variable_name)
+                # safe_getenv refuses server-reserved / sensitive names so a tenant cannot
+                # name LANGFLOW_SECRET_KEY / DATABASE_URL etc. and exfiltrate it via the flow.
+                key = safe_getenv(variable_name)
                 if key:
                     logger.info(f"Using environment variable {variable_name} for {field}")
                 else:
@@ -219,7 +236,7 @@ async def update_table_params_with_load_from_db_fields(
                                 logger.debug(f"Found context override for variable '{variable_name}'")
 
                         if key is None and not no_env_fallback:
-                            key = os.getenv(variable_name)
+                            key = safe_getenv(variable_name)
                             if key:
                                 logger.info(
                                     f"Using environment variable {variable_name} for table column {column_name}"
@@ -240,7 +257,7 @@ async def update_table_params_with_load_from_db_fields(
 
                 # If we couldn't get from database and fallback is enabled, try environment
                 if fallback_to_env_vars and key is None and not no_env_fallback:
-                    key = os.getenv(variable_name)
+                    key = safe_getenv(variable_name)
                     if key:
                         logger.info(f"Using environment variable {variable_name} for table column {column_name}")
                     else:
@@ -312,7 +329,7 @@ async def update_params_with_load_from_db_fields(
                     key = None
 
                 if fallback_to_env_vars and key is None:
-                    key = os.getenv(params[field])
+                    key = safe_getenv(params[field])
                     if key:
                         logger.info(f"Using environment variable {params[field]} for {field}")
                     else:

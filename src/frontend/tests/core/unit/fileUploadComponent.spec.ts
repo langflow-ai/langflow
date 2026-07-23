@@ -10,8 +10,8 @@ import { ensureFileSelected } from "../../utils/ensure-checkbox-checked";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { generateRandomFilename } from "../../utils/generate-filename";
 import {
-  disableInspectPanel,
-  enableInspectPanel,
+  addParameterToNode,
+  closeParametersPanel,
 } from "../../utils/open-advanced-options";
 
 // Run tests in this file serially to avoid database conflicts with shared file state
@@ -34,8 +34,6 @@ test(
     const testFilePath = path.join(__dirname, "../../assets/test_file.txt");
     const fileContent = fs.readFileSync(testFilePath);
     await openBlankFlow(page);
-
-    await disableInspectPanel(page);
 
     await addLegacyComponents(page);
 
@@ -446,8 +444,6 @@ test(
     const _fileContent = fs.readFileSync(testFilePath);
     await openBlankFlow(page);
 
-    await disableInspectPanel(page);
-
     await addLegacyComponents(page);
 
     await page.getByTestId("sidebar-search-input").click();
@@ -828,8 +824,6 @@ test(
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
 
-    await disableInspectPanel(page);
-
     await addLegacyComponents(page);
 
     // Add Read File Component
@@ -851,11 +845,11 @@ test(
     await page.mouse.down();
 
     await adjustScreenView(page);
-    await enableInspectPanel(page);
+    // LE-1810: add the hidden Server File Path field to the node through the
+    // parameters panel so its input handle becomes connectable.
     await page.getByTestId("title-Read File").click();
-    await page.getByTestId("edit-fields-button").click();
-    await page.getByTestId("showfile_path").click();
-    await page.getByTestId("edit-fields-button").click();
+    await addParameterToNode(page, "file_path");
+    await closeParametersPanel(page);
 
     // Upload Files
     await page.getByTestId("button_open_file_management").click();

@@ -109,7 +109,7 @@ export const SanitizedMarkdown = ({
               );
             },
             // biome-ignore lint/suspicious/noExplicitAny: pre-existing react-markdown override; proper type cleanup out of scope for this PR
-            code: ({ node, inline, className, children, ...props }: any) => {
+            code: ({ node, className, children, ...props }: any) => {
               let content = children as string;
               if (
                 Array.isArray(children) &&
@@ -130,9 +130,18 @@ export const SanitizedMarkdown = ({
                   }
                 }
 
+                // react-markdown v8+ removed the `inline` prop. Detect a
+                // fenced code block by the presence of either a
+                // `language-X` className (hinted block) or multi-line
+                // content (unhinted block). Anything else is inline
+                // backtick code — rendering it as a `<div>`/`<pre>`
+                // CodeTabsComponent inside a markdown `<p>` triggers the
+                // 'div cannot be a descendant of p' hydration error.
                 const match = /language-(\w+)/.exec(className || "");
+                const isBlock =
+                  match !== null || (content?.includes("\n") ?? false);
 
-                return !inline ? (
+                return isBlock ? (
                   <CodeTabsComponent
                     language={(match && match[1]) || ""}
                     code={String(content).replace(/\n$/, "")}

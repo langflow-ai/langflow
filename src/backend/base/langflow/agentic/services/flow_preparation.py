@@ -1,5 +1,6 @@
 """Flow data preparation and model injection."""
 
+import contextlib
 import copy
 import json
 import logging
@@ -43,6 +44,35 @@ def available_model_providers(global_variables: dict[str, str] | None) -> list[s
                     providers.append(provider)
                 break
     return providers
+
+
+MAX_ASSISTANT_ITERATIONS = 200
+# Pinned assistant step budget (a COST decision, tripwire-tested): LangflowAssistant.json
+# pins it on its Agents and the Python builder flow defaults to it — one source of truth.
+DEFAULT_ASSISTANT_ITERATIONS = 30
+
+
+def inject_iterations_into_flow(flow_data: dict, limit: int | None) -> dict:
+    """Set the step budget (``max_iterations``) on the flow's Agent components.
+
+    ``max_iterations`` caps the Agent's model-call loop and derives LangGraph's
+    ``recursion_limit`` (``max_iterations * 2 + 5``), so a low pin makes even a
+    small compound turn (build a 4-component flow, then report it) die on
+    "Recursion limit reached". Best-effort: ``None`` is a no-op (the flow default
+    stands); values are clamped to ``[1, MAX_ASSISTANT_ITERATIONS]`` so a bad input
+    can neither disable the cap nor run away.
+    """
+    if limit is None:
+        return flow_data
+    clamped = max(1, min(int(limit), MAX_ASSISTANT_ITERATIONS))
+    for node in flow_data.get("data", {}).get("nodes", []):
+        node_data = node.get("data", {})
+        if node_data.get("type") != "Agent":
+            continue
+        field = node_data.get("node", {}).get("template", {}).get("max_iterations")
+        if isinstance(field, dict):
+            field["value"] = clamped
+    return flow_data
 
 
 def inject_model_into_flow(
@@ -261,6 +291,13 @@ def load_and_prepare_flow(
 
     if provider and model_name:
         flow_data = inject_model_into_flow(flow_data, provider, model_name, api_key_var, provider_vars)
+
+    # The runtime step budget rides in provider_vars as ITERATIONS_LIMIT.
+    if provider_vars:
+        raw_iterations = provider_vars.get("ITERATIONS_LIMIT")
+        if raw_iterations not in (None, ""):
+            with contextlib.suppress(TypeError, ValueError):
+                flow_data = inject_iterations_into_flow(flow_data, int(raw_iterations))
 
     flow_data = inject_lfx_components_path(flow_data)
     flow_data = inject_assistant_fs_root(flow_data)

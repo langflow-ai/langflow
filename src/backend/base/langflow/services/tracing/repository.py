@@ -11,6 +11,7 @@ import math
 from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
+from lfx.utils.util_strings import escape_like_pattern
 from sqlmodel import col, func, select
 
 if TYPE_CHECKING:
@@ -167,12 +168,12 @@ async def fetch_traces(
             if status:
                 filters.append(TraceTable.status == status)
             if query:
-                search_value = f"%{query}%"
+                search_value = f"%{escape_like_pattern(query)}%"
                 filters.append(
                     sa.or_(
-                        sa.cast(TraceTable.name, sa.String).ilike(search_value),
-                        sa.cast(TraceTable.id, sa.String).ilike(search_value),
-                        sa.cast(TraceTable.session_id, sa.String).ilike(search_value),
+                        sa.cast(TraceTable.name, sa.String).ilike(search_value, escape="\\"),
+                        sa.cast(TraceTable.id, sa.String).ilike(search_value, escape="\\"),
+                        sa.cast(TraceTable.session_id, sa.String).ilike(search_value, escape="\\"),
                     )
                 )
             if start_time:

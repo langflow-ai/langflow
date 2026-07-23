@@ -106,6 +106,7 @@ _MODEL_FIELDS = {"model", "agent_llm", "embeddings_model", "embedding_model"}
 _PROVIDER_PACKAGE_FALLBACKS: dict[str, set[str]] = {
     "Amazon Bedrock": {"langchain-aws"},
     "Anthropic": {"langchain-anthropic"},
+    "Azure AI Foundry": {"langchain-azure-ai"},
     "Azure OpenAI": {"langchain-openai"},
     "Google Generative AI": {"langchain-google-genai"},
     "Groq": {"langchain-groq"},

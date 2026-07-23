@@ -63,7 +63,7 @@ class ServeWorkflowHost(WorkflowHostBase):
 
         query_param = await api_key_query(request)
         header_param = await api_key_header(request)
-        self._verify_api_key(query_param, header_param)
+        self._verify_api_key(request, query_param, header_param)
 
         verifier = request.app.state.identity_verifier
         return verifier.authenticate(request.headers) if verifier is not None else None

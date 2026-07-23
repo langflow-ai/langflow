@@ -1,6 +1,6 @@
 import { Panel } from "@xyflow/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { memo, useEffect, useState } from "react";
+import { memo } from "react";
 import { Separator } from "@/components/ui/separator";
 import type { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
@@ -14,13 +14,6 @@ interface InspectionPanelProps {
 const InspectionPanel = memo(function InspectionPanel({
   selectedNode,
 }: InspectionPanelProps) {
-  const [isEditingFields, setIsEditingFields] = useState(false);
-
-  // Reset edit mode when panel closes or node changes
-  useEffect(() => {
-    setIsEditingFields(false);
-  }, [selectedNode?.id]);
-
   return (
     <AnimatePresence mode="wait">
       {selectedNode && selectedNode.type === "genericNode" && (
@@ -43,16 +36,11 @@ const InspectionPanel = memo(function InspectionPanel({
               "overflow-y-auto overflow-x-visible flex flex-col pointer-events-auto",
             )}
           >
-            <InspectionPanelHeader
-              data={selectedNode.data}
-              isEditingFields={isEditingFields}
-              setIsEditingFields={setIsEditingFields}
-            />
+            <InspectionPanelHeader />
             <Separator className="my-0.5" />
             <InspectionPanelFields
               data={selectedNode.data}
               key={selectedNode.id}
-              isEditingFields={isEditingFields}
             />
           </motion.div>
         </Panel>

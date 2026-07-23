@@ -10,8 +10,8 @@ import httpx
 from lfx.utils.ssrf_protection import (
     SSRFProtectionError,
     is_ssrf_protection_enabled,
-    validate_and_resolve_url,
-    validate_url_for_ssrf,
+    validate_and_resolve_connector_url,
+    validate_connector_url_for_ssrf,
 )
 from lfx.utils.ssrf_transport import (
     SSRFProtectedSyncTransport,
@@ -22,9 +22,9 @@ from lfx.utils.ssrf_transport import (
 
 
 def validate_url_for_ssrf_or_raise(url: str) -> None:
-    """Validate a user URL and raise a UI-facing error when it is blocked."""
+    """Validate a connector URL and raise a UI-facing error when it is blocked."""
     try:
-        validate_url_for_ssrf(url, warn_only=False)
+        validate_connector_url_for_ssrf(url)
     except SSRFProtectionError as e:
         msg = f"SSRF Protection: {e}"
         raise ValueError(msg) from e
@@ -53,9 +53,9 @@ def _sync_client_for_url(url: str, validated_ips: list[str]) -> httpx.Client:
 
 
 def ssrf_protected_httpx_client_kwargs_for_url(url: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Return sync/async httpx kwargs that enforce SSRF protection for SDK clients."""
+    """Return sync/async httpx kwargs that enforce connector SSRF protection for SDK clients."""
     try:
-        validated_url, validated_ips = validate_and_resolve_url(url)
+        validated_url, validated_ips = validate_and_resolve_connector_url(url)
     except SSRFProtectionError as e:
         msg = f"SSRF Protection: {e}"
         raise ValueError(msg) from e
@@ -87,32 +87,32 @@ def ssrf_protected_openai_clients_for_url(url: str) -> dict[str, httpx.Client | 
 
 
 async def ssrf_safe_async_get(url: str, **request_kwargs: Any) -> httpx.Response:
-    """Perform an async GET with SSRF validation and DNS pinning."""
+    """Perform an async GET with connector SSRF validation and DNS pinning."""
     _raise_if_following_redirects(request_kwargs)
-    validated_url, validated_ips = validate_and_resolve_url(url)
+    validated_url, validated_ips = validate_and_resolve_connector_url(url)
     async with _async_client_for_url(validated_url, validated_ips) as client:
         return await client.get(url=validated_url, **request_kwargs)
 
 
 async def ssrf_safe_async_post(url: str, **request_kwargs: Any) -> httpx.Response:
-    """Perform an async POST with SSRF validation and DNS pinning."""
+    """Perform an async POST with connector SSRF validation and DNS pinning."""
     _raise_if_following_redirects(request_kwargs)
-    validated_url, validated_ips = validate_and_resolve_url(url)
+    validated_url, validated_ips = validate_and_resolve_connector_url(url)
     async with _async_client_for_url(validated_url, validated_ips) as client:
         return await client.post(url=validated_url, **request_kwargs)
 
 
 def ssrf_safe_httpx_get(url: str, **request_kwargs: Any) -> httpx.Response:
-    """Perform a synchronous GET with SSRF validation and DNS pinning."""
+    """Perform a synchronous GET with connector SSRF validation and DNS pinning."""
     _raise_if_following_redirects(request_kwargs)
-    validated_url, validated_ips = validate_and_resolve_url(url)
+    validated_url, validated_ips = validate_and_resolve_connector_url(url)
     with _sync_client_for_url(validated_url, validated_ips) as client:
         return client.get(url=validated_url, **request_kwargs)
 
 
 def ssrf_safe_httpx_post(url: str, **request_kwargs: Any) -> httpx.Response:
-    """Perform a synchronous POST with SSRF validation and DNS pinning."""
+    """Perform a synchronous POST with connector SSRF validation and DNS pinning."""
     _raise_if_following_redirects(request_kwargs)
-    validated_url, validated_ips = validate_and_resolve_url(url)
+    validated_url, validated_ips = validate_and_resolve_connector_url(url)
     with _sync_client_for_url(validated_url, validated_ips) as client:
         return client.post(url=validated_url, **request_kwargs)

@@ -20,6 +20,10 @@ function makeRecordingContext() {
     setRunId: (runId) => calls.push(`setRunId:${runId}`),
     applyDelta: (ops) => calls.push(`applyDelta:${ops.length}`),
     handleCustomEvent: (eventType) => calls.push(`custom:${eventType}`),
+    onHumanInput: (payload) =>
+      calls.push(
+        `humanInput:${(payload as { request_id?: string })?.request_id ?? ""}`,
+      ),
     handleEndEvent: () => calls.push("end"),
     handleLogEvent: () => calls.push("log"),
     onFinished: () => calls.push("finished"),
@@ -171,5 +175,23 @@ describe("handleAGUIEvent non-terminal contract", () => {
 
     expect(terminal).toBe(false);
     expect(calls).toEqual([]);
+  });
+});
+
+describe("handleAGUIEvent human-input contract", () => {
+  it("surfaces a human_input_required CUSTOM event non-terminally", () => {
+    const { ctx, calls } = makeRecordingContext();
+
+    const terminal = handleAGUIEvent(
+      {
+        type: EventType.CUSTOM,
+        name: "langflow.human_input_required",
+        value: { request_id: "node:job-1", kind: "node_input" },
+      } as unknown as BaseEvent,
+      ctx,
+    );
+
+    expect(terminal).toBe(false); // pause is NOT terminal
+    expect(calls).toEqual(["humanInput:node:job-1"]);
   });
 });

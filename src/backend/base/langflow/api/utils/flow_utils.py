@@ -60,6 +60,9 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
             vertex.update_raw_params({"session_id": session_id}, overwrite=True)
 
     graph.session_id = session_id
+    # Pin the caller's run_id before initialize_run so HITL resume reuses the pre-pause trace.
+    if (caller_run_id := kwargs.get("run_id")) is not None:
+        graph.set_run_id(caller_run_id)
     await graph.initialize_run()
     return graph
 

@@ -9,6 +9,7 @@ from lfx.io import (
     StrInput,
 )
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 
 class UpstashVectorStoreComponent(LCVectorStoreComponent):
@@ -65,6 +66,9 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> UpstashVectorStore:
+        # index_url is tenant-controlled: block SSRF to internal/cloud-metadata hosts.
+        if self.index_url:
+            validate_connector_url_for_ssrf(self.index_url)
         use_upstash_embedding = self.embedding is None
 
         # Convert DataFrame to Data if needed using parent's method

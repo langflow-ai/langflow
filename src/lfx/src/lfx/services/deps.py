@@ -132,6 +132,17 @@ def get_chat_service() -> ChatServiceProtocol | None:
     return get_service(ServiceType.CHAT_SERVICE)
 
 
+def get_checkpoint_service():
+    """Checkpoint store: registered service, or the in-memory standalone fallback."""
+    from lfx.graph.checkpoint.store import default_checkpoint_store
+    from lfx.services.schema import ServiceType
+
+    service = get_service(ServiceType.CHECKPOINT_SERVICE)
+    if service is not None:
+        return service
+    return default_checkpoint_store()
+
+
 def get_tracing_service() -> TracingServiceProtocol | None:
     """Retrieves the tracing service instance."""
     from lfx.services.schema import ServiceType

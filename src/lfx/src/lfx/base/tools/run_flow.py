@@ -544,7 +544,11 @@ class RunFlowBaseComponent(Component):
                 graph=graph,
             )
 
-        except Exception:  # noqa: BLE001
+        except Exception as exc:
+            from lfx.run.hitl import NestedHITLUnsupportedError
+
+            if isinstance(exc, NestedHITLUnsupportedError):
+                raise
             msg = f"Error running flow: {self.flow_name_selected}"
             raise RuntimeError(msg) from None
 

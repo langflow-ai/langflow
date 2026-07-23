@@ -39,6 +39,14 @@ def _clean_descriptions(spec: dict[str, Any]) -> None:
                 operation["description"] = description.strip()
 
 
+def _rewrite_defs_ref(node: dict[str, Any]) -> None:
+    """Rewrite a single ``#/$defs/Name`` ref onto ``#/components/schemas/Name``."""
+    ref = node.get("$ref")
+    if isinstance(ref, str) and ref.startswith("#/$defs/"):
+        name = ref.split("/")[-1]
+        node["$ref"] = f"#/components/schemas/{name}"
+
+
 def _collect_and_rewrite_defs(node: Any, collected: dict[str, Any]) -> None:
     """Hoist JSON Schema `$defs` into `components.schemas` and rewrite refs.
 
@@ -47,20 +55,19 @@ def _collect_and_rewrite_defs(node: Any, collected: dict[str, Any]) -> None:
     - Collect any `$defs` blocks we find anywhere in the tree.
     - Remove those local `$defs` blocks.
     - Rewrite `"$ref": "#/$defs/Name"` to `"#/components/schemas/Name"`.
+    - Recurse into hoisted `$defs` schemas so nested refs are rewritten too
+      (they are detached from the tree by ``pop``, so a plain walk would miss them).
     """
     if isinstance(node, dict):
-        # Hoist local $defs
+        # Hoist local $defs, then walk into them so nested #/$defs/ refs rewrite.
         if "$defs" in node and isinstance(node["$defs"], dict):
-            for name, schema in node["$defs"].items():
+            defs = node.pop("$defs")
+            for name, schema in defs.items():
                 # Only add if not already present; avoid clobbering explicit components
                 collected.setdefault(name, schema)
-            node.pop("$defs", None)
+                _collect_and_rewrite_defs(schema, collected)
 
-        # Rewrite local refs
-        ref = node.get("$ref")
-        if isinstance(ref, str) and ref.startswith("#/$defs/"):
-            name = ref.split("/")[-1]
-            node["$ref"] = f"#/components/schemas/{name}"
+        _rewrite_defs_ref(node)
 
         # Recurse into values
         for value in node.values():
@@ -76,13 +83,15 @@ def _normalize_defs(spec: dict[str, Any]) -> None:
     collected: dict[str, Any] = {}
     _collect_and_rewrite_defs(spec, collected)
 
-    if not collected:
-        return
+    if collected:
+        components = spec.setdefault("components", {})
+        schemas = components.setdefault("schemas", {})
+        for name, schema in collected.items():
+            schemas.setdefault(name, schema)
 
-    components = spec.setdefault("components", {})
-    schemas = components.setdefault("schemas", {})
-    for name, schema in collected.items():
-        schemas.setdefault(name, schema)
+    # Final sweep: catch any #/$defs/ refs that landed in components.schemas
+    # via setdefault of an already-present schema that still pointed at $defs.
+    _collect_and_rewrite_defs(spec, {})
 
 
 def generate_openapi(output_path: Path) -> None:

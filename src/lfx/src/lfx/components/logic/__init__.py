@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from lfx.components.logic.conditional_router import ConditionalRouterComponent
     from lfx.components.logic.data_conditional_router import DataConditionalRouterComponent
     from lfx.components.logic.flow_tool import FlowToolComponent
+    from lfx.components.logic.human_input import HumanInput
     from lfx.components.logic.llm_conditional_router import SmartRouterComponent
     from lfx.components.logic.loop import LoopComponent
     from lfx.components.logic.pass_message import PassMessageComponent
@@ -25,6 +26,7 @@ _dynamic_imports = {
     "ConditionalRouterComponent": "conditional_router",
     "DataConditionalRouterComponent": "data_conditional_router",
     "FlowToolComponent": "flow_tool",
+    "HumanInput": "human_input",
     "LoopComponent": "loop",
     "PassMessageComponent": "pass_message",
     "RunFlowComponent": "run_flow",
@@ -36,6 +38,7 @@ __all__ = [
     "ConditionalRouterComponent",
     "DataConditionalRouterComponent",
     "FlowToolComponent",
+    "HumanInput",
     "LoopComponent",
     "PassMessageComponent",
     "RunFlowComponent",
@@ -53,6 +56,7 @@ _redirected_submodules = {
     "lfx.components.logic.conditional_router": "lfx.components.flow_controls.conditional_router",
     "lfx.components.logic.data_conditional_router": "lfx.components.flow_controls.data_conditional_router",
     "lfx.components.logic.flow_tool": "lfx.components.flow_controls.flow_tool",
+    "lfx.components.logic.human_input": "lfx.components.flow_controls.human_input",
     "lfx.components.logic.run_flow": "lfx.components.flow_controls.run_flow",
     "lfx.components.logic.sub_flow": "lfx.components.flow_controls.sub_flow",
 }
@@ -149,6 +153,7 @@ def __getattr__(attr_name: str) -> Any:
         "ConditionalRouterComponent",
         "DataConditionalRouterComponent",
         "FlowToolComponent",
+        "HumanInput",
         "LoopComponent",
         "PassMessageComponent",
         "RunFlowComponent",

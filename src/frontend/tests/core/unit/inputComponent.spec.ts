@@ -2,10 +2,9 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
 
 test(
@@ -52,77 +51,67 @@ test(
     }
     await input.fill("collection_name_test_123123123!@#$&*(&%$@");
 
-    await disableInspectPanel(page);
-
     await page.getByTestId("div-generic-node").click();
 
-    await openAdvancedOptions(page);
+    // LE-1810: canvas visibility rounds now happen through the panel
+    // Add/Remove rows.
+    await openParametersPanel(page);
 
-    await page
-      .locator('//*[@id="showchroma_server_cors_allow_origins"]')
-      .click();
-    expect(
-      await page
-        .locator('//*[@id="showchroma_server_cors_allow_origins"]')
-        .isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "chroma_server_cors_allow_origins");
+    await expect(
+      page.getByTestId("inspector-remove-chroma_server_cors_allow_origins"),
+    ).toBeVisible();
 
-    await page.locator('//*[@id="showchroma_server_grpc_port"]').click();
-    expect(
-      await page.locator('//*[@id="showchroma_server_grpc_port"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "chroma_server_grpc_port");
+    await expect(
+      page.getByTestId("inspector-remove-chroma_server_grpc_port"),
+    ).toBeVisible();
 
-    await page.locator('//*[@id="showchroma_server_host"]').click();
-    expect(
-      await page.locator('//*[@id="showchroma_server_host"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "chroma_server_host");
+    await expect(
+      page.getByTestId("inspector-remove-chroma_server_host"),
+    ).toBeVisible();
 
-    await page.locator('//*[@id="showchroma_server_http_port"]').click();
-    expect(
-      await page.locator('//*[@id="showchroma_server_http_port"]').isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "chroma_server_http_port");
+    await expect(
+      page.getByTestId("inspector-remove-chroma_server_http_port"),
+    ).toBeVisible();
 
-    await page.locator('//*[@id="showchroma_server_ssl_enabled"]').click();
-    expect(
-      await page
-        .locator('//*[@id="showchroma_server_ssl_enabled"]')
-        .isChecked(),
-    ).toBeTruthy();
+    await toggleParameterOnNode(page, "chroma_server_ssl_enabled");
+    await expect(
+      page.getByTestId("inspector-remove-chroma_server_ssl_enabled"),
+    ).toBeVisible();
 
-    await page
-      .locator('//*[@id="showchroma_server_cors_allow_origins"]')
-      .click();
-    expect(
-      await page
-        .locator('//*[@id="showchroma_server_cors_allow_origins"]')
-        .isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "chroma_server_cors_allow_origins");
+    await expect(
+      page.getByTestId("inspector-add-chroma_server_cors_allow_origins"),
+    ).toBeVisible();
 
-    await page.locator('//*[@id="showchroma_server_grpc_port"]').click();
-    expect(
-      await page.locator('//*[@id="showchroma_server_grpc_port"]').isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "chroma_server_grpc_port");
+    await expect(
+      page.getByTestId("inspector-add-chroma_server_grpc_port"),
+    ).toBeVisible();
 
-    await page.locator('//*[@id="showchroma_server_host"]').click();
-    expect(
-      await page.locator('//*[@id="showchroma_server_host"]').isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "chroma_server_host");
+    await expect(
+      page.getByTestId("inspector-add-chroma_server_host"),
+    ).toBeVisible();
 
-    await page.locator('//*[@id="showchroma_server_http_port"]').click();
-    expect(
-      await page.locator('//*[@id="showchroma_server_http_port"]').isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "chroma_server_http_port");
+    await expect(
+      page.getByTestId("inspector-add-chroma_server_http_port"),
+    ).toBeVisible();
 
-    await page.locator('//*[@id="showchroma_server_ssl_enabled"]').click();
-    expect(
-      await page
-        .locator('//*[@id="showchroma_server_ssl_enabled"]')
-        .isChecked(),
-    ).toBeFalsy();
+    await toggleParameterOnNode(page, "chroma_server_ssl_enabled");
+    await expect(
+      page.getByTestId("inspector-add-chroma_server_ssl_enabled"),
+    ).toBeVisible();
 
+    await closeParametersPanel(page);
+
+    // LE-1810: the value stays editable on the node itself.
     const valueEditNode = await page
-      .getByTestId("popover-anchor-input-collection_name-edit")
-      .nth(0)
+      .getByTestId("popover-anchor-input-collection_name")
       .inputValue();
 
     if (valueEditNode != "collection_name_test_123123123!@#$&*(&%$@") {
@@ -130,11 +119,8 @@ test(
     }
 
     await page
-      .getByTestId("popover-anchor-input-collection_name-edit")
-      .nth(0)
+      .getByTestId("popover-anchor-input-collection_name")
       .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
-
-    await closeAdvancedOptions(page);
 
     const plusButtonLocator = page.getByTestId("input-collection_name");
     const elementCount = await plusButtonLocator?.count();
@@ -143,9 +129,9 @@ test(
 
       await page.getByTestId("div-generic-node").click();
 
-      await openAdvancedOptions(page);
+      await openParametersPanel(page);
 
-      await closeAdvancedOptions(page);
+      await closeParametersPanel(page);
 
       const value = await page
         .getByTestId("popover-anchor-input-collection_name")
@@ -155,7 +141,5 @@ test(
         expect(false).toBeTruthy();
       }
     }
-
-    await enableInspectPanel(page);
   },
 );

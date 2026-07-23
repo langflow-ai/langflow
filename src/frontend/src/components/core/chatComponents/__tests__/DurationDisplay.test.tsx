@@ -3,7 +3,13 @@ import DurationDisplay from "../DurationDisplay";
 
 // Mock AnimatedNumber component
 jest.mock("../../../common/animatedNumbers", () => ({
-  AnimatedNumber: ({ value, humanizedValue }: any) => (
+  AnimatedNumber: ({
+    value,
+    humanizedValue,
+  }: {
+    value: number;
+    humanizedValue: string;
+  }) => (
     <span data-testid="animated-number" data-value={value}>
       {humanizedValue}
     </span>
@@ -13,7 +19,7 @@ jest.mock("../../../common/animatedNumbers", () => ({
 // Mock Loading component
 jest.mock("../../../ui/loading", () => ({
   __esModule: true,
-  default: ({ className }: any) => (
+  default: ({ className }: { className?: string }) => (
     <div data-testid="loading-spinner" className={className}>
       Loading...
     </div>

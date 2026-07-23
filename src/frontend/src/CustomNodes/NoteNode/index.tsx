@@ -7,6 +7,7 @@ import {
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { useGetNoteTranslationsQuery } from "@/controllers/API/queries/flows/use-get-note-translations";
 import { useAlternate } from "@/shared/hooks/use-alternate";
 import useFlowStore, { syncNoteTranslations } from "@/stores/flowStore";
@@ -75,6 +76,7 @@ function NoteNode({
   const [isEditingDescription, setIsEditingDescription] = useAlternate(false);
 
   const currentFlow = useFlowStore((state) => state.currentFlow);
+  const isReadOnly = useIsFlowReadOnly(currentFlow?.id);
   const setNode = useFlowStore((state) => state.setNode);
 
   const { data: noteTranslations } = useGetNoteTranslationsQuery(
@@ -129,13 +131,18 @@ function NoteNode({
   // Only render toolbar when note is selected
   const toolbar = useMemo(
     () =>
-      selected ? (
+      selected && !isReadOnly ? (
         <div className="absolute -top-12 left-1/2 z-50 -translate-x-1/2">
           <NoteToolbarComponent data={data} bgColor={bgColorKey} />
         </div>
       ) : null,
-    [data, bgColorKey, selected],
+    [data, bgColorKey, isReadOnly, selected],
   );
+
+  useEffect(() => {
+    if (isReadOnly) debouncedResize.cancel();
+    return () => debouncedResize.cancel();
+  }, [debouncedResize, isReadOnly]);
 
   // Generate text color classes based on background (light text on dark bg, dark on light)
   const getTextColorClass = (opacity?: number) => {
@@ -159,11 +166,13 @@ function NoteNode({
       <NodeResizer
         minWidth={NOTE_NODE_MIN_WIDTH}
         minHeight={NOTE_NODE_MIN_HEIGHT}
-        onResize={(_, { width, height }) => debouncedResize(width, height)}
+        onResize={(_, { width, height }) => {
+          if (!isReadOnly) debouncedResize(width, height);
+        }}
         onResizeEnd={() => {
           debouncedResize.flush();
         }}
-        isVisible={selected}
+        isVisible={selected && !isReadOnly}
         lineClassName="!border !border-muted-foreground"
       />
 
@@ -233,6 +242,7 @@ function NoteNode({
             editNameDescription={isEditingDescription}
             setEditNameDescription={setIsEditingDescription}
             stickyNote
+            readOnly={isReadOnly}
           />
         </div>
       </div>

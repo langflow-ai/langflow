@@ -47,6 +47,7 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
         <PopoverTrigger asChild>{children}</PopoverTrigger>
         <PopoverContent
           ref={notificationRef}
+          aria-label={t("alerts.notificationsTitle")}
           data-testid="notification-dropdown-content"
           className="noflow nowheel nopan nodelete nodrag z-50 flex h-[500px] w-[500px] flex-col"
         >
@@ -54,6 +55,7 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
             {t("alerts.notificationsTitle")}
             <div className="flex gap-3 pr-3">
               <button
+                aria-label={t("alerts.clearNotifications")}
                 className="text-muted-foreground hover:text-status-red"
                 onClick={() => {
                   setOpen(false);
@@ -63,12 +65,13 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
                 <IconComponent name="Trash2" className="h-4 w-4" />
               </button>
               <button
+                aria-label={t("alerts.closeNotifications")}
                 className="text-foreground opacity-70 hover:opacity-100"
                 onClick={() => {
                   setOpen(false);
                 }}
               >
-                <Cross2Icon className="h-4 w-4" />
+                <Cross2Icon className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
           </div>

@@ -132,6 +132,7 @@ const KeypairListComponent = ({
           id={getTestId("keypair", index)}
           type="text"
           value={key.trim()}
+          disabled={disabled}
           className={getInputClassName(editNode, duplicateKey)}
           placeholder={t("input.typeKey")}
           onChange={(event) => handleChangeKey(event, index)}

@@ -33,6 +33,8 @@ from ag_ui.core import (
     ToolCallStartEvent,
 )
 
+from lfx.utils.constants import MESSAGE_SENDER_USER
+
 # Langflow content-block types with no standard AG-UI primitive. They ride as
 # CUSTOM events namespaced ``langflow.*``; generic AG-UI clients ignore them.
 _CUSTOM_CONTENT_TYPES = frozenset({"json", "code", "media", "error"})
@@ -132,6 +134,10 @@ class AGUITranslator:
                 del self._buffered_messages[removed_id]
                 self._emitted_text_message_ids.add(removed_id)
             return [CustomEvent(name="langflow.message.removed", value={"message_id": removed_id})]
+        if event_type == "human_input_required":
+            # Non-terminal: the run suspends for human input. Must precede the end/error
+            # branches so it never closes the open message or emits RUN_FINISHED/RUN_ERROR.
+            return [CustomEvent(name="langflow.human_input_required", value=data)]
 
         # Only terminal events close an open text message. Non-terminal events
         # (build_start, end_vertex, log, ...) interleave with tokens of the same
@@ -259,14 +265,30 @@ class AGUITranslator:
         ``add_message`` can fire repeatedly for one message as its content grows;
         emissions are deduplicated by message id and tool-call id.
         """
+        # Why: the user's echoed input must not become an assistant TEXT_MESSAGE (renders a stray empty bubble).
+        if data.get("sender") == MESSAGE_SENDER_USER:
+            return []
+
         message_id = str(data.get("id") or "")
         events: list[BaseEvent] = []
 
         # Content blocks: tool_use becomes tool-call events, the Langflow-specific
-        # content types become namespaced CUSTOM events.
+        # content types become namespaced CUSTOM events. They arrive in two shapes:
+        # the legacy/grouped shape nests leaves inside a group's ``contents``, while
+        # the agent's flat log (the content-blocks-as-source-of-truth design) carries
+        # ``tool_use`` / custom leaves at the TOP level with empty ``contents``. Handle
+        # both: translate a top-level leaf by its own type, and still walk a group's
+        # nested contents. ``text`` leaves are skipped here (text rides ``data["text"]``
+        # below); a block is either a leaf or a group, so a leaf's empty ``contents``
+        # makes the nested loop a no-op and the two paths cannot double-emit.
         for block_index, block in enumerate(data.get("content_blocks") or []):
             if not isinstance(block, dict):
                 continue
+            block_type = block.get("type")
+            if block_type == "tool_use":
+                events.extend(self._translate_tool_use(message_id, block_index, 0, block))
+            elif block_type in _CUSTOM_CONTENT_TYPES:
+                events.extend(self._translate_custom_content(message_id, block, block_index, 0, block))
             for content_index, content in enumerate(block.get("contents") or []):
                 if not isinstance(content, dict):
                     continue

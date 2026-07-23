@@ -3,6 +3,10 @@ import { expect } from "../fixtures";
 import { TEXTS } from "../utils/constants/texts";
 import { adjustScreenView } from "./adjust-screen-view";
 import { unselectNodes } from "./unselect-nodes";
+
+const ANTHROPIC_MODEL_NAME = "claude-sonnet-4-5-20250929";
+const ANTHROPIC_MODEL_OPTION_TEST_ID = `Anthropic-${ANTHROPIC_MODEL_NAME}-option`;
+
 export const selectAnthropicModel = async (page: Page) => {
   const nodes = page.locator(".react-flow__node", {
     has: page.getByTestId("title-language model"),
@@ -16,9 +20,8 @@ export const selectAnthropicModel = async (page: Page) => {
       await expect(node.getByTestId("model_model").last()).toBeVisible({
         timeout: 10000,
       });
-    } catch (error) {
-      console.log("Node model not visible, proceeding...", error);
-      node.click();
+    } catch {
+      await node.click();
     }
 
     const model = (await node.getByTestId("model_model").last().isVisible())
@@ -31,7 +34,7 @@ export const selectAnthropicModel = async (page: Page) => {
     await page.waitForSelector('[role="listbox"]', { timeout: 10000 });
 
     const gptOMiniOption = await page
-      .getByTestId("claude-sonnet-4-5-20250929-option")
+      .getByTestId(ANTHROPIC_MODEL_OPTION_TEST_ID)
       .count();
 
     await page.waitForTimeout(500);
@@ -51,25 +54,23 @@ export const selectAnthropicModel = async (page: Page) => {
         await page.waitForSelector("text=Anthropic Api Key Saved", {
           timeout: 30000,
         });
-        await page.getByTestId("llm-toggle-claude-sonnet-4-5-20250929").click();
+        await page.getByTestId(`llm-toggle-${ANTHROPIC_MODEL_NAME}`).click();
         await page.getByText(TEXTS.close).last().click();
       } else {
         await page.waitForTimeout(500);
 
         const isChecked = await page
-          .getByTestId("llm-toggle-claude-sonnet-4-5-20250929")
+          .getByTestId(`llm-toggle-${ANTHROPIC_MODEL_NAME}`)
           .isChecked();
         if (!isChecked) {
-          await page
-            .getByTestId("llm-toggle-claude-sonnet-4-5-20250929")
-            .click();
+          await page.getByTestId(`llm-toggle-${ANTHROPIC_MODEL_NAME}`).click();
         }
         await page.getByText(TEXTS.close).last().click();
         await page.getByTestId("model_model").nth(i).click();
       }
     }
     await page.waitForTimeout(500);
-    await page.getByTestId("claude-sonnet-4-5-20250929-option").click();
+    await page.getByTestId(ANTHROPIC_MODEL_OPTION_TEST_ID).click();
     if (i < gptModelDropdownCount - 1) {
       await unselectNodes(page);
     }

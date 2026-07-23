@@ -1,4 +1,5 @@
 import json
+import subprocess
 import tempfile
 from unittest.mock import MagicMock, patch
 
@@ -129,9 +130,10 @@ class TestFileComponentDynamicOutputs:
 
     @patch("subprocess.Popen")
     def test_process_docling_subprocess_success(self, mock_popen):
-        """Test successful Docling subprocess execution."""
+        """Test successful Docling execution for a valid path containing shell punctuation."""
         component = FileComponent()
         component.markdown = False
+        file_path = "invoice;final.pdf"
 
         # Mock successful subprocess response
         mock_result = {
@@ -141,25 +143,40 @@ class TestFileComponentDynamicOutputs:
                 {"page_no": 1, "label": "title", "text": "Test Document", "level": 1},
                 {"page_no": 1, "label": "paragraph", "text": "Content here", "level": 0},
             ],
-            "meta": {"file_path": "test.pdf"},
+            "meta": {"file_path": file_path},
         }
         stdout_bytes = json.dumps(mock_result).encode("utf-8")
 
-        # Simulate Popen: poll() returns None once (in-progress), then 0 (done)
         mock_proc = MagicMock()
-        mock_proc.poll.side_effect = [0]  # immediately done
-        mock_proc.stdin = MagicMock()
-        mock_proc.stdout = MagicMock()
-        mock_proc.stdout.read.return_value = stdout_bytes
-        mock_proc.stderr = MagicMock()
-        mock_proc.stderr.read.return_value = b""
+        mock_proc.communicate.return_value = (stdout_bytes, b"")
+        mock_popen.return_value = mock_proc
+
+        result = component._process_docling_in_subprocess(file_path)
+
+        assert result is not None
+        assert result.data["doc"] == mock_result["doc"]
+        assert result.data["file_path"] == file_path
+        mock_proc.communicate.assert_called_once()
+
+    @patch("subprocess.Popen")
+    def test_process_docling_subprocess_drains_output_between_heartbeats(self, mock_popen):
+        component = FileComponent()
+        component.markdown = False
+        mock_result = {"ok": True, "mode": "structured", "doc": [], "meta": {"file_path": "test.pdf"}}
+        mock_proc = MagicMock()
+        mock_proc.communicate.side_effect = [
+            subprocess.TimeoutExpired(cmd="docling", timeout=5),
+            (json.dumps(mock_result).encode("utf-8"), b""),
+        ]
         mock_popen.return_value = mock_proc
 
         result = component._process_docling_in_subprocess("test.pdf")
 
         assert result is not None
-        assert result.data["doc"] == mock_result["doc"]
-        assert result.data["file_path"] == "test.pdf"
+        assert result.data["doc"] == []
+        assert mock_proc.communicate.call_count == 2
+        assert mock_proc.communicate.call_args_list[0].kwargs["input"] is not None
+        assert mock_proc.communicate.call_args_list[1].kwargs["input"] is None
 
     def test_dynamic_outputs_have_tool_mode_enabled(self):
         """Test that all dynamically created outputs have tool_mode=True."""

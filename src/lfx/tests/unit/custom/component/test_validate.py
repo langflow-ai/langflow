@@ -2,6 +2,7 @@ import ast
 from textwrap import dedent
 
 import pytest
+from lfx.custom.eval import eval_custom_component_code
 from lfx.custom.validate import (
     _get_module_fallbacks,
     _resolve_attribute,
@@ -10,6 +11,24 @@ from lfx.custom.validate import (
     execute_function,
     prepare_global_scope,
 )
+
+
+@pytest.mark.asyncio
+async def test_eval_custom_component_code_supports_module_level_async_helpers():
+    code = dedent("""
+from lfx.custom import Component
+
+async def async_helper():
+    return "async helper result"
+
+class AsyncHelperComponent(Component):
+    async def run(self):
+        return await async_helper()
+    """)
+
+    component_class = eval_custom_component_code(code)
+
+    assert await component_class().run() == "async helper result"
 
 
 def test_importing_langflow_module_in_lfx():

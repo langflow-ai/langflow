@@ -1,14 +1,92 @@
 import os
 import socket
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpcore
 import pytest
-from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get
+from lfx.utils.ssrf_httpx import ssrf_safe_async_get, ssrf_safe_async_post, ssrf_safe_httpx_get
 from lfx.utils.ssrf_protection import SSRFProtectionError
 
 
 class TestSSRFSafeHTTPX:
+    def test_literal_loopback_is_allowed_by_connector_policy(self):
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+                    "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true",
+                    "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK": "true",
+                },
+                clear=True,
+            ),
+            patch("httpx.Client.get") as mock_get,
+        ):
+            ssrf_safe_httpx_get("http://127.0.0.1:1234/v1/models", timeout=5)
+
+        mock_get.assert_called_once()
+
+    def test_literal_loopback_is_blocked_when_connector_policy_opts_out(self):
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+                    "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true",
+                    "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK": "false",
+                },
+                clear=True,
+            ),
+            patch("httpx.Client.get") as mock_get,
+            pytest.raises(SSRFProtectionError, match=r"127\.0\.0\.1.*blocked"),
+        ):
+            ssrf_safe_httpx_get("http://127.0.0.1:1234/v1/models", timeout=5)
+
+        mock_get.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("request_fn", "client_method"),
+        [(ssrf_safe_async_get, "get"), (ssrf_safe_async_post, "post")],
+    )
+    async def test_async_literal_loopback_is_allowed_by_connector_policy(self, request_fn, client_method):
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+                    "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true",
+                    "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK": "true",
+                },
+                clear=True,
+            ),
+            patch(f"httpx.AsyncClient.{client_method}", new_callable=AsyncMock) as mock_request,
+        ):
+            await request_fn("http://127.0.0.1:1234/v1/models", timeout=5)
+
+        mock_request.assert_awaited_once()
+
+    @pytest.mark.parametrize(
+        ("request_fn", "client_method"),
+        [(ssrf_safe_async_get, "get"), (ssrf_safe_async_post, "post")],
+    )
+    async def test_async_literal_loopback_is_blocked_when_connector_policy_opts_out(self, request_fn, client_method):
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+                    "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true",
+                    "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK": "false",
+                },
+                clear=True,
+            ),
+            patch(f"httpx.AsyncClient.{client_method}", new_callable=AsyncMock) as mock_request,
+            pytest.raises(SSRFProtectionError, match=r"127\.0\.0\.1.*blocked"),
+        ):
+            await request_fn("http://127.0.0.1:1234/v1/models", timeout=5)
+
+        mock_request.assert_not_awaited()
+
     def test_direct_internal_ip_is_blocked(self):
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),

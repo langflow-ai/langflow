@@ -1,11 +1,12 @@
 # Router for base api
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from lfx.schema.workflow import WORKFLOW_EXECUTION_RESPONSES
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from lfx.workflow.host import WorkflowHost
 from lfx.workflow.router import create_workflow_router
 
 from langflow.api.v1 import (
+    a2a_router,
     api_key_router,
     authz_audit_router,
     authz_me_router,
@@ -85,6 +86,10 @@ router_v1.include_router(memories_router)
 router_v1.include_router(mcp_router)
 router_v1.include_router(voice_mode_router)
 router_v1.include_router(mcp_projects_router)
+# Always mounted; the per-request guard in langflow.api.v1.a2a returns 404 when
+# LANGFLOW_A2A_ENABLED is off, so the route is indistinguishable from "not
+# mounted" until the flag is set (mirrors the extensions router below).
+router_v1.include_router(a2a_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)
@@ -114,13 +119,19 @@ include_deployment_router(router_v1)
 
 # Agentic flow execution - lazy import to avoid circular dependency
 def _include_agentic_router():
+    from langflow.agentic.api.deps import require_agentic_experience
     from langflow.agentic.api.files_router import router as agentic_files_router
     from langflow.agentic.api.router import router as agentic_router
     from langflow.agentic.api.sessions_router import router as agentic_sessions_router
 
+    # SECURITY (Issue 15): gate the sandbox-management routers on agentic_experience. The
+    # code-exec endpoints inside agentic_router (/assist, /assist/stream, /execute) carry the same
+    # gate per-route (see agentic/api/router.py) so the read-only /agentic/check-config probe stays
+    # reachable for non-agentic deployments.
+    agentic_gate = [Depends(require_agentic_experience)]
     router_v1.include_router(agentic_router)
-    router_v1.include_router(agentic_files_router)
-    router_v1.include_router(agentic_sessions_router)
+    router_v1.include_router(agentic_files_router, dependencies=agentic_gate)
+    router_v1.include_router(agentic_sessions_router, dependencies=agentic_gate)
 
 
 _include_agentic_router()

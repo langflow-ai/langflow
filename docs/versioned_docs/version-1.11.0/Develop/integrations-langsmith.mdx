@@ -1,0 +1,38 @@
+---
+title: LangSmith
+slug: /integrations-langsmith
+---
+
+LangSmith is a full-lifecycle DevOps service from LangChain that provides monitoring and observability. To integrate with Langflow, add your LangChain API key and configuration as Langflow environment variables, and then start Langflow.
+
+1. Obtain your LangChain API key from [https://smith.langchain.com](https://smith.langchain.com/)
+2. Set the following environment variables in your Langflow `.env` file, replacing `LANGCHAIN_API_KEY` and `LANGSMITH_PROJECT_NAME` with your own values:
+
+    ```text
+    LANGSMITH_TRACING=True
+    LANGSMITH_ENDPOINT=https://api.smith.langchain.com/
+    LANGSMITH_API_KEY=LANGCHAIN_API_KEY
+    LANGSMITH_PROJECT=LANGSMITH_PROJECT_NAME
+    ```
+
+    Alternatively, you can export the environment variables in your terminal instead of adding them to the `.env` file:
+
+    ```bash
+    export LANGSMITH_TRACING=True && export LANGSMITH_ENDPOINT="https://api.smith.langchain.com/" && export LANGSMITH_API_KEY="LANGCHAIN_API_KEY" && export LANGSMITH_PROJECT="LANGSMITH_PROJECT_NAME"
+    ```
+
+3. Restart Langflow with your modified `.env` file or from the terminal where you set your environment variables:
+
+    ```bash
+    langflow run --env-file .env
+    ```
+
+    If you set the environment variables in your terminal, you can omit `--env-file`.
+    However, Langflow can source environment variables from `.env` _and_ your terminal.
+    For more information, see [Langflow environment variables](/environment-variables).
+
+4. Run a flow in Langflow to generate some activity.
+
+5. View the LangSmith dashboard for monitoring and observability.
+
+    ![LangSmith dashboard](/img/langsmith-dashboard.png)

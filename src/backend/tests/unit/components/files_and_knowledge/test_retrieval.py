@@ -373,6 +373,21 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
             with pytest.raises(ValueError, match=r"User with ID .* not found"):
                 await component.retrieve_data()
 
+    @pytest.mark.parametrize("knowledge_base", ["../../outside", "../victim/secret_kb"])
+    async def test_retrieve_data_rejects_paths_outside_the_current_user_directory(
+        self, component_class, default_kwargs, knowledge_base
+    ):
+        default_kwargs["knowledge_base"] = knowledge_base
+        component = component_class(**default_kwargs)
+
+        with (
+            patch.object(component, "_get_kb_metadata") as mock_get_metadata,
+            pytest.raises(ValueError, match="KB path escapes root directory"),
+        ):
+            await component.retrieve_data()
+
+        mock_get_metadata.assert_not_called()
+
     async def test_retrieve_data_routes_query_with_scores(
         self,
         component_class,

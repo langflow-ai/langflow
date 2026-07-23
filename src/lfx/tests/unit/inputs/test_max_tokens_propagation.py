@@ -22,6 +22,7 @@ from lfx.base.models.unified_models.provider_queries import get_model_providers
 
 # All known provider names — used to mock enabled providers in tests
 _ALL_PROVIDERS = set(get_model_providers())
+_TEST_USER_ID = "00000000-0000-0000-0000-000000000001"
 
 # ---------------------------------------------------------------------------
 # 1. get_language_model_options must include max_tokens_field_name
@@ -47,7 +48,7 @@ class TestModelOptionsIncludeMaxTokensFieldName:
     def test_all_provider_options_have_max_tokens_field_name(self):
         """Each model option must include max_tokens_field_name in metadata."""
         with _patch_all_providers_enabled():
-            options = get_language_model_options(user_id="test-user")
+            options = get_language_model_options(user_id=_TEST_USER_ID)
 
         # Group by provider to give a clear failure message
         providers_seen: set[str] = set()
@@ -81,7 +82,7 @@ class TestModelOptionsIncludeMaxTokensFieldName:
     def test_provider_max_tokens_field_name_matches_metadata(self, provider: str, expected_field: str):
         """The max_tokens_field_name in options must match MODEL_PROVIDER_METADATA."""
         with _patch_all_providers_enabled():
-            options = get_language_model_options(user_id="test-user")
+            options = get_language_model_options(user_id=_TEST_USER_ID)
         provider_options = [
             o
             for o in options
@@ -313,7 +314,7 @@ class TestAgentComponentGetLlm:
                 "lfx.base.models.unified_models.get_api_key_for_provider",
                 return_value="fake-key",
             ),
-            patch.object(agent, "_user_id", "test-user"),
+            patch.object(agent, "_user_id", _TEST_USER_ID),
         ):
             agent._get_llm()
 
@@ -352,7 +353,7 @@ class TestAgentComponentGetLlm:
                 "lfx.base.models.unified_models.get_api_key_for_provider",
                 return_value="fake-key",
             ),
-            patch.object(agent, "_user_id", "test-user"),
+            patch.object(agent, "_user_id", _TEST_USER_ID),
         ):
             agent._get_llm()
 

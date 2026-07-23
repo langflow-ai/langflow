@@ -13,6 +13,8 @@
  * The fix removes the premature logout logic and delegates auth decisions to ProtectedRoute.
  */
 
+import { isAutoLoginDisabledResponse } from "../use-get-autologin";
+
 // Mock dependencies - use unique names to avoid conflicts with other test files
 const raceConditionMockSetAutoLogin = jest.fn();
 const raceConditionMockNavigate = jest.fn();
@@ -220,6 +222,19 @@ describe("useGetAutoLogin - Race Condition Prevention", () => {
       // Assert: Even with slow network, no premature logout
       expect(raceConditionMockMutationLogout).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("isAutoLoginDisabledResponse", () => {
+  it("recognizes FastAPI's nested HTTPException detail", () => {
+    expect(isAutoLoginDisabledResponse({ detail: { auto_login: false } })).toBe(
+      true,
+    );
+  });
+
+  it("keeps supporting the legacy top-level response", () => {
+    expect(isAutoLoginDisabledResponse({ auto_login: false })).toBe(true);
+    expect(isAutoLoginDisabledResponse(undefined)).toBe(false);
   });
 });
 

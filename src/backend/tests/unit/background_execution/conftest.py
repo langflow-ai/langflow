@@ -27,7 +27,13 @@ if TYPE_CHECKING:
 
 
 def _async_pg_url(raw: str) -> str:
-    """Normalize a Postgres URL to the async psycopg (v3) dialect the project ships."""
+    """Normalize a Postgres URL to the async psycopg dialect.
+
+    psycopg (v3) is what ``--extra postgresql`` installs and what
+    ``DatabaseService`` picks for async Postgres, so the harness exercises the
+    same driver production does. A bare ``postgresql://`` (or an explicit
+    asyncpg dialect) is normalized to psycopg.
+    """
     if "+psycopg" in raw:
         return raw
     if raw.startswith("postgresql+asyncpg://"):
@@ -45,7 +51,7 @@ async def real_services_db_url(request: pytest.FixtureRequest) -> AsyncGenerator
 
     - sqlite: a real temp-file SQLite database (always runs).
     - postgres: the database behind ``LANGFLOW_TEST_DATABASE_URI`` normalized to
-      the asyncpg dialect; skipped when the env var is unset (CI always sets it).
+      the async psycopg dialect; skipped when the env var is unset (CI always sets it).
     """
     if request.param == "sqlite":
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:

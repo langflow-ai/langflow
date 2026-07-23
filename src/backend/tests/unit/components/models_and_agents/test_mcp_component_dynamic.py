@@ -14,12 +14,22 @@ Covers:
 """
 
 import asyncio
+from copy import deepcopy
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
+
+from tests.base import ComponentTestBaseWithoutClient
+
+
+def test_tool_mode_capability_is_available_before_server_discovery() -> None:
+    """The toolbar must not wait for an MCP connection to discover Tool Mode."""
+    tool_placeholder = next(input_ for input_ in MCPToolsComponent.inputs if input_.name == "tool_placeholder")
+
+    assert tool_placeholder.tool_mode is True
 
 
 def _make_tool(name: str) -> MagicMock:
@@ -87,6 +97,22 @@ class TestCacheKey:
 
         assert a._mcp_servers_cache_key("srv") != b._mcp_servers_cache_key("srv")
 
+    def test_different_users_produce_different_keys(self) -> None:
+        a = MCPToolsComponent()
+        a._user_id = "tenant-a"
+        b = MCPToolsComponent()
+        b._user_id = "tenant-b"
+
+        assert a._mcp_servers_cache_key("srv") != b._mcp_servers_cache_key("srv")
+
+    def test_same_user_produces_identical_keys(self) -> None:
+        a = MCPToolsComponent()
+        a._user_id = "tenant-a"
+        b = MCPToolsComponent()
+        b._user_id = "tenant-a"
+
+        assert a._mcp_servers_cache_key("srv") == b._mcp_servers_cache_key("srv")
+
     def test_same_headers_produce_identical_keys(self) -> None:
         a = MCPToolsComponent()
         a.headers = [{"key": "Authorization", "value": "Bearer same"}]
@@ -110,21 +136,56 @@ class TestCacheKey:
         assert a._mcp_servers_cache_key("srv") == b._mcp_servers_cache_key("srv")
 
 
-class TestTtlToolCacheIsolation:
+class TestTtlToolCacheIsolation(ComponentTestBaseWithoutClient):
     """``_ttl_tool_cache`` must be a per-instance dict, not class-level."""
 
-    def test_fresh_instances_have_independent_dicts(self) -> None:
-        a = MCPToolsComponent()
-        b = MCPToolsComponent()
+    @pytest.fixture
+    def component_class(self):
+        return MCPToolsComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        return {}
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        return []
+
+    def test_fresh_instances_have_independent_dicts(self, component_class, default_kwargs) -> None:
+        a = component_class(**default_kwargs)
+        b = component_class(**default_kwargs)
 
         assert a._ttl_tool_cache is not b._ttl_tool_cache
 
-    def test_write_to_one_instance_does_not_leak_to_another(self) -> None:
-        a = MCPToolsComponent()
-        b = MCPToolsComponent()
+    def test_write_to_one_instance_does_not_leak_to_another(self, component_class, default_kwargs) -> None:
+        a = component_class(**default_kwargs)
+        b = component_class(**default_kwargs)
         a._ttl_tool_cache["k"] = (0.0, [_make_tool("leak")])
 
         assert "k" not in b._ttl_tool_cache
+
+    def test_invocation_copy_shares_cache_with_source_component(self, component_class, default_kwargs) -> None:
+        component = component_class(**default_kwargs)
+
+        invocation_copy = deepcopy(component)
+
+        assert invocation_copy._ttl_tool_cache is component._ttl_tool_cache
+
+    @pytest.mark.asyncio
+    async def test_sequential_invocation_copies_reuse_cached_tools(self, component_class, default_kwargs) -> None:
+        component = component_class(**default_kwargs, mcp_server={"name": "srv"}, headers=[])
+        first_invocation = deepcopy(component)
+        second_invocation = deepcopy(component)
+        tools = [_make_tool("cached")]
+
+        update_tool_list = AsyncMock(return_value=(tools, {"name": "srv", "config": {}}))
+        with patch.object(component_class, "update_tool_list", new=update_tool_list):
+            first_result = await first_invocation._get_tools()
+            second_result = await second_invocation._get_tools()
+
+        assert first_result is tools
+        assert second_result is tools
+        update_tool_list.assert_awaited_once()
 
 
 class TestGetToolsTtlCache:
@@ -297,7 +358,7 @@ class TestUpdateBuildConfigRefresh:
     @staticmethod
     def _build_config(**overrides):
         config = {
-            "mcp_server": {"value": {"name": "srv", "config": {"command": "uvx test"}}},
+            "mcp_server": {"value": {"name": "srv", "config": {"command": "uvx", "args": ["test"]}}},
             "tool": {"show": True, "options": ["stale"], "value": "", "placeholder": "Select a tool"},
             "tool_placeholder": {"tool_mode": False},
             "tools_metadata": {"show": False},
@@ -309,6 +370,14 @@ class TestUpdateBuildConfigRefresh:
         return config
 
     @pytest.mark.asyncio
+    async def test_clearing_server_keeps_tool_mode_capability(self) -> None:
+        component = MCPToolsComponent()
+
+        build_config = await component.update_build_config(self._build_config(), {}, "mcp_server")
+
+        assert build_config["tool_placeholder"]["tool_mode"] is True
+
+    @pytest.mark.asyncio
     async def test_refresh_bypasses_existing_options(self) -> None:
         component = MCPToolsComponent()
         component.use_cache = True
@@ -318,11 +387,11 @@ class TestUpdateBuildConfigRefresh:
         with patch.object(
             component,
             "update_tool_list",
-            new=AsyncMock(return_value=([tool], {"name": "srv", "config": {"command": "uvx test"}})),
+            new=AsyncMock(return_value=([tool], {"name": "srv", "config": {"command": "uvx", "args": ["test"]}})),
         ) as mocked_update:
             build_config = await component.update_build_config(
                 self._build_config(is_refresh=True),
-                {"name": "srv", "config": {"command": "uvx test"}},
+                {"name": "srv", "config": {"command": "uvx", "args": ["test"]}},
                 "mcp_server",
             )
 
@@ -340,9 +409,13 @@ class TestUpdateBuildConfigRefresh:
             "update_tool_list",
             new=AsyncMock(side_effect=ValueError("Connection refused")),
         ):
+            # is_refresh forces a fresh connection attempt (per this class's contract) so the
+            # error surfaces deterministically. Without it, the cold-cache fast path preserves
+            # the saved ("stale") options and never calls update_tool_list, which made this test
+            # depend on shared-cache state left by a sibling test (order-dependent under xdist).
             build_config = await component.update_build_config(
-                self._build_config(),
-                {"name": "srv", "config": {"command": "uvx test"}},
+                self._build_config(is_refresh=True),
+                {"name": "srv", "config": {"command": "uvx", "args": ["test"]}},
                 "mcp_server",
             )
 

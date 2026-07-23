@@ -38,6 +38,7 @@ class AssistantRequest(BaseModel):
     model_name: str | None = None
     provider: str | None = None
     session_id: str | None = None
+    iterations_limit: int | None = Field(None, ge=1, le=200)
 
 
 class ValidationResult(BaseModel):

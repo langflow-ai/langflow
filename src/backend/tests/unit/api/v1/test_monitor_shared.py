@@ -6,6 +6,7 @@ derived from the user's ID and the original flow ID.
 """
 
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi import status
@@ -113,6 +114,7 @@ async def shared_messages_setup(active_user):
     """Create test messages with a virtual flow_id scoped to active_user."""
     source_flow_id = uuid.uuid4()
     virtual_flow_id = compute_virtual_flow_id(active_user.id, source_flow_id)
+    base_timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
     async with session_scope() as session:
         for i in range(3):
@@ -126,6 +128,7 @@ async def shared_messages_setup(active_user):
                 files=[],
                 properties={},
                 content_blocks=[],
+                timestamp=base_timestamp + timedelta(minutes=i),
             )
             session.add(msg)
 
@@ -171,6 +174,61 @@ async def test_get_shared_messages_returns_messages(client: AsyncClient, logged_
     messages = response.json()
     assert isinstance(messages, list)
     assert len(messages) == 3
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_get_shared_messages_defaults_to_timestamp_ascending(
+    client: AsyncClient, logged_in_headers, shared_messages_setup
+):
+    source_flow_id = shared_messages_setup["source_flow_id"]
+    response = await client.get(
+        "api/v1/monitor/messages/shared",
+        headers=logged_in_headers,
+        params={"source_flow_id": source_flow_id, "session_id": "test-session-1"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert [message["text"] for message in response.json()] == [
+        "Test message 0",
+        "Test message 1",
+        "Test message 2",
+    ]
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_get_shared_messages_supports_descending_order_with_pagination(
+    client: AsyncClient, logged_in_headers, shared_messages_setup
+):
+    source_flow_id = shared_messages_setup["source_flow_id"]
+    response = await client.get(
+        "api/v1/monitor/messages/shared",
+        headers=logged_in_headers,
+        params={
+            "source_flow_id": source_flow_id,
+            "session_id": "test-session-1",
+            "order": "DESC",
+            "limit": 2,
+            "offset": 1,
+        },
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert [message["text"] for message in response.json()] == ["Test message 1", "Test message 0"]
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_get_shared_messages_rejects_invalid_order_direction(
+    client: AsyncClient, logged_in_headers, shared_messages_setup
+):
+    source_flow_id = shared_messages_setup["source_flow_id"]
+    response = await client.get(
+        "api/v1/monitor/messages/shared",
+        headers=logged_in_headers,
+        params={"source_flow_id": source_flow_id, "order": "sideways"},
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST, response.text
+    assert response.json()["detail"] == "Invalid order direction: sideways"
 
 
 @pytest.mark.usefixtures("active_user", "shared_messages_setup")

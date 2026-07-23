@@ -27,8 +27,8 @@ predictable.
 
 ```bash
 cd src/frontend
-RUN_A11Y=true npx playwright test tests/a11y/static-routes.a11y.spec.ts --project=chromium --workers=1
-RUN_A11Y=true npx playwright test tests/a11y --project=chromium --workers=1
+RUN_A11Y=true npx playwright test tests/a11y/static-routes.a11y.spec.ts --project=chromium --workers=5
+RUN_A11Y=true npx playwright test tests/a11y --project=chromium --workers=5
 npm run a11y:html-report --silent
 ```
 
@@ -44,5 +44,5 @@ DOM path, ARIA path, element bounds, snippet, and IBM rule link.
 To assert against checker baselines:
 
 ```bash
-RUN_A11Y=true RUN_A11Y_ASSERT=true npx playwright test tests/a11y --project=chromium --workers=1
+RUN_A11Y=true RUN_A11Y_ASSERT=true npx playwright test tests/a11y --project=chromium --workers=5
 ```

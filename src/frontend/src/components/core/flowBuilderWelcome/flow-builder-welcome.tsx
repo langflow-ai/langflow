@@ -111,6 +111,7 @@ export function FlowBuilderWelcome({
         className="absolute left-1.5 top-1.5 z-10 flex w-10 animate-in flex-col items-center gap-1.5 rounded-lg border border-border bg-background p-1 duration-300 fade-in slide-in-from-left-2"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Mirror the real always-visible nav, Agent tab included. */}
         {NAV_ITEMS.map((item) => {
           const tooltip = t(item.tooltip);
           return (

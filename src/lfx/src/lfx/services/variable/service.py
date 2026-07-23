@@ -10,6 +10,7 @@ from lfx.services.variable.request_scope import (
     is_env_fallback_disabled,
     normalize_parsed_variables,
 )
+from lfx.utils.env_var_security import safe_getenv
 
 
 class VariableService(Service):
@@ -94,12 +95,15 @@ class VariableService(Service):
             return request_variables[global_alias]
 
         if not is_env_fallback_disabled():
-            value = os.getenv(name)
+            # safe_getenv denies reserved names (LANGFLOW_SECRET_KEY, DATABASE_URL, ...) so a
+            # tenant-supplied variable name cannot exfiltrate the server's own secrets via the
+            # env fallback.
+            value = safe_getenv(name)
             if value:
                 logger.debug(f"Variable '{name}' loaded from environment")
                 return value
 
-            value = os.getenv(global_alias)
+            value = safe_getenv(global_alias)
             if value:
                 logger.debug(f"Variable '{name}' loaded from global alias '{global_alias}'")
                 return value

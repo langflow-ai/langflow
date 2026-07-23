@@ -1,0 +1,57 @@
+---
+title: Grafana and Loki
+slug: /observability-grafana-loki
+---
+
+Langflow can emit structured JSON logs for ingestion by [Grafana Loki](https://grafana.com/oss/loki/).
+
+This page demonstrates how to connect Langflow to the [reference Grafana stack](https://github.com/langflow-ai/langflow/tree/main/deploy/observability/grafana-loki) shipped with the Langflow repository.
+For more information, see the [README](https://github.com/langflow-ai/langflow/tree/main/deploy/observability/grafana-loki).
+
+To consume structured Langflow logs with other ingestion providers, see [Logs](/logging).
+
+## Prerequisites
+
+- [Clone the Langflow repository](/contributing-how-to-contribute#install-langflow-from-source) to access the [reference Grafana stack](https://github.com/langflow-ai/langflow/tree/main/deploy/observability/grafana-loki). If you are using your own Grafana and Loki instances, cloning the repository is not required.
+- [Docker and Docker Compose](https://docs.docker.com/)
+
+## Configure environment variables
+
+1. In the root folder of your Langflow application, edit your existing `.env` file or create a new one.
+2. Add the following environment variables. Replace the placeholders with the values for your deployment:
+
+   ```text
+   LANGFLOW_LOG_ENV=container
+   LANGFLOW_LOG_LEVEL=INFO
+   LANGFLOW_LOG_FILE=/var/log/langflow/langflow.log
+   LANGFLOW_SERVICE_NAME=langflow
+   LANGFLOW_VERSION=1.10.0
+   LANGFLOW_ENVIRONMENT=production
+   ```
+
+   Setting `LANGFLOW_LOG_ENV=container` switches structlog's terminal processor to [`JSONRenderer`](https://www.structlog.org/en/stable/api.html#structlog.processors.JSONRenderer), so every line written to stdout is a JSON object containing the event message, level, timestamp, logger name, exception structure, and service metadata. For more information, see [Logs](/logging).
+
+   The shipped Promtail configuration scrapes `*.log` files from a directory rather than stdout. `LANGFLOW_LOG_FILE` must point at a file inside the directory that Promtail watches. Set `LANGFLOW_LOG_DIR` to that same directory so Langflow creates the file in the right place.
+
+3. Start the reference Loki + Promtail + Grafana stack from the repository:
+
+   ```bash
+   cd deploy/observability/grafana-loki
+   export LANGFLOW_LOG_DIR=/var/log/langflow
+   docker compose up -d
+   ```
+
+4. Launch Langflow with your `.env` file:
+
+   ```bash
+   uv run langflow run --env-file .env
+   ```
+
+5. Run a flow in Langflow to generate log traffic.
+
+6. Open Grafana at `http://localhost:3000` and navigate to **Dashboards** > **Langflow Logs** to view structured log output, including panels for structured tracebacks, PII redaction, stdlib library output, and service/environment/version coverage.
+
+## See also
+
+* [Logs](/logging)
+* [Logs endpoints](/api-logs)

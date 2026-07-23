@@ -64,6 +64,8 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   allowCustomComponents: true,
   setAllowCustomComponents: (allowCustomComponents: boolean) =>
     set({ allowCustomComponents }),
+  a2aEnabled: false,
+  setA2aEnabled: (a2aEnabled: boolean) => set({ a2aEnabled }),
   mcpBaseUrl: "",
   setMcpBaseUrl: (mcpBaseUrl: string) => set({ mcpBaseUrl }),
   // Default ``false`` so a misconfigured store (no ``/config`` reply yet)

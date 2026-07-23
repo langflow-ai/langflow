@@ -12,6 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -59,6 +60,7 @@ export const MenuBar = memo((): JSX.Element => {
   const onFlowPage = useFlowStore((state) => state.onFlowPage);
   const measureRef = useRef<HTMLSpanElement>(null);
   const changesNotSaved = useUnsavedChanges();
+  const isReadOnly = useIsFlowReadOnly(currentFlowId);
 
   const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
 
@@ -76,7 +78,7 @@ export const MenuBar = memo((): JSX.Element => {
   );
 
   const handleSave = () => {
-    if (!onFlowPage) return;
+    if (!onFlowPage || isReadOnly) return;
     saveFlow().then(() => {
       setSuccessData({ title: t("flow.savedSuccessfully") });
     });
@@ -95,7 +97,10 @@ export const MenuBar = memo((): JSX.Element => {
   });
 
   return onFlowPage ? (
-    <Popover open={openSettings} onOpenChange={setOpenSettings}>
+    <Popover
+      open={openSettings && !isReadOnly}
+      onOpenChange={(open) => setOpenSettings(open && !isReadOnly)}
+    >
       <PopoverAnchor>
         <div
           className="relative flex w-full items-center justify-center gap-2"
@@ -148,7 +153,8 @@ export const MenuBar = memo((): JSX.Element => {
                 headerTriggerFocusClass,
               )}
               data-testid="menu_bar_display"
-              title={flowDetailsLabel}
+              title={isReadOnly ? t("version.readOnly") : flowDetailsLabel}
+              disabled={isReadOnly}
             >
               <span
                 ref={measureRef}
@@ -173,17 +179,19 @@ export const MenuBar = memo((): JSX.Element => {
             {!autoSaving && (
               <ShadTooltip
                 content={
-                  changesNotSaved
-                    ? saveLoading
-                      ? t("flow.saving")
-                      : t("flow.saveChanges")
-                    : t("flow.savedHover") +
-                      (updatedAt
-                        ? new Date(updatedAt).toLocaleString("en-US", {
-                            hour: "numeric",
-                            minute: "numeric",
-                          })
-                        : t("flow.never"))
+                  isReadOnly
+                    ? t("version.readOnly")
+                    : changesNotSaved
+                      ? saveLoading
+                        ? t("flow.saving")
+                        : t("flow.saveChanges")
+                      : t("flow.savedHover") +
+                        (updatedAt
+                          ? new Date(updatedAt).toLocaleString("en-US", {
+                              hour: "numeric",
+                              minute: "numeric",
+                            })
+                          : t("flow.never"))
                 }
                 side="bottom"
                 styleClasses="cursor-default z-10"
@@ -192,7 +200,12 @@ export const MenuBar = memo((): JSX.Element => {
                   <Button
                     variant="primary"
                     size="iconMd"
-                    disabled={!changesNotSaved || isBuilding || saveLoading}
+                    disabled={
+                      isReadOnly ||
+                      !changesNotSaved ||
+                      isBuilding ||
+                      saveLoading
+                    }
                     className={cn("h-7 w-7 border-border")}
                     onClick={handleSave}
                     data-testid="save-flow-button"

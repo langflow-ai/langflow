@@ -14,6 +14,7 @@ from lfx.custom import validate
 from lfx.custom.custom_component.base_component import BaseComponent
 from lfx.helpers import (
     get_flow_by_id_or_name,
+    list_a2a_agents_by_flow_folder,
     list_flows,
     list_flows_by_flow_folder,
     list_flows_by_folder_id,
@@ -571,6 +572,17 @@ class CustomComponent(BaseComponent):
                 return await list_flows_by_flow_folder(user_id=str(self.user_id), flow_id=str(flow_id))
             except Exception as e:
                 msg = f"Error listing flows: {e}"
+                raise ValueError(msg) from e
+        return []
+
+    async def alist_a2a_agents_by_flow_folder(self) -> list[Data]:
+        """List flows published as A2A agents in the same folder as the current flow."""
+        flow_id = self._get_runtime_or_frontend_node_attr("flow_id")
+        if flow_id is not None:
+            try:  # user and flow ids are validated in the function
+                return await list_a2a_agents_by_flow_folder(user_id=str(self.user_id), flow_id=str(flow_id))
+            except Exception as e:
+                msg = f"Error listing A2A agents: {e}"
                 raise ValueError(msg) from e
         return []
 

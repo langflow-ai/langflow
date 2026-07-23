@@ -405,6 +405,10 @@ class Vertex:
             )
         else:
             custom_component = self.custom_component
+            # A checkpoint-restored component (HITL resume) loses _user_id, which
+            # load_from_db fields (API keys) need; re-apply without overriding.
+            if user_id is not None and getattr(custom_component, "_user_id", None) is None:
+                custom_component._user_id = user_id  # noqa: SLF001 — re-apply user after checkpoint restore
             if hasattr(self.custom_component, "set_event_manager"):
                 self.custom_component.set_event_manager(event_manager)
             custom_params = initialize.loading.get_params(self.params)

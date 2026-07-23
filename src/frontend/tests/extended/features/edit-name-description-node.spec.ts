@@ -1,10 +1,10 @@
 import { expect, test } from "../../fixtures";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
-import {
-  disableInspectPanel,
-  enableInspectPanel,
-} from "../../utils/open-advanced-options";
 
+// LE-1810: the inspection panel is a parameter manager and no longer offers
+// editable name/description fields — name and description are edited directly
+// ON the node (pencil button / inline inputs). The former "panel" and
+// "panel disabled" variants collapsed into this single on-node flow.
 test(
   "user should be able to edit name and description of a node",
   { tag: ["@release", "@workspace"] },
@@ -31,119 +31,6 @@ test(
     );
 
     await page.waitForTimeout(500);
-
-    await page.getByTestId("sidebar-custom-component-button").click();
-
-    await page.getByTestId("div-generic-node").click();
-
-    await page.getByTestId("edit-name-description-button").click();
-
-    await page.getByTestId("inspection-panel-name").fill(randomName);
-
-    await page
-      .getByTestId("inspection-panel-description")
-      .fill(randomDescription);
-
-    await page.getByTestId("save-name-description-button").click();
-
-    expect(await page.getByText(randomName).count()).toBe(2);
-    expect(await page.getByText(randomDescription).count()).toBe(2);
-
-    await page.getByTestId("div-generic-node").click();
-
-    await page.getByTestId("edit-name-description-button").click();
-
-    await page.getByTestId(`inspection-panel-name`).fill(randomName_2);
-
-    await page
-      .getByTestId("inspection-panel-description")
-      .fill(randomDescription_2);
-
-    await page.getByTestId("save-name-description-button").click();
-
-    expect(await page.getByText(randomName_2).count()).toBe(2);
-    expect(await page.getByText(randomDescription_2).count()).toBe(2);
-
-    await page.getByTestId("div-generic-node").click();
-
-    await page.getByTestId("edit-name-description-button").click();
-
-    await page.getByTestId(`inspection-panel-name`).fill(randomName_3);
-
-    await page.keyboard.press("Enter");
-
-    expect(await page.getByText(randomName_3).count()).toBe(2);
-
-    await page.getByTestId("div-generic-node").click();
-
-    await page.getByTestId("edit-name-description-button").click();
-
-    await page.getByTestId(`inspection-panel-name`).fill(randomName_4);
-
-    await page
-      .getByTestId("inspection-panel-description")
-      .fill(randomDescription_4);
-
-    await page.keyboard.press("Escape");
-
-    expect(await page.getByText(randomName_4).count()).toBe(0);
-
-    expect(await page.getByText(randomDescription_2).count()).toBe(2);
-
-    expect(await page.getByText(randomDescription_4).count()).toBe(0);
-
-    expect(await page.getByText(randomName_3).count()).toBe(2);
-
-    await page.getByTestId("div-generic-node").click();
-
-    await page.getByTestId("edit-name-description-button").click();
-
-    await page
-      .getByTestId("inspection-panel-description")
-      .fill(randomDescription_3);
-
-    await page.getByTestId(`inspection-panel-name`).fill(randomName_3);
-
-    await page.keyboard.press("Enter");
-
-    expect(await page.getByText(randomDescription_3).count()).toBe(2);
-
-    expect(await page.getByText(randomName_4).count()).toBe(0);
-
-    expect(await page.getByText(randomName_3).count()).toBe(2);
-
-    expect(await page.getByText(randomDescription_4).count()).toBe(0);
-  },
-);
-
-test(
-  "user should be able to edit name and description of a node with inspect panel disabled",
-  { tag: ["@release", "@workspace"] },
-
-  async ({ page }) => {
-    const randomName = Math.random().toString(36).substring(2, 15);
-    const randomDescription = Math.random().toString(36).substring(2, 15);
-
-    const randomName_2 = Math.random().toString(36).substring(2, 15);
-    const randomDescription_2 = Math.random().toString(36).substring(2, 15);
-
-    const randomName_3 = Math.random().toString(36).substring(2, 15);
-    const randomDescription_3 = Math.random().toString(36).substring(2, 15);
-
-    const randomName_4 = Math.random().toString(36).substring(2, 15);
-    const randomDescription_4 = Math.random().toString(36).substring(2, 15);
-    await openBlankFlow(page);
-
-    await page.waitForSelector(
-      '[data-testid="sidebar-custom-component-button"]',
-      {
-        timeout: 30000,
-      },
-    );
-
-    await page.waitForTimeout(500);
-
-    await disableInspectPanel(page);
 
     await page.getByTestId("sidebar-custom-component-button").click();
 
@@ -220,7 +107,5 @@ test(
     expect(await page.getByText(randomName_3).count()).toBe(0);
 
     expect(await page.getByText(randomDescription_4).count()).toBe(0);
-
-    await enableInspectPanel(page);
   },
 );

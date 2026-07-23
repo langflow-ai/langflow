@@ -1,5 +1,6 @@
 import { UseMutationResult } from "@tanstack/react-query";
 import { useMutationFunctionType } from "@/types/api";
+import type { ModelType } from "@/types/models";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -7,6 +8,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 export interface ModelStatusUpdate {
   provider: string;
   model_id: string;
+  model_type: ModelType;
   enabled: boolean;
 }
 

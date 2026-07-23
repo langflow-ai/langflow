@@ -50,6 +50,27 @@ def _reject_unsupported_sync_fields(parsed: ParsedWorkflowRun) -> None:
         )
 
 
+def _reject_sync_only_fields(parsed: ParsedWorkflowRun) -> None:
+    """Reject sync-only request fields in stream/background mode.
+
+    ``output_ids`` only drives answer selection on the inline sync path; other
+    modes would silently ignore it, which reads as success to the caller.
+    """
+    if parsed.mode == "sync" or not parsed.output_ids:
+        return
+
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail={
+            "error": "Unsupported request fields for mode",
+            "code": "MODE_UNSUPPORTED_FIELDS",
+            "message": f"mode='{parsed.mode}' does not support request fields: output_ids. "
+            "Output selection via output_ids only applies to mode='sync'.",
+            "fields": ["output_ids"],
+        },
+    )
+
+
 def _enforce_flow_data_override_owner(parsed: ParsedWorkflowRun, flow: FlowRead, current_user: UserRead) -> None:
     """Only the flow owner may execute caller-supplied graph data."""
     if parsed.data is None or flow.user_id == current_user.id:

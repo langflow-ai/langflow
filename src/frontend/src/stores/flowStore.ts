@@ -11,7 +11,10 @@ import { v5 as uuidv5 } from "uuid";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { queryClient } from "@/contexts";
-import { runFlowAGUI } from "@/controllers/API/agui/run-flow-bridge";
+import {
+  runFlowAGUI,
+  runFlowHITL,
+} from "@/controllers/API/agui/run-flow-bridge";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { track, trackFlowBuild } from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
@@ -170,6 +173,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   nodes: [],
   edges: [],
   isBuilding: false,
+  awaitingInput: false,
   buildStartTime: null,
   buildDuration: null,
   buildingFlowId: null,
@@ -370,6 +374,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       buildingSessionId: !isBuilding ? null : current.buildingSessionId,
     });
   },
+  setAwaitingInput: (awaitingInput) => {
+    set({ awaitingInput });
+  },
   setBuildStartTime: (time) => {
     set({ buildStartTime: time });
   },
@@ -460,7 +467,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       return node;
     });
 
-    const { edges: newEdges } = cleanEdges(newNodes, get().edges);
+    const { edges: newEdges, brokenEdges } = cleanEdges(newNodes, get().edges);
+
+    // An edit that reshapes a node's handles (e.g. disabling Human Input's fallback
+    // with a wired branch) strands the downstream node; surface it like resetFlow does.
+    if (brokenEdges.length > 0) {
+      useAlertStore.getState().setErrorData({
+        title: i18n.t("flow.brokenEdgesWarning"),
+        list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
+      });
+    }
 
     set((state) => {
       if (callback) {
@@ -549,9 +565,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       selection.edges = selection.edges.concat(existingEdgesToCopy);
     }
 
-    // Enforce component placement constraints (singleton + mutual exclusivity)
-    // on paste so they cannot be bypassed by copy/paste, matching the sidebar.
-    // The filter is side-effect free; surfacing the notice is the caller's job.
+    // Enforce placement constraints (singleton + mutual exclusivity) on paste so
+    // they cannot be bypassed by copy/paste; surfacing the notice is the caller's job.
     const placeable = filterPlaceableSelection(selection, get().nodes);
     selection.nodes = placeable.nodes;
     selection.edges = placeable.edges;
@@ -726,29 +741,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   onConnect: (connection) => {
     const _dark = useDarkStore.getState().dark;
-    // const commonMarkerProps = {
-    //   type: MarkerType.ArrowClosed,
-    //   width: 20,
-    //   height: 20,
-    //   color: dark ? "#555555" : "#000000",
-    // };
 
     // const inputTypes = INPUT_TYPES;
     // const outputTypes = OUTPUT_TYPES;
-
-    // const findNode = useFlowStore
-    //   .getState()
-    //   .nodes.find(
-    //     (node) => node.id === connection.source || node.id === connection.target
-    //   );
-
-    // const sourceType = findNode?.data?.type;
-    // let isIoIn = false;
-    // let isIoOut = false;
-    // if (sourceType) {
-    //   isIoIn = inputTypes.has(sourceType);
-    //   isIoOut = outputTypes.has(sourceType);
-    // }
 
     let newEdges: EdgeType[] = [];
     get().setEdges((oldEdges) => {
@@ -874,9 +869,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // then immediately clicked "Run") before checking outdated state.
     await waitForNodeUpdates();
 
-    // Block build when custom components are disabled and there are outdated components
-    // Recalculate from current nodes to avoid stale componentsToUpdate
-    // (setNode does not trigger updateComponentsToUpdate, only setNodes does)
+    // Block build when custom components are disabled and outdated components exist;
+    // recalculate from current nodes (setNode does not run updateComponentsToUpdate).
     get().updateComponentsToUpdate(get().nodes);
     const allowCustomComponents =
       useUtilityStore.getState().allowCustomComponents;
@@ -920,17 +914,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
     }
 
-    // Each build gets its own AbortController so ``stopBuilding`` cancels
-    // only the in-flight run (re-using a controller across runs would leave
-    // it in the aborted state for the next call). The signal is passed to
-    // ``runFlowAGUI`` so Stop aborts the actual SSE request, not just the
-    // local build state.
+    // One AbortController per build so stopBuilding cancels only the in-flight run;
+    // the signal reaches runFlowAGUI so Stop aborts the actual SSE request.
     const buildController = new AbortController();
     get().setBuildController(buildController);
 
-    // Always run through the v2 workflows endpoint. Current frontend nodes
-    // + edges are sent so unsaved tweaks (dropdowns, text inputs) run as
-    // the user sees them.
+    // Playground runs are namespaced by visitor id so unsaved tweaks run as the user sees them.
     let buildingFlowId = currentFlow!.id;
     if (get().playgroundPage) {
       const authState = useAuthStore.getState();
@@ -943,7 +932,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       buildingFlowId = uuidv5(`${visitorId}_${currentFlow!.id}`, uuidv5.DNS);
     }
     get().setBuildingSession(buildingFlowId, session ?? null);
-    await runFlowAGUI({
+
+    // Only the durable background path supports a mid-run pause/resume.
+    const runArgs = {
       flowId: currentFlow!.id,
       message: input_value,
       threadId: session,
@@ -953,21 +944,25 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       files,
       signal: buildController.signal,
       silent,
+    };
+    const canSuspend = get().nodes.some((node) => {
+      if (node.data?.type === "HumanInput") return true;
+      const rows = node.data?.node?.template?.tools_metadata?.value;
+      return (
+        Array.isArray(rows) &&
+        rows.some((row) => (row?.approval_actions?.length ?? 0) > 0)
+      );
     });
+    await (canSuspend ? runFlowHITL(runArgs) : runFlowAGUI(runArgs));
 
-    // Invalidate KB-related caches so any KnowledgeIngestion node that ran
-    // inside this build surfaces its updated stats / runs the next time the
-    // user opens the assets/knowledge-bases tab. Cheap when no subscribers are
-    // mounted; the queries only refetch if a component is actively reading them.
+    // Invalidate KB caches so a KnowledgeIngestion run surfaces updated stats on the
+    // next read; cheap when no subscribers are mounted (queries refetch only if read).
     queryClient.invalidateQueries({ queryKey: ["useGetKnowledgeBases"] });
     queryClient.invalidateQueries({ queryKey: ["useGetIngestionRuns"] });
     queryClient.invalidateQueries({ queryKey: ["useGetKnowledgeBaseChunks"] });
 
-    // Mirror the v1 build callbacks' analytics: every actual build attempt
-    // logs a flow-build event with success/error and (on failure) the error
-    // list. `runFlowAGUI` always resolves and writes failures into
-    // `buildInfo`; silent successful runs leave it null and are tracked as
-    // success.
+    // Mirror v1 build analytics: every attempt logs success/error. runFlowAGUI always
+    // resolves and writes failures into buildInfo; a null buildInfo counts as success.
     const finalBuildInfo = get().buildInfo;
     const hasError = finalBuildInfo?.success === false;
     trackFlowBuild(currentFlow?.name ?? "Unknown", hasError, {
@@ -1183,9 +1178,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ helperLineEnabled });
   },
   inspectionPanelVisible: ENABLE_INSPECTION_PANEL
-    ? localStorage.getItem("inspectionPanelVisible") !== null
-      ? localStorage.getItem("inspectionPanelVisible") === "true"
-      : true
+    ? localStorage.getItem("inspectionPanelVisible") === "true"
     : false,
   setInspectionPanelVisible: (visible: boolean) => {
     if (!ENABLE_INSPECTION_PANEL) return;
@@ -1258,9 +1251,8 @@ export function syncNodeTranslations(): void {
         : (normalizedToRegistryKey[normalizeComponentKey(nodeType)] ??
           nodeType);
 
-    // Resolve definition: normal path first, then fall back to templates which
-    // has legacy aliases pre-resolved (e.g. "Prompt" → Prompt Template definition,
-    // "parser" → ParserComponent definition).
+    // Resolve definition: normal path first, then templates which has legacy aliases
+    // pre-resolved (e.g. "Prompt" -> Prompt Template, "parser" -> ParserComponent).
     const freshDef =
       category && typesData[category]?.[registryKey]
         ? typesData[category][registryKey]
@@ -1268,9 +1260,8 @@ export function syncNodeTranslations(): void {
 
     if (!freshDef) return node;
 
-    // Determine whether display_name / description are default (safe to translate)
-    // or user-customized (leave alone). A value is "default" if it appears in the
-    // known-translations set for this component type across any supported locale.
+    // display_name/description are translated only when the saved value is a known
+    // default in the translations set for this type; user-customized values stay.
     const normKey = normalizeComponentKey(nodeType);
     const knownNames = componentDisplayNames[normKey]?.display_name ?? [];
     const knownDescs = componentDisplayNames[normKey]?.description ?? [];
@@ -1281,12 +1272,8 @@ export function syncNodeTranslations(): void {
       node.data.node!.description,
     );
 
-    // Update input field display_names, info (tooltips), and placeholders.
-    // Before overwriting a field's display_name, verify that the currently
-    // saved value is a known translatable string for that field (i.e. it
-    // matches one of the locale translations we collected at startup).
-    // If the saved value is not in the known set it was user-customized in
-    // the component code and must not be overwritten.
+    // Update field display_names/info/placeholders only when the saved value matches
+    // a known locale translation; anything else is user-customized and kept as-is.
     const updatedTemplate = { ...node.data.node!.template };
     const knownFields = componentDisplayNames[normKey]?.fields ?? {};
     for (const fieldName of Object.keys(updatedTemplate)) {
@@ -1297,7 +1284,7 @@ export function syncNodeTranslations(): void {
           knownFields[fieldName]?.display_name ?? [];
         const isKnownTranslation =
           knownFieldDisplayNames.length === 0 ||
-          knownFieldDisplayNames.includes(currentDisplayName);
+          knownFieldDisplayNames.includes(currentDisplayName!);
         if (isKnownTranslation) {
           updatedTemplate[fieldName] = {
             ...updatedTemplate[fieldName],

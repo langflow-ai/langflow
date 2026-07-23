@@ -845,6 +845,12 @@ async def test_download_image_for_browser(files_client, files_created_api_key, f
     # Verify content type is image
     assert "image" in response.headers.get("content-type", ""), "Response should be an image"
 
+    # Security: a tenant-uploaded SVG/HTML must not be able to execute inline in the app origin.
+    # nosniff blocks MIME sniffing and attachment forces a download on direct navigation; neither
+    # affects <img>/blob embedding (the download still succeeded above).
+    assert response.headers.get("x-content-type-options") == "nosniff"
+    assert response.headers.get("content-disposition") == "attachment"
+
 
 async def test_download_image_returns_correct_content_type(files_client, files_created_api_key, files_flow):
     """Test that the /images endpoint returns correct content-type for images."""

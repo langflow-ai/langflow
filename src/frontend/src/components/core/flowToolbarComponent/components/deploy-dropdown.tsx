@@ -13,6 +13,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { usePermissions } from "@/contexts/permissionsContext";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
+import CustomFlowShareAction from "@/customization/components/custom-flow-share-action";
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
 import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
@@ -118,6 +119,15 @@ export default function PublishDropdown({
           align="end"
           className="w-full min-w-[275px]"
         >
+          {/* Customization seam: overlays render a user/team share item; the OSS stub renders nothing. */}
+          {flowId && (
+            <CustomFlowShareAction
+              resourceId={flowId}
+              resourceType="flow"
+              resourceName={flowName}
+              menuContext="editor"
+            />
+          )}
           <DropdownMenuItem
             className="deploy-dropdown-item group"
             onClick={() => setOpenApiModal(true)}

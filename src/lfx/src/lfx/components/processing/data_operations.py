@@ -33,6 +33,7 @@ class DataOperationsComponent(Component):
     icon = "file-json"
     name = "DataOperations"
     legacy = True
+    replacement = ["processing.Operations"]
     default_keys = ["operations", "data"]
     metadata = {
         "keywords": [

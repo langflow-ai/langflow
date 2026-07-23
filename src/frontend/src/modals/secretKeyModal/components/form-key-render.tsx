@@ -100,7 +100,7 @@ export const FormKeyRender = ({
       </Form.Field>
 
       <Form.Field name="expires_at">
-        <Form.Label asChild className="mb-2">
+        <Form.Label asChild className="mb-2" htmlFor="expires-at-input">
           <Label className="relative bottom-1">
             {t("apiKey.expirationDate", "Expiration date")}{" "}
             <span className="text-muted-foreground">
@@ -109,25 +109,23 @@ export const FormKeyRender = ({
           </Label>
         </Form.Label>
         <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-          <Form.Control asChild>
-            <PopoverTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                id="expires-at-input"
-                data-testid="expires-at-input"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !selectedDate && "text-muted-foreground",
-                )}
-              >
-                <CalendarIcon className="mr-2 size-4 shrink-0" />
-                {selectedDate
-                  ? format(selectedDate, "PP")
-                  : t("apiKey.expirationPlaceholder", "No expiration")}
-              </Button>
-            </PopoverTrigger>
-          </Form.Control>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              id="expires-at-input"
+              data-testid="expires-at-input"
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !selectedDate && "text-muted-foreground",
+              )}
+            >
+              <CalendarIcon className="mr-2 size-4 shrink-0" />
+              {selectedDate
+                ? format(selectedDate, "PP")
+                : t("apiKey.expirationPlaceholder", "No expiration")}
+            </Button>
+          </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="single"

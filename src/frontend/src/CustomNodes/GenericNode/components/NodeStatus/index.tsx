@@ -10,6 +10,10 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
+import {
+  useIsFlowReadOnly,
+  usePermissions,
+} from "@/contexts/permissionsContext";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { track } from "@/customization/utils/analytics";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
@@ -24,6 +28,9 @@ import { formatTokenCount } from "@/utils/format-token-count";
 import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames, cn } from "@/utils/utils";
 import IconComponent from "../../../../components/common/genericIconComponent";
+import HumanInputNodeBadge, {
+  useAwaitingHumanInput,
+} from "../HumanInputNodeBadge";
 import BuildStatusDisplay from "./components/build-status-display";
 import { normalizeTimeString } from "./utils/format-run-time";
 
@@ -67,6 +74,7 @@ export default function NodeStatus({
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
   const [isPolling, setIsPolling] = useState(false);
+  const awaitingHumanInput = useAwaitingHumanInput(nodeId);
 
   const nodeAuth = Object.values(data.node?.template ?? {}).find(
     (value) => value.type === "auth",
@@ -98,6 +106,12 @@ export default function NodeStatus({
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setNode = useFlowStore((state) => state.setNode);
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isReadOnly = useIsFlowReadOnly(currentFlowId);
+  const { can, isLoading: permissionsLoading } = usePermissions();
+  const executeDenied =
+    Boolean(currentFlowId) &&
+    (permissionsLoading || !can(currentFlowId, "execute"));
   const version = useDarkStore((state) => state.version);
   const eventDeliveryConfig = useUtilityStore((state) => state.eventDelivery);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -111,6 +125,7 @@ export default function NodeStatus({
 
   // Start polling when connection is initiated
   const startPolling = () => {
+    if (isReadOnly) return;
     stopPolling();
     setIsPolling(true);
 
@@ -178,6 +193,7 @@ export default function NodeStatus({
   }, [isAuthenticated]);
 
   const handleDisconnect = () => {
+    if (isReadOnly) return;
     setIsPolling(true);
     mutateTemplate(
       "disconnect",
@@ -207,7 +223,13 @@ export default function NodeStatus({
   };
 
   function handlePlayWShortcut() {
-    if (buildStatus === BuildStatus.BUILDING || isBuilding || !selected) return;
+    if (
+      executeDenied ||
+      buildStatus === BuildStatus.BUILDING ||
+      isBuilding ||
+      !selected
+    )
+      return;
     setValidationStatus(null);
     buildFlow({
       stopNodeId: nodeId,
@@ -271,7 +293,7 @@ export default function NodeStatus({
   ]);
 
   useEffect(() => {
-    if (buildStatus === BuildStatus.BUILT && !isBuilding) {
+    if (buildStatus === BuildStatus.BUILT && !isBuilding && !isReadOnly) {
       setNode(
         nodeId,
         (old) => {
@@ -289,20 +311,20 @@ export default function NodeStatus({
         false,
       );
     }
-  }, [buildStatus, isBuilding]);
+  }, [buildStatus, isBuilding, isReadOnly, nodeId, setNode, version]);
 
   const [isHovered, setIsHovered] = useState(false);
 
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const handleClickRun = () => {
-    setFlowPool({});
-
     if (BuildStatus.BUILDING === buildStatus && isHovered) {
       stopBuilding();
       return;
     }
-    if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
+    if (executeDenied || buildStatus === BuildStatus.BUILDING || isBuilding)
+      return;
+    setFlowPool({});
     buildFlow({
       stopNodeId: nodeId,
       eventDelivery: eventDeliveryConfig,
@@ -332,7 +354,7 @@ export default function NodeStatus({
   };
 
   const handleClickConnect = () => {
-    if (connectionLink === "error") return;
+    if (isReadOnly || connectionLink === "error") return;
     if (isAuthenticated) {
       handleDisconnect();
     } else {
@@ -466,6 +488,7 @@ export default function NodeStatus({
                 <Button
                   unstyled
                   disabled={
+                    isReadOnly ||
                     (connectionLink === "" &&
                       (!apiKeyValue || apiKeyValue === "COMPOSIO_API_KEY")) ||
                     connectionLink === "error"
@@ -513,25 +536,33 @@ export default function NodeStatus({
           )}
         </div>
       )}
-      {showNode && (
-        <ShadTooltip content={getTooltipContent()}>
-          <div
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onClick={handleClickRun}
-            className="-m-0.5"
-          >
-            <Button unstyled className="nodrag button-run-bg group">
-              <div data-testid={`button_run_` + display_name.toLowerCase()}>
-                <IconComponent
-                  name={iconName}
-                  className={iconClasses}
-                  strokeWidth={ICON_STROKE_WIDTH}
-                />
-              </div>
-            </Button>
-          </div>
-        </ShadTooltip>
+      {awaitingHumanInput ? (
+        <HumanInputNodeBadge nodeId={nodeId} />
+      ) : (
+        showNode && (
+          <ShadTooltip content={getTooltipContent()}>
+            <div
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              onClick={handleClickRun}
+              className="-m-0.5"
+            >
+              <Button
+                unstyled
+                className="nodrag button-run-bg group disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={executeDenied && buildStatus !== BuildStatus.BUILDING}
+              >
+                <div data-testid={`button_run_` + display_name.toLowerCase()}>
+                  <IconComponent
+                    name={iconName}
+                    className={iconClasses}
+                    strokeWidth={ICON_STROKE_WIDTH}
+                  />
+                </div>
+              </Button>
+            </div>
+          </ShadTooltip>
+        )
       )}
     </div>
   );

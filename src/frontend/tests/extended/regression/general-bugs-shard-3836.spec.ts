@@ -5,8 +5,9 @@ import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import {
-  closeAdvancedOptions,
-  openAdvancedOptions,
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
 import { uploadFile } from "../../utils/upload-file";
 
@@ -27,9 +28,10 @@ test(
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
     await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
-    await openAdvancedOptions(page);
-    await page.getByTestId("showfiles").click();
-    await closeAdvancedOptions(page);
+    // LE-1810: the parameters panel adds the hidden files field to the node
+    await openParametersPanel(page);
+    await toggleParameterOnNode(page, "files");
+    await closeParametersPanel(page);
     const userQuestion = "What is this image?";
     await page.getByTestId("textarea_str_input_value").fill(userQuestion);
 

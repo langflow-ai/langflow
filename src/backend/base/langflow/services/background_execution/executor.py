@@ -52,15 +52,6 @@ class InProcessExecutor:
         # "Task was destroyed but it is pending" warning is logged.
         # return_exceptions swallows the CancelledError each task raises so one
         # cancel cannot mask the others.
-        # Cancel the in-flight JOB tasks directly first, then await them. A job
-        # that catches its cancel (a user-stop reconciles to CANCELLED) would
-        # otherwise leave the worker's ``await task`` in cancellation limbo, so we
-        # do not rely on cancellation propagating through the worker. Awaiting the
-        # job tasks here lets each one's shielded terminal reconcile finish BEFORE
-        # teardown — without it a reconcile write races a closing DB engine and a
-        # "Task was destroyed but it is pending" warning is logged.
-        # return_exceptions swallows the CancelledError each task raises so one
-        # cancel cannot mask the others.
         in_flight = list(self._in_flight.values())
         for task in in_flight:
             task.cancel()

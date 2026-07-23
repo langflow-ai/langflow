@@ -3,6 +3,7 @@ import type {
   AgenticProgressState,
   AgenticResult,
   AgenticStepType,
+  AssistantModelNotice,
   FlowAction,
 } from "@/controllers/API/queries/agentic";
 
@@ -76,6 +77,9 @@ export interface AssistantMessage {
    * the backend's ``duration_seconds``). Same units that ``MessageMetadata``
    * expects in the playground. */
   duration?: number;
+  /** Non-fatal model errors this turn recovered from (silent fallback/retry).
+   * Rendered as an (i) next to the message metadata. */
+  notices?: AssistantModelNotice[];
 }
 
 /** A single incremental canvas operation surfaced to the user as a task. */

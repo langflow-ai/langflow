@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.langflow.org/extension/v1.json",
   "id": "lfx-duckduckgo",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "name": "DuckDuckGo Search",
   "description": "DuckDuckGo Search component as a standalone Langflow Extension Bundle.",
   "lfx": {

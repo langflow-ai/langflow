@@ -1,0 +1,231 @@
+---
+title: Deploy Langflow with Nginx and SSL
+slug: /deployment-nginx-ssl
+---
+
+import Icon from "@site/src/components/icon";
+
+Deploy Langflow on a Linux-based server using Nginx as a reverse proxy, Let's Encrypt for SSL certificates, and Certbot for automated certificate management.
+
+This setup encrypts all communications between users and your Langflow server. SSL certificates ensure that sensitive data is protected from eavesdropping and tampering, and the automatic certificate management through Certbot eliminates the complexity of manual SSL configuration.
+
+## Prerequisites
+
+- An Ubuntu or Debian-based Linux server with a dual-core CPU and at least 2 GB of RAM
+This example uses [Digital Ocean cloud](https://www.digitalocean.com) for hosting. Your deployment may vary.
+- A domain name with external DNS management access
+- A DNS record configured to point your domain to your server's external IP address
+For example, if your server's IP is `203.0.113.1`, configure your DNS like this:
+    ```bash
+    Type: A
+    Name: langflow.example.com
+    Value: 203.0.113.1
+    ```
+
+## Connect to your server with SSH
+
+1. Create an SSH key to connect to your server remotely.
+For example:
+
+    ```bash
+    ssh-keygen -t ed25519 -C "DANA@EXAMPLE.COM"
+    ```
+
+    Replace `DANA@EXAMPLE.COM` with the email address that you want to associate with the SSH key.
+
+2. In your terminal, follow the instructions to create your SSH key pair.
+This creates both a private and public key.
+To copy the public key from your terminal, enter the following command:
+
+    ```bash
+    cat ~/Downloads/host-lf.pub | pbcopy
+    ```
+
+3. In your server, add the SSH key you copied in the previous step.
+For example, if you are using a Digital Ocean cloud server, add this SSH key when the server is created, or with the [Digital Ocean control panel](https://docs.digitalocean.com/products/droplets/how-to/add-ssh-keys/).
+
+4. To connect to your server with SSH, enter the following command.
+
+    ```bash
+    ssh -i PATH_TO_PRIVATE_KEY/PRIVATE_KEY_NAME root@SERVER_IP_ADDRESS
+    ```
+
+    Replace the following:
+
+    * `PATH_TO_PRIVATE_KEY/PRIVATE_KEY_NAME`: The path to your private SSH key file that matches the public key you added to your server
+    * `SERVER_IP_ADDRESS`: Your server's IP address
+
+5. When prompted for a key fingerprint, type `yes`.
+The terminal output indicates if the connection succeeds or fails.
+The following response was returned after connecting to a Digital Ocean cloud server.
+    ```bash
+     System information as of Wed Oct  8 21:40:43 UTC 2025
+
+      System load:  0.02              Processes:             103
+      Usage of /:   4.1% of 47.35GB   Users logged in:       1
+      Memory usage: 10%               IPv4 address for eth0: 165.227.176.236
+      Swap usage:   0%                IPv4 address for eth0: 10.17.0.5
+    ```
+
+## Install Langflow on your server
+
+To install Langflow on your server, do the following:
+
+1. Update system packages.
+    ```bash
+    sudo apt update && sudo apt upgrade -y
+    ```
+
+2. Install Python and pip.
+    ```bash
+    sudo apt install python3 python3-pip python3-venv -y
+    ```
+
+3. Install uv to manage Python packages.
+    Langflow recommends uv for faster installation.
+    ```bash
+    pip install uv
+    ```
+
+4. Create a virtual environment for Langflow.
+    ```bash
+    uv venv langflow-venv
+    source langflow-venv/bin/activate
+    ```
+
+5. Install Langflow using uv.
+    ```bash
+    uv pip install langflow
+    ```
+
+6. Optionally, start Langflow.
+    ```bash
+    uv run langflow run --host 127.0.0.1 --port 7860 &
+    ```
+
+    Test access at your `http://YOUR_PUBLIC_IP:7860`.
+    Since Langflow is running on `localhost`, you should not be successful.
+    In next steps, you will install Nginx as a reverse proxy to handle external access, and Certbot to configure SSL for secure HTTPS access.
+
+## Install Nginx
+
+Nginx is a reverse proxy that receives external requests and forwards them to your Langflow server. In addition to SSL termination, Nginx includes features for load balancing and security. For more information, see the [Nginx documentation](https://nginx.org/en/docs/).
+
+1. Install Nginx on your server.
+
+    ```bash
+    sudo apt install nginx -y
+    ```
+
+2. Start and enable Nginx on your server.
+    ```bash
+    sudo systemctl start nginx
+    sudo systemctl enable nginx
+    ```
+
+3. Create an Nginx configuration file.
+Replace **DOMAIN_NAME** with your actual domain name, such as `langflow.example.com`.
+    ```bash
+    sudo nano /etc/nginx/sites-available/DOMAIN_NAME
+    ```
+
+4. Paste the following content to the configuration file you created at `/etc/nginx/sites-available/DOMAIN_NAME`.
+
+    Replace **DOMAIN_NAME** with your actual domain name, such as `langflow.example.com`.
+    ```nginx
+    server {
+        listen 80;
+        server_name DOMAIN_NAME;
+
+        # Increase client body size for file uploads
+        client_max_body_size 100M;
+
+        location / {
+            proxy_pass http://127.0.0.1:7860/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            # WebSocket support for Langflow
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+
+            # Timeout settings for long-running flows
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 300s;
+
+            # Buffer settings
+            proxy_buffering off;
+            proxy_request_buffering off;
+        }
+    }
+    ```
+    This configuration listens on port 80 for standard HTTP. When you install Certbot in a later step, it will modify this configuration to add port 443 for HTTPS.
+
+5. To enable your site configuration, create a symlink between the `/sites-available` and `/sites-enabled` directories. `/sites-available` stores all site configurations, and `/sites-enabled` stores only active configurations which Nginx reads from. Creating this symlink switches this configuration ON.
+
+    ```bash
+    sudo ln -s /etc/nginx/sites-available/DOMAIN_NAME /etc/nginx/sites-enabled/DOMAIN_NAME
+    ```
+
+6. Check the Nginx configuration file's syntax.
+    ```bash
+    sudo nginx -t
+    ```
+
+7. Restart Nginx.
+    ```bash
+    sudo systemctl restart nginx
+    ```
+
+## Install Certbot and obtain SSL certificates
+
+While Nginx handles SSL termination in encrypting and decrypting traffic, Certbot automatically obtains SSL certificates from Let's Encrypt and configures Nginx to use them.
+
+The Certbot client is [recommended by Let's Encrypt](https://letsencrypt.org/getting-started/#selecting-and-operating-an-acme-client-yourself) for automated certificate management. For more information, see the [Certbot documentation](https://certbot.eff.org/).
+
+Install the Certbot client on your server to manage certificates, and install the [`python3-certbot-nginx` plugin](https://packages.ubuntu.com/source/jammy/python-certbot-nginx) to allow Certbot to modify your server's Nginx configuration.
+
+1. Install Certbot and the `python3-certbot-nginx` plugin.
+    ```bash
+    sudo apt install certbot python3-certbot-nginx -y
+    ```
+
+2. Obtain the SSL certificate for `DOMAIN_NAME` from Let's Encrypt.
+    ```bash
+    sudo certbot --nginx -d DOMAIN_NAME
+    ```
+
+    This result indicates that Certbot succeeded.
+    ```bash
+    Successfully received certificate.
+    Certificate is saved at: /etc/letsencrypt/live/DOMAIN_NAME/fullchain.pem
+    Key is saved at: /etc/letsencrypt/live/DOMAIN_NAME/privkey.pem
+    ```
+
+    When using `--nginx`, Certbot automatically injects the paths into your Nginx configuration as `ssl_certificate` and `ssl_certificate_key`.
+
+3. Start Langflow from the virtual environment.
+
+    a. Activate the virtual environment.
+    ```bash
+    source langflow-venv/bin/activate
+    ```
+
+    b. Start Langflow in the background.
+    ```bash
+    uv run langflow run --host 127.0.0.1 --port 7860 &
+    ```
+
+4. To test the deployment, navigate to `https://DOMAIN_NAME` in your browser.
+5. Verify the SSL certificate is working. Ensure the URL is `https://`, not `http://`.
+Your browser's address bar should display a <Icon name="Lock" aria-hidden="true"/> **Lock** icon.
+Click <Icon name="Lock" aria-hidden="true"/> **Lock** to view your SSL certificate details.
+
+## See also
+
+- [Deploy Langflow on a remote server with Caddy](/deployment-caddyfile)
+- [Deploy Langflow on Docker](/deployment-docker)

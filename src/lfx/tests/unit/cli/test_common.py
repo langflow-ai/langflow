@@ -1,9 +1,11 @@
 """Unit tests for LFX CLI common utilities."""
 
+import asyncio
 import os
 import socket
 import sys
 import uuid
+from io import StringIO
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
@@ -201,6 +203,118 @@ class TestLoadGraph:
 
 class TestGraphExecution:
     """Test graph execution utilities."""
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_with_capture_keeps_concurrent_logs_request_local(self):
+        """Concurrent graph output must not cross request boundaries."""
+        first_entered = asyncio.Event()
+        second_entered = asyncio.Event()
+        first_finished = asyncio.Event()
+
+        def make_graph(label: str, wait_for: asyncio.Event, entered: asyncio.Event):
+            async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+                sys.stdout.write(f"{label}-stdout-before\n")
+                sys.stderr.write(f"{label}-stderr-before\n")
+                entered.set()
+                await wait_for.wait()
+                sys.stdout.write(f"{label}-stdout-after\n")
+                sys.stderr.write(f"{label}-stderr-after\n")
+                yield MagicMock(results={"text": label})
+
+            graph = MagicMock()
+            graph.context = {}
+            graph.async_start = mock_async_start
+            return graph
+
+        first_graph = make_graph("first-secret", second_entered, first_entered)
+        second_graph = make_graph("second-secret", first_finished, second_entered)
+
+        async def run_first():
+            try:
+                return await execute_graph_with_capture(first_graph, "first input")
+            finally:
+                first_finished.set()
+
+        original_stdout = sys.stdout
+        original_stderr = sys.stderr
+        try:
+            first_task = asyncio.create_task(run_first())
+            await first_entered.wait()
+            second_task = asyncio.create_task(execute_graph_with_capture(second_graph, "second input"))
+            (_, first_logs), (_, second_logs) = await asyncio.gather(first_task, second_task)
+        finally:
+            # The vulnerable implementation can restore the wrong request's
+            # StringIO globally. Keep the regression self-contained when it fails.
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
+
+        assert "first-secret-stdout-before" in first_logs
+        assert "first-secret-stderr-after" in first_logs
+        assert "second-secret" not in first_logs
+        assert "second-secret-stdout-before" in second_logs
+        assert "second-secret-stderr-after" in second_logs
+        assert "first-secret" not in second_logs
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_with_capture_preserves_single_request_logs(self):
+        """A normal request still receives both its stdout and stderr."""
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            sys.stdout.write("single stdout\n")
+            sys.stderr.write("single stderr\n")
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.async_start = mock_async_start
+
+        process_stdout = StringIO()
+        process_stderr = StringIO()
+        with patch.object(sys, "stdout", process_stdout), patch.object(sys, "stderr", process_stderr):
+            _, logs = await execute_graph_with_capture(mock_graph, "test input")
+            sys.stdout.write("outside stdout\n")
+            sys.stderr.write("outside stderr\n")
+
+        assert logs == "single stdout\nsingle stderr\n"
+        assert process_stdout.getvalue() == "outside stdout\n"
+        assert process_stderr.getvalue() == "outside stderr\n"
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_with_capture_deactivates_outliving_child_capture(self):
+        """A child task that outlives its graph writes to the process streams."""
+        child_started = asyncio.Event()
+        release_child = asyncio.Event()
+        child_task = None
+
+        async def write_after_graph_returns():
+            child_started.set()
+            await release_child.wait()
+            sys.stdout.write("late child stdout\n")
+            sys.stderr.write("late child stderr\n")
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            nonlocal child_task
+            child_task = asyncio.create_task(write_after_graph_returns())
+            await child_started.wait()
+            sys.stdout.write("captured stdout\n")
+            sys.stderr.write("captured stderr\n")
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.async_start = mock_async_start
+
+        process_stdout = StringIO()
+        process_stderr = StringIO()
+        with patch.object(sys, "stdout", process_stdout), patch.object(sys, "stderr", process_stderr):
+            _, logs = await execute_graph_with_capture(mock_graph, "test input")
+            release_child.set()
+            assert child_task is not None
+            await child_task
+
+        assert logs == "captured stdout\ncaptured stderr\n"
+        assert process_stdout.getvalue() == "late child stdout\n"
+        assert process_stderr.getvalue() == "late child stderr\n"
 
     @pytest.mark.asyncio
     async def test_execute_graph_with_capture_success(self):

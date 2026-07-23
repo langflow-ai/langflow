@@ -67,6 +67,7 @@ RUN microdnf update -y \
         gnupg \
         xz tar \
     && microdnf clean all
+RUN python3.14 -m pip install --upgrade pip
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
 # Install Node.js (required for npx-based MCP stdio servers)
@@ -79,7 +80,8 @@ RUN ARCH=$(uname -m) \
                     | head -1) \
     && if [ -z "$NODE_VERSION" ]; then echo "ERROR: Could not determine Node.js version" && exit 1; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
-    | tar -xJ -C /usr/local --strip-components=1
+    | tar -xJ -C /usr/local --strip-components=1 \
+    && npm install -g npm@latest
 
 # Create non-root user
 RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
@@ -116,6 +118,8 @@ WORKDIR /app
 
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
+
+# secuirty options
 ENV LANGFLOW_AUTO_LOGIN=false
 
 CMD ["python", "-m", "langflow", "run", "--backend-only"]

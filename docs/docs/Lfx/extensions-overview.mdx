@@ -1,0 +1,27 @@
+---
+title: Langflow Extensions overview
+slug: /extensions-overview
+---
+
+Langflow ships third-party provider integrations as **extensions**.
+An extension is a `pip`-installable package that registers components when Langflow starts.
+
+Each extension exposes one or more **bundles**.
+A bundle is a named provider such as `openai`, `qdrant`, or `duckduckgo`.
+This bundle is the same group that related components are listed under in the visual editor.
+
+Instead of every integration being built into `langflow`, you install the extensions you need. Saved flows reference bundles by stable IDs (`ext:<bundle>:<Class>@official`), not by pip package name, so a provider can move between packages without breaking your flows.
+
+To install extensions and bundle components, see [Install LFX with bundle components](./lfx-install#install-with-bundle-components).
+
+To build your own extension, see [Build your first extension](./extensions-quickstart).
+
+## See also
+
+- [About LFX](./lfx-overview)
+- [Install LFX](./lfx-install)
+- [Bundle list](./extensions-bundle-list)
+- [Build your first extension](./extensions-quickstart)
+- [Manifest reference](./extensions-manifest)
+- [Run flows with LFX](./lfx-run)
+- [Serve flows with LFX](./lfx-serve)

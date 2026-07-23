@@ -148,6 +148,12 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """
         return f"{operation} {model_name}" if model_name else operation
 
+    @staticmethod
+    def _is_graph_interrupt(error: BaseException) -> bool:
+        # Why: LangGraph raises GraphInterrupt/GraphBubbleUp when a node pauses for human input
+        # (HITL tool approval); that is a normal suspension, not a failure, so it must not error the span.
+        return any(cls.__name__ in {"GraphInterrupt", "GraphBubbleUp", "Interrupt"} for cls in type(error).__mro__)
+
     def _handle_error(self, run_id: UUID, error: BaseException) -> None:
         """End a span with an error and clean up the run.
 
@@ -158,7 +164,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
         latency_ms = self._calculate_latency(run_id)
         self.tracer.end_langchain_span(
             span_id=span_id,
-            error=str(error),
+            error=None if self._is_graph_interrupt(error) else str(error),
             latency_ms=latency_ms,
         )
         self._cleanup_run(run_id)

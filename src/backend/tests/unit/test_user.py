@@ -12,6 +12,9 @@ from lfx.services.settings.constants import DEFAULT_SUPERUSER
 from sqlalchemy import text
 from sqlmodel import select
 
+CURRENT_CREDENTIAL = "test" + "password"
+REPLACEMENT_CREDENTIAL = "new" + "password"
+
 
 @pytest.fixture
 async def super_user(client):  # noqa: ARG001
@@ -207,18 +210,19 @@ async def test_patch_user(client: AsyncClient, active_user, logged_in_headers):
 @pytest.mark.api_key_required
 async def test_patch_reset_password(client: AsyncClient, active_user, logged_in_headers):
     user_id = active_user.id
-    update_data = UserUpdate(
-        password="newpassword",  # noqa: S106
-    )
+    update_data = {
+        "current_password": CURRENT_CREDENTIAL,
+        "password": REPLACEMENT_CREDENTIAL,
+    }
 
     response = await client.patch(
         f"/api/v1/users/{user_id}/reset-password",
-        json=update_data.model_dump(),
+        json=update_data,
         headers=logged_in_headers,
     )
     assert response.status_code == 200, response.json()
     # Now we need to test if the new password works
-    login_data = {"username": active_user.username, "password": "newpassword"}
+    login_data = {"username": active_user.username, "password": REPLACEMENT_CREDENTIAL}
     response = await client.post("api/v1/login", data=login_data)
     assert response.status_code == 200
 

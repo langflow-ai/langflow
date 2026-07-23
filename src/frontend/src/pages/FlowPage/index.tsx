@@ -9,7 +9,7 @@ import {
   SimpleSidebar,
   SimpleSidebarProvider,
 } from "@/components/ui/simple-sidebar";
-import { PermissionsProvider } from "@/contexts/permissionsContext";
+import { useRestoreCanvasHitl } from "@/controllers/API/agui/use-restore-canvas-hitl";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
@@ -29,6 +29,7 @@ import { customStringify } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import AgentMainContent from "./components/AgentMainContent";
 import {
   FlowSearchProvider,
   FlowSidebarComponent,
@@ -47,6 +48,14 @@ function FlowPageMainContent({
   const { activeSection } = useSidebar();
   const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
   const showMemories = ENABLE_NEW_SIDEBAR && activeSection === "memories";
+  // The Agent tab is always available. It handles its own three states
+  // (ineligible / eligible-not-serving / serving) inside AgentMainContent, so
+  // there's nothing to fall back to the canvas for.
+  const showAgent = ENABLE_NEW_SIDEBAR && activeSection === "agent";
+
+  if (showAgent) {
+    return <AgentMainContent />;
+  }
 
   if (showTraces) {
     return (
@@ -98,6 +107,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const flows = useFlowsManagerStore((state) => state.flows);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+
+  // Restore the Human Input awaiting-input badge after a reload (LE-1603 reconnect).
+  useRestoreCanvasHitl(currentFlowId);
 
   const updatedAt = currentSavedFlow?.updated_at;
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
@@ -347,20 +359,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                       )}
                     >
                       <div className="h-full w-full">
-                        <PermissionsProvider
-                          resourceType="flow"
-                          resourceIds={currentFlow?.id ? [currentFlow.id] : []}
-                          domain={
-                            currentFlow?.folder_id
-                              ? `project:${currentFlow.folder_id}`
-                              : undefined
-                          }
-                        >
-                          <FlowPageMainContent
-                            flowId={id}
-                            setIsLoading={setIsLoading}
-                          />
-                        </PermissionsProvider>
+                        <FlowPageMainContent
+                          flowId={id}
+                          setIsLoading={setIsLoading}
+                        />
                       </div>
                     </main>
                   </FlowSearchProvider>

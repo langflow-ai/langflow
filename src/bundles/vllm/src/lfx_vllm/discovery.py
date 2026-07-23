@@ -11,11 +11,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import requests
+import httpx
 from lfx.base.models.model_metadata import create_model_metadata
 from lfx.base.models.model_utils import MIN_DEFAULT_MODELS, get_provider_variable_value
 from lfx.log.logger import logger
-from lfx.utils.ssrf_protection import validate_url_for_ssrf
+from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -62,8 +62,7 @@ def fetch_live_vllm_models(user_id: UUID | str | None, model_type: str = "llm") 
         headers: dict[str, str] = {}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
-        validate_url_for_ssrf(models_url)
-        response = requests.get(models_url, headers=headers, timeout=_TIMEOUT_SECONDS)
+        response = ssrf_safe_httpx_get(models_url, headers=headers, timeout=_TIMEOUT_SECONDS, follow_redirects=False)
         response.raise_for_status()
         model_names = _parse_model_names(response.json())
         return [
@@ -102,21 +101,32 @@ def validate_vllm_credentials(provider: str, variables: dict[str, str], model_na
         headers["Authorization"] = f"Bearer {api_key}"
 
     try:
-        validate_url_for_ssrf(models_url)
-        response = requests.get(models_url, headers=headers, timeout=_TIMEOUT_SECONDS)
+        response = ssrf_safe_httpx_get(models_url, headers=headers, timeout=_TIMEOUT_SECONDS, follow_redirects=False)
         if response.status_code in (401, 403):
             msg = "Authentication failed for vLLM server. Check VLLM_API_KEY."
             logger.error(msg)
             raise ValueError(msg)
         response.raise_for_status()
-    except requests.ConnectionError as e:
+    except httpx.ConnectError as e:
         msg = (
             f"Could not connect to vLLM server at {base_url.rstrip('/')}. "
             "Please check that the server is running and the URL is correct."
         )
         logger.error(msg)
         raise ValueError(msg) from e
-    except requests.Timeout as e:
+    except httpx.TimeoutException as e:
         msg = f"Connection to vLLM server at {base_url.rstrip('/')} timed out."
+        logger.error(msg)
+        raise ValueError(msg) from e
+    except httpx.HTTPStatusError as e:
+        status = e.response.status_code if e.response is not None else "unknown"
+        msg = (
+            f"The vLLM server at {base_url.rstrip('/')} returned HTTP {status} for {models_url}. "
+            "Check that the base URL points to a vLLM OpenAI-compatible API."
+        )
+        logger.error(msg)
+        raise ValueError(msg) from e
+    except httpx.RequestError as e:
+        msg = f"Could not validate the vLLM server at {base_url.rstrip('/')}: {e}"
         logger.error(msg)
         raise ValueError(msg) from e

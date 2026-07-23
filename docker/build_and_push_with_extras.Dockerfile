@@ -77,6 +77,16 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv sync --frozen --no-editable --extra couchbase --extra cassio --extra local --extra clickhouse-connect --extra nv-ingest --extra postgresql --no-group dev
 
+# Use the release workflow's exact wheels when present, while retaining the
+# frontend compiled specifically for this image. Nightly and local builds leave
+# the artifact directory empty and no-op.
+COPY ./.release-artifacts /tmp/release-artifacts
+COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
+RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
+    --python /app/.venv/bin/python \
+    --mode main \
+    --frontend-source /app/src/backend/langflow/frontend
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
@@ -86,6 +96,7 @@ USER root
 RUN microdnf update -y \
     && microdnf install -y curl git libpq gnupg xz tar shadow-utils \
     && microdnf clean all
+RUN python3.14 -m pip install --upgrade pip
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
 RUN ARCH=$(uname -m) \
@@ -97,7 +108,8 @@ RUN ARCH=$(uname -m) \
                     | head -1) \
     && if [ -z "$NODE_VERSION" ]; then echo "ERROR: Could not determine Node.js version" && exit 1; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
-    | tar -xJ -C /usr/local --strip-components=1
+    | tar -xJ -C /usr/local --strip-components=1 \
+    && npm install -g npm@latest
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
@@ -115,6 +127,18 @@ ENV BASH_ENV="" \
 # /app/langflow/secret_key. See https://github.com/langflow-ai/langflow/issues/10437
 RUN mkdir -p /app/langflow && chown -R 1000:0 /app/langflow && chmod -R g+rwX /app/langflow
 
+# Give the runtime user (uid 1000) a writable npm cache. The image ships Node so
+# users can spawn stdio MCP servers via `npx`, but on the ubi10 base
+# HOME=/opt/app-root/src is not owned by uid 1000, so npx otherwise fails with
+# `EACCES` on ~/.npm/_cacache and stdio MCP servers never list any tools. Pin
+# npm's cache to a uid-1000-owned dir (immune to the base image's HOME) and hand
+# ownership of the default HOME cache to the runtime user as a fallback.
+# See https://github.com/langflow-ai/langflow/pull/13893 (ubi10 base change).
+ENV NPM_CONFIG_CACHE=/app/.npm
+RUN mkdir -p /app/.npm /opt/app-root/src/.npm \
+    && chown -R 1000:0 /app/.npm /opt/app-root/src/.npm \
+    && chmod -R g+rwX /app/.npm /opt/app-root/src/.npm
+
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']
 LABEL org.opencontainers.image.licenses=MIT
@@ -126,6 +150,8 @@ WORKDIR /app
 
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
+
+# secuirty options
 ENV LANGFLOW_AUTO_LOGIN=false
 
 CMD ["langflow", "run"]

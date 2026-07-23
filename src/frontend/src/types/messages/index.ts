@@ -1,4 +1,4 @@
-import type { ContentBlock, UsageType } from "../chat";
+import type { ContentBlockItem, UsageType } from "../chat";
 
 type Message = {
   flow_id: string;
@@ -31,7 +31,7 @@ type Message = {
     usage?: UsageType | null;
     [key: string]: unknown;
   };
-  content_blocks?: ContentBlock[];
+  content_blocks?: ContentBlockItem[];
 };
 
 export type { Message };

@@ -19,6 +19,12 @@ from langflow.schema.validators import TF_WITH_TZ_AND_MICROSECONDS, str_to_times
 if TYPE_CHECKING:
     from langflow.schema.message import Message
 
+# Columns a caller may order messages by. A tenant-supplied order_by is passed to
+# getattr(MessageTable, order_by); validating against this allowlist prevents an arbitrary
+# attribute name from raising a 500 error-oracle (or reaching a non-column attribute). Shared by
+# the monitor endpoints and the langflow.memory query helper so they validate identically.
+ALLOWED_MESSAGE_ORDER_FIELDS = frozenset({"timestamp", "sender", "sender_name", "session_id", "text"})
+
 
 class MessageBase(SQLModel):
     timestamp: Annotated[datetime, str_to_timestamp_validator] = Field(
@@ -64,7 +70,13 @@ class MessageBase(SQLModel):
         return value
 
     @classmethod
-    def from_message(cls, message: "Message", flow_id: str | UUID | None = None, run_id: str | UUID | None = None):
+    def from_message(
+        cls,
+        message: "Message",
+        flow_id: str | UUID | None = None,
+        run_id: str | UUID | None = None,
+        user_id: str | UUID | None = None,
+    ):
         # ``message.text`` is now a computed_field over content_blocks. The
         # "content present" signal is: ``data["text"]`` explicitly set
         # (covers ``text=""`` from ChatInput), a pending text stream
@@ -140,6 +152,13 @@ class MessageBase(SQLModel):
                 msg = f"Run ID {run_id} is not a valid UUID"
                 raise ValueError(msg) from exc
 
+        if isinstance(user_id, str):
+            try:
+                user_id = UUID(user_id)
+            except ValueError as exc:
+                msg = f"User ID {user_id} is not a valid UUID"
+                raise ValueError(msg) from exc
+
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
@@ -150,6 +169,7 @@ class MessageBase(SQLModel):
             timestamp=timestamp,
             flow_id=flow_id,
             run_id=run_id,
+            user_id=user_id,
             properties=properties,
             category=message.category,
             content_blocks=content_blocks,
@@ -177,6 +197,10 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     flow_id: UUID | None = Field(default=None)
     run_id: UUID | None = Field(default=None, index=True)
+    # Owner of the message (the user that executed the flow). Scopes chat-history retrieval so a
+    # reused session_id cannot disclose another user's messages on the authenticated run path.
+    # Nullable for legacy rows / contexts with no owner concept.
+    user_id: UUID | None = Field(default=None, index=True)
     is_output: bool = Field(default=False)
 
     files: list[str] = Field(sa_column=Column(JSON))
@@ -200,6 +224,15 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     @field_validator("flow_id", mode="before")
     @classmethod
     def validate_flow_id(cls, value):
+        if value is None:
+            return value
+        if isinstance(value, str):
+            return UUID(value)
+        return value
+
+    @field_validator("user_id", mode="before")
+    @classmethod
+    def validate_user_id(cls, value):
         if value is None:
             return value
         if isinstance(value, str):

@@ -1,0 +1,104 @@
+---
+title: macOS Support
+slug: /macos-support
+---
+
+Langflow supports both Apple Silicon (ARM64) and Intel (x86_64) Macs, but ML and AI features are only available on Apple Silicon due to hardware and dependency constraints.
+
+Intel Macs lack the Neural Engine, Metal 3 GPU acceleration, and unified memory architecture that Apple Silicon uses to run ML workloads efficiently.
+
+PyTorch, a popular AI/ML library, dropped support for macOS Intel (x86_64) starting with version 2.3.0 in April 2024. The last compatible release was PyTorch 2.2.2, which only supports Python versions 3.10–3.12. Many Langflow components depend on PyTorch, and are automatically excluded on Intel Macs to prevent installation failures.
+
+## Quick reference
+
+Core Langflow features and OCR work on both architectures.
+ML/AI components and GPU acceleration are Apple Silicon only.
+
+| Feature category | Apple Silicon (M1/M2/M3) | Intel (x86_64) |
+|-----------------|--------------------------|----------------|
+| **Core Langflow** | Full support | Full support |
+| **ML/AI Components** | Full support | Limited/Unavailable |
+| **GPU acceleration** | Metal support | Not available |
+| **Native OCR** | Full support | Full support |
+
+## Python version support
+
+All supported Python versions work on Apple Silicon.
+On Intel Macs, Python 3.13 and later lose PyTorch-dependent features like ALTK, HuggingFace, EasyOCR, and Docling.
+
+| Python version | Apple Silicon | Intel Mac |
+|---------------|---------------|-----------|
+| 3.10 | Supported | Supported |
+| 3.11 | Supported | Supported |
+| 3.12 | Supported | Supported |
+| 3.13 | Supported | Limited (no PyTorch) |
+| 3.14 | Supported | Limited (no PyTorch) |
+
+## Langflow feature support
+
+Feature support varies by Mac architecture. The following sections describe what works on each.
+
+### Core functionality (both architectures)
+
+The following features work on **both Apple Silicon and Intel Macs**:
+
+- Flow builder and visual editor
+- API server and endpoints
+- Database operations (SQLite, PostgreSQL)
+- Authentication and user management
+- All non-ML components (text processing, API calls, data transformations)
+- Native OCR via `ocrmac` (uses macOS Vision framework)
+- Vector stores and embeddings (when using API-based providers)
+- LangChain integrations (non-ML components)
+
+### ML/AI features (Apple Silicon only)
+
+The following features require **Apple Silicon (ARM64)** and are **not available on Intel Macs**:
+
+
+- **ALTK (Agent Lifecycle Toolkit)** - Requires PyTorch
+- **HuggingFace Transformers** - Requires PyTorch
+- **Sentence Transformers** - Requires PyTorch
+- **EasyOCR** - Requires PyTorch
+- **Docling (binary processing)** - Requires PyTorch
+  - Note: `docling-core` (metadata-only) works on Intel
+- **MLX and MLX-VLM** - Apple Silicon exclusive framework
+- **Metal GPU acceleration** - Requires Apple Silicon hardware
+- **CUGA** - Apple Silicon only
+
+If you need ML features on an Intel Mac, consider using API-based providers such as HuggingFace, or a remove inference server with GPU support.
+
+For some workloads, you can use Docker with ARM64 images with Rosetta 2:
+
+```bash
+docker run --platform linux/arm64 langflowai/langflow:latest
+```
+
+## Installation recommendations
+
+Installation instructions vary depending on your Mac architecture.
+
+For Apple Silicon users, install Langflow normally with all features:
+
+```bash
+pip install langflow
+```
+
+Or with specific ML extras:
+
+```bash
+pip install langflow[altk,langchain-huggingface,easyocr]
+```
+
+For Intel Mac users, install the base package for core functionality.
+Attempting to install ML-dependent extras on Intel Macs will be automatically skipped due to platform markers in the package configuration.
+
+```bash
+pip install langflow
+```
+
+## See also
+
+For troubleshooting, see [Troubleshoot Intel Mac issues](./troubleshooting.mdx#intel-mac-issues).
+
+For more information, ask the Langflow community in [GitHub Discussions](https://github.com/langflow-ai/langflow/discussions) or the [Discord server](https://discord.gg/EqksyE2EX9).

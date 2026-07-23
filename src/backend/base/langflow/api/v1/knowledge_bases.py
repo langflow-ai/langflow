@@ -226,6 +226,13 @@ def _resolve_kb_path(kb_name: str, owner_user) -> Path:
     kb_user_path = (kb_root_path / kb_user).resolve()
     kb_path = (kb_user_path / kb_name).resolve()
 
+    # The username roots the KB directory, so a username containing path separators
+    # or ".." (e.g. "../../etc") could make kb_user_path resolve outside kb_root_path
+    # while kb_path stays "contained" within that escaped base — bypassing the kb_name
+    # check below and enabling arbitrary-directory access/deletion. Check containment
+    # against the real root first, then the user dir for kb_name, matching the list
+    # endpoint's guard.
+    _validate_kb_path_containment(kb_root_path.resolve(), kb_user_path, kb_name, kb_user)
     _validate_kb_path_containment(kb_user_path, kb_path, kb_name, kb_user)
 
     if not kb_path.exists() or not kb_path.is_dir():
@@ -259,6 +266,20 @@ def _build_connector_ingest_dedupe_key(
     )
     digest = hashlib.sha256(canonical.encode()).hexdigest()
     return f"kb_connector_ingest:{digest}"
+
+
+def _apply_folder_source_security_settings(source_config: dict[str, Any]) -> dict[str, Any]:
+    """Return folder config with request-controlled security fields overwritten.
+
+    Folder paths and traversal options are request inputs, but filesystem roots
+    and file-size limits are operator policy. Keep that trust boundary in one
+    helper so both public folder-ingestion routes enforce the same settings.
+    """
+    settings = get_settings_service().settings
+    secured_config = dict(source_config)
+    secured_config["allowed_roots"] = list(settings.kb_allowed_folder_roots or [])
+    secured_config["max_file_size_bytes"] = settings.kb_folder_max_file_size_bytes
+    return secured_config
 
 
 def _is_memory_base_associated(metadata: dict[str, Any]) -> bool:
@@ -705,6 +726,9 @@ async def create_knowledge_base(
         # rejected before any directory is created.
         kb_user_path = (kb_root_path / kb_user).resolve()
         kb_path = (kb_user_path / kb_name).resolve()
+        # The username also roots the path, so it must be contained within the KB root
+        # too (a username with ".." would otherwise escape it before mkdir).
+        _validate_kb_path_containment(kb_root_path.resolve(), kb_user_path, kb_name, kb_user)
         _validate_kb_path_containment(kb_user_path, kb_path, kb_name, kb_user)
 
         # Check both durable DB state and legacy disk state. During
@@ -1130,9 +1154,8 @@ class IngestFolderRequest(BaseModel):
     """Body payload for ``POST /{kb_name}/ingest/folder``.
 
     Path is expanded (``~`` → user home) and resolved before being
-    checked against the settings allow-list. ``extensions`` and
-    ``max_file_size_bytes`` are optional — unset means "use the
-    FolderSource defaults".
+    checked against the settings allow-list. The per-file size limit is
+    operator-owned and is not exposed as a request field.
     """
 
     path: str = Field(..., description="Absolute or ~-expanded directory to walk.")
@@ -1141,7 +1164,6 @@ class IngestFolderRequest(BaseModel):
         None,
         description="Lowercase extensions without dot. None → defaults (txt, md, pdf, docx, …).",
     )
-    max_file_size_bytes: int | None = Field(None, description="Per-file size cap; None → 25 MB default.")
     source_name: str = Field("", description="Optional grouping label stamped on every chunk's 'source'.")
     chunk_size: int = Field(
         1000,
@@ -1190,9 +1212,6 @@ async def ingest_folder_to_knowledge_base(
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.INGEST, kb_name=kb_name)
     _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
-        settings = get_settings_service().settings
-        allowed_roots = settings.kb_allowed_folder_roots or []
-
         # Validate user-supplied metadata before resolving the KB path so a
         # malformed payload responds with 422 rather than 404 if the KB name
         # also happens to be wrong.
@@ -1240,14 +1259,12 @@ async def ingest_folder_to_knowledge_base(
         source_config: dict[str, Any] = {
             "path": payload.path,
             "recursive": payload.recursive,
-            "allowed_roots": allowed_roots,
         }
         if payload.extensions is not None:
             source_config["extensions"] = payload.extensions
-        if payload.max_file_size_bytes is not None:
-            source_config["max_file_size_bytes"] = payload.max_file_size_bytes
         if per_file_user_metadata:
             source_config["per_file_metadata"] = per_file_user_metadata
+        source_config = _apply_folder_source_security_settings(source_config)
 
         folder_source = FolderSource(user_id=current_user.id, source_config=source_config)
         try:
@@ -1829,11 +1846,15 @@ async def ingest_via_connector(
             metadata=metadata,
         )
 
+        source_config = dict(payload.source_config)
+        if payload.source_type == SourceType.FOLDER.value:
+            source_config = _apply_folder_source_security_settings(source_config)
+
         try:
             source = create_source(
                 payload.source_type,
                 user_id=current_user.id,
-                source_config=payload.source_config,
+                source_config=source_config,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -1853,7 +1874,7 @@ async def ingest_via_connector(
             user_id=current_user.id,
             kb_name=kb_name,
             source_type=payload.source_type,
-            source_config=payload.source_config,
+            source_config=source_config,
         )
 
         job_service = get_job_service()

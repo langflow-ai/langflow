@@ -74,6 +74,9 @@ class Input(BaseModel):
     advanced: bool = False
     """Specifies if the field will an advanced parameter (hidden). Defaults to False."""
 
+    api_editable: bool = False
+    """Specifies if the field is exposed as an editable API input. Defaults to False."""
+
     input_types: list[str] | None = None
     """List of input types for the handle when the field has more than one type. Default is an empty list."""
 

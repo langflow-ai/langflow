@@ -10,7 +10,8 @@ LM Studio, Ollama's /v1) cannot even be saved.
 Design: OPENAI_BASE_URL is OPTIONAL — the existing experience (paste an
 API key, static catalog) is byte-identical when it is not set. With it
 set, ChatOpenAI targets the custom server, validation validates against
-it, and the model list comes live from ``{base}/models``.
+it, and the model list comes live from ``{base}/models`` for both language
+model and embedding pickers.
 
 Mock boundaries: ChatOpenAI construction, variable lookups, and the HTTP
 fetch — external servers CI cannot reproduce.
@@ -27,6 +28,7 @@ from lfx.base.models.model_utils import (
     replace_with_live_models,
 )
 from lfx.base.models.unified_models import (
+    get_embeddings,
     get_model_provider_variable_mapping,
     get_provider_all_variables,
     get_provider_required_variable_keys,
@@ -67,7 +69,7 @@ class TestGetLlmBaseUrl:
     def test_should_pass_base_url_to_chat_openai_when_variable_is_set(self):
         with patch(
             "lfx.base.models.unified_models.get_all_variables_for_provider",
-            return_value={"OPENAI_API_KEY": "sk-test", "OPENAI_BASE_URL": CUSTOM_BASE_URL},
+            return_value={"OPENAI_API_KEY": "sk-test", "OPENAI_BASE_URL": CUSTOM_BASE_URL},  # pragma: allowlist secret
         ):
             llm = get_llm(OPENAI_MODEL_SPEC, USER_ID, api_key="sk-test")
 
@@ -76,11 +78,44 @@ class TestGetLlmBaseUrl:
     def test_should_not_set_base_url_when_variable_is_absent(self):
         with patch(
             "lfx.base.models.unified_models.get_all_variables_for_provider",
-            return_value={"OPENAI_API_KEY": "sk-test"},
+            return_value={"OPENAI_API_KEY": "sk-test"},  # pragma: allowlist secret
         ):
             llm = get_llm(OPENAI_MODEL_SPEC, USER_ID, api_key="sk-test")
 
         assert llm.openai_api_base is None
+
+
+class TestGetEmbeddingsBaseUrl:
+    @patch("lfx.base.models.unified_models.get_api_key_for_provider", return_value="sk-test")
+    @patch("lfx.base.models.unified_models.get_embedding_class")
+    def test_should_pass_global_base_url_to_openai_embeddings(self, get_embedding_class, get_api_key):
+        embedding_class = MagicMock()
+        get_embedding_class.return_value = embedding_class
+        model = [
+            {
+                "name": "BAAI/bge-base-en-v1.5",
+                "provider": "OpenAI",
+                "metadata": {},
+            }
+        ]
+
+        with (
+            patch(
+                "lfx.base.models.unified_models.get_all_variables_for_provider",
+                return_value={
+                    "OPENAI_API_KEY": "sk-test",  # pragma: allowlist secret
+                    "OPENAI_BASE_URL": CUSTOM_BASE_URL,
+                },
+            ),
+            patch(
+                "lfx.base.models.unified_models.instantiation._get_configured_embedding_providers",
+                return_value=[],
+            ),
+        ):
+            get_embeddings(model, user_id=USER_ID)
+
+        get_api_key.assert_any_call(USER_ID, "OpenAI", None)
+        assert embedding_class.call_args.kwargs["base_url"] == transform_localhost_url(CUSTOM_BASE_URL)
 
 
 class TestKeyValidationWithBaseUrl:
@@ -89,7 +124,7 @@ class TestKeyValidationWithBaseUrl:
         with patch("langchain_openai.ChatOpenAI", chat_openai):
             validate_model_provider_key(
                 "OpenAI",
-                {"OPENAI_API_KEY": "anything", "OPENAI_BASE_URL": CUSTOM_BASE_URL},
+                {"OPENAI_API_KEY": "anything", "OPENAI_BASE_URL": CUSTOM_BASE_URL},  # pragma: allowlist secret
                 model_name="gpt-oss:20b",
             )
 
@@ -98,7 +133,11 @@ class TestKeyValidationWithBaseUrl:
     def test_should_not_pass_base_url_when_not_configured(self):
         chat_openai = MagicMock()
         with patch("langchain_openai.ChatOpenAI", chat_openai):
-            validate_model_provider_key("OpenAI", {"OPENAI_API_KEY": "sk-test"}, model_name="gpt-4o-mini")
+            validate_model_provider_key(
+                "OpenAI",
+                {"OPENAI_API_KEY": "sk-test"},  # pragma: allowlist secret
+                model_name="gpt-4o-mini",
+            )
 
         assert "base_url" not in chat_openai.call_args.kwargs
 
@@ -118,7 +157,9 @@ class TestLiveOpenAICompatibleModels:
         with (
             patch(
                 "lfx.base.models.model_utils.get_provider_variable_value",
-                side_effect=lambda _uid, key: CUSTOM_BASE_URL if key == "OPENAI_BASE_URL" else "sk-test",
+                side_effect=lambda _uid, key: CUSTOM_BASE_URL
+                if key == "OPENAI_BASE_URL"
+                else "sk-test",  # pragma: allowlist secret
             ),
             patch("requests.get", return_value=response) as http_get,
         ):
@@ -128,12 +169,30 @@ class TestLiveOpenAICompatibleModels:
         assert all(m["tool_calling"] for m in models)
         assert http_get.call_args.args[0] == f"{CUSTOM_BASE_URL}/models"
 
-    def test_should_not_list_embeddings_from_the_custom_server(self):
-        with patch(
-            "lfx.base.models.model_utils.get_provider_variable_value",
-            return_value=CUSTOM_BASE_URL,
+    def test_should_list_embeddings_from_the_custom_server(self):
+        response = MagicMock()
+        response.json.return_value = {"data": [{"id": "BAAI/bge-base-en-v1.5"}]}
+        response.raise_for_status.return_value = None
+        with (
+            patch(
+                "lfx.base.models.model_utils.get_provider_variable_value",
+                side_effect=lambda _uid, key: CUSTOM_BASE_URL
+                if key == "OPENAI_BASE_URL"
+                else "sk-test",  # pragma: allowlist secret
+            ),
+            patch("requests.get", return_value=response),
         ):
-            assert fetch_live_openai_compatible_models(USER_ID, "embeddings") == []
+            models = fetch_live_openai_compatible_models(USER_ID, "embeddings")
+
+        assert [model["name"] for model in models] == ["BAAI/bge-base-en-v1.5"]
+        assert all(model["model_type"] == "embeddings" for model in models)
+        assert all(not model["tool_calling"] for model in models)
+
+    def test_should_reject_unknown_model_type_without_fetching(self):
+        with patch("requests.get") as http_get:
+            assert fetch_live_openai_compatible_models(USER_ID, "image") == []
+
+        http_get.assert_not_called()
 
 
 class TestConditionalLiveReplacement:
@@ -169,6 +228,25 @@ class TestConditionalLiveReplacement:
 
         assert [m["model_name"] for m in catalog[0]["models"]] == ["gpt-oss:20b"]
 
+    def test_should_replace_embedding_catalog_with_server_models_when_base_url_is_configured(self):
+        catalog = [{"provider": "OpenAI", "models": [{"model_name": "text-embedding-3-small", "metadata": {}}]}]
+        live = [
+            {
+                "name": "BAAI/bge-base-en-v1.5",
+                "provider": "OpenAI",
+                "model_type": "embeddings",
+                "tool_calling": False,
+            }
+        ]
+        with patch(
+            "lfx.base.models.model_utils.get_live_models_for_provider",
+            return_value=live,
+        ):
+            replace_with_live_models(catalog, USER_ID, ["OpenAI"], model_type="embeddings")
+
+        assert [model["model_name"] for model in catalog[0]["models"]] == ["BAAI/bge-base-en-v1.5"]
+        assert catalog[0]["models"][0]["metadata"]["model_type"] == "embeddings"
+
 
 class TestMalformedModelsPayload:
     """C7: a non-conforming /models payload from an arbitrary server degrades to [], not raises."""
@@ -187,7 +265,9 @@ class TestMalformedModelsPayload:
             patch.object(
                 model_utils,
                 "get_provider_variable_value",
-                side_effect=lambda _uid, key: CUSTOM_BASE_URL if key == "OPENAI_BASE_URL" else "sk-x",
+                side_effect=lambda _uid, key: CUSTOM_BASE_URL
+                if key == "OPENAI_BASE_URL"
+                else "sk-x",  # pragma: allowlist secret
             ),
             patch("requests.get", return_value=FakeResp()),
         ):
@@ -214,19 +294,21 @@ class TestBaseUrlNormalizationParity:
         with (
             patch("langchain_openai.ChatOpenAI", chat_openai),
             patch("lfx.utils.util.transform_localhost_url", return_value=self.TRANSFORMED),
+            patch("lfx.base.models.unified_models.credentials.validate_connector_url_for_ssrf") as validate_url,
         ):
             validate_model_provider_key(
                 "OpenAI",
-                {"OPENAI_API_KEY": "sk-x", "OPENAI_BASE_URL": "http://localhost:11434/v1"},
+                {"OPENAI_API_KEY": "sk-x", "OPENAI_BASE_URL": "http://localhost:11434/v1"},  # pragma: allowlist secret
                 model_name="gpt-oss:20b",
             )
 
+        validate_url.assert_called_once_with(self.TRANSFORMED)
         assert chat_openai.call_args.kwargs.get("base_url") == self.TRANSFORMED
 
     def test_get_llm_normalizes_base_url(self):
         with patch(
             "lfx.base.models.unified_models.get_all_variables_for_provider",
-            return_value={"OPENAI_API_KEY": "sk-test", "OPENAI_BASE_URL": CUSTOM_BASE_URL},
+            return_value={"OPENAI_API_KEY": "sk-test", "OPENAI_BASE_URL": CUSTOM_BASE_URL},  # pragma: allowlist secret
         ):
             llm = get_llm(OPENAI_MODEL_SPEC, USER_ID, api_key="sk-test")
 

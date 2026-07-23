@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { BaseInputProps } from "@/components/core/parameterRenderComponent/types";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import { matchesModelIdentity } from "../helpers/model-option-identity";
 import ModelInputComponent from "../index";
 import type { ModelInputComponentType, ModelOption } from "../types";
 
@@ -162,6 +163,23 @@ const mockOptions: ModelOption[] = [
   },
 ];
 
+const duplicateModelOptions: ModelOption[] = [
+  {
+    id: "openai-gpt-4o",
+    name: "gpt-4o",
+    icon: "OpenAI",
+    provider: "OpenAI",
+    metadata: {},
+  },
+  {
+    id: "foundry-gpt-4o",
+    name: "gpt-4o",
+    icon: "Azure",
+    provider: "Azure AI Foundry",
+    metadata: {},
+  },
+];
+
 const defaultProps: BaseInputProps & ModelInputComponentType = {
   id: "test-model-input",
   value: [],
@@ -213,7 +231,64 @@ describe("ModelInputComponent", () => {
     jest.clearAllMocks();
   });
 
+  describe("Model identity", () => {
+    it("distinguishes providers and preserves legacy name-only matching", () => {
+      const openAiOption = { name: "gpt-4o", provider: "OpenAI" };
+
+      expect(
+        matchesModelIdentity(openAiOption, {
+          name: "gpt-4o",
+          provider: "Azure AI Foundry",
+        }),
+      ).toBe(false);
+      expect(matchesModelIdentity(openAiOption, { name: "gpt-4o" })).toBe(true);
+    });
+  });
+
   describe("Rendering", () => {
+    it("keeps the saved provider when providers share a model name", async () => {
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={duplicateModelOptions}
+          value={[duplicateModelOptions[1]]}
+        />,
+      );
+
+      expect(screen.getByTestId("icon-Azure")).toBeInTheDocument();
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("combobox"));
+      expect(
+        screen
+          .getByTestId("Azure AI Foundry-gpt-4o-option")
+          .querySelector('[data-testid="icon-Check"]'),
+      ).toHaveClass("opacity-100");
+      expect(
+        screen
+          .getByTestId("OpenAI-gpt-4o-option")
+          .querySelector('[data-testid="icon-Check"]'),
+      ).toHaveClass("opacity-0");
+    });
+
+    it("uses name-only matching for legacy saved values without a provider", () => {
+      const legacyValue = {
+        name: "gpt-4o",
+        icon: "Bot",
+        metadata: {},
+      } as ModelOption;
+
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={[duplicateModelOptions[0]]}
+          value={[legacyValue]}
+        />,
+      );
+
+      expect(screen.getByTestId("icon-OpenAI")).toBeInTheDocument();
+    });
+
     it("should keep combobox enabled when no options are provided", async () => {
       const user = userEvent.setup();
       renderWithQueryClient(
@@ -280,6 +355,27 @@ describe("ModelInputComponent", () => {
   });
 
   describe("Dropdown Interaction", () => {
+    it("selects the requested provider when providers share a model name", async () => {
+      const handleOnNewValue = jest.fn();
+      const user = userEvent.setup();
+
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={duplicateModelOptions}
+          value={[duplicateModelOptions[0]]}
+          handleOnNewValue={handleOnNewValue}
+        />,
+      );
+
+      await user.click(screen.getByRole("combobox"));
+      await user.click(screen.getByTestId("Azure AI Foundry-gpt-4o-option"));
+
+      expect(handleOnNewValue).toHaveBeenLastCalledWith({
+        value: [duplicateModelOptions[1]],
+      });
+    });
+
     it("should open dropdown when trigger is clicked", async () => {
       const user = userEvent.setup();
       renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
@@ -303,8 +399,13 @@ describe("ModelInputComponent", () => {
       // Wait for dropdown to open and show content
       await waitFor(() => {
         // Check that model options with data-testid are rendered
-        expect(screen.getByTestId("gpt-4-option")).toBeInTheDocument();
-        expect(screen.getByTestId("gpt-3.5-turbo-option")).toBeInTheDocument();
+        expect(screen.getByTestId("OpenAI-gpt-4-option")).toBeInTheDocument();
+        expect(
+          screen.getByTestId("OpenAI-gpt-3.5-turbo-option"),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole("group", { name: "OpenAI" }),
+        ).toBeInTheDocument();
       });
     });
 
@@ -326,7 +427,7 @@ describe("ModelInputComponent", () => {
         expect(screen.getByText("gpt-3.5-turbo")).toBeInTheDocument();
       });
 
-      const modelOption = screen.getByTestId("gpt-3.5-turbo-option");
+      const modelOption = screen.getByTestId("OpenAI-gpt-3.5-turbo-option");
       await user.click(modelOption);
 
       expect(handleOnNewValue).toHaveBeenCalled();
@@ -540,7 +641,9 @@ describe("ModelInputComponent", () => {
       });
 
       // Popover must be closed after refresh to prevent width measurement glitch
-      expect(screen.queryByTestId("gpt-4-option")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("OpenAI-gpt-4-option"),
+      ).not.toBeInTheDocument();
       expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
     });
 
@@ -549,7 +652,9 @@ describe("ModelInputComponent", () => {
       renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
 
       expect(screen.getByRole("combobox")).toBeInTheDocument();
-      expect(screen.queryByTestId("gpt-4-option")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("OpenAI-gpt-4-option"),
+      ).not.toBeInTheDocument();
     });
 
     it("should call refresh with silent=false exactly once per click", async () => {
@@ -682,10 +787,10 @@ describe("ModelInputComponent", () => {
       await user.click(trigger);
 
       await waitFor(() => {
-        expect(screen.getByTestId("gpt-4-option")).toBeInTheDocument();
+        expect(screen.getByTestId("OpenAI-gpt-4-option")).toBeInTheDocument();
       });
       expect(
-        screen.queryByTestId("gpt-3.5-turbo-option"),
+        screen.queryByTestId("OpenAI-gpt-3.5-turbo-option"),
       ).not.toBeInTheDocument();
     });
 
@@ -740,11 +845,11 @@ describe("ModelInputComponent", () => {
       await user.click(trigger);
 
       await waitFor(() => {
-        expect(screen.getByTestId("gpt-4-option")).toBeInTheDocument();
+        expect(screen.getByTestId("OpenAI-gpt-4-option")).toBeInTheDocument();
       });
       // Augmented entries from providersData × enabled_models must be visible.
-      expect(screen.getByTestId("gpt-4o-option")).toBeInTheDocument();
-      expect(screen.getByTestId("gpt-4.1-option")).toBeInTheDocument();
+      expect(screen.getByTestId("OpenAI-gpt-4o-option")).toBeInTheDocument();
+      expect(screen.getByTestId("OpenAI-gpt-4.1-option")).toBeInTheDocument();
     });
 
     it("keeps the trigger enabled when saved options=[] but providersData has enabled models", () => {
@@ -1043,7 +1148,7 @@ describe("ModelInputComponent", () => {
 
       // The sticky-default option for the configured provider must be hidden.
       expect(
-        screen.queryByTestId("gpt-3.5-turbo-sticky-option"),
+        screen.queryByTestId("OpenAI-gpt-3.5-turbo-sticky-option"),
       ).not.toBeInTheDocument();
     });
   });
@@ -1308,13 +1413,17 @@ describe("ModelInputComponent", () => {
       // Tool-calling-capable model must appear (via the augment loop).
       await waitFor(() => {
         expect(
-          screen.getByTestId("gemini-3.1-flash-lite-option"),
+          screen.getByTestId(
+            "Google Generative AI-gemini-3.1-flash-lite-option",
+          ),
         ).toBeInTheDocument();
       });
       // Tool-incompatible model must be filtered out — even though the
       // backend lists it as enabled and the provider is configured.
       expect(
-        screen.queryByTestId("gemini-3.1-flash-image-preview-option"),
+        screen.queryByTestId(
+          "Google Generative AI-gemini-3.1-flash-image-preview-option",
+        ),
       ).not.toBeInTheDocument();
     });
 
@@ -1345,9 +1454,13 @@ describe("ModelInputComponent", () => {
 
       await user.click(screen.getByRole("combobox"));
       await waitFor(() => {
-        expect(screen.getByTestId("claude-sonnet-option")).toBeInTheDocument();
+        expect(
+          screen.getByTestId("Anthropic-claude-sonnet-option"),
+        ).toBeInTheDocument();
       });
-      expect(screen.queryByTestId("image-only-option")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("Anthropic-image-only-option"),
+      ).not.toBeInTheDocument();
     });
 
     it("treats a missing metadata key as a filter failure (conservative)", async () => {
@@ -1377,14 +1490,14 @@ describe("ModelInputComponent", () => {
       await user.click(screen.getByRole("combobox"));
       await waitFor(() => {
         expect(
-          screen.getByTestId("claude-known-good-option"),
+          screen.getByTestId("Anthropic-claude-known-good-option"),
         ).toBeInTheDocument();
       });
       // Conservative drop: metadata doesn't declare tool_calling at all,
       // so we can't verify the constraint — better hide than risk a
       // runtime crash from a non-tool-calling pick.
       expect(
-        screen.queryByTestId("no-metadata-option"),
+        screen.queryByTestId("Anthropic-no-metadata-option"),
       ).not.toBeInTheDocument();
     });
 
@@ -1406,7 +1519,9 @@ describe("ModelInputComponent", () => {
       );
       await user.click(screen.getByRole("combobox"));
       await waitFor(() => {
-        expect(screen.getByTestId("any-model-option")).toBeInTheDocument();
+        expect(
+          screen.getByTestId("OpenAI-any-model-option"),
+        ).toBeInTheDocument();
       });
     });
   });

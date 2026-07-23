@@ -7,6 +7,8 @@
  * - sessionStorage (anonymous/auto-login shareable playground)
  */
 
+import { renderHook } from "@testing-library/react";
+
 const FLOW_ID = "virtual-flow-id-123";
 const SOURCE_FLOW_ID = "real-flow-id-456";
 const MOCK_MESSAGES = [
@@ -51,6 +53,7 @@ jest.mock("@/modals/IOModal/helpers/playground-auth", () => ({
 }));
 
 const mockApiGet = jest.fn();
+const mockQueryKeys: unknown[] = [];
 jest.mock("@/controllers/API/api", () => ({
   api: { get: (...args: unknown[]) => mockApiGet(...args) },
 }));
@@ -61,22 +64,23 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
 
 jest.mock("@/utils/utils", () => ({
   extractColumnsFromRows: jest.fn(() => []),
-  prepareSessionIdForAPI: (id: string) => id,
+  prepareSessionIdForAPI: (id: string) => encodeURIComponent(id),
 }));
 
 jest.mock("@/controllers/API/services/request-processor", () => ({
   UseRequestProcessor: jest.fn(() => ({
-    query: jest.fn((_key: unknown, fn: () => Promise<unknown>) => {
+    query: jest.fn((key: unknown, fn: () => Promise<unknown>) => {
+      mockQueryKeys.push(key);
       void fn();
       return { data: null, isFetched: false, refetch: jest.fn() };
     }),
   })),
 }));
 
+import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import useFlowStore from "@/stores/flowStore";
 import { useMessagesStore } from "@/stores/messagesStore";
-import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
-import { useGetMessagesQuery } from "../use-get-messages";
+import { getMessages, useGetMessagesQuery } from "../use-get-messages";
 
 const mockFlowStore = useFlowStore as unknown as { getState: jest.Mock };
 const mockIsAuth = isAuthenticatedPlayground as jest.MockedFunction<
@@ -89,6 +93,7 @@ describe("useGetMessagesQuery - Routing Logic", () => {
     mockApiGet.mockResolvedValue({ data: MOCK_MESSAGES });
     mockFlowStore.getState.mockReturnValue({ playgroundPage: false });
     mockIsAuth.mockReturnValue(false);
+    mockQueryKeys.length = 0;
     window.sessionStorage.clear();
   });
 
@@ -96,14 +101,32 @@ describe("useGetMessagesQuery - Routing Logic", () => {
     mockFlowStore.getState.mockReturnValue({ playgroundPage: false });
     mockIsAuth.mockReturnValue(false);
 
-    useGetMessagesQuery({ id: FLOW_ID, mode: "union" }, {});
+    useGetMessagesQuery(
+      {
+        id: FLOW_ID,
+        mode: "union",
+        params: {
+          session_id: "session-1",
+          limit: 20,
+          order: "DESC",
+          offset: 40,
+        },
+      },
+      {},
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(mockApiGet).toHaveBeenCalledWith(
       "api/v1/messages",
       expect.objectContaining({
-        params: expect.objectContaining({ flow_id: FLOW_ID }),
+        params: {
+          flow_id: FLOW_ID,
+          session_id: "session-1",
+          limit: 20,
+          order: "DESC",
+          offset: 40,
+        },
       }),
     );
   });
@@ -112,14 +135,32 @@ describe("useGetMessagesQuery - Routing Logic", () => {
     mockFlowStore.getState.mockReturnValue({ playgroundPage: true });
     mockIsAuth.mockReturnValue(true);
 
-    useGetMessagesQuery({ id: FLOW_ID, mode: "union" }, {});
+    useGetMessagesQuery(
+      {
+        id: FLOW_ID,
+        mode: "union",
+        params: {
+          flow_id: "must-not-be-forwarded",
+          session_id: "session-1",
+          limit: 20,
+          order: "DESC",
+          offset: 40,
+        },
+      },
+      {},
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(mockApiGet).toHaveBeenCalledWith(
-      "api/v1/messages/shared",
-      expect.objectContaining({ params: { source_flow_id: SOURCE_FLOW_ID } }),
-    );
+    expect(mockApiGet).toHaveBeenCalledWith("api/v1/messages/shared", {
+      params: {
+        session_id: "session-1",
+        limit: 20,
+        order: "DESC",
+        offset: 40,
+        source_flow_id: SOURCE_FLOW_ID,
+      },
+    });
   });
 
   it("should_use_sessionStorage_when_anonymous_playground", async () => {
@@ -134,6 +175,86 @@ describe("useGetMessagesQuery - Routing Logic", () => {
 
     // Should NOT call API
     expect(mockApiGet).not.toHaveBeenCalled();
+  });
+
+  it("should_filter_order_and_paginate_anonymous_sessionStorage", async () => {
+    mockFlowStore.getState.mockReturnValue({ playgroundPage: true });
+    mockIsAuth.mockReturnValue(false);
+    window.sessionStorage.setItem(
+      FLOW_ID,
+      JSON.stringify([
+        {
+          id: "oldest",
+          session_id: "session one",
+          timestamp: "2026-01-01T00:00:00Z",
+        },
+        {
+          id: "other-session",
+          session_id: "session-two",
+          timestamp: "2026-01-01T00:03:00Z",
+        },
+        {
+          id: "newest",
+          session_id: "session one",
+          timestamp: "2026-01-01T00:02:00Z",
+        },
+        {
+          id: "middle",
+          session_id: "session one",
+          timestamp: "2026-01-01T00:01:00Z",
+        },
+      ]),
+    );
+
+    const response = await getMessages(FLOW_ID, {
+      session_id: "session one",
+      order: "DESC",
+      offset: 1,
+      limit: 1,
+    });
+
+    expect(response.data.map((message) => message.id)).toEqual(["middle"]);
+    expect(mockApiGet).not.toHaveBeenCalled();
+  });
+
+  it("uses a distinct query key when request params change", () => {
+    const { rerender } = renderHook(
+      ({ sessionId }) =>
+        useGetMessagesQuery(
+          {
+            id: FLOW_ID,
+            mode: "union",
+            excludedFields: ["properties"],
+            params: { session_id: sessionId, limit: 20, order: "DESC" },
+          },
+          {},
+        ),
+      { initialProps: { sessionId: "session-1" } },
+    );
+    const firstKey = mockQueryKeys[mockQueryKeys.length - 1];
+
+    rerender({ sessionId: "session-2" });
+    const secondKey = mockQueryKeys[mockQueryKeys.length - 1];
+
+    expect(firstKey).toEqual([
+      "useGetMessagesQuery",
+      {
+        id: FLOW_ID,
+        mode: "union",
+        excludedFields: ["properties"],
+        params: { session_id: "session-1", limit: 20, order: "DESC" },
+      },
+    ]);
+    expect(secondKey).toEqual([
+      "useGetMessagesQuery",
+      {
+        id: FLOW_ID,
+        mode: "union",
+        excludedFields: ["properties"],
+        params: { session_id: "session-2", limit: 20, order: "DESC" },
+      },
+    ]);
+    expect(secondKey).not.toEqual(firstKey);
   });
 
   it("should_sync_messages_to_zustand_store_when_authenticated_playground", async () => {

@@ -3,6 +3,7 @@ import { cloneDeep } from "lodash";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -67,6 +68,7 @@ const FlowSettingsComponent = ({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const flows = useFlowsManagerStore((state) => state.flows);
   const flow = flowData ?? currentFlow;
+  const isReadOnly = useIsFlowReadOnly(flow?.id);
   const [name, setName] = useState(flow?.name ?? "");
   const [description, setDescription] = useState(flow?.description ?? "");
   const [locked, setLocked] = useState<boolean>(flow?.locked ?? false);
@@ -83,6 +85,7 @@ const FlowSettingsComponent = ({
 
   function handleSubmit(event?: React.FormEvent<HTMLFormElement>): void {
     if (event) event.preventDefault();
+    if (isReadOnly) return;
     setIsSaving(true);
     if (!flow) return;
     const newFlow = updateFlowWithFormValues(flow, name, description, locked);
@@ -130,6 +133,7 @@ const FlowSettingsComponent = ({
             submitForm={submitForm}
             locked={locked}
             setLocked={setLocked}
+            readOnly={isReadOnly}
           />
         </div>
         <div className="flex justify-end gap-2">
@@ -148,7 +152,8 @@ const FlowSettingsComponent = ({
               size="sm"
               data-testid="save-flow-settings"
               loading={isSaving}
-              disabled={disableSave}
+              disabled={disableSave || isReadOnly}
+              title={isReadOnly ? t("version.readOnly") : undefined}
             >
               {t("modal.saveButton")}
             </Button>

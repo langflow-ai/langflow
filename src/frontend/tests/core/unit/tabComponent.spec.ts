@@ -67,9 +67,9 @@ test(
     await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     // Verify that all tabs are visible
-    expect(await page.getByText("Tab 1").isVisible()).toBeTruthy();
-    expect(await page.getByText("Tab 2").isVisible()).toBeTruthy();
-    expect(await page.getByText("Tab 3").isVisible()).toBeTruthy();
+    await expect(page.getByTestId("tab_0_tab_1")).toBeVisible();
+    await expect(page.getByTestId("tab_1_tab_2")).toBeVisible();
+    await expect(page.getByTestId("tab_2_tab_3")).toBeVisible();
 
     // Verify that Tab 1 is active by default (as specified in the value)
     expect(

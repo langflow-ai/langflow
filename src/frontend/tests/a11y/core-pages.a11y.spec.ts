@@ -4,6 +4,7 @@ import { TID } from "../utils/constants/testIds";
 import { TEXTS } from "../utils/constants/texts";
 import { TIMEOUTS } from "../utils/constants/timeouts";
 import { addComponentFromSidebar } from "../utils/flow/add-component-from-sidebar";
+import { openParametersPanel } from "../utils/open-advanced-options";
 
 async function disableAnimations(page: LangflowPage) {
   await page.addStyleTag({
@@ -97,13 +98,15 @@ test.describe("core application accessibility", () => {
       await page.runA11yScan("flow-canvas-populated");
 
       await page.getByTestId("title-Chat Input").click();
-      await expect(page.getByTestId(TID.editFieldsButton)).toBeVisible();
-      await page.getByTestId(TID.editFieldsButton).click();
-      await expect(page.getByTestId("showinput_value")).toBeVisible();
+      await expect(page.getByTestId(TID.parametersButton)).toBeVisible();
+      await openParametersPanel(page);
+      await expect(
+        page.getByTestId("inspector-param-input_value"),
+      ).toBeVisible();
 
       await page.runA11yScan("component-configuration");
 
-      await page.getByTestId(TID.editFieldsButton).click();
+      await page.getByTestId("inspection-panel-close").click();
       await page
         .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();

@@ -15,8 +15,9 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.models import (
     DISABLED_MODELS_VAR,
     ENABLED_MODELS_VAR,
-    get_model_names_for_provider,
+    build_model_providers_by_name,
     get_provider_from_variable_name,
+    normalize_model_status_entries,
 )
 from langflow.api.v1.schemas.deployments import DetectVarsRequest, DetectVarsResponse
 from langflow.services.authorization import VariableAction, ensure_variable_permission
@@ -36,10 +37,11 @@ async def _cleanup_model_list_variable(
     variable_service: DatabaseVariableService,
     user_id: UUID,
     variable_name: str,
-    models_to_remove: set[str],
+    provider: str,
+    providers_by_name: dict[str, set[str]],
     session: DbSession,
 ) -> None:
-    """Remove specified models from a model list variable (disabled or enabled models).
+    """Remove one provider's models from a persisted model-status variable.
 
     If all models are removed, the variable is deleted entirely.
     If the variable doesn't exist, this is a no-op.
@@ -57,12 +59,19 @@ async def _cleanup_model_list_variable(
 
     # Parse current models
     try:
-        current_models = set(json.loads(model_list_var.value))
+        parsed_value = json.loads(model_list_var.value)
+        current_models = (
+            {str(item) for item in parsed_value if isinstance(item, str)} if isinstance(parsed_value, list) else set()
+        )
     except (json.JSONDecodeError, TypeError):
         current_models = set()
 
-    # Filter out the provider's models
-    filtered_models = current_models - models_to_remove
+    # Migrate known legacy bare names first so shared aliases retain the other
+    # provider identities, then remove only the deleted provider's qualified
+    # entries (including live/custom deployment names absent from the catalog).
+    normalized_models = normalize_model_status_entries(current_models, providers_by_name)
+    provider_prefix = f"{provider}::"
+    filtered_models = {model for model in normalized_models if not model.startswith(provider_prefix)}
 
     # Nothing changed, no update needed
     if filtered_models == current_models:
@@ -95,14 +104,28 @@ async def _cleanup_provider_models(
 ) -> None:
     """Clean up disabled and enabled model lists for a deleted provider credential."""
     try:
-        provider_models = get_model_names_for_provider(provider)
+        providers_by_name = build_model_providers_by_name()
     except ValueError:
         logger.exception("Provider model retrieval failed")
         return
 
     # Clean up disabled and enabled models
-    await _cleanup_model_list_variable(variable_service, user_id, DISABLED_MODELS_VAR, provider_models, session)
-    await _cleanup_model_list_variable(variable_service, user_id, ENABLED_MODELS_VAR, provider_models, session)
+    await _cleanup_model_list_variable(
+        variable_service,
+        user_id,
+        DISABLED_MODELS_VAR,
+        provider,
+        providers_by_name,
+        session,
+    )
+    await _cleanup_model_list_variable(
+        variable_service,
+        user_id,
+        ENABLED_MODELS_VAR,
+        provider,
+        providers_by_name,
+        session,
+    )
 
 
 @router.post("/", response_model=VariableRead, status_code=201, include_in_schema=False)
