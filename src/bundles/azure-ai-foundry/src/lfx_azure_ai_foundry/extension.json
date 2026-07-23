@@ -1,0 +1,66 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-azure-ai-foundry",
+  "version": "0.1.0",
+  "name": "Azure AI Foundry",
+  "description": "Azure AI Foundry as a first-class Langflow model provider, packaged as a standalone Extension Bundle.",
+  "lfx": {
+    "compat": ["1"]
+  },
+  "providers": [
+    {
+      "name": "Azure AI Foundry",
+      "metadata": {
+        "icon": "Azure",
+        "max_tokens_field_name": "max_tokens",
+        "variables": [
+          {
+            "variable_name": "Azure AI Foundry API Key",
+            "variable_key": "AZURE_AI_FOUNDRY_API_KEY",
+            "required": true,
+            "is_secret": true,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "credential",
+            "component_metadata": {
+              "mapping_field": "api_key",
+              "required": false,
+              "advanced": true,
+              "info": "Falls back to AZURE_AI_FOUNDRY_API_KEY environment variable"
+            }
+          },
+          {
+            "variable_name": "Azure AI Foundry Endpoint",
+            "variable_key": "AZURE_AI_FOUNDRY_ENDPOINT",
+            "description": "OpenAI-compatible endpoint from the Foundry portal (Get endpoint). Example: https://<resource>.services.ai.azure.com/openai/v1",
+            "required": true,
+            "is_secret": false,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "endpoint"
+          }
+        ],
+        "api_docs_url": "https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/langchain-models",
+        "mapping": {
+          "model_class": "AzureAIOpenAIApiChatModel",
+          "model_param": "model"
+        }
+      },
+      "model_class": {
+        "module": "langchain_azure_ai.chat_models",
+        "attr": "AzureAIOpenAIApiChatModel",
+        "install_hint": "langchain-azure-ai"
+      },
+      "api_key_required": true,
+      "live": false,
+      "validator": "lfx_azure_ai_foundry.validator:validate_azure_ai_foundry_credentials",
+      "models": [
+        {"provider": "Azure AI Foundry", "name": "gpt-4o",           "icon": "Azure", "tool_calling": true,  "default": true,  "model_type": "llm"},
+        {"provider": "Azure AI Foundry", "name": "gpt-4o-mini",      "icon": "Azure", "tool_calling": true,  "default": false, "model_type": "llm"},
+        {"provider": "Azure AI Foundry", "name": "gpt-4.1",          "icon": "Azure", "tool_calling": true,  "default": false, "model_type": "llm"},
+        {"provider": "Azure AI Foundry", "name": "o3-mini",          "icon": "Azure", "tool_calling": true,  "reasoning": true, "default": false, "model_type": "llm"},
+        {"provider": "Azure AI Foundry", "name": "Mistral-Large-3",  "icon": "Azure", "tool_calling": true,  "default": false, "model_type": "llm"}
+      ]
+    }
+  ]
+}
