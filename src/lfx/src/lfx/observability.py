@@ -316,14 +316,18 @@ if _OTEL_AVAILABLE:
         logger.info(f"OTLP metric export enabled (protocol={protocol}, endpoint={endpoint}).")
         return reader
 
-    def _install_meter_provider(*, prometheus_enabled: bool) -> MeterProvider:
-        """Install (or reuse) the meter provider carrying the Prometheus and OTLP readers."""
+    def _install_meter_provider(*, prometheus_enabled: bool) -> tuple[MeterProvider | None, bool]:
+        """Install (or reuse) the meter provider carrying the Prometheus and OTLP readers.
+
+        Returns ``(provider, owned)``. ``owned`` is True only when this call constructed the
+        provider, so the shutdown path never tears down a provider that belongs to someone else.
+        """
         existing_provider = metrics.get_meter_provider()
         # Reuse a concrete SDK provider installed by another integration. The default API proxy
         # also returns meters, but it has no readers and must be replaced so the readers below
-        # can collect.
+        # can collect. Adopted, not owned: it is not ours to shut down.
         if isinstance(existing_provider, MeterProvider):
-            return existing_provider
+            return existing_provider, False
 
         metric_readers = []
         if prometheus_enabled:
@@ -336,9 +340,16 @@ if _OTEL_AVAILABLE:
         if otlp_reader is not None:
             metric_readers.append(otlp_reader)
 
+        if not metric_readers:
+            # Nothing to scrape or export. Installing a reader-less provider would still replace
+            # the API proxy globally (set_meter_provider is first-write-wins), silently blocking a
+            # provider a later integration or the embedding app installs, while never emitting
+            # anything. The traces and logs paths decline the same way when nothing is configured.
+            return None, False
+
         provider = MeterProvider(resource=_resource(), metric_readers=metric_readers)
         metrics.set_meter_provider(provider)
-        return provider
+        return provider, True
 
     def _instrument_process_metrics(meter_provider: MeterProvider) -> None:
         """Report this process's CPU, memory, threads, file descriptors and GC.
@@ -447,15 +458,21 @@ class ApplicationTelemetry:
     meter_provider: MeterProvider | None = None
     tracer_provider: TracerProvider | None = None
     logger_provider: LoggerProvider | None = None
+    # True only when the bootstrap constructed the meter provider. A provider adopted from
+    # another integration is theirs to shut down. The tracer and logger providers need no such
+    # flag: their paths decline to install over an existing provider and return None, so a
+    # non-None handle here is always one we installed.
+    owns_meter_provider: bool = False
 
     def shutdown(self) -> None:
-        """Flush and shut down the installed providers. A no-op when none were installed.
+        """Flush and shut down the providers this bootstrap installed. A no-op when none were.
 
         Meter first: only ``MeterProvider.shutdown`` unregisters its atexit flush, and skipping
         it lets the interpreter shut the readers down a second time (Prometheus raises on the
-        double unregister).
+        double unregister). The meter provider is shut down only when we own it, so an adopted
+        provider's pipeline (which may outlive this process in an embedded host) is left intact.
         """
-        if self.meter_provider is not None:
+        if self.meter_provider is not None and self.owns_meter_provider:
             self.meter_provider.shutdown()
         if self.tracer_provider is not None:
             self.tracer_provider.shutdown()
@@ -487,12 +504,14 @@ def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> Appl
             )
         return ApplicationTelemetry()
 
-    meter_provider = _install_meter_provider(prometheus_enabled=prometheus_enabled)
-    _instrument_process_metrics(meter_provider)
+    meter_provider, owns_meter_provider = _install_meter_provider(prometheus_enabled=prometheus_enabled)
+    if meter_provider is not None:
+        _instrument_process_metrics(meter_provider)
     tracer_provider = _configure_tracer_provider_from_environment()
     logger_provider = _configure_logger_provider_from_environment()
     return ApplicationTelemetry(
         meter_provider=meter_provider,
+        owns_meter_provider=owns_meter_provider,
         tracer_provider=tracer_provider,
         logger_provider=logger_provider,
     )

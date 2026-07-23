@@ -212,10 +212,14 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         # hands back the meter provider our custom metrics register on.
         telemetry: ApplicationTelemetry = bootstrap_application_telemetry(prometheus_enabled=prometheus_enabled)
         self._meter_provider = telemetry.meter_provider
+        self._owns_meter_provider = telemetry.owns_meter_provider
         self._tracer_provider = telemetry.tracer_provider
         self._logger_provider = telemetry.logger_provider
 
-        self.meter = self._meter_provider.get_meter(langflow_meter_name)
+        # meter_provider is None when nothing is exported and Prometheus is off (the default):
+        # the bootstrap declines to install a reader-less provider. Fall back to the global API
+        # proxy so the custom metrics still register on a no-op meter rather than crashing here.
+        self.meter = (self._meter_provider or metrics.get_meter_provider()).get_meter(langflow_meter_name)
 
         for name, metric in self._metrics_registry.items():
             if name != metric.name:
@@ -305,10 +309,11 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         # Only shut down if initialized
         if not self._initialized:
             return
-        if self._meter_provider:
+        if self._meter_provider and self._owns_meter_provider:
             # Not the readers directly: only MeterProvider.shutdown unregisters the atexit
             # handler, and without that the interpreter shuts the readers down a second time
-            # and Prometheus raises on the double unregister.
+            # and Prometheus raises on the double unregister. Only when we own it: a provider
+            # adopted from another integration is theirs to shut down, not ours.
             self._meter_provider.shutdown()
         if self._tracer_provider:
             self._tracer_provider.shutdown()

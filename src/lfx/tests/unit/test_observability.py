@@ -209,3 +209,50 @@ def test_instrument_fastapi_app_sets_stable_semconv():
 
     instrument_fastapi_app(FastAPI())
     assert os.environ.get("OTEL_SEMCONV_STABILITY_OPT_IN") == "http"
+
+
+@requires_otel
+def test_no_readers_installs_no_meter_provider():
+    """Bare serve (no endpoint, Prometheus off) must not install a reader-less global provider.
+
+    set_meter_provider is first-write-wins, so a reader-less provider would block one a later
+    integration installs while exporting nothing; the traces and logs paths decline the same way.
+    """
+    probe = (
+        "from lfx.observability import bootstrap_application_telemetry\n"
+        "from opentelemetry import metrics\n"
+        "from opentelemetry.sdk.metrics import MeterProvider\n"
+        "result = bootstrap_application_telemetry(prometheus_enabled=False)\n"
+        "installed = isinstance(metrics.get_meter_provider(), MeterProvider)\n"
+        "print('METER', result.meter_provider is None, result.owns_meter_provider, installed)\n"
+    )
+    completed = _run(probe, {})
+    assert completed.returncode == 0, completed.stderr
+    assert "METER True False False" in completed.stdout
+
+
+@requires_otel
+def test_shutdown_leaves_an_adopted_meter_provider_alone():
+    """A provider adopted from another integration is not ours to shut down.
+
+    Shutting it down here would tear down the host's metrics pipeline in an embedded or
+    in-process-restart scenario.
+    """
+    from lfx.observability import ApplicationTelemetry
+    from opentelemetry.sdk.metrics import MeterProvider
+
+    foreign = MeterProvider()
+    # owns_meter_provider defaults False -> adopted.
+    ApplicationTelemetry(meter_provider=foreign).shutdown()
+    assert foreign._shutdown is False, "adopted provider must be left running"
+
+
+@requires_otel
+def test_shutdown_shuts_down_a_meter_provider_we_own():
+    """A provider this bootstrap installed is flushed and shut down on exit."""
+    from lfx.observability import ApplicationTelemetry
+    from opentelemetry.sdk.metrics import MeterProvider
+
+    owned = MeterProvider()
+    ApplicationTelemetry(meter_provider=owned, owns_meter_provider=True).shutdown()
+    assert owned._shutdown is True
