@@ -30,7 +30,7 @@ dependencies = [
     # the supported lfx axis.
     "lfx-duckduckgo>=0.1.0,<1.0.0",
     "lfx-arxiv>=0.1.0,<1.0.0",
-    "lfx-ibm>=0.1.0,<1.0.0",
+    "lfx-ibm>=0.1.4,<1.0.0",
     "lfx-docling>=0.1.0,<1.0.0",
     "lfx-datastax>=0.1.0,<1.0.0",
     "lfx-openai>=0.1.0,<1.0.0",
@@ -46,6 +46,7 @@ dependencies = [
     "lfx-openai-compatible>=0.1.0,<1.0.0",
     "lfx-exa>=0.1.0,<1.0.0",
     "lfx-valkey>=0.1.0,<1.0.0",
+    "lfx-google>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -123,6 +124,7 @@ lfx-empiriolabs = { workspace = true }
 lfx-openai-compatible = { workspace = true }
 lfx-exa = { workspace = true }
 lfx-valkey = { workspace = true }
+lfx-google = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -155,6 +157,7 @@ members = [
     "src/bundles/openai-compatible",
     "src/bundles/exa",
     "src/bundles/valkey",
+    "src/bundles/google",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -167,7 +170,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.4,<2.0",
 ]
 
 docling = [

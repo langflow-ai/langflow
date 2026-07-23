@@ -15,7 +15,7 @@ dependencies = [
     # Previously satisfied only transitively via docling-slim; declared here so the
     # xlsx path survives torch/docling becoming opt-in.
     "openpyxl>=3.1.5,<4.0.0",
-    "pydantic>=2.0.0,<3.0.0",
+    "pydantic>=2.0.0,<2.14",
     "pillow>=11.1.0,<13.0.0",
     "fastapi>=0.135.0,<1.0.0",
     # [standard] adds uvloop + httptools (fast loop + HTTP parser) for the `lfx serve` worker path.

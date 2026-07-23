@@ -12,6 +12,7 @@ from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.auth.base import BaseAuthService
+from lfx.services.model_provider_policy import set_current_model_provider_policy_context
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
 from sqlalchemy.exc import IntegrityError
 
@@ -684,11 +685,16 @@ class AuthService(BaseAuthService):
     async def get_current_active_user(self, current_user: User | UserRead) -> User | UserRead | None:
         if not current_user.is_active:
             return None
+        set_current_model_provider_policy_context(
+            user_id=current_user.id,
+            attributes={"is_superuser": bool(current_user.is_superuser)},
+        )
         return current_user
 
     async def get_current_active_superuser(self, current_user: User | UserRead) -> User | UserRead | None:
         if not current_user.is_active or not current_user.is_superuser:
             return None
+        set_current_model_provider_policy_context(user_id=current_user.id, attributes={"is_superuser": True})
         return current_user
 
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:
@@ -1113,6 +1119,10 @@ class AuthService(BaseAuthService):
     async def get_current_active_user_mcp(self, current_user: User | UserRead) -> User | UserRead:
         if not current_user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
+        set_current_model_provider_policy_context(
+            user_id=current_user.id,
+            attributes={"is_superuser": bool(current_user.is_superuser)},
+        )
         return current_user
 
     async def teardown(self) -> None:

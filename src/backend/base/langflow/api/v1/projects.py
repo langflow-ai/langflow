@@ -8,7 +8,7 @@ from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
 from lfx.utils.util_strings import escape_like_pattern
-from sqlalchemy import or_, update
+from sqlalchemy import literal, or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
@@ -159,7 +159,7 @@ async def create_project(
                 update_statement_components = (
                     update(Flow)
                     .where(Flow.id.in_(project.components_list), Flow.user_id == current_user.id)  # type: ignore[attr-defined]
-                    .values(folder_id=new_project.id)
+                    .values(folder_id=new_project.id, workspace_id=new_project.workspace_id)
                 )
                 await session.exec(update_statement_components)
 
@@ -180,7 +180,7 @@ async def create_project(
                 update_statement_flows = (
                     update(Flow)
                     .where(Flow.id.in_(project.flows_list), Flow.user_id == current_user.id)  # type: ignore[attr-defined]
-                    .values(folder_id=new_project.id)
+                    .values(folder_id=new_project.id, workspace_id=new_project.workspace_id)
                 )
                 await session.exec(update_statement_flows)
 
@@ -354,7 +354,7 @@ async def read_project(
                     stmt,
                     id_column=Flow.id,
                     owner_clause=Flow.user_id == current_user.id,
-                    workspace_column=Flow.workspace_id,
+                    workspace_expression=literal(project.workspace_id),
                     project_column=Flow.folder_id,
                     visibility=visibility_scope,
                 )
@@ -390,7 +390,7 @@ async def read_project(
                     current_user,
                     resource_type="flow",
                     candidates=list(paginated_flows.items),
-                    domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
+                    domain_extractor=lambda flow: _resolve_authz_domain(project.workspace_id, flow.folder_id),
                     owner_extractor=lambda flow: flow.user_id,
                     act=FlowAction.READ,
                 )
@@ -416,7 +416,7 @@ async def read_project(
                     if flow.user_id == current_user.id
                     or resource_visible_in_scope(
                         resource_id=flow.id,
-                        workspace_id=flow.workspace_id,
+                        workspace_id=project.workspace_id,
                         project_id=flow.folder_id,
                         visibility=visibility_scope,
                     )
@@ -426,16 +426,19 @@ async def read_project(
                     current_user,
                     resource_type="flow",
                     candidates=list(project.flows),
-                    domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
+                    domain_extractor=lambda flow: _resolve_authz_domain(project.workspace_id, flow.folder_id),
                     owner_extractor=lambda flow: flow.user_id,
                     act=FlowAction.READ,
                 )
         else:
             visible_flows = [flow for flow in project.flows if flow.user_id == current_user.id]
-        project.flows = visible_flows
-
-        # Convert to FolderReadWithFlows while session is still active to avoid detached instance errors
-        return FolderReadWithFlows.model_validate(project, from_attributes=True)
+        # Convert without assigning the filtered list back to the ORM
+        # relationship. ``Folder.flows`` owns delete-orphan cascade; mutating it
+        # in this GET handler would delete every hidden flow when the request
+        # session commits.
+        project_read = FolderReadWithFlows.model_validate(project, from_attributes=True)
+        project_read.flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in visible_flows]
+        return project_read  # noqa: TRY300 - conversion must happen while the ORM session is active
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -613,7 +616,7 @@ async def update_project(
                         Flow.id.in_(excluded_flows),  # type: ignore[attr-defined]
                         Flow.user_id == project_owner_id,
                     )
-                    .values(folder_id=my_collection_project.id)
+                    .values(folder_id=my_collection_project.id, workspace_id=my_collection_project.workspace_id)
                 )
                 await session.exec(update_statement_my_collection)
 
@@ -637,7 +640,7 @@ async def update_project(
                         Flow.id.in_(concat_project_components),  # type: ignore[attr-defined]
                         Flow.user_id == project_owner_id,
                     )
-                    .values(folder_id=existing_project.id)
+                    .values(folder_id=existing_project.id, workspace_id=existing_project.workspace_id)
                 )
                 await session.exec(update_statement_components)
 

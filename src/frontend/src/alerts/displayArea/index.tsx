@@ -26,7 +26,11 @@ export default function AlertDisplayArea() {
   // IBM aria_content_in_landmark (role="status"/"alert" are live regions,
   // not landmarks).
   return (
-    <aside aria-label={t("alerts.notificationsTitle")} style={{ zIndex: 999 }}>
+    <div
+      role="region"
+      aria-label={t("alerts.notificationsTitle")}
+      style={{ zIndex: 999 }}
+    >
       <div
         aria-atomic="true"
         aria-live="assertive"
@@ -70,6 +74,6 @@ export default function AlertDisplayArea() {
           ),
         )}
       </div>
-    </aside>
+    </div>
   );
 }

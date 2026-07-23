@@ -230,6 +230,7 @@ def restrict_to_owned_or_visible_scope(
     owner_clause: ColumnElement[bool],
     visibility: ResourceVisibilityScope,
     workspace_column: InstrumentedAttribute | None = None,
+    workspace_expression: ColumnElement[Any] | None = None,
     project_column: InstrumentedAttribute | None = None,
 ) -> StatementT:
     """Apply owner, concrete-ID, workspace, and project visibility before pagination."""
@@ -239,8 +240,11 @@ def restrict_to_owned_or_visible_scope(
     clauses: list[ColumnElement[bool]] = [owner_clause]
     if visibility.resource_ids:
         clauses.append(col(id_column).in_(visibility.resource_ids))
-    if workspace_column is not None and visibility.workspace_ids:
-        clauses.append(col(workspace_column).in_(visibility.workspace_ids))
+    resolved_workspace = workspace_expression
+    if resolved_workspace is None and workspace_column is not None:
+        resolved_workspace = col(workspace_column)
+    if resolved_workspace is not None and visibility.workspace_ids:
+        clauses.append(resolved_workspace.in_(visibility.workspace_ids))
     if project_column is not None and visibility.project_ids:
         clauses.append(col(project_column).in_(visibility.project_ids))
     return stmt.where(or_(*clauses))

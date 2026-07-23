@@ -35,7 +35,7 @@ describe("AlertDisplayArea accessibility", () => {
     const { container } = render(<AlertDisplayArea />);
 
     expect(
-      screen.getByRole("complementary", { name: "Notifications" }),
+      screen.getByRole("region", { name: "Notifications" }),
     ).toBeInTheDocument();
     expect(
       container.querySelector('[aria-live="assertive"]'),
@@ -51,7 +51,9 @@ describe("AlertDisplayArea accessibility", () => {
       useAlertStore.getState().setSuccessData({ title: "Flow saved" });
     });
 
+    const region = screen.getByRole("region", { name: "Notifications" });
     const status = screen.getByRole("status");
+    expect(region).toContainElement(status);
     expect(status).toHaveAttribute("aria-live", "polite");
     expect(status).toHaveAttribute("aria-atomic", "true");
     expect(status).toHaveTextContent("Flow saved");
