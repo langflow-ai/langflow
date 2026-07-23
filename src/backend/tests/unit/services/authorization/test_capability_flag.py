@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 from langflow.services.authorization.service import LangflowAuthorizationService
+from lfx.services.authorization import ShareRuleSnapshot
 from lfx.services.authorization.base import BaseAuthorizationService
 from lfx.services.authorization.service import AuthorizationService as LfxDefaultService
 
@@ -32,6 +35,38 @@ async def test_lfx_default_service_does_not_support_cross_user_fetch():
     service = LfxDefaultService()
     assert await service.supports_cross_user_fetch() is False
     assert await service.supports_api_key_scopes() is False
+
+
+@pytest.mark.anyio
+async def test_lfx_default_targeted_share_hooks_are_noops():
+    """New hooks stay source-compatible because the framework defaults do nothing."""
+    service = LfxDefaultService()
+    share_id = uuid4()
+    snapshot = ShareRuleSnapshot(
+        share_id=share_id,
+        resource_type="flow",
+        resource_id=uuid4(),
+        scope="user",
+        target_id=uuid4(),
+        permission_level="read",
+    )
+
+    assert await service.sync_share(share_id) is None
+    assert await service.remove_share_rules(snapshot) is None
+
+
+def test_share_rule_snapshot_is_framework_neutral_and_immutable():
+    snapshot = ShareRuleSnapshot(
+        share_id=uuid4(),
+        resource_type="flow",
+        resource_id=uuid4(),
+        scope="team",
+        target_id=uuid4(),
+        permission_level="write",
+    )
+
+    with pytest.raises(FrozenInstanceError):
+        snapshot.permission_level = "read"  # type: ignore[misc]
 
 
 @pytest.mark.anyio

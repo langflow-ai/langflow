@@ -444,6 +444,7 @@
   "shortcuts.name.toggleSidebar": "Toggle Sidebar",
   "shortcuts.name.aiAssistant": "AI Assistant",
   "shortcuts.noKeyCombination": "No key combination recorded.",
+  "shortcuts.modifierOnly": "Add at least one non-modifier key (e.g. a letter or number).",
   "shortcuts.combinationExists": "This combination already exists!",
   "shortcuts.defaultNotFound": "Default shortcut not found.",
   "shortcuts.successChanged": "{{name}} shortcut successfully changed",

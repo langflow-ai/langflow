@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.2"
+version = "1.1.4"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -51,7 +51,7 @@ elastic = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-
 faiss = ["faiss-cpu==1.9.0.post1; python_version < '3.14'", "faiss-cpu>=1.13.2; python_version >= '3.14'", "langchain-community>=0.4.1,<1.0.0"]
 git = ["GitPython>=3.1.50", "langchain-community>=0.4.1,<1.0.0"]
 glean = []
-google = ["langchain-google-genai~=4.1.2", "langchain-google-community~=3.0.2", "google-api-python-client~=2.161", "google-auth-oauthlib>=1.2.0,<2.0.0"]
+google = ["lfx-google>=0.1.0,<1.0.0"]
 groq = ["langchain-groq~=1.1.1"]
 homeassistant = ["requests>=2.32.0"]
 huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'", "huggingface-hub[inference]>=1.0.0,<2.0.0", "langchain-community>=0.4.1,<1.0.0"]
@@ -122,7 +122,6 @@ all = [
     "lfx-bundles[faiss]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
-    "lfx-bundles[google]",
     "lfx-bundles[groq]",
     "lfx-bundles[homeassistant]",
     "lfx-bundles[huggingface]",
@@ -192,7 +191,6 @@ all-no-torch = [
     "lfx-bundles[faiss]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
-    "lfx-bundles[google]",
     "lfx-bundles[groq]",
     "lfx-bundles[homeassistant]",
     "lfx-bundles[huggingface]",
