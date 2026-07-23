@@ -77,16 +77,20 @@ try:
     lfx_app.command(name="run", help="Run a flow directly", no_args_is_help=True)(lfx_run)
 
     app.add_typer(lfx_app, name="lfx")
-
-    # Mounted at the top level, not under `lfx`: the OTLP pipeline it checks is langflow's own
-    # (langflow's telemetry service calls the same bootstrap), so `langflow observability doctor`
-    # is the command an operator running langflow would look for.
-    from lfx.cli._observability_commands import observability_app
-
-    app.add_typer(observability_app, name="observability")
 except ImportError:
     # LFX not available, skip adding the sub-app
     pass
+
+# Mounted at the top level, not under `lfx`: the OTLP pipeline it checks is langflow's own
+# (langflow's telemetry service calls the same bootstrap), so `langflow observability doctor` is
+# the command an operator running langflow would look for.
+#
+# Deliberately outside the try/except above: lfx is already imported unguarded at module scope,
+# so an ImportError here means this module is broken, not that lfx is absent. Swallowing it
+# would make the command vanish from `langflow --help` with nothing said.
+from lfx.cli._observability_commands import observability_app  # noqa: E402
+
+app.add_typer(observability_app, name="observability")
 
 
 class ProcessManager:
