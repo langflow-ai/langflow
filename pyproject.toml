@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.12.0"
+version = "1.12.0.dev2"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-core~=1.12.0",
+    "langflow-core==1.12.0.dev2",
     # langflow-extensions:bundle-deps-start
     # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
     # curated lfx-* package, never exact pins -- exact pins in reusable library
@@ -186,7 +186,7 @@ docling-image-description = [
 ]
 
 audio = [
-    "langflow-core[audio]~=1.12.0",
+    "langflow-core[audio]==1.12.0.dev2",
 ]
 
 
@@ -210,7 +210,7 @@ nv-ingest = [
 ]
 
 postgresql = [
-    "langflow-core[postgresql]~=1.12.0",
+    "langflow-core[postgresql]==1.12.0.dev2",
 ]
 
 [tool.uv]
