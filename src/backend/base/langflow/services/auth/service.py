@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 import jwt
-from cryptography.fernet import Fernet
 from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
@@ -18,6 +17,14 @@ from sqlalchemy.exc import IntegrityError
 
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_SESSION_WARNING, AUTO_LOGIN_WARNING
+from langflow.services.auth.context import (
+    AUTH_METHOD_AUTO_LOGIN,
+    AUTH_METHOD_EXTERNAL,
+    AUTH_METHOD_JWT,
+    AuthCredentialContext,
+    clear_current_auth_context,
+    set_current_auth_context,
+)
 from langflow.services.auth.exceptions import (
     InactiveUserError,
     InvalidCredentialsError,
@@ -27,7 +34,16 @@ from langflow.services.auth.exceptions import (
 from langflow.services.auth.exceptions import (
     InvalidTokenError as AuthInvalidTokenError,
 )
-from langflow.services.database.models.api_key.crud import check_key
+from langflow.services.auth.external import (
+    ExternalIdentity,
+    _external_username_fallback,
+    access_context_from_identity,
+    clear_current_external_access_context,
+    identity_from_claims,
+    resolve_external_identity,
+    set_current_external_access_context,
+)
+from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
     get_user_by_username,
@@ -38,10 +54,9 @@ from langflow.services.deps import session_scope
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
+    from cryptography.fernet import Fernet, MultiFernet
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-    from langflow.services.database.models.api_key.model import ApiKey
 
 
 class AuthService(BaseAuthService):
@@ -62,6 +77,7 @@ class AuthService(BaseAuthService):
         token: str | None,
         api_key: str | None,
         db: AsyncSession,
+        external_token: str | None = None,
     ) -> User | UserRead:
         """Framework-agnostic authentication method.
 
@@ -72,6 +88,11 @@ class AuthService(BaseAuthService):
             token: Access token (JWT, OIDC token, etc.)
             api_key: API key for authentication
             db: Database session
+            external_token: Separately-extracted external credential to try as a
+                fallback when native token authentication fails for any reason
+                (expired, invalid, inactive user). When ``None`` behavior is
+                unchanged. This lets a valid external credential authenticate even
+                when a present-but-invalid native token would otherwise shadow it.
 
 
         Returns:
@@ -85,15 +106,31 @@ class AuthService(BaseAuthService):
             TokenExpiredError: If token has expired
             InactiveUserError: If user account is inactive
         """
+        clear_current_auth_context()
+        clear_current_external_access_context()
+
         # Try token authentication first (if token provided)
         if token:
             try:
                 return await self._authenticate_with_token(token, db)
-            except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError):
-                # Re-raise our generic exceptions
-                raise
+            except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError) as e:
+                # Native auth failed. If a *distinct* external credential was
+                # extracted, try it before surfacing the native error so a present
+                # but invalid/expired native token can't shadow a valid external
+                # one. When external_token is None or identical to the token we
+                # already tried, behavior is unchanged.
+                if external_token and external_token != token:
+                    external_user = await self._authenticate_with_external_token(external_token, db)
+                    if external_user is not None:
+                        return external_user
+                raise e  # noqa: TRY201
             except Exception as e:
-                # Token auth failed; fall back to API key if provided
+                # Token auth failed for an unexpected reason; try the distinct
+                # external credential first, then fall back to API key if provided.
+                if external_token and external_token != token:
+                    external_user = await self._authenticate_with_external_token(external_token, db)
+                    if external_user is not None:
+                        return external_user
                 if api_key:
                     try:
                         user = await self._authenticate_with_api_key(api_key, db)
@@ -110,6 +147,13 @@ class AuthService(BaseAuthService):
                 logger.error(f"Unexpected error during token authentication: {e}")
                 msg = "Token authentication failed"
                 raise AuthInvalidTokenError(msg) from e
+
+        # No native token, but a separately-extracted external credential may be
+        # present (extractors no longer collapse native/external into one string).
+        if external_token:
+            external_user = await self._authenticate_with_external_token(external_token, db)
+            if external_user is not None:
+                return external_user
 
         # Try API key authentication
         if api_key:
@@ -151,6 +195,7 @@ class AuthService(BaseAuthService):
                 msg = "User account is inactive"
                 raise InactiveUserError(msg)
             logger.warning(AUTO_LOGIN_WARNING)
+            set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
             return superuser
 
         # No credentials provided
@@ -199,10 +244,16 @@ class AuthService(BaseAuthService):
             msg = "Token has expired"
             raise TokenExpiredError(msg) from e
         except InvalidTokenError as e:
+            external_user = await self._authenticate_with_external_token(token, db)
+            if external_user is not None:
+                return external_user
             logger.debug("JWT validation failed: Invalid token format or signature")
             msg = "Invalid token"
             raise AuthInvalidTokenError(msg) from e
         except Exception as e:
+            external_user = await self._authenticate_with_external_token(token, db)
+            if external_user is not None:
+                return external_user
             logger.error(f"Unexpected error decoding token: {e}")
             msg = "Token validation failed"
             raise AuthInvalidTokenError(msg) from e
@@ -219,22 +270,178 @@ class AuthService(BaseAuthService):
             msg = "User account is inactive"
             raise InactiveUserError(msg)
 
+        set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_JWT))
         return user
 
+    async def _authenticate_with_external_token(self, token: str, db: AsyncSession) -> User | None:
+        """Fallback path: try the configured external identity resolver.
+
+        Returns the JIT-provisioned local user when the token resolves to a
+        valid external identity, ``None`` otherwise. Callers raise the native
+        JWT error if this returns ``None``.
+        """
+        if not self.settings.auth_settings.EXTERNAL_AUTH_ENABLED:
+            return None
+        try:
+            identity = await resolve_external_identity(token, self.settings.auth_settings)
+        except AuthInvalidTokenError as exc:
+            logger.debug(f"External credential rejected: {exc}")
+            return None
+        set_current_auth_context(
+            AuthCredentialContext(method=AUTH_METHOD_EXTERNAL, external_provider=identity.provider)
+        )
+        set_current_external_access_context(access_context_from_identity(identity, self.settings.auth_settings))
+        return await self._materialize_external_user(identity, db)
+
     async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
-        """Internal method to authenticate with API key (raises generic exceptions)."""
-        result = await check_key(db, api_key)
+        """Internal method to authenticate with API key (raises generic exceptions).
+
+        The EXTERNAL_AUTH access ceiling block for externally-managed users is
+        enforced inside ``authenticate_api_key`` (the shared chokepoint), which
+        returns ``None`` for a blocked user so every caller treats it as an auth
+        failure. No additional ceiling check is needed here.
+        """
+        result = await authenticate_api_key(db, api_key)
         if not result:
             return None
 
-        if isinstance(result, User):
-            user_read = UserRead.model_validate(result, from_attributes=True)
+        if isinstance(result.user, User):
+            user_read = UserRead.model_validate(result.user, from_attributes=True)
             if not user_read.is_active:
                 msg = "User account is inactive"
                 raise InactiveUserError(msg)
+            set_current_auth_context(AuthCredentialContext.from_api_key_result(result))
             return user_read
 
         return None
+
+    # ------------------------------------------------------------------
+    # JIT user provisioning via BaseAuthService hook
+    # ------------------------------------------------------------------
+
+    def extract_user_info_from_claims(self, claims: dict) -> dict:
+        """Normalize provider claims using the configured EXTERNAL_AUTH_* mapping.
+
+        Returns a dict with ``provider``, ``subject``, ``username``, ``email``,
+        and ``name`` keys; raises :class:`AuthInvalidTokenError` when the
+        subject claim is missing.
+        """
+        identity = identity_from_claims(claims, self.settings.auth_settings)
+        return {
+            "provider": identity.provider,
+            "subject": identity.subject,
+            "username": identity.username,
+            "email": identity.email,
+            "name": identity.name,
+        }
+
+    async def get_or_create_user_from_claims(self, claims: dict, db: AsyncSession) -> User:
+        """Return the local Langflow user mapped to these external claims.
+
+        Looks up SSOUserProfile by (provider, sso_user_id). On hit, refreshes
+        the email + last-login timestamps and returns the existing user. On
+        miss, JIT-provisions a fresh user, writes a profile row, and seeds
+        the default folder + variables.
+        """
+        identity = identity_from_claims(claims, self.settings.auth_settings)
+        return await self._materialize_external_user(identity, db)
+
+    async def _materialize_external_user(self, identity: ExternalIdentity, db: AsyncSession) -> User:
+        """Find-or-create the local user backing an external identity."""
+        import secrets
+        from datetime import datetime, timezone
+
+        from sqlalchemy.exc import IntegrityError
+        from sqlmodel import select
+
+        from langflow.services.database.models.auth import SSOUserProfile
+
+        profile_stmt = select(SSOUserProfile).where(
+            SSOUserProfile.sso_provider == identity.provider,
+            SSOUserProfile.sso_user_id == identity.subject,
+        )
+        profile = (await db.exec(profile_stmt)).first()
+
+        if profile is not None:
+            user = await get_user_by_id(db, profile.user_id)
+            if user is None:
+                msg = "Mapped external user was not found"
+                raise AuthInvalidTokenError(msg)
+            if not user.is_active:
+                msg = "User account is inactive"
+                raise InactiveUserError(msg)
+            now = datetime.now(timezone.utc)
+            # Only overwrite the stored email when the token carries one; a later
+            # token that omits the email claim must not erase a previously stored
+            # address.
+            if identity.email is not None:
+                profile.email = identity.email
+            profile.sso_last_login_at = now
+            profile.updated_at = now
+            await update_user_last_login_at(user.id, db)
+            return user
+
+        username = await self._unique_external_username(db, identity)
+        random_password = secrets.token_urlsafe(48)
+        now = datetime.now(timezone.utc)
+        user = User(
+            username=username,
+            password=self.get_password_hash(random_password),
+            is_active=True,
+            is_superuser=False,
+            last_login_at=now,
+        )
+        new_profile = SSOUserProfile(
+            user_id=user.id,
+            sso_provider=identity.provider,
+            sso_user_id=identity.subject,
+            email=identity.email,
+            sso_last_login_at=now,
+        )
+        db.add(user)
+        db.add(new_profile)
+        try:
+            await db.flush()
+            await db.refresh(user)
+            await self._initialize_jit_user_defaults(user, db)
+        except IntegrityError:
+            await db.rollback()
+            profile = (await db.exec(profile_stmt)).first()
+            if profile is None:
+                raise
+            user = await get_user_by_id(db, profile.user_id)
+            if user is None:
+                msg = "Mapped external user was not found"
+                raise AuthInvalidTokenError(msg) from None
+            if not user.is_active:
+                msg = "User account is inactive"
+                raise InactiveUserError(msg) from None
+
+        return user
+
+    @staticmethod
+    async def _unique_external_username(db: AsyncSession, identity: ExternalIdentity) -> str:
+        desired = identity.username
+        if await get_user_by_username(db, desired) is None:
+            return desired
+        fallback = _external_username_fallback(identity.provider, identity.subject)
+        if await get_user_by_username(db, fallback) is None:
+            return fallback
+        # Final tier: fold the desired name into the digest so two providers'
+        # subjects that collide on the helper's digest still resolve uniquely.
+        import hashlib
+
+        long_digest = hashlib.sha256(f"{identity.provider}:{identity.subject}:{desired}".encode()).hexdigest()[:16]
+        normalized_provider = identity.provider[:200] or "external"
+        return f"{normalized_provider}-{long_digest}"
+
+    @staticmethod
+    async def _initialize_jit_user_defaults(user: User, db: AsyncSession) -> None:
+        from langflow.initial_setup.setup import get_or_create_default_folder
+        from langflow.services.deps import get_variable_service
+
+        await get_or_create_default_folder(db, user.id)
+        await get_variable_service().initialize_user_variables(user.id, db)
 
     async def api_key_security(
         self, query_param: str | None, header_param: str | None, db: AsyncSession | None = None
@@ -255,7 +462,8 @@ class AuthService(BaseAuthService):
         db: AsyncSession,
         settings_service,
     ) -> UserRead | None:
-        result: ApiKey | User | None
+        clear_current_auth_context()
+        clear_current_external_access_context()
 
         if settings_service.auth_settings.AUTO_LOGIN:
             if not settings_service.auth_settings.SUPERUSER:
@@ -277,6 +485,7 @@ class AuthService(BaseAuthService):
                             detail="User account is inactive",
                         )
                     logger.warning(AUTO_LOGIN_WARNING)
+                    set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
                     return UserRead.model_validate(result, from_attributes=True)
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -286,7 +495,7 @@ class AuthService(BaseAuthService):
             api_key = query_param or header_param
             if api_key is None:  # pragma: no cover - guaranteed by the if-condition above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            result = await check_key(db, api_key)
+            api_key_result = await authenticate_api_key(db, api_key)
 
         elif not query_param and not header_param:
             raise HTTPException(
@@ -299,23 +508,27 @@ class AuthService(BaseAuthService):
             api_key = query_param or header_param
             if api_key is None:  # pragma: no cover - guaranteed by the elif-condition above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            result = await check_key(db, api_key)
+            api_key_result = await authenticate_api_key(db, api_key)
 
-        if not result:
+        if not api_key_result:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid or missing API key",
             )
 
-        if isinstance(result, User):
-            return UserRead.model_validate(result, from_attributes=True)
+        if isinstance(api_key_result.user, User):
+            set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
+            return UserRead.model_validate(api_key_result.user, from_attributes=True)
 
         msg = "Invalid result type"
         raise ValueError(msg)
 
     async def ws_api_key_security(self, api_key: str | None) -> UserRead:
         settings = self.settings
+        clear_current_auth_context()
+        clear_current_external_access_context()
         async with session_scope() as db:
+            api_key_result = None
             if settings.auth_settings.AUTO_LOGIN:
                 if not settings.auth_settings.SUPERUSER:
                     raise WebSocketException(
@@ -336,13 +549,15 @@ class AuthService(BaseAuthService):
                                 reason="User account is inactive",
                             )
                         logger.warning(AUTO_LOGIN_WARNING)
+                        set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
                     else:
                         raise WebSocketException(
                             code=status.WS_1008_POLICY_VIOLATION,
                             reason=AUTO_LOGIN_ERROR,
                         )
                 else:
-                    result = await check_key(db, api_key)
+                    api_key_result = await authenticate_api_key(db, api_key)
+                    result = api_key_result.user if api_key_result is not None else None
 
             else:
                 if not api_key:
@@ -350,7 +565,8 @@ class AuthService(BaseAuthService):
                         code=status.WS_1008_POLICY_VIOLATION,
                         reason="An API key must be passed as query or header",
                     )
-                result = await check_key(db, api_key)
+                api_key_result = await authenticate_api_key(db, api_key)
+                result = api_key_result.user if api_key_result is not None else None
 
             if not result:
                 raise WebSocketException(
@@ -359,6 +575,8 @@ class AuthService(BaseAuthService):
                 )
 
             if isinstance(result, User):
+                if api_key_result is not None:
+                    set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
                 return UserRead.model_validate(result, from_attributes=True)
 
         raise WebSocketException(
@@ -372,6 +590,7 @@ class AuthService(BaseAuthService):
         query_param: str | None,
         header_param: str | None,
         db: AsyncSession,
+        external_token: str | None = None,
     ) -> User | UserRead:
         # Handle coroutine token (FastAPI dependency injection)
         resolved_token: str | None = None
@@ -384,24 +603,31 @@ class AuthService(BaseAuthService):
         api_key = query_param or header_param
 
         # Delegate to framework-agnostic method
-        return await self.authenticate_with_credentials(resolved_token, api_key, db)
+        return await self.authenticate_with_credentials(resolved_token, api_key, db, external_token=external_token)
 
     async def get_current_user_from_access_token(
         self,
         token: str | Coroutine | None,
         db: AsyncSession,
+        external_token: str | None = None,
     ) -> User:
         """Get user from access token (raises generic exceptions).
 
         This method now uses the framework-agnostic _authenticate_with_token() internally.
+
+        ``external_token`` is an optional, separately-extracted external credential
+        tried as a fallback when native token authentication fails so a
+        present-but-invalid native token cannot shadow a valid external one. When
+        ``None`` (or identical to ``token``) behavior is unchanged.
         """
-        if token is None:
-            msg = "Missing authentication token"
-            raise MissingCredentialsError(msg)
+        clear_current_auth_context()
+        clear_current_external_access_context()
 
         # Handle coroutine token (FastAPI dependency injection)
-        resolved_token: str
-        if isinstance(token, Coroutine):
+        resolved_token: str | None
+        if token is None:
+            resolved_token = None
+        elif isinstance(token, Coroutine):
             resolved_token = await token
         elif isinstance(token, str):
             resolved_token = token
@@ -409,26 +635,51 @@ class AuthService(BaseAuthService):
             msg = "Invalid token format"
             raise AuthInvalidTokenError(msg)
 
-        # Use internal authentication method
-        return await self._authenticate_with_token(resolved_token, db)
+        # No native token: try a separately-extracted external credential before
+        # rejecting so a valid external credential authenticates on its own. When
+        # external_token is None (the default), behavior is unchanged: a missing
+        # native token raises MissingCredentialsError.
+        if not resolved_token:
+            if external_token:
+                external_user = await self._authenticate_with_external_token(external_token, db)
+                if external_user is not None:
+                    return external_user
+            msg = "Missing authentication token"
+            raise MissingCredentialsError(msg)
+
+        # Use internal authentication method. Try the native token first; on
+        # failure fall back to a *distinct* external credential before surfacing
+        # the native error so a stale/invalid native token can't shadow a valid
+        # external one. When external_token is None or identical, behavior is
+        # unchanged.
+        try:
+            return await self._authenticate_with_token(resolved_token, db)
+        except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError, InvalidCredentialsError) as e:
+            if external_token and external_token != resolved_token:
+                external_user = await self._authenticate_with_external_token(external_token, db)
+                if external_user is not None:
+                    return external_user
+            raise e  # noqa: TRY201
 
     async def get_current_user_for_websocket(
         self,
         token: str | None,
         api_key: str | None,
         db: AsyncSession,
+        external_token: str | None = None,
     ) -> User | UserRead:
         """Delegates to authenticate_with_credentials()."""
-        return await self.authenticate_with_credentials(token, api_key, db)
+        return await self.authenticate_with_credentials(token, api_key, db, external_token=external_token)
 
     async def get_current_user_for_sse(
         self,
         token: str | None,
         api_key: str | None,
         db: AsyncSession,
+        external_token: str | None = None,
     ) -> User | UserRead:
         """Delegates to authenticate_with_credentials()."""
-        return await self.authenticate_with_credentials(token, api_key, db)
+        return await self.authenticate_with_credentials(token, api_key, db, external_token=external_token)
 
     async def get_current_active_user(self, current_user: User | UserRead) -> User | UserRead | None:
         if not current_user.is_active:
@@ -442,6 +693,8 @@ class AuthService(BaseAuthService):
 
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:
         settings_service = self.settings
+        clear_current_auth_context()
+        clear_current_external_access_context()
 
         if not settings_service.auth_settings.WEBHOOK_AUTH_ENABLE:
             try:
@@ -464,12 +717,13 @@ class AuthService(BaseAuthService):
 
         try:
             async with session_scope() as db:
-                result = await check_key(db, api_key)
+                result = await authenticate_api_key(db, api_key)
                 if not result:
                     logger.warning("Invalid API key provided for webhook")
                     raise HTTPException(status_code=403, detail="Invalid API key")
 
-                authenticated_user = UserRead.model_validate(result, from_attributes=True)
+                set_current_auth_context(AuthCredentialContext.from_api_key_result(result))
+                authenticated_user = UserRead.model_validate(result.user, from_attributes=True)
                 logger.info("Webhook API key validated successfully")
         except HTTPException:
             raise
@@ -730,10 +984,14 @@ class AuthService(BaseAuthService):
         return user
 
     def _get_fernet(self) -> Fernet:
-        from langflow.services.auth.utils import ensure_fernet_key
+        from langflow.services.auth.utils import get_fernet
 
-        secret_key: str = self.settings.auth_settings.SECRET_KEY.get_secret_value()
-        return Fernet(ensure_fernet_key(secret_key))
+        return get_fernet(self.settings)
+
+    def _get_decryption_fernet(self) -> Fernet | MultiFernet:
+        from langflow.services.auth.utils import get_fernet_for_decryption
+
+        return get_fernet_for_decryption(self.settings)
 
     def encrypt_api_key(self, api_key: str) -> str:
         fernet = self._get_fernet()
@@ -762,7 +1020,7 @@ class AuthService(BaseAuthService):
         if not encrypted_api_key.startswith("gAAAAA"):
             return encrypted_api_key
 
-        fernet = self._get_fernet()
+        fernet = self._get_decryption_fernet()
         try:
             return fernet.decrypt(encrypted_api_key.encode()).decode()
         except Exception as primary_exception:  # noqa: BLE001
@@ -790,11 +1048,14 @@ class AuthService(BaseAuthService):
         header_param: str | None,
         db: AsyncSession,
     ) -> User | UserRead:
+        clear_current_auth_context()
+        clear_current_external_access_context()
         if token:
             return await self.get_current_user_from_access_token(token, db)
 
         settings_service = self.settings
-        result: ApiKey | User | None
+        result: User | None
+        api_key_result = None
 
         if settings_service.auth_settings.AUTO_LOGIN:
             if not settings_service.auth_settings.SUPERUSER:
@@ -806,13 +1067,15 @@ class AuthService(BaseAuthService):
                 result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
                 if result:
                     logger.warning(AUTO_LOGIN_WARNING)
+                    set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
                     return result
             else:
                 # At least one of query_param or header_param is truthy
                 api_key = query_param or header_param
                 if api_key is None:  # pragma: no cover - guaranteed by the if-condition above
                     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-                result = await check_key(db, api_key)
+                api_key_result = await authenticate_api_key(db, api_key)
+                result = api_key_result.user if api_key_result is not None else None
 
         elif not query_param and not header_param:
             raise HTTPException(
@@ -821,13 +1084,15 @@ class AuthService(BaseAuthService):
             )
 
         elif query_param:
-            result = await check_key(db, query_param)
+            api_key_result = await authenticate_api_key(db, query_param)
+            result = api_key_result.user if api_key_result is not None else None
 
         else:
             # header_param must be truthy here (query_param is falsy, and we passed the not-both-None check)
             if header_param is None:  # pragma: no cover - guaranteed by the elif chain above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            result = await check_key(db, header_param)
+            api_key_result = await authenticate_api_key(db, header_param)
+            result = api_key_result.user if api_key_result is not None else None
 
         if not result:
             raise HTTPException(
@@ -836,6 +1101,8 @@ class AuthService(BaseAuthService):
             )
 
         if isinstance(result, User):
+            if api_key_result is not None:
+                set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
             return result
 
         raise HTTPException(

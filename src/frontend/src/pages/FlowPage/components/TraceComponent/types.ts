@@ -1,5 +1,6 @@
 import { CellClickedEvent } from "ag-grid-community";
 import { TraceListItem } from "@/controllers/API/queries/traces/types";
+import type { PendingHumanRequest } from "@/controllers/API/queries/workflows/use-get-pending-workflows";
 import { createFlowTracesColumns } from "./config/flowTraceColumns";
 
 export type SpanType =
@@ -12,7 +13,7 @@ export type SpanType =
   | "agent"
   | "none";
 
-export type SpanStatus = "unset" | "ok" | "error";
+export type SpanStatus = "unset" | "ok" | "error" | "awaiting_human";
 
 export interface TokenUsage {
   promptTokens: number;
@@ -28,7 +29,7 @@ export interface Span {
   status: SpanStatus;
   startTime: string;
   endTime?: string;
-  latencyMs: number;
+  latencyMs: number | null;
   inputs: Record<string, unknown>;
   outputs: Record<string, unknown>;
   error?: string;
@@ -58,8 +59,12 @@ export interface SpanNodeProps {
   depth: number;
   isExpanded: boolean;
   isSelected: boolean;
+  tabIndex?: number;
+  posInSet?: number;
+  setSize?: number;
   onToggle: () => void;
   onSelect: () => void;
+  registerNodeRef?: (id: string, el: HTMLElement | null) => void;
 }
 
 export interface SpanDetailProps {
@@ -75,6 +80,13 @@ export interface TraceViewProps {
 export interface TraceDetailViewProps {
   traceId: string | null;
   flowName?: string | null;
+  pendingRequest?: PendingHumanRequest | null;
+  onResolved?: () => void;
+  // False when the row is a synthetic paused run with no persisted trace yet —
+  // skip the trace fetch and show only the pause/resume affordance.
+  hasTrace?: boolean;
+  // While true (just after a resume), poll the trace so its spans/status update in place.
+  pollUpdates?: boolean;
 }
 
 export interface TraceAccordionItemProps {
@@ -94,7 +106,7 @@ export interface TraceAccordionItemProps {
 
 export type StatusIconProps = {
   colorClass: string;
-  iconName: "Loader2" | "CircleCheck" | "CircleX";
+  iconName: "Loader2" | "CircleCheck" | "CircleX" | "CirclePause";
   shouldSpin: boolean;
 };
 

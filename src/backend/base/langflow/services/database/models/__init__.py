@@ -1,3 +1,4 @@
+from .a2a import A2ACheckpoint, A2ATask
 from .api_key import ApiKey
 from .auth import (
     AuthzAuditLog,
@@ -19,8 +20,9 @@ from .flow_version import FlowVersion
 from .flow_version_deployment_attachment import FlowVersionDeploymentAttachment
 from .folder import Folder
 from .ingestion_run import IngestionRun, IngestionRunStatus
-from .jobs import Job
+from .jobs import ExecutionSignal, Job, JobCheckpoint, JobEvent, SignalType
 from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
+from .mcp_server import MCPServer
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
 from .traces.model import SpanTable, TraceTable
@@ -29,6 +31,8 @@ from .user import User
 from .variable import Variable
 
 __all__ = [
+    "A2ACheckpoint",
+    "A2ATask",
     "ApiKey",
     "AuthzAuditLog",
     "AuthzEditLock",
@@ -40,6 +44,7 @@ __all__ = [
     "CasbinRule",
     "Deployment",
     "DeploymentProviderAccount",
+    "ExecutionSignal",
     "File",
     "Flow",
     "FlowVersion",
@@ -48,8 +53,11 @@ __all__ = [
     "IngestionRun",
     "IngestionRunStatus",
     "Job",
+    "JobCheckpoint",
+    "JobEvent",
     "KnowledgeBaseRecord",
     "KnowledgeBaseStatus",
+    "MCPServer",
     "MemoryBase",
     "MemoryBaseSession",
     "MemoryBaseWorkflowRun",
@@ -57,6 +65,7 @@ __all__ = [
     "MessageTable",
     "SSOConfig",
     "SSOUserProfile",
+    "SignalType",
     "SpanTable",
     "TraceTable",
     "TransactionTable",

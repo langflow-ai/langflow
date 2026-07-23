@@ -171,6 +171,10 @@ export const lazyIconsMapping = {
     import("@/icons/ElasticsearchStore").then((mod) => ({
       default: mod.ElasticsearchIcon,
     })),
+  EmpirioLabs: () =>
+    import("@/icons/EmpirioLabs").then((mod) => ({
+      default: mod.EmpirioLabsIcon,
+    })),
   Evernote: () =>
     import("@/icons/Evernote").then((mod) => ({ default: mod.EvernoteIcon })),
   Exa: () => import("@/icons/Exa").then((mod) => ({ default: mod.ExaIcon })),
@@ -270,6 +274,10 @@ export const lazyIconsMapping = {
       default: mod.HackerNewsIcon,
     })),
   HCD: () => import("@/icons/HCD").then((mod) => ({ default: mod.HCDIcon })),
+  HumanInput: () =>
+    import("@/icons/HumanInput").then((mod) => ({
+      default: mod.HumanInputIcon,
+    })),
   HomeAssistant: () =>
     import("@/icons/HomeAssistant").then((mod) => ({
       default: mod.HomeAssistantIcon,
@@ -351,6 +359,8 @@ export const lazyIconsMapping = {
   Neon: () => import("@/icons/Neon").then((mod) => ({ default: mod.NeonIcon })),
   Newsapi: () =>
     import("@/icons/Newsapi").then((mod) => ({ default: mod.NewsapiIcon })),
+  NextPlaid: () =>
+    import("@/icons/NextPlaid").then((mod) => ({ default: mod.NextPlaidIcon })),
   NotDiamond: () =>
     import("@/icons/NotDiamond").then((mod) => ({
       default: mod.NotDiamondIcon,
@@ -369,12 +379,16 @@ export const lazyIconsMapping = {
     import("@/icons/OpenAi").then((mod) => ({ default: mod.OpenAiIcon })),
   OpenAICopy: () =>
     import("@/icons/OpenAI copy").then((mod) => ({ default: mod.OpenAIIcon })),
+  OpenRAG: () =>
+    import("@/icons/OpenRAG").then((mod) => ({ default: mod.OpenRAGIcon })),
   OpenRouter: () =>
     import("@/icons/OpenRouter").then((mod) => ({
       default: mod.OpenRouterIcon,
     })),
   OpenSearch: () =>
     import("@/icons/OpenSearch").then((mod) => ({ default: mod.OpenSearch })),
+  Oracle: () =>
+    import("@/icons/Oracle").then((mod) => ({ default: mod.OracleIcon })),
   Perplexity: () =>
     import("@/icons/Perplexity").then((mod) => ({
       default: mod.PerplexityIcon,
@@ -481,8 +495,11 @@ export const lazyIconsMapping = {
     })),
   Upstash: () =>
     import("@/icons/Upstash").then((mod) => ({ default: mod.UpstashSvgIcon })),
+  Valkey: () =>
+    import("@/icons/Valkey").then((mod) => ({ default: mod.ValkeyIcon })),
   Vectara: () =>
     import("@/icons/VectaraIcon").then((mod) => ({ default: mod.VectaraIcon })),
+  vLLM: () => import("@/icons/vLLM").then((mod) => ({ default: mod.VllmIcon })),
   VectorStores: () =>
     import("@/icons/vectorstores").then((mod) => ({
       default: mod.VectorStoresIcon,

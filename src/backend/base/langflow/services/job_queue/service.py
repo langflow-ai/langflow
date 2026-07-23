@@ -43,6 +43,47 @@ class JobQueueNotFoundError(Exception):
         super().__init__(f"Job queue not found for job_id: {job_id}")
 
 
+class JobQueueBackendUnavailableError(Exception):
+    """Raised when the configured job queue backend (e.g. Redis) is unreachable.
+
+    Route handlers translate this into a clean HTTP 503 so callers get an
+    actionable message instead of a raw redis ``ConnectionError`` stack trace.
+    """
+
+
+def _is_backend_connection_error(exc: BaseException) -> bool:
+    """Return True if *exc* indicates the Redis backend is unreachable.
+
+    Covers both builtin socket-level errors and redis-py's own
+    ``ConnectionError`` / ``TimeoutError`` (which are NOT subclasses of the
+    builtins). ``redis`` is an optional dependency, so its exception types are
+    imported lazily — this only runs on a failure path, never the hot path.
+    """
+    if isinstance(exc, ConnectionError | TimeoutError | OSError):
+        return True
+    try:
+        from redis.exceptions import ConnectionError as RedisConnectionError
+        from redis.exceptions import TimeoutError as RedisTimeoutError
+    except ImportError:
+        return False
+    return isinstance(exc, RedisConnectionError | RedisTimeoutError)
+
+
+def _redact_url_credentials(url: str) -> str:
+    """Strip userinfo from a URL so credentials never reach logs or HTTP responses."""
+    from urllib.parse import urlparse, urlunparse
+
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return "<redacted>"
+    if parsed.username is None and parsed.password is None:
+        return url
+    host = parsed.hostname or ""
+    netloc = f"***@{host}:{parsed.port}" if parsed.port else f"***@{host}"
+    return urlunparse(parsed._replace(netloc=netloc))
+
+
 class JobQueueService(Service):
     """Asynchronous service for managing job-specific queues and their associated tasks.
 
@@ -88,6 +129,9 @@ class JobQueueService(Service):
 
     name = "job_queue_service"
 
+    # Backend label used on OpenTelemetry metrics. Subclasses override.
+    _backend_label: str = "memory"
+
     def __init__(self) -> None:
         """Initialize the JobQueueService.
 
@@ -101,6 +145,44 @@ class JobQueueService(Service):
         self._closed = False
         self.ready = False
         self.CLEANUP_GRACE_PERIOD = 300  # 5 minutes before cleaning up marked tasks
+        # Cached OpenTelemetry handle (resolved lazily on first emit).
+        # _otel_resolved is True after the first lookup attempt, including failures,
+        # so we don't retry on every bump. _otel remains None when lookup fails.
+        self._otel: Any = None
+        self._otel_resolved: bool = False
+
+    def _get_otel(self) -> Any:
+        """Best-effort lookup of the OpenTelemetry singleton. Cached after first call.
+
+        Returns the ``ot`` handle, or ``None`` if telemetry is unavailable. Never raises —
+        instrumentation must not break the queue.
+        """
+        if self._otel_resolved:
+            return self._otel
+        self._otel_resolved = True
+        try:
+            from langflow.services.deps import get_telemetry_service
+
+            self._otel = get_telemetry_service().ot
+        except Exception:  # noqa: BLE001 - telemetry must not crash the queue
+            self._otel = None
+        return self._otel
+
+    def _emit_otel_counter(self, metric_name: str, labels: dict[str, str], value: float = 1.0) -> None:
+        """Best-effort OpenTelemetry counter bump. Silent on failure."""
+        ot = self._get_otel()
+        if ot is None:
+            return
+        with contextlib.suppress(Exception):
+            ot.increment_counter(metric_name, labels, value)
+
+    def _emit_otel_up_down(self, metric_name: str, value: float, labels: dict[str, str]) -> None:
+        """Best-effort OpenTelemetry up-down counter delta. Silent on failure."""
+        ot = self._get_otel()
+        if ot is None:
+            return
+        with contextlib.suppress(Exception):
+            ot.up_down_counter(metric_name, value, labels)
 
     def is_started(self) -> bool:
         """Check if the JobQueueService has started.
@@ -200,6 +282,7 @@ class JobQueueService(Service):
 
         # Register the queue without an active task.
         self._queues[job_id] = (main_queue, event_manager, None, None)
+        self._emit_otel_up_down("langflow_job_queue_active_jobs", 1, {"backend": self._backend_label})
         logger.debug(f"Queue and event manager successfully created for job_id {job_id}")
         return main_queue, event_manager
 
@@ -395,7 +478,8 @@ class JobQueueService(Service):
 
         await logger.adebug(f"Removed {items_cleared} items from queue for job_id {job_id}")
         # Remove the job entry from the registry
-        self._queues.pop(job_id, None)
+        if self._queues.pop(job_id, None) is not None:
+            self._emit_otel_up_down("langflow_job_queue_active_jobs", -1, {"backend": self._backend_label})
         self._job_owners.pop(job_id, None)
         self._public_jobs.discard(job_id)
         await logger.adebug(f"Cleanup successful for job_id {job_id}: resources have been released.")
@@ -769,6 +853,8 @@ class RedisJobQueueService(JobQueueService):
     ACTIVITY_PREFIX = _ACTIVITY_PREFIX
     PUBLIC_JOB_PREFIX = _PUBLIC_JOB_PREFIX
 
+    _backend_label: str = "redis"
+
     def __init__(
         self,
         host: str = "localhost",
@@ -839,6 +925,16 @@ class RedisJobQueueService(JobQueueService):
         """
         return self._cancel_channel_enabled
 
+    def _bump_cancel_stat(self, key: str, value: int = 1) -> None:
+        """Increment a cancel_stat counter and emit the matching OTel counter event.
+
+        Single point of mutation for ``self._cancel_stats`` so ``/monitor/job_queue``
+        and Prometheus stay in lockstep. The OTel emit is best-effort and never
+        raises (see :meth:`_emit_otel_counter` on the base class).
+        """
+        self._cancel_stats[key] += value
+        self._emit_otel_counter("langflow_job_queue_cancel_events_total", {"event_type": key}, float(value))
+
     def _stream_key(self, job_id: str) -> str:
         return f"{self.STREAM_PREFIX}{job_id}"
 
@@ -862,14 +958,17 @@ class RedisJobQueueService(JobQueueService):
         task.add_done_callback(self._background_tasks.discard)
         return task
 
-    def start(self) -> None:
-        """Create the Redis client, start the periodic cleanup, and run one cancel dispatcher."""
+    def _make_client(self):
+        """Build a Redis client from the configured settings."""
         from redis.asyncio import StrictRedis
 
         if self._redis_url:
-            self._client = StrictRedis.from_url(self._redis_url)
-        else:
-            self._client = StrictRedis(host=self._redis_host, port=self._redis_port, db=self._redis_db)
+            return StrictRedis.from_url(self._redis_url)
+        return StrictRedis(host=self._redis_host, port=self._redis_port, db=self._redis_db)
+
+    def start(self) -> None:
+        """Create the Redis client, start the periodic cleanup, and run one cancel dispatcher."""
+        self._client = self._make_client()
         super().start()
         # Schedule a connectivity check so startup logs a clear error if Redis is unreachable.
         self._connection_check_task = asyncio.create_task(self._check_connection())
@@ -886,6 +985,70 @@ class RedisJobQueueService(JobQueueService):
             self._polling_watchdog_task = asyncio.create_task(self._run_polling_watchdog())
         logger.debug("RedisJobQueueService started.")
 
+    # Startup connectivity probe tunables (overridable in tests). A short retry
+    # window tolerates Redis that comes up a beat after Langflow, e.g. a
+    # docker-compose service without a healthcheck-gated dependency.
+    _STARTUP_PROBE_ATTEMPTS = 5
+    _STARTUP_PROBE_BACKOFF_S = 1.0
+
+    @property
+    def connection_target(self) -> str:
+        """Human-readable description of the configured Redis endpoint for error messages.
+
+        Credentials embedded in the URL are redacted — this string ends up in
+        server logs and in HTTP 503 details returned to API clients.
+        """
+        if self._redis_url:
+            return _redact_url_credentials(self._redis_url)
+        return f"{self._redis_host}:{self._redis_port} db={self._redis_db}"
+
+    def _backend_unavailable_message(self) -> str:
+        """Actionable message for JobQueueBackendUnavailableError."""
+        return (
+            f"Job queue backend (Redis) is unavailable at {self.connection_target}. "
+            "Start Redis, fix the LANGFLOW_REDIS_QUEUE_* settings, or set "
+            "LANGFLOW_JOB_QUEUE_TYPE=asyncio."
+        )
+
+    async def is_connected(self, *, attempts: int | None = None, backoff_s: float | None = None) -> bool:
+        """Ping Redis with bounded retry; return True if reachable, False otherwise.
+
+        Used at startup to fail fast when ``LANGFLOW_JOB_QUEUE_TYPE=redis`` but the
+        Redis server is not reachable, instead of booting "fine" and then emitting
+        confusing connection errors on the first flow execution.
+
+        The startup probe runs from ``initialize_services()``, before the per-worker
+        ``start()`` creates ``self._client``, so a temporary client is used (and
+        closed) when the service has not started yet. It is not retained: ``start()``
+        runs on the worker's event loop, which may differ from the probe's.
+        """
+        attempts = self._STARTUP_PROBE_ATTEMPTS if attempts is None else attempts
+        backoff_s = self._STARTUP_PROBE_BACKOFF_S if backoff_s is None else backoff_s
+        temp_client = None
+        client = self._client
+        if client is None:
+            client = temp_client = self._make_client()
+        try:
+            for attempt in range(1, attempts + 1):
+                try:
+                    await client.ping()
+                except Exception as exc:  # noqa: BLE001
+                    if attempt < attempts:
+                        await logger.adebug(
+                            f"RedisJobQueueService: Redis not reachable at {self.connection_target} "
+                            f"(attempt {attempt}/{attempts}): {exc}. Retrying in {backoff_s}s."
+                        )
+                        await asyncio.sleep(backoff_s)
+                        continue
+                    return False
+                else:
+                    return True
+            return False
+        finally:
+            if temp_client is not None:
+                with contextlib.suppress(Exception):
+                    await temp_client.aclose()
+
     async def _check_connection(self) -> None:
         """Ping Redis and log a prominent error if the connection is unavailable."""
         try:
@@ -893,8 +1056,7 @@ class RedisJobQueueService(JobQueueService):
             await logger.adebug("RedisJobQueueService: Redis connection OK.")
         except Exception as exc:  # noqa: BLE001
             await logger.aerror(
-                f"RedisJobQueueService: cannot reach Redis at "
-                f"{self._redis_url or f'{self._redis_host}:{self._redis_port} db={self._redis_db}'} — {exc}. "
+                f"RedisJobQueueService: cannot reach Redis at {self.connection_target} — {exc}. "
                 "Build events will NOT be delivered. "
                 "Set LANGFLOW_JOB_QUEUE_TYPE=asyncio or start Redis before running Langflow."
             )
@@ -1101,7 +1263,7 @@ class RedisJobQueueService(JobQueueService):
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # noqa: BLE001
-            self._cancel_stats["activity_touch_errors"] += 1
+            self._bump_cancel_stat("activity_touch_errors")
             await logger.adebug(f"touch_activity SET failed for {job_id}: {exc}")
 
     def _owner_refresh_interval_s(self) -> float:
@@ -1141,7 +1303,7 @@ class RedisJobQueueService(JobQueueService):
         try:
             if await self._client.exists(marker_key):
                 await self._client.delete(marker_key)
-                self._cancel_stats["marker_hit"] += 1
+                self._bump_cancel_stat("marker_hit")
                 await self._handle_cancel(job_id, source="marker")
         except Exception as exc:  # noqa: BLE001
             await logger.awarning(f"Pending cancel marker check failed for {job_id}: {exc}")
@@ -1199,7 +1361,7 @@ class RedisJobQueueService(JobQueueService):
                 try:
                     raw = await self._client.get(self._activity_key(job_id))
                 except Exception as exc:  # noqa: BLE001
-                    self._cancel_stats["activity_get_errors"] += 1
+                    self._bump_cancel_stat("activity_get_errors")
                     await logger.adebug(f"polling watchdog: GET failed for {job_id}: {exc}")
                     continue
                 # Default to "infinitely stale" so a missed elif below cannot
@@ -1217,7 +1379,7 @@ class RedisJobQueueService(JobQueueService):
                     try:
                         last = float(raw.decode() if isinstance(raw, bytes) else raw)
                     except (ValueError, TypeError) as exc:
-                        self._cancel_stats["activity_parse_errors"] += 1
+                        self._bump_cancel_stat("activity_parse_errors")
                         await logger.awarning(
                             f"polling watchdog: ignoring malformed activity value for {job_id}: {exc}"
                         )
@@ -1228,7 +1390,7 @@ class RedisJobQueueService(JobQueueService):
                 # Stale → cancel this job. Local cancel on owned jobs skips the
                 # pubsub round-trip and stays correct even during a dispatcher
                 # reconnect window.
-                self._cancel_stats["polling_watchdog_kills"] += 1
+                self._bump_cancel_stat("polling_watchdog_kills")
                 await logger.ainfo(f"polling watchdog: reclaiming abandoned job {job_id} (age={age:.1f}s)")
                 await self._handle_cancel(job_id, source="watchdog")
                 with contextlib.suppress(Exception):
@@ -1276,7 +1438,7 @@ class RedisJobQueueService(JobQueueService):
                     job_id = channel_str[len(self.CANCEL_CHANNEL_PREFIX) :]
                     await self._handle_cancel(job_id, source="pubsub")
                 # listen() returned cleanly — treat as a soft disconnect and reconnect.
-                self._cancel_stats["dispatcher_reconnects"] += 1
+                self._bump_cancel_stat("dispatcher_reconnects")
                 await logger.awarning(f"Cancel dispatcher pubsub.listen() ended; reconnecting in {backoff:.1f}s")
             except asyncio.CancelledError:
                 with contextlib.suppress(Exception):
@@ -1286,15 +1448,15 @@ class RedisJobQueueService(JobQueueService):
             except (ConnectionError, TimeoutError, OSError) as exc:
                 # Expected transient failure: Redis dropped the pubsub, network
                 # blip, broker restart. Reconnect quietly via the backoff loop.
-                self._cancel_stats["dispatcher_reconnects"] += 1
+                self._bump_cancel_stat("dispatcher_reconnects")
                 await logger.awarning(f"Cancel dispatcher disconnect (retrying in {backoff:.1f}s): {exc!r}")
             except Exception as exc:  # noqa: BLE001
                 # Unexpected exception — likely a bug in dispatch logic, NOT a
                 # Redis problem. Surface at error level with traceback so it
                 # reaches Sentry / log aggregation, then still reconnect so a
                 # one-off bug doesn't kill cross-worker cancel permanently.
-                self._cancel_stats["dispatcher_reconnects"] += 1
-                self._cancel_stats["dispatcher_internal_errors"] += 1
+                self._bump_cancel_stat("dispatcher_reconnects")
+                self._bump_cancel_stat("dispatcher_internal_errors")
                 await logger.aerror(
                     f"Cancel dispatcher internal error (retrying in {backoff:.1f}s): {exc!r}",
                     exc_info=True,
@@ -1311,7 +1473,7 @@ class RedisJobQueueService(JobQueueService):
 
     async def _on_cancel_dispatcher_connection_reconnect(self, _connection: Any) -> None:
         """Record redis-py reconnects that happen inside an active PubSub."""
-        self._cancel_stats["dispatcher_reconnects"] += 1
+        self._bump_cancel_stat("dispatcher_reconnects")
         with contextlib.suppress(Exception):
             await logger.awarning("Cancel dispatcher pubsub connection reconnected transparently")
 
@@ -1351,10 +1513,10 @@ class RedisJobQueueService(JobQueueService):
         """
         entry = self._queues.get(job_id)
         if entry is None:
-            self._cancel_stats["dispatched_foreign"] += 1
+            self._bump_cancel_stat("dispatched_foreign")
             await logger.adebug(f"Cancel for {job_id} ignored on this worker (not owner); source={source}")
             return
-        self._cancel_stats["dispatched_owned"] += 1
+        self._bump_cancel_stat("dispatched_owned")
         await logger.ainfo(f"Cancel applied to {job_id} (source={source})")
         main_queue, _, task, _ = entry
         if task is not None and not task.done():
@@ -1462,9 +1624,9 @@ class RedisJobQueueService(JobQueueService):
             await self._client.set(self._cancel_marker_key(job_id), "1", ex=self._cancel_marker_ttl)
             receivers = int(await self._client.publish(self._cancel_channel(job_id), "1"))
         except Exception:
-            self._cancel_stats["publish_errors"] += 1
+            self._bump_cancel_stat("publish_errors")
             raise
-        self._cancel_stats["published"] += 1
+        self._bump_cancel_stat("published")
         await logger.ainfo(f"signal_cancel: job_id={job_id} receivers={receivers}")
         return receivers
 
@@ -1611,9 +1773,23 @@ class RedisJobQueueService(JobQueueService):
                     await logger.adebug(f"Redis keys deleted for job_id {job_id}")
 
     async def register_job_owner(self, job_id: str, user_id: UUID) -> None:
-        """Store the job owner in Redis for cross-worker ownership checks."""
+        """Store the job owner in Redis for cross-worker ownership checks.
+
+        Raises:
+            JobQueueBackendUnavailableError: if Redis is unreachable. Callers
+                (route handlers) translate this into a clean HTTP 503 instead of
+                letting a raw redis ``ConnectionError`` escape as a 500.
+        """
+        # Write to Redis first: registering locally before a failed Redis write
+        # would let same-worker ownership checks pass while every other worker
+        # sees the job as unowned.
+        try:
+            await self._set_owner_key(job_id, user_id)
+        except Exception as exc:
+            if _is_backend_connection_error(exc):
+                raise JobQueueBackendUnavailableError(self._backend_unavailable_message()) from exc
+            raise
         self._job_owners[job_id] = user_id
-        await self._set_owner_key(job_id, user_id)
         if job_id in self._queues:
             self._ensure_owner_refresh_task(job_id)
 
@@ -1629,14 +1805,21 @@ class RedisJobQueueService(JobQueueService):
             return local
         if self._client:
             owner_key = self._owner_key(job_id)
-            value = await self._client.get(owner_key)
-            if value:
-                from uuid import UUID as _UUID
+            try:
+                value = await self._client.get(owner_key)
+                if value:
+                    from uuid import UUID as _UUID
 
-                # Slide the TTL forward so builds longer than the initial TTL
-                # continue to pass ownership checks as long as they are polled.
-                await self._client.expire(owner_key, self._ttl)
-                return _UUID(value.decode())
+                    # Slide the TTL forward so builds longer than the initial TTL
+                    # continue to pass ownership checks as long as they are polled.
+                    await self._client.expire(owner_key, self._ttl)
+                    return _UUID(value.decode())
+            except Exception as exc:
+                # A Redis outage mid-session must surface as a clean 503 at the
+                # ownership-check endpoints, not a raw ConnectionError 500.
+                if _is_backend_connection_error(exc):
+                    raise JobQueueBackendUnavailableError(self._backend_unavailable_message()) from exc
+                raise
         return None
 
     async def register_public_job(self, job_id: str) -> None:
@@ -1648,6 +1831,16 @@ class RedisJobQueueService(JobQueueService):
         before the marker exists and incorrectly 404 a legitimate public job. Awaiting
         the write here guarantees the marker is visible to every worker by the time
         build_public_tmp's response (containing job_id) reaches the client.
+
+        Raises:
+            JobQueueBackendUnavailableError: if a Redis client is configured but the
+                marker write fails. Surfacing (instead of swallowing) prevents
+                build_public_tmp from returning a job_id that only this worker
+                recognizes — on a multi-worker deployment that would let the public
+                events/cancel endpoints 404 on every other worker. The caller cleans
+                up the started job and returns a 503. With no Redis client configured
+                (single-worker, in-memory) there is no shared marker to persist, so
+                the base no-op success path is unchanged.
         """
         await super().register_public_job(job_id)
         if self._client:
@@ -1656,8 +1849,10 @@ class RedisJobQueueService(JobQueueService):
     async def _set_public_job_key(self, job_id: str) -> None:
         try:
             await self._client.set(self._public_job_key(job_id), b"1", ex=self._ttl)
-        except Exception as exc:  # noqa: BLE001
-            await logger.awarning(f"Failed to set public_job Redis key for {job_id}: {exc!r}")
+        except Exception as exc:
+            if _is_backend_connection_error(exc):
+                raise JobQueueBackendUnavailableError(self._backend_unavailable_message()) from exc
+            raise
 
     async def is_public_job_async(self, job_id: str) -> bool:
         """Return True if the job was started through the public build endpoint.

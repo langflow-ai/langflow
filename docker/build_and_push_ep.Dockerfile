@@ -9,7 +9,11 @@
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS builder
+FROM ghcr.io/astral-sh/uv:latest AS uv_installer
+FROM registry.access.redhat.com/ubi10/python-314-minimal AS builder
+USER root
+COPY --from=uv_installer /uv /usr/local/bin/uv
+COPY --from=uv_installer /uvx /usr/local/bin/uvx
 
 # Install the project into `/app`
 WORKDIR /app
@@ -23,18 +27,15 @@ ENV UV_LINK_MODE=copy
 # Set RUSTFLAGS for reqwest unstable features needed by apify-client v2.0.0
 ENV RUSTFLAGS='--cfg reqwest_unstable'
 
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y \
+RUN microdnf install -y tar xz \
     # deps for building python deps
-    build-essential \
+    gcc gcc-c++ make python3.14-devel \
     git \
     # npm
     npm \
     # gcc
     gcc \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && microdnf clean all
 
 # Copy files first to avoid permission issues with bind mounts
 COPY ./uv.lock /app/uv.lock
@@ -61,8 +62,11 @@ COPY ./src /app/src
 
 COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
+# PUPPETEER_SKIP_DOWNLOAD: puppeteer (via accessibility-checker, test-only)
+# must not download Chrome here - the builder image lacks unzip and the
+# production image never runs it.
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci \
+    PUPPETEER_SKIP_DOWNLOAD=true npm ci \
     && ESBUILD_BINARY_PATH="" NODE_OPTIONS="--max-old-space-size=4096" JOBS=1 npm run build \
     && cp -r build /app/src/backend/langflow/frontend \
     && rm -rf /tmp/src/frontend
@@ -73,33 +77,46 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv sync --frozen --no-editable --extra nv-ingest --extra postgresql --no-group dev
 
+# Use the release workflow's exact wheels when present, while retaining the
+# frontend compiled specifically for this image. Nightly and local builds leave
+# the artifact directory empty and no-op.
+COPY ./.release-artifacts /tmp/release-artifacts
+COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
+RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
+    --python /app/.venv/bin/python \
+    --mode main \
+    --frontend-source /app/src/backend/langflow/frontend
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.14-slim-trixie AS runtime
-
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y curl git libpq5 gnupg xz-utils \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+FROM registry.access.redhat.com/ubi10/python-314-minimal AS runtime
+USER root
+RUN microdnf update -y \
+    && microdnf install -y curl git libpq gnupg xz tar shadow-utils \
+    && microdnf clean all
+RUN python3.14 -m pip install --upgrade pip
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
-RUN ARCH=$(dpkg --print-architecture) \
-    && if [ "$ARCH" = "amd64" ]; then NODE_ARCH="x64"; \
-       elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
+RUN ARCH=$(uname -m) \
+    && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
+       elif [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
     && NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
                     | sed -nE "s/.*node-v([0-9]+\.[0-9]+\.[0-9]+)-linux-${NODE_ARCH}\.tar\.xz.*/\1/p" \
                     | head -1) \
     && if [ -z "$NODE_VERSION" ]; then echo "ERROR: Could not determine Node.js version" && exit 1; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
-    | tar -xJ -C /usr/local --strip-components=1
+    | tar -xJ -C /usr/local --strip-components=1 \
+    && npm install -g npm@latest
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
+ENV BASH_ENV="" \
+    ENV="" \
+    PROMPT_COMMAND=""
 
 # Pre-create LANGFLOW_CONFIG_DIR (the default location used by the docker_example
 # compose file) with the non-root user as owner. When the official compose mounts
@@ -121,6 +138,8 @@ WORKDIR /app
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
 ENV LANGFLOW_EVENT_DELIVERY=polling
+
+# secuirty options
 ENV LANGFLOW_AUTO_LOGIN=false
 
 USER 1000

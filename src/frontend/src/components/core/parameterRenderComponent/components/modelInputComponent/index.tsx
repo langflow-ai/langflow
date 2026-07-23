@@ -8,7 +8,6 @@ import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-m
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
-import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
@@ -23,6 +22,7 @@ import {
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
+import { matchesModelIdentity } from "./helpers/model-option-identity";
 import { recoverModelOption } from "./helpers/recover-model-option";
 import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import type {
@@ -51,7 +51,6 @@ export default function ModelInputComponent({
   ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t("model.setupProvider");
-  const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [openManageProvidersDialog, setOpenManageProvidersDialog] =
@@ -60,6 +59,9 @@ export default function ModelInputComponent({
   const [refreshOptions, setRefreshOptions] = useState(false);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const buildInfo = useFlowStore((state) => state.buildInfo);
+  const inspectionPanelVisible = useFlowStore(
+    (state) => state.inspectionPanelVisible,
+  );
   const showingBuildPanel =
     isBuilding || !!buildInfo?.error || !!buildInfo?.success;
 
@@ -397,7 +399,9 @@ export default function ModelInputComponent({
       return null;
     }
 
-    const match = flatOptions.find((option) => option.name === currentName);
+    const match = flatOptions.find((option) =>
+      matchesModelIdentity(option, saved),
+    );
     if (match) return match;
 
     // Saved name isn't in the filtered options list — typically because the
@@ -446,7 +450,9 @@ export default function ModelInputComponent({
     let isSavedValueStale = false;
     if (!isEmpty) {
       const saved = value[0];
-      const inOptions = flatOptions.some((opt) => opt.name === saved.name);
+      const inOptions = flatOptions.some((option) =>
+        matchesModelIdentity(option, saved),
+      );
       if (!inOptions && saved.provider) {
         isSavedValueStale =
           providersData?.some(
@@ -481,7 +487,7 @@ export default function ModelInputComponent({
    * Handles model selection from the dropdown.
    */
   const handleModelSelect = useCallback(
-    (modelName: string) => {
+    (modelName: string, provider?: string) => {
       setConnectionMode(false);
       // Clear the _connection_mode flag from the model field template
       // so the backend resumes normal update_build_config behavior.
@@ -513,8 +519,8 @@ export default function ModelInputComponent({
           );
         }
       }
-      const selectedOption = flatOptions.find(
-        (option) => option.name === modelName,
+      const selectedOption = flatOptions.find((option) =>
+        matchesModelIdentity(option, { name: modelName, provider }),
       );
       if (!selectedOption) return;
 
@@ -661,7 +667,7 @@ export default function ModelInputComponent({
 
   const renderPopoverContent = () => {
     const PopoverContentInput =
-      editNode || inspectionPanel
+      editNode || inspectionPanel || inspectionPanelVisible
         ? PopoverContent
         : PopoverContentWithoutPortal;
     return (
@@ -671,7 +677,7 @@ export default function ModelInputComponent({
         collisionPadding={{
           bottom: showingBuildPanel ? BUILD_PANEL_COLLISION_PADDING_PX : 0,
         }}
-        className="noflow nowheel nopan nodelete nodrag p-0"
+        className="noflow nowheel nopan nodelete nodrag z-[70] p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >
         <Command className="flex flex-col">

@@ -141,6 +141,37 @@ class TestDenyListSymlinkAlias:
         assert result.get("status") == "ok", f"allowed symlink target was blocked: {result!r}"
 
 
+class TestDenyListProtectedDirectoryBasename:
+    """A path whose final component IS a protected directory name must be denied.
+
+    Previously the basename was matched only against literal/prefix/suffix rules,
+    never against ``_DENY_PATH_FRAGMENTS``. Requesting ``.ssh`` / ``.aws`` /
+    ``.git`` directly therefore fell through to I/O and leaked a
+    "directory vs not-found" existence signal, and a ``**/*`` glob could surface
+    the protected directory entry itself even when its children were filtered.
+    """
+
+    PROTECTED_DIR_BASENAMES = [
+        pytest.param(".ssh", id="ssh"),
+        pytest.param(".aws", id="aws"),
+        pytest.param(".git", id="git"),
+        pytest.param(".SSH", id="ssh-case-insensitive"),
+        pytest.param("nested/.aws", id="nested-aws"),
+    ]
+
+    @pytest.mark.parametrize("path", PROTECTED_DIR_BASENAMES)
+    def test_should_deny_read_when_basename_is_protected_directory(
+        self, component: FileSystemToolComponent, path: str
+    ) -> None:
+        result = component._read_file(path)
+
+        assert "error" in result, f"deny-list did not fire for protected directory {path!r}; result={result!r}"
+        assert "not found" not in result["error"].lower(), (
+            "deny must fire before existence is observed (no directory-vs-not-found leak), "
+            f"error was: {result['error']}"
+        )
+
+
 class TestDenyListGlob:
     def test_should_omit_denied_files_when_globbing_workspace(self, component: FileSystemToolComponent) -> None:
         result = component._glob_search("**/*")
@@ -149,6 +180,13 @@ class TestDenyListGlob:
         denied_hits = [m for m in result["matches"] if Path(m).name in {".env", "id_rsa", "secret.pem", "config"}]
         assert denied_hits == [], f"glob leaked denied files: {denied_hits}"
         assert "notes.txt" in result["matches"]
+
+    def test_should_omit_protected_directory_entry_when_globbing(self, component: FileSystemToolComponent) -> None:
+        result = component._glob_search("**/*")
+
+        assert result.get("status") == "ok"
+        fragment_entries = [m for m in result["matches"] if Path(m).name in {".ssh", ".aws", ".git"}]
+        assert fragment_entries == [], f"glob returned a protected directory entry: {fragment_entries}"
 
 
 class TestDenyListGrep:

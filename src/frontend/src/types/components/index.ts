@@ -1,5 +1,5 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
-import type { ReactElement, ReactNode } from "react";
+import type { InputHTMLAttributes, ReactElement, ReactNode } from "react";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import type { InputOutput } from "../../constants/enums";
 import type {
@@ -39,6 +39,7 @@ export type InputComponentType = {
   placeholder?: string;
   className?: string;
   id?: string;
+  inputProps?: InputHTMLAttributes<HTMLInputElement>;
   blurOnEnter?: boolean;
   optionsIcon?: string;
   optionsPlaceholder?: string;
@@ -157,6 +158,7 @@ export type NodeInputFieldComponentType = {
   isToolMode?: boolean;
   isPrimaryInput?: boolean;
   displayHandle?: boolean;
+  minimizedHandleTop?: string;
 };
 
 export type IOJSONInputComponentType = {
@@ -332,6 +334,11 @@ export type IconComponentProps = {
   id?: string;
   skipFallback?: boolean;
   dataTestId?: string;
+  /** Icons are decorative (aria-hidden) by default; pass false to expose. */
+  ariaHidden?: boolean;
+  /** Accessible name for meaningful icons; implies ariaHidden=false. */
+  ariaLabel?: string;
+  title?: string;
 };
 
 export type InputProps = {
@@ -452,6 +459,7 @@ export type loginInputStateType = {
 };
 
 export type patchUserInputStateType = {
+  currentPassword: string;
   password: string;
   cnfPassword: string;
   profilePicture: string;
@@ -620,8 +628,6 @@ export type nodeToolbarPropsType = {
   numberOfOutputHandles: number;
   showNode: boolean;
   name?: string;
-  openAdvancedModal?: boolean;
-  onCloseAdvancedModal?: (close: boolean) => void;
   isOutdated: boolean;
   isUserEdited: boolean;
   hasBreakingChange: boolean;

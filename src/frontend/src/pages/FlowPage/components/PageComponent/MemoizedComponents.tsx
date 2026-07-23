@@ -19,13 +19,18 @@ export const MemoizedBackground = memo(() => (
 interface MemoizedCanvasControlsProps {
   selectedNode: AllNodeType | null;
   isAgentWorking?: boolean;
+  isReadOnly?: boolean;
 }
 
 export const MemoizedCanvasControls = memo(
-  ({ selectedNode, isAgentWorking }: MemoizedCanvasControlsProps) => {
+  ({
+    selectedNode,
+    isAgentWorking,
+    isReadOnly,
+  }: MemoizedCanvasControlsProps) => {
     const currentFlow = useFlowStore(useShallow((state) => state.currentFlow));
     const isLocked = currentFlow?.locked ?? false;
-    const effectiveLocked = isLocked || isAgentWorking;
+    const effectiveLocked = isLocked || isAgentWorking || isReadOnly;
 
     return (
       <CanvasControls
@@ -40,6 +45,8 @@ export const MemoizedSidebarTrigger = memo(() => {
   const { t } = useTranslation();
   const { open, toggleSidebar, setActiveSection } = useSidebar();
   if (ENABLE_NEW_SIDEBAR) {
+    if (open) return null;
+
     return (
       <Panel
         className={cn(
@@ -54,7 +61,8 @@ export const MemoizedSidebarTrigger = memo(() => {
             iconName={item.icon}
             iconClasses={item.id === "mcp" ? "h-8 w-8" : ""}
             key={item.id}
-            tooltipText={item.tooltip}
+            navItemId={item.id}
+            tooltipText={t(item.tooltip)}
             onClick={() => {
               setActiveSection(item.id);
               if (!open) {

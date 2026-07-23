@@ -17,7 +17,6 @@ import sqlalchemy
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
 from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
@@ -42,6 +41,7 @@ from langflow.plugin_routes import load_plugin_routes
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
+    get_background_execution_service,
     get_queue_service,
     get_service,
     get_settings_service,
@@ -236,6 +236,17 @@ def get_lifespan(*, fix_migration=False, version=None):
                     f"writes will use the legacy direct-write path: {exc}"
                 )
 
+            # Start the periodic authz audit-log retention sweep. No-op unless
+            # AUTHZ_AUDIT_ENABLED and AUTHZ_AUDIT_RETENTION_DAYS > 0. The startup
+            # sweep in initialize_services() already pruned at boot; this keeps a
+            # long-running instance bounded between restarts.
+            try:
+                from langflow.services.task.audit_cleanup import audit_log_cleanup_worker
+
+                await audit_log_cleanup_worker.start()
+            except Exception as exc:  # noqa: BLE001 — never block startup on cleanup scheduling
+                await logger.awarning(f"Failed to start authz audit-log cleanup worker: {exc}")
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")
             setup_llm_caching()
@@ -411,6 +422,17 @@ def get_lifespan(*, fix_migration=False, version=None):
                     except Exception as e:  # noqa: BLE001
                         await logger.awarning(f"Failed to configure agentic MCP server: {e}")
 
+            # Backfill MCP servers from the legacy per-user JSON file into the
+            # mcp_server table (idempotent + multi-replica-safe; existing file-based
+            # users are migrated to the DB store automatically on upgrade).
+            try:
+                from langflow.api.utils.mcp.backfill import backfill_mcp_servers_from_files
+
+                async with session_scope() as session:
+                    await backfill_mcp_servers_from_files(session)
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(f"Failed to backfill MCP servers from legacy files: {e}")
+
             # Gate: Load flows from directory
             current_time = asyncio.get_event_loop().time()
             if is_step_complete(PreloadStep.FLOWS):
@@ -426,6 +448,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             queue_service = get_queue_service()
             if not queue_service.is_started():
                 queue_service.start()
+
+            # Reconcile background-execution jobs left behind by a crashed worker:
+            # fail orphaned IN_PROGRESS rows, re-enqueue QUEUED rows. Best-effort
+            # so a reconcile hiccup never blocks boot.
+            with suppress(Exception):
+                await get_background_execution_service().sweep_orphans_on_startup()
 
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
@@ -578,6 +606,22 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await stop_streamable_http_manager()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Close the shared A2A push-notification webhook client.
+                    try:
+                        from langflow.api.v1.a2a import close_push_client
+
+                        await close_push_client()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to close A2A push notification client: {e}")
+                    # Stop the authz audit-log retention worker (best-effort;
+                    # no-op when it was never scheduled).
+                    try:
+                        from langflow.services.task.audit_cleanup import audit_log_cleanup_worker
+
+                        await audit_log_cleanup_worker.stop()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop authz audit-log cleanup worker: {e}")
+
                     # Cancel background tasks
                     tasks_to_cancel = []
                     if sync_flows_from_fs_task:
@@ -919,11 +963,38 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
         app (FastAPI): FastAPI app.
         static_files_dir (str): Path to the static files directory.
     """
-    app.mount(
-        "/",
-        StaticFiles(directory=static_files_dir, html=True),
-        name="static",
-    )
+
+    # app.frontend() serves index.html for any unmatched GET, so an unknown
+    # /api/* GET would otherwise return the SPA shell instead of a JSON 404.
+    # Reserve /api GET/HEAD to force a 404 that the handler below shapes as JSON.
+    # Only GET/HEAD are claimed: wrong-method requests to real endpoints still
+    # get a native 405, and real API routes are registered earlier so they win.
+    @app.api_route("/api/{_path:path}", include_in_schema=False, methods=["GET", "HEAD"])
+    async def api_not_found(_path: str):
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    # Serve the favicon from an explicit high-priority route instead of relying on
+    # the low-priority app.frontend() static route. Browsers request /favicon.ico
+    # with an image Accept header, which app.frontend() does not treat as a
+    # navigation request; if the file is ever missed there the request falls
+    # through to the 404 handler, which returns index.html (HTML) and the browser
+    # renders no icon. A dedicated route always answers with the file and the
+    # correct media type, or a clean 404 when it is absent, independent of the
+    # frontend fallback heuristics.
+    favicon_path = static_files_dir / "favicon.ico"
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon():
+        if await anyio.Path(favicon_path).exists():
+            return FileResponse(favicon_path, media_type="image/x-icon")
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    # FastAPI >=0.138 serves the frontend build as low-priority routes: path
+    # operations are matched first, static files only if nothing else matched.
+    # fallback="index.html" returns the SPA entrypoint for extensionless
+    # client-side routes; the handler below covers the rest (e.g. deep links
+    # whose last segment contains a dot).
+    app.frontend("/", directory=str(static_files_dir), fallback="index.html")
 
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):

@@ -9,7 +9,7 @@ import shutil
 import unicodedata
 from collections.abc import AsyncIterator, Awaitable, Callable
 from types import UnionType
-from typing import Any, TypedDict, Union, get_args, get_origin
+from typing import Annotated, Any, TypedDict, Union, get_args, get_origin
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -17,17 +17,24 @@ import httpx
 from anyio import ClosedResourceError
 from httpx import codes as httpx_codes
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import StructuredTool
+from langchain_core.tools import ArgsSchema, StructuredTool
 from mcp import ClientSession
 from mcp.shared.exceptions import McpError
-from pydantic import BaseModel
+from pydantic import BaseModel, SkipValidation
 
 from lfx.base.agents.utils import maybe_unflatten_dict
+from lfx.base.mcp import security as mcp_security
+from lfx.base.mcp.security import (
+    AGENTIC_MCP_MODULE,
+    AGENTIC_USER_ID_ENV_VAR,
+    validate_mcp_stdio_config,
+)
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
@@ -41,90 +48,25 @@ HTTP_INTERNAL_SERVER_ERROR = 500
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
 
-# SECURITY: Environment variables that enable code injection via approved MCP
-# stdio commands. All comparisons are case-insensitive (see is_dangerous_mcp_env_var).
-#
-# The stdio launcher runs servers with shell=False (no bash -c / cmd /c wrapper;
-# see MCPStdioClient._connect_to_server), which structurally neutralizes the
-# shell-startup vectors below. They are retained as defense-in-depth: a fail-safe
-# if a shell wrapper is ever reintroduced, and to keep write-time validation
-# (MCPServerConfig) aligned with the launch-time backstop. The loader and
-# interpreter entries remain load-bearing regardless of the shell, because the
-# dynamic linker / target interpreter honors them directly.
-DANGEROUS_MCP_ENV_VARS = frozenset(
-    {
-        # -- Loader / interpreter injection (dangerous even with shell=False) --
-        # Shared-object / dylib injection (arbitrary native code in any process)
-        "ld_preload",
-        "ld_library_path",
-        "ld_audit",
-        "dyld_insert_libraries",
-        "dyld_library_path",
-        # glibc iconv module injection (loads arbitrary .so via iconv)
-        "gconv_path",
-        # Command resolution override (redirects which binary is exec'd)
-        "path",
-        # Node.js code injection (honored by the node runtime itself)
-        "node_options",
-        "node_extra_ca_certs",
-        # Python code injection (honored by the python runtime itself)
-        "pythonstartup",
-        "pythonpath",
-        # Home / config directory redirection (loads attacker-controlled configs)
-        "home",
-        "xdg_config_home",
-        "xdg_data_home",
-        # Temp directory redirection
-        "tmpdir",
-        "tmp",
-        "temp",
-        # DNS / network manipulation
-        "hostaliases",
-        "localdomain",
-        "res_options",
-        # Locale / getconf injection (can load arbitrary .so on some glibc)
-        "getconf_dir",
-        # -- Shell-startup vectors (defense-in-depth; inert while shell=False) --
-        # Shell startup, option, and tracing injection
-        "bash_env",
-        "env",
-        "bash_func_",
-        "shellopts",
-        "bashopts",
-        "ps4",
-        # Shell word-splitting / globbing manipulation
-        "ifs",
-        "cdpath",
-    }
-)
+# Backward-compatible exports; the canonical policy lives in lfx.base.mcp.security.
+DANGEROUS_MCP_ENV_VARS = mcp_security.DANGEROUS_MCP_ENV_VARS
+is_dangerous_mcp_env_var = mcp_security.is_dangerous_mcp_env_var
 
-# MCP Session Manager constants - lazy loaded
-_mcp_settings_cache: dict[str, Any] = {}
-
-
-def is_dangerous_mcp_env_var(key: str) -> bool:
-    lower_key = key.lower()
-    return lower_key in DANGEROUS_MCP_ENV_VARS or lower_key.startswith("bash_func_")
+# Minimum cleanup interval to prevent tight-loop CPU spin if settings return 0 or fail.
+_MCP_CLEANUP_INTERVAL_MIN = 30  # seconds
+_SESSION_VALIDATION_TIMEOUT_FLOOR = 10.0
 
 
 def _validate_mcp_stdio_env(env: dict[str, str] | None) -> dict[str, str]:
-    if env is None:
-        return {}
-
-    for key in env:
-        if is_dangerous_mcp_env_var(key):
-            msg = f"Environment variable '{key}' is not allowed for MCP stdio servers"
-            raise ValueError(msg)
-
-    return env
+    """Backward-compatible env-only wrapper around the shared stdio policy."""
+    validate_mcp_stdio_config(None, None, env)
+    return env or {}
 
 
 def _get_mcp_setting(key: str, default: Any = None) -> Any:
-    """Lazy load MCP settings from settings service."""
-    if key not in _mcp_settings_cache:
-        settings = get_settings_service().settings
-        _mcp_settings_cache[key] = getattr(settings, key, default)
-    return _mcp_settings_cache[key]
+    """Read MCP settings from settings service (no cache — settings may change)."""
+    settings = get_settings_service().settings
+    return getattr(settings, key, default)
 
 
 def _resolve_mcp_tool_execution_timeout(tool_execution_timeout: float | None) -> float:
@@ -149,6 +91,14 @@ def _resolve_mcp_tool_execution_timeout(tool_execution_timeout: float | None) ->
     return max(configured_timeouts) if configured_timeouts else 180.0
 
 
+def get_session_validation_timeout() -> float:
+    """Derive a fast session health-check timeout from the configured connection budget."""
+    connect_timeout = _get_mcp_setting("mcp_server_timeout", None)
+    if connect_timeout is None:
+        return _SESSION_VALIDATION_TIMEOUT_FLOOR
+    return max(_SESSION_VALIDATION_TIMEOUT_FLOOR, float(connect_timeout) / 3.0)
+
+
 def get_max_sessions_per_server() -> int:
     """Get maximum number of sessions per server to prevent resource exhaustion."""
     return _get_mcp_setting("mcp_max_sessions_per_server")
@@ -160,8 +110,15 @@ def get_session_idle_timeout() -> int:
 
 
 def get_session_cleanup_interval() -> int:
-    """Get cleanup interval in seconds."""
-    return _get_mcp_setting("mcp_session_cleanup_interval")
+    """Get cleanup interval in seconds, clamped to a safe minimum.
+
+    Guard: if settings return 0, None, or a negative value the _periodic_cleanup
+    loop would call asyncio.sleep(0) on every iteration, spinning at 100% CPU.
+    """
+    interval = _get_mcp_setting("mcp_session_cleanup_interval")
+    if not interval or interval < _MCP_CLEANUP_INTERVAL_MIN:
+        return _MCP_CLEANUP_INTERVAL_MIN
+    return interval
 
 
 # RFC 7230 compliant header name pattern: token = 1*tchar
@@ -645,6 +602,23 @@ def _convert_mcp_result(result: Any) -> Any:
     return blocks
 
 
+def _raise_if_tool_result_is_error(tool_name: str, result: Any) -> None:
+    """A CallToolResult with isError=True is a FAILED call; returning it as data hides the failure.
+
+    Enforced here (package code, shared by the component build and the agent tool path) rather
+    than only in the component, because saved flows freeze component code and a pre-fix
+    ``build_output`` would keep swallowing failures.
+    """
+    if not getattr(result, "isError", False):
+        return
+    content = getattr(result, "content", None) or []
+    error_text = " ".join(
+        getattr(block, "text", "") for block in content if getattr(block, "type", None) == "text"
+    ).strip()
+    msg = f"MCP tool '{tool_name}' failed: {error_text or 'no error detail provided'}"
+    raise ValueError(msg)
+
+
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
@@ -669,12 +643,14 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
 
         try:
             arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
-            return await client.run_tool(tool_name, arguments=arguments)
+            result = await client.run_tool(tool_name, arguments=arguments)
         except Exception as e:
             await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
             msg = f"Tool '{tool_name}' execution failed: {e}"
             raise ValueError(msg) from e
+        _raise_if_tool_result_is_error(tool_name, result)
+        return result
 
     return tool_coroutine
 
@@ -699,12 +675,14 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
 
         try:
             arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
-            return run_until_complete(client.run_tool(tool_name, arguments=arguments))
+            result = run_until_complete(client.run_tool(tool_name, arguments=arguments))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
             msg = f"Tool '{tool_name}' execution failed: {e}"
             raise ValueError(msg) from e
+        _raise_if_tool_result_is_error(tool_name, result)
+        return result
 
     return tool_func
 
@@ -780,6 +758,42 @@ def _process_headers(headers: Any, request_variables: dict[str, str] | None = No
         resolved_headers = _resolve_global_variables_in_headers(processed_headers, request_variables)
         return validate_headers(resolved_headers)
     return {}
+
+
+def _inject_mcp_stdio_headers(args: list[str], headers: dict[str, str]) -> list[str]:
+    """Add sanitized proxy header arguments without treating opaque values as command syntax."""
+    if not headers:
+        return list(args)
+
+    final_args = list(args)
+    extra_args: list[str] = []
+    for key, value in headers.items():
+        extra_args.extend(["--headers", key, value])
+
+    if "--headers" in final_args:
+        idx = final_args.index("--headers")
+        return final_args[:idx] + extra_args + final_args[idx:]
+
+    # Insert before the last positional argument (typically the upstream URL),
+    # while skipping flag/value pairs.
+    last_positional_idx: int | None = None
+    index = 0
+    while index < len(final_args):
+        if final_args[index].startswith("-"):
+            index += 1
+            if (
+                index < len(final_args)
+                and not final_args[index].startswith("-")
+                and not final_args[index].startswith(("http://", "https://"))
+            ):
+                index += 1
+        else:
+            last_positional_idx = index
+            index += 1
+
+    if last_positional_idx is not None:
+        return final_args[:last_positional_idx] + extra_args + final_args[last_positional_idx:]
+    return [*final_args, *extra_args]
 
 
 def _resolve_global_variables_in_headers(headers: dict, request_variables: dict[str, str] | None) -> dict:
@@ -1058,7 +1072,18 @@ class MCPSessionManager:
         return server_data  # legacy flat structure
 
     def _start_cleanup_task(self):
-        """Start the periodic cleanup task."""
+        """Start the periodic cleanup task.
+
+        Safe to call from __init__ (synchronous context): if no event loop is
+        running yet we silently skip task creation.  get_session() calls this
+        again on every invocation, so the task is always started once a loop
+        is available.
+        """
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # No running event loop — defer until get_session() is awaited.
+            return
         if self._cleanup_task is None or self._cleanup_task.done():
             self._cleanup_task = asyncio.create_task(self._periodic_cleanup())
             self._background_tasks.add(self._cleanup_task)
@@ -1072,8 +1097,9 @@ class MCPSessionManager:
                 await self._cleanup_idle_sessions()
             except asyncio.CancelledError:
                 break
-            except (RuntimeError, KeyError, ClosedResourceError, ValueError, asyncio.TimeoutError) as e:
-                # Handle common recoverable errors without stopping the cleanup loop
+            except Exception as e:  # noqa: BLE001
+                # Catch all recoverable errors so the cleanup loop never silently dies.
+                # asyncio.CancelledError is excluded by the clause above and re-raised.
                 await logger.awarning(f"Error in periodic cleanup: {e}")
 
     async def _cleanup_idle_sessions(self):
@@ -1150,8 +1176,8 @@ class MCPSessionManager:
         """Validate that the session is actually usable by testing a simple operation."""
         try:
             # Try to list tools as a connectivity test (this is a lightweight operation)
-            # Use a shorter timeout for the connectivity test to fail fast
-            response = await asyncio.wait_for(session.list_tools(), timeout=3.0)
+            # Keep the health check shorter than connection setup while honoring its configured budget.
+            response = await asyncio.wait_for(session.list_tools(), timeout=get_session_validation_timeout())
         except Exception as e:  # noqa: BLE001
             # Any failure means the session is not safe to reuse (SDK errors, terminated session, etc.)
             await logger.adebug(f"Session connectivity test failed: {type(e).__name__}: {e}")
@@ -1188,6 +1214,11 @@ class MCPSessionManager:
         """
         server_key = self._get_server_key(connection_params, transport_type)
 
+        # Ensure cleanup task is running. _start_cleanup_task() is a no-op if
+        # called from __init__ before the event loop was started, so we retry
+        # here where we are guaranteed to be inside an async context.
+        self._start_cleanup_task()
+
         async with self._server_lock(server_key):
             # Ensure server entry exists
             if server_key not in self.sessions_by_server:
@@ -1199,31 +1230,27 @@ class MCPSessionManager:
             server_data = self.sessions_by_server[server_key]
             sessions = server_data["sessions"]
 
-            # Try to find a healthy existing session
+            # Try to find a healthy existing session.
+            # Only sessions whose background task is still running are considered alive.
+            # We do NOT call list_tools() here because that would add up to
+            # (max_sessions x 3 s timeout) = ~30 s of blocking on every run_tool invocation.
             for session_id, session_info in list(sessions.items()):
                 session = session_info["session"]
                 task = session_info["task"]
 
-                # Check if session is still alive
                 if not task.done():
-                    # Update last used time
+                    # Background task is still alive — treat the session as healthy.
                     session_info["last_used"] = asyncio.get_event_loop().time()
-
-                    # Quick health check
-                    if await self._validate_session_connectivity(session):
-                        await logger.adebug(f"Reusing existing session {session_id} for server {server_key}")
-                        # record mapping & bump ref-count for backwards compatibility
-                        self._context_to_session[context_id] = (server_key, session_id)
-                        self._session_refcount[(server_key, session_id)] = (
-                            self._session_refcount.get((server_key, session_id), 0) + 1
-                        )
-                        return session
-                    await logger.ainfo(f"Session {session_id} for server {server_key} failed health check, cleaning up")
-                    await self._cleanup_session_by_id(server_key, session_id)
-                else:
-                    # Task is done, clean up
-                    await logger.ainfo(f"Session {session_id} for server {server_key} task is done, cleaning up")
-                    await self._cleanup_session_by_id(server_key, session_id)
+                    await logger.adebug(f"Reusing existing session {session_id} for server {server_key}")
+                    # record mapping & bump ref-count for backwards compatibility
+                    self._context_to_session[context_id] = (server_key, session_id)
+                    self._session_refcount[(server_key, session_id)] = (
+                        self._session_refcount.get((server_key, session_id), 0) + 1
+                    )
+                    return session
+                # Background task finished — session is dead, clean it up.
+                await logger.ainfo(f"Session {session_id} for server {server_key} task is done, cleaning up")
+                await self._cleanup_session_by_id(server_key, session_id)
 
             # Check if we've reached the maximum number of sessions for this server
             if len(sessions) >= get_max_sessions_per_server():
@@ -1650,7 +1677,14 @@ class MCPStdioClient:
         self._component_cache = component_cache
         self._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
-    async def _connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
+    async def _connect_to_server(
+        self,
+        command_str: str,
+        env: dict[str, str] | None = None,
+        *,
+        current_user_id: str | UUID | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> list[StructuredTool]:
         """Connect to MCP server using stdio transport (SDK style).
 
         The server process is launched **without a shell** (``shell=False``
@@ -1680,7 +1714,25 @@ class MCPStdioClient:
             msg = "MCP stdio command is empty"
             raise ValueError(msg)
 
+        command, args = command_parts[0], command_parts[1:]
+        # Final pre-spawn enforcement. This must remain here even though API and
+        # component call sites validate earlier: callers can instantiate this client
+        # directly, and no unvalidated argv or tenant-controlled environment may reach
+        # StdioServerParameters.
+        validate_mcp_stdio_config(command, args, env)
+        # Component headers are validated as HTTP data and appended as structured
+        # argv only after command policy succeeds. Cookie/signature values may
+        # legitimately contain shell-looking punctuation, which is inert because
+        # the process is launched without a shell.
+        final_args = _inject_mcp_stdio_headers(args, _process_headers(headers))
         safe_env = _validate_mcp_stdio_env(env)
+        if AGENTIC_MCP_MODULE in command or any(AGENTIC_MCP_MODULE in arg for arg in args):
+            if not current_user_id:
+                msg = "The Langflow agentic MCP server requires an authenticated user context and cannot be used here."
+                raise ValueError(msg)
+            # Bind the trusted identity only after validating the tenant-controlled
+            # environment. Supplying this key in the config is rejected above.
+            safe_env = {**safe_env, AGENTIC_USER_ID_ENV_VAR: str(current_user_id)}
         env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **safe_env}
 
         # shell=False: exec the binary directly with structured args. The MCP SDK
@@ -1688,8 +1740,8 @@ class MCPStdioClient:
         # resolution), so identical parameters work on every OS and no shell
         # interpreter is ever interposed between Langflow and the server process.
         server_params = StdioServerParameters(
-            command=command_parts[0],
-            args=command_parts[1:],
+            command=command,
+            args=final_args,
             env=env_data,
         )
 
@@ -1710,10 +1762,18 @@ class MCPStdioClient:
         self._connected = True
         return response.tools
 
-    async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
+    async def connect_to_server(
+        self,
+        command_str: str,
+        env: dict[str, str] | None = None,
+        *,
+        current_user_id: str | UUID | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> list[StructuredTool]:
         """Connect to MCP server using stdio transport (SDK style)."""
         return await asyncio.wait_for(
-            self._connect_to_server(command_str, env), timeout=get_settings_service().settings.mcp_server_timeout
+            self._connect_to_server(command_str, env, current_user_id=current_user_id, headers=headers),
+            timeout=get_settings_service().settings.mcp_server_timeout,
         )
 
     def set_session_context(self, context_id: str):
@@ -2168,6 +2228,7 @@ async def update_tools(
     mcp_sse_client: MCPStreamableHttpClient | None = None,  # Backward compatibility
     request_variables: dict[str, str] | None = None,
     tool_execution_timeout: float | None = None,
+    current_user_id: str | UUID | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools.
 
@@ -2179,6 +2240,9 @@ async def update_tools(
         mcp_sse_client: Optional SSE client instance (backward compatibility)
         request_variables: Optional dict of global variables to resolve in headers
         tool_execution_timeout: Optional timeout in seconds for tool execution (int or float)
+        current_user_id: Authenticated user id of the caller. Injected into the env of the
+            internal agentic MCP server (``langflow.agentic.mcp``) at spawn time so its tools are
+            scoped to this user. Never sourced from the (tenant-controlled) server config.
     """
     if server_config is None:
         server_config = {}
@@ -2230,54 +2294,38 @@ async def update_tools(
     if mode == "Stdio":
         args = list(server_config.get("args", []))
         env = server_config.get("env", {})
-        # For stdio mode, inject component headers as --headers CLI args.
-        # This enables passing headers through proxy tools like mcp-proxy
-        # that forward them to the upstream HTTP server.
-        if headers:
-            extra_args = []
-            for key, value in headers.items():
-                extra_args.extend(["--headers", key, str(value)])
-            if "--headers" in args:
-                # Insert before the existing --headers flag so all header
-                # flags are grouped together
-                idx = args.index("--headers")
-                for i, arg in enumerate(extra_args):
-                    args.insert(idx + i, arg)
-            else:
-                # No existing --headers flag; try to insert before the last
-                # positional arg (typically the URL in mcp-proxy commands).
-                # Scan args to find the last true positional token by skipping
-                # flag+value pairs so we don't mistake a flag's value for a
-                # positional argument (e.g. "--port 8080").
-                last_positional_idx: int | None = None
-                i = 0
-                while i < len(args):
-                    if args[i].startswith("-"):
-                        # Skip the flag and its value (assumes each flag
-                        # takes at most one value argument; boolean flags
-                        # are handled correctly since the next token will
-                        # start with '-' or be a URL-like positional).
-                        i += 1
-                        if (
-                            i < len(args)
-                            and not args[i].startswith("-")
-                            and not args[i].startswith("http://")
-                            and not args[i].startswith("https://")
-                        ):
-                            i += 1
-                    else:
-                        last_positional_idx = i
-                        i += 1
+        # SECURITY: A tenant-built flow can embed this stdio config directly in the
+        # MCPTools component value, bypassing REST-layer model validation. Enforce the
+        # shared policy here, then enforce it again at the final process-spawn boundary.
+        validate_mcp_stdio_config(command, args, env)
 
-                if last_positional_idx is not None:
-                    args = args[:last_positional_idx] + extra_args + args[last_positional_idx:]
-                else:
-                    args.extend(extra_args)
-        full_command = shlex.join([*shlex.split(command), *args])
-        tools = await mcp_stdio_client.connect_to_server(full_command, env)
+        is_agentic_server = AGENTIC_MCP_MODULE in command or any(AGENTIC_MCP_MODULE in arg for arg in args)
+        if is_agentic_server and not current_user_id:
+            msg = "The Langflow agentic MCP server requires an authenticated user context and cannot be used here."
+            raise ValueError(msg)
+        # `command` is a structured executable field, not a shell fragment. Keeping it
+        # intact preserves legitimate executable paths that contain spaces.
+        full_command = shlex.join([command, *args])
+        if is_agentic_server and headers:
+            tools = await mcp_stdio_client.connect_to_server(
+                full_command,
+                env,
+                current_user_id=current_user_id,
+                headers=headers,
+            )
+        elif is_agentic_server:
+            tools = await mcp_stdio_client.connect_to_server(full_command, env, current_user_id=current_user_id)
+        elif headers:
+            tools = await mcp_stdio_client.connect_to_server(full_command, env, headers=headers)
+        else:
+            tools = await mcp_stdio_client.connect_to_server(full_command, env)
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:
         # Streamable HTTP connection with SSE fallback
+        # SECURITY: a tenant-embedded MCP HTTP config could point at an internal service or
+        # the cloud-metadata endpoint. Guard the URL with the same SSRF posture as other
+        # outbound fetches (no-op when SSRF protection is disabled / host is allowlisted).
+        validate_connector_url_for_ssrf(url)
         verify_ssl = server_config.get("verify_ssl", True)
         tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
         client = mcp_streamable_http_client
@@ -2367,6 +2415,15 @@ async def update_tools(
                         if key not in schema_fields and key not in normalized:
                             normalized[key] = value
                     return normalized
+
+            if not MCPStructuredTool.__pydantic_complete__:
+                MCPStructuredTool.model_rebuild(
+                    _types_namespace={
+                        "Annotated": Annotated,
+                        "ArgsSchema": ArgsSchema,
+                        "SkipValidation": SkipValidation,
+                    }
+                )
 
             tool_obj = MCPStructuredTool(
                 name=tool.name,

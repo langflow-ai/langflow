@@ -8,13 +8,21 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 from lfx.log.logger import logger
+from lfx.services.authorization.base import BaseAuthorizationService
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_shares import ShareCreate, ShareRead, ShareUpdate
 from langflow.services.authorization import ShareAction, ensure_share_permission
+from langflow.services.authorization.invalidation import safe_invalidate_all, safe_invalidate_user
 from langflow.services.authorization.utils import audit_decision
-from langflow.services.database.models.auth import AuthzShare, AuthzTeamMember, SharePermissionLevel, ShareScope
+from langflow.services.database.models.auth import (
+    AuthzShare,
+    AuthzTeam,
+    AuthzTeamMember,
+    SharePermissionLevel,
+    ShareScope,
+)
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.flow.model import Flow
@@ -53,6 +61,38 @@ async def _resolve_resource_owner(
     if row is None:
         return None
     return getattr(row, owner_attr, None)
+
+
+async def _serialize_shares(session: DbSession, rows: list[AuthzShare]) -> list[ShareRead]:
+    """Serialize shares with human-readable user and team target names.
+
+    ``target_id`` is polymorphic, so the database cannot expose a normal ORM
+    relationship. Resolve each target kind in one query and keep the name
+    optional for deleted or otherwise stale targets.
+    """
+    user_ids = {row.target_id for row in rows if row.scope == ShareScope.USER.value and row.target_id is not None}
+    team_ids = {row.target_id for row in rows if row.scope == ShareScope.TEAM.value and row.target_id is not None}
+
+    user_names: dict[UUID, str] = {}
+    if user_ids:
+        user_rows = await session.exec(select(User.id, User.username).where(User.id.in_(user_ids)))
+        user_names.update(dict(user_rows.all()))
+    team_names: dict[UUID, str] = {}
+    if team_ids:
+        team_rows = await session.exec(select(AuthzTeam.id, AuthzTeam.team_name).where(AuthzTeam.id.in_(team_ids)))
+        team_names.update(dict(team_rows.all()))
+
+    def target_name(row: AuthzShare) -> str | None:
+        if row.scope == ShareScope.USER.value:
+            return user_names.get(row.target_id)
+        if row.scope == ShareScope.TEAM.value:
+            return team_names.get(row.target_id)
+        return None
+
+    return [
+        ShareRead.model_validate(row, from_attributes=True).model_copy(update={"target_name": target_name(row)})
+        for row in rows
+    ]
 
 
 def _share_visible(
@@ -104,13 +144,32 @@ async def _user_can_see_share(
     )
 
 
-async def _invalidate_for_share(scope: str, target_id: UUID | None) -> None:
+async def _invalidate_for_share(scope: str, target_id: UUID | None, *, op: str = "share:write") -> None:
     """Invalidate cached policy after a share write (user scope vs invalidate_all)."""
     authz = get_authorization_service()
     if scope == ShareScope.USER.value and target_id is not None:
-        await authz.invalidate_user(target_id)
+        await safe_invalidate_user(authz, target_id, op=op)
     else:
-        await authz.invalidate_all()
+        await safe_invalidate_all(authz, op=op)
+
+
+def _uses_base_sync_shares(authz: BaseAuthorizationService) -> bool:
+    """Return True when the service only has the OSS no-op sync_shares hook."""
+    return getattr(type(authz), "sync_shares", None) is BaseAuthorizationService.sync_shares
+
+
+async def _refresh_policy_for_share(scope: str, target_id: UUID | None, *, op: str) -> None:
+    """Refresh share-derived policy after the share DB transaction is durable."""
+    authz = get_authorization_service()
+    sync_shares = getattr(authz, "sync_shares", None)
+    if sync_shares is not None and not _uses_base_sync_shares(authz):
+        try:
+            await sync_shares()
+        except Exception as exc:  # noqa: BLE001 - plugin hooks are best-effort post-commit work
+            logger.warning("sync_shares failed after %s; falling back to targeted invalidation: %s", op, exc)
+        else:
+            return
+    await _invalidate_for_share(scope, target_id, op=op)
 
 
 async def _ensure_can_administer_share(
@@ -189,9 +248,12 @@ async def create_share(
             detail="Share could not be created: it may already exist or conflict with an existing share.",
         ) from exc
     await session.refresh(row)
+    response = (await _serialize_shares(session, [row]))[0]
+    await session.commit()
 
-    # Invalidate policy cache for the share audience.
-    await _invalidate_for_share(payload.scope, payload.target_id)
+    # Refresh policy after commit so plugins using a separate DB connection see
+    # the durable authz_share row instead of the pre-commit transaction state.
+    await _refresh_policy_for_share(payload.scope, payload.target_id, op="share:create")
 
     await audit_decision(
         user_id=current_user.id,
@@ -199,13 +261,13 @@ async def create_share(
         obj=f"{payload.resource_type}:{payload.resource_id}",
         result="allow",
         details={
-            "share_id": str(row.id),
+            "share_id": str(response.id),
             "scope": payload.scope,
             "target_id": str(payload.target_id) if payload.target_id else None,
             "permission_level": payload.permission_level,
         },
     )
-    return ShareRead.model_validate(row, from_attributes=True)
+    return response
 
 
 _LIST_SHARES_MAX_LIMIT = 200
@@ -253,14 +315,14 @@ async def list_shares(
 
     is_superuser = getattr(current_user, "is_superuser", False)
     if is_superuser:
-        return [ShareRead.model_validate(row, from_attributes=True) for row in rows]
+        return await _serialize_shares(session, rows)
 
     # Pre-fetch team memberships (avoid N+1 per row).
     team_membership_stmt = select(AuthzTeamMember.team_id).where(AuthzTeamMember.user_id == current_user.id)
     caller_team_ids: set[UUID] = set(await session.exec(team_membership_stmt))
 
     # Filter rows by visibility rules for non-superusers.
-    visible: list[ShareRead] = []
+    visible: list[AuthzShare] = []
     owner_cache: dict[tuple[str, UUID], UUID | None] = {}
     for row in rows:
         key = (row.resource_type, row.resource_id)
@@ -276,8 +338,8 @@ async def list_shares(
             resource_owner_id=owner_cache[key],
             caller_team_ids=caller_team_ids,
         ):
-            visible.append(ShareRead.model_validate(row, from_attributes=True))
-    return visible
+            visible.append(row)
+    return await _serialize_shares(session, visible)
 
 
 def _row_visible_to(
@@ -331,7 +393,7 @@ async def get_share(
         # UUID privacy: forbidden share → 404.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share not found")
 
-    return ShareRead.model_validate(row, from_attributes=True)
+    return (await _serialize_shares(session, [row]))[0]
 
 
 @router.patch("/{share_id}", response_model=ShareRead)
@@ -381,20 +443,22 @@ async def update_share(
             detail="Share could not be updated: it may conflict with an existing share.",
         ) from exc
     await session.refresh(row)
+    response = (await _serialize_shares(session, [row]))[0]
+    await session.commit()
 
-    await _invalidate_for_share(row.scope, row.target_id)
+    await _refresh_policy_for_share(response.scope, response.target_id, op="share:update")
 
     await audit_decision(
         user_id=current_user.id,
         action="share:update",
-        obj=f"{row.resource_type}:{row.resource_id}",
+        obj=f"{response.resource_type}:{response.resource_id}",
         result="allow",
         details={
-            "share_id": str(row.id),
-            "permission_level": row.permission_level,
+            "share_id": str(response.id),
+            "permission_level": response.permission_level,
         },
     )
-    return ShareRead.model_validate(row, from_attributes=True)
+    return response
 
 
 @router.delete("/{share_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -429,8 +493,9 @@ async def delete_share(
     scope = row.scope
     await session.delete(row)
     await session.flush()
+    await session.commit()
 
-    await _invalidate_for_share(scope, target_id)
+    await _refresh_policy_for_share(scope, target_id, op="share:delete")
 
     await audit_decision(
         user_id=current_user.id,

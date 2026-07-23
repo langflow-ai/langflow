@@ -67,9 +67,17 @@ from langflow.api.v1.schemas import (
     MCPSettings,
 )
 from langflow.services.auth.constants import AUTO_LOGIN_WARNING
+from langflow.services.auth.context import (
+    AUTH_METHOD_AUTO_LOGIN,
+    AuthCredentialContext,
+    clear_current_auth_context,
+    set_current_auth_context,
+)
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
+from langflow.services.authorization import ProjectAction, ensure_project_permission
+from langflow.services.authorization.access_ceiling import clear_current_external_access_context
 from langflow.services.database.models import Flow, Folder
-from langflow.services.database.models.api_key.crud import check_key, create_api_key
+from langflow.services.database.models.api_key.crud import authenticate_api_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
@@ -93,6 +101,12 @@ async def verify_project_auth(
     This function provides authentication for MCP endpoints when using MCP Composer and no API key is provided,
     or checks if the API key is valid.
     """
+    # Mirror the service.py auth entrypoints: reset request-local credential metadata at entry so a
+    # later branch (e.g. the composer-token fast path) never inherits stale context from a prior call.
+    clear_current_auth_context()
+    # Defensive invariant: drop any stale external access ceiling so it can't carry into MCP project auth.
+    clear_current_external_access_context()
+
     settings_service = get_settings_service()
 
     project = (await db.exec(select(Folder).where(Folder.id == project_id))).first()
@@ -144,9 +158,11 @@ async def verify_project_auth(
             )
 
         # Validate the API key
-        user = await check_key(db, api_key)
-        if not user:
+        api_key_result = await authenticate_api_key(db, api_key)
+        if not api_key_result:
             raise HTTPException(status_code=401, detail="Invalid API key")
+        set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
+        user = api_key_result.user
 
         # Verify user has access to the project
         project_access = (
@@ -171,6 +187,7 @@ async def _superuser_fallback(db: AsyncSession, settings_service) -> User:
     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
     if result:
         logger.warning(AUTO_LOGIN_WARNING)
+        set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
         return result
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -546,6 +563,18 @@ async def update_project_mcp_settings(
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
 
+            # Mutating flow MCP exposure + project MCP auth settings is a project
+            # WRITE: enforce so the external access ceiling (e.g. a "viewer")
+            # cannot change MCP settings. The owner with no ceiling fast-paths via
+            # owner-override; behavior is unchanged when the feature is off.
+            await ensure_project_permission(
+                current_user,
+                ProjectAction.WRITE,
+                project_id=project_id,
+                project_user_id=project.user_id,
+                workspace_id=project.workspace_id,
+            )
+
             # Track if MCP Composer needs to be started or stopped
             should_handle_mcp_composer = False
             should_start_composer = False
@@ -736,7 +765,18 @@ def is_local_ip(ip_str: str) -> bool:
 
 
 def get_client_ip(request: Request) -> str:
-    """Extract the client IP address from a FastAPI request.
+    """Resolve the client IP for the local-only install locality check.
+
+    ``X-Forwarded-For`` is client-controlled and must NOT be trusted by default:
+    trusting it lets a remote caller spoof a loopback address and defeat the
+    local-only restriction on :func:`install_mcp_config` (which writes MCP client
+    config to the host filesystem). By default we use the real TCP peer
+    (``request.client.host``), so a spoofed header has no effect.
+
+    Only when the operator has explicitly opted into a trusted proxy
+    (``rate_limit_trust_proxy``) do we consult ``X-Forwarded-For``, and then we
+    take the rightmost entry — the last hop added by the trusted proxy, which a
+    client cannot forge — mirroring ``langflow.services.rate_limit.service.get_client_ip``.
 
     Args:
         request: FastAPI Request object
@@ -744,13 +784,16 @@ def get_client_ip(request: Request) -> str:
     Returns:
         str: The client's IP address
     """
-    # Check for X-Forwarded-For header (common when behind proxies)
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        # The client IP is the first one in the list
-        return forwarded_for.split(",")[0].strip()
+    # Only consult X-Forwarded-For when an operator has explicitly declared a
+    # trusted proxy; otherwise the header is attacker-controlled.
+    if get_settings_service().settings.rate_limit_trust_proxy:
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            # Rightmost entry = last hop added by the trusted proxy (unspoofable);
+            # the leftmost entry is client-supplied and must never be trusted.
+            return forwarded_for.split(",")[-1].strip()
 
-    # If no proxy headers, use the client's direct IP
+    # Default: trust only the real TCP peer.
     if request.client:
         return request.client.host
 

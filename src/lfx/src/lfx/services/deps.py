@@ -61,6 +61,10 @@ def get_service(service_type: ServiceType, default=None):
     try:
         return service_manager.get(service_type, default)
     except Exception:  # noqa: BLE001
+        # Preserve the traceback in logs so callers seeing a None return have something to grep
+        # for. Returning None remains the contract because several callers (e.g. get_db_service)
+        # treat absence as "not configured" and substitute a noop implementation.
+        logger.exception("Failed to resolve service %s", service_type)
         return None
 
 
@@ -126,6 +130,17 @@ def get_chat_service() -> ChatServiceProtocol | None:
     from lfx.services.schema import ServiceType
 
     return get_service(ServiceType.CHAT_SERVICE)
+
+
+def get_checkpoint_service():
+    """Checkpoint store: registered service, or the in-memory standalone fallback."""
+    from lfx.graph.checkpoint.store import default_checkpoint_store
+    from lfx.services.schema import ServiceType
+
+    service = get_service(ServiceType.CHECKPOINT_SERVICE)
+    if service is not None:
+        return service
+    return default_checkpoint_store()
 
 
 def get_tracing_service() -> TracingServiceProtocol | None:

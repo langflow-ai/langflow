@@ -4,6 +4,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogHeader,
   DialogTitle,
 } from "../dialog";
 
@@ -74,5 +75,61 @@ describe("DialogContent", () => {
     expect(
       screen.queryByRole("button", { name: /close/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("should_detect_dialog_title_and_description_inside_dialog_header", () => {
+    renderWithProviders(
+      <Dialog open>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nested title</DialogTitle>
+            <DialogDescription>Nested description</DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Nested title" });
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAccessibleDescription("Nested description");
+    expect(screen.queryByText("Dialog")).not.toBeInTheDocument();
+    expect(document.querySelectorAll("p")).toHaveLength(1);
+  });
+
+  it("should_stop_scanning_for_dialog_title_after_safe_depth", () => {
+    renderWithProviders(
+      <Dialog open>
+        <DialogContent>
+          <div>
+            <div>
+              <div>
+                <div>
+                  <div>
+                    <div>
+                      <DialogTitle>Too deep</DialogTitle>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogDescription>Test description</DialogDescription>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    expect(screen.getByText("Dialog")).toBeInTheDocument();
+  });
+
+  it("should_skip_fallback_title_when_hideTitle_is_set", () => {
+    renderWithProviders(
+      <Dialog open>
+        <DialogContent hideTitle hideDescription>
+          <p>Content provided by a composed header</p>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    expect(screen.queryByText("Dialog")).not.toBeInTheDocument();
   });
 });

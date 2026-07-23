@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
 from lfx.base.models import models_dev_catalog
 from lfx.base.models.unified_models import (
     _get_all_provider_mapped_fields,
@@ -13,6 +14,7 @@ from lfx.base.models.unified_models import (
 )
 from lfx.base.models.unified_models.build_config import _resolve_dropdown_provider_values
 from lfx.base.models.unified_models.provider_queries import get_models_detailed
+from lfx.services.variable.request_scope import activate_no_env_fallback, reset_no_env_fallback
 
 
 @pytest.fixture(autouse=True)
@@ -414,6 +416,15 @@ def test_get_all_provider_mapped_fields_is_cached():
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture(autouse=True)
+def _skip_available_models_catalog(monkeypatch):
+    """Keep existing get_embeddings tests focused on the primary instance."""
+    monkeypatch.setattr(
+        "lfx.base.models.unified_models.instantiation._get_provider_embedding_model_names",
+        lambda _provider, _user_id: [],
+    )
+
+
 def test_get_embeddings_passthrough_embeddings_object():
     """An already-instantiated Embeddings object should be returned as-is."""
     from langchain_core.embeddings import Embeddings as BaseEmbeddings
@@ -515,7 +526,9 @@ def test_get_embeddings_falls_back_when_metadata_stripped(mock_get_class, mock_g
     kwargs = fake_class.call_args.kwargs
     assert kwargs["model"] == "text-embedding-3-small"
     assert kwargs["api_key"] == "sk-test"
-    assert result == "embeddings-instance"
+    assert isinstance(result, EmbeddingsWithModels)
+    assert result.embeddings == "embeddings-instance"
+    assert result.available_models == {"text-embedding-3-small": "embeddings-instance"}
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
@@ -529,11 +542,55 @@ def test_get_embeddings_openai_basic(mock_get_class, mock_get_api_key):
 
     result = get_embeddings([_make_openai_embedding_model()], api_key="sk-test")
 
-    assert result is mock_instance
+    assert isinstance(result, EmbeddingsWithModels)
+    assert result.embeddings is mock_instance
+    assert result.available_models == {"text-embedding-3-small": mock_instance}
     mock_get_class.assert_called_once_with("OpenAIEmbeddings")
     kwargs = mock_embedding_class.call_args.kwargs
     assert kwargs["model"] == "text-embedding-3-small"
     assert kwargs["api_key"] == "sk-test"  # pragma: allowlist secret
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_populates_available_models_from_all_configured_providers(
+    mock_get_class, mock_get_api_key, monkeypatch
+):
+    monkeypatch.setattr(
+        "lfx.base.models.unified_models.instantiation._get_configured_embedding_providers",
+        lambda _user_id, _selected_provider: ["OpenAI", "Google Generative AI"],
+    )
+
+    def _embedding_names_for_provider(provider, _user_id):
+        if provider == "OpenAI":
+            return ["text-embedding-3-small", "text-embedding-3-large"]
+        if provider == "Google Generative AI":
+            return ["models/text-embedding-004"]
+        return []
+
+    monkeypatch.setattr(
+        "lfx.base.models.unified_models.instantiation._get_provider_embedding_model_names",
+        _embedding_names_for_provider,
+    )
+    mock_get_api_key.return_value = "sk-test"
+    primary = MagicMock(name="primary")
+    openai_secondary = MagicMock(name="openai-secondary")
+    google_embedding = MagicMock(name="google-embedding")
+    mock_embedding_class = MagicMock(side_effect=[primary, openai_secondary, google_embedding])
+    mock_get_class.return_value = mock_embedding_class
+
+    result = get_embeddings([_make_openai_embedding_model()], api_key="sk-test")
+
+    assert isinstance(result, EmbeddingsWithModels)
+    assert result.embeddings is primary
+    assert set(result.available_models.keys()) == {
+        "text-embedding-3-small",
+        "text-embedding-3-large",
+        "models/text-embedding-004",
+    }
+    assert result.available_models["text-embedding-3-small"] is primary
+    assert result.available_models["text-embedding-3-large"] is openai_secondary
+    assert result.available_models["models/text-embedding-004"] is google_embedding
 
 
 @pytest.mark.parametrize(
@@ -571,6 +628,26 @@ def test_get_embeddings_openai_api_base_env_fallback(
 
     kwargs = mock_embedding_class.call_args.kwargs
     assert kwargs["base_url"] == expected_base_url
+
+
+@pytest.mark.parametrize("variable_name", ["OPENAI_EMBEDDINGS_API_BASE", "OPENAI_API_BASE"])
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_openai_api_base_env_fallback_can_be_disabled(
+    mock_get_class, mock_get_api_key, monkeypatch, variable_name
+):
+    mock_get_api_key.return_value = "sk-test"
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+    monkeypatch.setenv(variable_name, "http://openai-compatible.example/v1")
+    token = activate_no_env_fallback(disabled=True)
+
+    try:
+        get_embeddings([_make_openai_embedding_model()], api_key="sk-test")
+    finally:
+        reset_no_env_fallback(token)
+
+    assert "base_url" not in mock_embedding_class.call_args.kwargs
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")

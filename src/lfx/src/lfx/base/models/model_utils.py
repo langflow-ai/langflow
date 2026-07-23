@@ -9,6 +9,7 @@ import requests
 
 from lfx.base.models.model_metadata import (
     CONDITIONAL_LIVE_MODEL_PROVIDERS,
+    EXPLICIT_ENABLE_ONLY_PROVIDERS,
     LIVE_MODEL_PROVIDERS,
     create_model_metadata,
 )
@@ -25,6 +26,7 @@ from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.secrets import unwrap_secret_value
+from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
@@ -164,8 +166,15 @@ async def is_valid_ollama_url(url: str) -> bool:
         url = url.rstrip("/").removesuffix("/v1")
         if not url.endswith("/"):
             url = url + "/"
+        tags_url = urljoin(url, "api/tags")
+        # base_url is tenant-controlled and this runs during build-config edits: block SSRF
+        # to internal/cloud-metadata hosts before issuing the request.
+        validate_connector_url_for_ssrf(tags_url)
         async with httpx.AsyncClient() as client:
-            return (await client.get(url=urljoin(url, "api/tags"))).status_code == HTTP_STATUS_OK
+            return (await client.get(url=tags_url)).status_code == HTTP_STATUS_OK
+    except SSRFProtectionError:
+        logger.warning("Ollama URL blocked by SSRF protection: %s", url)
+        return False
     except httpx.RequestError:
         logger.debug(f"Invalid Ollama URL: {url}")
         return False
@@ -208,6 +217,10 @@ async def get_ollama_models(
 
         # Ollama REST API to return model capabilities
         show_url = urljoin(base_url, "api/show")
+
+        # base_url is tenant-controlled: block SSRF to internal/cloud-metadata hosts. The
+        # host is shared by both endpoints, so validating one covers the POST to show_url too.
+        validate_connector_url_for_ssrf(tags_url)
 
         async with httpx.AsyncClient() as client:
             # Fetch available models
@@ -357,7 +370,10 @@ def get_watsonx_llm_models(
             "version": "2024-09-16",
             "filters": "function_text_chat,!lifecycle_withdrawn",
         }
-        response = requests.get(endpoint, params=params, timeout=10)
+        # base_url is tenant-controlled: block SSRF to internal/cloud-metadata hosts (the
+        # except below returns default models if blocked). allow_redirects=False per OWASP.
+        validate_connector_url_for_ssrf(endpoint)
+        response = requests.get(endpoint, params=params, timeout=10, allow_redirects=False)
         response.raise_for_status()
         data = response.json()
         models = [model["model_id"] for model in data.get("resources", [])]
@@ -389,7 +405,10 @@ def get_watsonx_embedding_models(
             "version": "2024-09-16",
             "filters": "function_embedding,!lifecycle_withdrawn:and",
         }
-        response = requests.get(endpoint, params=params, timeout=10)
+        # base_url is tenant-controlled: block SSRF to internal/cloud-metadata hosts (the
+        # except below returns default models if blocked). allow_redirects=False per OWASP.
+        validate_connector_url_for_ssrf(endpoint)
+        response = requests.get(endpoint, params=params, timeout=10, allow_redirects=False)
         response.raise_for_status()
         data = response.json()
         models = [model["model_id"] for model in data.get("resources", [])]
@@ -483,16 +502,37 @@ OPENROUTER_FETCH_TIMEOUT = 10.0
 
 OPENAI_COMPATIBLE_FETCH_TIMEOUT = 10.0
 
+AZURE_AI_FOUNDRY_FETCH_TIMEOUT = 10.0
+# Shared wall-clock bound for Foundry HTTP (discovery) and SDK (validate/get_llm).
+AZURE_AI_FOUNDRY_REQUEST_TIMEOUT = AZURE_AI_FOUNDRY_FETCH_TIMEOUT
+
+
+def request_azure_ai_foundry_model_entries(endpoint: str, api_key: str) -> list[dict]:
+    """Probe Foundry /models for credential validation (catalog, not deployments)."""
+    response = requests.get(
+        f"{endpoint.rstrip('/')}/models",
+        headers={"api-key": api_key},
+        timeout=AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
+        allow_redirects=False,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    raw_models = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(raw_models, list):
+        msg = f"Unexpected Azure AI Foundry /models payload (data is {type(raw_models).__name__})"
+        raise TypeError(msg)
+    return raw_models
+
 
 def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
     """Fetch models from a custom OpenAI-compatible endpoint (OPENAI_BASE_URL).
 
     Returns [] when no custom base URL is configured, so api.openai.com
-    users keep the curated static catalog. ``tool_calling`` is assumed
-    True: ``/models`` carries no capability data and the OpenAI wire
-    format implies tools support.
+    users keep the curated static catalog. Because ``/models`` carries no
+    capability data, the endpoint's models are offered in whichever picker
+    requested them. ``tool_calling`` is assumed only for language models.
     """
-    if model_type != "llm":
+    if model_type not in {"llm", "embeddings"}:
         return []
 
     base_url = get_provider_variable_value(user_id, "OPENAI_BASE_URL")
@@ -526,13 +566,19 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
             provider="OpenAI",
             name=entry["id"],
             icon="OpenAI",
-            model_type="llm",
-            tool_calling=True,
+            model_type=model_type,
+            tool_calling=model_type == "llm",
             default=index < MIN_DEFAULT_MODELS,
         )
         for index, entry in enumerate(entries)
         if isinstance(entry, dict) and entry.get("id")
     ]
+
+
+def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
+    """Foundry /models is a catalog, not deployments; return [] and use free-text enables."""
+    _ = (user_id, model_type)
+    return []
 
 
 def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
@@ -710,6 +756,24 @@ def get_live_models_for_provider(
         return fetch_live_openrouter_models(user_id, model_type)
     if provider == "OpenAI":
         return fetch_live_openai_compatible_models(user_id, model_type)
+    if provider == "Azure AI Foundry":
+        return fetch_live_azure_ai_foundry_models(user_id, model_type)
+
+    # Providers contributed by extension bundles supply their own live-discovery
+    # callable via provider_registry (imported lazily to avoid an import cycle).
+    from lfx.base.models.provider_registry import live_discovery_for
+
+    discovery = live_discovery_for(provider)
+    if discovery is not None:
+        try:
+            models = discovery(user_id, model_type)
+        except Exception:  # noqa: BLE001
+            logger.debug(f"Live discovery failed for bundle provider {provider!r}; returning no live models")
+            return []
+        if isinstance(models, list):
+            return models
+        logger.warning(f"Live discovery for bundle provider {provider!r} returned a non-list result; ignoring")
+        return []
     return []
 
 
@@ -722,6 +786,91 @@ def _live_models_to_catalog_shape(live_models: list[dict]) -> list[dict]:
         }
         for m in live_models
     ]
+
+
+def inject_custom_enabled_models(
+    provider_models: list[dict],
+    explicitly_enabled_models: set[str],
+    *,
+    model_name: str | None = None,
+    model_type: str | None = None,
+    metadata_filters: dict | None = None,
+) -> None:
+    """Append free-text enabled deployments missing from the catalog (e.g. Foundry)."""
+    if not explicitly_enabled_models:
+        return
+
+    # Lazy imports: provider_queries pulls model constants that import model_utils.
+    from lfx.base.models.unified_models.credentials import parse_model_status_key
+    from lfx.base.models.unified_models.provider_queries import get_model_provider_metadata
+
+    provider_meta = get_model_provider_metadata()
+    # Track (name, model_type) so llm and embeddings rows do not collide.
+    known_by_provider: dict[str, set[tuple[str, str]]] = {}
+    provider_dicts: dict[str, dict] = {}
+    for provider_dict in provider_models:
+        provider = provider_dict.get("provider")
+        if not isinstance(provider, str):
+            continue
+        provider_dicts[provider] = provider_dict
+        known_by_provider[provider] = {
+            (
+                model.get("model_name"),
+                (model.get("metadata") or {}).get("model_type") or "llm",
+            )
+            for model in provider_dict.get("models", [])
+            if isinstance(model.get("model_name"), str)
+        }
+
+    # Stable order across processes (set iteration is unordered).
+    for entry in sorted(explicitly_enabled_models):
+        provider, custom_name, persisted_type = parse_model_status_key(entry)
+        if provider not in EXPLICIT_ENABLE_ONLY_PROVIDERS:
+            continue
+        custom_name = custom_name.strip()
+        if not provider or not custom_name:
+            continue
+        resolved_type = persisted_type or "llm"
+        if model_type is not None and resolved_type != model_type:
+            continue
+        if model_name is not None and custom_name != model_name:
+            continue
+
+        icon = provider_meta.get(provider, {}).get("icon", "Bot")
+        metadata = {
+            "icon": icon,
+            "model_type": resolved_type,
+            "tool_calling": resolved_type == "llm",
+            "default": False,
+        }
+        if metadata_filters and any(metadata.get(k) != v for k, v in metadata_filters.items()):
+            continue
+
+        provider_dict = provider_dicts.get(provider)
+        if provider_dict is None:
+            # Stub provider when embeddings filter omits chat-only Foundry seed.
+            meta = provider_meta.get(provider, {})
+            provider_dict = {
+                "provider": provider,
+                "models": [],
+                "num_models": 0,
+                **meta,
+            }
+            provider_models.append(provider_dict)
+            provider_dicts[provider] = provider_dict
+            known_by_provider[provider] = set()
+
+        known = known_by_provider.setdefault(provider, set())
+        if (custom_name, resolved_type) in known:
+            continue
+        provider_dict.setdefault("models", []).append(
+            {
+                "model_name": custom_name,
+                "metadata": metadata,
+            }
+        )
+        provider_dict["num_models"] = len(provider_dict["models"])
+        known.add((custom_name, resolved_type))
 
 
 def replace_with_live_models(

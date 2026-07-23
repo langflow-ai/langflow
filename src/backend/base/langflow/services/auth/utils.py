@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import random
 from typing import TYPE_CHECKING, Annotated, Final
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, MultiFernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from lfx.log.logger import logger
-from lfx.services.deps import injectable_session_scope
+from lfx.services.deps import injectable_session_scope, session_scope
+from lfx.services.settings.constants import MINIMUM_SECRET_KEY_LENGTH
 
 from langflow.services.auth.exceptions import (
     AuthenticationError,
@@ -17,7 +19,8 @@ from langflow.services.auth.exceptions import (
     InvalidCredentialsError,
     MissingCredentialsError,
 )
-from langflow.services.deps import get_auth_service
+from langflow.services.auth.external import extract_external_token
+from langflow.services.deps import get_auth_service, get_settings_service
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -35,6 +38,8 @@ class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
     This allows the application to work with HttpOnly cookies while supporting
     explicit Authorization headers for backward compatibility and testing scenarios.
     If an explicit Authorization header is provided, it takes precedence over cookies.
+    When external trusted auth is enabled, the configured external header/cookie
+    is consulted last so the native JWT path is always tried first.
     """
 
     async def __call__(self, request: Request) -> str | None:
@@ -49,9 +54,22 @@ class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
         if token:
             return token
 
+        # Final fallback: external trusted credential (validated downstream).
+        if external := _get_external_token(request.headers, request.cookies):
+            return external
+
         # If auto_error is True, this would raise an exception
         # Since we set auto_error=False, return None
         return None
+
+
+def _get_external_token(headers, cookies) -> str | None:
+    """Return the configured external credential, swallowing transient failures."""
+    try:
+        auth_settings = get_settings_service().auth_settings
+    except Exception:  # noqa: BLE001
+        return None
+    return extract_external_token(headers, cookies, auth_settings)
 
 
 oauth2_login = OAuth2PasswordBearerCookie(tokenUrl="api/v1/login", auto_error=False)
@@ -155,13 +173,22 @@ def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
 
 
 async def get_current_user(
+    request: Request,
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
     db: AsyncSession = Depends(injectable_session_scope),
 ) -> User:
+    # Keep the native token (resolved by oauth2_login, which may already have
+    # collapsed to the external credential) separate from a freshly-extracted
+    # external credential so a present-but-invalid native cookie cannot shadow a
+    # valid external one. The auth service tries the native token first and only
+    # falls back to the external credential when it differs from the token.
+    external_token = _get_external_token(request.headers, request.cookies)
     try:
-        return await _auth_service().get_current_user(token, query_param, header_param, db)
+        return await _auth_service().get_current_user(
+            token, query_param, header_param, db, external_token=external_token
+        )
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
 
@@ -169,18 +196,21 @@ async def get_current_user(
 async def get_current_user_from_access_token(
     token: str | Coroutine | None,
     db: AsyncSession,
+    external_token: str | None = None,
 ) -> User:
     """Compatibility helper to resolve a user from an access token.
 
     This simply delegates to the active auth service's
-    `get_current_user_from_access_token` implementation.
+    `get_current_user_from_access_token` implementation. ``external_token`` is an
+    optional, separately-extracted external credential tried as a fallback when
+    native token authentication fails; when ``None`` behavior is unchanged.
 
     **For new code, prefer calling
     `get_auth_service().get_current_user_from_access_token(...)` directly**
     instead of importing this function.
     """
     try:
-        return await _auth_service().get_current_user_from_access_token(token, db)
+        return await _auth_service().get_current_user_from_access_token(token, db, external_token=external_token)
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
 
@@ -193,7 +223,11 @@ async def get_current_user_for_websocket(
     db: AsyncSession,
 ) -> User | UserRead:
     """Extracts credentials from WebSocket and delegates to auth service."""
+    # Keep the native token and the external credential separate so a present but
+    # invalid/expired native token cannot shadow a valid external credential; the
+    # auth service tries the external token as a fallback when native auth fails.
     token = websocket.cookies.get("access_token_lf") or websocket.query_params.get("token")
+    external_token = _get_external_token(websocket.headers, websocket.cookies)
     api_key = (
         websocket.query_params.get("x-api-key")
         or websocket.query_params.get("api_key")
@@ -202,7 +236,7 @@ async def get_current_user_for_websocket(
     )
 
     try:
-        return await _auth_service().get_current_user_for_websocket(token, api_key, db)
+        return await _auth_service().get_current_user_for_websocket(token, api_key, db, external_token=external_token)
     except AuthenticationError as e:
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=WS_AUTH_REASON) from e
 
@@ -215,16 +249,50 @@ async def get_current_user_for_sse(
 
     Accepts cookie (access_token_lf) or API key (x-api-key query param).
     """
+    # Keep the native token and the external credential separate (see
+    # get_current_user_for_websocket) so the external credential remains a usable
+    # fallback even when a stale native cookie is present.
     token = request.cookies.get("access_token_lf")
+    external_token = _get_external_token(request.headers, request.cookies)
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
 
     try:
-        return await _auth_service().get_current_user_for_sse(token, api_key, db)
+        return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
     except AuthenticationError as e:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Missing or invalid credentials (cookie or API key).",
         ) from e
+
+
+async def get_current_user_for_workflow(
+    token: Annotated[str | None, Security(oauth2_login)],
+    query_param: Annotated[str | None, Security(api_key_query)],
+    header_param: Annotated[str | None, Security(api_key_header)],
+) -> UserRead:
+    """Combined session-or-API-key auth that does not hold a DB session.
+
+    Resolves the user from a session cookie/token *or* an API key inside a
+    short-lived session that is committed and closed before the path operation
+    runs. Unlike `get_current_active_user` (a generator dependency whose session
+    stays open for the whole request), this is required by endpoints that
+    execute a graph inline: a held auth connection contends with the run's own
+    writes (on SQLite it blocks the run's INSERTs with "database is locked").
+    """
+    from langflow.services.database.models.user.model import UserRead
+
+    async with session_scope() as db:
+        try:
+            user = await _auth_service().get_current_user(token, query_param, header_param, db)
+        except AuthenticationError as e:
+            raise _auth_error_to_http(e) from e
+        active_user = await _auth_service().get_current_active_user(user)
+        if active_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is inactive",
+            )
+        return UserRead.model_validate(active_user, from_attributes=True)
 
 
 async def get_optional_user(
@@ -285,11 +353,15 @@ async def get_current_user_optional(
     if auth_header and auth_header.startswith("Bearer "):
         token = token or auth_header[len("Bearer ") :]
 
-    if not token and not api_key:
+    # Keep the external credential separate so it remains a usable fallback when a
+    # stale/invalid native token is present (see get_current_user_for_websocket).
+    external_token = _get_external_token(request.headers, request.cookies)
+
+    if not token and not external_token and not api_key:
         return None
 
     try:
-        return await _auth_service().get_current_user_for_sse(token, api_key, db)
+        return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
     except (AuthenticationError, HTTPException):
         return None
 
@@ -332,20 +404,12 @@ def ensure_fernet_key(secret_key: str) -> bytes:
     For short keys (< 32 chars), the 32-byte key is derived with SHA-256, a
     cryptographic hash. For longer keys, base64 padding is added.
 
-    Security note: short keys previously seeded Python's ``random`` module
-    (``random.seed(secret_key)``) to generate the key bytes. ``random`` is a
-    non-cryptographic Mersenne-Twister PRNG, so the resulting Fernet key was
-    fully predictable from the secret, and seeding it also mutated global PRNG
-    state. SHA-256 is deterministic (so the key stays stable for a given
-    secret) but is not predictable/reversible the way the PRNG output was.
-
-    Deployments that set a ``SECRET_KEY`` shorter than 32 characters will derive
-    a different key than before this fix and must re-enter encrypted secrets
-    (API keys, global variables) after upgrading. The default ``SECRET_KEY`` is
-    a 43-char ``secrets.token_urlsafe(32)`` value and is unaffected.
+    Security note: short keys previously seeded Python's ``random`` module to
+    generate key bytes. New encryption uses SHA-256 so it never depends on a
+    non-cryptographic PRNG or mutates global PRNG state. Short, guessable input
+    remains unsuitable for production; settings validation warns operators.
     """
-    MINIMUM_KEY_LENGTH = 32  # noqa: N806
-    if len(secret_key) < MINIMUM_KEY_LENGTH:
+    if len(secret_key) < MINIMUM_SECRET_KEY_LENGTH:
         digest = hashlib.sha256(secret_key.encode()).digest()  # 32 bytes
         key = base64.urlsafe_b64encode(digest)
     else:
@@ -353,17 +417,41 @@ def ensure_fernet_key(secret_key: str) -> bytes:
     return key
 
 
+def _ensure_legacy_fernet_key(secret_key: str) -> bytes:
+    """Reproduce the pre-1.10.1 short-secret key for decryption only.
+
+    This compatibility key must never be used for encryption. A local PRNG
+    instance reproduces the legacy bytes without mutating global random state.
+    """
+    legacy_random = random.Random(secret_key)  # noqa: S311
+    legacy_bytes = bytes(legacy_random.getrandbits(8) for _ in range(32))
+    return base64.urlsafe_b64encode(legacy_bytes)
+
+
 def get_fernet(settings_service: SettingsService) -> Fernet:
-    """Get a Fernet instance for encryption/decryption.
+    """Get the current Fernet instance used for encryption and decryption."""
+    secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+    return Fernet(ensure_fernet_key(secret_key))
+
+
+def get_fernet_for_decryption(settings_service: SettingsService) -> Fernet | MultiFernet:
+    """Get a Fernet-compatible instance that can read legacy ciphertext.
 
     Args:
         settings_service: Settings service to get the secret key
 
     Returns:
-        Fernet instance for encryption/decryption
+        For short secrets, MultiFernet with the current key first and the
+        pre-1.10.1 key second. This function is used only for decryption; all
+        encryption goes through :func:`get_fernet` and the current key.
     """
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-    return Fernet(ensure_fernet_key(secret_key))
+    current_fernet = get_fernet(settings_service)
+    if len(secret_key) >= MINIMUM_SECRET_KEY_LENGTH:
+        return current_fernet
+
+    legacy_fernet = Fernet(_ensure_legacy_fernet_key(secret_key))
+    return MultiFernet([current_fernet, legacy_fernet])
 
 
 def encrypt_api_key(api_key: str, settings_service: SettingsService | None = None) -> str:  # noqa: ARG001

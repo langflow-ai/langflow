@@ -71,6 +71,13 @@ jobs:
       # matching lfx published when bundles are released ahead of a main
       # release. We build the lfx wheel from the current ref so the smoke
       # test resolves against it; this artifact is not published.
+      - name: Build langflow-sdk wheel for smoke test
+        if: steps.build.outputs.bundles-found == '1'
+        run: |
+          mkdir -p sdk-dist
+          SDK_DIST="$PWD/sdk-dist"
+          (cd src/sdk && uv build --wheel --out-dir "$SDK_DIST")
+          ls -la sdk-dist/
       - name: Build lfx wheel for smoke test
         if: steps.build.outputs.bundles-found == '1'
         run: |
@@ -90,6 +97,12 @@ jobs:
         with:
           name: dist-lfx-smoketest
           path: lfx-dist
+      - name: Upload langflow-sdk artifact (smoke-test only; not published)
+        if: steps.build.outputs.bundles-found == '1'
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist-sdk-smoketest
+          path: sdk-dist
 
   test-install:
     name: Install Smoke Test - ${{ matrix.os }} ${{ matrix.python-version }}
@@ -132,6 +145,11 @@ jobs:
         with:
           name: dist-lfx-smoketest
           path: ./lfx-dist
+      - name: Download langflow-sdk artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-sdk-smoketest
+          path: ./sdk-dist
       - name: Create fresh virtual environment
         run: uv venv test-env --seed
         shell: bash
@@ -140,34 +158,44 @@ jobs:
         run: |
           shopt -s nullglob
           BUNDLE_WHEELS=(./bundles-dist/*.whl)
+          SDK_WHEELS=(./sdk-dist/*.whl)
           LFX_WHEELS=(./lfx-dist/*.whl)
           if [ ${#BUNDLE_WHEELS[@]} -eq 0 ]; then
             echo "No bundle wheels found in ./bundles-dist/"
+            exit 1
+          fi
+          if [ ${#SDK_WHEELS[@]} -eq 0 ]; then
+            echo "No langflow-sdk wheel found in ./sdk-dist/"
             exit 1
           fi
           if [ ${#LFX_WHEELS[@]} -eq 0 ]; then
             echo "No lfx wheel found in ./lfx-dist/"
             exit 1
           fi
-          printf 'Installing: %s\n' "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
-          uv pip install --prerelease=allow --python ./test-env/bin/python "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+          printf 'Installing: %s\n' "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+          uv pip install --prerelease=if-necessary-or-explicit --python ./test-env/bin/python "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
         shell: bash
       - name: Install lfx + bundle wheels (Windows)
         if: matrix.os == 'windows'
         run: |
           shopt -s nullglob
           BUNDLE_WHEELS=(./bundles-dist/*.whl)
+          SDK_WHEELS=(./sdk-dist/*.whl)
           LFX_WHEELS=(./lfx-dist/*.whl)
           if [ ${#BUNDLE_WHEELS[@]} -eq 0 ]; then
             echo "No bundle wheels found in ./bundles-dist/"
+            exit 1
+          fi
+          if [ ${#SDK_WHEELS[@]} -eq 0 ]; then
+            echo "No langflow-sdk wheel found in ./sdk-dist/"
             exit 1
           fi
           if [ ${#LFX_WHEELS[@]} -eq 0 ]; then
             echo "No lfx wheel found in ./lfx-dist/"
             exit 1
           fi
-          printf 'Installing: %s\n' "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+          printf 'Installing: %s\n' "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+          uv pip install --prerelease=if-necessary-or-explicit --python ./test-env/Scripts/python.exe "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
         shell: bash
 
   publish-bundles:

@@ -1,5 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
@@ -30,6 +31,7 @@ interface FormInputBranchProps {
   blurOnEnter: boolean;
   name?: string;
   id: string;
+  inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
   allowAutofill?: boolean;
 }
 
@@ -50,6 +52,7 @@ function FormInputBranch({
   blurOnEnter,
   name,
   id,
+  inputProps,
   allowAutofill,
 }: FormInputBranchProps) {
   const [cursor, setCursor] = useState<number | null>(null);
@@ -90,6 +93,7 @@ function FormInputBranch({
   return (
     <Form.Control asChild>
       <Input
+        {...inputProps}
         name={name}
         id={"form-" + id}
         ref={refInput}
@@ -149,6 +153,7 @@ export default function InputComponent({
   objectOptions,
   isObjectOption = false,
   name,
+  inputProps,
   onChangeFolderName,
   nodeStyle,
   isToolMode,
@@ -157,9 +162,12 @@ export default function InputComponent({
   blockAddNewGlobalVariable = false,
   hasRefreshButton = false,
   inspectionPanel = false,
+  ariaLabelledBy,
 }: InputComponentType & {
   disabledOptions?: Record<string, string>;
+  ariaLabelledBy?: string;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
@@ -194,6 +202,7 @@ export default function InputComponent({
           blurOnEnter={blurOnEnter}
           name={name}
           id={id}
+          inputProps={inputProps}
           allowAutofill={allowAutofill}
         />
       ) : (
@@ -259,6 +268,7 @@ export default function InputComponent({
               blockAddNewGlobalVariable={blockAddNewGlobalVariable}
               hasRefreshButton={hasRefreshButton}
               inspectionPanel={inspectionPanel}
+              ariaLabelledBy={ariaLabelledBy}
             />
           )}
         </>
@@ -274,6 +284,7 @@ export default function InputComponent({
             )}
           >
             <button
+              type="button"
               disabled={disabled}
               onClick={(e) => {
                 if (disabled) return;
@@ -287,6 +298,9 @@ export default function InputComponent({
                   : "text-placeholder-foreground",
                 !disabled && "hover:text-foreground",
               )}
+              aria-label={t("input.selectOption")}
+              aria-expanded={showOptions}
+              aria-haspopup="listbox"
             >
               <ForwardedIconComponent
                 name={
@@ -312,7 +326,8 @@ export default function InputComponent({
       {password && (!setSelectedOption || selectedOption === "") && (
         <button
           type="button"
-          tabIndex={-1}
+          aria-label={pwdVisible ? "Hide password" : "Show password"}
+          aria-pressed={pwdVisible}
           className={classNames(
             "mb-px mr-3 p-0",
             editNode

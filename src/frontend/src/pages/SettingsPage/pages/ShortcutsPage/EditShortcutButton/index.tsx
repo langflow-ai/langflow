@@ -12,6 +12,7 @@ import {
   findShortcutByName,
   getFixedCombination,
   isDuplicateCombination,
+  isModifierOnlyCombination,
   normalizeRecordedCombination,
 } from "./helpers";
 
@@ -90,6 +91,18 @@ export default function EditShortcutButton({
       });
       return;
     }
+    if (isModifierOnlyCombination(key)) {
+      setErrorData({
+        title: t("errors.errorSavingKeyCombination"),
+        list: [
+          t("shortcuts.modifierOnly", {
+            defaultValue:
+              "Add at least one non-modifier key (e.g. a letter or number).",
+          }),
+        ],
+      });
+      return;
+    }
     const normalizedCombination = normalizeRecordedCombination(key);
     if (isDuplicateCombination(shortcuts, shortcut[0], normalizedCombination)) {
       setErrorData({
@@ -146,6 +159,21 @@ export default function EditShortcutButton({
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        target.closest("button, input, textarea, select, a")
+      ) {
+        return;
+      }
+      if (e.key === "Tab") {
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        editCombination();
+        return;
+      }
       e.preventDefault();
       let fixedKey = e.key;
       if (e.key?.toLowerCase() === "control") {
@@ -168,7 +196,7 @@ export default function EditShortcutButton({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [key, setKey]);
+  }, [key, setKey, editCombination]);
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-small" disable={disable}>

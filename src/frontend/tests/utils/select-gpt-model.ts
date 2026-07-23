@@ -4,6 +4,8 @@ import { TEXTS } from "../utils/constants/texts";
 import { adjustScreenView } from "./adjust-screen-view";
 import { unselectNodes } from "./unselect-nodes";
 
+const OPENAI_PROVIDER = "OpenAI";
+
 const PREFERRED_OPENAI_MODELS = [
   "gpt-4o-mini",
   "gpt-4.1-mini",
@@ -11,9 +13,15 @@ const PREFERRED_OPENAI_MODELS = [
   "gpt-4.1",
 ];
 
+const getOpenAiModelOptionTestId = (modelName: string) =>
+  `${OPENAI_PROVIDER}-${modelName}-option`;
+
 const findPreferredOpenAiModelInDropdown = async (page: Page) => {
   for (const modelName of PREFERRED_OPENAI_MODELS) {
-    if ((await page.getByTestId(`${modelName}-option`).count()) > 0) {
+    if (
+      (await page.getByTestId(getOpenAiModelOptionTestId(modelName)).count()) >
+      0
+    ) {
       return modelName;
     }
   }
@@ -87,9 +95,21 @@ const enablePreferredOpenAiModel = async (page: Page) => {
   return modelName;
 };
 
+const languageModelNodes = (page: Page) =>
+  page.locator(".react-flow__node", {
+    has: page.locator(
+      [
+        '[data-testid="title-language model"]',
+        '[data-testid="title-agent"]',
+        '[data-testid="title-batch run"]',
+        '[data-testid="title-structured output"]',
+      ].join(", "),
+    ),
+  });
+
 export const selectGptModel = async (page: Page) => {
-  const nodes = page.locator(".react-flow__node", {
-    has: page.getByTestId("title-language model"),
+  const nodes = languageModelNodes(page).filter({
+    has: page.getByTestId("model_model"),
   });
 
   const gptModelDropdownCount = await nodes.count();
@@ -114,13 +134,19 @@ export const selectGptModel = async (page: Page) => {
     if (!modelName) {
       modelName = await enablePreferredOpenAiModel(page);
       await openModelDropdown(page, model);
-      if ((await page.getByTestId(`${modelName}-option`).count()) === 0) {
+      if (
+        (await page
+          .getByTestId(getOpenAiModelOptionTestId(modelName))
+          .count()) === 0
+      ) {
         await clickModelDropdownFooter(page, "refresh-model-list");
         await openModelDropdown(page, model);
       }
     }
 
-    const selectedOption = page.getByTestId(`${modelName}-option`);
+    const selectedOption = page.getByTestId(
+      getOpenAiModelOptionTestId(modelName),
+    );
     await expect(selectedOption).toBeVisible({ timeout: 30000 });
     await selectedOption.dispatchEvent("click");
 

@@ -10,6 +10,7 @@ These guard the refactor that split ``Settings`` into per-group mixins:
 - yaml round-trip and the small utility helpers still work.
 """
 
+import builtins
 import tempfile
 from pathlib import Path
 
@@ -22,6 +23,25 @@ from lfx.services.settings.base import (
     load_settings_from_yaml,
     save_settings_to_yaml,
 )
+from lfx.services.settings.constants import AGENTIC_VARIABLES
+
+
+def test_voice_mode_requires_openai_sdk(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Installing only the VAD library must not advertise unusable voice mode."""
+    real_import = builtins.__import__
+
+    def import_without_openai(name, *args, **kwargs):
+        if name == "webrtcvad":
+            return object()
+        if name == "openai" or name.startswith("openai."):
+            error_message = "No module named 'openai'"
+            raise ModuleNotFoundError(error_message, name="openai")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_without_openai)
+
+    assert Settings().voice_mode_available is False
+
 
 # Every field the composed Settings must expose: the original monolith fields
 # plus the settings added in 1.10.0 (folded into the mixins during the release
@@ -86,6 +106,8 @@ EXPECTED_FIELDS = {
     "skip_mcp_auto_init",
     "mcp_composer_enabled",
     "mcp_composer_version",
+    "a2a_enabled",
+    "a2a_allow_private_webhooks",
     # TelemetrySettings
     "sentry_dsn",
     "sentry_traces_sample_rate",
@@ -109,6 +131,8 @@ EXPECTED_FIELDS = {
     "cors_allow_headers",
     "ssrf_protection_enabled",
     "ssrf_allowed_hosts",
+    "connector_ssrf_validation_enabled",
+    "connector_ssrf_allow_loopback",
     "disable_track_apikey_usage",
     "remove_api_keys",
     "allow_custom_components",
@@ -134,6 +158,7 @@ EXPECTED_FIELDS = {
     "dev",
     "event_delivery",
     "worker_timeout",
+    "workflow_execution_timeout",
     "public_flow_cleanup_interval",
     "public_flow_expiration",
     "webhook_polling_interval",
@@ -148,21 +173,24 @@ EXPECTED_FIELDS = {
     "variables_to_get_from_environment",
     "agentic_experience",
     "developer_api_enabled",
-    # ---- Added in 1.10.0, folded into the mixins during the release back-merge ----
+    # ---- Added after the original Settings split and folded into the mixins ----
     # PathSettings
     "kb_allowed_folder_roots",
+    "kb_folder_max_file_size_bytes",
     "directory_component_allowed_roots",
     # McpSettings
     "mcp_tool_execution_timeout",
     "mcp_servers_locked",
     # ComponentsSettings
     "load_flows_overwrite_on_name_match",
+    "load_flows_preserve_variable_bindings",
     "enable_extension_reload",
     # SecuritySettings
     "rate_limit_enabled",
     "rate_limit_per_minute",
     "rate_limit_storage_uri",
     "rate_limit_trust_proxy",
+    "public_flow_rate_limit_per_minute",
     "custom_component_admin_only",
     "allow_components_paths_override",
     # RuntimeSettings
@@ -178,6 +206,7 @@ EXPECTED_FIELDS = {
     "redis_queue_polling_stale_threshold_s",
     "redis_queue_polling_watchdog_interval_s",
     "max_ingestion_timeout_secs",
+    "executor_kind",
     # UiSettings
     "embedded_mode",
     "hide_getting_started_progress",
@@ -197,9 +226,22 @@ EXPECTED_FIELDS = {
     "telemetry_writer_size_strategy",
     "telemetry_writer_batch_size_bytes",
     "telemetry_writer_max_queue_bytes",
+    # Background execution
+    "background_max_concurrency",
+    "background_job_timeout",
+    "background_input_deadline_s",
+    "background_lease_ttl_s",
+    "background_heartbeat_interval_s",
+    "background_watchdog_interval_s",
+    "test_redis_url",
     # ---- Added in 1.10.1 ----
     # SecuritySettings
     "allow_public_custom_components",
+    "block_code_interpreter_components",
+    "restrict_local_file_access",
+    "mcp_server_docker_hardening",
+    "mcp_server_allowed_packages",
+    "mcp_server_interpreter_hardening",
 }
 
 
@@ -230,9 +272,16 @@ def test_critical_defaults_unchanged():
     assert settings.cors_origins == "*"
     assert settings.cors_allow_credentials is True
     assert settings.ssrf_protection_enabled is True
+    assert settings.connector_ssrf_validation_enabled is True
     assert settings.allow_custom_components is True
+    assert settings.block_code_interpreter_components is False
+    assert settings.restrict_local_file_access is False
+    assert settings.mcp_server_docker_hardening is False
+    assert settings.mcp_server_interpreter_hardening is False
+    assert settings.mcp_server_allowed_packages is None
     assert settings.mcp_server_enabled is True
     assert settings.mcp_composer_enabled is True
+    assert settings.load_flows_preserve_variable_bindings is True
     assert settings.do_not_track is False
     assert settings.dev is False
     assert settings.agentic_experience is False
@@ -365,6 +414,12 @@ def test_yaml_round_trip():
         ("LANGFLOW_BACKEND_ONLY", "true", "backend_only", True),
         ("LANGFLOW_AUTO_SAVING", "false", "auto_saving", False),
         ("LANGFLOW_FALLBACK_TO_ENV_VAR", "false", "fallback_to_env_var", False),
+        (
+            "LANGFLOW_LOAD_FLOWS_PRESERVE_VARIABLE_BINDINGS",
+            "false",
+            "load_flows_preserve_variable_bindings",
+            False,
+        ),
         ("LANGFLOW_VARIABLE_STORE", "kubernetes", "variable_store", "kubernetes"),
     ],
 )
@@ -373,3 +428,28 @@ def test_env_var_round_trip(monkeypatch, env_var, env_value, field, expected):
     monkeypatch.setenv(env_var, env_value)
     settings = Settings()
     assert getattr(settings, field) == expected
+
+
+def test_agentic_variables_excluded_when_experience_off(monkeypatch):
+    """Agentic env vars must NOT be mirrored from the environment while the experience is off.
+
+    The ASTRA_TOKEN credential is among them, and the agentic experience is off by default.
+
+    Regression: the env-mirror list used to be extended with AGENTIC_VARIABLES
+    whenever LANGFLOW_AGENTIC_EXPERIENCE was unset, provisioning ASTRA_TOKEN into
+    the DB for a feature whose endpoints stay 404.
+    """
+    monkeypatch.delenv("LANGFLOW_AGENTIC_EXPERIENCE", raising=False)
+    settings = Settings()
+    assert settings.agentic_experience is False
+    for var in AGENTIC_VARIABLES:
+        assert var not in settings.variables_to_get_from_environment
+
+
+def test_agentic_variables_included_when_experience_on(monkeypatch):
+    """Enabling the agentic experience mirrors its variables from the environment."""
+    monkeypatch.setenv("LANGFLOW_AGENTIC_EXPERIENCE", "true")
+    settings = Settings()
+    assert settings.agentic_experience is True
+    for var in AGENTIC_VARIABLES:
+        assert var in settings.variables_to_get_from_environment

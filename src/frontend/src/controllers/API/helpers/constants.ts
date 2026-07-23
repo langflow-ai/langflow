@@ -32,6 +32,7 @@ export const URLs = {
   PUBLIC_FLOW: `flows/public_flow`,
   MCP: `mcp/project`,
   MCP_SERVERS: `mcp/servers`,
+  A2A: `a2a`,
   KNOWLEDGE_BASES: `knowledge_bases`,
   MEMORIES: `memories`,
   MODELS: `models`,
@@ -46,6 +47,7 @@ export const URLs = {
   AGENTIC_CHECK_CONFIG: `agentic/check-config`,
   AGENTIC_FILES: `agentic/files`,
   EXTENSIONS: `extensions`,
+  AUTHZ_ME_PERMISSIONS: `authz/me/permissions`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility

