@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "image_families": {
+    "enterprise-ubi-hardened": {
+      "profile": "enterprise-hardened",
+      "install_phase": "build"
+    }
+  },
+  "profiles": {
+    "enterprise-hardened": {
+      "description": "Reviewed provider inventory for the supported Enterprise UBI/hardened application image family.",
+      "owners": [
+        "Langflow Enterprise maintainers",
+        "Langflow release maintainers"
+      ],
+      "update_cadence": "Review on every Langflow minor release and whenever a provider is added, removed, or graduated.",
+      "indexes": [
+        "https://pypi.org/simple"
+      ],
+      "python": ">=3.10,<3.15",
+      "application": {
+        "distribution": "langflow",
+        "version": ">=1.12.0,<1.13.0",
+        "bundle_source": "pyproject.toml"
+      },
+      "bundle_api": {
+        "distribution": "lfx",
+        "version": ">=1.12.0.dev0,<1.13.0"
+      },
+      "bundles": [
+        {
+          "distribution": "lfx-duckduckgo",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-duckduckgo"
+          ]
+        },
+        {
+          "distribution": "lfx-arxiv",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-arxiv"
+          ]
+        },
+        {
+          "distribution": "lfx-ibm",
+          "extras": [],
+          "version": ">=0.1.4,<1.0.0",
+          "providers": [
+            "lfx-ibm"
+          ]
+        },
+        {
+          "distribution": "lfx-docling",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-docling"
+          ]
+        },
+        {
+          "distribution": "lfx-datastax",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-datastax"
+          ]
+        },
+        {
+          "distribution": "lfx-openai",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-openai"
+          ]
+        },
+        {
+          "distribution": "lfx-anthropic",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-anthropic"
+          ]
+        },
+        {
+          "distribution": "lfx-amazon",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-amazon"
+          ]
+        },
+        {
+          "distribution": "lfx-cohere",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-cohere"
+          ]
+        },
+        {
+          "distribution": "lfx-oracle",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-oracle"
+          ]
+        },
+        {
+          "distribution": "lfx-firecrawl",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-firecrawl"
+          ]
+        },
+        {
+          "distribution": "lfx-nextplaid",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-nextplaid"
+          ]
+        },
+        {
+          "distribution": "lfx-paddle",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-paddle"
+          ]
+        },
+        {
+          "distribution": "lfx-vllm",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-vllm"
+          ]
+        },
+        {
+          "distribution": "lfx-empiriolabs",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-empiriolabs"
+          ]
+        },
+        {
+          "distribution": "lfx-openai-compatible",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-openai-compatible"
+          ]
+        },
+        {
+          "distribution": "lfx-exa",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-exa"
+          ]
+        },
+        {
+          "distribution": "lfx-google",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-google"
+          ]
+        },
+        {
+          "distribution": "lfx-valkey",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-valkey"
+          ]
+        }
+      ]
+    }
+  }
+}

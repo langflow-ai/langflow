@@ -16,6 +16,8 @@ except ImportError:
     # not installed. (Upstream dropped its <3.14 cap in 0.10.1, now requires >=3.10.)
     pytest.skip("altk (agent-lifecycle-toolkit) not available", allow_module_level=True)
 
+pytest.importorskip("lfx_bundles")
+
 from langchain_core.messages import HumanMessage
 from langchain_core.tools import BaseTool
 from lfx.base.agents.altk_base_agent import (

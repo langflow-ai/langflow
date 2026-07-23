@@ -1,0 +1,237 @@
+{
+  "application": {
+    "distribution": "langflow",
+    "requested": ">=1.12.0,<1.13.0",
+    "requirement": "langflow==1.12.0",
+    "resolved_version": "1.12.0"
+  },
+  "bundle_api": {
+    "distribution": "lfx",
+    "requested": ">=1.12.0.dev0,<1.13.0",
+    "requirement": "lfx==1.12.0",
+    "resolved_version": "1.12.0"
+  },
+  "bundles": [
+    {
+      "distribution": "lfx-amazon",
+      "extras": [],
+      "providers": [
+        "lfx-amazon"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-amazon==0.1.2",
+      "resolved_version": "0.1.2"
+    },
+    {
+      "distribution": "lfx-anthropic",
+      "extras": [],
+      "providers": [
+        "lfx-anthropic"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-anthropic==0.1.3",
+      "resolved_version": "0.1.3"
+    },
+    {
+      "distribution": "lfx-arxiv",
+      "extras": [],
+      "providers": [
+        "lfx-arxiv"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-arxiv==0.1.3",
+      "resolved_version": "0.1.3"
+    },
+    {
+      "distribution": "lfx-cohere",
+      "extras": [],
+      "providers": [
+        "lfx-cohere"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-cohere==0.1.1",
+      "resolved_version": "0.1.1"
+    },
+    {
+      "distribution": "lfx-datastax",
+      "extras": [],
+      "providers": [
+        "lfx-datastax"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-datastax==0.1.2",
+      "resolved_version": "0.1.2"
+    },
+    {
+      "distribution": "lfx-docling",
+      "extras": [],
+      "providers": [
+        "lfx-docling"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-docling==0.1.4",
+      "resolved_version": "0.1.4"
+    },
+    {
+      "distribution": "lfx-duckduckgo",
+      "extras": [],
+      "providers": [
+        "lfx-duckduckgo"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-duckduckgo==0.1.3",
+      "resolved_version": "0.1.3"
+    },
+    {
+      "distribution": "lfx-empiriolabs",
+      "extras": [],
+      "providers": [
+        "lfx-empiriolabs"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-empiriolabs==0.1.1",
+      "resolved_version": "0.1.1"
+    },
+    {
+      "distribution": "lfx-exa",
+      "extras": [],
+      "providers": [
+        "lfx-exa"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-exa==0.1.1",
+      "resolved_version": "0.1.1"
+    },
+    {
+      "distribution": "lfx-firecrawl",
+      "extras": [],
+      "providers": [
+        "lfx-firecrawl"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-firecrawl==0.1.1",
+      "resolved_version": "0.1.1"
+    },
+    {
+      "distribution": "lfx-google",
+      "extras": [],
+      "providers": [
+        "lfx-google"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-google==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
+      "distribution": "lfx-ibm",
+      "extras": [],
+      "providers": [
+        "lfx-ibm"
+      ],
+      "requested": ">=0.1.4,<1.0.0",
+      "requirement": "lfx-ibm==0.1.4",
+      "resolved_version": "0.1.4"
+    },
+    {
+      "distribution": "lfx-nextplaid",
+      "extras": [],
+      "providers": [
+        "lfx-nextplaid"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-nextplaid==0.1.1",
+      "resolved_version": "0.1.1"
+    },
+    {
+      "distribution": "lfx-openai",
+      "extras": [],
+      "providers": [
+        "lfx-openai"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-openai==0.1.1",
+      "resolved_version": "0.1.1"
+    },
+    {
+      "distribution": "lfx-openai-compatible",
+      "extras": [],
+      "providers": [
+        "lfx-openai-compatible"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-openai-compatible==0.1.1",
+      "resolved_version": "0.1.1"
+    },
+    {
+      "distribution": "lfx-oracle",
+      "extras": [],
+      "providers": [
+        "lfx-oracle"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-oracle==0.1.1",
+      "resolved_version": "0.1.1"
+    },
+    {
+      "distribution": "lfx-paddle",
+      "extras": [],
+      "providers": [
+        "lfx-paddle"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-paddle==0.1.1",
+      "resolved_version": "0.1.1"
+    },
+    {
+      "distribution": "lfx-valkey",
+      "extras": [],
+      "providers": [
+        "lfx-valkey"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-valkey==0.1.1",
+      "resolved_version": "0.1.1"
+    },
+    {
+      "distribution": "lfx-vllm",
+      "extras": [],
+      "providers": [
+        "lfx-vllm"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-vllm==0.1.1",
+      "resolved_version": "0.1.1"
+    }
+  ],
+  "image_families": [
+    "enterprise-ubi-hardened"
+  ],
+  "indexes": [
+    "https://pypi.org/simple"
+  ],
+  "profile": "enterprise-hardened",
+  "profile_digest": "sha256:95f4c5899131fc3c",
+  "providers": [
+    "lfx-amazon",
+    "lfx-anthropic",
+    "lfx-arxiv",
+    "lfx-cohere",
+    "lfx-datastax",
+    "lfx-docling",
+    "lfx-duckduckgo",
+    "lfx-empiriolabs",
+    "lfx-exa",
+    "lfx-firecrawl",
+    "lfx-google",
+    "lfx-ibm",
+    "lfx-nextplaid",
+    "lfx-openai",
+    "lfx-openai-compatible",
+    "lfx-oracle",
+    "lfx-paddle",
+    "lfx-valkey",
+    "lfx-vllm"
+  ],
+  "python": ">=3.10,<3.15",
+  "schema_version": 1
+}

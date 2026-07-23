@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from sqlalchemy import Select
+from lfx.services.authorization.base import ResourceVisibilityScope
+from sqlalchemy import Select, false
 from sqlmodel import col, or_
 
 from langflow.services.authorization.actions import FlowAction
@@ -150,6 +151,46 @@ async def visible_id_prefilter(
     )
 
 
+async def visible_scope_prefilter(
+    user: User | UserRead,
+    *,
+    resource_type: str,
+    domain: str = "*",
+    act: FlowAction | str = FlowAction.READ,
+) -> ResourceVisibilityScope | None:
+    """Return a compact SQL visibility scope, or ``None`` for the OSS fallback.
+
+    Unlike :func:`visible_id_prefilter`, this hook can represent global,
+    workspace, and project wildcard grants without materializing every matching
+    resource UUID. The base service adapts legacy concrete-ID plugins.
+    """
+    settings = get_settings_service()
+    if not settings.auth_settings.AUTHZ_ENABLED:
+        return None
+    authz = get_authorization_service()
+    get_visibility = getattr(authz, "get_resource_visibility", None)
+    if get_visibility is not None:
+        return await get_visibility(
+            user_id=getattr(user, "id", None),
+            resource_type=resource_type,
+            domain=domain,
+            act=_coerce_action(act),
+            context=_auth_context(user),
+        )
+
+    # Compatibility for duck-typed services that predate the new base method.
+    visible_ids = await authz.list_visible_resource_ids(
+        user_id=getattr(user, "id", None),
+        resource_type=resource_type,
+        domain=domain,
+        act=_coerce_action(act),
+        context=_auth_context(user),
+    )
+    if visible_ids is None:
+        return None
+    return ResourceVisibilityScope(resource_ids=tuple(visible_ids))
+
+
 def restrict_to_owned_or_visible(
     stmt: StatementT,
     *,
@@ -204,3 +245,69 @@ async def apply_owned_or_visible_prefilter(
             visible_ids=visible_ids,
         )
     return stmt.where(col(id_column).in_(list(visible_ids)))
+
+
+def restrict_to_owned_or_visible_scope(
+    stmt: StatementT,
+    *,
+    id_column: InstrumentedAttribute,
+    owner_clause: ColumnElement[bool],
+    visibility: ResourceVisibilityScope,
+    workspace_column: InstrumentedAttribute | None = None,
+    workspace_expression: ColumnElement[Any] | None = None,
+    project_column: InstrumentedAttribute | None = None,
+) -> StatementT:
+    """Apply owner, concrete-ID, workspace, and project visibility before pagination."""
+    if visibility.all_resources:
+        return stmt
+
+    clauses: list[ColumnElement[bool]] = [owner_clause]
+    if visibility.resource_ids:
+        clauses.append(col(id_column).in_(visibility.resource_ids))
+    resolved_workspace = workspace_expression
+    if resolved_workspace is None and workspace_column is not None:
+        resolved_workspace = col(workspace_column)
+    if resolved_workspace is not None and visibility.workspace_ids:
+        clauses.append(resolved_workspace.in_(visibility.workspace_ids))
+    if project_column is not None and visibility.project_ids:
+        clauses.append(col(project_column).in_(visibility.project_ids))
+    return stmt.where(or_(*clauses))
+
+
+async def apply_owned_or_visible_scope_prefilter(
+    stmt: StatementT,
+    *,
+    id_column: InstrumentedAttribute,
+    owner_clause: ColumnElement[bool],
+    visibility: ResourceVisibilityScope,
+    workspace_column: InstrumentedAttribute | None = None,
+    workspace_expression: ColumnElement[Any] | None = None,
+    project_column: InstrumentedAttribute | None = None,
+) -> StatementT:
+    """Apply a structured visibility prefilter, respecting owner override."""
+    effective_owner_clause = owner_clause if await should_apply_owner_override() else false()
+    return restrict_to_owned_or_visible_scope(
+        stmt,
+        id_column=id_column,
+        owner_clause=effective_owner_clause,
+        visibility=visibility,
+        workspace_column=workspace_column,
+        workspace_expression=workspace_expression,
+        project_column=project_column,
+    )
+
+
+def resource_visible_in_scope(
+    *,
+    resource_id: UUID,
+    visibility: ResourceVisibilityScope,
+    workspace_id: UUID | None = None,
+    project_id: UUID | None = None,
+) -> bool:
+    """Evaluate a compact visibility scope for an already-loaded resource."""
+    return bool(
+        visibility.all_resources
+        or resource_id in visibility.resource_ids
+        or (workspace_id is not None and workspace_id in visibility.workspace_ids)
+        or (project_id is not None and project_id in visibility.project_ids)
+    )

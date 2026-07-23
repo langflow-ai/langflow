@@ -20,6 +20,11 @@ from elevenlabs import ElevenLabs
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from lfx.log import logger
 from lfx.schema.schema import InputValueRequest
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyError,
+    ModelProviderPolicyPurpose,
+    require_model_provider,
+)
 from lfx.utils.secrets import secret_value_to_str
 from sqlmodel import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
@@ -105,6 +110,24 @@ async def authenticate_and_get_openai_key(session: DbSession, user: User, websoc
             }
         )
         return None, None
+
+    try:
+        require_model_provider(
+            user_id=user.id,
+            provider="OpenAI",
+            purpose=ModelProviderPolicyPurpose.USE,
+            attributes={"is_superuser": bool(getattr(user, "is_superuser", False))},
+        )
+    except ModelProviderPolicyError as exc:
+        await websocket.send_json(
+            {
+                "type": "error",
+                "code": exc.code,
+                "message": str(exc),
+            }
+        )
+        return None, None
+
     variable_service = get_variable_service()
     try:
         openai_key_value = await variable_service.get_variable(
@@ -1235,7 +1258,7 @@ async def flow_tts_websocket(
             await openai_ws.close()
 
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
-        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_send)
+        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
         if current_user is None or openai_key is None:
             return
         url = "wss://api.openai.com/v1/realtime?intent=transcription"

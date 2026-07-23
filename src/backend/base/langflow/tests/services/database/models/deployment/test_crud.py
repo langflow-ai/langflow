@@ -225,6 +225,7 @@ async def test_list_deployments_page_attachment_count_only_counts_live_flow_vers
     # String-match on compiled SQL because these tests use mocked sessions.
     statement_text = str(db.exec.await_args.args[0]).lower()
     assert "join flow_version" in statement_text
+    assert "flow_version_deployment_attachment.user_id" in statement_text
 
 
 @pytest.mark.asyncio
@@ -325,7 +326,6 @@ async def test_delete_by_id_none_rowcount_returns_unconfirmed():
     mock_logger.aerror.assert_awaited_once()
 
 
-@pytest.mark.asyncio
 async def test_delete_by_id_negative_rowcount_returns_unconfirmed():
     """PEP 249 / SQLAlchemy use -1 when the driver did not determine rowcount."""
     db = _make_db()
@@ -650,7 +650,9 @@ async def test_update_deployment_metadata_batch_matches_owner_per_row(
     folder: Folder,
     provider_account: DeploymentProviderAccount,
 ):
-    other_user_id = uuid4()
+    other_user = User(username=f"other-{uuid4()}", password=_TEST_PASSWORD, is_active=True)
+    db.add(other_user)
+    await db.flush()
     owner_row = await create_deployment(
         db,
         user_id=user.id,
@@ -662,7 +664,7 @@ async def test_update_deployment_metadata_batch_matches_owner_per_row(
         deployment_type=DeploymentType.AGENT,
     )
     other_row = Deployment(
-        user_id=other_user_id,
+        user_id=other_user.id,
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-metadata-other-row",

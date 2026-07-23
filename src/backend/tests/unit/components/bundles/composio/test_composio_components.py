@@ -4,6 +4,9 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.base.composio.composio_base import ComposioBaseComponent
 from lfx.schema.data import Data
 from lfx.schema.message import Message

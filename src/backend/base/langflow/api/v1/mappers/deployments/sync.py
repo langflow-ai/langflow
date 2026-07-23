@@ -32,6 +32,7 @@ from lfx.services.interfaces import DeploymentServiceProtocol
 
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.database.models.deployment.crud import (
+    UNCONFIRMED_DELETE_ROWCOUNT,
     delete_deployments_by_ids,
     list_deployments_for_flows_with_provider_info,
     list_project_deployments_with_provider_info,
@@ -260,7 +261,19 @@ async def _sync_deployments_and_attachments_by_provider(
             # any implementation should bound that cost (for example, by flushing in chunks
             # once a size threshold is reached) rather than accumulating without limit.
             if stale_deployment_ids:
-                await delete_deployments_by_ids(db, user_id=user_id, deployment_ids=stale_deployment_ids)
+                deleted = await delete_deployments_by_ids(
+                    db,
+                    user_id=user_id,
+                    deployment_ids=stale_deployment_ids,
+                )
+                if deleted is UNCONFIRMED_DELETE_ROWCOUNT:
+                    await logger.awarning(
+                        "Stale deployment batch delete rowcount could not be confirmed during %s sync: "
+                        "provider=%s deployments=%s",
+                        stale_scope_label,
+                        provider_account_id,
+                        stale_deployment_ids,
+                    )
 
             if surviving:
                 try:

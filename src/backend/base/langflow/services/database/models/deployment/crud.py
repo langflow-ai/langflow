@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from lfx.services.adapters.deployment.schema import DeploymentType
+    from lfx.services.authorization.base import ResourceVisibilityScope
     from sqlalchemy.sql.selectable import CTE
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -355,38 +356,54 @@ async def update_deployment_metadata_batch(
     (await db.exec(stmt)).all()
 
 
-async def _scope_to_owner_or_allowed(stmt: StmtT, *, user_id: UUID, allowed_ids: list[UUID] | None) -> StmtT:
-    """Scope a deployment query to owner rows, optionally widened by ``allowed_ids``.
+async def _scope_to_owner_or_allowed(
+    stmt: StmtT,
+    *,
+    user_id: UUID,
+    allowed_ids: list[UUID] | None,
+    visibility_scope: ResourceVisibilityScope | None = None,
+) -> StmtT:
+    """Scope a deployment query to owner rows plus concrete or domain grants.
 
     ``allowed_ids`` meanings are distinct — do not treat ``None`` and ``[]`` as
     interchangeable:
 
-    * ``None`` — no SQL prefilter (only from :func:`visible_id_prefilter` when it
-      declines / AUTHZ is off). Always owner-only here, **including** when
-      :func:`~langflow.services.authorization.guards.should_apply_owner_override`
-      is false. Callers that want "visible ids only / show nothing owned" under
-      a scoped API key must pass a concrete list (``[]`` for empty), not ``None``.
+    * ``None`` with no structured scope — no SQL prefilter. The OSS path remains
+      owner-only.
     * A list — concrete prefilter; delegates to
       :func:`langflow.services.authorization.apply_owned_or_visible_prefilter`,
       which owns the owner-override vs visible-ids-only decision (``[]`` +
       override off → no rows).
 
-    Centralized so the page query and its count apply the identical predicate —
-    a drift would make pagination totals disagree with the rows returned. The
-    import is lazy to match the rest of this module's authorization access and
-    keep import order cycle-free. The ``None`` branch stays here so the OSS
-    default never emits a degenerate ``IN ()`` term.
+    ``visibility_scope`` represents concrete, workspace, project, or global
+    grants without expanding wildcards to resource UUIDs and follows the same
+    scoped-API-key owner-override rule. Centralizing this predicate ensures the
+    page and count queries cannot drift. Imports stay lazy to avoid
+    authorization/database import cycles.
     """
-    if allowed_ids is None:
+    if visibility_scope is None and allowed_ids is None:
         return stmt.where(Deployment.user_id == user_id)
 
-    from langflow.services.authorization.listing import apply_owned_or_visible_prefilter
+    from langflow.services.authorization.listing import (
+        apply_owned_or_visible_prefilter,
+        apply_owned_or_visible_scope_prefilter,
+    )
 
-    return await apply_owned_or_visible_prefilter(
+    if visibility_scope is None:
+        return await apply_owned_or_visible_prefilter(
+            stmt,
+            id_column=Deployment.id,
+            owner_clause=Deployment.user_id == user_id,
+            visible_ids=allowed_ids or (),
+        )
+
+    return await apply_owned_or_visible_scope_prefilter(
         stmt,
         id_column=Deployment.id,
         owner_clause=Deployment.user_id == user_id,
-        visible_ids=allowed_ids,
+        workspace_column=Deployment.workspace_id,
+        project_column=Deployment.project_id,
+        visibility=visibility_scope,
     )
 
 
@@ -394,13 +411,14 @@ async def list_deployments_page(
     db: AsyncSession,
     *,
     user_id: UUID,
-    row_owner_id: UUID,
     deployment_provider_account_id: UUID,
     offset: int,
     limit: int,
+    row_owner_id: UUID | None = None,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
     allowed_ids: list[UUID] | None = None,
+    visibility_scope: ResourceVisibilityScope | None = None,
 ) -> list[tuple[Deployment, int, list[tuple[UUID, str | None]]]]:
     """Return a page of deployments with attachment counts and matched attachments.
 
@@ -408,15 +426,13 @@ async def list_deployments_page(
     pairs for attachments that matched the ``flow_version_ids`` filter (empty
     list when no filter is active).
 
-    ``allowed_ids`` is the DB-layer authorization prefilter (see
-    :func:`_scope_to_owner_or_allowed`). ``None`` and ``[]`` are not
-    interchangeable: ``None`` is "no prefilter → owner-scoped"; a list (including
-    empty) goes through
-    :func:`~langflow.services.authorization.apply_owned_or_visible_prefilter`.
+    ``visibility_scope`` is the preferred DB-layer authorization prefilter;
+    ``allowed_ids`` remains its concrete-ID compatibility form. With neither,
+    the page is owner-scoped exactly as before.
 
-    ``user_id`` is the listing actor for the ownership half of ``allowed_ids``.
-    ``row_owner_id`` scopes attachment counts/filters (provider-account owner on
-    shared listing).
+    ``user_id`` is the listing actor for the ownership half of the prefilter.
+    ``row_owner_id`` scopes attachment counts and filters to the provider-account
+    owner on shared listings; owner-only callers may omit it.
     """
     if offset < 0:
         msg = "offset must be greater than or equal to 0"
@@ -424,6 +440,7 @@ async def list_deployments_page(
     if limit <= 0:
         msg = "limit must be greater than 0"
         raise ValueError(msg)
+    attachment_owner_id = row_owner_id or user_id
     attachment_counts_subquery = (
         select(
             col(FlowVersionDeploymentAttachment.deployment_id).label("deployment_id"),
@@ -435,7 +452,7 @@ async def list_deployments_page(
             FlowVersion,
             FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
         )
-        .where(FlowVersionDeploymentAttachment.user_id == row_owner_id)
+        .where(FlowVersionDeploymentAttachment.user_id == attachment_owner_id)
         .group_by(FlowVersionDeploymentAttachment.deployment_id)
         .subquery()
     )
@@ -447,14 +464,19 @@ async def list_deployments_page(
         .outerjoin(attachment_counts_subquery, attachment_counts_subquery.c.deployment_id == Deployment.id)
         .where(Deployment.deployment_provider_account_id == deployment_provider_account_id)
     )
-    stmt = await _scope_to_owner_or_allowed(stmt, user_id=user_id, allowed_ids=allowed_ids)
+    stmt = await _scope_to_owner_or_allowed(
+        stmt,
+        user_id=user_id,
+        allowed_ids=allowed_ids,
+        visibility_scope=visibility_scope,
+    )
     if project_id is not None:
         stmt = stmt.where(Deployment.project_id == project_id)
     if flow_version_ids:
         matched_deployments_subquery = (
             select(FlowVersionDeploymentAttachment.deployment_id)
             .where(
-                FlowVersionDeploymentAttachment.user_id == row_owner_id,
+                FlowVersionDeploymentAttachment.user_id == attachment_owner_id,
                 col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
             )
             .group_by(FlowVersionDeploymentAttachment.deployment_id)
@@ -478,7 +500,7 @@ async def list_deployments_page(
                 FlowVersionDeploymentAttachment.flow_version_id,
                 FlowVersionDeploymentAttachment.provider_snapshot_id,
             ).where(
-                FlowVersionDeploymentAttachment.user_id == row_owner_id,
+                FlowVersionDeploymentAttachment.user_id == attachment_owner_id,
                 col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
                 col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
             )
@@ -583,29 +605,37 @@ async def count_deployments_by_provider(
     db: AsyncSession,
     *,
     user_id: UUID,
-    row_owner_id: UUID,
     deployment_provider_account_id: UUID,
+    row_owner_id: UUID | None = None,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
     allowed_ids: list[UUID] | None = None,
+    visibility_scope: ResourceVisibilityScope | None = None,
 ) -> int:
     """Count deployments for a provider account.
 
-    ``allowed_ids`` mirrors ``list_deployments_page`` / ``_scope_to_owner_or_allowed``
-    so the pagination total reflects the same authorization prefilter as the page.
-    ``row_owner_id`` scopes attachment filters (same role as in ``list_deployments_page``).
+    Authorization arguments mirror ``list_deployments_page`` so pagination
+    totals use exactly the same owner-plus-visible predicate as the page.
+    ``row_owner_id`` scopes attachment filters to the provider-account owner on
+    shared listings; owner-only callers may omit it.
     """
+    attachment_owner_id = row_owner_id or user_id
     stmt = select(func.count(Deployment.id)).where(
         Deployment.deployment_provider_account_id == deployment_provider_account_id,
     )
-    stmt = await _scope_to_owner_or_allowed(stmt, user_id=user_id, allowed_ids=allowed_ids)
+    stmt = await _scope_to_owner_or_allowed(
+        stmt,
+        user_id=user_id,
+        allowed_ids=allowed_ids,
+        visibility_scope=visibility_scope,
+    )
     if project_id is not None:
         stmt = stmt.where(Deployment.project_id == project_id)
     if flow_version_ids:
         matched_deployments_subquery = (
             select(FlowVersionDeploymentAttachment.deployment_id)
             .where(
-                FlowVersionDeploymentAttachment.user_id == row_owner_id,
+                FlowVersionDeploymentAttachment.user_id == attachment_owner_id,
                 col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
             )
             .group_by(FlowVersionDeploymentAttachment.deployment_id)

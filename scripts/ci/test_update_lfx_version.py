@@ -58,6 +58,8 @@ def test_nightly_rewrite_keeps_component_index_in_lockstep(nightly_tree: tuple[P
 
     index = orjson.loads(index_path.read_bytes())
     assert index["version"] == "1.11.0.dev45"
+    assert index["entries"] == [["input_output", {"ChatInput": {"template": {}}}]]
+    assert index["metadata"] == {"num_components": 1, "num_modules": 1}
     assert index_path.read_bytes().endswith(b"\n")
     expected_hash = index.pop("sha256")
     payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)

@@ -510,6 +510,54 @@ async def test_ensure_flows_permission_raises_when_any_denied(monkeypatch, fake_
 
 
 @pytest.mark.anyio
+async def test_ensure_flows_permission_fails_closed_on_result_count_mismatch(monkeypatch, fake_user):
+    """A malformed batch result is audited and denied instead of escaping as ValueError."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(batch_results=[True])
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await authz_guards.ensure_flows_permission(
+            fake_user,
+            FlowAction.DEPLOY,
+            flow_ids=[uuid4(), uuid4()],
+            flow_user_id=uuid4(),
+        )
+
+    assert exc_info.value.status_code == 403
+    assert len(service.batch_calls) == 1
+    assert audit_calls[-1]["result"] == "deny"
+    assert audit_calls[-1]["details"]["error"] == "batch_enforce result count mismatch"
+
+
+@pytest.mark.anyio
+async def test_ensure_flows_permission_applies_external_ceiling_when_authz_disabled(monkeypatch, fake_user):
+    """The external deploy ceiling remains enforceable in the default OSS RBAC mode."""
+    install_settings(monkeypatch, authz_enabled=False)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+    set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="subject-1", level="editor"))
+
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await authz_guards.ensure_flows_permission(
+                fake_user,
+                FlowAction.DEPLOY,
+                flow_ids=[uuid4()],
+                flow_user_id=fake_user.id,
+            )
+    finally:
+        set_current_external_access_context(None)
+
+    assert exc_info.value.status_code == 403
+    assert service.batch_calls == []
+    assert audit_calls[-1]["result"] == "deny"
+    assert audit_calls[-1]["details"]["external_access_level"] == "editor"
+
+
+@pytest.mark.anyio
 async def test_ensure_flows_permission_owner_override_skips_batch(monkeypatch, fake_user):
     """Owned flow ids short-circuit without batch_enforce when owner override applies."""
     install_settings(monkeypatch, authz_enabled=True)

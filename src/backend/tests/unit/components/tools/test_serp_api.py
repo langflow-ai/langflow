@@ -3,6 +3,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langchain_core.tools import ToolException
 from langflow.custom import Component
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.components.serpapi.serp import SerpComponent
 from lfx.custom.utils import build_custom_component_template
 from lfx.schema import Data

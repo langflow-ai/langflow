@@ -29,9 +29,13 @@ from langflow.services.authorization.guards import (
 )
 from langflow.services.authorization.listing import (
     apply_owned_or_visible_prefilter,
+    apply_owned_or_visible_scope_prefilter,
     filter_visible_resources,
+    resource_visible_in_scope,
     restrict_to_owned_or_visible,
+    restrict_to_owned_or_visible_scope,
     visible_id_prefilter,
+    visible_scope_prefilter,
 )
 from langflow.services.authorization.service import LangflowAuthorizationService
 
@@ -45,6 +49,7 @@ __all__ = [
     "ShareAction",
     "VariableAction",
     "apply_owned_or_visible_prefilter",
+    "apply_owned_or_visible_scope_prefilter",
     "audit_decision",
     "authorized_or_owner_scoped",
     "deny_to_404",
@@ -61,7 +66,10 @@ __all__ = [
     "filter_visible_resources",
     "requires_flow_permission",
     "requires_resource_permission",
+    "resource_visible_in_scope",
     "restrict_to_owned_or_visible",
+    "restrict_to_owned_or_visible_scope",
     "should_apply_owner_override",
     "visible_id_prefilter",
+    "visible_scope_prefilter",
 ]

@@ -195,3 +195,40 @@ class TestModelInputStaticOptions:
 
         # Verify: Should treat empty list as dynamic and fetch global options
         assert result["model"]["options"] == global_options
+
+    def test_static_options_are_narrowed_and_blocked_selection_is_replaced(self, monkeypatch):
+        from lfx.services.model_provider_policy import (
+            ModelProviderPolicyContext,
+            ModelProviderPolicyPurpose,
+            ModelProviderPolicySnapshot,
+        )
+
+        component = MagicMock()
+        component.user_id = "test_user"
+        component.cache = {}
+        component.log = MagicMock()
+        openai = {"name": "gpt-test", "provider": "OpenAI"}
+        anthropic = {"name": "claude-test", "provider": "Anthropic"}
+        build_config = {"model": {"options": [openai, anthropic], "value": [anthropic]}}
+        snapshot = ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=component.user_id),
+            purpose=ModelProviderPolicyPurpose.USE,
+            candidate_provider_ids=frozenset({"openai", "anthropic"}),
+            allowed_provider_ids=frozenset({"openai"}),
+        )
+        monkeypatch.setattr(
+            "lfx.services.model_provider_policy.resolve_model_provider_policy",
+            lambda **_kwargs: snapshot,
+        )
+
+        result = update_model_options_in_build_config(
+            component=component,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=lambda _user_id: [],
+            field_name=None,
+            field_value=None,
+        )
+
+        assert result["model"]["options"] == [openai]
+        assert result["model"]["value"] == [openai]

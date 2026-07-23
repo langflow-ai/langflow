@@ -89,6 +89,32 @@ async def test_resume_without_decision_suspends_again():
         await resumed.process(fallback_to_env_vars=False)
 
 
+async def test_resume_restores_user_id_from_checkpoint():
+    """A durable run must resume under the identity that started it.
+
+    The checkpoint is written mid-run (user_id already stamped by the initial build), so
+    resume must restore graph.user_id too. Without it, a component that reads self.user_id
+    on resume — e.g. an A2A Agent tool listing in-project agents under HITL tool-approval —
+    resolves it to None via the graph.user_id fallback, and str(None) == "None" is then
+    parsed as a UUID: "badly formed hexadecimal UUID string".
+    """
+    store = InMemoryCheckpointStore()
+    first = _graph(store)
+    first.user_id = "f7bee55e-6daa-4d9d-916a-2f8783e02ed8"
+    with pytest.raises(GraphPausedException):
+        await first.process(fallback_to_env_vars=False)
+
+    checkpoint = await store.load_by_run_id("job-1")
+    resumed = Graph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+
+    # Root cause: the resumed graph must carry the original identity.
+    assert resumed.user_id == "f7bee55e-6daa-4d9d-916a-2f8783e02ed8"
+    # Exact A2A failure mechanism: the component's user_id property falls back to
+    # graph.user_id, so a restored component (its own _user_id lost) must still resolve it.
+    pauser_component = resumed.get_vertex("pauser").custom_component
+    assert pauser_component.user_id == "f7bee55e-6daa-4d9d-916a-2f8783e02ed8"
+
+
 async def test_resume_reapplies_user_id_to_restored_component():
     """A checkpoint-restored component loses _user_id; the build re-applies it on resume.
 

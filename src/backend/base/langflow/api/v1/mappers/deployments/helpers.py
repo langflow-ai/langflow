@@ -82,6 +82,8 @@ from langflow.services.database.utils import require_non_empty
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from lfx.services.authorization.base import ResourceVisibilityScope
+
     from langflow.api.utils import DbSession
     from langflow.services.database.models.flow_version_deployment_attachment.model import (
         FlowVersionDeploymentAttachment,
@@ -960,15 +962,16 @@ async def list_deployments_synced(
     deployment_adapter: DeploymentServiceProtocol,
     deployment_mapper: BaseDeploymentMapper,
     user_id: UUID,
-    row_owner_id: UUID,
     provider_id: UUID,
     db: DbSession,
     page: int,
     size: int,
     deployment_type: DeploymentType | None,
+    row_owner_id: UUID | None = None,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
     allowed_ids: list[UUID] | None = None,
+    visibility_scope: ResourceVisibilityScope | None = None,
 ) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int, dict[str, dict[str, Any]]]:
     """Return a page of deployments, deleting any DB rows the provider doesn't recognise.
 
@@ -977,22 +980,22 @@ async def list_deployments_synced(
     provider-owned display metadata for rows that still exist. The cursor
     does not advance for deleted rows (deletion shifts subsequent offsets down).
 
-    ``user_id`` is the listing actor for the ownership half of ``allowed_ids``
-    (same role as in ``list_deployments_page`` / ``count_deployments_by_provider``).
+    ``user_id`` is the actor used for the owner-plus-visible database query.
     ``row_owner_id`` is the provider-account owner namespace (credentials +
-    attachments). Shared listing passes them separately so provider calls stay
-    in the account owner's namespace.
+    attachments); it defaults to the actor for owner-only callers. Shared
+    listing passes them separately so provider calls stay in the account
+    owner's namespace.
 
-    ``allowed_ids`` is the DB-layer authorization prefilter, threaded into both
-    the page query and the total count so a registered authorization plugin can
-    constrain the listing to (owner ⊕ visible) rows without a per-row enforce.
-    ``None`` (OSS default) keeps the listing owner-scoped exactly as before.
+    ``visibility_scope`` is the preferred DB-layer authorization prefilter;
+    ``allowed_ids`` remains its concrete-ID compatibility form. Both are
+    threaded into the page and count queries so pagination stays consistent.
 
     Note that this helper deletes and writes to shared deployment resources
     without any permission checks. In most cases that is unacceptable. It is
     acceptable here because those writes synchronize provider state into
     Langflow, not perform arbitrary actions on behalf of any user.
     """
+    provider_namespace_user_id = row_owner_id or user_id
     accepted: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]] = []
     accepted_deployment_ids: list[UUID] = []
     provider_bindings: list[ProviderSnapshotBinding] = []
@@ -1006,20 +1009,21 @@ async def list_deployments_synced(
         batch = await list_deployments_page(
             db,
             user_id=user_id,
-            row_owner_id=row_owner_id,
+            row_owner_id=provider_namespace_user_id,
             deployment_provider_account_id=provider_id,
             offset=cursor,
             limit=size - len(accepted),
             flow_version_ids=flow_version_ids,
             project_id=project_id,
             allowed_ids=allowed_ids,
+            visibility_scope=visibility_scope,
         )
         if not batch:
             break
 
         known, provider_view = await fetch_provider_resource_keys(
             deployment_adapter=deployment_adapter,
-            user_id=row_owner_id,
+            user_id=provider_namespace_user_id,
             provider_id=provider_id,
             db=db,
             resource_keys=[row.resource_key for row, _, _ in batch],
@@ -1073,7 +1077,7 @@ async def list_deployments_synced(
             async with db.begin_nested():
                 await delete_unbound_attachments(
                     db,
-                    user_id=row_owner_id,
+                    user_id=provider_namespace_user_id,
                     provider_account_id=provider_id,
                     deployment_ids=accepted_deployment_ids,
                     bindings=provider_bindings,
@@ -1081,7 +1085,7 @@ async def list_deployments_synced(
 
             corrected_counts = await count_attachments_by_deployment_ids(
                 db,
-                user_id=row_owner_id,
+                user_id=provider_namespace_user_id,
                 deployment_ids=accepted_deployment_ids,
             )
             accepted = [(row, corrected_counts[row.id], matched) for row, _attached_count, matched in accepted]
@@ -1094,11 +1098,12 @@ async def list_deployments_synced(
     total = await count_deployments_by_provider(
         db,
         user_id=user_id,
-        row_owner_id=row_owner_id,
+        row_owner_id=provider_namespace_user_id,
         deployment_provider_account_id=provider_id,
         flow_version_ids=flow_version_ids,
         project_id=project_id,
         allowed_ids=allowed_ids,
+        visibility_scope=visibility_scope,
     )
     return accepted, total, provider_data_by_resource_key
 

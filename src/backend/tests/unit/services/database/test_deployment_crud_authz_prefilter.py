@@ -1,10 +1,10 @@
-"""DB-layer tests for the deployment authz prefilter (``allowed_ids``).
+"""DB-layer tests for deployment authorization prefilters.
 
 ``list_deployments_page`` / ``count_deployments_by_provider`` gain an
-``allowed_ids`` parameter so a registered authorization plugin can widen the
-owner-scoped listing to the union of owner rows and the ids it reports visible —
-all in one SQL statement (no per-row enforce, so no N+1). ``None`` preserves the
-owner-only behavior exactly.
+``allowed_ids`` compatibility parameter and a structured ``visibility_scope``
+so a registered authorization plugin can widen the owner-scoped listing with
+concrete, workspace, project, or global grants in one SQL statement (no per-row
+enforce and no wildcard UUID expansion). ``None`` preserves owner-only behavior.
 
 The rows here deliberately seed foreign-owned deployments under the requester's
 provider account so the union semantics are observable at the DB layer (the
@@ -24,6 +24,7 @@ from langflow.services.database.models.deployment_provider_account.schemas impor
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from lfx.services.adapters.deployment.schema import DeploymentType
+from lfx.services.authorization import ResourceVisibilityScope
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -31,7 +32,8 @@ async def _seed(async_session: AsyncSession):
     """Seed one provider account (owned by ``owner``) plus owned + foreign rows."""
     owner = User(username=f"owner-{uuid4()}", password=f"hashed-{uuid4()}", is_active=True)
     other = User(username=f"other-{uuid4()}", password=f"hashed-{uuid4()}", is_active=True)
-    project = Folder(name=f"project-{uuid4()}", user_id=owner.id)
+    project = Folder(name=f"project-{uuid4()}", user_id=owner.id, workspace_id=uuid4())
+    hidden_project = Folder(name=f"project-{uuid4()}", user_id=other.id, workspace_id=uuid4())
     provider = DeploymentProviderAccount(
         user_id=owner.id,
         name=f"provider-{uuid4()}",
@@ -40,22 +42,23 @@ async def _seed(async_session: AsyncSession):
         provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
         api_key="encrypted-api-key",  # pragma: allowlist secret
     )
-    async_session.add_all([owner, other, project, provider])
+    async_session.add_all([owner, other, project, hidden_project, provider])
     await async_session.commit()
 
-    def _mk(user_id):
+    def _mk(user_id, target_project):
         return Deployment(
             user_id=user_id,
-            project_id=project.id,
+            workspace_id=target_project.workspace_id,
+            project_id=target_project.id,
             deployment_provider_account_id=provider.id,
             resource_key=f"rk-{uuid4()}",
             display_name=f"dep-{uuid4()}",
             deployment_type=DeploymentType.AGENT,
         )
 
-    owned = _mk(owner.id)
-    foreign_visible = _mk(other.id)
-    foreign_hidden = _mk(other.id)
+    owned = _mk(owner.id, project)
+    foreign_visible = _mk(other.id, project)
+    foreign_hidden = _mk(other.id, hidden_project)
     async_session.add_all([owned, foreign_visible, foreign_hidden])
     await async_session.commit()
     return owner, provider, owned, foreign_visible, foreign_hidden
@@ -103,7 +106,6 @@ async def test_list_deployments_page_allowed_ids_unions_owner_and_visible(async_
     assert foreign_hidden.id not in returned
 
 
-@pytest.mark.asyncio
 async def test_list_deployments_page_allowed_ids_skips_owner_when_override_disabled(
     async_session: AsyncSession, monkeypatch
 ):
@@ -125,6 +127,37 @@ async def test_list_deployments_page_allowed_ids_skips_owner_when_override_disab
         offset=0,
         limit=20,
         allowed_ids=[foreign_visible.id],
+    )
+
+    returned = {deployment.id for deployment, _count, _matched in rows}
+    assert returned == {foreign_visible.id}
+    assert owned.id not in returned
+    assert foreign_hidden.id not in returned
+
+
+@pytest.mark.asyncio
+async def test_list_deployments_page_visibility_scope_skips_owner_when_override_disabled(
+    async_session: AsyncSession, monkeypatch
+):
+    """Scoped API keys: structured visibility must not auto-include owned rows."""
+    from langflow.services.authorization import listing as authz_listing
+
+    async def _override_off() -> bool:
+        return False
+
+    monkeypatch.setattr(authz_listing, "should_apply_owner_override", _override_off)
+
+    owner, provider, owned, foreign_visible, foreign_hidden = await _seed(async_session)
+    scope = ResourceVisibilityScope(resource_ids=(foreign_visible.id,))
+
+    rows = await list_deployments_page(
+        async_session,
+        user_id=owner.id,
+        row_owner_id=owner.id,
+        deployment_provider_account_id=provider.id,
+        offset=0,
+        limit=20,
+        visibility_scope=scope,
     )
 
     returned = {deployment.id for deployment, _count, _matched in rows}
@@ -163,7 +196,6 @@ async def test_get_provider_account_by_id_unscoped_loads_foreign_account(async_s
     assert await get_provider_account_by_id_unscoped(async_session, provider_id=uuid4()) is None
 
 
-@pytest.mark.asyncio
 async def test_count_deployments_by_provider_reflects_allowed_ids(async_session: AsyncSession):
     """The total count uses the same predicate as the page, so pagination stays consistent."""
     owner, provider, _owned, foreign_visible, _foreign_hidden = await _seed(async_session)
@@ -194,3 +226,37 @@ async def test_count_deployments_by_provider_reflects_allowed_ids(async_session:
     # An empty visible set degrades to owner-only (owner-override invariant),
     # never to zero.
     assert empty_allowed == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("scope_kind", ["workspace", "project", "global"])
+async def test_structured_scope_keeps_page_and_total_consistent(async_session: AsyncSession, scope_kind: str):
+    """Domain/global grants are applied in SQL to both rows and pagination total."""
+    owner, provider, owned, foreign_visible, foreign_hidden = await _seed(async_session)
+    if scope_kind == "workspace":
+        scope = ResourceVisibilityScope(workspace_ids=(owned.workspace_id,))
+        expected = {owned.id, foreign_visible.id}
+    elif scope_kind == "project":
+        scope = ResourceVisibilityScope(project_ids=(owned.project_id,))
+        expected = {owned.id, foreign_visible.id}
+    else:
+        scope = ResourceVisibilityScope(all_resources=True)
+        expected = {owned.id, foreign_visible.id, foreign_hidden.id}
+
+    rows = await list_deployments_page(
+        async_session,
+        user_id=owner.id,
+        deployment_provider_account_id=provider.id,
+        offset=0,
+        limit=20,
+        visibility_scope=scope,
+    )
+    total = await count_deployments_by_provider(
+        async_session,
+        user_id=owner.id,
+        deployment_provider_account_id=provider.id,
+        visibility_scope=scope,
+    )
+
+    assert {deployment.id for deployment, _count, _matched in rows} == expected
+    assert total == len(expected)

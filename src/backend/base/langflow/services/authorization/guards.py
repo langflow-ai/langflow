@@ -479,13 +479,11 @@ async def ensure_flows_permission(
     batch (same owner-namespace / domain for every id). Raises HTTP 403 if any
     flow is denied.
     """
-    settings = get_settings_service()
-    if not settings.auth_settings.AUTHZ_ENABLED or not flow_ids:
+    if not flow_ids:
         return
 
     act_str = _coerce_action(act)
     user_id = getattr(user, "id", None)
-    auth_context = _auth_context(user)
     resolved_domain = _resolve_authz_domain(workspace_id, folder_id)
 
     external_context = get_current_external_access_context()
@@ -498,7 +496,7 @@ async def ensure_flows_permission(
             obj="flow:*",
             result=_audit.AUDIT_DENY,
             details={
-                "domain": "*",
+                "domain": resolved_domain,
                 "external_auth_provider": external_context.provider,
                 "external_access_level": external_context.level,
                 "flow_count": len(flow_ids),
@@ -509,6 +507,17 @@ async def ensure_flows_permission(
             detail="External credentials do not allow this action",
         )
 
+    settings = get_settings_service()
+    if not settings.auth_settings.AUTHZ_ENABLED:
+        await _audit_flow_decision_batch(
+            user_id=user_id,
+            act_str=act_str,
+            domain=resolved_domain,
+            flow_results=[(flow_id, _audit.AUDIT_ALLOW) for flow_id in flow_ids],
+        )
+        return
+
+    auth_context = _auth_context(user)
     owner_override_enabled = await should_apply_owner_override()
     if owner_override_enabled and user_id is not None and flow_user_id == user_id:
         await _audit_flow_decision_batch(
@@ -541,6 +550,30 @@ async def ensure_flows_permission(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=_DEFAULT_DENY_DETAIL,
         ) from exc
+
+    if len(results) != len(flow_ids):
+        logger.error(
+            "Authorization plugin returned %d batch results for %d flow ids; failing closed",
+            len(results),
+            len(flow_ids),
+        )
+        await _audit.audit_decision(
+            user_id=user_id,
+            action=f"flow:{act_str}",
+            obj="flow:*",
+            result=_audit.AUDIT_DENY,
+            details={
+                "domain": resolved_domain,
+                "error": "batch_enforce result count mismatch",
+                "expected_results": len(flow_ids),
+                "actual_results": len(results),
+                **_auth_audit_details(),
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=_DEFAULT_DENY_DETAIL,
+        )
 
     await _audit_flow_decision_batch(
         user_id=user_id,

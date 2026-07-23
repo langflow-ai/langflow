@@ -12,6 +12,8 @@
 FROM ghcr.io/astral-sh/uv:latest AS uv_installer
 FROM registry.access.redhat.com/ubi10/python-314-minimal AS builder
 USER root
+ARG MAIN_VERSION=""
+ARG CORE_VERSION=""
 COPY --from=uv_installer /uv /usr/local/bin/uv
 COPY --from=uv_installer /uvx /usr/local/bin/uvx
 
@@ -47,6 +49,10 @@ COPY ./src/lfx/README.md /app/src/lfx/README.md
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
+# Copy langflow-core metadata because it is the root package's direct runtime
+# dependency and a workspace member.
+COPY ./src/langflow-core/README.md /app/src/langflow-core/README.md
+COPY ./src/langflow-core/pyproject.toml /app/src/langflow-core/pyproject.toml
 # Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
 # is a uv workspace member, so each bundle's pyproject.toml must be present
 # for ``uv sync --no-install-project`` to resolve the workspace.  Copy the
@@ -74,8 +80,37 @@ RUN --mount=type=cache,target=/root/.npm \
 WORKDIR /app
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    RUSTFLAGS='--cfg reqwest_unstable' \
-    uv sync --frozen --no-editable --extra couchbase --extra cassio --extra local --extra clickhouse-connect --extra nv-ingest --extra postgresql --no-group dev
+    if [ -n "$MAIN_VERSION" ]; then \
+        sed -i "s/^version = .*/version = \"${MAIN_VERSION}\"/" /app/pyproject.toml; \
+    fi \
+    && if [ -n "$CORE_VERSION" ]; then \
+        sed -i "s/^version = .*/version = \"${CORE_VERSION}\"/" /app/src/langflow-core/pyproject.toml; \
+        core_major=${CORE_VERSION%%.*}; \
+        core_remainder=${CORE_VERSION#*.}; \
+        core_minor=${core_remainder%%.*}; \
+        core_upper_bound="${core_major}.$((core_minor + 1)).dev0"; \
+        sed -i -E \
+            "s|\"langflow-core(\\[[^]]+\\])?[^\";]*\"|\"langflow-core\\1>=${CORE_VERSION},<${core_upper_bound}\"|g" \
+            /app/pyproject.toml; \
+    fi \
+    && RUSTFLAGS='--cfg reqwest_unstable' \
+        uv sync --frozen --no-editable --extra couchbase --extra cassio --extra local --extra clickhouse-connect --extra nv-ingest --extra postgresql --no-group dev \
+    && if [ -n "$MAIN_VERSION" ]; then \
+        MAIN_VERSION="$MAIN_VERSION" /app/.venv/bin/python -c 'import importlib.metadata as m, os; assert m.version("langflow") == os.environ["MAIN_VERSION"]'; \
+    fi \
+    && if [ -n "$CORE_VERSION" ]; then \
+        CORE_VERSION="$CORE_VERSION" /app/.venv/bin/python -c 'import importlib.metadata as m, os; assert m.version("langflow-core") == os.environ["CORE_VERSION"]'; \
+    fi
+
+# Use the release workflow's exact wheels when present, while retaining the
+# frontend compiled specifically for this image. Nightly and local builds leave
+# the artifact directory empty and no-op.
+COPY ./.release-artifacts /tmp/release-artifacts
+COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
+RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
+    --python /app/.venv/bin/python \
+    --mode main \
+    --frontend-source /app/src/backend/langflow/frontend
 
 ################################
 # RUNTIME

@@ -49,6 +49,7 @@ from lfx.services.adapters.deployment.schema import (
     SnapshotItem,
     SnapshotListResult,
 )
+from lfx.services.authorization import ResourceVisibilityScope
 
 ROUTES_MODULE = "langflow.api.v1.deployments"
 HELPERS_MODULE = "langflow.api.v1.mappers.deployments.helpers"
@@ -877,8 +878,8 @@ class TestListDeploymentsSharedPrefilter:
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_shared_listing_provider_account_or_404", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.visible_id_prefilter", new_callable=AsyncMock)
-    async def test_concrete_prefilter_relaxes_provider_gate_and_threads_allowed_ids(
+    @patch(f"{ROUTES_MODULE}.visible_scope_prefilter", new_callable=AsyncMock)
+    async def test_concrete_prefilter_relaxes_provider_gate_and_threads_visibility_scope(
         self,
         mock_prefilter,
         mock_get_owned_pa,
@@ -891,9 +892,9 @@ class TestListDeploymentsSharedPrefilter:
 
         Regression for the cross-user shared-deployment listing gap: a caller
         granted READ on a deployment under *another user's* provider account
-        used to 404 on the strict owner gate before the ``allowed_ids`` union
-        could surface the row. When ``visible_id_prefilter`` returns a concrete
-        list, the strict owner gate must be skipped, the relaxed (id-only) gate
+        used to 404 on the strict owner gate before the visibility union could
+        surface the row. When ``visible_scope_prefilter`` returns a concrete
+        scope, the strict owner gate must be skipped, the relaxed (id-only) gate
         must run, and the prefilter ids must be threaded into
         ``list_deployments_synced`` so the row is actually listed.
         """
@@ -903,7 +904,8 @@ class TestListDeploymentsSharedPrefilter:
         pa = _fake_provider_account()
         row = _fake_deployment_row(deployment_provider_account_id=pa.id, id=shared_id)
 
-        mock_prefilter.return_value = [shared_id]
+        scope = ResourceVisibilityScope(resource_ids=(shared_id,))
+        mock_prefilter.return_value = scope
         mock_get_shared_pa.return_value = pa
         mock_resolve_adapter.return_value = AsyncMock()
         mapper = MagicMock()
@@ -921,7 +923,6 @@ class TestListDeploymentsSharedPrefilter:
         ]
         mock_get_mapper.return_value = mapper
         mock_synced.return_value = ([(row, 0, [])], 1, {})
-
         actor = _fake_user()
         result = await list_deployments(
             provider_id=pa.id,
@@ -935,9 +936,9 @@ class TestListDeploymentsSharedPrefilter:
         # reader); the relaxed id-only gate resolves the foreign provider account.
         mock_get_owned_pa.assert_not_awaited()
         mock_get_shared_pa.assert_awaited_once()
-        # The prefilter ids are threaded into the synced query as allowed_ids so
+        # The prefilter scope is threaded into the synced query so
         # the (owner ⊕ visible) union actually constrains the page + total.
-        assert mock_synced.await_args.kwargs["allowed_ids"] == [shared_id]
+        assert mock_synced.await_args.kwargs["visibility_scope"] == scope
         # Shared listing: user_id is the actor; row_owner_id is the provider-account
         # owner (credentials + attachments) — otherwise Watsonx lookup fails.
         assert mock_synced.await_args.kwargs["user_id"] == actor.id
@@ -951,7 +952,7 @@ class TestListDeploymentsSharedPrefilter:
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_shared_listing_provider_account_or_404", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.visible_id_prefilter", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.visible_scope_prefilter", new_callable=AsyncMock)
     async def test_none_prefilter_keeps_strict_owner_gate(
         self,
         mock_prefilter,
@@ -963,7 +964,7 @@ class TestListDeploymentsSharedPrefilter:
     ):
         """OSS / no-plugin path (prefilter declines → None) keeps the owner gate.
 
-        The relaxed id-only fetch must never run, and ``allowed_ids`` stays
+        The relaxed id-only fetch must never run, and ``visibility_scope`` stays
         ``None`` so the listing remains owner-scoped exactly as before.
         """
         from langflow.api.v1.deployments import list_deployments
@@ -988,7 +989,7 @@ class TestListDeploymentsSharedPrefilter:
 
         mock_get_owned_pa.assert_awaited_once()
         mock_get_shared_pa.assert_not_awaited()
-        assert mock_synced.await_args.kwargs["allowed_ids"] is None
+        assert mock_synced.await_args.kwargs["visibility_scope"] is None
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
@@ -996,7 +997,7 @@ class TestListDeploymentsSharedPrefilter:
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_shared_listing_provider_account_or_404", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.visible_id_prefilter", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.visible_scope_prefilter", new_callable=AsyncMock)
     async def test_empty_prefilter_keeps_strict_owner_gate(
         self,
         mock_prefilter,
@@ -1016,7 +1017,8 @@ class TestListDeploymentsSharedPrefilter:
 
         pa = _fake_provider_account()
 
-        mock_prefilter.return_value = []
+        scope = ResourceVisibilityScope()
+        mock_prefilter.return_value = scope
         mock_get_owned_pa.return_value = pa
         mock_resolve_adapter.return_value = AsyncMock()
         mapper = MagicMock()
@@ -1034,9 +1036,9 @@ class TestListDeploymentsSharedPrefilter:
 
         mock_get_owned_pa.assert_awaited_once()
         mock_get_shared_pa.assert_not_awaited()
-        # The (empty) prefilter is still threaded through as allowed_ids so the
+        # The (empty) prefilter is still threaded through as visibility_scope so the
         # union stays authoritative and the per-row in-memory filter is skipped.
-        assert mock_synced.await_args.kwargs["allowed_ids"] == []
+        assert mock_synced.await_args.kwargs["visibility_scope"] == scope
 
 
 # ---------------------------------------------------------------------------
@@ -3440,6 +3442,7 @@ class TestCreateDeploymentProjectValidation:
 
 class TestCreateDeploymentSchemaValidation:
     @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.ensure_flow_deploy_for_version_ids", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
@@ -3452,6 +3455,7 @@ class TestCreateDeploymentSchemaValidation:
         mock_resolve_adapter,
         mock_resolve_project,
         mock_validate_fv,
+        mock_ensure_flow_deploy,  # noqa: ARG002
     ):
         """Mapper-level schema failures on create surface as HTTP 422."""
         from langflow.api.v1.deployments import create_deployment
@@ -3971,8 +3975,8 @@ class TestListDeploymentsScopedKeyPrefilter:
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_shared_listing_provider_account_or_404", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.visible_id_prefilter", new_callable=AsyncMock)
-    async def test_concrete_prefilter_threads_allowed_ids_without_owner_union_assumption(
+    @patch(f"{ROUTES_MODULE}.visible_scope_prefilter", new_callable=AsyncMock)
+    async def test_concrete_prefilter_threads_visibility_scope_without_owner_union_assumption(
         self,
         mock_prefilter,
         mock_get_owned_pa,
@@ -3981,18 +3985,19 @@ class TestListDeploymentsScopedKeyPrefilter:
         mock_resolve_adapter,
         mock_synced,
     ):
-        """Route-level: concrete prefilter must reach sync as allowed_ids.
+        """Route-level: a concrete prefilter must reach sync as a visibility scope.
 
         Ownership inclusion for scoped API keys is decided in
-        ``apply_owned_or_visible_prefilter`` (via ``_scope_to_owner_or_allowed``);
-        this test locks the route contract that a concrete prefilter list is
-        forwarded (not dropped).
+        ``apply_owned_or_visible_scope_prefilter`` (via
+        ``_scope_to_owner_or_allowed``); this test locks the route contract that
+        a concrete prefilter is forwarded (not dropped).
         """
         from langflow.api.v1.deployments import list_deployments
 
         visible_only = uuid4()
+        visibility_scope = ResourceVisibilityScope(resource_ids=(visible_only,))
         pa = _fake_provider_account()
-        mock_prefilter.return_value = [visible_only]
+        mock_prefilter.return_value = visibility_scope
         mock_get_shared_pa.return_value = pa
         mock_resolve_adapter.return_value = AsyncMock()
         mapper = MagicMock()
@@ -4010,6 +4015,6 @@ class TestListDeploymentsScopedKeyPrefilter:
         )
 
         mock_get_owned_pa.assert_not_awaited()
-        assert mock_synced.await_args.kwargs["allowed_ids"] == [visible_only]
+        assert mock_synced.await_args.kwargs["visibility_scope"] == visibility_scope
         assert mock_synced.await_args.kwargs["user_id"] == actor.id
         assert mock_synced.await_args.kwargs["row_owner_id"] == pa.user_id

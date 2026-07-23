@@ -142,6 +142,10 @@ def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: Checkpo
     graph.set_run_id(checkpoint.run_id)
     if checkpoint.session_id:
         graph.session_id = checkpoint.session_id
+    # Continue under the starting identity; else self.user_id (via graph.user_id) is None
+    # and str(None) fails UUID parsing for A2A/flow tools ("badly formed hexadecimal UUID string").
+    if checkpoint.user_id:
+        graph.user_id = checkpoint.user_id
     graph.job_id = checkpoint.job_id
     graph.checkpointing_enabled = True
     graph.checkpoint_store = store

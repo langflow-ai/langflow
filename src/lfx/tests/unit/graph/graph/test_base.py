@@ -6,9 +6,31 @@ from ag_ui.core import RunFinishedEvent, RunStartedEvent
 from lfx.components.input_output import ChatInput, ChatOutput, TextInputComponent, TextOutputComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.components.processing.combine_text import CombineTextComponent
+from lfx.custom.custom_component.component import Component
 from lfx.graph import Graph
 from lfx.graph.graph.constants import Finish
+from lfx.io import MessageTextInput, Output, SecretStrInput
+from lfx.schema.message import Message
 from lfx.schema.schema import INPUT_FIELD_NAME
+
+
+class SecretConnectionString(Component):
+    display_name = "Secret Connection String"
+    inputs = [SecretStrInput(name="password", display_name="Password")]
+    outputs = [Output(name="connection_string", method="build_connection_string")]
+
+    def build_connection_string(self) -> Message:
+        return Message(text=f"postgresql://demo:{self.password}@localhost/db")
+
+
+class SecretEcho(Component):
+    display_name = "Secret Echo"
+    inputs = [MessageTextInput(name="value", display_name="Value")]
+    outputs = [Output(name="message", method="echo")]
+
+    def echo(self) -> Message:
+        self.received_value = self.value
+        return Message(text=self.value)
 
 
 @pytest.mark.asyncio
@@ -41,6 +63,20 @@ async def test_graph_with_edge():
     assert graph.vertices[1].id == output_id
     assert graph.edges[0].source_id == input_id
     assert graph.edges[0].target_id == output_id
+
+
+@pytest.mark.asyncio
+async def test_graph_preserves_secret_on_edge_and_masks_terminal_result():
+    """A downstream component receives the secret while public graph results remain masked."""
+    test_secret = "hunter2"  # noqa: S105  # pragma: allowlist secret
+    producer = SecretConnectionString(_id="producer").set(password=test_secret)
+    consumer = SecretEcho(_id="consumer").set(value=producer.build_connection_string)
+    graph = Graph(producer, consumer)
+
+    outputs = await graph.arun(inputs=[{}], outputs=[consumer.get_id()])
+
+    assert consumer.received_value == "postgresql://demo:hunter2@localhost/db"  # pragma: allowlist secret
+    assert outputs[0].outputs[0].outputs["message"]["message"] == "postgresql://demo:**********@localhost/db"
 
 
 @pytest.mark.asyncio

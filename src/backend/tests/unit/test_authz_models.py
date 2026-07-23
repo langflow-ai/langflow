@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.auth import (
@@ -594,8 +595,11 @@ async def test_authz_audit_log_persists(authz_async_session: AsyncSession):
     await authz_async_session.commit()
     await authz_async_session.refresh(flow)
 
+    actor_id = uuid4()
     entry = AuthzAuditLog(
         user_id=user.id,
+        actor_type="api_key",
+        actor_id=actor_id,
         action="flow:write",
         resource_type="flow",
         resource_id=flow.id,
@@ -610,4 +614,15 @@ async def test_authz_audit_log_persists(authz_async_session: AsyncSession):
     assert stored.action == "flow:write"
     assert stored.result == "allow"
     assert stored.details == {"ip": "127.0.0.1"}
+    assert stored.actor_type == "api_key"
+    assert stored.actor_id == actor_id
     assert stored.timestamp is not None
+
+
+def test_authz_audit_actor_identity_has_no_fk_and_composite_timestamp_index():
+    """Credential attribution survives API-key deletion and supports actor history scans."""
+    table = AuthzAuditLog.__table__
+
+    assert table.c.actor_id.foreign_keys == set()
+    assert ("actor_id", "timestamp") in {tuple(column.name for column in index.columns) for index in table.indexes}
+    assert ("actor_type", "timestamp") in {tuple(column.name for column in index.columns) for index in table.indexes}

@@ -8,7 +8,7 @@ Covers:
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
@@ -23,6 +23,9 @@ from langflow.api.v1.mappers.deployments.contracts import (
 )
 from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
 from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
+from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow_version.model import FlowVersion
+from langflow.services.database.models.user.model import User
 from lfx.services.adapters.deployment.exceptions import ServiceUnavailableError
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
@@ -32,6 +35,9 @@ from lfx.services.adapters.deployment.schema import (
     SnapshotItem,
     SnapshotListResult,
 )
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 MODULE = "langflow.api.v1.mappers.deployments.helpers"
 SYNC_MODULE = "langflow.api.v1.mappers.deployments.sync"
@@ -390,6 +396,53 @@ class TestListDeploymentsSynced:
         assert provider_data_by_resource_key == {}
         mock_delete_unbound.assert_awaited_once()
         mock_count.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
+    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
+    @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
+    async def test_shared_rows_use_provider_owner_namespace_for_sync(
+        self,
+        mock_list,
+        mock_fetch,
+        mock_delete_unbound,
+        mock_count_attachments,
+        mock_count,
+    ):
+        actor_id = uuid4()
+        owner_id = uuid4()
+        provider_id = uuid4()
+        row = _mock_deployment_row("rk-shared", user_id=owner_id)
+        mock_list.return_value = [(row, 0, [])]
+        mock_fetch.return_value = ({"rk-shared"}, _mock_provider_view([SimpleNamespace(id="rk-shared")]))
+        mock_count_attachments.return_value = {row.id: 0}
+        db = _mock_async_db()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
+
+        accepted, total, _ = await list_deployments_synced(
+            deployment_adapter=AsyncMock(),
+            deployment_mapper=_NoSnapshotBindingMapper(),
+            user_id=actor_id,
+            row_owner_id=owner_id,
+            provider_id=provider_id,
+            db=db,
+            page=1,
+            size=1,
+            deployment_type=None,
+        )
+
+        assert accepted[0][0] is row
+        assert total == 1
+        assert mock_list.await_args.kwargs["user_id"] == actor_id
+        assert mock_list.await_args.kwargs["row_owner_id"] == owner_id
+        assert mock_fetch.await_args.kwargs["user_id"] == owner_id
+        assert mock_delete_unbound.await_args.kwargs["user_id"] == owner_id
+        assert mock_count_attachments.await_args.kwargs["user_id"] == owner_id
+        assert mock_count.await_args.kwargs["user_id"] == actor_id
+        assert mock_count.await_args.kwargs["row_owner_id"] == owner_id
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
@@ -1603,6 +1656,44 @@ class TestSyncDeploymentsAndAttachmentsByProvider:
         assert mock_delete_unbound.await_args.kwargs["deployment_ids"] == [surviving.id]
         assert mock_delete_unbound.await_args.kwargs["bindings"] == ["binding-1"]
 
+    @pytest.mark.asyncio
+    @patch(f"{SYNC_MODULE}.logger.awarning", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.delete_deployments_by_ids", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.get_deployment_adapter")
+    async def test_logs_unconfirmed_stale_deployment_batch_delete(
+        self,
+        mock_get_adapter,
+        mock_fetch_resource_keys,
+        mock_delete_deployments,
+        mock_warning,
+    ):
+        """An undetermined batch-delete rowcount is surfaced in sync logs."""
+        from langflow.api.v1.mappers.deployments.sync import _sync_deployments_and_attachments_by_provider
+        from langflow.services.database.models.deployment.crud import UNCONFIRMED_DELETE_ROWCOUNT
+
+        provider_account_id = uuid4()
+        stale = SimpleNamespace(
+            id=uuid4(),
+            resource_key="rk-stale",
+            deployment_provider_account_id=provider_account_id,
+        )
+        mock_get_adapter.return_value = AsyncMock()
+        mock_fetch_resource_keys.return_value = (set(), _mock_provider_view([]))
+        mock_delete_deployments.return_value = UNCONFIRMED_DELETE_ROWCOUNT
+
+        await _sync_deployments_and_attachments_by_provider(
+            db=_mock_async_db(),
+            user_id=uuid4(),
+            deployments_with_provider=[(stale, "watsonx-orchestrate")],
+            stale_scope_label="flow",
+            failure_log_message="ignored",
+            failure_scope_value=uuid4(),
+        )
+
+        mock_delete_deployments.assert_awaited_once()
+        assert any("could not be confirmed" in call.args[0] for call in mock_warning.await_args_list)
+
 
 # ---------------------------------------------------------------------------
 # provider-account scoped sync entry points
@@ -2763,55 +2854,68 @@ class TestFlowVersionDeploymentAttachmentCrud:
 # ---------------------------------------------------------------------------
 
 
+async def _seed_flow_versions(
+    async_session: AsyncSession, *, version_count: int
+) -> tuple[User, Flow, list[FlowVersion]]:
+    """Persist one owner, one flow, and ``version_count`` versions."""
+    owner = User(username=f"owner-{uuid4()}", password=f"hashed-{uuid4()}", is_active=True)
+    flow = Flow(name=f"flow-{uuid4()}", user_id=owner.id)
+    versions = [
+        FlowVersion(
+            flow_id=flow.id,
+            user_id=owner.id,
+            version_number=index + 1,
+            data={"nodes": [], "edges": []},
+        )
+        for index in range(version_count)
+    ]
+    async_session.add_all([owner, flow, *versions])
+    await async_session.commit()
+    return owner, flow, versions
+
+
 class TestFlowIdsForVersionIds:
     @pytest.mark.asyncio
-    async def test_empty_input_returns_empty(self):
+    async def test_empty_input_returns_empty(self, async_session: AsyncSession):
+        """Empty input skips the query even with a real session."""
         from langflow.api.v1.mappers.deployments.helpers import flow_ids_for_version_ids
 
         assert (
             await flow_ids_for_version_ids(
                 flow_version_ids=[],
                 owner_id=uuid4(),
-                db=AsyncMock(),
+                db=async_session,
             )
             == []
         )
 
     @pytest.mark.asyncio
-    async def test_partial_match_raises_404(self):
+    async def test_partial_match_raises_404(self, async_session: AsyncSession):
         """Missing versions must fail on matched count, not on an empty distinct set."""
         from langflow.api.v1.mappers.deployments.helpers import flow_ids_for_version_ids
 
-        flow_a = uuid4()
-        db = AsyncMock()
-        result = MagicMock()
-        result.all.return_value = [flow_a]  # one row for two requested versions
-        db.exec = AsyncMock(return_value=result)
+        owner, _flow, versions = await _seed_flow_versions(async_session, version_count=1)
 
         with pytest.raises(HTTPException) as exc_info:
             await flow_ids_for_version_ids(
-                flow_version_ids=[uuid4(), uuid4()],
-                owner_id=uuid4(),
-                db=db,
+                flow_version_ids=[versions[0].id, uuid4()],
+                owner_id=owner.id,
+                db=async_session,
             )
 
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_shared_flow_dedupes_returned_ids(self):
+    async def test_shared_flow_dedupes_returned_ids(self, async_session: AsyncSession):
+        """Two persisted versions of one flow resolve to one authorization target."""
         from langflow.api.v1.mappers.deployments.helpers import flow_ids_for_version_ids
 
-        flow_a = uuid4()
-        db = AsyncMock()
-        result = MagicMock()
-        # Two versions of the same flow → two match rows, one returned id.
-        result.all.return_value = [flow_a, flow_a]
-        db.exec = AsyncMock(return_value=result)
+        owner, flow, versions = await _seed_flow_versions(async_session, version_count=2)
 
         flow_ids = await flow_ids_for_version_ids(
-            flow_version_ids=[uuid4(), uuid4()],
-            owner_id=uuid4(),
-            db=db,
+            flow_version_ids=[version.id for version in versions],
+            owner_id=owner.id,
+            db=async_session,
         )
 
-        assert flow_ids == [flow_a]
+        assert flow_ids == [flow.id]
