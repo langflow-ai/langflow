@@ -1,0 +1,38 @@
+[project]
+name = "lfx-adanos"
+version = "0.1.0"
+description = "Adanos market sentiment data as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "adanos", "market-sentiment", "finance"]
+dependencies = [
+    "lfx>=1.11.0.dev0,<2.0.0",
+    "httpx>=0.28.1,<1.0.0",
+]
+
+[project.urls]
+Homepage = "https://adanos.org/"
+Documentation = "https://api.adanos.org/docs"
+Repository = "https://github.com/langflow-ai/langflow"
+
+[project.entry-points."langflow.extensions"]
+lfx-adanos = "lfx_adanos"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_adanos"]
+include = ["src/lfx_adanos/extension.json", "src/lfx_adanos/components/**/*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_adanos",
+    "README.md",
+    "pyproject.toml",
+]
