@@ -232,10 +232,12 @@ class BackgroundExecutionService(Service):
         # carry inline secrets (API keys), and storing them plaintext in the
         # durable ``job`` table (JSONB on Postgres) widens the blast radius of any
         # DB read (backup, ops access, a SQL-injection elsewhere) beyond the
-        # live-only handling globals get on the sync path. Tradeoff: a background
-        # re-enqueue after a restart drops inline globals — reference STORED global
-        # variables by name for background runs rather than passing secrets inline.
-        # The live in-memory run below still uses the full ``request``.
+        # live-only handling globals get on the sync path. Tradeoff: inline
+        # globals are dropped on EVERY scaled-mode run (the worker always
+        # hydrates from this redacted row) and on a default-mode re-enqueue
+        # after a restart — reference STORED global variables by name for
+        # background runs rather than passing secrets inline. Only the
+        # default-mode live in-process run below uses the full ``request``.
         await job_service.update_job_metadata(job_id, {"request": self._redact_request(request)})
         # After create_job so an idempotent retry returns the existing job instead of
         # cancelling it; the new job is QUEUED, so the suspended-only query skips it.
@@ -488,7 +490,7 @@ class BackgroundExecutionService(Service):
         worker_lost + terminal event). QUEUED workflow rows never started, so
         under at-least-once we re-enqueue them onto this worker's executor with a
         reconstructed request. Best-effort per job so one bad row can't block the
-        rest. Redis backend reconciles via its own watchdog.
+        rest. The scaled backend reconciles via its worker-side watchdog.
         """
         if self._is_scaled_configured:
             return

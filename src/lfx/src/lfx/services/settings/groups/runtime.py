@@ -97,7 +97,9 @@ class RuntimeSettings(BaseModel):
     the work queue: the API only persists the QUEUED row, and separate
     ``langflow worker`` processes lease-claim and run jobs against the SAME
     database, so background load runs off the API workers and scales
-    horizontally. No broker is needed — the database is the queue."""
+    horizontally. No broker is needed — the database is the queue. Every worker
+    must reach that one database: use Postgres for multi-host fleets (SQLite's
+    WAL is host-local, so scaled + SQLite only works on a single machine)."""
     background_poll_interval_s: float = Field(default=0.5, gt=0)
     """How often a scaled-mode event tail polls ``job_events`` for new durable
     frames while a job is live. Bounds the added reattach latency per milestone.
