@@ -37,6 +37,10 @@ if TYPE_CHECKING:
 
 # Durable statuses that mean the run is over (the event tail drains and ends).
 _TERMINAL_STATUSES = frozenset({JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.TIMED_OUT})
+# Statuses that end the event tail: terminal runs, plus SUSPENDED — a paused
+# run will produce no more durable frames until it is resumed, so a tail
+# waiting on it would poll forever (mirrors the default backend's is_done).
+_TAIL_END_STATUSES = _TERMINAL_STATUSES | {JobStatus.SUSPENDED}
 
 
 def _coerce_uuid(job_id: Any) -> Any:
@@ -180,9 +184,17 @@ class DBBackgroundQueue:
         flips FAILED, then appends ``run_failed``), so a tail that returned on
         the first terminal observation could end without the terminal
         milestone. On observing a terminal status the tail therefore drains,
-        waits one more poll interval, drains again, and ends — the append
-        happens within milliseconds of the flip, so the bounded grace pass
-        closes the window without risking an unterminated stream.
+        waits one more poll interval, drains again, and ends. The gap between
+        flip and append is a handful of sequential DB round trips (widest on
+        the CANCELLED path), comfortably inside the default 0.5s interval —
+        an operator tuning ``background_poll_interval_s`` very low narrows the
+        grace window with it, degrading to a status-only stream end (never a
+        hang).
+
+        A job that no worker ever claims stays QUEUED and the tail keeps
+        polling: deliberately client-bounded (the job may start any moment;
+        two PK-indexed queries per interval), matching the semantics of
+        waiting on a queued run.
         """
         # ponytail: poll-based tail (<= poll_interval_s added latency per
         # milestone); switch to pg LISTEN/NOTIFY wakes if that ever matters.
@@ -202,7 +214,7 @@ class DBBackgroundQueue:
                 yield event
 
             job = await self._job_service.get_job_by_job_id(durable_id)
-            if job is None or job.status in _TERMINAL_STATUSES:
+            if job is None or job.status in _TAIL_END_STATUSES:
                 # Grace pass: drain, give the terminal-event append one poll
                 # interval to land, drain once more, then end the stream.
                 async for event in _drain():
