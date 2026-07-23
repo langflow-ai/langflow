@@ -1,0 +1,110 @@
+/*!
+	Copyright (c) 2018 Jed Watson.
+	Licensed under the MIT License (MIT), see
+	http://jedwatson.github.io/classnames
+*/
+
+/*!
+ * Redocusaurus
+ * https://redocusaurus.vercel.app/
+ * (c) 2025 Rohit Gohri
+ * Released under the MIT License
+ */
+
+/*!
+ * Stickyfill -- `position: sticky` polyfill
+ * v. 1.1.1 | https://github.com/wilddeer/stickyfill
+ * Copyright Oleg Korsunsky | http://wd.dizaina.net/
+ *
+ * MIT License
+ */
+
+/*!
+ * The buffer module from node.js, for the browser.
+ *
+ * @author   Feross Aboukhadijeh <https://feross.org>
+ * @license  MIT
+ */
+
+/*!
+ * lunr.Builder
+ * Copyright (C) 2020 Oliver Nightingale
+ */
+
+/*!
+ * lunr.Index
+ * Copyright (C) 2020 Oliver Nightingale
+ */
+
+/*!
+ * lunr.Pipeline
+ * Copyright (C) 2020 Oliver Nightingale
+ */
+
+/*!
+ * lunr.Set
+ * Copyright (C) 2020 Oliver Nightingale
+ */
+
+/*!
+ * lunr.TokenSet
+ * Copyright (C) 2020 Oliver Nightingale
+ */
+
+/*!
+ * lunr.Vector
+ * Copyright (C) 2020 Oliver Nightingale
+ */
+
+/*!
+ * lunr.stemmer
+ * Copyright (C) 2020 Oliver Nightingale
+ * Includes code from - http://tartarus.org/~martin/PorterStemmer/js.txt
+ */
+
+/*!
+ * lunr.stopWordFilter
+ * Copyright (C) 2020 Oliver Nightingale
+ */
+
+/*!
+ * lunr.tokenizer
+ * Copyright (C) 2020 Oliver Nightingale
+ */
+
+/*!
+ * lunr.trimmer
+ * Copyright (C) 2020 Oliver Nightingale
+ */
+
+/*!
+ * lunr.utils
+ * Copyright (C) 2020 Oliver Nightingale
+ */
+
+/*!
+ * perfect-scrollbar v1.5.6
+ * Copyright 2024 Hyunje Jun, MDBootstrap and Contributors
+ * Licensed under MIT
+ */
+
+/*! @license DOMPurify 3.3.1 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.3.1/LICENSE */
+
+/*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
+
+/*!***************************************************
+* mark.js v8.11.1
+* https://markjs.io/
+* Copyright (c) 2014–2018, Julian Kühnel
+* Released under the MIT license https://git.io/vwTVl
+*****************************************************/
+
+/**
+ * @license React
+ * use-sync-external-store-shim.production.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
