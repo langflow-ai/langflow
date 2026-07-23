@@ -13,6 +13,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 from lfx.log.logger import logger
+from lfx.utils.util_strings import escape_like_pattern
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
@@ -68,8 +69,10 @@ async def list_teams(
     """
     stmt = select(AuthzTeam)
     if search:
-        like = f"%{search}%"
-        stmt = stmt.where((AuthzTeam.team_name.ilike(like)) | (AuthzTeam.adom_name.ilike(like)))
+        like = f"%{escape_like_pattern(search)}%"
+        stmt = stmt.where(
+            (AuthzTeam.team_name.ilike(like, escape="\\")) | (AuthzTeam.adom_name.ilike(like, escape="\\"))
+        )
     if is_active is not None:
         stmt = stmt.where(AuthzTeam.is_active == is_active)
     stmt = stmt.order_by(AuthzTeam.team_name, AuthzTeam.id).offset(offset).limit(limit)

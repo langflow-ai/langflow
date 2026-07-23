@@ -77,6 +77,16 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv sync --frozen --no-editable --extra nv-ingest --extra postgresql --no-group dev
 
+# Use the release workflow's exact wheels when present, while retaining the
+# frontend compiled specifically for this image. Nightly and local builds leave
+# the artifact directory empty and no-op.
+COPY ./.release-artifacts /tmp/release-artifacts
+COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
+RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
+    --python /app/.venv/bin/python \
+    --mode main \
+    --frontend-source /app/src/backend/langflow/frontend
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
@@ -86,6 +96,7 @@ USER root
 RUN microdnf update -y \
     && microdnf install -y curl git libpq gnupg xz tar shadow-utils \
     && microdnf clean all
+RUN python3.14 -m pip install --upgrade pip
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
 RUN ARCH=$(uname -m) \
@@ -97,7 +108,8 @@ RUN ARCH=$(uname -m) \
                     | head -1) \
     && if [ -z "$NODE_VERSION" ]; then echo "ERROR: Could not determine Node.js version" && exit 1; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
-    | tar -xJ -C /usr/local --strip-components=1
+    | tar -xJ -C /usr/local --strip-components=1 \
+    && npm install -g npm@latest
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
@@ -126,6 +138,8 @@ WORKDIR /app
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
 ENV LANGFLOW_EVENT_DELIVERY=polling
+
+# secuirty options
 ENV LANGFLOW_AUTO_LOGIN=false
 
 USER 1000

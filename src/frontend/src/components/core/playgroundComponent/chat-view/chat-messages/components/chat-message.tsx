@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import useFlowStore from "@/stores/flowStore";
+import { isGroupedBlock } from "@/types/chat";
 import type { chatMessagePropsType } from "@/types/components";
 import { BotMessage } from "./bot-message";
 import { ErrorView } from "./error-message";
@@ -27,7 +28,7 @@ export default function ChatMessage({
 
   // Error messages
   if (chat.category === "error") {
-    const blocks = chat.content_blocks ?? [];
+    const blocks = (chat.content_blocks ?? []).filter(isGroupedBlock);
     return (
       <ErrorView
         blocks={blocks}

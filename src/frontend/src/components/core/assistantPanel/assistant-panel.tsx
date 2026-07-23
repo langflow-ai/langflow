@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { useSidebar } from "@/components/ui/sidebar";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import type { AgenticStepType } from "@/controllers/API/queries/agentic";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
+import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import type {
   AssistantModel,
@@ -86,12 +88,18 @@ function AssistantInputWithScroll({
 export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   const { hasEnabledModels } = useEnabledModels();
   const panelRef = useRef<HTMLDivElement>(null);
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isReadOnly = useIsFlowReadOnly(currentFlowId);
   // Mirror the FlowPage sidebar's open state. When the sidebar is expanded
   // the canvas is offset 280px from the viewport's left edge, so the panel
   // shifts right by half that (140px) to align with the canvas center. When
   // collapsed (offcanvas slid off), the canvas takes the full viewport and
   // the panel sits at plain ``left-1/2``.
   const isSidebarOpen = useSidebar().open;
+
+  useEffect(() => {
+    if (isOpen && isReadOnly) onClose();
+  }, [isOpen, isReadOnly, onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -171,7 +179,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     (state) => state.clearPendingMessage,
   );
   useEffect(() => {
-    if (!isOpen || !pendingMessage) return;
+    if (!isOpen || !pendingMessage || isReadOnly) return;
     let saved: AssistantModel | null = null;
     try {
       const raw = localStorage.getItem("langflow-assistant-selected-model");
@@ -189,7 +197,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     if (!saved) return;
     void handleSend(pendingMessage, saved);
     clearPendingMessage();
-  }, [isOpen, pendingMessage, handleSend, clearPendingMessage]);
+  }, [isOpen, pendingMessage, isReadOnly, handleSend, clearPendingMessage]);
 
   // When the panel opens with a pendingMessage in the store, the user just
   // submitted from the welcome overlay. Capture that and lock a min-height
@@ -216,6 +224,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   }, [handleStopGeneration, saveCurrentSession, handleClearHistory]);
 
   const handleApproveAndClose = (messageId: string, componentCode?: string) => {
+    if (isReadOnly) return;
     handleApprove(messageId, componentCode);
     onClose();
   };
@@ -350,7 +359,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     [panelSize, useExpandedSize],
   );
 
-  if (!isOpen) return null;
+  if (!isOpen || isReadOnly) return null;
 
   const containerClasses = cn(
     "flex flex-col transition-[opacity,transform] duration-200 fixed shadow-xl will-change-[opacity,transform]",

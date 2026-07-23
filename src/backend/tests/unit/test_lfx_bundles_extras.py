@@ -14,13 +14,18 @@ never drift by hand-edit:
        (``TORCH_EXTRAS``), giving a torch-free full-provider install,
     4. normalized extra keys are collision-free,
     5. the metapackage provider set stays disjoint from the graduated
-       partner distributions (no double-ship; manifest would shadow).
+       partner distributions (no double-ship; manifest would shadow),
+    6. ALTK remains available on Python 3.14 while preserving its Intel macOS
+       exclusion.
 """
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
+
+from packaging.markers import default_environment
+from packaging.requirements import Requirement
 
 try:
     import tomllib
@@ -104,3 +109,32 @@ def test_metapackage_providers_disjoint_from_graduated_partners() -> None:
     }
     overlap = {_normalize(p) for p in _provider_dirs()} & {_normalize(p) for p in partners}
     assert not overlap, f"providers shipped from both lfx-bundles and a graduated package: {sorted(overlap)}"
+
+
+def test_altk_dependency_supports_python_314() -> None:
+    """ALTK supports Python 3.14 everywhere except unsupported Intel macOS."""
+    requirements = (Requirement(dependency) for dependency in _load_extras()["altk"])
+    altk = next(requirement for requirement in requirements if requirement.name == "agent-lifecycle-toolkit")
+    assert altk.marker is not None
+
+    environment = default_environment()
+    for sys_platform, platform_machine in (("linux", "x86_64"), ("darwin", "arm64"), ("win32", "AMD64")):
+        environment.update(
+            {
+                "python_full_version": "3.14.0",
+                "python_version": "3.14",
+                "sys_platform": sys_platform,
+                "platform_machine": platform_machine,
+            }
+        )
+        assert altk.marker.evaluate(environment)
+
+    environment.update(
+        {
+            "python_full_version": "3.14.0",
+            "python_version": "3.14",
+            "sys_platform": "darwin",
+            "platform_machine": "x86_64",
+        }
+    )
+    assert not altk.marker.evaluate(environment)

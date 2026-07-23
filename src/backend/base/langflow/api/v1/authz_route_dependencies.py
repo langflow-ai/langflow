@@ -14,6 +14,7 @@ from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 
 _FLOW_WRITE_DENIED_DETAIL = "You don't have permission to edit this flow."
+_FLOW_DELETE_DENIED_DETAIL = "You don't have permission to delete this flow."
 
 
 async def _get_authorized_flow(
@@ -37,7 +38,7 @@ async def _get_authorized_flow(
             folder_id=flow.folder_id,
         )
     except HTTPException as exc:
-        if act == FlowAction.WRITE and exc.status_code == status.HTTP_403_FORBIDDEN:
+        if act in (FlowAction.WRITE, FlowAction.DELETE) and exc.status_code == status.HTTP_403_FORBIDDEN:
             try:
                 await ensure_flow_permission(
                     current_user,
@@ -49,7 +50,8 @@ async def _get_authorized_flow(
                 )
             except HTTPException as read_exc:
                 raise deny_to_404(read_exc, detail="Flow not found") from read_exc
-            raise HTTPException(status_code=403, detail=_FLOW_WRITE_DENIED_DETAIL) from exc
+            denied_detail = _FLOW_WRITE_DENIED_DETAIL if act == FlowAction.WRITE else _FLOW_DELETE_DENIED_DETAIL
+            raise HTTPException(status_code=403, detail=denied_detail) from exc
         raise deny_to_404(exc, detail="Flow not found") from exc
     return flow
 
@@ -68,7 +70,7 @@ async def get_authorized_flow_for_write(
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> Flow:
-    """Return a flow the caller may write (404 when denied or missing)."""
+    """Return a flow the caller may write (403 when readable but not writable, 404 otherwise)."""
     return await _get_authorized_flow(FlowAction.WRITE, flow_id=flow_id, current_user=current_user, session=session)
 
 
@@ -77,7 +79,7 @@ async def get_authorized_flow_for_delete(
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> Flow:
-    """Return a flow the caller may delete (404 when denied or missing)."""
+    """Return a flow the caller may delete (403 when readable but not deletable, 404 otherwise)."""
     return await _get_authorized_flow(FlowAction.DELETE, flow_id=flow_id, current_user=current_user, session=session)
 
 

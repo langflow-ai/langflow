@@ -110,6 +110,159 @@ async function openApiKeysRoute(
     .catch(() => {});
 }
 
+type FocusableSnapshot = {
+  name: string;
+  role: string | null;
+  tagName: string;
+  testId: string | null;
+  tabIndex: number;
+  className: string;
+};
+
+type FocusTraversalSnapshot = FocusableSnapshot & {
+  isDisabledPagingButton: boolean;
+};
+
+type ActiveElementSnapshot = FocusTraversalSnapshot & {
+  colId: string | null;
+  isGridCell: boolean;
+  isTabGuard: boolean;
+};
+
+async function getVisibleTabOrder(page: LangflowPage) {
+  return page.evaluate<FocusableSnapshot[]>(() => {
+    const focusableSelector = [
+      "a[href]",
+      "button:not([disabled])",
+      "input:not([disabled])",
+      "select:not([disabled])",
+      "textarea:not([disabled])",
+      '[tabindex]:not([tabindex="-1"])',
+      '[contenteditable="true"]',
+    ].join(",");
+
+    const isVisibleFocusable = (element: HTMLElement) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+
+      return (
+        element.tabIndex >= 0 &&
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        rect.width > 0 &&
+        rect.height > 0 &&
+        !element.closest('[inert], [aria-hidden="true"]')
+      );
+    };
+
+    const getName = (element: HTMLElement) =>
+      (
+        element.getAttribute("aria-label") ??
+        element.getAttribute("title") ??
+        element.innerText ??
+        element.getAttribute("data-testid") ??
+        element.id ??
+        element.tagName
+      )
+        .replace(/\s+/g, " ")
+        .trim();
+
+    return Array.from(document.querySelectorAll<HTMLElement>(focusableSelector))
+      .filter(isVisibleFocusable)
+      .map((element) => ({
+        name: getName(element),
+        role: element.getAttribute("role"),
+        tagName: element.tagName.toLowerCase(),
+        testId: element.getAttribute("data-testid"),
+        tabIndex: element.tabIndex,
+        className: String(element.className),
+      }));
+  });
+}
+
+async function collectTabTraversal(page: LangflowPage, steps: number) {
+  const focusedElements: FocusTraversalSnapshot[] = [];
+
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  });
+
+  for (let index = 0; index < steps; index += 1) {
+    await page.keyboard.press("Tab");
+    await page.waitForTimeout(20);
+    focusedElements.push(
+      await page.evaluate<FocusTraversalSnapshot>(() => {
+        const element = document.activeElement as HTMLElement | null;
+        const getName = (activeElement: HTMLElement | null) =>
+          (
+            activeElement?.getAttribute("aria-label") ??
+            activeElement?.getAttribute("title") ??
+            activeElement?.innerText ??
+            activeElement?.getAttribute("data-testid") ??
+            activeElement?.id ??
+            activeElement?.tagName ??
+            ""
+          )
+            .replace(/\s+/g, " ")
+            .trim();
+
+        return {
+          name: getName(element),
+          role: element?.getAttribute("role") ?? null,
+          tagName: element?.tagName.toLowerCase() ?? "",
+          testId: element?.getAttribute("data-testid") ?? null,
+          tabIndex: element?.tabIndex ?? -1,
+          className: String(element?.className ?? ""),
+          isDisabledPagingButton: Boolean(
+            element?.closest(
+              ".ag-paging-button.ag-disabled, .ag-paging-button[aria-disabled='true']",
+            ),
+          ),
+        };
+      }),
+    );
+  }
+
+  return focusedElements;
+}
+
+async function getActiveElementSnapshot(page: LangflowPage) {
+  return page.evaluate<ActiveElementSnapshot>(() => {
+    const element = document.activeElement as HTMLElement | null;
+    const getName = (activeElement: HTMLElement | null) =>
+      (
+        activeElement?.getAttribute("aria-label") ??
+        activeElement?.getAttribute("title") ??
+        activeElement?.innerText ??
+        activeElement?.getAttribute("data-testid") ??
+        activeElement?.id ??
+        activeElement?.tagName ??
+        ""
+      )
+        .replace(/\s+/g, " ")
+        .trim();
+
+    return {
+      name: getName(element),
+      role: element?.getAttribute("role") ?? null,
+      tagName: element?.tagName.toLowerCase() ?? "",
+      testId: element?.getAttribute("data-testid") ?? null,
+      tabIndex: element?.tabIndex ?? -1,
+      className: String(element?.className ?? ""),
+      colId: element?.getAttribute("col-id") ?? null,
+      isDisabledPagingButton: Boolean(
+        element?.closest(
+          ".ag-paging-button.ag-disabled, .ag-paging-button[aria-disabled='true']",
+        ),
+      ),
+      isGridCell: element?.getAttribute("role") === "gridcell",
+      isTabGuard: Boolean(element?.classList.contains("ag-tab-guard")),
+    };
+  });
+}
+
 test.describe("API keys route accessibility", () => {
   test(
     "scans populated API keys table",
@@ -120,6 +273,212 @@ test.describe("API keys route accessibility", () => {
       await expect(page.getByText("A11y Expiring Key")).toBeVisible();
 
       await page.runA11yScan("settings-api-keys-data-rich");
+    },
+  );
+
+  test(
+    "keeps API keys route tab order usable",
+    { tag: ["@release", "@api"] },
+    async ({ page }) => {
+      await openApiKeysRoute(page);
+
+      const tabOrder = await getVisibleTabOrder(page);
+      const realFocusOrder = await collectTabTraversal(page, 80);
+      const sidebarItems = tabOrder.filter((item) =>
+        item.testId?.startsWith("sidebar-nav-"),
+      );
+      const rowContainers = tabOrder.filter((item) => item.role === "row");
+      const disabledPagingButtons = await page.evaluate(() => {
+        return Array.from(
+          document.querySelectorAll<HTMLElement>(".ag-paging-button"),
+        )
+          .filter(
+            (btn) =>
+              btn.classList.contains("ag-disabled") &&
+              (btn.tabIndex >= 0 ||
+                !btn.hasAttribute("tabindex") ||
+                btn.getAttribute("tabindex") !== "-1"),
+          )
+          .map((btn) => ({
+            name: btn.getAttribute("aria-label") ?? btn.textContent?.trim(),
+            className: btn.className,
+          }));
+      });
+
+      expect(
+        sidebarItems.length,
+        "settings nav should have one tab stop per visible sidebar item",
+      ).toBeGreaterThan(0);
+      expect(
+        sidebarItems.every((item) => item.testId?.startsWith("sidebar-nav-")),
+        "all sidebar items should have sidebar-nav- test IDs",
+      ).toBe(true);
+      // The grid exposes exactly one tabbable row (the roving-tabindex grid
+      // pattern IBM's aria_child_tabbable requires); the rest stay tabindex=-1.
+      expect(
+        rowContainers,
+        "AG Grid should expose exactly one tabbable row (roving tabindex)",
+      ).toHaveLength(1);
+      expect(
+        disabledPagingButtons,
+        "disabled AG Grid paging buttons should not be tabbable",
+      ).toHaveLength(0);
+      expect(
+        realFocusOrder.filter((item) => item.isDisabledPagingButton),
+        "keyboard Tab should not focus disabled AG Grid paging buttons",
+      ).toHaveLength(0);
+
+      // AG Grid exposes the grid as a single logical tab stop via its own tab
+      // guards and gives it an accessible name; the treegrid element itself is
+      // not a tab stop and its rows/cells/headers must not be individual stops.
+      const treegridName = await page.evaluate(
+        () =>
+          document
+            .querySelector('[role="treegrid"]')
+            ?.getAttribute("aria-label") ?? null,
+      );
+      expect(treegridName, "table should expose one named treegrid").toBe(
+        "Langflow API Keys",
+      );
+      const cellAndHeaderTabStops = tabOrder.filter(
+        (item) => item.role === "gridcell" || item.role === "columnheader",
+      );
+      expect(
+        cellAndHeaderTabStops,
+        "individual grid cells and headers should not be tab stops",
+      ).toHaveLength(0);
+    },
+  );
+
+  test(
+    "opens API key name cells with Enter",
+    { tag: ["@release", "@api"] },
+    async ({ page }) => {
+      await openApiKeysRoute(page);
+
+      const nameCell = page
+        .locator('[role="gridcell"][col-id="name"]')
+        .filter({ hasText: "A11y Primary Key" })
+        .first();
+      await expect(nameCell).toBeVisible();
+      await nameCell.evaluate((element) => {
+        (element as HTMLElement).focus();
+      });
+      await page.keyboard.press("Enter");
+
+      await expect(page.getByRole("dialog")).toBeVisible();
+      await expect(page.getByText("View Text")).toBeVisible();
+      await expect(page.getByTestId("textarea")).toHaveValue(
+        "A11y Primary Key",
+      );
+    },
+  );
+
+  test(
+    "moves focus from the last API key header into the table body",
+    { tag: ["@release", "@api"] },
+    async ({ page }) => {
+      await openApiKeysRoute(page);
+
+      const lastHeader = page.locator(
+        '[role="columnheader"][col-id="total_uses"]',
+      );
+      await expect(lastHeader).toBeVisible();
+      await lastHeader.evaluate((element) => {
+        (element as HTMLElement).focus();
+      });
+
+      await page.keyboard.press("Tab");
+      await page.waitForTimeout(20);
+
+      const activeElement = await getActiveElementSnapshot(page);
+
+      expect(activeElement.isGridCell, "focus should enter table body").toBe(
+        true,
+      );
+      expect(activeElement.colId, "focus should start at first body cell").toBe(
+        "name",
+      );
+    },
+  );
+
+  test(
+    "exits the table with a single Tab from the last cell",
+    { tag: ["@release", "@api"] },
+    async ({ page }) => {
+      await openApiKeysRoute(page);
+
+      // Select a row so the table's delete control (the first focusable element
+      // after the grid) is enabled and can receive focus on tab-out.
+      await page.locator(".ag-header-select-all").first().click();
+      const deleteButton = page.getByTestId("delete-row-button");
+      await expect(deleteButton).toBeEnabled();
+
+      const lastCell = page
+        .locator('[role="gridcell"][col-id="total_uses"]')
+        .last();
+      await expect(lastCell).toBeVisible();
+      await lastCell.click();
+
+      await page.keyboard.press("Tab");
+      await page.waitForTimeout(50);
+
+      const activeElement = await getActiveElementSnapshot(page);
+
+      expect(activeElement.isGridCell, "focus should leave the grid body").toBe(
+        false,
+      );
+      expect(
+        activeElement.tagName,
+        "a single Tab should reach the next control, not dead-stop on <body>",
+      ).not.toBe("body");
+      expect(
+        activeElement.testId,
+        "a single Tab should land on the delete control after the grid",
+      ).toBe("delete-row-button");
+    },
+  );
+
+  test(
+    "re-enters the table on reverse tab from the delete control",
+    { tag: ["@release", "@api"] },
+    async ({ page }) => {
+      await openApiKeysRoute(page);
+
+      await page.locator(".ag-header-select-all").first().click();
+      const deleteButton = page.getByTestId("delete-row-button");
+      await expect(deleteButton).toBeEnabled();
+
+      // Tab out of the grid to the delete control the way a keyboard user would,
+      // then reverse back. Reverse tabbing must move past the delete control and
+      // must not trap by oscillating between it and <body> (the regression an
+      // inert/disabled pagination panel caused, where every Shift+Tab bounced
+      // delete <-> body and the grid became unreachable backwards).
+      await page
+        .locator('[role="gridcell"][col-id="total_uses"]')
+        .last()
+        .click();
+      await page.keyboard.press("Tab");
+      await page.waitForTimeout(50);
+      expect((await getActiveElementSnapshot(page)).testId).toBe(
+        "delete-row-button",
+      );
+
+      const escaped: boolean[] = [];
+      for (let index = 0; index < 4; index += 1) {
+        await page.keyboard.press("Shift+Tab");
+        await page.waitForTimeout(40);
+        const snapshot = await getActiveElementSnapshot(page);
+        escaped.push(
+          snapshot.tagName !== "body" &&
+            snapshot.testId !== "delete-row-button",
+        );
+      }
+
+      expect(
+        escaped.some(Boolean),
+        "reverse tab must progress past the delete control, not trap on delete <-> body",
+      ).toBe(true);
     },
   );
 

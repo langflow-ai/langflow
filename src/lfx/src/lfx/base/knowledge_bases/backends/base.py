@@ -19,7 +19,6 @@ call site is expected to obtain a fresh backend instance and tear it down via
 
 from __future__ import annotations
 
-import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
@@ -27,6 +26,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from lfx.log.logger import logger
+from lfx.utils.env_var_security import safe_getenv
 
 if TYPE_CHECKING:
     import queue as sync_queue
@@ -196,7 +196,9 @@ class BaseVectorStoreBackend(ABC):
             except Exception as exc:  # noqa: BLE001 — fall through to env
                 logger.debug("variable_service lookup for %s failed: %s", variable_name, exc)
 
-        env_value = os.environ.get(variable_name)
+        # safe_getenv denies reserved names (LANGFLOW_SECRET_KEY, DATABASE_URL, ...) so a
+        # tenant-supplied KB secret name cannot exfiltrate the server's own secrets.
+        env_value = safe_getenv(variable_name)
         return env_value or None
 
     async def resolve_required_secret(self, variable_name: str) -> str:

@@ -12,6 +12,8 @@ export interface ModelProviderInfo {
   is_enabled: boolean;
   is_configured?: boolean;
   api_docs_url?: string;
+  /** Icon name from provider metadata (e.g. MODEL_PROVIDER_METADATA). */
+  icon?: string;
 }
 
 export interface ModelProviderWithStatus extends ModelProviderInfo {
@@ -50,7 +52,9 @@ export const useGetModelProviders: useQueryFunctionType<
 
     return providersData.map((providerInfo) => ({
       ...providerInfo,
-      icon: getProviderIcon(providerInfo.provider),
+      // Prefer backend metadata icon so new providers don't need a frontend map
+      // entry; fall back to the legacy name→asset map, then Bot.
+      icon: providerInfo.icon || getProviderIcon(providerInfo.provider),
     }));
   };
 
@@ -71,7 +75,7 @@ export const useGetModelProviders: useQueryFunctionType<
   return queryResult;
 };
 
-// Helper function to map provider names to icon names
+// Helper function to map provider names to icon names when the API omits icon.
 const getProviderIcon = (providerName: string): string => {
   const iconMap: Record<string, string> = {
     OpenAI: "OpenAI",
@@ -81,7 +85,10 @@ const getProviderIcon = (providerName: string): string => {
     "Amazon Bedrock": "Bedrock",
     NVIDIA: "NVIDIA",
     Cohere: "Cohere",
-    "Azure OpenAI": "AzureOpenAI",
+    // Both Azure providers share the Azure brand icon asset (there is no
+    // AzureOpenAI icon module in the frontend icon registry).
+    "Azure OpenAI": "Azure",
+    "Azure AI Foundry": "Azure",
     SambaNova: "SambaNova",
     Ollama: "Ollama",
     "IBM WatsonX": "IBM",

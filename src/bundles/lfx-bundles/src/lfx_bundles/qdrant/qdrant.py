@@ -13,6 +13,7 @@ from lfx.io import (
     StrInput,
 )
 from lfx.schema.data import Data, custom_serializer
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
@@ -71,6 +72,12 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         }
 
         server_kwargs = {k: v for k, v in server_kwargs.items() if v is not None}
+
+        # host/url are tenant-controlled: block SSRF to internal/cloud-metadata hosts.
+        if self.url:
+            validate_connector_url_for_ssrf(self.url)
+        elif self.host:
+            validate_connector_url_for_ssrf(f"http://{self.host}:{int(self.port)}")
 
         # Convert DataFrame to Data if needed using parent's method
         self.ingest_data = self._prepare_ingest_data()

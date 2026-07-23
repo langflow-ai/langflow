@@ -68,6 +68,13 @@ class RuntimeSettings(BaseModel):
     """Wall-clock seconds a single background job may run before it is marked
     TIMED_OUT. ``None`` (default) means no timeout. Applies per job, enforced by
     the runner via ``asyncio.wait_for`` around the build loop."""
+    background_input_deadline_s: float | None = None
+    """Optional wall-clock seconds a background run may stay SUSPENDED (awaiting human
+    input) before it is given up on. Independent of ``background_job_timeout``: paused
+    time never accrues against the compute timeout (resume re-enqueues a fresh pass).
+    ``None`` (default) disables the deadline — nothing is stamped, nothing enforced.
+    Enforced by ``sweep_input_deadlines`` (startup sweep + the periodic watchdog when
+    the setting is set), which FAILs overdue runs with an ``input_timed_out`` error."""
     background_lease_ttl_s: float = Field(default=45.0, gt=0)
     """Liveness lease window for a running background job. The running owner
     refreshes a heartbeat on the job row; a reconciler (startup sweep / scaled

@@ -1,9 +1,15 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
 import { TEXTS } from "../../utils/constants/texts";
-import { openFlowCard } from "../../utils/flow/open-flow-card";
+import {
+  addParameterToNode,
+  setParameterApiEditable,
+} from "../../utils/open-advanced-options";
+
+// LE-1810: API exposure is managed per-parameter on the node (panel API
+// toggle backed by the persisted api_editable flag). The apiModal no longer
+// hosts an "Input Schema" section — snippets derive from the exposed fields.
 
 test(
   "curl_api_generation",
@@ -36,21 +42,16 @@ test(
     const clipboardContent = await handle.jsonValue();
     const oldValue = clipboardContent;
     expect(clipboardContent.length).toBeGreaterThan(0);
-    await page.getByTestId("tweaks-button").click();
-    await page
-      .getByRole("heading", { name: TEXTS.componentLanguageModel })
-      .locator("div")
-      .first()
-      .click();
 
-    await page.waitForSelector('[data-testid="showstream"]', {
-      timeout: 1000,
-    });
+    // Expose a parameter through the node's parameters panel — the snippet
+    // must pick it up as a tweak.
+    await page.keyboard.press("Escape");
+    await page.getByTestId("title-Language Model").click();
+    await addParameterToNode(page, "stream");
+    await setParameterApiEditable(page, "stream", true);
 
-    await page.getByTestId("showstream").first().click();
-
-    await page.getByText(TEXTS.close).last().click();
-
+    await page.getByTestId("publish-button").click();
+    await page.getByTestId("api-access-item").click();
     await page.getByTestId("api_tab_curl").click();
     await page.getByTestId("icon-Copy").click();
     const handle2 = await page.evaluateHandle(() =>
@@ -59,18 +60,12 @@ test(
     const clipboardContent2 = await handle2.jsonValue();
     const newValue = clipboardContent2;
     expect(oldValue).not.toBe(newValue);
+    expect(newValue).toContain("stream");
     expect(clipboardContent2.length).toBeGreaterThan(clipboardContent.length);
-    await awaitBootstrapTest(page, { skipModal: true });
-    await openFlowCard(page, TEXTS.templateBasicPrompting);
-    await page.getByTestId("publish-button").click();
-    await page.getByTestId("api-access-item").click();
-    expect(
-      await page.getByText("Input Schema (1)", { exact: true }).isVisible(),
-    );
   },
 );
 
-test("check if tweaks are updating when someothing on the flow changes", async ({
+test("check if exposed parameters are updating when something on the flow changes", async ({
   page,
 }) => {
   await awaitBootstrapTest(page);
@@ -104,6 +99,11 @@ test("check if tweaks are updating when someothing on the flow changes", async (
     .getByTestId("popover-anchor-input-persist_directory")
     .fill("persist_directory_123123123!@#$&*(&%$@");
 
+  // Expose both edited fields so the snippets carry their live values.
+  await page.getByTestId("div-generic-node").click();
+  await setParameterApiEditable(page, "collection_name", true);
+  await setParameterApiEditable(page, "persist_directory", true);
+
   // biome-ignore lint/suspicious/noExplicitAny: legacy
   const focusElementsOnBoard = async ({ page }: any) => {
     const focusElements = await page.getByTestId("publish-button").first();
@@ -113,19 +113,6 @@ test("check if tweaks are updating when someothing on the flow changes", async (
   await focusElementsOnBoard({ page });
 
   await page.getByTestId("api-access-item").click();
-
-  await page.getByTestId("tweaks-button").click();
-
-  await page
-    .getByRole("heading", { name: "Chroma" })
-    .locator("div")
-    .first()
-    .click();
-
-  await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
-  await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
-
-  await page.getByText(TEXTS.close).last().click();
 
   await page.getByText("Python", { exact: true }).click();
 
@@ -141,6 +128,4 @@ test("check if tweaks are updating when someothing on the flow changes", async (
 
   await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
   await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
-
-  expect(await page.getByText("Input Schema (2)", { exact: true }).isVisible());
 });

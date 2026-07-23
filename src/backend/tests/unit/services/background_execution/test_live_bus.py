@@ -106,3 +106,32 @@ async def test_reattach_dedupes_overlap_between_durable_and_live():
     f = await asyncio.wait_for(stream.__anext__(), timeout=2)
     assert f.seq == 2
     await bus.close("job-1")
+
+
+async def test_reattach_keeps_ephemeral_frames_sharing_last_durable_seq():
+    """Ephemeral token frames carry the last durable seq, so seq-dedupe must not eat them.
+
+    The runner publishes ephemeral frames tagged with ``last_durable_seq`` (they have
+    no row of their own). After replay leaves ``highest`` at that same seq, a plain
+    ``seq <= highest`` skip would silently drop every token delta until the next
+    durable milestone bumps the seq.
+    """
+    bus = InMemoryLiveBus()
+    persisted = [LiveFrame(seq=1, data=b"milestone-1")]
+
+    async def read_durable(after_seq: int) -> list[LiveFrame]:
+        return [f for f in persisted if f.seq > after_seq]
+
+    stream = bus.reattach("job-1", last_seq=0, read_durable=read_durable)
+    replayed = await asyncio.wait_for(stream.__anext__(), timeout=2)
+    assert replayed.seq == 1
+
+    # Two token deltas emitted before the next durable milestone: both ride seq 1.
+    await bus.publish("job-1", LiveFrame(seq=1, data=b"tok-a", durable=False))
+    await bus.publish("job-1", LiveFrame(seq=1, data=b"tok-b", durable=False))
+    # ...then the next durable milestone.
+    await bus.publish("job-1", LiveFrame(seq=2, data=b"milestone-2"))
+
+    got = [(await asyncio.wait_for(stream.__anext__(), timeout=2)).data for _ in range(3)]
+    assert got == [b"tok-a", b"tok-b", b"milestone-2"]
+    await bus.close("job-1")

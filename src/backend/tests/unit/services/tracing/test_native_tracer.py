@@ -193,6 +193,43 @@ class TestAddEndTrace:
         tracer.end_trace("comp-1", "Comp")
         assert tracer._current_component_id is None
 
+
+class TestFinalizePendingSpans:
+    """Force-completion of spans that started but never received an end_trace.
+
+    A span whose end event raced the trace worker teardown must still be flushed, otherwise
+    the terminal component (e.g. Chat Output) is silently missing from the persisted trace.
+    """
+
+    def test_pending_span_is_force_completed(self):
+        tracer = _make_tracer()
+        tracer.add_trace("out-1", "Chat Output (out-1)", "chain", {"in": "val"})
+        tracer.end_trace("comp-1", "Other")  # noop; out-1 deliberately left unended
+
+        tracer._finalize_pending_spans()
+
+        assert "out-1" not in tracer.spans
+        names = [s["name"] for s in tracer.completed_spans]
+        assert "Chat Output" in names
+        span = next(s for s in tracer.completed_spans if s["name"] == "Chat Output")
+        assert span["status"] == SpanStatus.OK
+        assert span["inputs"] == {"in": "val"}
+
+    def test_already_ended_spans_are_untouched(self):
+        tracer = _make_tracer()
+        tracer.add_trace("comp-1", "Comp (comp-1)", "chain", {})
+        tracer.end_trace("comp-1", "Comp", outputs={"out": "x"})
+
+        tracer._finalize_pending_spans()
+
+        assert len(tracer.completed_spans) == 1
+        assert tracer.completed_spans[0]["outputs"] == {"out": "x"}
+
+    def test_noop_when_no_pending_spans(self):
+        tracer = _make_tracer()
+        tracer._finalize_pending_spans()
+        assert tracer.completed_spans == []
+
     def test_end_trace_includes_token_attributes(self):
         tracer = _make_tracer()
         tracer.add_trace("comp-1", "Comp (comp-1)", "llm", {})

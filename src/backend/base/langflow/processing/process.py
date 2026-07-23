@@ -144,16 +144,23 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
         logger.warning(f"Template data for node {node.get('id')} should be a dictionary")
         return
 
-    # Security: tweaks must never inject executable code or widen the code sandbox.
+    # Security: tweaks must never inject executable code, widen the code sandbox,
+    # or repoint a protected sink configured by the flow author.
     # The previous name-only block on "code" was bypassable because code-execution
     # components expose their code under other field names (python_code, tool_code,
     # filter_instruction) that serialize as plain "str". Refuse a tweak when the
     # field is code-typed, literally named "code", or is a code/sandbox input on a
     # code-execution component — while leaving benign fields (name, description,
     # data, ...) on those components tweakable.
-    from lfx.utils.flow_validation import CODE_EXECUTION_COMPONENT_TYPES, CODE_EXECUTION_FIELD_NAMES
+    from lfx.utils.flow_validation import (
+        CODE_EXECUTION_COMPONENT_TYPES,
+        CODE_EXECUTION_FIELD_NAMES,
+        PROTECTED_TWEAK_FIELDS_BY_COMPONENT,
+    )
 
-    is_code_exec_component = node.get("data", {}).get("type") in CODE_EXECUTION_COMPONENT_TYPES
+    component_type = node.get("data", {}).get("type")
+    is_code_exec_component = component_type in CODE_EXECUTION_COMPONENT_TYPES
+    protected_tweak_fields = PROTECTED_TWEAK_FIELDS_BY_COMPONENT.get(component_type, ())
     for tweak_name, tweak_value in node_tweaks.items():
         if tweak_name not in template_data:
             continue
@@ -164,6 +171,9 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
             or (is_code_exec_component and tweak_name in CODE_EXECUTION_FIELD_NAMES)
         ):
             logger.warning(f"Security: refusing to override code field {tweak_name!r} via tweaks.")
+            continue
+        if tweak_name in protected_tweak_fields:
+            logger.warning(f"Security: refusing to override protected field {tweak_name!r} via tweaks.")
             continue
         if field_type == "NestedDict":
             value = validate_and_repair_json(tweak_value)

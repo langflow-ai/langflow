@@ -9,6 +9,7 @@ from pathlib import Path as SyncPath
 from unittest.mock import AsyncMock, patch
 from urllib.parse import urlparse
 
+import orjson
 import pytest
 from anyio import Path
 from httpx import AsyncClient
@@ -16,6 +17,7 @@ from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
     detect_github_url,
+    filter_starter_projects_by_available_components,
     get_project_data,
     load_bundles_from_urls,
     load_starter_projects,
@@ -35,6 +37,79 @@ async def test_load_starter_projects():
     assert isinstance(projects, list)
     assert all(isinstance(project[1], dict) for project in projects)
     assert all(isinstance(project[0], Path) for project in projects)
+
+
+def test_filter_starter_projects_by_available_components():
+    available_components = {
+        "input_output": {
+            "ChatInput": {
+                "display_name": "Chat Input",
+                "template": {"_type": "ChatInput"},
+            }
+        }
+    }
+    valid_project = {
+        "name": "Core starter",
+        "data": {
+            "nodes": [
+                {
+                    "data": {
+                        "type": "ChatInput",
+                        "node": {"metadata": {"module": "lfx.components.input_output.chat"}, "template": {}},
+                    }
+                },
+                {"data": {"type": "note", "node": {"metadata": {}, "template": {}}}},
+                {
+                    "data": {
+                        "type": "EmbeddedCustomComponent",
+                        "node": {"metadata": {}, "template": {"code": {"value": "class Embedded: pass"}}},
+                    }
+                },
+            ]
+        },
+    }
+    unavailable_project = {
+        "name": "Bundle starter",
+        "data": {
+            "nodes": [
+                {
+                    "data": {
+                        "type": "OpenAIModelComponent",
+                        "node": {
+                            "metadata": {"module": "lfx.components.openai.openai_chat_model"},
+                            "template": {"code": {"value": "class OpenAIModelComponent: pass"}},
+                        },
+                    }
+                }
+            ]
+        },
+    }
+    projects = [
+        (Path("core.json"), valid_project),
+        (Path("bundle.json"), unavailable_project),
+    ]
+
+    filtered = filter_starter_projects_by_available_components(projects, available_components)
+
+    assert filtered == [(Path("core.json"), valid_project)]
+
+
+async def test_core_catalog_filters_extension_starter_projects():
+    repo_root = SyncPath(__file__).resolve().parents[4]
+    index_path = repo_root / "src" / "lfx" / "src" / "lfx" / "_assets" / "component_index.json"
+    core_components = dict(orjson.loads(index_path.read_bytes())["entries"])
+    projects = await load_starter_projects()
+
+    filtered = filter_starter_projects_by_available_components(projects, core_components)
+
+    filtered_names = {project["name"] for _, project in filtered}
+    removed_names = {project["name"] for _, project in projects} - filtered_names
+    assert removed_names == {
+        "Hybrid Search RAG",
+        "Research Translation Loop",
+        "Structured Data Analysis Agent",
+        "YouTube Analysis",
+    }
 
 
 async def test_get_project_data():
@@ -597,6 +672,52 @@ def test_update_projects_resolves_prompt_via_component_type_alias():
         f"Expected code to be updated to 'new_prompt_code_v2' but got '{updated_code}'. "
         "The legacy 'Prompt' type should resolve to 'Prompt Template'."
     )
+
+
+def test_update_projects_preserves_current_prompt_custom_fields():
+    """Current Prompt Template nodes must retain serialized dynamic inputs."""
+    url_field = {
+        "name": "URL",
+        "type": "str",
+        "value": "",
+        "input_types": ["Message", "Text"],
+    }
+    all_types_dict = {
+        "models_and_agents": {
+            "Prompt Template": {
+                "template": {
+                    "_type": "Component",
+                    "code": {"value": "new_prompt_code"},
+                    "template": {"type": "prompt", "value": ""},
+                },
+                "display_name": "Prompt Template",
+            }
+        }
+    }
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Prompt Template",
+                    "node": {
+                        "custom_fields": {"template": ["URL"]},
+                        "template": {
+                            "_type": "Component",
+                            "code": {"value": "old_prompt_code"},
+                            "template": {"type": "prompt", "value": "Source: {URL}"},
+                            "URL": url_field,
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+
+    updated_template = updated_project["nodes"][0]["data"]["node"]["template"]
+    assert updated_template["URL"] == url_field
 
 
 def test_update_projects_direct_key_takes_precedence_over_alias():

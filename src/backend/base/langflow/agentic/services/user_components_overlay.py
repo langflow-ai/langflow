@@ -86,6 +86,15 @@ def load_registry_with_user_overlay(*, user_id: str | None) -> dict[str, dict]:
     """
     base_registry = load_local_registry()
 
+    # SECURITY: building an overlay entry instantiates the user's generated code in-process
+    # (build_custom_component_template -> compile/exec of the class). When the operator has disabled
+    # custom components, do NOT load/execute user-generated components — return only the built-in
+    # registry so the assistant cannot become a code-execution path that bypasses the platform policy.
+    from lfx.services.deps import get_settings_service
+
+    if not get_settings_service().settings.allow_custom_components:
+        return base_registry
+
     if user_id is None:
         return base_registry
 

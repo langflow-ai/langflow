@@ -2205,6 +2205,8 @@ The proposal card renders **three actions** in pending state:
 - **Replace canvas** (secondary, neutral border): destructive, calls the legacy `applyFlowUpdate(set_flow)` path. Testid `assistant-flow-replace-button`. Calls `onApply("replace")`. Tooltip clarifies the consequence.
 - **Dismiss** (zinc dark button): unchanged.
 
+**Applying minimizes the panel.** Both apply modes write the canvas, so `handleApplyFlowProposal` calls `setAssistantSidebarOpen(false)` — the flow the user just accepted is revealed immediately instead of sitting behind the panel. The legacy "Add to Flow" path in `AssistantFlowPreview` does the same. **Dismiss** does not touch the canvas and leaves the panel open.
+
 `AssistantFlowPreview` exposes a single `onApply: (mode: "replace" | "add") => void` callback. The hook handler `handleApplyFlowProposal(messageId, mode)` accepts the mode and routes:
 
 - `mode="replace"` (also the default when omitted) → `applyFlowUpdate({action: "set_flow", flow})` — backwards-compat for any caller that ignores the arg.

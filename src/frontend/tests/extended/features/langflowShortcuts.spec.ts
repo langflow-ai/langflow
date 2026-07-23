@@ -25,7 +25,7 @@ test(
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await page.getByTestId("generic-node-title-arrangement").click();
-    await expect(page.getByTestId("panel-description")).toBeVisible();
+    await expect(page.getByTestId("parameters-button")).toBeVisible();
 
     await page.getByTestId("generic-node-title-arrangement").click();
     await page.keyboard.press(`ControlOrMeta+d`);

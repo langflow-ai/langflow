@@ -3,7 +3,12 @@ import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs-button";
 import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import {
@@ -211,63 +216,79 @@ export default function GlobalVariableModal({
         {children}
       </BaseModal.Trigger>
       <BaseModal.Content>
-        <div className="flex h-full w-full flex-col gap-4">
+        <Tabs
+          defaultValue={type}
+          onValueChange={handleOnValueCHange}
+          className="flex h-full w-full flex-col gap-4"
+        >
           <div className="space-y-2">
             <Label>{t("globalVars.modal.typeLabel")}</Label>
-            <Tabs
-              defaultValue={type}
-              onValueChange={handleOnValueCHange}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger
-                  disabled={!!initialData?.type}
-                  data-testid="credential-tab"
-                  value="Credential"
-                >
-                  {t("globalVars.modal.typeCredential")}
-                </TabsTrigger>
-                <TabsTrigger
-                  disabled={!!initialData?.type}
-                  data-testid="generic-tab"
-                  value="Generic"
-                >
-                  {t("globalVars.modal.typeGeneric")}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger
+                disabled={
+                  !!initialData?.type && initialData.type !== "Credential"
+                }
+                data-testid="credential-tab"
+                value="Credential"
+              >
+                {t("globalVars.modal.typeCredential")}
+              </TabsTrigger>
+              <TabsTrigger
+                disabled={!!initialData?.type && initialData.type !== "Generic"}
+                data-testid="generic-tab"
+                value="Generic"
+              >
+                {t("globalVars.modal.typeGeneric")}
+              </TabsTrigger>
+            </TabsList>
           </div>
 
           <div className="space-y-2" id="global-variable-modal-inputs">
-            <Label>{t("globalVars.modal.nameLabel")}</Label>
+            <Label htmlFor="global-variable-name">
+              {t("globalVars.modal.nameLabel")}
+            </Label>
             <Input
+              id="global-variable-name"
               value={key}
               onChange={(e) => setKey(e.target.value)}
               placeholder={t("globalVars.modal.namePlaceholder")}
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>{t("globalVars.modal.valueLabel")}</Label>
-            {type === "Credential" ? (
-              <InputComponent
-                password
-                value={value}
-                onChange={(e) => setValue(e)}
-                placeholder={t("globalVars.modal.valuePlaceholder")}
-                nodeStyle
-              />
-            ) : (
-              <Input
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder={t("globalVars.modal.valuePlaceholder")}
-              />
-            )}
-          </div>
+          <TabsContent
+            value="Credential"
+            className="m-0 space-y-2"
+            tabIndex={-1}
+          >
+            <Label id="global-variable-value-credential-label">
+              {t("globalVars.modal.valueLabel")}
+            </Label>
+            <InputComponent
+              password
+              id="global-variable-value-credential"
+              value={value}
+              onChange={(e) => setValue(e)}
+              placeholder={t("globalVars.modal.valuePlaceholder")}
+              nodeStyle
+              ariaLabelledBy="global-variable-value-credential-label"
+            />
+          </TabsContent>
+          <TabsContent value="Generic" className="m-0 space-y-2" tabIndex={-1}>
+            <Label htmlFor="global-variable-value-generic">
+              {t("globalVars.modal.valueLabel")}
+            </Label>
+            <Input
+              id="global-variable-value-generic"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder={t("globalVars.modal.valuePlaceholder")}
+            />
+          </TabsContent>
 
           <div className="space-y-2">
-            <Label>{t("globalVars.modal.applyToFieldsLabel")}</Label>
+            <Label id="global-variable-apply-to-fields-label">
+              {t("globalVars.modal.applyToFieldsLabel")}
+            </Label>
             <InputComponent
               setSelectedOptions={(value) => setFields(value)}
               selectedOptions={fields}
@@ -277,12 +298,13 @@ export default function GlobalVariableModal({
               id="apply-to-fields"
               popoverWidth="29rem"
               optionsPlaceholder="Fields"
+              ariaLabelledBy="global-variable-apply-to-fields-label"
             />
             <div className="text-xs text-muted-foreground">
               {t("globalVars.modal.applyToFieldsHint")}
             </div>
           </div>
-        </div>
+        </Tabs>
       </BaseModal.Content>
       <BaseModal.Footer
         submit={{

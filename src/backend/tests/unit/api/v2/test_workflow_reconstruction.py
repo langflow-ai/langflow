@@ -184,6 +184,84 @@ class TestWorkflowReconstruction:
             # Verify filtering happened by checking terminal nodes were retrieved
             mock_graph.get_terminal_nodes.assert_called_once()
 
+    async def test_reconstructed_outputs_carry_terminal_content(self):
+        """The rebuilt response must carry the persisted terminal content.
+
+        The persisted vertex_build ``data`` blob (a ``ResultDataResponse`` dump) has no
+        ``component_id`` — the component id lives on the row's ``id`` column. The rebuild
+        must attach it, or the converter's ``output_data_map`` (keyed by component_id)
+        stays empty and every completed background GET status returns ``content: null``
+        / ``output.text: null`` while the same run in sync mode returns the text.
+        Fixture mirrors a real ChatOutput row captured from a live background run.
+        """
+        from lfx.components.input_output import ChatInput, ChatOutput
+
+        chat_input = ChatInput(_id="chat_input")
+        chat_output = ChatOutput(_id="chat_output")
+        payload = {
+            "nodes": [
+                {"id": node["id"], "data": node["data"]}
+                for node in (chat_input.to_frontend_node(), chat_output.to_frontend_node())
+            ],
+            "edges": [
+                {
+                    "source": "chat_input",
+                    "target": "chat_output",
+                    "id": "chat_input-message-chat_output",
+                    "data": {
+                        "sourceHandle": {
+                            "dataType": "ChatInput",
+                            "id": "chat_input",
+                            "name": "message",
+                            "output_types": ["Message"],
+                        },
+                        "targetHandle": {
+                            "fieldName": "input_value",
+                            "id": "chat_output",
+                            "inputTypes": ["Message"],
+                            "type": "str",
+                        },
+                    },
+                }
+            ],
+        }
+        mock_flow = MagicMock()
+        mock_flow.id = uuid4()
+        mock_flow.name = "echo"
+        mock_flow.data = payload
+
+        vb = MagicMock(spec=VertexBuildTable)
+        vb.id = "chat_output"
+        vb.data = {
+            "results": {
+                "message": {
+                    "text_key": "text",
+                    "data": {"text": "hello content probe", "session_id": "session-1", "sender": "Machine"},
+                    "text": "hello content probe",
+                    "session_id": "session-1",
+                }
+            },
+            "outputs": {"message": {"message": "hello content probe", "type": "text"}},
+            "logs": {"message": []},
+            "artifacts": {"message": "hello content probe", "type": "object"},
+            "duration": "8 ms",
+        }
+        vb.artifacts = {}
+        vb.timestamp = datetime.now(timezone.utc)
+
+        with patch("langflow.api.v2.workflow_reconstruction.get_vertex_builds_by_job_id") as mock_get_vb:
+            mock_get_vb.return_value = [vb]
+            response = await reconstruct_workflow_response_from_job_id(
+                session=MagicMock(),
+                flow=mock_flow,
+                job_id=str(uuid4()),
+                user_id=str(uuid4()),
+            )
+
+        assert response.outputs["chat_output"].content == "hello content probe"
+        assert response.output.text == "hello content probe"
+        assert response.session_id == "session-1"
+
     async def test_reconstruct_blocks_custom_components_when_disabled(self, monkeypatch):
         flow_id = uuid4()
         job_id = uuid4()

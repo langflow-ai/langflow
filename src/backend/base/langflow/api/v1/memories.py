@@ -104,9 +104,8 @@ async def create_memory_base(
     - Returns 422 if preprocessing=true but preproc_model is missing.
     """
     # Memory bases are knowledge-base-backed resources; guard via the KB family.
-    # Passing the actor as owner makes the owner-override path return early when
-    # no access ceiling is set, preserving existing behavior, while a deny-only
-    # external ceiling (e.g. a "viewer") is still enforced.
+    # The actor is only the prospective owner during CREATE, so the shared guard
+    # still evaluates policy instead of applying the existing-resource override.
     await ensure_knowledge_base_permission(
         current_user,
         KnowledgeBaseAction.CREATE,

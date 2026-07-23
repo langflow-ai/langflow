@@ -163,6 +163,12 @@ jobs:
             exit 1
           fi
 
+          if [ "${{ inputs.release_package_base }}" = "true" ] && [ "${{ inputs.release_lfx }}" = "false" ]; then
+            echo "Error: Cannot release Langflow Base without releasing LFX."
+            echo "Langflow Base depends on LFX. Please enable 'release_lfx' or disable 'release_package_base'."
+            exit 1
+          fi
+
           if [ "${{ inputs.release_lfx }}" = "true" ] && [ "${{ inputs.release_sdk }}" = "false" ]; then
             echo "Error: Cannot release LFX without releasing langflow-sdk."
             echo "LFX depends on langflow-sdk. Please enable 'release_sdk' or disable 'release_lfx'."
@@ -311,7 +317,11 @@ jobs:
               version="$(read_pyproject_version "$pyproject")"
               output_file="$tmp_dir/${package_name}-pypi.txt"
               fetch_pypi_versions "$package_name" "$output_file"
-              consider_versions "PyPI ${package_name}" "$version" "$output_file"
+              if grep -Fxq "$version" "$output_file"; then
+                echo "PyPI ${package_name}: final ${version} is already published; excluding its historical RCs."
+              else
+                consider_versions "PyPI ${package_name}" "$version" "$output_file"
+              fi
             done
           fi
 
@@ -667,6 +677,10 @@ jobs:
           # Update version in lfx pyproject.toml
           sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
 
+          # Keep the bundled component index version/hash aligned with the RC wheel.
+          uv run --no-sync python ../../scripts/ci/update_component_index_version.py \
+            src/lfx/_assets/component_index.json "$VERSION"
+
           # Verify the change
           echo "Updated pyproject.toml version:"
           grep "^version" pyproject.toml
@@ -779,7 +793,7 @@ jobs:
           if [ -d "./sdk-dist" ]; then
             FIND_LINKS="$FIND_LINKS --find-links ./sdk-dist"
           fi
-          uv pip install $FIND_LINKS --prerelease=allow -e src/backend/base
+          uv pip install $FIND_LINKS --prerelease=if-necessary-or-explicit -e src/backend/base
       - name: Check for dependency incompatibility
         if: ${{ inputs.run_pip_check }}
         run: uv pip check
@@ -801,31 +815,11 @@ jobs:
         run: |
           LFX_VERSION="${{ needs.determine-lfx-version.outputs.version }}"
           echo "Updating lfx dependency to allow pre-release version: $LFX_VERSION"
-          cd src/backend/base
+          python3 scripts/ci/update_lfx_pre_release_dependency.py \
+            src/backend/base/pyproject.toml "$LFX_VERSION"
 
-          # Extract current lfx constraint from pyproject.toml
-          CURRENT_CONSTRAINT=$(grep -E '^\s*"lfx' pyproject.toml | head -1)
-          echo "Current constraint: $CURRENT_CONSTRAINT"
-
-          # Extract the major.minor version (e.g., "1.10" from "~=1.10.0", or from the
-          # lower bound of the range form ">=1.10.0,<1.11.dev0"). Anchor to the FIRST
-          # version in the line so a greedy match can't pick up the range's upper bound.
-          MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/^[^0-9]*([0-9]+\.[0-9]+).*/\1/')
-          MAJOR=${MAJOR_MINOR%.*}
-          MINOR=${MAJOR_MINOR#*.}
-          NEXT_MINOR=$((MINOR + 1))
-
-          # Create new constraint: >=LFX_VERSION,<MAJOR.(MINOR+1).dev0
-          NEW_CONSTRAINT="\"lfx>=$LFX_VERSION,<$MAJOR.$NEXT_MINOR.dev0\""
-
-          echo "New constraint: $NEW_CONSTRAINT"
-
-          # Replace the constraint
-          sed -i.bak "s|\"lfx[^\"]*\"|$NEW_CONSTRAINT|" pyproject.toml
-
-          # Verify the change
           echo "Updated lfx dependency:"
-          grep "lfx" pyproject.toml
+          grep "lfx" src/backend/base/pyproject.toml
       - name: Build project for distribution
         run: make build base=true args="--wheel"
       - name: Verify built version
@@ -931,7 +925,7 @@ jobs:
           if [ -d "./sdk-dist" ]; then
             FIND_LINKS="$FIND_LINKS --find-links ./sdk-dist"
           fi
-          uv pip install $FIND_LINKS --prerelease=allow -e .
+          uv pip install $FIND_LINKS --prerelease=if-necessary-or-explicit -e .
       - name: Check for dependency incompatibility
         if: ${{ inputs.run_pip_check }}
         run: uv pip check
@@ -1049,25 +1043,49 @@ jobs:
           prune-cache: false
       - name: Install the project
         run: uv sync
-      - name: Set bundle versions for pre-release
+      - name: Set unpublished bundle versions for pre-release
         if: ${{ inputs.pre_release }}
         run: |
+          set -euo pipefail
+
+          pypi_final_exists() {
+            local package_name="$1"
+            local version="$2"
+            local response_file
+            response_file="$(mktemp)"
+            local status
+            status=$(curl --retry 3 --retry-delay 2 --retry-connrefused -sS -o "$response_file" -w "%{http_code}" "https://pypi.org/pypi/${package_name}/${version}/json")
+            if [ "$status" = "200" ]; then
+              return 0
+            fi
+            if [ "$status" = "404" ]; then
+              return 1
+            fi
+            echo "Failed to check PyPI release ${package_name} ${version}: HTTP ${status}" >&2
+            cat "$response_file" >&2 || true
+            exit 1
+          }
+
           RC_NUMBER="${{ needs.determine-rc-number.outputs.rc_number }}"
-          echo "Setting bundle pre-release versions with shared rc number: rc$RC_NUMBER"
+          echo "Setting unpublished bundle pre-release versions with shared rc number: rc$RC_NUMBER"
           for pyproject in src/bundles/*/pyproject.toml; do
-            CURRENT_VERSION=$(python3 - "$pyproject" <<'PY'
+            read -r PACKAGE_NAME CURRENT_VERSION < <(python3 - "$pyproject" <<'PY'
           import pathlib
           import sys
           import tomllib
 
           data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text())
-          print(data["project"]["version"])
+          print(data["project"]["name"], data["project"]["version"])
           PY
           )
+            if pypi_final_exists "$PACKAGE_NAME" "$CURRENT_VERSION"; then
+              echo "Keeping ${PACKAGE_NAME} at ${CURRENT_VERSION}: final version is already published."
+              continue
+            fi
             VERSION=$(uv run ./scripts/ci/langflow_pre_release_tag.py "$CURRENT_VERSION" --rc-number "$RC_NUMBER")
             sed -i.bak "0,/^version = /s|^version = .*|version = \"$VERSION\"|" "$pyproject"
             rm -f "${pyproject}.bak"
-            grep "^version" "$pyproject" | sed "s|^|  ${pyproject}: |"
+            echo "Set ${PACKAGE_NAME} to ${VERSION}."
           done
       - name: Relax bundle lfx floor for pre-release
         if: ${{ inputs.pre_release }}
@@ -1334,27 +1352,42 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    if: ${{ inputs.build_docker_base }}
-    needs: [ci, determine-base-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_base &&
+      needs.ci.result == 'success' &&
+      needs.determine-base-version.result == 'success' &&
+      (!inputs.release_package_base || needs.build-base.result == 'success')
+    needs: [ci, determine-base-version, build-base]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: base
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-base-version.outputs.version }}
+      release_artifacts: ${{ needs.build-base.result == 'success' }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci, determine-main-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_main &&
+      needs.ci.result == 'success' &&
+      needs.determine-main-version.result == 'success' &&
+      (!inputs.release_package_main || needs.build-main.result == 'success') &&
+      (!inputs.release_bundles || needs.build-bundles.result == 'success')
+    needs: [ci, determine-main-version, build-main, build-bundles]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
+      release_artifacts: ${{ needs.build-main.result == 'success' }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
@@ -1386,27 +1419,37 @@ jobs:
 
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci, determine-main-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_main &&
+      needs.call_docker_build_main.result == 'success'
+    needs: [call_docker_build_main, determine-main-version, build-main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main-ep
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
+      release_artifacts: ${{ needs.build-main.result == 'success' }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main_all:
     name: Call Docker Build Workflow for langflow-all
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci, determine-main-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.build_docker_main &&
+      needs.call_docker_build_main.result == 'success'
+    needs: [call_docker_build_main, determine-main-version, build-main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main-all
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
+      release_artifacts: ${{ needs.build-main.result == 'success' }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 

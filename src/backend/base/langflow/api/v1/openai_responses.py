@@ -513,14 +513,22 @@ async def run_flow_for_openai_responses(
                                     break
 
                         if hasattr(component_output, "results") and component_output.results:
-                            for blocks in component_output.results.get("message", {}).content_blocks:
+                            message = component_output.results.get("message")
+                            for block in getattr(message, "content_blocks", None) or []:
+                                # The agent's flat log carries tool_use as top-level
+                                # ToolContent leaves; the legacy/grouped shape nests
+                                # them inside a group's ``contents``. Handle both.
+                                if isinstance(block, ToolContent):
+                                    leaves = [block]
+                                else:
+                                    leaves = getattr(block, "contents", None) or []
                                 tool_calls.extend(
                                     {
                                         "name": content.name,
                                         "input": content.tool_input,
                                         "output": content.output,
                                     }
-                                    for content in blocks.contents
+                                    for content in leaves
                                     if isinstance(content, ToolContent)
                                 )
                     if output_text:

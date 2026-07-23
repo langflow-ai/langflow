@@ -42,13 +42,23 @@ class LiveFrame:
     milestone it is the row's ``job_events.seq``; for an ephemeral frame it is
     the seq of the most recent durable milestone (so ordering stays monotonic).
     ``data`` is the already-formatted SSE frame bytes.
+
+    ``durable`` says whether this frame has a ``job_events`` row of its own.
+    Only durable frames can come back from a replay, so only they are
+    seq-deduped on reattach; ephemeral frames share the preceding milestone's
+    seq and would otherwise be mistaken for replays of it.
     """
 
     seq: int
     data: bytes
+    durable: bool = True
 
 
 ReadDurable = Callable[[int], Awaitable[list[LiveFrame]]]
+# True once the run will produce no more durable frames (terminal; +SUSPENDED in LE-1442).
+IsDone = Callable[[], Awaitable[bool]]
+
+_DURABLE_POLL_INTERVAL_S = 0.5
 
 # Sentinel pushed into a subscriber queue to signal end-of-stream.
 _CLOSED = object()
@@ -140,6 +150,9 @@ class InMemoryLiveBus:
         job_id: str,
         last_seq: int,
         read_durable: ReadDurable,
+        *,
+        is_done: IsDone | None = None,
+        poll_interval_s: float = _DURABLE_POLL_INTERVAL_S,
     ) -> AsyncIterator[LiveFrame]:
         """Replay the durable log after ``last_seq``, then tail the live bus.
 
@@ -147,6 +160,11 @@ class InMemoryLiveBus:
         frame published during replay is lost. Frames whose seq was already
         replayed (or already <= last_seq) are skipped so the boundary emits
         each seq exactly once.
+
+        With ``is_done`` set, the tail also polls the durable log on idle so a
+        reattach landing on a worker that is NOT running the job (its runner
+        writes the durable log, not this process's bus) still advances gap-free
+        and ends when ``is_done()`` reports the job reached a terminal state.
         """
         # Register eagerly (not inside the generator) so frames published
         # between ``reattach(...)`` and the first ``__anext__`` are captured.
@@ -154,6 +172,11 @@ class InMemoryLiveBus:
 
         async def _gen() -> AsyncIterator[LiveFrame]:
             highest = last_seq
+
+            async def drain_durable(after: int) -> tuple[int, list[LiveFrame]]:
+                fresh = [f for f in await read_durable(after) if f.seq > after]
+                return (fresh[-1].seq if fresh else after), fresh
+
             try:
                 for frame in await read_durable(last_seq):
                     highest = max(highest, frame.seq)
@@ -162,12 +185,27 @@ class InMemoryLiveBus:
                 if self._closed.get(job_id) and queue.empty():
                     return
                 while True:
-                    item = await queue.get()
+                    if is_done is None:
+                        item = await queue.get()
+                    else:
+                        try:
+                            item = await asyncio.wait_for(queue.get(), timeout=poll_interval_s)
+                        except asyncio.TimeoutError:
+                            highest, fresh = await drain_durable(highest)
+                            for frame in fresh:
+                                yield frame
+                            if await is_done():
+                                highest, fresh = await drain_durable(highest)
+                                for frame in fresh:
+                                    yield frame
+                                return
+                            continue
                     if item is _CLOSED:
                         return
-                    if item.seq <= highest:
-                        continue
-                    highest = item.seq
+                    if item.durable:
+                        if item.seq <= highest:
+                            continue
+                        highest = item.seq
                     yield item
             finally:
                 self._drop_queue(job_id, queue)

@@ -204,6 +204,21 @@ class TestToolContent:
         deserialized = ToolContent.model_validate(serialized)
         assert deserialized == tool
 
+    def test_tool_input_coerces_json_string(self):
+        """A JSON-object string tool_input parses to a dict instead of raising ValidationError."""
+        tool = ToolContent(name="search", tool_input='{"q": "hi"}')
+        assert tool.tool_input == {"q": "hi"}
+
+    def test_tool_input_wraps_plain_string(self):
+        """A non-JSON string tool_input is wrapped under an ``input`` key so the field still validates."""
+        tool = ToolContent(name="search", tool_input="weather in SF")
+        assert tool.tool_input == {"input": "weather in SF"}
+
+    def test_tool_input_via_input_alias_coerces(self):
+        """The same coercion applies when set through the ``input`` alias."""
+        tool = ToolContent.model_validate({"type": "tool_use", "name": "s", "input": "raw"})
+        assert tool.tool_input == {"input": "raw"}
+
 
 # --- New content type tests ---
 
