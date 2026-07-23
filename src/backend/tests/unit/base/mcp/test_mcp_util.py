@@ -286,6 +286,38 @@ class TestMCPSessionManager:
         # Clean up after test
         await manager.cleanup_all()
 
+    async def test_cancelled_stdio_session_creation_closes_transport(self, session_manager):
+        """Cancelling session creation must also stop its detached transport task."""
+        initialize_started = asyncio.Event()
+        never_ready = asyncio.Event()
+
+        async def initialize():
+            initialize_started.set()
+            await never_ready.wait()
+
+        session = MagicMock()
+        session.initialize = AsyncMock(side_effect=initialize)
+        session.__aenter__ = AsyncMock(return_value=session)
+        session.__aexit__ = AsyncMock(return_value=None)
+
+        transport = MagicMock()
+        transport.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+        transport.__aexit__ = AsyncMock(return_value=None)
+
+        with (
+            patch("mcp.client.stdio.stdio_client", return_value=transport),
+            patch("lfx.base.mcp.util.ClientSession", return_value=session),
+        ):
+            creation = asyncio.create_task(session_manager._create_stdio_session("test_session", MagicMock()))
+            await initialize_started.wait()
+            creation.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await creation
+            await asyncio.sleep(0)
+
+        session.__aexit__.assert_awaited_once()
+        transport.__aexit__.assert_awaited_once()
+
     async def test_session_caching(self, session_manager):
         """Test that sessions are properly cached and reused."""
         context_id = "test_context"
@@ -3972,6 +4004,41 @@ class TestStreamableHttpTransportPolicy:
         inst.__aenter__ = AsyncMock(return_value=inst)
         inst.__aexit__ = AsyncMock(return_value=None)
         return inst
+
+    @pytest.mark.asyncio
+    async def test_cancelled_session_creation_closes_transport(self):
+        manager = MCPSessionManager()
+        try:
+            initialize_started = asyncio.Event()
+            never_ready = asyncio.Event()
+
+            async def initialize():
+                initialize_started.set()
+                await never_ready.wait()
+
+            session = self._fake_client_session()
+            session.initialize = AsyncMock(side_effect=initialize)
+            transport = MagicMock()
+            transport.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock(), None))
+            transport.return_value.__aexit__ = AsyncMock(return_value=None)
+
+            with (
+                patch("lfx.base.mcp.util.ClientSession", return_value=session),
+                patch("mcp.client.streamable_http.streamablehttp_client", transport),
+            ):
+                creation = asyncio.create_task(
+                    manager._create_streamable_http_session("test_sess", self._connection_params(), None)
+                )
+                await initialize_started.wait()
+                creation.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await creation
+                await asyncio.sleep(0)
+
+            session.__aexit__.assert_awaited_once()
+            transport.return_value.__aexit__.assert_awaited_once()
+        finally:
+            await manager.cleanup_all()
 
     @pytest.mark.asyncio
     async def test_streamable_success_sse_not_invoked(self):
