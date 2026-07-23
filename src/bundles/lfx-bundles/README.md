@@ -45,7 +45,7 @@ pip install "lfx-bundles[<provider>]"  # one provider's code + that provider's S
 ```
 
 `lfx-bundles` itself depends only on `lfx`. Each provider's third-party SDKs are
-**optional extras** (PEP 685-normalized keys, e.g. `lfx-bundles[google]`); the
+**optional extras** (PEP 685-normalized keys, e.g. `lfx-bundles[qdrant]`); the
 generated `all` extra pulls every provider's deps for users who explicitly
 install `lfx[bundles]` or `lfx-bundles[all]`.
 

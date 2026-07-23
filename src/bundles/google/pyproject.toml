@@ -1,0 +1,55 @@
+[project]
+name = "lfx-google"
+version = "0.1.0"
+description = "Google and Gemini components as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "google", "gemini"]
+
+# Runtime deps: lfx (the BUNDLE_API surface) plus every third-party package
+# imported by the Google components. Keep these dependencies with the bundle
+# so a default Langflow install can discover and build Gemini models without
+# relying on the opt-in lfx-bundles metapackage.
+dependencies = [
+    "lfx>=1.12.0.dev0,<2.0.0",
+    "google-api-python-client~=2.161",
+    "google-auth>=2.38.0,<3.0.0",
+    "google-auth-oauthlib>=1.2.0,<2.0.0",
+    "google-cloud-bigquery>=3.35,<4.0.0",
+    "langchain-community>=0.4.1,<1.0.0",
+    "langchain-core>=1.2.28,<2.0.0",
+    "langchain-google-community~=3.0.2",
+    "langchain-google-genai~=4.1.2",
+    "requests>=2.32.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+[project.entry-points."langflow.extensions"]
+lfx-google = "lfx_google"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_google"]
+include = [
+    "src/lfx_google/extension.json",
+    "src/lfx_google/components/**/*.py",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_google",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]
