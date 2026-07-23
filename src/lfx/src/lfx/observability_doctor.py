@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 
@@ -97,24 +98,38 @@ class _ExporterLogCapture(logging.Handler):
         self.messages.append(f"{record.levelname}: {record.getMessage()}")
 
 
+# Serializes the temporary mutation of the process-global ``opentelemetry`` logger below.
+# Without it, two overlapping capture windows snapshot each other's temporary level and restore
+# out of order, leaving the logger permanently at the wrong level: a host that had quieted otel
+# to ERROR is left at WARNING for the rest of the process. That would break the guarantee this
+# module rests on, that a doctor run cannot disturb a live process.
+#
+# ponytail: one global lock, because the thing being guarded is itself one global logger. The
+# windows are short and never nested, so there is nothing to contend over and no upgrade path
+# worth building.
+_LOGGER_STATE_LOCK = threading.Lock()
+
+
 @contextmanager
 def _capture_exporter_logs():
     """Listen on the ``opentelemetry`` logger for the duration of one export.
 
     The level is forced on that logger as well as the handler: it is normally NOTSET, so its
     effective level comes from the root, and a host that raised the root above WARNING would
-    otherwise hide the very messages we are here to surface. Both are restored afterwards.
+    otherwise hide the very messages we are here to surface. Both are restored afterwards, under
+    a lock so concurrent callers cannot interleave their snapshot and restore.
     """
     handler = _ExporterLogCapture()
     otel_logger = logging.getLogger("opentelemetry")
-    previous_level = otel_logger.level
-    otel_logger.setLevel(logging.WARNING)
-    otel_logger.addHandler(handler)
-    try:
-        yield handler
-    finally:
-        otel_logger.removeHandler(handler)
-        otel_logger.setLevel(previous_level)
+    with _LOGGER_STATE_LOCK:
+        previous_level = otel_logger.level
+        otel_logger.setLevel(logging.WARNING)
+        otel_logger.addHandler(handler)
+        try:
+            yield handler
+        finally:
+            otel_logger.removeHandler(handler)
+            otel_logger.setLevel(previous_level)
 
 
 def _header_keys(signal: str) -> list[str]:
