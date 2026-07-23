@@ -14,8 +14,10 @@ from langflow.services.authorization.actions import (
     FlowAction,
     KnowledgeBaseAction,
     ProjectAction,
+    ProviderAccountAction,
     ShareAction,
     VariableAction,
+    VoiceAction,
 )
 
 # Canonical permission slug is ``<resource>:<action>`` — matches the
@@ -43,6 +45,8 @@ _RESOURCE_ACTIONS: dict[str, frozenset[str]] = {
     "variable": frozenset({a.value for a in VariableAction}) | {"*"},
     "file": frozenset({a.value for a in FileAction}) | {"*"},
     "share": frozenset({a.value for a in ShareAction}) | {"*"},
+    "provider_account": frozenset({a.value for a in ProviderAccountAction}) | {"*"},
+    "voice": frozenset({a.value for a in VoiceAction}) | {"*"},
 }
 
 _PERMISSION_SLUG_RE = re.compile(r"^[a-z_]+:[a-z_*]+$")
@@ -92,7 +96,7 @@ class RoleCreate(BaseModel):
             "Permission slugs in the canonical ``<resource>:<action>`` form — for "
             "example ``flow:read``, ``deployment:execute``, ``share:create``. "
             "Resources must be one of flow, deployment, project, knowledge_base, "
-            "variable, file, share, plus the narrow model-provider form "
+            "variable, file, share, provider_account, voice, plus the narrow model-provider form "
             "``component:models/<provider-id>:read``. Actions are constrained per-resource (see "
             "``services/authorization/actions.py``): e.g. ``deploy`` is only valid "
             "on ``flow``, ``ingest`` only on ``knowledge_base``, ``update`` only on "

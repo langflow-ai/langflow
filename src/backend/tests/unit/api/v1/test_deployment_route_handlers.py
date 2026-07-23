@@ -1698,6 +1698,101 @@ class TestListDeploymentFlowVersionsRoute:
 
 class TestProviderAccountRoutes:
     @pytest.mark.asyncio
+    async def test_provider_account_guards_precede_all_route_side_effects(self, monkeypatch):
+        """Every provider-account route stops before external I/O or mutation when revoked."""
+        from langflow.api.v1 import deployments as routes
+
+        user = _fake_user()
+        account = _fake_provider_account(user_id=user.id)
+        denied_guard = AsyncMock(side_effect=HTTPException(status_code=403, detail="denied"))
+        mapper = MagicMock()
+        adapter = MagicMock()
+        create_row = AsyncMock()
+        list_rows = AsyncMock()
+        count_rows = AsyncMock()
+        fetch_row = AsyncMock(return_value=account)
+        fetch_owned = AsyncMock(return_value=account)
+        update_row = AsyncMock()
+        delete_row = AsyncMock()
+        reconcile = AsyncMock()
+
+        monkeypatch.setattr(routes, "ensure_provider_account_permission", denied_guard)
+        monkeypatch.setattr(routes, "get_deployment_mapper", mapper)
+        monkeypatch.setattr(routes, "resolve_deployment_adapter", adapter)
+        monkeypatch.setattr(routes, "create_provider_account_row", create_row)
+        monkeypatch.setattr(routes, "list_provider_account_rows", list_rows)
+        monkeypatch.setattr(routes, "count_provider_account_rows", count_rows)
+        monkeypatch.setattr(routes, "get_provider_account_row_by_id", fetch_row)
+        monkeypatch.setattr(routes, "get_owned_provider_account_or_404", fetch_owned)
+        monkeypatch.setattr(routes, "update_provider_account_row", update_row)
+        monkeypatch.setattr(routes, "delete_provider_account_row", delete_row)
+        monkeypatch.setattr(routes, "_count_provider_deployments_after_reconciliation", reconcile)
+
+        with pytest.raises(HTTPException) as create_error:
+            await routes.create_provider_account(
+                session=AsyncMock(),
+                payload=SimpleNamespace(provider_key="test-provider"),
+                current_user=user,
+                telemetry=_fake_telemetry(),
+            )
+        assert create_error.value.status_code == 403
+        mapper.assert_not_called()
+        adapter.assert_not_called()
+        create_row.assert_not_awaited()
+
+        denied_guard.reset_mock(side_effect=True)
+        denied_guard.side_effect = HTTPException(status_code=403, detail="denied")
+        with pytest.raises(HTTPException) as list_error:
+            await routes.list_provider_accounts(
+                session=AsyncMock(),
+                current_user=user,
+                page=1,
+                size=20,
+            )
+        assert list_error.value.status_code == 403
+        list_rows.assert_not_awaited()
+        count_rows.assert_not_awaited()
+
+        denied_guard.reset_mock(side_effect=True)
+        denied_guard.side_effect = HTTPException(status_code=403, detail="denied")
+        with pytest.raises(HTTPException) as get_error:
+            await routes.get_provider_account(
+                provider_id=account.id,
+                session=AsyncMock(),
+                current_user=user,
+            )
+        assert get_error.value.status_code == 404
+        mapper.assert_not_called()
+
+        denied_guard.reset_mock(side_effect=True)
+        denied_guard.side_effect = HTTPException(status_code=403, detail="denied")
+        with pytest.raises(HTTPException) as update_error:
+            await routes.update_provider_account(
+                provider_id=account.id,
+                session=AsyncMock(),
+                payload=DeploymentProviderAccountUpdateRequest(name="renamed"),
+                current_user=user,
+                telemetry=_fake_telemetry(),
+            )
+        assert update_error.value.status_code == 404
+        mapper.assert_not_called()
+        adapter.assert_not_called()
+        update_row.assert_not_awaited()
+
+        denied_guard.reset_mock(side_effect=True)
+        denied_guard.side_effect = HTTPException(status_code=403, detail="denied")
+        with pytest.raises(HTTPException) as delete_error:
+            await routes.delete_provider_account(
+                provider_id=account.id,
+                session=AsyncMock(),
+                current_user=user,
+                telemetry=_fake_telemetry(),
+            )
+        assert delete_error.value.status_code == 404
+        reconcile.assert_not_awaited()
+        delete_row.assert_not_awaited()
+
+    @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")

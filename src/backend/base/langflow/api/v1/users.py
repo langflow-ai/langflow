@@ -2,6 +2,12 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from lfx.services.authorization import (
+    AuthorizationMutation,
+    AuthorizationMutationKind,
+    AuthorizationMutationRejected,
+    UserAuthorizationSnapshot,
+)
 from lfx.utils.util_strings import escape_like_pattern
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -12,9 +18,15 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import PasswordResetRequest, UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import get_current_active_superuser, get_current_user_optional
+from langflow.services.authorization.lifecycle import (
+    safe_identity_mutation_committed,
+    stage_identity_mutation,
+    validate_identity_mutation,
+)
+from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
-from langflow.services.deps import get_auth_service, get_settings_service
+from langflow.services.deps import get_auth_service, get_authorization_service, get_settings_service
 
 router = APIRouter(tags=["Users"], prefix="/users")
 
@@ -50,6 +62,7 @@ async def add_user(
         raise HTTPException(status_code=403, detail="Public user registration is disabled.")
 
     new_user = User.model_validate(user, from_attributes=True)
+    authorization_service = get_authorization_service()
     try:
         new_user.password = get_auth_service().get_password_hash(user.password)
         new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE
@@ -60,8 +73,36 @@ async def add_user(
         if not folder:
             raise HTTPException(status_code=500, detail="Error creating default project")
     except IntegrityError as e:
+        await session.rollback()
         raise HTTPException(status_code=400, detail="This username is unavailable.") from e
 
+    lifecycle_mutation = AuthorizationMutation(
+        kind=AuthorizationMutationKind.USER_CREATED,
+        entity_id=new_user.id,
+        actor_user_id=current_user.id if current_user is not None else None,
+        affected_user_ids=(new_user.id,),
+        policy_relevant_fields=("is_active", "is_superuser"),
+        user_before=None,
+        user_after=UserAuthorizationSnapshot(
+            is_active=new_user.is_active,
+            is_superuser=new_user.is_superuser,
+        ),
+    )
+    try:
+        await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
+
+    await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
+    await audit_decision(
+        user_id=current_user.id if current_user is not None else new_user.id,
+        action="user:create",
+        obj=f"user:{new_user.id}",
+        result="allow",
+        details={"created_by": "admin" if is_superuser_caller else "signup"},
+    )
     return new_user
 
 
@@ -125,9 +166,61 @@ async def patch_user(
         user_update.password = get_auth_service().get_password_hash(user_update.password)
 
     if user_db := await get_user_by_id(session, user_id):
+        authorization_service = get_authorization_service()
+        lifecycle_mutation: AuthorizationMutation | None = None
+        next_is_active = user_db.is_active if user_update.is_active is None else user_update.is_active
+        next_is_superuser = user_db.is_superuser if user_update.is_superuser is None else user_update.is_superuser
+        if user_db.is_active and not next_is_active:
+            lifecycle_kind = AuthorizationMutationKind.USER_DISABLED
+        elif user_db.is_superuser and not next_is_superuser:
+            lifecycle_kind = AuthorizationMutationKind.USER_SUPERUSER_DEMOTED
+        else:
+            lifecycle_kind = None
+
+        if lifecycle_kind is not None:
+            changed_fields = tuple(
+                field
+                for field, before, after in (
+                    ("is_active", user_db.is_active, next_is_active),
+                    ("is_superuser", user_db.is_superuser, next_is_superuser),
+                )
+                if before != after
+            )
+            lifecycle_mutation = AuthorizationMutation(
+                kind=lifecycle_kind,
+                entity_id=user_db.id,
+                actor_user_id=user.id,
+                affected_user_ids=(user_db.id,),
+                policy_relevant_fields=changed_fields,
+                user_before=UserAuthorizationSnapshot(
+                    is_active=user_db.is_active,
+                    is_superuser=user_db.is_superuser,
+                ),
+                user_after=UserAuthorizationSnapshot(
+                    is_active=next_is_active,
+                    is_superuser=next_is_superuser,
+                ),
+            )
+            try:
+                await validate_identity_mutation(authorization_service, session, lifecycle_mutation)
+            except AuthorizationMutationRejected as exc:
+                raise HTTPException(status_code=409, detail=exc.public_detail) from exc
+
         if not update_password:
             user_update.password = user_db.password
-        return await update_user(user_db, user_update, session)
+        updated_user = await update_user(user_db, user_update, session)
+        if lifecycle_mutation is not None:
+            await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
+            await session.commit()
+            await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
+            await audit_decision(
+                user_id=user.id,
+                action=lifecycle_mutation.kind.value.replace(".", ":"),
+                obj=f"user:{user_db.id}",
+                result="allow",
+                details={"fields_changed": list(lifecycle_mutation.policy_relevant_fields)},
+            )
+        return updated_user
     raise HTTPException(status_code=404, detail="User not found")
 
 
@@ -178,6 +271,24 @@ async def delete_user(
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 
+    lifecycle_mutation = AuthorizationMutation(
+        kind=AuthorizationMutationKind.USER_DELETED,
+        entity_id=user_db.id,
+        actor_user_id=current_user.id,
+        affected_user_ids=(user_db.id,),
+        policy_relevant_fields=("is_active", "is_superuser"),
+        user_before=UserAuthorizationSnapshot(
+            is_active=user_db.is_active,
+            is_superuser=user_db.is_superuser,
+        ),
+        user_after=None,
+    )
+    authorization_service = get_authorization_service()
+    try:
+        await validate_identity_mutation(authorization_service, session, lifecycle_mutation)
+    except AuthorizationMutationRejected as exc:
+        raise HTTPException(status_code=409, detail=exc.public_detail) from exc
+
     # IMPORTANT:
     # This endpoint intentionally performs a DB-cascade delete only and does
     # not issue provider-side teardown across all user deployments.
@@ -185,4 +296,17 @@ async def delete_user(
     # deployment resources during user deletion.
     await session.delete(user_db)
     await session.flush()
+    await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
+    await session.commit()
+    await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
+    await audit_decision(
+        user_id=current_user.id,
+        action="user:delete",
+        obj=f"user:{user_id}",
+        result="allow",
+        details={
+            "target_was_active": lifecycle_mutation.user_before.is_active,
+            "target_was_superuser": lifecycle_mutation.user_before.is_superuser,
+        },
+    )
     return {"detail": "User deleted"}

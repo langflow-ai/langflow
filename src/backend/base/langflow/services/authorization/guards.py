@@ -24,8 +24,10 @@ from langflow.services.authorization.actions import (
     FlowAction,
     KnowledgeBaseAction,
     ProjectAction,
+    ProviderAccountAction,
     ShareAction,
     VariableAction,
+    VoiceAction,
 )
 from langflow.services.deps import get_authorization_service, get_settings_service
 
@@ -43,6 +45,8 @@ _ACTION_ENUMS = (
     VariableAction,
     FileAction,
     ShareAction,
+    ProviderAccountAction,
+    VoiceAction,
 )
 
 # Resource-owner keys included in audit details (kept in one place so a new
@@ -55,6 +59,8 @@ _OWNER_CONTEXT_KEYS = (
     "variable_user_id",
     "file_user_id",
     "share_user_id",
+    "provider_account_user_id",
+    "voice_user_id",
 )
 
 # Default 403 detail. UUID-leaking detail strings are opt-in via ``detail=...``
@@ -109,6 +115,8 @@ def _coerce_action(
     | VariableAction
     | FileAction
     | ShareAction
+    | ProviderAccountAction
+    | VoiceAction
     | str,
 ) -> str:
     """Return the string value of an action enum or pass through a raw string."""
@@ -345,6 +353,22 @@ _RESOURCE_SPECS: dict[str, _ResourceSpec] = {
         # resource owner, not the prospective share-row owner.
         owner_override_on_create=True,
     ),
+    "provider_account": _ResourceSpec(
+        resource_type="provider_account",
+        owner_kw="provider_account_user_id",
+        id_kw="provider_account_id",
+        workspace_kw=None,
+        scope_kw=None,
+        # A newly-created provider account always belongs to the caller.
+        owner_override_on_create=True,
+    ),
+    "voice": _ResourceSpec(
+        resource_type="voice",
+        owner_kw="voice_user_id",
+        id_kw="voice_id",
+        workspace_kw=None,
+        scope_kw=None,
+    ),
 }
 
 
@@ -457,6 +481,48 @@ async def ensure_deployment_permission(
             "deployment_user_id": deployment_user_id,
             "workspace_id": workspace_id,
             "project_id": project_id,
+        },
+        domain_override=domain,
+    )
+
+
+async def ensure_provider_account_permission(
+    user: User | UserRead,
+    act: ProviderAccountAction | str,
+    *,
+    provider_account_id: UUID | None = None,
+    provider_account_user_id: UUID | None = None,
+    domain: str | None = None,
+) -> None:
+    """Check provider-account permission without exposing credential metadata."""
+    await _ensure_typed(
+        user,
+        spec_key="provider_account",
+        act_str=_coerce_action(act),
+        kwargs={
+            "provider_account_id": provider_account_id,
+            "provider_account_user_id": provider_account_user_id,
+        },
+        domain_override=domain,
+    )
+
+
+async def ensure_voice_permission(
+    user: User | UserRead,
+    act: VoiceAction | str,
+    *,
+    voice_id: UUID | None = None,
+    voice_user_id: UUID | None = None,
+    domain: str | None = None,
+) -> None:
+    """Check credential-backed voice permission."""
+    await _ensure_typed(
+        user,
+        spec_key="voice",
+        act_str=_coerce_action(act),
+        kwargs={
+            "voice_id": voice_id,
+            "voice_user_id": voice_user_id,
         },
         domain_override=domain,
     )

@@ -70,7 +70,9 @@ from langflow.api.v1.schemas.deployments import (
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.authorization import (
     DeploymentAction,
+    ProviderAccountAction,
     ensure_deployment_permission,
+    ensure_provider_account_permission,
     filter_visible_resources,
     visible_scope_prefilter,
 )
@@ -313,6 +315,11 @@ async def create_provider_account(
     current_user: CurrentActiveUser,
     telemetry: Annotated[DeploymentTelemetryCtx, Depends(provider_create_telemetry)],
 ):
+    await ensure_provider_account_permission(
+        current_user,
+        ProviderAccountAction.CREATE,
+        provider_account_user_id=current_user.id,
+    )
     telemetry.provider = payload.provider_key
     deployment_mapper = get_deployment_mapper(payload.provider_key)
     deployment_adapter = resolve_deployment_adapter(payload.provider_key)
@@ -346,6 +353,11 @@ async def list_provider_accounts(
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
+    await ensure_provider_account_permission(
+        current_user,
+        ProviderAccountAction.READ,
+        provider_account_user_id=current_user.id,
+    )
     offset = page_offset(page, size)
     provider_accounts = await list_provider_account_rows(session, user_id=current_user.id, offset=offset, limit=size)
     total = await count_provider_account_rows(session, user_id=current_user.id)
@@ -373,6 +385,15 @@ async def get_provider_account(
     provider_account = await get_provider_account_row_by_id(session, provider_id=provider_id, user_id=current_user.id)
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
+    try:
+        await ensure_provider_account_permission(
+            current_user,
+            ProviderAccountAction.READ,
+            provider_account_id=provider_account.id,
+            provider_account_user_id=provider_account.user_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Deployment provider account not found.") from exc
     return get_deployment_mapper(provider_account.provider_key).resolve_provider_account_response(provider_account)
 
 
@@ -392,6 +413,15 @@ async def delete_provider_account(
         user_id=current_user.id,
         db=session,
     )
+    try:
+        await ensure_provider_account_permission(
+            current_user,
+            ProviderAccountAction.DELETE,
+            provider_account_id=provider_account.id,
+            provider_account_user_id=provider_account.user_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Deployment provider account not found.") from exc
     telemetry.provider = provider_account.provider_key
     telemetry.wxo_tenant_id = provider_account.provider_tenant_id
     deployment_count = await _count_provider_deployments_after_reconciliation(
@@ -428,6 +458,15 @@ async def update_provider_account(
         user_id=current_user.id,
         db=session,
     )
+    try:
+        await ensure_provider_account_permission(
+            current_user,
+            ProviderAccountAction.WRITE,
+            provider_account_id=provider_account.id,
+            provider_account_user_id=provider_account.user_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Deployment provider account not found.") from exc
     telemetry.provider = provider_account.provider_key
     telemetry.wxo_tenant_id = provider_account.provider_tenant_id
 

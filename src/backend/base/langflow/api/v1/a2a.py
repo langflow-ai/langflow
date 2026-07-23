@@ -62,8 +62,8 @@ from lfx.schema.workflow import (
 from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
 from lfx.utils.ssrf_transport import create_ssrf_protected_client
 from lfx.workflow.converters import parse_workflow_run_request, run_response_to_workflow_response
-from sqlalchemy import delete
-from sqlmodel import select
+from sqlalchemy import case, delete
+from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
@@ -77,9 +77,21 @@ from langflow.api.v1.a2a_utils import (
 )
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
+from langflow.services.auth.context import AuthCredentialContext, set_current_auth_context
+from langflow.services.authorization import (
+    FlowAction,
+    ensure_flow_permission,
+    filter_visible_resources,
+    restrict_to_owned_or_visible_scope,
+    visible_scope_prefilter,
+)
+from langflow.services.authorization.fetch import deny_to_404
+from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.database.models import A2ACheckpoint, A2ATask, Flow
-from langflow.services.database.models.api_key.crud import check_key
+from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.flow.model import FlowType
+from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.user.model import User
 
 router = APIRouter(prefix="/a2a", tags=["a2a"])
 
@@ -95,7 +107,7 @@ def _require_a2a_enabled() -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
 
 
-async def _enforce_a2a_auth(flow: Flow, request: Request) -> None:
+async def _enforce_a2a_auth(flow: Flow, request: Request) -> User | None:
     """Enforce the folder's auth scheme before any dispatch, failing closed on the rest.
 
     The flow always runs as its owner (see ``_run_flow``), so an unauthenticated run is a
@@ -119,7 +131,7 @@ async def _enforce_a2a_auth(flow: Flow, request: Request) -> None:
     async with session_scope() as session:
         auth_type = await folder_auth_type(flow, session)
         if auth_type == "none":
-            return  # public agent
+            return None  # public agent
         if auth_type not in ("apikey", "oauth"):
             # Protected folder with a scheme A2A can't enforce: fail closed, never public.
             raise HTTPException(
@@ -129,10 +141,23 @@ async def _enforce_a2a_auth(flow: Flow, request: Request) -> None:
         api_key = request.headers.get(A2A_APIKEY_HEADER)
         if not api_key:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required")
-        user = await check_key(session, api_key)
+        api_key_result = await authenticate_api_key(session, api_key)
         # Same message for invalid and wrong-owner: don't reveal a key is valid for another user.
-        if user is None or user.id != flow.user_id:
+        if api_key_result is None or api_key_result.user.id != flow.user_id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+        user = api_key_result.user
+        set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
+        try:
+            await ensure_flow_permission(
+                user,
+                FlowAction.EXECUTE,
+                flow_id=flow.id,
+                flow_user_id=flow.user_id,
+                folder_id=flow.folder_id,
+            )
+        except HTTPException as exc:
+            raise deny_to_404(exc, detail="Not Found") from exc
+        return user
 
 
 class _FlowContextBuilder(DefaultServerCallContextBuilder):
@@ -666,9 +691,33 @@ async def list_a2a_agents(request: Request, session: DbSession, current_user: Cu
     discovery entry point an orchestrator fetches per agent.
     """
     base = str(request.base_url).rstrip("/")
-    flows = (
-        await session.exec(select(Flow).where(Flow.user_id == current_user.id, Flow.flow_type == FlowType.AGENT))
-    ).all()
+    owned_clause = Flow.user_id == current_user.id
+    visibility = await visible_scope_prefilter(current_user, resource_type="flow", act=FlowAction.READ)
+    if visibility is not None:
+        canonical_workspace = case(
+            (col(Flow.folder_id).is_not(None), Folder.workspace_id),
+            else_=Flow.workspace_id,
+        )
+        stmt = restrict_to_owned_or_visible_scope(
+            select(Flow).outerjoin(Folder, Folder.id == Flow.folder_id),
+            id_column=Flow.id,
+            owner_clause=owned_clause,
+            workspace_expression=canonical_workspace,
+            project_column=Flow.folder_id,
+            visibility=visibility,
+        )
+    else:
+        stmt = select(Flow).where(owned_clause)
+    flows = (await session.exec(stmt.where(Flow.flow_type == FlowType.AGENT))).all()
+    if visibility is None:
+        flows = await filter_visible_resources(
+            current_user,
+            resource_type="flow",
+            candidates=list(flows),
+            domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
+            owner_extractor=lambda flow: flow.user_id,
+            act=FlowAction.READ,
+        )
     # a2a_enabled is bool|None; filter truthiness in Python, matching the card route's gate.
     return [
         {

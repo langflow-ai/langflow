@@ -63,6 +63,21 @@ class FileAction(str, Enum):
     DELETE = "delete"
 
 
+class ProviderAccountAction(str, Enum):
+    """Actions authorized on a deployment provider credential account."""
+
+    READ = "read"
+    WRITE = "write"
+    CREATE = "create"
+    DELETE = "delete"
+
+
+class VoiceAction(str, Enum):
+    """Actions authorized on credential-backed voice resources."""
+
+    READ = "read"
+
+
 class ShareAction(str, Enum):
     """Actions authorized on an authz_share row."""
 

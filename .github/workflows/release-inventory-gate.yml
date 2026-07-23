@@ -76,6 +76,139 @@ jobs:
           path: bundle-profile-inventories/*.lock.json
           if-no-files-found: error
 
+  python-core-inventory:
+    name: Python ${{ matrix.python-version }} / python-core
+    if: ${{ inputs.core-artifact-name != '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: Check out release contract
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+
+      - name: Download SDK wheel
+        if: ${{ inputs.sdk-artifact-name != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.sdk-artifact-name }}
+          path: sdk-dist
+
+      - name: Download LFX wheel
+        if: ${{ inputs.lfx-artifact-name != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.lfx-artifact-name }}
+          path: lfx-dist
+
+      - name: Download base wheel
+        if: ${{ inputs.base-artifact-name != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.base-artifact-name }}
+          path: base-dist
+
+      - name: Download core wheel
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.core-artifact-name }}
+          path: core-dist
+
+      - name: Install core release shape from wheels
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          uv venv inventory-env --seed --python "${{ matrix.python-version }}"
+
+          LOCAL_WHEELS=()
+          for wheel_dir in sdk-dist lfx-dist base-dist core-dist; do
+            if [ ! -d "$wheel_dir" ]; then
+              continue
+            fi
+            WHEELS=("$wheel_dir"/*.whl)
+            if [ ${#WHEELS[@]} -ne 1 ]; then
+              echo "Expected exactly one wheel in $wheel_dir, found ${#WHEELS[@]}"
+              exit 1
+            fi
+            LOCAL_WHEELS+=("${WHEELS[0]}")
+          done
+
+          CORE_WHEELS=(core-dist/langflow_core-*.whl)
+          if [ ${#CORE_WHEELS[@]} -ne 1 ]; then
+            echo "Expected exactly one langflow-core wheel, found ${#CORE_WHEELS[@]}"
+            exit 1
+          fi
+
+          SDK_TARGET=()
+          if [ ! -d sdk-dist ]; then
+            # The SDK is independently versioned and may already be published
+            # when a core-only release is cut.
+            SDK_TARGET=(langflow-sdk)
+          fi
+
+          uv pip install --python inventory-env/bin/python \
+            --prerelease=if-necessary-or-explicit \
+            "${LOCAL_WHEELS[@]}" "${SDK_TARGET[@]}"
+          uv pip check --python inventory-env/bin/python
+
+      - name: Validate core distribution and component inventory
+        run: |
+          inventory-env/bin/python scripts/ci/check_release_inventory.py \
+            --contract scripts/ci/release_inventory_contract.json \
+            --profile python-core \
+            --output "inventory-reports/python-core-py${{ matrix.python-version }}.json"
+
+      - name: Verify core authorization lifecycle imports
+        run: |
+          inventory-env/bin/python - <<'PY'
+          from lfx.services.authorization import AuthorizationMutationKind, AuthorizationMutationRejected
+
+          assert isinstance(AuthorizationMutationKind.USER_DISABLED, str)
+          assert AuthorizationMutationKind.USER_DISABLED.value == "user.disabled"
+          assert AuthorizationMutationRejected("safe detail").public_detail == "safe detail"
+          PY
+
+      - name: Verify core application startup and health
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          inventory-env/bin/python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          server_pid=$!
+          trap 'kill "$server_pid" >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:7860/health_check >/dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              echo "Langflow core exited before becoming healthy"
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "Langflow core did not become healthy"
+          exit 1
+
+      - name: Upload core Python inventory report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: inventory-python-core-py${{ matrix.python-version }}
+          path: inventory-reports/*.json
+          if-no-files-found: warn
+
   python-inventory:
     name: Python ${{ matrix.python-version }} / ${{ matrix.profile }}
     if: ${{ inputs.main-artifact-name != '' }}
