@@ -77,11 +77,34 @@ def test_error_records_counter_with_error_type(reader):
     h.on_llm_error(RuntimeError("boom https://api.openai.com/v1/chat?key=sk-SECRET-LEAK"), run_id=rid)
 
     points = _all_data_points(reader)
-    error_points = points.get("gen_ai.client.operation.errors", [])
+    error_points = points.get("langflow.llm.provider.errors", [])
     assert error_points, "expected an error counter data point"
     attrs = dict(error_points[0].attributes)
     assert attrs["error.type"] == "RuntimeError"
     assert attrs["gen_ai.provider.name"] == "anthropic"
+
+    # Failed-call latency ("is it us or them" case) must land on the duration histogram too,
+    # carrying error.type per the OTel GenAI semconv.
+    error_durations = [
+        dp for dp in points.get("gen_ai.client.operation.duration", []) if dict(dp.attributes).get("error.type")
+    ]
+    assert error_durations, "expected a duration point for the failed call"
+    assert dict(error_durations[0].attributes)["error.type"] == "RuntimeError"
+
+
+def test_cancelled_runs_do_not_grow_unbounded():
+    """A run that never reaches on_llm_end/on_llm_error (cancelled mid-flight) must not leak forever."""
+    from lfx.observability_llm_metrics import LLMProviderMetricsCallbackHandler
+
+    h = LLMProviderMetricsCallbackHandler()
+    h._MAX_RUNS = 2  # instance override so the cap is reachable in a test
+    import uuid
+
+    for _ in range(5):
+        h.on_chat_model_start(
+            {}, [[HumanMessage("x")]], run_id=uuid.uuid4(), invocation_params={"model_name": "gpt-4o"}
+        )
+    assert len(h._runs) <= 2
 
 
 def test_no_leak_and_bounded_cardinality(reader):
