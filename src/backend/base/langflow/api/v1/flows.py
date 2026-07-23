@@ -436,8 +436,7 @@ async def update_flow(
         if folder_id_will_change:
             return await retry_flow_operation_on_deployment_guard(
                 db=session,
-                user_id=current_user.id,
-                flow_ids=[flow_id],
+                flow_owner_ids={flow_id: db_flow.user_id},
                 operation=operation,
             )
         return await operation()
@@ -587,8 +586,7 @@ async def upsert_flow(
             if folder_id_will_change:
                 flow_read = await retry_flow_operation_on_deployment_guard(
                     db=session,
-                    user_id=current_user.id,
-                    flow_ids=[existing_flow.id],
+                    flow_owner_ids={existing_flow.id: existing_flow.user_id},
                     operation=update_operation,
                 )
             else:
@@ -629,13 +627,12 @@ async def delete_flow(
     session: DbSession,
     flow_id: UUID,  # noqa: ARG001
     flow: AuthorizedDeleteFlow,
-    current_user: CurrentActiveUser,
+    current_user: CurrentActiveUser,  # noqa: ARG001
 ):
     """Delete a flow."""
     await retry_flow_operation_on_deployment_guard(
         db=session,
-        user_id=current_user.id,
-        flow_ids=[flow.id],
+        flow_owner_ids={flow.id: flow.user_id},
         operation=lambda: cascade_delete_flow(session, flow.id),
     )
     return {"message": "Flow deleted successfully"}
@@ -806,6 +803,7 @@ async def delete_multiple_flows(
 ):
     """Delete multiple flows by their IDs."""
     try:
+        authorized_flow_owner_ids: dict[UUID, UUID] = {}
 
         async def _delete_operation() -> int:
             if not flow_ids:
@@ -830,6 +828,7 @@ async def delete_multiple_flows(
                     workspace_id=flow.workspace_id,
                     folder_id=flow.folder_id,
                 )
+            authorized_flow_owner_ids.update((flow.id, flow.user_id) for flow in flows_to_delete)
             for flow in flows_to_delete:
                 await cascade_delete_flow(db, flow.id)
             await db.flush()
@@ -837,8 +836,7 @@ async def delete_multiple_flows(
 
         deleted_count = await retry_flow_operation_on_deployment_guard(
             db=db,
-            user_id=user.id,
-            flow_ids=flow_ids,
+            flow_owner_ids=authorized_flow_owner_ids,
             operation=_delete_operation,
         )
     except Exception as exc:

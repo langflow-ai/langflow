@@ -9,7 +9,7 @@ request hot paths.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from itertools import groupby
 from typing import TYPE_CHECKING, TypeVar
 from uuid import UUID
@@ -32,6 +32,7 @@ from lfx.services.interfaces import DeploymentServiceProtocol
 
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.database.models.deployment.crud import (
+    UNCONFIRMED_DELETE_ROWCOUNT,
     delete_deployments_by_ids,
     list_deployments_for_flows_with_provider_info,
     list_project_deployments_with_provider_info,
@@ -260,7 +261,19 @@ async def _sync_deployments_and_attachments_by_provider(
             # any implementation should bound that cost (for example, by flushing in chunks
             # once a size threshold is reached) rather than accumulating without limit.
             if stale_deployment_ids:
-                await delete_deployments_by_ids(db, user_id=user_id, deployment_ids=stale_deployment_ids)
+                deleted = await delete_deployments_by_ids(
+                    db,
+                    user_id=user_id,
+                    deployment_ids=stale_deployment_ids,
+                )
+                if deleted is UNCONFIRMED_DELETE_ROWCOUNT:
+                    await logger.awarning(
+                        "Stale deployment batch delete rowcount could not be confirmed during %s sync: "
+                        "provider=%s deployments=%s",
+                        stale_scope_label,
+                        provider_account_id,
+                        stale_deployment_ids,
+                    )
 
             if surviving:
                 try:
@@ -429,11 +442,37 @@ async def sync_project_deployments(
     )
 
 
+async def sync_flow_deployment_state_by_owner(
+    *,
+    db: DbSession,
+    flow_owner_ids: Mapping[UUID, UUID],
+) -> None:
+    """Sync authorized flows in each owner's deployment namespace.
+
+    Deployment rows and attachments are owner-scoped. Under share-aware RBAC the
+    actor may differ from the flow owner, so sync must use each flow's owner
+    ``user_id`` — never the actor's.
+
+    ``flow_owner_ids`` must be populated from rows the enclosing operation has
+    already scoped and authorized. Accepting that mapping instead of resolving
+    owners from raw request ids prevents guard retries from crossing into an
+    unrelated user's provider namespace.
+    """
+    by_owner: dict[UUID, list[UUID]] = {}
+    for flow_id, owner_id in flow_owner_ids.items():
+        by_owner.setdefault(owner_id, []).append(flow_id)
+
+    for owner_id, owned_flow_ids in by_owner.items():
+        # TODO: group/loop by deployment provider
+        # (keyed by url, tenant id, api key, etc)
+        # instead of owners?
+        await sync_flow_deployment_state(db=db, flow_ids=owned_flow_ids, user_id=owner_id)
+
+
 async def retry_flow_operation_on_deployment_guard(
     *,
     db: DbSession,
-    user_id: UUID,
-    flow_ids: list[UUID] | None = None,
+    flow_owner_ids: Mapping[UUID, UUID] | None = None,
     operation: Callable[[], Awaitable[TGuardOperationResult]],
 ) -> TGuardOperationResult:
     """Run *operation* and retry once after flow-scoped deployment sync on guard errors.
@@ -443,8 +482,13 @@ async def retry_flow_operation_on_deployment_guard(
     via ORM/service preflight checks that raise ``DeploymentGuardError``) before
     mutating state. This helper does not add guard checks; it only:
     1) detects ``DeploymentGuardError`` failures from the operation,
-    2) performs best-effort deployment sync, and
+    2) performs best-effort deployment sync for the authorized flow-owner
+       mapping in each owner's namespace, and
     3) retries the same operation once.
+
+    The operation may populate a mutable ``flow_owner_ids`` mapping while
+    loading and authorizing rows. That state survives a nested-transaction
+    rollback and is then used for the repair pass.
     """
     try:
         async with db.begin_nested():
@@ -454,8 +498,8 @@ async def retry_flow_operation_on_deployment_guard(
         if not guard_error:
             raise
 
-    if flow_ids:
-        await sync_flow_deployment_state(db=db, flow_ids=flow_ids, user_id=user_id)
+    if flow_owner_ids:
+        await sync_flow_deployment_state_by_owner(db=db, flow_owner_ids=flow_owner_ids)
 
     async with db.begin_nested():
         return await operation()

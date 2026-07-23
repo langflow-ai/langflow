@@ -376,6 +376,9 @@ class TestCreateDeploymentExistingAgent:
         mock_create_db.assert_not_awaited()
 
     @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.ensure_flow_deploy_for_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -388,6 +391,9 @@ class TestCreateDeploymentExistingAgent:
         mock_get_mapper,
         mock_resolve_adapter,
         mock_create_db,
+        mock_resolve_project,
+        mock_validate_fv,  # noqa: ARG002
+        mock_ensure_deploy,  # noqa: ARG002
     ):
         from langflow.api.v1.deployments import create_deployment
 
@@ -398,7 +404,9 @@ class TestCreateDeploymentExistingAgent:
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()
         mapper.util_existing_deployment_resource_key_for_create.return_value = "existing-agent-1"
+        mapper.util_create_flow_version_ids.return_value = []
         mock_get_mapper.return_value = mapper
+        mock_resolve_project.return_value = uuid4()
 
         payload = MagicMock()
         payload.provider_id = pa.id
@@ -415,6 +423,57 @@ class TestCreateDeploymentExistingAgent:
         mock_create_db.assert_not_awaited()
         adapter.create.assert_not_awaited()
         adapter.update.assert_not_awaited()
+        adapter.get.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.ensure_flow_deploy_for_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.ensure_deployment_permission", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_deployment_by_resource_key", new_callable=AsyncMock, return_value=None)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_create_denied_before_provider_get(
+        self,
+        mock_get_pa,
+        mock_get_by_resource_key,  # noqa: ARG002
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_resolve_project,
+        mock_validate_fv,  # noqa: ARG002
+        mock_ensure_create,
+        mock_ensure_deploy,  # noqa: ARG002
+    ):
+        """CREATE denial must not probe the provider (existing-resource onboarding)."""
+        from langflow.api.v1.deployments import create_deployment
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        adapter = AsyncMock()
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        mapper.util_existing_deployment_resource_key_for_create.return_value = "existing-agent-1"
+        mapper.util_create_flow_version_ids.return_value = []
+        mock_get_mapper.return_value = mapper
+        mock_resolve_project.return_value = uuid4()
+        mock_ensure_create.side_effect = HTTPException(status_code=403, detail="denied")
+
+        payload = MagicMock()
+        payload.provider_id = pa.id
+        payload.display_name = "existing"
+        payload.type = "agent"
+        payload.description = None
+
+        with pytest.raises(HTTPException) as exc_info:
+            await create_deployment(
+                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+            )
+
+        assert exc_info.value.status_code == 403
+        adapter.get.assert_not_awaited()
+        adapter.create.assert_not_awaited()
+        mapper.util_existing_deployment_resource_key_for_create.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -865,7 +924,6 @@ class TestListDeploymentsSharedPrefilter:
         mock_get_mapper.return_value = mapper
         mock_synced.return_value = ([(row, 0, [])], 1, {})
         actor = _fake_user()
-
         result = await list_deployments(
             provider_id=pa.id,
             session=MagicMock(),
@@ -881,8 +939,10 @@ class TestListDeploymentsSharedPrefilter:
         # The prefilter scope is threaded into the synced query so
         # the (owner ⊕ visible) union actually constrains the page + total.
         assert mock_synced.await_args.kwargs["visibility_scope"] == scope
+        # Shared listing: user_id is the actor; row_owner_id is the provider-account
+        # owner (credentials + attachments) — otherwise Watsonx lookup fails.
         assert mock_synced.await_args.kwargs["user_id"] == actor.id
-        assert mock_synced.await_args.kwargs["provider_owner_id"] == pa.user_id
+        assert mock_synced.await_args.kwargs["row_owner_id"] == pa.user_id
         assert result.total == 1
         assert result.deployments[0].id == shared_id
 
@@ -1111,6 +1171,11 @@ class TestConfigAndSnapshotListRoutes:
 
 
 class TestUpdateSnapshotRoute:
+    @pytest.fixture(autouse=True)
+    def _mock_flow_deploy(self):
+        with patch(f"{ROUTES_MODULE}.ensure_flow_deploy_for_version_ids", new_callable=AsyncMock):
+            yield
+
     @pytest.mark.asyncio
     @patch("langflow.services.database.models.flow_version.crud.get_flow_version_entry", new_callable=AsyncMock)
     @patch("langflow.services.database.models.deployment.crud.get_deployment", new_callable=AsyncMock)
@@ -1698,6 +1763,101 @@ class TestListDeploymentFlowVersionsRoute:
 
 class TestProviderAccountRoutes:
     @pytest.mark.asyncio
+    async def test_provider_account_guards_precede_all_route_side_effects(self, monkeypatch):
+        """Every provider-account route stops before external I/O or mutation when revoked."""
+        from langflow.api.v1 import deployments as routes
+
+        user = _fake_user()
+        account = _fake_provider_account(user_id=user.id)
+        denied_guard = AsyncMock(side_effect=HTTPException(status_code=403, detail="denied"))
+        mapper = MagicMock()
+        adapter = MagicMock()
+        create_row = AsyncMock()
+        list_rows = AsyncMock()
+        count_rows = AsyncMock()
+        fetch_row = AsyncMock(return_value=account)
+        fetch_owned = AsyncMock(return_value=account)
+        update_row = AsyncMock()
+        delete_row = AsyncMock()
+        reconcile = AsyncMock()
+
+        monkeypatch.setattr(routes, "ensure_provider_account_permission", denied_guard)
+        monkeypatch.setattr(routes, "get_deployment_mapper", mapper)
+        monkeypatch.setattr(routes, "resolve_deployment_adapter", adapter)
+        monkeypatch.setattr(routes, "create_provider_account_row", create_row)
+        monkeypatch.setattr(routes, "list_provider_account_rows", list_rows)
+        monkeypatch.setattr(routes, "count_provider_account_rows", count_rows)
+        monkeypatch.setattr(routes, "get_provider_account_row_by_id", fetch_row)
+        monkeypatch.setattr(routes, "get_owned_provider_account_or_404", fetch_owned)
+        monkeypatch.setattr(routes, "update_provider_account_row", update_row)
+        monkeypatch.setattr(routes, "delete_provider_account_row", delete_row)
+        monkeypatch.setattr(routes, "_count_provider_deployments_after_reconciliation", reconcile)
+
+        with pytest.raises(HTTPException) as create_error:
+            await routes.create_provider_account(
+                session=AsyncMock(),
+                payload=SimpleNamespace(provider_key="test-provider"),
+                current_user=user,
+                telemetry=_fake_telemetry(),
+            )
+        assert create_error.value.status_code == 403
+        mapper.assert_not_called()
+        adapter.assert_not_called()
+        create_row.assert_not_awaited()
+
+        denied_guard.reset_mock(side_effect=True)
+        denied_guard.side_effect = HTTPException(status_code=403, detail="denied")
+        with pytest.raises(HTTPException) as list_error:
+            await routes.list_provider_accounts(
+                session=AsyncMock(),
+                current_user=user,
+                page=1,
+                size=20,
+            )
+        assert list_error.value.status_code == 403
+        list_rows.assert_not_awaited()
+        count_rows.assert_not_awaited()
+
+        denied_guard.reset_mock(side_effect=True)
+        denied_guard.side_effect = HTTPException(status_code=403, detail="denied")
+        with pytest.raises(HTTPException) as get_error:
+            await routes.get_provider_account(
+                provider_id=account.id,
+                session=AsyncMock(),
+                current_user=user,
+            )
+        assert get_error.value.status_code == 404
+        mapper.assert_not_called()
+
+        denied_guard.reset_mock(side_effect=True)
+        denied_guard.side_effect = HTTPException(status_code=403, detail="denied")
+        with pytest.raises(HTTPException) as update_error:
+            await routes.update_provider_account(
+                provider_id=account.id,
+                session=AsyncMock(),
+                payload=DeploymentProviderAccountUpdateRequest(name="renamed"),
+                current_user=user,
+                telemetry=_fake_telemetry(),
+            )
+        assert update_error.value.status_code == 404
+        mapper.assert_not_called()
+        adapter.assert_not_called()
+        update_row.assert_not_awaited()
+
+        denied_guard.reset_mock(side_effect=True)
+        denied_guard.side_effect = HTTPException(status_code=403, detail="denied")
+        with pytest.raises(HTTPException) as delete_error:
+            await routes.delete_provider_account(
+                provider_id=account.id,
+                session=AsyncMock(),
+                current_user=user,
+                telemetry=_fake_telemetry(),
+            )
+        assert delete_error.value.status_code == 404
+        reconcile.assert_not_awaited()
+        delete_row.assert_not_awaited()
+
+    @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -2212,6 +2372,60 @@ class TestUpdateDeploymentRollback:
         assert (
             mock_rollback.call_args.kwargs["deployment_provider_account_id"] == dep_row.deployment_provider_account_id
         )
+        assert mock_rollback.call_args.kwargs["user_id"] == dep_row.user_id
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.rollback_provider_update", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.update_deployment_db", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update", return_value=([], []))
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
+    async def test_rollback_uses_owner_namespace_for_non_owner_actor(
+        self,
+        mock_resolve_amm,
+        mock_resolve_fvp,  # noqa: ARG002
+        mock_validate_fv,  # noqa: ARG002
+        mock_resolve_snap,  # noqa: ARG002
+        mock_apply_patch,  # noqa: ARG002
+        mock_update_db,  # noqa: ARG002
+        mock_rollback,
+    ):
+        """Shared-update rollback must stay in the deployment owner's namespace."""
+        from langflow.api.v1.deployments import update_deployment
+
+        owner_id = uuid4()
+        actor = _fake_user()
+        dep_row = _fake_deployment_row(user_id=owner_id)
+        adapter = AsyncMock()
+        mapper = MagicMock()
+        update_result = DeploymentUpdateResult(id="provider-dep-1")
+        adapter.update.return_value = update_result
+        mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
+        mapper.resolve_kwargs_for_metadata_update.return_value = {"description": None}
+        mapper.shape_deployment_update_result.return_value = MagicMock()
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
+
+        session = AsyncMock()
+        session.commit.side_effect = RuntimeError("DB commit failed")
+
+        payload = MagicMock()
+        payload.display_name = None
+        payload.description = None
+
+        with pytest.raises(RuntimeError, match="DB commit failed"):
+            await update_deployment(
+                deployment_id=dep_row.id,
+                session=session,
+                payload=payload,
+                current_user=actor,
+                telemetry=_fake_telemetry(),
+            )
+
+        assert actor.id != owner_id
+        assert mock_rollback.call_args.kwargs["user_id"] == owner_id
+        assert adapter.update.await_args.kwargs["user_id"] == owner_id
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.rollback_provider_update", new_callable=AsyncMock)
@@ -2273,6 +2487,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
     @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
     @patch(f"{ROUTES_MODULE}.list_deployment_attachments_for_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.ensure_flow_deploy_for_version_ids", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update")
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
@@ -2281,6 +2496,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         mock_resolve_amm,
         mock_resolve_fvp,
         mock_validate_fv,  # noqa: ARG002
+        mock_ensure_deploy,  # noqa: ARG002
         mock_list_attachments,
         mock_resolve_snap,
         mock_apply_patch,  # noqa: ARG002
@@ -2333,6 +2549,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
     @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
     @patch(f"{ROUTES_MODULE}.list_deployment_attachments_for_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.ensure_flow_deploy_for_version_ids", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update")
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
@@ -2341,6 +2558,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         mock_resolve_amm,
         mock_resolve_fvp,
         mock_validate_fv,  # noqa: ARG002
+        mock_ensure_deploy,  # noqa: ARG002
         mock_list_attachments,
         mock_resolve_snap,
         mock_apply_patch,  # noqa: ARG002
@@ -2393,6 +2611,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
     @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
     @patch(f"{ROUTES_MODULE}.list_deployment_attachments_for_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.ensure_flow_deploy_for_version_ids", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update")
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
@@ -2401,6 +2620,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         mock_resolve_amm,
         mock_resolve_fvp,
         mock_validate_fv,  # noqa: ARG002
+        mock_ensure_deploy,  # noqa: ARG002
         mock_list_attachments,
         mock_resolve_snap,
         mock_apply_patch,  # noqa: ARG002
@@ -2964,11 +3184,11 @@ class TestDeleteDeployment:
         """Delete is idempotent when the provider agent is already gone."""
         from langflow.api.v1.deployments import delete_deployment
 
+        mock_delete_row.return_value = 1
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         adapter.delete.side_effect = DeploymentNotFoundError(message="gone")
         mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
-
         user = _fake_user()
         session = AsyncMock()
 
@@ -3022,10 +3242,10 @@ class TestDeleteDeployment:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
-
         user = _fake_user()
         session = AsyncMock()
         session.commit.side_effect = [RuntimeError("commit failed"), None]
+        mock_delete_row.return_value = 1
 
         response = await delete_deployment(
             deployment_id=dep_row.id, session=session, current_user=user, telemetry=_fake_telemetry()
@@ -3050,9 +3270,9 @@ class TestDeleteDeployment:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
-
         session = AsyncMock()
         session.commit.side_effect = [RuntimeError("commit failed"), RuntimeError("still failing")]
+        mock_delete_row.return_value = 1
 
         with pytest.raises(HTTPException) as exc_info:
             await delete_deployment(
@@ -3075,10 +3295,10 @@ class TestDeleteDeployment:
         """include_provider=True (default) calls adapter.delete to remove provider resources."""
         from langflow.api.v1.deployments import delete_deployment
 
+        mock_delete_row.return_value = 1
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
-
         user = _fake_user()
         session = AsyncMock()
 
@@ -3105,10 +3325,10 @@ class TestDeleteDeployment:
         """include_provider=False skips the adapter entirely — only the DB row is removed."""
         from langflow.api.v1.deployments import delete_deployment
 
+        mock_delete_row.return_value = 1
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
-
         user = _fake_user()
         session = AsyncMock()
 
@@ -3123,6 +3343,87 @@ class TestDeleteDeployment:
         assert response.status_code == 204
         adapter.delete.assert_not_awaited()
         mock_delete_row.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_from_deployment", new_callable=AsyncMock)
+    async def test_shared_delete_uses_deployment_owner_for_local_cleanup(
+        self,
+        mock_resolve,
+        mock_delete_row,
+    ):
+        """Non-owner delete cleans up the owner's DB row, not the actor's namespace."""
+        from langflow.api.v1.deployments import delete_deployment
+
+        mock_delete_row.return_value = 1
+        owner_id = uuid4()
+        actor = _fake_user()
+        dep_row = _fake_deployment_row(user_id=owner_id)
+        adapter = AsyncMock()
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
+        session = AsyncMock()
+        response = await delete_deployment(
+            deployment_id=dep_row.id, session=session, current_user=actor, telemetry=_fake_telemetry()
+        )
+
+        assert response.status_code == 204
+        assert actor.id != owner_id
+        mock_delete_row.assert_awaited_once_with(session, user_id=owner_id, deployment_id=dep_row.id)
+        adapter.delete.assert_awaited_once()
+        assert adapter.delete.await_args.kwargs["user_id"] == owner_id
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_from_deployment", new_callable=AsyncMock)
+    async def test_zero_row_local_delete_returns_404(
+        self,
+        mock_resolve,
+        mock_delete_row,
+    ):
+        """Local delete must remove exactly one row; zero rows means the deployment is gone."""
+        from langflow.api.v1.deployments import delete_deployment
+
+        mock_delete_row.return_value = 0
+        dep_row = _fake_deployment_row()
+        adapter = AsyncMock()
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
+        session = AsyncMock()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_deployment(
+                deployment_id=dep_row.id, session=session, current_user=_fake_user(), telemetry=_fake_telemetry()
+            )
+
+        assert exc_info.value.status_code == 404
+        mock_delete_row.assert_awaited_once()
+        session.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_from_deployment", new_callable=AsyncMock)
+    async def test_unconfirmed_local_delete_rowcount_returns_500(
+        self,
+        mock_resolve,
+        mock_delete_row,
+    ):
+        """Unknown DELETE rowcount must not be treated as success or as 404."""
+        from langflow.api.v1.deployments import delete_deployment
+        from langflow.services.database.models.deployment.crud import UNCONFIRMED_DELETE_ROWCOUNT
+
+        mock_delete_row.return_value = UNCONFIRMED_DELETE_ROWCOUNT
+        dep_row = _fake_deployment_row()
+        adapter = AsyncMock()
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
+        session = AsyncMock()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_deployment(
+                deployment_id=dep_row.id, session=session, current_user=_fake_user(), telemetry=_fake_telemetry()
+            )
+
+        assert exc_info.value.status_code == 500
+        mock_delete_row.assert_awaited_once()
+        session.commit.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------
@@ -3236,6 +3537,7 @@ class TestCreateDeploymentProjectValidation:
 
 class TestCreateDeploymentSchemaValidation:
     @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.ensure_flow_deploy_for_version_ids", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
@@ -3248,6 +3550,7 @@ class TestCreateDeploymentSchemaValidation:
         mock_resolve_adapter,
         mock_resolve_project,
         mock_validate_fv,
+        mock_ensure_flow_deploy,  # noqa: ARG002
     ):
         """Mapper-level schema failures on create surface as HTTP 422."""
         from langflow.api.v1.deployments import create_deployment
@@ -3574,3 +3877,239 @@ class TestHandleAdapterErrors:
             raise NotImplementedError(msg)
 
         assert exc_info.value.status_code == 501
+
+
+# ---------------------------------------------------------------------------
+# RBAC audit repairs: flow:deploy + scoped-key list prefilter
+# ---------------------------------------------------------------------------
+
+
+class TestCreateDeploymentFlowDeploy:
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.rollback_provider_create", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_snapshot_map_for_create", return_value={})
+    @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.ensure_flow_deploy_for_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_create_authorizes_flow_deploy_before_provider_create(
+        self,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_resolve_project,
+        mock_validate_fv,  # noqa: ARG002
+        mock_ensure_deploy,
+        mock_create_db,
+        mock_resolve_snap,  # noqa: ARG002
+        mock_attach,  # noqa: ARG002
+        mock_rollback,  # noqa: ARG002
+    ):
+        from langflow.api.v1.deployments import create_deployment
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        call_order: list[str] = []
+
+        async def _track_deploy(**_kwargs):
+            call_order.append("flow_deploy")
+
+        async def _track_create(**_kwargs):
+            call_order.append("provider_create")
+            return DeploymentCreateResult(id="provider-dep-1", type=DeploymentType.AGENT)
+
+        mock_ensure_deploy.side_effect = _track_deploy
+        adapter = AsyncMock()
+        adapter.create.side_effect = _track_create
+        mock_resolve_adapter.return_value = adapter
+        fv_ids = [uuid4(), uuid4()]
+        mapper = MagicMock()
+        mapper.util_create_flow_version_ids.return_value = fv_ids
+        mapper.util_existing_deployment_resource_key_for_create.return_value = None
+        mapper.resolve_deployment_create = AsyncMock(return_value=MagicMock())
+        mapper.resolve_deployment_model_for_create.return_value = MagicMock()
+        mapper.shape_deployment_create_result.return_value = MagicMock()
+        mock_get_mapper.return_value = mapper
+        project_id = uuid4()
+        mock_resolve_project.return_value = project_id
+        mock_create_db.return_value = _fake_deployment_row()
+
+        user = _fake_user()
+        session = AsyncMock()
+        session.commit.return_value = None
+        payload = MagicMock()
+        payload.provider_id = pa.id
+        payload.display_name = "test"
+        payload.type = "agent"
+        payload.description = None
+
+        await create_deployment(session=session, payload=payload, current_user=user, telemetry=_fake_telemetry())
+
+        mock_ensure_deploy.assert_awaited_once_with(
+            user=user,
+            flow_version_ids=fv_ids,
+            owner_id=user.id,
+            db=session,
+            project_id=project_id,
+        )
+        assert call_order == ["flow_deploy", "provider_create"]
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.ensure_flow_deploy_for_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_flow_deploy_deny_skips_provider_create(
+        self,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_resolve_project,
+        mock_validate_fv,  # noqa: ARG002
+        mock_ensure_deploy,
+    ):
+        from langflow.api.v1.deployments import create_deployment
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        adapter = AsyncMock()
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        mapper.util_create_flow_version_ids.return_value = [uuid4()]
+        mapper.util_existing_deployment_resource_key_for_create.return_value = None
+        mock_get_mapper.return_value = mapper
+        mock_resolve_project.return_value = uuid4()
+        mock_ensure_deploy.side_effect = HTTPException(status_code=403, detail="flow deploy denied")
+
+        payload = MagicMock()
+        payload.provider_id = pa.id
+        payload.display_name = "test"
+        payload.type = "agent"
+        payload.description = None
+
+        with pytest.raises(HTTPException) as exc_info:
+            await create_deployment(
+                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+            )
+
+        assert exc_info.value.status_code == 403
+        adapter.create.assert_not_awaited()
+        adapter.get.assert_not_awaited()
+
+
+class TestUpdateDeploymentFlowDeploy:
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.list_deployment_attachments_for_flow_version_ids", new_callable=AsyncMock, return_value=[])
+    @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
+    @patch(f"{ROUTES_MODULE}.ensure_flow_deploy_for_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update")
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
+    async def test_update_authorizes_flow_deploy_for_added_versions_only(
+        self,
+        mock_resolve_amm,
+        mock_resolve_fvp,
+        mock_validate_fv,  # noqa: ARG002
+        mock_ensure_deploy,
+        mock_resolve_snap,  # noqa: ARG002
+        mock_apply_patch,  # noqa: ARG002
+        mock_list_attachments,  # noqa: ARG002
+    ):
+        from langflow.api.v1.deployments import update_deployment
+
+        owner_id = uuid4()
+        actor = _fake_user()
+        dep_row = _fake_deployment_row(user_id=owner_id)
+        added = [uuid4()]
+        removed = [uuid4()]
+        mock_resolve_fvp.return_value = (added, removed)
+        adapter = AsyncMock()
+        mapper = MagicMock()
+        adapter.update.return_value = DeploymentUpdateResult(id="provider-dep-1")
+        mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
+        mapper.resolve_kwargs_for_metadata_update.return_value = {}
+        mapper.shape_deployment_update_result.return_value = MagicMock()
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
+
+        session = AsyncMock()
+        session.commit.return_value = None
+        payload = MagicMock()
+        payload.display_name = None
+        payload.description = None
+
+        await update_deployment(
+            deployment_id=dep_row.id,
+            session=session,
+            payload=payload,
+            current_user=actor,
+            telemetry=_fake_telemetry(),
+        )
+
+        mock_ensure_deploy.assert_awaited_once_with(
+            user=actor,
+            flow_version_ids=added,
+            owner_id=owner_id,
+            db=session,
+            project_id=dep_row.project_id,
+            workspace_id=dep_row.workspace_id,
+        )
+        assert adapter.update.await_count == 1
+
+
+class TestListDeploymentsScopedKeyPrefilter:
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_shared_listing_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.visible_scope_prefilter", new_callable=AsyncMock)
+    async def test_concrete_prefilter_threads_visibility_scope_without_owner_union_assumption(
+        self,
+        mock_prefilter,
+        mock_get_owned_pa,
+        mock_get_shared_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_synced,
+    ):
+        """Route-level: a concrete prefilter must reach sync as a visibility scope.
+
+        Ownership inclusion for scoped API keys is decided in
+        ``apply_owned_or_visible_scope_prefilter`` (via
+        ``_scope_to_owner_or_allowed``); this test locks the route contract that
+        a concrete prefilter is forwarded (not dropped).
+        """
+        from langflow.api.v1.deployments import list_deployments
+
+        visible_only = uuid4()
+        visibility_scope = ResourceVisibilityScope(resource_ids=(visible_only,))
+        pa = _fake_provider_account()
+        mock_prefilter.return_value = visibility_scope
+        mock_get_shared_pa.return_value = pa
+        mock_resolve_adapter.return_value = AsyncMock()
+        mapper = MagicMock()
+        mapper.shape_deployment_list_items.return_value = []
+        mock_get_mapper.return_value = mapper
+        mock_synced.return_value = ([], 0, {})
+
+        actor = _fake_user()
+        await list_deployments(
+            provider_id=pa.id,
+            session=MagicMock(),
+            current_user=actor,
+            params=SimpleNamespace(page=1, size=20),
+            deployment_type=None,
+        )
+
+        mock_get_owned_pa.assert_not_awaited()
+        assert mock_synced.await_args.kwargs["visibility_scope"] == visibility_scope
+        assert mock_synced.await_args.kwargs["user_id"] == actor.id
+        assert mock_synced.await_args.kwargs["row_owner_id"] == pa.user_id
