@@ -132,6 +132,96 @@ def _capture_exporter_logs():
             otel_logger.setLevel(previous_level)
 
 
+# What the OTLP response carries per signal when the backend accepted the request but threw
+# some of the payload away. The field names differ per signal, so they are mapped once here.
+_PARTIAL_SUCCESS_FIELD = {
+    "traces": "rejected_spans",
+    "metrics": "rejected_data_points",
+    "logs": "rejected_log_records",
+}
+
+
+def _response_class(signal: str):
+    """The protobuf response type a collector returns for *signal*."""
+    if signal == "traces":
+        from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTraceServiceResponse as Response
+    elif signal == "metrics":
+        from opentelemetry.proto.collector.metrics.v1.metrics_service_pb2 import (
+            ExportMetricsServiceResponse as Response,
+        )
+    else:
+        from opentelemetry.proto.collector.logs.v1.logs_service_pb2 import ExportLogsServiceResponse as Response
+    return Response
+
+
+def _recording_session():
+    """A requests session that keeps the last response, so we can inspect what the exporter ignored.
+
+    The HTTP exporter decides success on ``resp.ok`` alone: it never looks at redirects and never
+    parses the body. That makes several "delivered nothing" situations indistinguishable from a
+    real success, which is exactly what this command exists to tell apart. Keeping the response
+    lets :func:`_delivery_problem` apply the checks the exporter skips.
+    """
+    import requests
+
+    class RecordingSession(requests.Session):
+        def __init__(self) -> None:
+            super().__init__()
+            self.last_response = None
+
+        def post(self, *args, **kwargs):
+            response = super().post(*args, **kwargs)
+            self.last_response = response
+            return response
+
+    return RecordingSession()
+
+
+def _delivery_problem(session, signal: str) -> str | None:
+    """Why a 2xx did not actually mean delivery, or None when it did.
+
+    Three cases the exporter reports as success:
+
+    - A redirect. ``requests`` follows a 302 by downgrading POST to GET and dropping the body, so
+      an auth proxy or an ingress with a trailing-slash rule swallows the payload and answers 200
+      from a login page.
+    - A partial success. The collector accepted the request and then rejected some or all of the
+      items, for quota, cardinality or an unknown tenant. The count is in the response body, which
+      the exporter never reads.
+    - A non-OTLP 200. An ingress answering HTML on an unmatched path looks identical to a
+      collector otherwise. An empty body stays acceptable: real collectors send one.
+    """
+    response = getattr(session, "last_response", None)
+    if response is None:
+        return None
+
+    if response.history:
+        chain = " -> ".join(str(r.status_code) for r in response.history)
+        return (
+            f"the request was redirected ({chain}) to {response.url} and the payload was dropped; "
+            f"redirects turn the POST into a GET, so nothing was delivered"
+        )
+
+    body = response.content
+    if not body:
+        return None
+
+    try:
+        parsed = _response_class(signal).FromString(body)
+    except Exception:  # noqa: BLE001
+        content_type = response.headers.get("Content-Type", "unknown")
+        return (
+            f"the endpoint answered {response.status_code} with a {content_type} body that is not an "
+            f"OTLP response, so it is not a collector"
+        )
+
+    rejected = getattr(parsed.partial_success, _PARTIAL_SUCCESS_FIELD[signal], 0)
+    if rejected:
+        reason = parsed.partial_success.error_message or "no reason given"
+        return f"the collector rejected {rejected} item(s) from it: {reason}"
+    return None
+
+
 def _header_keys(signal: str) -> list[str]:
     """Header names for one signal, never the values.
 
@@ -151,15 +241,30 @@ def _header_keys(signal: str) -> list[str]:
 
 
 def _probe_spans(resource):
-    """One real span, produced by a throwaway tracer provider and caught in memory."""
+    """One real span, produced by a throwaway tracer provider and caught in memory.
+
+    The probe is forced to record, rather than inheriting ``OTEL_TRACES_SAMPLER``. The probe is a
+    single root span with a fresh trace id, so under any probabilistic sampler it is dropped at
+    the configured ratio and the traces verdict becomes a coin flip on a perfectly healthy
+    pipeline: at ratio 0.1 the command fails roughly nine runs in ten and its exit code changes
+    with no configuration change, which makes it useless as a healthcheck. Sampling governs which
+    production traffic is worth keeping; it says nothing about whether the transport works, and
+    the transport is what this command tests.
+
+    ``always_off`` is the exception and stays inherited. There the operator has turned tracing off
+    outright, so reporting that nothing was sent is the honest answer rather than a coin flip.
+    """
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import SimpleSpanProcessor
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    from opentelemetry.sdk.trace.sampling import ALWAYS_ON
 
     sink = InMemorySpanExporter()
+    configured_sampler = os.getenv("OTEL_TRACES_SAMPLER", "").strip().lower()
+    sampler = None if "always_off" in configured_sampler else ALWAYS_ON
     # shutdown_on_exit=False: this provider is thrown away here, and registering an atexit
     # handler for it would outlive the check and accumulate across repeated calls.
-    provider = TracerProvider(resource=resource, shutdown_on_exit=False)
+    provider = TracerProvider(resource=resource, shutdown_on_exit=False, sampler=sampler)
     provider.add_span_processor(SimpleSpanProcessor(sink))
     with provider.get_tracer(APPLICATION_TRACER_NAME).start_as_current_span(PROBE_NAME):
         pass
@@ -223,10 +328,15 @@ def _is_empty(payload) -> bool:
     return not payload
 
 
+def _sdk_disabled() -> bool:
+    """Whether OTEL_SDK_DISABLED turned the whole SDK into no-ops."""
+    return os.getenv("OTEL_SDK_DISABLED", "").strip().lower() == "true"
+
+
 def _empty_payload_detail(signal: str) -> str:
-    """Explain an empty probe, naming the sampler when that is what suppressed it."""
-    if signal == "traces":
-        sampler = os.getenv("OTEL_TRACES_SAMPLER", "parentbased_always_on")
+    """Explain an empty probe, naming the sampler only when one is actually configured."""
+    sampler = os.getenv("OTEL_TRACES_SAMPLER", "").strip()
+    if signal == "traces" and sampler:
         return (
             "The probe span was not recorded, so nothing could be sent and delivery was not "
             f"tested. OTEL_TRACES_SAMPLER={sampler} is dropping it."
@@ -247,13 +357,24 @@ def _check_signal(signal: str, resource, timeout: float | None) -> SignalReport:
     if otlp_exporter_disabled(signal):
         report.detail = f"Disabled by OTEL_{signal.upper()}_EXPORTER=none."
         return report
+    if _sdk_disabled():
+        # The SDK hands back NoOp providers, so every probe comes back empty. Without this the
+        # run reports three failures and blames the sampler, which is not set and drops nothing.
+        report.detail = "Disabled by OTEL_SDK_DISABLED=true."
+        return report
 
     report.protocol = _otlp_protocol(signal)
     report.header_keys = _header_keys(signal)
     route = f"{report.endpoint} over {report.protocol}"
 
+    # Only the HTTP exporters take a session. gRPC gives no equivalent hook, so the extra
+    # delivery checks below are HTTP-only and a gRPC run keeps the plain result-code verdict.
+    session = None if report.protocol == "grpc" else _recording_session()
     try:
-        exporter = otlp_exporter_class(signal, report.protocol)(timeout=timeout)
+        exporter_class = otlp_exporter_class(signal, report.protocol)
+        exporter = (
+            exporter_class(timeout=timeout) if session is None else exporter_class(timeout=timeout, session=session)
+        )
     except Exception as exc:  # noqa: BLE001
         # Endpoint and protocol belong on every failure line, not only the ones that reached the
         # wire: a bad certificate path fails here, and "which end is wrong" is the question.
@@ -292,6 +413,14 @@ def _check_signal(signal: str, resource, timeout: float | None) -> SignalReport:
     report.exporter_logs = capture.messages
     # Every signal's export result enum spells success as a member named SUCCESS.
     if getattr(result, "name", "") == "SUCCESS":
+        # SUCCESS only means the exporter saw a status under 400. It never checks whether it was
+        # redirected away from the collector, and never reads the response body, so several
+        # "delivered nothing" cases reach here looking identical to a real success.
+        problem = _delivery_problem(session, signal) if session is not None else None
+        if problem:
+            report.status = FAILED
+            report.detail = f"Export to {route} reported success but {problem}."
+            return report
         report.status = OK
         report.detail = f"Accepted by {route}."
     else:

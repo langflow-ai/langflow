@@ -35,6 +35,11 @@ class _CollectorStub:
         # raised on the server thread is routed to socketserver's handle_error, the client still
         # sees its response, and the test passes regardless. Assertions belong on the test thread.
         self.received: list[tuple[str, dict[str, str], int]] = []
+        # Default is an empty body, which real collectors do send and which the doctor accepts.
+        # Tests needing a partial-success or non-OTLP response set these before running.
+        self.response_body = b""
+        self.response_content_type = "application/x-protobuf"
+        stub = self
         received = self.received
         status_code = status
 
@@ -42,11 +47,13 @@ class _CollectorStub:
             def do_POST(self) -> None:
                 body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
                 received.append((self.path, dict(self.headers), len(body)))
-                # A zero-length body keeps the exporter from waiting on a protobuf response it
-                # does not need in order to read the status.
+                payload = stub.response_body
                 self.send_response(status_code)
-                self.send_header("Content-Length", "0")
+                self.send_header("Content-Type", stub.response_content_type)
+                self.send_header("Content-Length", str(len(payload)))
                 self.end_headers()
+                if payload:
+                    self.wfile.write(payload)
 
             def log_message(self, *_args) -> None:
                 """Silence the default stderr access log."""
@@ -351,6 +358,159 @@ def test_per_signal_headers_replace_the_generic_ones_rather_than_merging(monkeyp
         assert traces_headers.get("authorization") == "t"
         assert "x-generic" not in traces_headers
         assert collector.headers_for("/v1/metrics").get("x-generic") == "g"
+
+
+class _RedirectingStub:
+    """A stub that 302s the OTLP POST to a login page, like an auth proxy in front of a collector."""
+
+    def __init__(self) -> None:
+        self.saw: list[str] = []
+        saw = self.saw
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self) -> None:
+                self.rfile.read(int(self.headers.get("Content-Length", 0)))
+                saw.append(f"POST {self.path}")
+                self.send_response(302)
+                self.send_header("Location", "/login")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+
+            def do_GET(self) -> None:
+                saw.append(f"GET {self.path}")
+                page = b"<html>login</html>"
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html")
+                self.send_header("Content-Length", str(len(page)))
+                self.end_headers()
+                self.wfile.write(page)
+
+            def log_message(self, *_args) -> None:
+                """Silence the default stderr access log."""
+
+        self._server = HTTPServer(("127.0.0.1", 0), Handler)
+        self.endpoint = f"http://127.0.0.1:{self._server.server_port}"
+
+    def __enter__(self) -> "_RedirectingStub":
+        self._thread = Thread(target=self._server.serve_forever, daemon=True)
+        self._thread.start()
+        return self
+
+    def __exit__(self, *_exc_info: object) -> None:
+        self._server.shutdown()
+        self._server.server_close()
+        self._thread.join(timeout=5)
+
+
+@requires_otel
+@pytest.mark.usefixtures("clean_otel_env")
+def test_a_redirected_export_is_not_reported_as_delivered(monkeypatch):
+    """A 302 turns the POST into a GET and drops the payload, but the exporter still says SUCCESS.
+
+    An auth proxy or an ingress redirect rule in front of the collector produces exactly this:
+    the body never arrives, the login page answers 200, and the exporter reports success because
+    it only looks at the status code. Reporting OK here sends the operator away from the problem.
+    """
+    with _RedirectingStub() as stub:
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", stub.endpoint)
+        report = run_doctor(timeout=5)
+
+        assert not report.ok
+        for signal in report.signals:
+            assert signal.status == FAILED, signal.detail
+            assert "redirected" in signal.detail, signal.detail
+        # The payload really was thrown away: each POST became a GET of the login page.
+        assert "GET /login" in stub.saw
+
+
+@requires_otel
+@pytest.mark.usefixtures("clean_otel_env")
+def test_a_partial_success_response_is_not_reported_as_delivered(monkeypatch):
+    """A collector can answer 200 and still reject the items, for quota or an unknown tenant.
+
+    The count lives in the OTLP response body, which the exporter never reads.
+    """
+    from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTraceServiceResponse
+
+    rejected = ExportTraceServiceResponse()
+    rejected.partial_success.rejected_spans = 1
+    rejected.partial_success.error_message = "quota exceeded"
+    body = rejected.SerializeToString()
+
+    with _CollectorStub(status=200) as collector:
+        collector.response_body = body
+        collector.response_content_type = "application/x-protobuf"
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", f"{collector.endpoint}/v1/traces")
+        report = run_doctor(timeout=5)
+
+        traces = _by_signal(report)["traces"]
+        assert traces.status == FAILED, traces.detail
+        assert "rejected 1 item" in traces.detail, traces.detail
+        assert "quota exceeded" in traces.detail, traces.detail
+
+
+@requires_otel
+@pytest.mark.usefixtures("clean_otel_env")
+def test_a_non_otlp_200_is_not_reported_as_delivered(monkeypatch):
+    """An ingress answering HTML on an unmatched path looks like a collector to the exporter."""
+    with _CollectorStub(status=200) as collector:
+        collector.response_body = b"<html>not a collector</html>"
+        collector.response_content_type = "text/html"
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", collector.endpoint)
+        report = run_doctor(timeout=5)
+
+        assert not report.ok
+        for signal in report.signals:
+            assert signal.status == FAILED, signal.detail
+            assert "not an OTLP response" in signal.detail, signal.detail
+
+
+@requires_otel
+@pytest.mark.usefixtures("clean_otel_env")
+def test_a_probabilistic_sampler_does_not_decide_the_traces_verdict(monkeypatch):
+    """Sampling governs which production traffic is kept; it says nothing about the transport.
+
+    The probe is one root span with a fresh trace id, so an inherited ratio sampler drops it at
+    that ratio and the verdict becomes a coin flip on a healthy pipeline. Repeated here because a
+    single run passing proves nothing about a probabilistic bug.
+    """
+    with _CollectorStub(status=200) as collector:
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", collector.endpoint)
+        monkeypatch.setenv("OTEL_TRACES_SAMPLER", "traceidratio")
+        monkeypatch.setenv("OTEL_TRACES_SAMPLER_ARG", "0.05")
+
+        for _ in range(10):
+            traces = _by_signal(run_doctor(timeout=5))["traces"]
+            assert traces.status == OK, traces.detail
+
+
+@requires_otel
+@pytest.mark.usefixtures("clean_otel_env")
+def test_sampling_off_entirely_is_still_reported_honestly(monkeypatch):
+    """always_off is a deliberate 'trace nothing', so claiming delivery would be a lie."""
+    with _CollectorStub(status=200) as collector:
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", collector.endpoint)
+        monkeypatch.setenv("OTEL_TRACES_SAMPLER", "always_off")
+        report = run_doctor(timeout=5)
+
+        traces = _by_signal(report)["traces"]
+        assert traces.status == FAILED
+        assert "always_off" in traces.detail
+
+
+@requires_otel
+@pytest.mark.usefixtures("clean_otel_env")
+def test_sdk_disabled_is_named_as_the_cause(monkeypatch):
+    """OTEL_SDK_DISABLED makes every provider a no-op, so blaming the sampler is a fabricated cause."""
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318")
+    monkeypatch.setenv("OTEL_SDK_DISABLED", "true")
+
+    report = run_doctor(timeout=2)
+
+    assert [signal.status for signal in report.signals] == [SKIPPED] * 3
+    for signal in report.signals:
+        assert "OTEL_SDK_DISABLED" in signal.detail
+        assert "SAMPLER" not in signal.detail.upper(), signal.detail
 
 
 @requires_otel
