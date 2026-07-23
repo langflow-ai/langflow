@@ -558,6 +558,7 @@ async def get_graph(
     provider: str | None = None,
     model_name: str | None = None,
     api_key_var: str | None = None,
+    iterations_limit: int | None = None,
 ) -> Graph:
     """Create and return the FlowBuilderAssistant graph.
 
@@ -565,12 +566,22 @@ async def get_graph(
         provider: Model provider (e.g., "OpenAI", "Anthropic").
         model_name: Model name (e.g., "gpt-4o").
         api_key_var: Optional API key variable name.
+        iterations_limit: Per-request Agent step budget; defaults to the shared
+            assistant budget. This flow is Python-built, so the JSON-side
+            ``inject_iterations_into_flow`` never touches it — the budget must
+            arrive here or the Agent silently runs on the component default.
 
     Returns:
         Graph: The configured flow builder assistant graph.
     """
+    from langflow.agentic.services.flow_preparation import DEFAULT_ASSISTANT_ITERATIONS, MAX_ASSISTANT_ITERATIONS
+
     provider = provider or "OpenAI"
     model_name = model_name or "gpt-4o"
+    if iterations_limit is None:
+        step_budget = DEFAULT_ASSISTANT_ITERATIONS
+    else:
+        step_budget = max(1, min(int(iterations_limit), MAX_ASSISTANT_ITERATIONS))
 
     chat_input = ChatInput()
     chat_input.set(sender="User", sender_name="User")
@@ -586,6 +597,7 @@ async def get_graph(
         "system_prompt": FLOW_BUILDER_PROMPT,
         "tools": tools,
         "temperature": 0.1,
+        "max_iterations": step_budget,
     }
     if api_key_var:
         agent_config["api_key"] = api_key_var

@@ -7,6 +7,7 @@
 
 import type { useUpdateNodeInternals } from "@xyflow/react";
 import useFlowStore from "@/stores/flowStore";
+import { filterPlaceableSelection } from "@/utils/componentConstraints";
 import type { PendingFlowProposal } from "../assistant-panel.types";
 import { applyFlowUpdate, notifyNodesUntilMounted } from "./apply-flow-update";
 import { mergeFlowIntoCanvas } from "./merge-flow-into-canvas";
@@ -40,10 +41,15 @@ export function applyFlowProposalToCanvas(
     const existingIds = new Set(
       (store.nodes as PositionedNode[]).map((n) => n.id),
     );
+    // Writes the store directly (not via `paste`), so re-enforce placement policy.
+    const placeable = filterPlaceableSelection(
+      { nodes: proposalNodes as never[], edges: proposalEdges as never[] },
+      store.nodes as Array<{ data?: { type?: string } }>,
+    );
     const merged = mergeFlowIntoCanvas(
       store.nodes as PositionedNode[],
       store.edges as SimpleEdge[],
-      { nodes: proposalNodes, edges: proposalEdges },
+      { nodes: placeable.nodes, edges: placeable.edges },
     );
     // Atomic nodes+edges in one render so edges to loop/dynamic handles draw
     // without a refresh (a split setNodes+setEdges draws them a frame late).

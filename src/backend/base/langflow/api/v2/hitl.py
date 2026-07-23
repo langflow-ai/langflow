@@ -166,6 +166,54 @@ def _set_submitted_action(content_blocks: list, action_id: str | None, request_i
     return changed
 
 
+def _mark_superseded(content_blocks: list) -> bool:
+    """Flag every still-open human_input content as superseded, in place."""
+    changed = False
+    for block in content_blocks or []:
+        contents = block.get("contents") if isinstance(block, dict) else getattr(block, "contents", None)
+        for content in contents or []:
+            is_dict = isinstance(content, dict)
+            ctype = content.get("type") if is_dict else getattr(content, "type", None)
+            if ctype != "human_input":
+                continue
+            answered = content.get("submitted_action") if is_dict else getattr(content, "submitted_action", None)
+            if answered is not None:
+                continue
+            if is_dict:
+                content["superseded"] = True
+            else:
+                content.superseded = True
+            changed = True
+    return changed
+
+
+async def mark_card_superseded(job_id: UUID) -> None:
+    """Close the persisted card of a run cancelled by supersede/stop.
+
+    Without this the reloaded card (no ``submitted_action``) turns interactive
+    again and every click 409s against the cancelled job. Patched in place like
+    ``mark_card_answered`` so prompt/options are preserved for the history.
+    """
+    from lfx.services.deps import session_scope
+
+    from langflow.services.database.models.message.model import MessageTable
+
+    job = await get_job_service().get_job_by_job_id(job_id)
+    card_message_id = (job.job_metadata or {}).get("card_message_id") if job else None
+    if not card_message_id:
+        return
+    try:
+        async with session_scope() as session:
+            message = await session.get(MessageTable, UUID(str(card_message_id)))
+            if message is None:
+                return
+            if _mark_superseded(message.content_blocks):
+                flag_modified(message, "content_blocks")
+                session.add(message)
+    except Exception as _e:  # noqa: BLE001
+        await logger.awarning("Failed to mark human-input card superseded for job %s: %r", job_id, _e)
+
+
 async def mark_card_answered(job_id: UUID, request_id: str, decision: dict, *, card_message_id=None) -> None:
     """Record the chosen action on the persisted card message for ``job_id``.
 

@@ -67,6 +67,9 @@ def inject_history_limit_into_flow(flow_data: dict, limit: int | None) -> dict:
 
 
 MAX_ASSISTANT_ITERATIONS = 200
+# Pinned assistant step budget (a COST decision, tripwire-tested): LangflowAssistant.json
+# pins it on its Agents and the Python builder flow defaults to it — one source of truth.
+DEFAULT_ASSISTANT_ITERATIONS = 30
 
 
 def inject_iterations_into_flow(flow_data: dict, limit: int | None) -> dict:

@@ -39,7 +39,7 @@ This component has two modes, depending on the type of server you want to access
 
     * **JSON**: Paste the MCP server's JSON configuration object into the field, including required and optional parameters that you want to use, and then click **Add Server**.
     * **STDIO**: Enter the MCP server's **Name**, **Command**, and any **Arguments** and **Environment Variables** the server uses, and then click **Add Server**.
-    For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the **Command** is `uvx mcp-server-fetch`.
+    For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, set **Command** to `uvx` and the first **Argument** to `mcp-server-fetch`.
     * **HTTP/SSE**: Enter your MCP server's **Name**, **URL**, and any **Headers** and **Environment Variables** the server uses, and then click **Add Server**.
     The default **URL** for Langflow MCP servers is `http://localhost:7860/api/v1/mcp/project/PROJECT_ID/streamable` or `http://localhost:7860/api/v1/mcp/streamable`. For more information, see [Connect to a Langflow MCP server](#mcp-http-mode).
 

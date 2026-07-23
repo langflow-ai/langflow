@@ -7,6 +7,7 @@ from uuid import UUID
 import pytest
 from httpx import codes
 from langflow.services.database.models.flow import FlowUpdate
+from langflow.services.deps import get_settings_service
 from langflow.services.job_queue.service import JobQueueService
 from lfx.log.logger import logger
 from lfx.memory import aget_messages
@@ -560,6 +561,58 @@ async def test_build_public_tmp_ignores_data_parameter(client, json_memory_chatb
     assert response.status_code == codes.OK
     response_data = response.json()
     assert "job_id" in response_data
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_rate_limits_each_client_and_flow(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """Anonymous builds are bounded without sharing counters across public flows."""
+
+    async def create_public_flow():
+        flow_data = json.loads(json_memory_chatbot_no_llm)
+        flow_data["id"] = str(uuid.uuid4())
+        flow_id = await create_flow(client, json.dumps(flow_data), logged_in_headers)
+        response = await client.patch(
+            f"api/v1/flows/{flow_id}",
+            json={"access_type": "PUBLIC"},
+            headers=logged_in_headers,
+        )
+        assert response.status_code == codes.OK
+        return flow_id
+
+    first_flow_id = await create_public_flow()
+    second_flow_id = await create_public_flow()
+    started_source_flow_ids = []
+
+    async def fake_start_flow_build(**kwargs):
+        started_source_flow_ids.append(kwargs["source_flow_id"])
+        return str(uuid.uuid4())
+
+    monkeypatch.setattr("langflow.api.v1.chat.start_flow_build", fake_start_flow_build)
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "rate_limit_enabled", True)
+    monkeypatch.setattr(settings, "public_flow_rate_limit_per_minute", 2)
+
+    client.cookies.clear()
+    client.cookies.set("client_id", "test-public-build-rate-limit-client")
+    request_kwargs = {
+        "json": {"inputs": {"session": "test_session"}},
+        "headers": {"Content-Type": "application/json"},
+    }
+
+    for _ in range(2):
+        response = await client.post(f"api/v1/build_public_tmp/{first_flow_id}/flow", **request_kwargs)
+        assert response.status_code == codes.OK
+
+    limited_response = await client.post(f"api/v1/build_public_tmp/{first_flow_id}/flow", **request_kwargs)
+    assert limited_response.status_code == codes.TOO_MANY_REQUESTS
+    assert limited_response.headers["Retry-After"] == "60"
+
+    other_flow_response = await client.post(f"api/v1/build_public_tmp/{second_flow_id}/flow", **request_kwargs)
+    assert other_flow_response.status_code == codes.OK
+    assert started_source_flow_ids == [first_flow_id, first_flow_id, second_flow_id]
 
 
 @pytest.mark.benchmark

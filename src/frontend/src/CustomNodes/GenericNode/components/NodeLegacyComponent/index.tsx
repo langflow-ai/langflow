@@ -8,10 +8,12 @@ export default function NodeLegacyComponent({
   legacy,
   replacement,
   setDismissAll,
+  disabled = false,
 }: {
   legacy?: boolean;
   replacement?: string[];
   setDismissAll: (value: boolean) => void;
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
   const setFilterComponent = useFlowStore((state) => state.setFilterComponent);
@@ -46,6 +48,7 @@ export default function NodeLegacyComponent({
           }}
           aria-label={t("node.dismissWarning")}
           data-testid="dismiss-warning-bar"
+          disabled={disabled}
         >
           Dismiss
         </Button>

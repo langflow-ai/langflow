@@ -32,7 +32,10 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
     def default_kwargs(self):
         """Return the default kwargs for the component."""
         return {
-            "mcp_server": {"name": "test_server", "config": {"command": "uvx test-mcp-server"}},
+            "mcp_server": {
+                "name": "test_server",
+                "config": {"command": "uvx", "args": ["test-mcp-server"]},
+            },
             "tool": "",
             "use_cache": False,
         }
@@ -62,7 +65,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def mock_server_config(self):
         """Mock server configuration."""
-        return {"command": "uvx test-mcp-server", "args": [], "env": {}}
+        return {"command": "uvx", "args": ["test-mcp-server"], "env": {}}
 
     async def component_setup(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> MCPToolsComponent:
         component_instance = await super().component_setup(component_class, default_kwargs)

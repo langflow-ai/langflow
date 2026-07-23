@@ -29,6 +29,59 @@ if TYPE_CHECKING:
 LANGFUSE_FEEDBACK_SCORE_NAME = "user-feedback"
 
 
+def _normalize_boundary_messages(value: Any) -> Any:
+    """Replace Langflow messages with their text while preserving container shape."""
+    from lfx.schema.message import Message
+
+    if isinstance(value, Message):
+        return value.get_text()
+    if isinstance(value, dict):
+        return {key: _normalize_boundary_messages(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [_normalize_boundary_messages(item) for item in value]
+    return value
+
+
+def _serialize_component_boundary(component_output: Any) -> Any:
+    """Collapse a sole component output and normalize Langflow messages to text."""
+    value = (
+        next(iter(component_output.values()))
+        if isinstance(component_output, dict) and len(component_output) == 1
+        else component_output
+    )
+    return serialize(_normalize_boundary_messages(value))
+
+
+def _trace_boundary_value(
+    component_values: dict[str, Any],
+    boundary_traces: dict[str, str],
+    *,
+    fallback_component_values: dict[str, Any] | None = None,
+    prefer_fallback_trace_ids: set[str] | None = None,
+) -> tuple[bool, Any]:
+    """Return marked graph-boundary outputs in deterministic component-id order."""
+    values = []
+    prefer_fallback_trace_ids = prefer_fallback_trace_ids or set()
+    for trace_id, trace_name in sorted(boundary_traces.items()):
+        sources = (
+            (fallback_component_values, component_values)
+            if trace_id in prefer_fallback_trace_ids
+            else (component_values, fallback_component_values)
+        )
+        for source in sources:
+            if source is None or trace_name not in source:
+                continue
+            component_value = source[trace_name]
+            if isinstance(component_value, dict) and not component_value:
+                continue
+            values.append(_serialize_component_boundary(component_value))
+            break
+
+    if not values:
+        return False, None
+    return True, values[0] if len(boundary_traces) == 1 else values
+
+
 class _SharedClient:
     """Process-wide cached Langfuse client.
 
@@ -311,6 +364,8 @@ class LangFuseTracer(BaseTracer):
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict[str, LangfuseSpan] = OrderedDict()
+        self._input_trace_names: dict[str, str] = {}
+        self._output_trace_names: dict[str, str] = {}
         self.langfuse_trace_id = None
 
         config = self._get_config()
@@ -409,6 +464,12 @@ class LangFuseTracer(BaseTracer):
 
         name = trace_name.removesuffix(f" ({trace_id})")
 
+        if vertex is not None:
+            if vertex.is_input:
+                self._input_trace_names[trace_id] = trace_name
+            if vertex.is_output:
+                self._output_trace_names[trace_id] = trace_name
+
         # Create child span under the root span
         span = self._root_span.start_span(
             name=name,
@@ -452,10 +513,28 @@ class LangFuseTracer(BaseTracer):
         if not self._ready:
             return
 
-        # Serialize once and reuse to avoid duplicate work
+        # Keep the complete component aggregates on the root observation.
         inputs_ser = serialize(inputs)
         outputs_ser = serialize(outputs)
         metadata_ser = serialize(metadata) if metadata else None
+
+        # Input components emit the normalized external request as their output;
+        # output components emit the final graph result. If a custom graph has no
+        # boundary marker, retain the full aggregate rather than guessing from
+        # concurrent component completion order.
+        dual_role_trace_ids = self._input_trace_names.keys() & self._output_trace_names.keys()
+        input_found, trace_input = _trace_boundary_value(
+            outputs,
+            self._input_trace_names,
+            fallback_component_values=inputs,
+            prefer_fallback_trace_ids=dual_role_trace_ids,
+        )
+        if not input_found:
+            trace_input = inputs_ser
+
+        output_found, trace_output = _trace_boundary_value(outputs, self._output_trace_names)
+        if not output_found:
+            trace_output = outputs_ser
 
         # Update the root span with final input/output
         self._root_span.update(
@@ -466,8 +545,8 @@ class LangFuseTracer(BaseTracer):
 
         # Update trace-level data
         self._root_span.update_trace(
-            input=inputs_ser,
-            output=outputs_ser,
+            input={"input": trace_input},
+            output={"output": trace_output},
             metadata=metadata_ser,
         )
 

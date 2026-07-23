@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { useSidebar } from "@/components/ui/sidebar";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import type { AgenticStepType } from "@/controllers/API/queries/agentic";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
+import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import type {
   AssistantModel,
@@ -86,9 +88,15 @@ function AssistantInputWithScroll({
 export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   const { hasEnabledModels } = useEnabledModels();
   const panelRef = useRef<HTMLDivElement>(null);
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isReadOnly = useIsFlowReadOnly(currentFlowId);
   // An open sidebar offsets the canvas 280px, so the panel shifts right by
   // half (140px) to stay canvas-centered; collapsed uses plain left-1/2.
   const isSidebarOpen = useSidebar().open;
+
+  useEffect(() => {
+    if (isOpen && isReadOnly) onClose();
+  }, [isOpen, isReadOnly, onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -175,7 +183,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     (state) => state.clearPendingMessage,
   );
   useEffect(() => {
-    if (!isOpen || !pendingMessage) return;
+    if (!isOpen || !pendingMessage || isReadOnly) return;
     let saved: AssistantModel | null = null;
     try {
       const raw = localStorage.getItem("langflow-assistant-selected-model");
@@ -192,7 +200,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     if (!saved) return;
     void handleSend(pendingMessage, saved);
     clearPendingMessage();
-  }, [isOpen, pendingMessage, handleSend, clearPendingMessage]);
+  }, [isOpen, pendingMessage, isReadOnly, handleSend, clearPendingMessage]);
 
   // Opening with a pendingMessage = welcome submit: lock a min-height so the
   // auto-sent message + reply aren't cramped in the tiny compact panel.
@@ -216,6 +224,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   }, [handleStopGeneration, saveCurrentSession, handleClearHistory]);
 
   const handleApproveAndClose = (messageId: string, componentCode?: string) => {
+    if (isReadOnly) return;
     handleApprove(messageId, componentCode);
     onClose();
   };
@@ -330,7 +339,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     [panelSize, useExpandedSize],
   );
 
-  if (!isOpen) return null;
+  if (!isOpen || isReadOnly) return null;
 
   const containerClasses = cn(
     "flex flex-col transition-[opacity,transform] duration-200 fixed shadow-xl will-change-[opacity,transform]",

@@ -51,8 +51,10 @@ from langflow.agentic.helpers.sse import (
 from langflow.agentic.helpers.streaming_retry import emit_execution_retry_events
 from langflow.agentic.helpers.validation import validate_component_code, validate_component_runtime
 from langflow.agentic.services.agent_run_context import (
+    reset_agent_run_iterations,
     reset_agent_run_model,
     reset_requested_agent_model,
+    set_agent_run_iterations,
     set_agent_run_model,
     set_requested_agent_model,
 )
@@ -317,6 +319,17 @@ async def _get_current_flow_summary(flow_id: str | None, *, user_id: str | None 
     return None
 
 
+def _iterations_from_globals(global_variables: dict[str, str]) -> int | None:
+    """Parse the ITERATIONS_LIMIT riding in the request's global variables."""
+    raw = global_variables.get("ITERATIONS_LIMIT")
+    if raw in (None, ""):
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
 async def execute_flow_with_validation(
     flow_filename: str,
     input_value: str,
@@ -348,17 +361,23 @@ async def execute_flow_with_validation(
         attempt += 1
         logger.info(f"Component generation attempt {attempt}/{max_retries + 1}")
 
-        result = await execute_flow_file(
-            flow_filename=flow_filename,
-            input_value=current_input,
-            global_variables=global_variables,
-            verbose=True,
-            user_id=user_id,
-            session_id=session_id,
-            provider=provider,
-            model_name=model_name,
-            api_key_var=api_key_var,
-        )
+        # Bound per attempt so the generate_component tool (running inside
+        # execute_flow_file) caps its nested subflow with this turn's budget.
+        set_agent_run_iterations(_iterations_from_globals(global_variables))
+        try:
+            result = await execute_flow_file(
+                flow_filename=flow_filename,
+                input_value=current_input,
+                global_variables=global_variables,
+                verbose=True,
+                user_id=user_id,
+                session_id=session_id,
+                provider=provider,
+                model_name=model_name,
+                api_key_var=api_key_var,
+            )
+        finally:
+            reset_agent_run_iterations()
 
         response_text = extract_response_text(result)
 
@@ -850,6 +869,7 @@ async def execute_flow_with_validation_streaming(
         # The generate_component tool re-runs the component-gen LLM flow
         # mid-loop and needs the same provider/model the request used.
         set_agent_run_model(provider, model_name, api_key_var)
+        set_agent_run_iterations(_iterations_from_globals(global_variables))
         # If the user EXPLICITLY named a model (e.g. "use the OpenAI gpt-5.4
         # model"), bind it so the run-time injector ENFORCES it on the Agent —
         # the canvas must show exactly what the user asked for, never the
@@ -1527,6 +1547,7 @@ async def execute_flow_with_validation_streaming(
         # inherits this context doesn't see a stale id.
         reset_current_user_id()
         reset_agent_run_model()
+        reset_agent_run_iterations()
         reset_requested_agent_model()
         # Persist the completed turn to the session buffer so the next
         # request can inject it as context. Skips cancelled/errored runs

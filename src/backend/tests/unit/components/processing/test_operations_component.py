@@ -9,6 +9,8 @@ Values" operation.
 
 import pandas as pd
 import pytest
+from lfx.components.processing.data_operations import DataOperationsComponent
+from lfx.components.processing.dataframe_operations import DataFrameOperationsComponent
 from lfx.components.processing.operations import (
     JSON_OPERATIONS,
     OPERATIONS_BY_TYPE,
@@ -16,6 +18,7 @@ from lfx.components.processing.operations import (
     TEXT_OPERATIONS,
     OperationsComponent,
 )
+from lfx.components.processing.text_operations import TextOperations
 from lfx.schema import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict
@@ -42,6 +45,14 @@ class TestOperationsComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
+
+
+@pytest.mark.parametrize(
+    "legacy_component",
+    [DataOperationsComponent, DataFrameOperationsComponent, TextOperations],
+)
+def test_legacy_operations_components_point_to_unified_replacement(legacy_component):
+    assert legacy_component.replacement == ["processing.Operations"]
 
 
 class TestOperationCatalog:
