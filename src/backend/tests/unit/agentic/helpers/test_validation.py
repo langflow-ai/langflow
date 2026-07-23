@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 import pytest
 from langflow.agentic.helpers.validation import (
+    _execute_output_methods_for_validation,
     _extract_class_name_regex,
     _extract_io_names,
     _extract_output_methods,
@@ -330,6 +331,40 @@ class TestValidateComponentRuntimeExecution:
     failures so the retry loop can recover before the component is handed to the
     user.
     """
+
+    @pytest.mark.asyncio
+    async def test_runtime_validation_applies_standalone_model_provider_gate(self, monkeypatch):
+        from lfx.base.models.model import LCModelComponent
+        from lfx.io import Output
+        from lfx.services.model_provider_policy import (
+            ModelProviderPolicyContext,
+            ModelProviderPolicySnapshot,
+        )
+
+        output_called = False
+
+        class DeniedModelComponent(LCModelComponent):
+            display_name = "OpenAI"
+            outputs = [Output(name="model", display_name="Model", method="build_model")]
+
+            def build_model(self):
+                nonlocal output_called
+                output_called = True
+                return "must-not-run"
+
+        def deny(*, user_id, providers, purpose, attributes=None):
+            return ModelProviderPolicySnapshot(
+                context=ModelProviderPolicyContext(user_id=user_id, attributes=attributes or {}),
+                purpose=purpose,
+                candidate_provider_ids=frozenset(providers),
+                allowed_provider_ids=frozenset(),
+            )
+
+        monkeypatch.setattr("lfx.services.model_provider_policy.utils.resolve_model_provider_policy", deny)
+        component = DeniedModelComponent(_user_id="user-1")
+
+        assert await _execute_output_methods_for_validation(component) is None
+        assert output_called is False
 
     @pytest.mark.asyncio
     async def test_should_return_error_when_output_method_builds_data_with_list_payload(self):

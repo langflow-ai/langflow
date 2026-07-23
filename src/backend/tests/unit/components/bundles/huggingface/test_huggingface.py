@@ -1,3 +1,7 @@
+import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.inputs.inputs import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput, StrInput
 from lfx_bundles.huggingface.huggingface import DEFAULT_MODEL, HuggingFaceEndpointsComponent
 

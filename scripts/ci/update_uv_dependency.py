@@ -8,35 +8,28 @@ BASE_DIR = Path(__file__).parent.parent.parent
 ARGUMENT_NUMBER = 2
 
 
-def update_uv_dep(base_version: str) -> None:
-    """Update the langflow-base dependency in pyproject.toml."""
+def update_uv_dep(core_version: str) -> None:
+    """Pin every root ``langflow-core`` requirement to a nightly version."""
     pyproject_path = BASE_DIR / "pyproject.toml"
 
     # Read the pyproject.toml file content
     content = pyproject_path.read_text(encoding="utf-8")
 
-    # For the main project, update the langflow-base dependency in the UV section
-    # Updated pattern to handle PEP 440 version suffixes, extras (e.g., [complete]),
-    # and both ~= and == version specifiers
-    # Also handles both langflow-base and langflow-base-nightly names
-    # Captures extras in group 3 to preserve them in the replacement
+    # Main delegates its runtime and matching optional extras to langflow-core.
+    # Rewrite the bare, audio, and postgresql requirements together so a nightly
+    # full wheel never mixes a dev root with stable core extras.
     pattern = re.compile(
-        r'(dependencies\s*=\s*\[\s*\n\s*)("langflow-base(?:-nightly)?((?:\[[^\]]+\])?)(?:~=|==|>=)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")'
+        r'"langflow-core(?:-nightly)?((?:\[[^\]]+\])?)(?:~=|==|>=)[\d.]+'
+        r'(?:\.(?:post|dev|a|b|rc)\d+)*(?:,[^"]*)?"'
     )
 
-    # Check if the pattern is found
-    match = pattern.search(content)
-    if not match:
+    content, count = pattern.subn(
+        lambda match: f'"langflow-core{match.group(1)}=={core_version}"',
+        content,
+    )
+    if count == 0:
         msg = f"{pattern} UV dependency not found in {pyproject_path}"
         raise ValueError(msg)
-
-    # Extract extras if present (e.g., "[complete]")
-    extras = match.group(3) if match.group(3) else ""
-    # Keep the canonical `langflow-base` name with an exact `==<dev>` pin.
-    replacement = rf'\1"langflow-base{extras}=={base_version}"'
-
-    # Replace the matched pattern with the new one
-    content = pattern.sub(replacement, content)
 
     # Write the updated content back to the file
     pyproject_path.write_text(content, encoding="utf-8")
@@ -44,11 +37,11 @@ def update_uv_dep(base_version: str) -> None:
 
 def main() -> None:
     if len(sys.argv) != ARGUMENT_NUMBER:
-        msg = "specify base version"
+        msg = "specify core version"
         raise ValueError(msg)
-    base_version = sys.argv[1]
-    base_version = base_version.lstrip("v")
-    update_uv_dep(base_version)
+    core_version = sys.argv[1]
+    core_version = core_version.lstrip("v")
+    update_uv_dep(core_version)
 
 
 if __name__ == "__main__":

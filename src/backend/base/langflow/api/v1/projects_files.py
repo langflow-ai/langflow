@@ -30,6 +30,8 @@ from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
+from langflow.services.authorization import FlowAction, filter_visible_resources
+from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.model import (
@@ -44,19 +46,29 @@ async def download_project_flows(
     session: DbSession,
     project_id: UUID,
     current_user: CurrentActiveUser,
+    project_owner_id: UUID | None = None,
 ) -> StreamingResponse:
     """Download all flows from project as a zip file."""
     try:
-        query = select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id)
+        owner_id = project_owner_id or current_user.id
+        query = select(Folder).where(Folder.id == project_id, Folder.user_id == owner_id)
         result = await session.exec(query)
         project = result.first()
 
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
 
-        flows_query = select(Flow).where(Flow.folder_id == project_id)
+        flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.user_id == owner_id)
         flows_result = await session.exec(flows_query)
-        flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows_result.all()]
+        visible_flows = await filter_visible_resources(
+            current_user,
+            resource_type="flow",
+            candidates=list(flows_result.all()),
+            domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
+            owner_extractor=lambda flow: flow.user_id,
+            act=FlowAction.READ,
+        )
+        flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in visible_flows]
 
         if not flows:
             raise HTTPException(status_code=404, detail="No flows found in project")
@@ -204,5 +216,6 @@ async def upload_project_flows(
         flow.name = flow_name
         flow.user_id = current_user.id
         flow.folder_id = new_project.id
+        flow.workspace_id = new_project.workspace_id
 
     return await create_flows(session=session, flow_list=flow_list, current_user=current_user)

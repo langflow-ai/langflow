@@ -1,0 +1,274 @@
+{
+  "schema_version": 1,
+  "artifacts": {
+    "python": {
+      "lfx": "standalone engine; intentionally not an application tier",
+      "langflow-base": "backend framework; intentionally not an application tier",
+      "langflow-core": "core application without provider bundle distributions",
+      "langflow": "default application with the curated provider set",
+      "langflow plus lfx-bundles[all-no-torch]": "full application provider inventory"
+    },
+    "images": {
+      "base": "build foundation; not an application image",
+      "main-backend": "backend-only derivative of the default application",
+      "main-frontend": "frontend-only static image",
+      "lfx": "standalone engine image",
+      "core": "core application image",
+      "main": "default curated application image",
+      "main-all": "full application image"
+    }
+  },
+  "profiles": {
+    "python-core": {
+      "required_distributions": [
+        "langflow-base",
+        "langflow-core",
+        "langflow-sdk",
+        "lfx"
+      ],
+      "forbidden_distributions": [
+        "langflow",
+        "lfx-bundles"
+      ],
+      "forbidden_distribution_prefixes": [
+        "lfx-"
+      ],
+      "exact_distributions": true,
+      "entry_points": {
+        "langflow.extensions": [],
+        "lfx.bundles": []
+      },
+      "bundle_names": [],
+      "required_files": {
+        "langflow-base": [
+          "langflow/initial_setup/starter_projects/Basic Prompting.json"
+        ]
+      },
+      "module_checks": [
+        {
+          "module": "lfx.components.youtube",
+          "expect": "error",
+          "contains": "pip install lfx-bundles"
+        }
+      ]
+    },
+    "python-default": {
+      "extends": "python-core",
+      "required_distributions_add": [
+        "langflow",
+        "lfx-amazon",
+        "lfx-anthropic",
+        "lfx-arxiv",
+        "lfx-cohere",
+        "lfx-datastax",
+        "lfx-docling",
+        "lfx-duckduckgo",
+        "lfx-empiriolabs",
+        "lfx-exa",
+        "lfx-firecrawl",
+        "lfx-google",
+        "lfx-ibm",
+        "lfx-nextplaid",
+        "lfx-openai",
+        "lfx-openai-compatible",
+        "lfx-oracle",
+        "lfx-paddle",
+        "lfx-valkey",
+        "lfx-vllm"
+      ],
+      "forbidden_distributions_remove": [
+        "langflow"
+      ],
+      "forbidden_distribution_prefixes": [],
+      "entry_points": {
+        "langflow.extensions": [
+          "lfx-amazon",
+          "lfx-anthropic",
+          "lfx-arxiv",
+          "lfx-cohere",
+          "lfx-datastax",
+          "lfx-docling",
+          "lfx-duckduckgo",
+          "lfx-empiriolabs",
+          "lfx-exa",
+          "lfx-firecrawl",
+          "lfx-google",
+          "lfx-ibm",
+          "lfx-nextplaid",
+          "lfx-openai",
+          "lfx-openai-compatible",
+          "lfx-oracle",
+          "lfx-paddle",
+          "lfx-valkey",
+          "lfx-vllm"
+        ],
+        "lfx.bundles": []
+      },
+      "required_files": {
+        "langflow-base": [
+          "langflow/initial_setup/starter_projects/Basic Prompting.json"
+        ],
+        "lfx-openai": [
+          "lfx_openai/extension.json",
+          "lfx_openai/components/openai/openai_chat_model.py"
+        ],
+        "lfx-google": [
+          "lfx_google/extension.json",
+          "lfx_google/components/google/google_generative_ai.py"
+        ]
+      },
+      "module_checks": [
+        {
+          "module": "lfx.components.google",
+          "attribute": "GoogleGenerativeAIComponent",
+          "expect": "success"
+        }
+      ]
+    },
+    "python-full": {
+      "extends": "python-default",
+      "required_distributions_add": [
+        "lfx-bundles"
+      ],
+      "forbidden_distributions_remove": [
+        "lfx-bundles"
+      ],
+      "entry_points": {
+        "langflow.extensions": [
+          "lfx-amazon",
+          "lfx-anthropic",
+          "lfx-arxiv",
+          "lfx-cohere",
+          "lfx-datastax",
+          "lfx-docling",
+          "lfx-duckduckgo",
+          "lfx-empiriolabs",
+          "lfx-exa",
+          "lfx-firecrawl",
+          "lfx-google",
+          "lfx-ibm",
+          "lfx-nextplaid",
+          "lfx-openai",
+          "lfx-openai-compatible",
+          "lfx-oracle",
+          "lfx-paddle",
+          "lfx-valkey",
+          "lfx-vllm"
+        ],
+        "lfx.bundles": [
+          "lfx_bundles"
+        ]
+      },
+      "bundle_names": [
+        "agentql",
+        "aiml",
+        "altk",
+        "apify",
+        "assemblyai",
+        "azure",
+        "baidu",
+        "bing",
+        "chroma",
+        "cleanlab",
+        "clickhouse",
+        "cloudflare",
+        "codeagents",
+        "cometapi",
+        "composio",
+        "confluence",
+        "couchbase",
+        "cuga",
+        "deepseek",
+        "elastic",
+        "faiss",
+        "git",
+        "glean",
+        "groq",
+        "homeassistant",
+        "huggingface",
+        "icosacomputing",
+        "jigsawstack",
+        "langwatch",
+        "litellm",
+        "lmstudio",
+        "maritalk",
+        "mem0",
+        "milvus",
+        "mistral",
+        "mongodb",
+        "needle",
+        "notdiamond",
+        "notion",
+        "novita",
+        "nvidia",
+        "olivya",
+        "ollama",
+        "openrouter",
+        "perplexity",
+        "pgvector",
+        "pinecone",
+        "qdrant",
+        "redis",
+        "sambanova",
+        "scrapegraph",
+        "searchapi",
+        "serpapi",
+        "spider",
+        "supabase",
+        "tavily",
+        "twelvelabs",
+        "unstructured",
+        "upstash",
+        "vectara",
+        "vertexai",
+        "vlmrun",
+        "weaviate",
+        "wikipedia",
+        "wolframalpha",
+        "xai",
+        "yahoosearch",
+        "youtube",
+        "zep"
+      ],
+      "required_files": {
+        "langflow-base": [
+          "langflow/initial_setup/starter_projects/Basic Prompting.json"
+        ],
+        "lfx-openai": [
+          "lfx_openai/extension.json",
+          "lfx_openai/components/openai/openai_chat_model.py"
+        ],
+        "lfx-google": [
+          "lfx_google/extension.json",
+          "lfx_google/components/google/google_generative_ai.py"
+        ],
+        "lfx-bundles": [
+          "lfx_bundles/mongodb/mongodb_atlas.py",
+          "lfx_bundles/codeagents/starter_projects/Structured Data Analysis Agent.json",
+          "lfx_bundles/youtube/starter_projects/Youtube Analysis.json"
+        ]
+      },
+      "module_checks": [
+        {
+          "module": "lfx.components.google",
+          "attribute": "GoogleGenerativeAIComponent",
+          "expect": "success"
+        },
+        {
+          "module": "lfx.components.youtube",
+          "attribute": "YouTubeTranscriptsComponent",
+          "expect": "success"
+        }
+      ]
+    },
+    "image-core": {
+      "extends": "python-core"
+    },
+    "image-default": {
+      "extends": "python-default"
+    },
+    "image-full": {
+      "extends": "python-full"
+    }
+  }
+}

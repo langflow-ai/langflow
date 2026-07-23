@@ -2,14 +2,15 @@
 
 ``src/bundles/lfx-bundles/pyproject.toml`` carries one optional-dependency
 extra per provider plus the *generated* ``all`` and ``all-no-torch`` aggregates
-(``langflow`` depends on the metapackage via ``lfx-bundles[all]``). These
-invariants are maintained by ``scripts/migrate/consolidate_bundles.py`` and must
-never drift by hand-edit:
+for explicit opt-in installs such as ``lfx[bundles]``. These invariants are
+maintained by ``scripts/migrate/consolidate_bundles.py`` and must never drift
+by hand-edit:
 
     1. every provider directory has exactly one extra (PEP 685-normalized key),
+       apart from explicit compatibility aliases for graduated providers,
     2. ``all`` is exactly the set of per-provider self-refs -- a provider
-       missing from ``all`` silently drops its deps from ``pip install
-       langflow`` (the epic's headline dep-parity risk),
+       missing from ``all`` silently drops its deps from explicit all-bundle
+       installs,
     3. ``all-no-torch`` is exactly ``all`` minus the torch-pulling providers
        (``TORCH_EXTRAS``), giving a torch-free full-provider install,
     4. normalized extra keys are collision-free,
@@ -41,6 +42,7 @@ BUNDLES_DIR = REPO_ROOT / "src" / "bundles"
 # scripts/migrate/consolidate_bundles.py. ``all`` pulls every provider;
 # ``all-no-torch`` is ``all`` minus the torch-pulling providers (TORCH_EXTRAS).
 AGGREGATE_EXTRAS = frozenset({"all", "all-no-torch"})
+COMPATIBILITY_EXTRAS = {"google": ["lfx-google>=0.1.0,<1.0.0"]}
 TORCH_EXTRAS = frozenset({"cuga", "codeagents"})
 
 
@@ -62,7 +64,7 @@ def _provider_dirs() -> list[str]:
 
 def test_every_provider_has_an_extra_and_vice_versa() -> None:
     extras = _load_extras()
-    extra_keys = set(extras) - AGGREGATE_EXTRAS
+    extra_keys = set(extras) - AGGREGATE_EXTRAS - COMPATIBILITY_EXTRAS.keys()
     provider_keys = {_normalize(p) for p in _provider_dirs()}
     assert extra_keys == provider_keys, (
         f"extras and provider dirs drifted: extras-only={sorted(extra_keys - provider_keys)}, "
@@ -72,7 +74,9 @@ def test_every_provider_has_an_extra_and_vice_versa() -> None:
 
 def test_all_extra_is_exactly_the_per_provider_self_refs() -> None:
     extras = _load_extras()
-    expected = {f"lfx-bundles[{key}]" for key in extras if key not in AGGREGATE_EXTRAS}
+    expected = {
+        f"lfx-bundles[{key}]" for key in extras if key not in AGGREGATE_EXTRAS and key not in COMPATIBILITY_EXTRAS
+    }
     actual = set(extras["all"])
     assert actual == expected, (
         f"generated `all` drifted: missing={sorted(expected - actual)}, stray={sorted(actual - expected)}"
@@ -81,11 +85,22 @@ def test_all_extra_is_exactly_the_per_provider_self_refs() -> None:
 
 def test_all_no_torch_extra_is_all_minus_torch_providers() -> None:
     extras = _load_extras()
-    expected = {f"lfx-bundles[{key}]" for key in extras if key not in AGGREGATE_EXTRAS and key not in TORCH_EXTRAS}
+    expected = {
+        f"lfx-bundles[{key}]"
+        for key in extras
+        if key not in AGGREGATE_EXTRAS and key not in TORCH_EXTRAS and key not in COMPATIBILITY_EXTRAS
+    }
     actual = set(extras["all-no-torch"])
     assert actual == expected, (
         f"generated `all-no-torch` drifted: missing={sorted(expected - actual)}, stray={sorted(actual - expected)}"
     )
+
+
+def test_graduated_compatibility_extras_are_explicit_and_not_aggregated() -> None:
+    extras = _load_extras()
+    assert {key: extras[key] for key in COMPATIBILITY_EXTRAS} == COMPATIBILITY_EXTRAS
+    aggregate_requirements = {*extras["all"], *extras["all-no-torch"]}
+    assert not {f"lfx-bundles[{key}]" for key in COMPATIBILITY_EXTRAS} & aggregate_requirements
 
 
 def test_normalized_extra_keys_are_collision_free() -> None:

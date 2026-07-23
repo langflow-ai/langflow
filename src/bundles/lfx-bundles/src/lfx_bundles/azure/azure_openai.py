@@ -7,6 +7,7 @@ from lfx.io import DropdownInput, IntInput, SecretStrInput, SliderInput
 
 
 class AzureChatOpenAIComponent(LCModelComponent):
+    model_provider_id = "azure-openai"
     display_name: str = "Azure OpenAI"
     description: str = "Generate text using Azure OpenAI LLMs."
     documentation: str = "https://python.langchain.com/docs/integrations/llms/azure_openai"

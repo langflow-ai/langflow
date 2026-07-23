@@ -50,6 +50,11 @@ COPY ./src/lfx/README.md /app/src/lfx/README.md
 # Copy sdk metadata files since it's a workspace member
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
+# Copy langflow-core metadata since it is a workspace member. This image does
+# not install langflow-core, but uv must discover every workspace member before
+# resolving the base package.
+COPY ./src/langflow-core/pyproject.toml /app/src/langflow-core/pyproject.toml
+COPY ./src/langflow-core/README.md /app/src/langflow-core/README.md
 # Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
 # is a uv workspace member, so each bundle's pyproject.toml must be present
 # for ``uv sync --no-install-project`` to resolve the workspace.  Copy the
@@ -88,6 +93,16 @@ WORKDIR /app/src/backend/base
 RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv sync --frozen --no-dev --no-editable --extra postgresql
+
+# Release workflows populate this directory with the exact core wheels built
+# for PyPI. The base mode deliberately ignores main and bundle wheels so the
+# lean image boundary is preserved. Nightly and local builds no-op.
+COPY ./.release-artifacts /tmp/release-artifacts
+COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
+RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
+    --python /app/.venv/bin/python \
+    --mode base \
+    --frontend-source /app/src/backend/base/langflow/frontend
 
 ################################
 # RUNTIME

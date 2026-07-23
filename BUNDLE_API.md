@@ -493,6 +493,18 @@ the deserialize half is covered by
   provider-only extension with `DiscoveredExtension.bundle_name = None`, and
   `registry.Extension.bundle_name` is likewise now `str | None` (the
   `lfx extension list` BUNDLE column shows `—` for such extensions).
+- **Provider identity and static catalogs (additive).**  A `providers[]` entry
+  may now declare a stable lowercase `provider_id`, an independent
+  `display_name`, legacy `aliases`, and a dotted-path `catalog_loader`.  The
+  loader must return a flat list of model metadata rows; Langflow validates
+  model identities and stamps provider ownership before merging those rows
+  into the unified catalog.  Manifests that omit `provider_id` retain their
+  existing behavior through a deterministic ID derived from `name`.
+  `ProviderDescriptor` is the preferred public registry type and
+  `ProviderSpec` remains an alias for source compatibility.  The registry also
+  exposes an immutable generation-tagged snapshot plus an eager catalog
+  validation hook for deployment readiness.  Existing provider manifests are
+  unaffected and `BUNDLE_API_VERSION` remains `1`.
 - **New typed error codes (additive): `provider-invalid`, `provider-skipped`.**
   A malformed provider spec surfaces `provider-invalid`; a provider whose name
   collides with a built-in or already-loaded provider surfaces

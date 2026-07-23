@@ -185,7 +185,7 @@ Three edits — all mechanical:
 # 1. Add to [project] dependencies (regular dep so `pip install langflow`
 #    still pulls the component in -- no user-visible change at install time).
 dependencies = [
-    "langflow-base[complete]>=0.10.0",
+    "langflow-core~=1.11.0",
     "lfx-duckduckgo>=0.1.0",
     "lfx-<bundle>>=0.1.0",                 # <-- add this line
 ]
@@ -198,6 +198,7 @@ members = [
     "src/backend/base",
     ".",
     "src/lfx",
+    "src/langflow-core",
     "src/sdk",
     "src/bundles/duckduckgo",
     "src/bundles/<bundle>",                # <-- add this line
@@ -364,6 +365,35 @@ uv run lfx extension dev src/bundles/<bundle>
 #   - Confirm <Class> appears under the <bundle> bundle group.
 #   - Right-click the <bundle> header -> Reload. No errors.
 ```
+
+### Release-plan and version changes
+
+Any releasable change under `src/bundles/<bundle>/src/` or to the bundle's
+`pyproject.toml` requires a distribution-version increase. Generate the same
+plan CI reviews without changing files:
+
+```bash
+python scripts/ci/bundle_release_plan.py plan \
+  --base-ref origin/release-1.11.0 \
+  --check \
+  --output bundle-release-plan.json
+```
+
+To apply the plan, use the update command instead of editing version fields by
+hand. It bumps affected bundles by one patch by default, synchronizes their
+`extension.json` versions and LFX ranges, raises every matching Langflow
+dependency floor, and regenerates `uv.lock` as one rollback-safe operation:
+
+```bash
+python scripts/ci/bundle_release_plan.py update \
+  --base-ref origin/release-1.11.0 \
+  --output bundle-release-plan.json
+```
+
+Use `--bump minor` or an explicit `--version lfx-<bundle>=X.Y.Z` when a patch
+bump is not appropriate. Release workflows upload the version/artifact plans
+for review and refuse to reuse an existing PyPI version unless its normalized
+wheel content matches the wheel built by the current run.
 
 ---
 
