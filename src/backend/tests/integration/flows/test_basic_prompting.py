@@ -6,7 +6,12 @@ from lfx.schema.message import Message
 from tests.integration.utils import pyleak_marker, run_flow
 
 
-@pyleak_marker()
+# Disable event-loop-block detection: the MCP StreamableHTTP session manager
+# started by the FastAPI lifespan (via the autouse `_start_app(client)` fixture)
+# initiates an anyio `try_connect` that can exceed pyleak's 0.2s blocking
+# threshold under load, producing flaky EventLoopBlockError. Same rationale as
+# tests/integration/components/inputs/test_chat_input.py.
+@pyleak_marker(blocking=False)
 async def test_simple_no_llm():
     graph = Graph()
     flow_input = graph.add_component(ChatInput())

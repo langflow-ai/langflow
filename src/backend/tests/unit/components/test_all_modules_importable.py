@@ -461,6 +461,10 @@ class TestDirectModuleImports:
                         "lfx-openai",
                         "lfx-datastax",
                         "lfx-oracle",
+                        # ToolGuard Policies (lfx[toolguard]); runtime may also
+                        # need fastmcp which is a separate optional extra.
+                        "toolguard",
+                        "fastmcp",
                     ]
                 ):
                     return ("skipped", modname, "missing optional dependency")
