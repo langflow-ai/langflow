@@ -44,6 +44,7 @@ from lfx.cli.serve_identity import IdentityConfig, build_identity_verifier
 from lfx.cli.serve_workflow import ServeWorkflowHost
 from lfx.load import load_flow_from_json
 from lfx.log.logger import logger
+from lfx.observability import bootstrap_application_telemetry, instrument_fastapi_app
 from lfx.utils.flow_validation import validate_flow_for_current_settings
 from lfx.workflow.router import create_workflow_router
 
@@ -674,6 +675,14 @@ def create_multi_serve_app(
         ),
         version="1.0.0",
     )
+
+    # Application observability. lfx serve is the production HTTP surface, so it installs the
+    # same OTLP providers and HTTP instrumentation the full langflow app does, driven entirely
+    # by the standard OTEL_* environment variables. No-op unless an endpoint is set (and unless
+    # lfx was installed with the ``otel`` extra), so this costs nothing by default.
+    bootstrap_application_telemetry()
+    instrument_fastapi_app(app)
+
     app.state.registry = registry
     # Snapshot the API key once so per-request auth (verify_api_key, run on a threadpool
     # thread) never reads live os.environ — see verify_api_key. Stays None until first use
