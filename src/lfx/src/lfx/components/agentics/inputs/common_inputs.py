@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
-from lfx.components.agentics.constants import DEFAULT_OLLAMA_URL
 from lfx.io import (
     DropdownInput,
     MessageInput,
@@ -114,8 +113,7 @@ def get_ollama_url_input() -> MessageInput:
     return MessageInput(
         name="ollama_base_url",
         display_name="Ollama API URL",
-        info=f"API endpoint for Ollama (shown only when Ollama is selected). Defaults to {DEFAULT_OLLAMA_URL}.",
-        value=DEFAULT_OLLAMA_URL,
+        info="API endpoint for Ollama (shown only when Ollama is selected).",
         show=False,
         real_time_refresh=True,
         load_from_db=True,
