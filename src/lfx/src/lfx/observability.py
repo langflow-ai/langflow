@@ -438,14 +438,29 @@ class ApplicationTelemetry:
     """The providers a call to :func:`bootstrap_application_telemetry` installed.
 
     Each is None when the corresponding signal was not configured (no endpoint, disabled, or
-    OpenTelemetry not installed). Callers that own the process lifetime can keep the handles
-    to shut down explicitly; most do not need to, because MeterProvider registers its own
-    atexit flush.
+    OpenTelemetry not installed). Callers that own the process lifetime should keep the handles
+    and call :meth:`shutdown` on exit: the atexit flush the SDK registers does not run under
+    uvicorn or gunicorn (both die by signal), so without an explicit shutdown the last buffered
+    batch of spans, metrics and logs is dropped on every restart and pod eviction.
     """
 
     meter_provider: MeterProvider | None = None
     tracer_provider: TracerProvider | None = None
     logger_provider: LoggerProvider | None = None
+
+    def shutdown(self) -> None:
+        """Flush and shut down the installed providers. A no-op when none were installed.
+
+        Meter first: only ``MeterProvider.shutdown`` unregisters its atexit flush, and skipping
+        it lets the interpreter shut the readers down a second time (Prometheus raises on the
+        double unregister).
+        """
+        if self.meter_provider is not None:
+            self.meter_provider.shutdown()
+        if self.tracer_provider is not None:
+            self.tracer_provider.shutdown()
+        if self.logger_provider is not None:
+            self.logger_provider.shutdown()
 
 
 def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> ApplicationTelemetry:

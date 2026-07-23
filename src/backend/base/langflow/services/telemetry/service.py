@@ -276,3 +276,8 @@ class TelemetryService(Service):
 
     async def teardown(self) -> None:
         await self.stop()
+        # Unconditional, and separate from stop(): the OTLP application telemetry is gated on
+        # OTEL_* env, not on do_not_track, so it can be live even when product analytics is off
+        # (stop() early-returns in that case). Off the event loop: the final export can block on
+        # the network. A no-op when no provider was installed.
+        await asyncio.to_thread(self.ot.shutdown)

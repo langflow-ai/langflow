@@ -88,6 +88,39 @@ def test_no_endpoint_without_otel_stays_silent():
     assert "lfx[otel]" not in completed.stdout + completed.stderr
 
 
+def test_shutdown_without_providers_is_a_noop():
+    """Empty handles (nothing configured, or otel absent) must shut down without error.
+
+    Imports only lfx.observability, so it runs whether or not the otel extra is installed.
+    """
+    from lfx.observability import ApplicationTelemetry
+
+    ApplicationTelemetry().shutdown()
+
+
+@requires_otel
+def test_shutdown_flushes_buffered_spans():
+    """shutdown() must flush the batch processor. Without it the last spans drop on exit.
+
+    uvicorn and gunicorn die by signal and never run the SDK's atexit flush, so an explicit
+    shutdown is the only thing that gets the in-flight batch out on restart and pod eviction.
+    """
+    from lfx.observability import ApplicationTelemetry
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    # A long delay so nothing exports on its own timer: only the flush inside shutdown() sends it.
+    provider.add_span_processor(BatchSpanProcessor(exporter, schedule_delay_millis=600_000))
+    provider.get_tracer("t").start_span("s").end()
+    assert exporter.get_finished_spans() == (), "span should still be buffered before shutdown"
+
+    ApplicationTelemetry(tracer_provider=provider).shutdown()
+    assert [span.name for span in exporter.get_finished_spans()] == ["s"]
+
+
 # Installs a process-global tracer provider, so anything touching env-driven installation runs
 # in a subprocess. The probe imports only lfx.observability -- if that quietly needed langflow,
 # these would fail to import.

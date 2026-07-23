@@ -680,8 +680,16 @@ def create_multi_serve_app(
     # same OTLP providers and HTTP instrumentation the full langflow app does, driven entirely
     # by the standard OTEL_* environment variables. No-op unless an endpoint is set (and unless
     # lfx was installed with the ``otel`` extra), so this costs nothing by default.
-    bootstrap_application_telemetry()
+    telemetry = bootstrap_application_telemetry()
     instrument_fastapi_app(app)
+
+    # Flush the OTLP buffers on shutdown. uvicorn dies by signal and never runs the SDK's
+    # atexit flush, so without this the last batch of spans, metrics and logs drops on every
+    # restart and pod eviction. Off the event loop: the final export can block on the network.
+    async def _flush_telemetry_on_shutdown() -> None:
+        await asyncio.to_thread(telemetry.shutdown)
+
+    app.add_event_handler("shutdown", _flush_telemetry_on_shutdown)
 
     app.state.registry = registry
     # Snapshot the API key once so per-request auth (verify_api_key, run on a threadpool
