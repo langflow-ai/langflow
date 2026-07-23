@@ -821,6 +821,7 @@ class TestProjectMCPIntegration:
             assert mock_validate.call_count == 2
             # Should update server twice (delete old, create new)
             assert mock_update_server.call_count == 2
+            assert mock_update_server.call_args_list[1].args[1]["description"] == "Updated Project Name"
 
     async def test_update_project_name_with_mcp_server_update_legacy_sse(
         self,

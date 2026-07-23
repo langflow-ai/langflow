@@ -68,6 +68,7 @@ type SidebarSearchItem = APIClassType & {
   category: string;
   key: string;
   mcpServerName?: string;
+  mcpProjectName?: string;
 };
 
 // Search context for the sidebar
@@ -297,7 +298,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       const newMcpSearchData = mcpServers.map((mcpServer) => ({
         ...mcpComponent,
         display_name: mcpServer.name,
-        description: `MCP Server: ${mcpServer.name}`,
+        description: mcpServer.description ?? `MCP Server: ${mcpServer.name}`,
+        mcpProjectName: mcpServer.description,
         category: "MCP",
         key: `mcp_${mcpServer.name}`,
         template: {
@@ -468,6 +470,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         "type",
         "category",
         "mcpServerName",
+        "mcpProjectName",
       ],
       threshold: 0.2,
       includeScore: true,
@@ -492,6 +495,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       const newMcpSearchData = mcpServers.map((mcpServer) => ({
         ...mcpComponent,
         mcpServerName: mcpServer.name, // adds this field and makes it searchable
+        mcpProjectName: mcpServer.description,
+        description: mcpServer.description ?? `MCP Server: ${mcpServer.name}`,
         category: "MCP",
         key: `mcp_${mcpServer.name}`,
         template: {

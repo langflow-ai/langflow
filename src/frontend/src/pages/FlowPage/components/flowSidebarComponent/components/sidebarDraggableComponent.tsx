@@ -1,4 +1,10 @@
-import { type DragEventHandler, forwardRef, useRef, useState } from "react";
+import {
+  type DragEventHandler,
+  forwardRef,
+  type ReactNode,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import IconComponent, {
   ForwardedIconComponent,
@@ -42,6 +48,7 @@ export const SidebarDraggableComponent = forwardRef(
       legacy,
       disabled,
       disabledTooltip,
+      displayNameTooltip,
     }: {
       sectionName: string;
       apiClass: APIClassType;
@@ -57,6 +64,7 @@ export const SidebarDraggableComponent = forwardRef(
       legacy: boolean;
       disabled?: boolean;
       disabledTooltip?: string;
+      displayNameTooltip?: ReactNode;
     },
     ref,
   ) => {
@@ -171,7 +179,10 @@ export const SidebarDraggableComponent = forwardRef(
                 className="h-[18px] w-[18px] shrink-0"
               />
               <div className="flex flex-1 items-center overflow-hidden">
-                <ShadTooltip content={display_name} styleClasses="z-50">
+                <ShadTooltip
+                  content={displayNameTooltip ?? display_name}
+                  styleClasses="z-50"
+                >
                   <span
                     data-testid="display-name"
                     className="truncate text-sm font-normal"

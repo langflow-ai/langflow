@@ -23,6 +23,22 @@ from langflow.services.deps import get_storage_service
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
 
 
+def _get_project_mcp_server_name(project_id: UUID, project_name: str) -> str:
+    """Return a stable MCP server name for a project.
+
+    Project display names may contain only characters that MCP name sanitization
+    removes, such as Chinese characters. Include part of the project UUID in the
+    fallback so those projects do not all collide on ``lf-unnamed``.
+    """
+    sanitized_name = sanitize_mcp_name(project_name)
+    if sanitized_name == "unnamed" and project_name.strip().lower() != "unnamed":
+        available_id_length = MAX_MCP_SERVER_NAME_LENGTH - len("lf-project_")
+        sanitized_name = f"project_{project_id.hex[:available_id_length]}"
+
+    max_sanitized_length = MAX_MCP_SERVER_NAME_LENGTH - len("lf-")
+    return f"lf-{sanitized_name[:max_sanitized_length]}"
+
+
 class MCPServerValidationResult:
     """Represents the result of an MCP server validation check.
 
@@ -111,7 +127,7 @@ async def validate_mcp_server_for_project(
         MCPServerValidationResult with validation details
     """
     # Generate server name that would be used for this project
-    server_name = f"lf-{sanitize_mcp_name(project_name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+    server_name = _get_project_mcp_server_name(project_id, project_name)
 
     try:
         existing_servers = await get_server_list(user, session, storage_service, settings_service)
@@ -434,7 +450,11 @@ async def auto_configure_starter_projects_mcp(session):
                         "streamablehttp",
                         streamable_http_url,
                     ]
-                server_config = {"command": command, "args": args}
+                server_config = {
+                    "command": command,
+                    "args": args,
+                    "description": user_starter_folder.name,
+                }
 
                 # Add to user's MCP servers configuration
                 await logger.adebug(f"Adding MCP server '{server_name}' for user {user.username}")

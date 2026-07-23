@@ -49,7 +49,12 @@ jest.mock("@/components/ui/button", () => ({
 jest.mock("@/components/common/shadTooltipComponent", () => ({
   __esModule: true,
   default: ({ children, content, side }: any) => (
-    <div data-testid="tooltip" data-content={content} data-side={side}>
+    <div
+      data-testid="tooltip"
+      data-content={typeof content === "string" ? content : undefined}
+      data-side={side}
+    >
+      <div data-testid="tooltip-content">{content}</div>
       {children}
     </div>
   ),
@@ -84,6 +89,7 @@ jest.mock("../sidebarDraggableComponent", () => ({
     legacy,
     disabled,
     disabledTooltip,
+    displayNameTooltip,
   }: any) => (
     <div
       data-testid={`draggable-component-${apiClass.name}`}
@@ -98,6 +104,7 @@ jest.mock("../sidebarDraggableComponent", () => ({
       data-legacy={legacy}
       data-disabled={disabled}
       data-disabled-tooltip={disabledTooltip}
+      data-display-name-tooltip={displayNameTooltip}
       onDragStart={onDragStart}
     >
       {display_name || apiClass.display_name || apiClass.name}
@@ -544,6 +551,33 @@ describe("McpSidebarGroup", () => {
         "data-display-name",
         "Custom Server Name",
       );
+    });
+
+    it("should show the project name and internal server name in the tooltip", () => {
+      const componentWithProjectName: APIClassType = {
+        ...mockMcpComponent,
+        mcpServerName: "lf-project_850f30b5",
+        mcpProjectName: "智能报告",
+      };
+
+      const props = {
+        ...defaultProps,
+        mcpSuccess: true,
+        hasMcpServers: true,
+        mcpComponents: [componentWithProjectName],
+      };
+
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
+
+      const tooltipContent = screen.getByTestId("tooltip-content");
+      expect(tooltipContent).toHaveTextContent("智能报告");
+      expect(tooltipContent).toHaveTextContent("lf-project_850f30b5");
+      expect(
+        screen.getByTestId(
+          `draggable-component-${componentWithProjectName.name}`,
+        ),
+      ).toHaveAttribute("data-display-name-tooltip", "智能报告");
     });
 
     it("should fallback to display_name when mcpServerName is not available", () => {
