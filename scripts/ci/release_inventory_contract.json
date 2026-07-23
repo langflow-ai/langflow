@@ -66,6 +66,7 @@
         "lfx-empiriolabs",
         "lfx-exa",
         "lfx-firecrawl",
+        "lfx-google",
         "lfx-ibm",
         "lfx-nextplaid",
         "lfx-openai",
@@ -91,6 +92,7 @@
           "lfx-empiriolabs",
           "lfx-exa",
           "lfx-firecrawl",
+          "lfx-google",
           "lfx-ibm",
           "lfx-nextplaid",
           "lfx-openai",
@@ -109,8 +111,19 @@
         "lfx-openai": [
           "lfx_openai/extension.json",
           "lfx_openai/components/openai/openai_chat_model.py"
+        ],
+        "lfx-google": [
+          "lfx_google/extension.json",
+          "lfx_google/components/google/google_generative_ai.py"
         ]
-      }
+      },
+      "module_checks": [
+        {
+          "module": "lfx.components.google",
+          "attribute": "GoogleGenerativeAIComponent",
+          "expect": "success"
+        }
+      ]
     },
     "python-full": {
       "extends": "python-default",
@@ -132,6 +145,7 @@
           "lfx-empiriolabs",
           "lfx-exa",
           "lfx-firecrawl",
+          "lfx-google",
           "lfx-ibm",
           "lfx-nextplaid",
           "lfx-openai",
@@ -169,7 +183,6 @@
         "faiss",
         "git",
         "glean",
-        "google",
         "groq",
         "homeassistant",
         "huggingface",
@@ -225,14 +238,22 @@
           "lfx_openai/extension.json",
           "lfx_openai/components/openai/openai_chat_model.py"
         ],
+        "lfx-google": [
+          "lfx_google/extension.json",
+          "lfx_google/components/google/google_generative_ai.py"
+        ],
         "lfx-bundles": [
-          "lfx_bundles/google/google_generative_ai.py",
           "lfx_bundles/mongodb/mongodb_atlas.py",
           "lfx_bundles/codeagents/starter_projects/Structured Data Analysis Agent.json",
           "lfx_bundles/youtube/starter_projects/Youtube Analysis.json"
         ]
       },
       "module_checks": [
+        {
+          "module": "lfx.components.google",
+          "attribute": "GoogleGenerativeAIComponent",
+          "expect": "success"
+        },
         {
           "module": "lfx.components.youtube",
           "attribute": "YouTubeTranscriptsComponent",

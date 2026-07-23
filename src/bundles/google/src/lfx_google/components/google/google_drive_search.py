@@ -1,5 +1,7 @@
 import json
+from json.decoder import JSONDecodeError
 
+from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from lfx.custom.custom_component.component import Component
@@ -104,17 +106,28 @@ class GoogleDriveSearchComponent(Component):
 
     def search_files(self) -> dict:
         # Load the token information from the JSON string
-        token_info = json.loads(self.token_string)
-        creds = Credentials.from_authorized_user_info(token_info)
+        try:
+            token_info = json.loads(self.token_string)
+        except JSONDecodeError as e:
+            msg = "Invalid JSON string"
+            raise ValueError(msg) from e
 
         # Use the query string from the input (which might have been edited by the user)
         query = self.query_string or self.generate_query_string()
 
-        # Initialize the Google Drive API service
-        service = build("drive", "v3", credentials=creds)
+        try:
+            creds = Credentials.from_authorized_user_info(token_info)
+            service = build("drive", "v3", credentials=creds)
+            results = (
+                service.files().list(q=query, pageSize=5, fields="nextPageToken, files(id, name, mimeType)").execute()
+            )
+        except RefreshError as e:
+            msg = "Authentication error: Unable to refresh authentication token. Please try to reauthenticate."
+            raise ValueError(msg) from e
+        except Exception as e:
+            msg = f"Error searching Google Drive: {e}"
+            raise ValueError(msg) from e
 
-        # Perform the search
-        results = service.files().list(q=query, pageSize=5, fields="nextPageToken, files(id, name, mimeType)").execute()
         items = results.get("files", [])
 
         doc_urls = []

@@ -6530,7 +6530,7 @@
               "dependencies": [
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "lfx",
@@ -7110,7 +7110,7 @@
                 },
                 {
                   "name": "googleapiclient",
-                  "version": null
+                  "version": "2.198.0"
                 }
               ],
               "total_dependencies": 4
@@ -7974,7 +7974,7 @@
                 },
                 {
                   "name": "cryptography",
-                  "version": "49.0.0"
+                  "version": "48.0.1"
                 },
                 {
                   "name": "langchain_chroma",
@@ -7990,7 +7990,7 @@
                 },
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "chromadb",
@@ -9564,7 +9564,7 @@
                 },
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "langchain_chroma",
@@ -9807,7 +9807,7 @@
                 },
                 {
                   "name": "googleapiclient",
-                  "version": null
+                  "version": "2.198.0"
                 }
               ],
               "total_dependencies": 7
@@ -30456,7 +30456,7 @@
                 },
                 {
                   "name": "langchain_google_community",
-                  "version": null
+                  "version": "3.0.5"
                 }
               ],
               "total_dependencies": 3
@@ -32659,6 +32659,6 @@
     "num_components": 131,
     "num_modules": 17
   },
-  "sha256": "c9a3819f89ed678688e942d7bd1f958d9f27317dd69139c563fa0f25318ba340",
+  "sha256": "9718831a991c1f3f74f832381676c1a6d7b7f851e8838dbc9b90c6e2ee229518",
   "version": "1.12.0"
 }

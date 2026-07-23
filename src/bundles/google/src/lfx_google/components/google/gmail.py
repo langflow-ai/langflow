@@ -164,7 +164,11 @@ class GmailLoaderComponent(Component):
 
         json_string = self.json_string
         label_ids = self.label_ids.split(",") if self.label_ids else ["INBOX"]
-        max_results = int(self.max_results) if self.max_results else 100
+        try:
+            max_results = int(self.max_results) if self.max_results else 100
+        except (TypeError, ValueError) as e:
+            msg = f"Invalid max_results value: {self.max_results}"
+            raise ValueError(msg) from e
 
         # Load the token information from the JSON string
         try:

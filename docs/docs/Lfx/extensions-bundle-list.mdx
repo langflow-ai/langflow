@@ -7,7 +7,7 @@ This page lists every official Langflow bundle and the pip **extension** package
 Bundle names are stable identifiers used in saved flows (`ext:<bundle>:<Class>@official`).
 The pip install command is what you run when a bundle is missing from your environment.
 
-This list reflects the bundles included with Langflow 1.11.0.
+This list reflects the bundles included with Langflow 1.12.0.
 Providers can graduate from `lfx-bundles` to a standalone `lfx-<provider>` package without changing the bundle name in your flows.
 
 ## Standalone packages
@@ -26,6 +26,7 @@ These providers ship as their own pip packages, each on its own release cadence.
 | [`empiriolabs`](./bundles-empiriolabs) (EmpirioLabs) | `uv pip install lfx-empiriolabs` |
 | [`exa`](/bundles-exa) (Exa) | `uv pip install lfx-exa` |
 | [`firecrawl`](/bundles-firecrawl) (Firecrawl) | `uv pip install lfx-firecrawl` |
+| [`google`](/bundles-google) (Google components) | `uv pip install lfx-google` |
 | [`ibm`](/bundles-ibm) (IBM) | `uv pip install lfx-ibm` |
 | [`nextplaid`](./bundles-nextplaid) (NextPlaid) | `uv pip install lfx-nextplaid` |
 | [`openai`](/bundles-openai) (OpenAI) | `uv pip install lfx-openai` |
@@ -67,7 +68,6 @@ Bare `uv pip install lfx-bundles` registers the provider code only; add a per-pr
 | [`faiss`](/bundles-faiss) (FAISS) | `uv pip install "lfx-bundles[faiss]"` |
 | `git` | `uv pip install "lfx-bundles[git]"` |
 | [`glean`](/bundles-glean) (Glean) | `uv pip install "lfx-bundles[glean]"` |
-| [`google`](/bundles-google) (Google components) | `uv pip install "lfx-bundles[google]"` |
 | [`groq`](/bundles-groq) (Groq) | `uv pip install "lfx-bundles[groq]"` |
 | `homeassistant` | `uv pip install "lfx-bundles[homeassistant]"` |
 | [`huggingface`](/bundles-huggingface) (Hugging Face) | `uv pip install "lfx-bundles[huggingface]"` |

@@ -42,6 +42,7 @@ members = [
     "lfx-empiriolabs",
     "lfx-exa",
     "lfx-firecrawl",
+    "lfx-google",
     "lfx-ibm",
     "lfx-nextplaid",
     "lfx-openai",
@@ -8140,6 +8141,7 @@ dependencies = [
     { name = "lfx-empiriolabs" },
     { name = "lfx-exa" },
     { name = "lfx-firecrawl" },
+    { name = "lfx-google" },
     { name = "lfx-ibm" },
     { name = "lfx-nextplaid" },
     { name = "lfx-openai" },
@@ -8253,6 +8255,7 @@ requires-dist = [
     { name = "lfx-empiriolabs", editable = "src/bundles/empiriolabs" },
     { name = "lfx-exa", editable = "src/bundles/exa" },
     { name = "lfx-firecrawl", editable = "src/bundles/firecrawl" },
+    { name = "lfx-google", editable = "src/bundles/google" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-nextplaid", editable = "src/bundles/nextplaid" },
     { name = "lfx-openai", editable = "src/bundles/openai" },
@@ -9634,7 +9637,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.1.3"
+version = "1.1.4"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -9664,7 +9667,6 @@ all = [
     { name = "gassist", marker = "sys_platform == 'win32'" },
     { name = "gitpython" },
     { name = "google-api-python-client" },
-    { name = "google-auth-oauthlib" },
     { name = "google-search-results" },
     { name = "huggingface-hub" },
     { name = "jigsawstack" },
@@ -9672,8 +9674,6 @@ all = [
     { name = "langchain-chroma" },
     { name = "langchain-community" },
     { name = "langchain-elasticsearch" },
-    { name = "langchain-google-community" },
-    { name = "langchain-google-genai" },
     { name = "langchain-google-vertexai" },
     { name = "langchain-groq" },
     { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
@@ -9736,7 +9736,6 @@ all-no-torch = [
     { name = "gassist", marker = "sys_platform == 'win32'" },
     { name = "gitpython" },
     { name = "google-api-python-client" },
-    { name = "google-auth-oauthlib" },
     { name = "google-search-results" },
     { name = "huggingface-hub" },
     { name = "jigsawstack" },
@@ -9744,8 +9743,6 @@ all-no-torch = [
     { name = "langchain-chroma" },
     { name = "langchain-community" },
     { name = "langchain-elasticsearch" },
-    { name = "langchain-google-community" },
-    { name = "langchain-google-genai" },
     { name = "langchain-google-vertexai" },
     { name = "langchain-groq" },
     { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
@@ -9868,10 +9865,7 @@ git = [
     { name = "langchain-community" },
 ]
 google = [
-    { name = "google-api-python-client" },
-    { name = "google-auth-oauthlib" },
-    { name = "langchain-google-community" },
-    { name = "langchain-google-genai" },
+    { name = "lfx-google" },
 ]
 groq = [
     { name = "langchain-groq" },
@@ -10044,9 +10038,7 @@ requires-dist = [
     { name = "faiss-cpu", marker = "python_full_version < '3.14' and extra == 'faiss'", specifier = "==1.9.0.post1" },
     { name = "gassist", marker = "sys_platform == 'win32' and extra == 'nvidia'", specifier = ">=0.0.1" },
     { name = "gitpython", marker = "extra == 'git'", specifier = ">=3.1.50" },
-    { name = "google-api-python-client", marker = "extra == 'google'", specifier = "~=2.161" },
     { name = "google-api-python-client", marker = "extra == 'youtube'", specifier = "~=2.161" },
-    { name = "google-auth-oauthlib", marker = "extra == 'google'", specifier = ">=1.2.0,<2.0.0" },
     { name = "google-search-results", marker = "extra == 'serpapi'", specifier = ">=2.4.1,<3.0.0" },
     { name = "huggingface-hub", extras = ["inference"], marker = "extra == 'huggingface'", specifier = ">=1.0.0,<2.0.0" },
     { name = "jigsawstack", marker = "extra == 'jigsawstack'", specifier = "==0.2.7" },
@@ -10075,8 +10067,6 @@ requires-dist = [
     { name = "langchain-community", marker = "extra == 'wikipedia'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'wolframalpha'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-elasticsearch", marker = "extra == 'elastic'", specifier = "~=1.0.0" },
-    { name = "langchain-google-community", marker = "extra == 'google'", specifier = "~=3.0.2" },
-    { name = "langchain-google-genai", marker = "extra == 'google'", specifier = "~=4.1.2" },
     { name = "langchain-google-vertexai", marker = "extra == 'vertexai'", specifier = ">=3.2.0" },
     { name = "langchain-groq", marker = "extra == 'groq'", specifier = "~=1.1.1" },
     { name = "langchain-huggingface", marker = "(platform_machine != 'x86_64' and extra == 'huggingface') or (sys_platform != 'darwin' and extra == 'huggingface')", specifier = "~=1.2.0" },
@@ -10146,8 +10136,6 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["git"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["glean"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["glean"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
-    { name = "lfx-bundles", extras = ["google"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
-    { name = "lfx-bundles", extras = ["google"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["groq"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["groq"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["homeassistant"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -10240,6 +10228,7 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["youtube"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["zep"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["zep"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-google", marker = "extra == 'google'", editable = "src/bundles/google" },
     { name = "markdown", marker = "extra == 'notion'", specifier = ">=3.8.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.2,<3.0.0" },
     { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
@@ -10457,6 +10446,39 @@ dependencies = [
 requires-dist = [
     { name = "firecrawl-py", specifier = ">=4.0.0,<5.0.0" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-google"
+version = "0.1.0"
+source = { editable = "src/bundles/google" }
+dependencies = [
+    { name = "google-api-python-client" },
+    { name = "google-auth" },
+    { name = "google-auth-oauthlib" },
+    { name = "google-cloud-bigquery" },
+    { name = "google-genai" },
+    { name = "langchain-community" },
+    { name = "langchain-core" },
+    { name = "langchain-google-community" },
+    { name = "langchain-google-genai" },
+    { name = "lfx" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "google-api-python-client", specifier = "~=2.161" },
+    { name = "google-auth", specifier = ">=2.38.0,<3.0.0" },
+    { name = "google-auth-oauthlib", specifier = ">=1.2.0,<2.0.0" },
+    { name = "google-cloud-bigquery", specifier = ">=3.35,<4.0.0" },
+    { name = "google-genai", specifier = ">=1.75.0,<2.0.0" },
+    { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-core", specifier = ">=1.2.28,<2.0.0" },
+    { name = "langchain-google-community", specifier = "~=3.0.2" },
+    { name = "langchain-google-genai", specifier = "~=4.1.2" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "requests", specifier = ">=2.32.0" },
 ]
 
 [[package]]
