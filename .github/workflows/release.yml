@@ -898,7 +898,7 @@ jobs:
           if [ -d "./sdk-dist" ]; then
             FIND_LINKS="$FIND_LINKS --find-links ./sdk-dist"
           fi
-          uv pip install $FIND_LINKS --prerelease=allow -e src/backend/base
+          uv pip install $FIND_LINKS --prerelease=if-necessary-or-explicit -e src/backend/base
       - name: Check for dependency incompatibility
         if: ${{ inputs.run_pip_check }}
         run: uv pip check
@@ -1245,7 +1245,6 @@ jobs:
         with:
           name: dist-base
           path: ./base-dist
-
       - name: Download core artifact
         if: needs.build-core.result == 'success'
         uses: actions/download-artifact@v7
@@ -1836,14 +1835,17 @@ jobs:
       !cancelled() &&
       inputs.build_docker_base &&
       needs.ci.result == 'success' &&
-      (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped')
-    needs: [ci, determine-base-version, release-inventory]
+      needs.determine-base-version.result == 'success' &&
+      (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped') &&
+      (!inputs.release_package_base || needs.build-base.result == 'success')
+    needs: [ci, determine-base-version, release-inventory, build-base]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: base
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-base-version.outputs.version }}
+      release_artifacts: ${{ needs.build-base.result == 'success' }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
@@ -1872,14 +1874,18 @@ jobs:
       !cancelled() &&
       inputs.build_docker_main &&
       needs.ci.result == 'success' &&
-      needs.release-inventory.result == 'success'
-    needs: [ci, determine-main-version, release-inventory]
+      needs.determine-main-version.result == 'success' &&
+      needs.release-inventory.result == 'success' &&
+      (!inputs.release_package_main || needs.build-main.result == 'success') &&
+      (!inputs.release_bundles || needs.build-bundles.result == 'success')
+    needs: [ci, determine-main-version, release-inventory, build-main, build-bundles]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
+      release_artifacts: ${{ needs.build-main.result == 'success' }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
@@ -1916,14 +1922,16 @@ jobs:
       !cancelled() &&
       inputs.build_docker_main &&
       needs.ci.result == 'success' &&
-      needs.release-inventory.result == 'success'
-    needs: [ci, determine-main-version, release-inventory]
+      needs.release-inventory.result == 'success' &&
+      needs.call_docker_build_main.result == 'success'
+    needs: [ci, release-inventory, call_docker_build_main, determine-main-version, build-main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main-ep
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
+      release_artifacts: ${{ needs.build-main.result == 'success' }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
@@ -1934,14 +1942,16 @@ jobs:
       !cancelled() &&
       inputs.build_docker_main &&
       needs.ci.result == 'success' &&
-      needs.release-inventory.result == 'success'
-    needs: [ci, determine-main-version, release-inventory]
+      needs.release-inventory.result == 'success' &&
+      needs.call_docker_build_main.result == 'success'
+    needs: [ci, release-inventory, call_docker_build_main, determine-main-version, build-main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main-all
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
+      release_artifacts: ${{ needs.build-main.result == 'success' }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 

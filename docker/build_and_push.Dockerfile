@@ -161,6 +161,17 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     && uv pip check --python /app/.venv/bin/python \
     && /app/.venv/bin/python -c 'import importlib.metadata as m; names = {d.metadata["Name"].lower() for d in m.distributions()}; assert "lfx-bundles" in names, "full-bundles image is missing lfx-bundles"'
 
+# Release workflows populate this directory with the exact wheels built for
+# PyPI. Reinstalling them after the source sync keeps Docker-specific frontend
+# compilation while ensuring package code and metadata match the published
+# artifacts. Nightly and local builds leave the directory empty and no-op.
+COPY ./.release-artifacts /tmp/release-artifacts
+COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
+RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
+    --python /app/.venv/bin/python \
+    --mode main \
+    --frontend-source /app/src/backend/langflow/frontend
+
 ################################
 # SHARED RUNTIME
 # One user, utility, label, and runtime defaults contract for every public target.

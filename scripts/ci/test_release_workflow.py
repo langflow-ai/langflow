@@ -4,14 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-WORKFLOW_PATH = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "release.yml"
-BUNDLE_WORKFLOW_PATH = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "release_bundles.yml"
-NIGHTLY_WORKFLOW_PATH = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "release_nightly.yml"
-CROSS_PLATFORM_WORKFLOW_PATH = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "cross-platform-test.yml"
-DB_MIGRATION_WORKFLOW_PATH = (
-    Path(__file__).resolve().parents[2] / ".github" / "workflows" / "db-migration-validation.yml"
-)
-PYTHON_TEST_WORKFLOW_PATH = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "python_test.yml"
+WORKFLOWS_DIR = Path(__file__).resolve().parents[2] / ".github" / "workflows"
+WORKFLOW_PATH = WORKFLOWS_DIR / "release.yml"
+BUNDLE_WORKFLOW_PATH = WORKFLOWS_DIR / "release_bundles.yml"
+NIGHTLY_WORKFLOW_PATH = WORKFLOWS_DIR / "release_nightly.yml"
+CROSS_PLATFORM_WORKFLOW_PATH = WORKFLOWS_DIR / "cross-platform-test.yml"
+DB_MIGRATION_WORKFLOW_PATH = WORKFLOWS_DIR / "db-migration-validation.yml"
+PYTHON_TEST_WORKFLOW_PATH = WORKFLOWS_DIR / "python_test.yml"
 
 
 def _job_block(start_job: str, end_job: str) -> str:
@@ -134,6 +133,20 @@ def test_cli_wheel_gate_checks_published_core() -> None:
     assert "langflow-base-nightly" not in cli_job
 
 
+def test_release_docker_builds_consume_built_wheels() -> None:
+    main_docker_job = _job_block("call_docker_build_main", "call_docker_build_main_backend")
+    base_docker_job = _job_block("call_docker_build_base", "call_docker_build_main")
+    docker_workflow = (WORKFLOWS_DIR / "docker-build-v2.yml").read_text(encoding="utf-8")
+
+    assert "build-main" in main_docker_job
+    assert "build-bundles" in main_docker_job
+    assert "release_artifacts: ${{ needs.build-main.result == 'success' }}" in main_docker_job
+    assert "build-base" in base_docker_job
+    assert "release_artifacts: ${{ needs.build-base.result == 'success' }}" in base_docker_job
+    assert "pattern: dist-*" in docker_workflow
+    assert "path: .release-artifacts" in docker_workflow
+
+
 if __name__ == "__main__":
     test_finalized_bundles_do_not_influence_shared_rc_number()
     test_bundle_build_uses_one_content_aware_prerelease_plan()
@@ -145,4 +158,5 @@ if __name__ == "__main__":
     test_main_only_cross_platform_run_does_not_require_core_only_job()
     test_nightly_migration_install_requests_core_explicitly()
     test_cli_wheel_gate_checks_published_core()
+    test_release_docker_builds_consume_built_wheels()
     print("All release workflow tests passed.")
