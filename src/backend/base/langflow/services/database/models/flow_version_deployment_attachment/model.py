@@ -6,9 +6,9 @@ from uuid import UUID, uuid4
 from pydantic import ValidationInfo, field_validator
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import validates
-from sqlmodel import Column, DateTime, Field, SQLModel, func
+from sqlmodel import Column, DateTime, Field, SQLModel
 
-from langflow.services.database.utils import validate_non_empty_string
+from langflow.services.database.utils import utc_now, validate_non_empty_string
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -39,13 +39,19 @@ class FlowVersionDeploymentAttachment(SQLModel, table=True):  # type: ignore[cal
             "Links this Langflow flow version to its provider-side resource."
         ),
     )
+    # Column-level Python default/onupdate (not server_default=func.now()):
+    # on SQLite, func.now() stores second-level precision. When that value is
+    # loaded into Python and SQLAlchemy later sends it as a query parameter,
+    # it is formatted with microseconds — stored column text vs the parameter
+    # then diverge. Field stays default=None so the ORM attribute is unset
+    # until flush; SQLAlchemy fills via Column default.
     created_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
+        sa_column=Column(DateTime(timezone=True), default=utc_now, nullable=False),
     )
     updated_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False),
+        sa_column=Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False),
     )
 
     # Primary enforcement is in CRUD helpers (require_non_empty at write boundary).

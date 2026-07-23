@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -12,6 +13,18 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
+
+
+def utc_now() -> datetime:
+    """Return timezone-aware UTC now for ORM timestamp columns.
+
+    Prefer Column ``default`` / ``onupdate`` with this over
+    ``server_default=func.now()``: on SQLite, ``func.now()`` stores
+    second-level precision. When that value is loaded into Python and
+    SQLAlchemy later sends it as a query parameter, it is formatted with
+    microseconds — stored column text vs the parameter then diverge.
+    """
+    return datetime.now(timezone.utc)
 
 
 async def initialize_database(*, fix_migration: bool = False) -> None:
