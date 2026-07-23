@@ -5,6 +5,7 @@ import pytest
 from httpx import AsyncClient
 from langflow.api.utils.mcp.config_utils import (
     MCPServerValidationResult,
+    _get_project_mcp_server_name,
     auto_configure_starter_projects_mcp,
     validate_mcp_server_for_project,
 )
@@ -13,6 +14,7 @@ from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NA
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
+from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from sqlmodel import select
 
 
@@ -25,6 +27,33 @@ def _build_server_config(base_url: str, project_id, transport: str):
     else:
         args = ["mcp-proxy", url]
     return url, {"command": "uvx", "args": args}
+
+
+class TestProjectMCPServerName:
+    def test_preserves_existing_ascii_name_format(self):
+        project_id = uuid4()
+
+        assert _get_project_mcp_server_name(project_id, "Test Project") == "lf-test_project"
+
+    def test_uses_project_id_when_name_contains_only_chinese_characters(self):
+        project_id = uuid4()
+
+        server_name = _get_project_mcp_server_name(project_id, "智能报告")
+
+        assert server_name == f"lf-project_{project_id.hex[:19]}"
+        assert len(server_name) <= MAX_MCP_SERVER_NAME_LENGTH
+
+    def test_chinese_project_names_generate_distinct_server_names(self):
+        first_project_id = uuid4()
+        second_project_id = uuid4()
+
+        first_server_name = _get_project_mcp_server_name(first_project_id, "智能报告")
+        second_server_name = _get_project_mcp_server_name(second_project_id, "另一个项目")
+
+        assert first_server_name != second_server_name
+
+    def test_keeps_literal_unnamed_project_backward_compatible(self):
+        assert _get_project_mcp_server_name(uuid4(), "unnamed") == "lf-unnamed"
 
 
 class TestMCPServerValidationResult:
