@@ -202,6 +202,8 @@ jobs:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
     name: Run Frontend Tests - Linux
     needs: [create-nightly-tag]
+    permissions:
+      contents: read
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests"
@@ -218,6 +220,8 @@ jobs:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
     name: Run Frontend Tests - Windows
     needs: [create-nightly-tag]
+    permissions:
+      contents: read
     # Windows tests are non-blocking - the release-nightly-build job only checks
     # frontend-tests-linux.result, allowing Windows tests to fail without blocking the build.
     # This gives us visibility into Windows-specific issues while we stabilize the tests.
@@ -237,6 +241,8 @@ jobs:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_backend_tests
     name: Run Backend Unit Tests
     needs: [create-nightly-tag]
+    permissions:
+      contents: read
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14"]'
@@ -261,6 +267,8 @@ jobs:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_backend_tests
     name: Run Stress Tests
     needs: [create-nightly-tag]
+    permissions:
+      contents: read
     uses: ./.github/workflows/stress-tests.yml
     with:
       ref: release-1.11.0
