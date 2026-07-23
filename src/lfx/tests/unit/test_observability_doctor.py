@@ -530,6 +530,7 @@ def test_concurrent_capture_windows_restore_the_logger_level():
     otel_logger = logging.getLogger("opentelemetry")
     original = otel_logger.level
     otel_logger.setLevel(logging.ERROR)  # a host that deliberately quieted otel
+    handlers_before = list(otel_logger.handlers)
     try:
 
         def hold(duration):
@@ -547,8 +548,35 @@ def test_concurrent_capture_windows_restore_the_logger_level():
         assert otel_logger.level == logging.ERROR, (
             f"logger left at {logging.getLevelName(otel_logger.level)} instead of ERROR"
         )
+        # The handler must come off too. Restoring only the level would still leak a capture
+        # handler per run, and each one keeps collecting records for the life of the process.
+        assert otel_logger.handlers == handlers_before
     finally:
         otel_logger.setLevel(original)
+
+
+@requires_otel
+def test_capture_ignores_records_from_other_threads():
+    """A live server's background exporter must not have its failures attributed to this run.
+
+    The opentelemetry logger is process-global, so without a thread filter a BatchSpanProcessor
+    failing on its own thread lands in exporter_logs and prints under one of the doctor's signals,
+    blaming this check for an unrelated outage.
+    """
+    import threading
+
+    from lfx.observability_doctor import _capture_exporter_logs
+
+    otel_logger = logging.getLogger("opentelemetry")
+    with _capture_exporter_logs() as capture:
+        otel_logger.warning("from the doctor's own thread")
+        other = threading.Thread(target=lambda: otel_logger.warning("from an unrelated thread"))
+        other.start()
+        other.join()
+
+    joined = " ".join(capture.messages)
+    assert "from the doctor's own thread" in joined
+    assert "unrelated thread" not in joined, capture.messages
 
 
 @requires_otel
@@ -566,12 +594,19 @@ def test_service_name_follows_the_otel_environment(monkeypatch):
 @requires_otel
 @pytest.mark.usefixtures("clean_otel_env")
 def test_the_doctor_installs_nothing_globally(monkeypatch):
-    """It has to be safe to run beside a live process; hijacking the global provider is not."""
+    """It has to be safe to run beside a live process; hijacking a global provider is not.
+
+    All three providers are checked, not just traces. A leaked meter or logger provider would be
+    worse than a leaked tracer: the bootstrap reuses an already-installed one, so the server would
+    silently keep the doctor's throwaway provider and export no metrics or logs at all.
+    """
     import atexit
 
-    from opentelemetry import trace
+    from opentelemetry import _logs, metrics, trace
 
-    before = trace.get_tracer_provider()
+    before_tracer = trace.get_tracer_provider()
+    before_meter = metrics.get_meter_provider()
+    before_logger = _logs.get_logger_provider()
     atexit_before = atexit._ncallbacks()
 
     with _CollectorStub(status=200) as collector:
@@ -579,6 +614,8 @@ def test_the_doctor_installs_nothing_globally(monkeypatch):
         run_doctor(timeout=5)
         run_doctor(timeout=5)
 
-    assert trace.get_tracer_provider() is before
+    assert trace.get_tracer_provider() is before_tracer
+    assert metrics.get_meter_provider() is before_meter
+    assert _logs.get_logger_provider() is before_logger
     # Throwaway providers must not register atexit handlers that outlive the check.
     assert atexit._ncallbacks() == atexit_before

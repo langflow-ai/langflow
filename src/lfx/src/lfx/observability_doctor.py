@@ -88,13 +88,22 @@ class DoctorReport:
 
 
 class _ExporterLogCapture(logging.Handler):
-    """Collects what the OTLP exporters log, which is where swallowed failures go."""
+    """Collects what the OTLP exporters log, which is where swallowed failures go.
 
-    def __init__(self) -> None:
+    Bound to the thread that opened the window. The ``opentelemetry`` logger is process-global, so
+    beside a live server a BatchSpanProcessor failing on its own background thread would otherwise
+    be collected here and printed underneath one of the doctor's own signals, blaming this run for
+    an unrelated outage.
+    """
+
+    def __init__(self, thread_id: int) -> None:
         super().__init__(level=logging.WARNING)
         self.messages: list[str] = []
+        self._thread_id = thread_id
 
     def emit(self, record: logging.LogRecord) -> None:
+        if record.thread != self._thread_id:
+            return
         self.messages.append(f"{record.levelname}: {record.getMessage()}")
 
 
@@ -114,16 +123,23 @@ _LOGGER_STATE_LOCK = threading.Lock()
 def _capture_exporter_logs():
     """Listen on the ``opentelemetry`` logger for the duration of one export.
 
-    The level is forced on that logger as well as the handler: it is normally NOTSET, so its
-    effective level comes from the root, and a host that raised the root above WARNING would
-    otherwise hide the very messages we are here to surface. Both are restored afterwards, under
-    a lock so concurrent callers cannot interleave their snapshot and restore.
+    The logger is normally NOTSET, taking its effective level from the root, so a host that
+    quieted otel would hide the very messages we exist to surface. The level is therefore lowered
+    to WARNING when it sits above that, and only lowered: raising it would suppress DEBUG and INFO
+    records a host had deliberately asked for. Level and handler are both restored afterwards,
+    under a lock so concurrent callers cannot interleave their snapshot and restore.
+
+    Lowering it does mean a host that quieted otel to ERROR sees warnings through its own handlers
+    for the length of one export. That is accepted deliberately: capturing the message the
+    exporter would otherwise swallow is the entire purpose of this command, and it cannot be read
+    without letting the record past the logger.
     """
-    handler = _ExporterLogCapture()
+    handler = _ExporterLogCapture(threading.get_ident())
     otel_logger = logging.getLogger("opentelemetry")
     with _LOGGER_STATE_LOCK:
         previous_level = otel_logger.level
-        otel_logger.setLevel(logging.WARNING)
+        if otel_logger.getEffectiveLevel() > logging.WARNING:
+            otel_logger.setLevel(logging.WARNING)
         otel_logger.addHandler(handler)
         try:
             yield handler
@@ -377,17 +393,41 @@ def _check_signal(signal: str, resource, timeout: float | None) -> SignalReport:
         )
     except Exception as exc:  # noqa: BLE001
         # Endpoint and protocol belong on every failure line, not only the ones that reached the
-        # wire: a bad certificate path fails here, and "which end is wrong" is the question.
+        # wire: a malformed OTEL_EXPORTER_OTLP_TIMEOUT raises here, before any request exists, and
+        # "which end is wrong" is still the question. (A bad certificate path does not: both
+        # transports construct fine and fail later, which the export branch below covers.)
         report.status = FAILED
         report.detail = f"Could not build the exporter for {route}. {type(exc).__name__}: {exc}"
         return report
 
-    if signal == "traces":
-        payload = _probe_spans(resource)
-    elif signal == "metrics":
-        payload = _probe_metrics(resource, exporter)
-    else:
-        payload = _probe_logs(resource)
+    # Report the URL the exporter resolved, not the raw variable. Only the generic endpoint gets
+    # /v1/<signal> appended; a per-signal one is used verbatim. Without this a per-signal endpoint
+    # aimed at the wrong path prints the same string on a failing and a passing line, so the
+    # operator sees opposite verdicts against what looks like one URL.
+    resolved = getattr(exporter, "_endpoint", None)
+    if resolved:
+        report.endpoint = str(resolved)
+        route = f"{report.endpoint} over {report.protocol}"
+
+    try:
+        if signal == "traces":
+            payload = _probe_spans(resource)
+        elif signal == "metrics":
+            payload = _probe_metrics(resource, exporter)
+        else:
+            payload = _probe_logs(resource)
+    except Exception as exc:  # noqa: BLE001
+        # The probe builds SDK objects from environment the operator controls, so a bad value can
+        # raise here. One failed signal is a better answer than an aborted run that reports none.
+        #
+        # Note this cannot catch the OTEL_*_LIMIT family: the SDK parses those into module-level
+        # constants at import, so a malformed one raises while lfx.observability is being imported,
+        # long before this runs. Nothing here can report that, and it is not worth chasing because
+        # the same variable stops bootstrap_application_telemetry too, so the server would not
+        # have started either.
+        report.status = FAILED
+        report.detail = f"Could not build the {signal} probe. {type(exc).__name__}: {exc}"
+        return report
 
     if _is_empty(payload):
         report.status = FAILED
