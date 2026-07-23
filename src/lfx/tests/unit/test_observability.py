@@ -53,6 +53,41 @@ def test_bootstrap_is_safe_without_endpoint_or_otel():
     assert "BOOTSTRAP_OK" in completed.stdout
 
 
+# Forces the no-otel condition by blocking the opentelemetry import, so it exercises the real
+# bare-lfx path whether or not the extra is installed in this environment.
+_NO_OTEL_PROBE = (
+    "import sys\n"
+    "class _Block:\n"
+    "    def find_spec(self, name, path=None, target=None):\n"
+    "        if name == 'opentelemetry' or name.startswith('opentelemetry.'):\n"
+    "            raise ImportError('blocked')\n"
+    "        return None\n"
+    "sys.meta_path.insert(0, _Block())\n"
+    "from lfx.log.logger import configure\n"
+    "configure(log_level='WARNING')\n"
+    "from lfx.observability import bootstrap_application_telemetry\n"
+    "bootstrap_application_telemetry()\n"
+)
+
+
+def test_endpoint_without_otel_warns_and_points_at_the_extra():
+    """An endpoint set without the otel extra must warn and name the install.
+
+    Otherwise it is a silent-export trap: nothing exports and nothing says why, so the operator
+    cannot tell whether the endpoint is wrong or the dependency is missing.
+    """
+    completed = _run(_NO_OTEL_PROBE, {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318"})
+    assert completed.returncode == 0, completed.stderr
+    assert "lfx[otel]" in completed.stdout + completed.stderr
+
+
+def test_no_endpoint_without_otel_stays_silent():
+    """Bare lfx with no endpoint is the default install; it must not nag about a missing extra."""
+    completed = _run(_NO_OTEL_PROBE, {})
+    assert completed.returncode == 0, completed.stderr
+    assert "lfx[otel]" not in completed.stdout + completed.stderr
+
+
 # Installs a process-global tracer provider, so anything touching env-driven installation runs
 # in a subprocess. The probe imports only lfx.observability -- if that quietly needed langflow,
 # these would fail to import.

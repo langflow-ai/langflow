@@ -45,6 +45,16 @@ APPLICATION_METER_NAME = "langflow"
 DEFAULT_SERVICE_NAME = "langflow"
 SUPPORTED_OTLP_PROTOCOLS = ("grpc", "http/protobuf")
 
+# The endpoint vars that mean "an operator wants to export". Any one of these being set is the
+# signal that observability was intended, used to turn an otel-not-installed situation from a
+# silent no-op into a loud "you meant to export, install the extra" warning.
+_OTLP_ENDPOINT_VARS = (
+    "OTEL_EXPORTER_OTLP_ENDPOINT",
+    "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+    "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
+    "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
+)
+
 # Instrumentation scopes whose spans describe the service itself. This is an allowlist, not
 # a denylist, because the LLM instrumentors ship inside the very same
 # opentelemetry.instrumentation.* namespace as the application ones (openai, anthropic,
@@ -451,6 +461,15 @@ def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> Appl
     no scrape endpoint, while langflow passes its own setting through.
     """
     if not _OTEL_AVAILABLE:
+        # Silence here is a real DX trap: an operator sets the endpoint, restarts, sees nothing
+        # in their APM, and has no way to know the reason is a missing dependency rather than a
+        # wrong endpoint. Only warn when they clearly intended to export.
+        if any(os.getenv(var) for var in _OTLP_ENDPOINT_VARS):
+            logger.warning(
+                "An OTLP endpoint is configured but OpenTelemetry is not installed, so no "
+                "telemetry will be exported. Install it with: pip install 'lfx[otel]' (the full "
+                "langflow distribution already includes it)."
+            )
         return ApplicationTelemetry()
 
     meter_provider = _install_meter_provider(prometheus_enabled=prometheus_enabled)
