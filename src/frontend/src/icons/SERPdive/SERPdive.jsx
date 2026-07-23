@@ -1,4 +1,4 @@
-export const SvgSERPdive = (props) => (
+export const SvgSERPdive = ({ isDark, ...props }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" {...props}>
     <path
       fill="#0fd1c1"
@@ -17,7 +17,7 @@ export const SvgSERPdive = (props) => (
       d="M293 185q-22 5-47 3 75-61 167-82l1 1-11 18q-16 22-42 35-31 18-68 25"
     />
     <path
-      fill="#0a0f13"
+      fill={isDark ? "#0fd1c1" : "#0a0f13"}
       d="m703 655 17-24q22-24 40 4 12 25 15 52 5 26-1 50-8 32-40 44-21 8-44 4-29-7-29-37 3-24 14-44zM556 529a62 62 0 0 1-72 37c-23-5-42-25-46-49a61 61 0 0 1 119-30q8 21-1 42m46-252c-12-6-23-11-29-23-10-18 3-39 23-39q11 0 20 5 22 11 39 29 7 7 8 17 1 18-16 21-12 0-23-3-11-2-22-7"
     />
   </svg>

@@ -101,7 +101,8 @@ class SerpdiveSearchComponent(Component):
                 data_results.append(Data(text=content, data=result_data))
 
             if search_results.get("extra_info"):
-                data_results.append(Data(text="Direct answer data", data={"extra_info": search_results["extra_info"]}))
+                extra_info = search_results["extra_info"]
+                data_results.append(Data(text=str(extra_info), data={"extra_info": extra_info}))
 
         except httpx.TimeoutException:
             error_message = "Request timed out (90s). Try the 'mako' retrieval depth or a shorter query."
@@ -117,6 +118,10 @@ class SerpdiveSearchComponent(Component):
             return [Data(text=error_message, data={"error": error_message})]
         except ValueError as exc:
             error_message = f"Invalid response format: {exc}"
+            logger.error(error_message)
+            return [Data(text=error_message, data={"error": error_message})]
+        except Exception as exc:  # noqa: BLE001
+            error_message = f"Unexpected error while processing SERPdive response: {exc}"
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         else:

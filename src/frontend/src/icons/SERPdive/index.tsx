@@ -4,7 +4,7 @@ import SvgSERPdive from "./SERPdive";
 
 export const SERPdiveIcon = forwardRef<
   SVGSVGElement,
-  React.PropsWithChildren<{}>
+  React.PropsWithChildren<{ isDark?: boolean }>
 >((props, ref) => {
   return <SvgSERPdive ref={ref} {...props} />;
 });
