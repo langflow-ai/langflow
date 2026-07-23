@@ -10,9 +10,10 @@ const SUPPORTED_LANGUAGES = [
   "ja",
   "pt",
   "zh-Hans",
+  "ko",
 ] as const;
 
-const normalizeLanguage = (lang?: string | null): string => {
+export const normalizeLanguage = (lang?: string | null): string => {
   if (!lang) return "en";
 
   if (
