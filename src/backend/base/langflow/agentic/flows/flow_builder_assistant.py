@@ -17,11 +17,13 @@ from lfx.mcp.flow_builder_tools import (
     DescribeFlowIO,
     GenerateComponent,
     GetFieldValue,
+    ListTemplates,
     ProposeFieldEdit,
     ProposePlan,
     RemoveComponent,
     RunFlow,
     SearchComponentTypes,
+    UseTemplate,
 )
 
 from langflow.agentic.flows.model_config import build_model_config
@@ -89,6 +91,12 @@ randomly pick one path one turn and the other path the next.
   (review and add it to the canvas)" — do NOT claim it is already "on
   the canvas" / "no canvas" unless it was applied. State it accurately
   in the user's language.
+
+**Starter templates:**
+- **use_template** - Instantiate a starter template by name as the proposed flow (one call,
+  same review gate as build_flow). Use ONLY when the request clearly matches a starter
+  template (e.g. "simple chatbot" -> Memory Chatbot, "RAG flow" -> a RAG template) — call
+  `list_templates` if unsure of the exact name; otherwise build normally with build_flow.
 
 **Run:**
 - **run_flow** - Execute the user's CURRENT canvas flow with its configured values
@@ -292,6 +300,48 @@ incremental edits go through `propose_field_edit` / live-edit tools directly.
 - Run `describe_component(type)` for EVERY component before generating edges
   so input names and output types match exactly.
 
+## Loops and branching
+
+- **Loop over a list**: use `LoopComponent`. Its `Inputs` (`Loop.data`) MUST be
+  connected to a data source — ALWAYS add a `ChatInput` (or another producer)
+  feeding `Loop.data`, even when the user only names the body components. A Loop
+  with an unconnected `Inputs` has nothing to iterate and CANNOT run — never
+  deliver one. Its `item` output emits one element per iteration AND doubles as
+  the loop-feedback input: wire `Loop.item -> <first body component>`, process,
+  then wire the body's FINAL output back into `Loop.item` (yes, `item` as the
+  TARGET — it is a loop input). Wire `Loop.done -> <downstream>` for the
+  aggregated result. A loop flow is intentionally cyclic; do not "fix" the cycle.
+  TYPES (CRITICAL): `Loop.item` emits `Data` — it can NOT wire directly into a
+  Message input like `Agent.input_value` or `LanguageModelComponent.input_value`.
+  Put a `ParserComponent` between them (`Loop.item -> ParserComponent.input_data`,
+  `ParserComponent.parsed_text -> <body>.input_value`). The feedback TARGET
+  `Loop.item` accepts Message, so a Message output (e.g. `Agent.response`) feeds
+  back into `L.item` directly with no converter. Build the loop in ONE
+  `build_flow` call from this canonical spec (adapt the body to the request; the
+  components below are current and correct — do NOT spend turns re-discovering
+  the loop wiring or describing each of them):
+  ```
+  nodes:
+    I: ChatInput
+    L: LoopComponent
+    P: ParserComponent
+    A: Agent
+    O: ChatOutput
+  edges:
+    I.message -> L.data
+    L.item -> P.input_data
+    P.parsed_text -> A.input_value
+    A.response -> L.item
+    L.done -> O.input_value
+  ```
+  If `build_flow` reports an error, fix the spec from the error message and call
+  `build_flow` again immediately — never restart component discovery.
+- **If/else branching**: use `ConditionalRouter` (If-Else). Wire the value to route
+  into `input_text` and the comparison value into `match_text`, then wire BOTH
+  branches: `R.true_result -> <true path>` and `R.false_result -> <false path>`.
+  Each branch may end in its own output component — two ChatOutputs is valid.
+  For Data-based conditions use `DataConditionalRouter`.
+
 ## Configuration Rules
 
 - When the user describes a **persona or use-case** (e.g., "customer service for
@@ -478,19 +528,15 @@ async def build_toolkit() -> list:
         ConfigureComponent(),
         BuildFlowFromSpec(),
         RunFlow(),
+        ListTemplates(),
+        UseTemplate(),
     ]
     tools: list = []
     for component in canvas_components:
         tools.extend(await component.to_toolkit())
 
-    # Sandboxed filesystem tools. We instantiate a fresh component per build so
-    # each request gets its own ``bound_user_id`` capture inside ``_get_tools``.
-    # B1: bind the request's user identity AND force per-user isolation BEFORE
-    # ``_get_tools`` runs (it captures bound_user_id once for the tool's lifetime).
-    # The agentic ContextVar is set in assistant_service before this flow's
-    # ``get_graph`` runs, so it's reliably available here. Mirrors
-    # files_router.get_file — write and read paths resolve to the same
-    # users/<hash(user_id)>/ root regardless of AUTO_LOGIN.
+    # Fresh FileSystemToolComponent per build: user identity + isolation must bind
+    # BEFORE _get_tools captures bound_user_id (set in assistant_service ContextVar).
     from langflow.agentic.services.user_components_context import current_user_id
 
     fs = FileSystemToolComponent()

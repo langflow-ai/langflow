@@ -1,11 +1,18 @@
-"""Input sanitization and prompt injection detection.
+"""Input sanitization: prompt injection and abusive content.
 
-Security: Validates and sanitizes user input BEFORE it reaches the LLM.
-Detects prompt injection attempts, system prompt leaking, and role hijacking.
+Security: Validates and sanitizes user input BEFORE it reaches the LLM. Detects prompt
+injection (instruction override, system prompt leaking, role hijacking) and, via
+content_safety, slurs and explicit profanity.
+
+Injection patterns are intentionally specific, to avoid firing on legitimate Langflow
+questions such as "how do I ignore errors".
 """
 
 import re
 from dataclasses import dataclass
+
+from langflow.agentic.helpers.content_safety import REFUSAL_MESSAGE as CONTENT_REFUSAL_MESSAGE
+from langflow.agentic.helpers.content_safety import check_content
 
 MAX_INPUT_LENGTH = 2000
 
@@ -16,10 +23,6 @@ REFUSAL_MESSAGE = (
     "Please rephrase your question about Langflow."
 )
 
-# Prompt injection patterns: (compiled_regex, violation_description)
-# Each pattern targets a specific injection technique.
-# Patterns are intentionally specific to avoid false positives on
-# legitimate Langflow questions (e.g., "how do I ignore errors").
 INJECTION_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     # Instruction override attempts
     (
@@ -85,13 +88,16 @@ class SanitizationResult:
     is_safe: bool
     sanitized_input: str
     violation: str | None = None
+    refusal: str = REFUSAL_MESSAGE
+    """What to tell the user. Defaults to the injection wording; content violations override it."""
 
 
 def sanitize_input(text: str) -> SanitizationResult:
     """Validate and sanitize user input before it reaches the LLM.
 
-    Checks for prompt injection patterns and normalizes the input.
-    Returns a SanitizationResult with is_safe=False if injection is detected.
+    Checks for prompt injection and abusive content, then normalizes the input. Returns a
+    SanitizationResult with is_safe=False on either. The two are separate refusals: an
+    injection attempt and a slur are different problems and read differently to the user.
     """
     if not text:
         return SanitizationResult(is_safe=True, sanitized_input="")
@@ -99,6 +105,15 @@ def sanitize_input(text: str) -> SanitizationResult:
     violation = _check_injection_patterns(text)
     if violation:
         return SanitizationResult(is_safe=False, sanitized_input=text, violation=violation)
+
+    content = check_content(text)
+    if not content.is_safe:
+        return SanitizationResult(
+            is_safe=False,
+            sanitized_input=text,
+            violation=content.violation,
+            refusal=CONTENT_REFUSAL_MESSAGE,
+        )
 
     normalized = _normalize_input(text)
     return SanitizationResult(is_safe=True, sanitized_input=normalized)

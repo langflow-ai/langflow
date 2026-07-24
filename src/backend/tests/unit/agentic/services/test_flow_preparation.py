@@ -597,3 +597,136 @@ class TestInjectAssistantFsRoot:
         # sub_path under the user's namespace.
         unchanged = result["data"]["nodes"][0]["data"]["node"]["template"]["root_path"]["value"]
         assert unchanged == "/explicit/path"
+
+
+class TestInjectHistoryLimitIntoFlow:
+    """The /history N command overrides the Agent's memory window (n_messages)."""
+
+    @staticmethod
+    def _flow_with_agent(n_messages_value=20):
+        return {
+            "data": {
+                "nodes": [
+                    {"data": {"type": "ChatInput", "node": {"template": {}}}},
+                    {
+                        "data": {
+                            "type": "Agent",
+                            "node": {"template": {"n_messages": {"value": n_messages_value}}},
+                        }
+                    },
+                ]
+            }
+        }
+
+    def test_should_set_n_messages_on_agent_nodes(self):
+        from langflow.agentic.services.flow_preparation import inject_history_limit_into_flow
+
+        flow = self._flow_with_agent(20)
+        out = inject_history_limit_into_flow(flow, 5)
+        agent = out["data"]["nodes"][1]["data"]["node"]["template"]
+        assert agent["n_messages"]["value"] == 5
+
+    def test_should_leave_non_agent_nodes_untouched(self):
+        from langflow.agentic.services.flow_preparation import inject_history_limit_into_flow
+
+        flow = self._flow_with_agent(20)
+        out = inject_history_limit_into_flow(flow, 5)
+        chat_input = out["data"]["nodes"][0]["data"]["node"]["template"]
+        assert "n_messages" not in chat_input
+
+    def test_should_be_noop_for_none_or_negative_limit(self):
+        from langflow.agentic.services.flow_preparation import inject_history_limit_into_flow
+
+        flow = self._flow_with_agent(20)
+
+        def _n_messages(f):
+            return f["data"]["nodes"][1]["data"]["node"]["template"]["n_messages"]["value"]
+
+        assert _n_messages(inject_history_limit_into_flow(flow, None)) == 20
+        assert _n_messages(inject_history_limit_into_flow(flow, -1)) == 20
+
+    def test_should_skip_agent_without_n_messages_field(self):
+        from langflow.agentic.services.flow_preparation import inject_history_limit_into_flow
+
+        flow = {"data": {"nodes": [{"data": {"type": "Agent", "node": {"template": {}}}}]}}
+        # must not raise
+        inject_history_limit_into_flow(flow, 5)
+
+
+class TestInjectIterationsIntoFlow:
+    """The /iterations N command overrides the assistant Agent's step budget (max_iterations)."""
+
+    @staticmethod
+    def _flow_with_agent(max_iterations_value=30):
+        return {
+            "data": {
+                "nodes": [
+                    {"data": {"type": "ChatInput", "node": {"template": {}}}},
+                    {
+                        "data": {
+                            "type": "Agent",
+                            "node": {"template": {"max_iterations": {"value": max_iterations_value}}},
+                        }
+                    },
+                ]
+            }
+        }
+
+    def test_should_set_max_iterations_on_agent_nodes(self):
+        from langflow.agentic.services.flow_preparation import inject_iterations_into_flow
+
+        flow = self._flow_with_agent(30)
+        out = inject_iterations_into_flow(flow, 60)
+        agent = out["data"]["nodes"][1]["data"]["node"]["template"]
+        assert agent["max_iterations"]["value"] == 60
+
+    def test_should_leave_non_agent_nodes_untouched(self):
+        from langflow.agentic.services.flow_preparation import inject_iterations_into_flow
+
+        flow = self._flow_with_agent(30)
+        out = inject_iterations_into_flow(flow, 60)
+        chat_input = out["data"]["nodes"][0]["data"]["node"]["template"]
+        assert "max_iterations" not in chat_input
+
+    def test_should_be_noop_for_none_limit(self):
+        from langflow.agentic.services.flow_preparation import inject_iterations_into_flow
+
+        flow = self._flow_with_agent(30)
+        assert (
+            inject_iterations_into_flow(flow, None)["data"]["nodes"][1]["data"]["node"]["template"]["max_iterations"][
+                "value"
+            ]
+            == 30
+        )
+
+    def test_should_clamp_to_minimum_of_one(self):
+        from langflow.agentic.services.flow_preparation import inject_iterations_into_flow
+
+        flow = self._flow_with_agent(30)
+        out = inject_iterations_into_flow(flow, 0)
+        assert out["data"]["nodes"][1]["data"]["node"]["template"]["max_iterations"]["value"] == 1
+
+    def test_should_clamp_to_max(self):
+        from langflow.agentic.services.flow_preparation import MAX_ASSISTANT_ITERATIONS, inject_iterations_into_flow
+
+        flow = self._flow_with_agent(30)
+        out = inject_iterations_into_flow(flow, MAX_ASSISTANT_ITERATIONS + 50)
+        assert (
+            out["data"]["nodes"][1]["data"]["node"]["template"]["max_iterations"]["value"] == MAX_ASSISTANT_ITERATIONS
+        )
+
+    def test_should_skip_agent_without_max_iterations_field(self):
+        from langflow.agentic.services.flow_preparation import inject_iterations_into_flow
+
+        flow = {"data": {"nodes": [{"data": {"type": "Agent", "node": {"template": {}}}}]}}
+        # must not raise
+        inject_iterations_into_flow(flow, 60)
+
+    def test_load_and_prepare_reads_iterations_from_provider_vars(self):
+        from langflow.agentic.services.flow_preparation import inject_iterations_into_flow, load_and_prepare_flow
+
+        # Sanity: the ITERATIONS_LIMIT provider var drives inject_iterations_into_flow.
+        flow = self._flow_with_agent(30)
+        out = inject_iterations_into_flow(flow, 45)
+        assert out["data"]["nodes"][1]["data"]["node"]["template"]["max_iterations"]["value"] == 45
+        assert callable(load_and_prepare_flow)

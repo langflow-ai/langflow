@@ -58,6 +58,70 @@ def _redact(text: str) -> str:
     return scrubbed
 
 
+def flow_has_loop_edge(flow: dict) -> bool:
+    """True when the flow contains a loop feedback edge (an intentional cycle).
+
+    A loop feedback edge targets an ``allows_loop`` output, so its
+    ``targetHandle`` is output-shaped (carries ``name`` instead of the normal
+    ``fieldName``) — see ``lfx.graph.flow_builder.connect``. Running such a
+    cyclic flow to completion for verification is slow and can hang, so the
+    caller skips the real run and delivers a structural-only result instead.
+    """
+    for edge in (flow or {}).get("data", {}).get("edges", []):
+        target_handle = (edge.get("data") or {}).get("targetHandle") or {}
+        if isinstance(target_handle, dict) and "name" in target_handle and "fieldName" not in target_handle:
+            return True
+    return False
+
+
+def loop_skipped_caveat() -> str:
+    return (
+        "This flow contains a loop, so I built and structurally validated it but "
+        "didn't run it here — run it yourself to see the results."
+    )
+
+
+def loop_structural_caveat(issues: list[str]) -> str:
+    """Honest, specific caveat for a loop that is structurally incomplete."""
+    detail = _redact("; ".join(issues))
+    return (
+        "This flow contains a loop, so I validated its structure instead of running it, "
+        f"and it looks incomplete: {detail} Connect those inputs, then run it."
+    )
+
+
+async def verify_loop_structure(
+    *,
+    flow: dict,
+    validate_fn: Callable[[dict], list[str]],
+    fix_fn: Callable[[str], Awaitable[dict | None]],
+    max_attempts: int = MAX_FLOW_VERIFICATION_ATTEMPTS,
+) -> FlowVerificationResult:
+    """Validate a cyclic flow's structure (no execution), retrying fixable gaps.
+
+    A loop can't be run to completion safely, so instead of executing it we
+    check its wiring. On failure the agent is asked to repair the exact
+    missing connections and the flow is re-validated, bounded by
+    ``max_attempts`` fix turns. A structurally sound loop is delivered as
+    ready; one still incomplete after the cap is delivered with an explicit
+    "incomplete — connect X" caveat, never as a confident success.
+    """
+    current = flow
+    issues = validate_fn(current)
+    attempt = 0
+    while issues and attempt < max_attempts:
+        attempt += 1
+        fixed = await fix_fn("; ".join(issues))
+        if not fixed:
+            break
+        current = fixed
+        issues = validate_fn(current)
+
+    if not issues:
+        return FlowVerificationResult(FlowVerificationStatus.PASSED, attempt, None, current)
+    return FlowVerificationResult(FlowVerificationStatus.NEEDS_CAVEAT, attempt, loop_structural_caveat(issues), current)
+
+
 def _external_caveat(error: str) -> str:
     return (
         "I built the flow and it's structurally valid, but I couldn't fully run it here "

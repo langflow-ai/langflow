@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException
 
 from langflow.agentic.utils.template_search import get_template_by_id
-from langflow.api.v1.flows import _new_flow, _save_flow_to_fs
+from langflow.api.v1.flows import _new_flow
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.flow.model import FlowCreate
 from langflow.services.database.models.folder.model import Folder
@@ -73,13 +73,11 @@ async def create_flow_from_template_and_get_link(
         user_id=user_id,
     )
 
-    # 4) Use the same creation path as API
+    # _new_flow already flushes/refreshes/saves and returns a FlowRead; refreshing
+    # or re-saving that non-mapped instance raised "FlowRead is not mapped".
     storage_service = get_storage_service()
     db_flow = await _new_flow(session=session, flow=new_flow, user_id=user_id, storage_service=storage_service)
     await session.commit()
-    await session.refresh(db_flow)
-    await _save_flow_to_fs(db_flow, user_id, storage_service)
 
-    # 5) Build relative UI link
     link = f"/flow/{db_flow.id}/folder/{folder_id}"
     return {"id": str(db_flow.id), "link": link}

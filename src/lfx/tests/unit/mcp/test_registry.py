@@ -242,3 +242,93 @@ class TestSearchRegistryLegacyFilter:
         result = describe_component(registry, "Calculator")
         assert result["type"] == "Calculator"
         assert result.get("legacy") is True
+
+
+class TestDescribeComponentLoopInputs:
+    """allows_loop outputs double as loop-feedback connection targets.
+
+    describe_component must surface them as inputs (and flag the output)
+    so the agent can discover that e.g. Loop.item accepts the loop body's
+    tail edge — otherwise loop flows are undiscoverable by the LLM.
+    """
+
+    def _registry_with_loop(self) -> dict:
+        return {
+            "LoopComponent": {
+                "display_name": "Loop",
+                "description": "Iterates over a list.",
+                "category": "flow_controls",
+                "outputs": [
+                    {
+                        "name": "item",
+                        "types": ["Data", "JSON"],
+                        "selected": "Data",
+                        "allows_loop": True,
+                        "loop_types": ["Message"],
+                    },
+                    {"name": "done", "types": ["DataFrame", "Table"]},
+                ],
+                "template": {
+                    "data": {
+                        "display_name": "Inputs",
+                        "type": "other",
+                        "input_types": ["DataFrame", "Table", "Data", "Message"],
+                    },
+                },
+            },
+        }
+
+    def test_loop_output_is_listed_as_loop_input(self) -> None:
+        result = describe_component(self._registry_with_loop(), "LoopComponent")
+
+        loop_inputs = [i for i in result["inputs"] if i.get("type") == "loop"]
+        assert len(loop_inputs) == 1
+        assert loop_inputs[0]["name"] == "item"
+        assert loop_inputs[0]["input_types"] == ["Data", "Message"]
+
+    def test_loop_output_is_flagged(self) -> None:
+        result = describe_component(self._registry_with_loop(), "LoopComponent")
+
+        item = next(o for o in result["outputs"] if o["name"] == "item")
+        assert item.get("allows_loop") is True
+        done = next(o for o in result["outputs"] if o["name"] == "done")
+        assert "allows_loop" not in done
+
+    def test_regular_inputs_unchanged(self) -> None:
+        result = describe_component(self._registry_with_loop(), "LoopComponent")
+
+        regular = [i for i in result["inputs"] if i.get("type") != "loop"]
+        assert [i["name"] for i in regular] == ["data"]
+
+    def test_loop_input_skipped_when_template_input_has_same_name(self) -> None:
+        # Mirrors connect.py's priority: the template input wins on a name
+        # collision, so describe must not list the same port twice.
+        registry = {
+            "CollidingPorts": {
+                "display_name": "Colliding Ports",
+                "category": "flow_controls",
+                "outputs": [
+                    {
+                        "name": "item",
+                        "types": ["Data"],
+                        "selected": "Data",
+                        "allows_loop": True,
+                        "loop_types": ["Message"],
+                    },
+                ],
+                "template": {
+                    "item": {
+                        "display_name": "Item",
+                        "type": "str",
+                        "input_types": ["Message"],
+                    },
+                },
+            },
+        }
+
+        result = describe_component(registry, "CollidingPorts")
+
+        item_inputs = [i for i in result["inputs"] if i["name"] == "item"]
+        assert len(item_inputs) == 1
+        assert item_inputs[0]["input_types"] == ["Message"]
+        assert item_inputs[0].get("type") != "loop"

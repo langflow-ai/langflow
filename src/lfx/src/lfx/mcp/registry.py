@@ -82,13 +82,29 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
         raise ValueError(msg)
 
     tmpl = registry[component_type]
-    outputs = [{"name": o["name"], "types": o.get("types", [])} for o in tmpl.get("outputs", [])]
+    outputs = []
+    loop_inputs = []
+    for o in tmpl.get("outputs", []):
+        entry: dict[str, Any] = {"name": o["name"], "types": o.get("types", [])}
+        if o.get("allows_loop"):
+            # An allows_loop output doubles as the loop-feedback target (Loop.item):
+            # surface it as an input too, or the agent cannot discover loop wiring.
+            entry["allows_loop"] = True
+            types = o.get("types") or []
+            selected = o.get("selected") or (types[0] if types else "Message")
+            loop_inputs.append(
+                {
+                    "name": o["name"],
+                    "input_types": [selected, *(o.get("loop_types") or [])],
+                    "type": "loop",
+                    "required": False,
+                    "description": "Loop feedback input: connect the loop body's final output back here.",
+                }
+            )
+        outputs.append(entry)
 
-    # Component supports tool mode if any INPUT field has tool_mode=True. This
-    # mirrors the runtime authority in Component._handle_tool_mode and matches
-    # what makes the Tool Mode toggle render in the canvas. Output-based
-    # tool_mode is also accepted for backward compat with components that
-    # declared the flag on the output side instead of the input.
+    # Tool mode = any INPUT field with tool_mode=True (mirrors Component._handle_tool_mode);
+    # output-side tool_mode is accepted for backward compat.
     template_fields = tmpl.get("template", {})
     tool_mode_inputs = [
         name for name, fdata in template_fields.items() if isinstance(fdata, dict) and fdata.get("tool_mode")
@@ -136,21 +152,25 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
                     field_info["required"] = True
                 fields.append(field_info)
 
+    # Template wins on a name collision (mirrors connect.py's priority):
+    # never describe the same port twice.
+    template_input_names = {name for name, fdata in template_fields.items() if isinstance(fdata, dict) and fdata}
+    loop_inputs = [li for li in loop_inputs if li["name"] not in template_input_names]
+
     result: dict[str, Any] = {
         "type": component_type,
         "category": tmpl.get("category", ""),
         "display_name": tmpl.get("display_name", component_type),
         "description": tmpl.get("description", ""),
         "outputs": outputs,
-        "inputs": inputs,
+        "inputs": [*inputs, *loop_inputs],
     }
     if fields:
         result["fields"] = fields
     if advanced_fields:
         result["advanced_fields"] = sorted(advanced_fields)
-    # Surface deprecation flags so the agent knows when it explicitly
-    # named a legacy/beta component (search_registry hides them, but the
-    # agent can still describe one by exact name).
+    # search_registry hides legacy/beta, but describe-by-exact-name still
+    # reaches them — flag so the agent knows what it picked.
     if tmpl.get("legacy"):
         result["legacy"] = True
     if tmpl.get("beta"):

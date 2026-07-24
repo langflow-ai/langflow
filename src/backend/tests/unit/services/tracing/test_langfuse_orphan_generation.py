@@ -162,6 +162,43 @@ class TestRootRunReparentingHandler:
         ctx = handler.captured[-1]
         assert not ctx.is_valid
 
+    def test_handler_is_deepcopy_and_copy_safe(self):
+        """Survive ``copy.deepcopy`` / ``copy.copy`` by returning self.
+
+        The handler never recurses into the langfuse client.
+
+        Langflow deep-copies flow/graph state (restore-point snapshots, working-flow
+        copies, component build). The real langfuse ``CallbackHandler`` / ``Langfuse``
+        client is NOT deep-copyable — its singleton ``LangfuseResourceManager.__new__``
+        is keyword-only, so ``copy.deepcopy`` (which calls ``cls.__new__(cls)`` with
+        no args) raises ``TypeError: __new__() missing 3 required keyword-only
+        arguments``. That surfaced to users as a failed Agent build. A base whose
+        deepcopy explodes stands in for that; the subclass must short-circuit it.
+        """
+        import copy
+
+        from langflow.services.tracing.langfuse import _root_run_reparenting_handler_cls
+
+        class _NonCopyableBase:
+            def __init__(self, *, trace_context=None, **kwargs):  # noqa: ARG002
+                self.trace_context = trace_context
+
+            def __deepcopy__(self, memo):
+                msg = "LangfuseResourceManager.__new__() missing 3 required keyword-only arguments"
+                raise TypeError(msg)
+
+            def __copy__(self):
+                msg = "LangfuseResourceManager.__new__() missing 3 required keyword-only arguments"
+                raise TypeError(msg)
+
+        handler_cls = _root_run_reparenting_handler_cls(_NonCopyableBase)
+        handler = handler_cls(trace_context={"trace_id": "a" * 32}, otel_parent=None)
+
+        assert copy.deepcopy(handler) is handler
+        assert copy.copy(handler) is handler
+        # Deep-copying a container that holds the handler must not raise either.
+        assert copy.deepcopy({"callbacks": [handler]})["callbacks"][0] is handler
+
 
 def _build_real_langfuse_client_or_skip(tracer_provider):
     """Construct a real Langfuse client wired to ``tracer_provider``.

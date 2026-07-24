@@ -570,7 +570,12 @@ class TracingService(Service):
         for tracer in trace_context.tracers.values():
             if not tracer.ready:  # type: ignore[truthy-function]
                 continue
-            langchain_callback = tracer.get_langchain_callback()
+            try:
+                # A broken tracer (e.g. partial Langfuse creds) must never fail the run.
+                langchain_callback = tracer.get_langchain_callback()
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Tracer {type(tracer).__name__} failed to provide a callback; skipping: {e}")
+                continue
             if langchain_callback:
                 callbacks.append(langchain_callback)
         return callbacks

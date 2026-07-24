@@ -284,7 +284,7 @@ def test_critical_defaults_unchanged():
     assert settings.load_flows_preserve_variable_bindings is True
     assert settings.do_not_track is False
     assert settings.dev is False
-    assert settings.agentic_experience is False
+    assert settings.agentic_experience is True
     assert settings.developer_api_enabled is False
 
 

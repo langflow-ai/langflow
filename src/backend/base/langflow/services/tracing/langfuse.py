@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import os
 import threading
 from collections import OrderedDict
@@ -122,10 +123,19 @@ def _get_or_create_shared_client(config: dict) -> Langfuse:
 
 
 def _reset_shared_client_for_tests() -> None:
-    """Test-only hook: clear the cached client so each test gets a fresh mock."""
+    """Test-only hook: clear the cached client so each test gets a fresh mock.
+
+    Also clears the langfuse SDK's own process-global resource-manager registry
+    (keyed by public_key); without it a prior test's client leaks into the next —
+    e.g. a real-SDK test resolves to a stale manager with no in-memory exporter.
+    """
     with _SharedClient.lock:
         _SharedClient.client = None
         _SharedClient.key = None
+    with contextlib.suppress(Exception):
+        from langfuse._client.resource_manager import LangfuseResourceManager
+
+        LangfuseResourceManager._instances.clear()
 
 
 def normalize_langfuse_trace_id(trace_id: UUID | str | None) -> str | None:
@@ -283,15 +293,20 @@ def _root_run_reparenting_handler_cls(base_cls: type) -> type:
             self._otel_parent = otel_parent
 
         def __deepcopy__(self, memo: dict[int, Any]) -> Any:
-            # LangfuseResourceManager (held internally by the base CallbackHandler)
-            # does not support deepcopy: its __new__ requires explicit credentials
-            # that are unavailable during object reconstruction, causing:
-            #   LangfuseResourceManager.new() missing required keyword arguments
-            # The handler holds no per-invocation mutable state, so returning
-            # self instead of a true copy is safe even when tools share it across
-            # concurrent calls. See https://github.com/langflow-ai/langflow/issues/13965
-            # and the same workaround in flow_loader.py (issue #13429).
+            """Return self instead of a copy.
+
+            The base CallbackHandler holds a LangfuseResourceManager whose
+            keyword-only ``__new__`` cannot be reconstructed during deepcopy
+            (raises ``__new__() missing required keyword arguments``), and
+            langflow deep-copies flow state around the Agent build. The handler
+            keeps no per-invocation mutable state, so sharing it across
+            concurrent calls is safe. See issues #13965 / #13429 (same
+            workaround in flow_loader.py).
+            """
             memo[id(self)] = self
+            return self
+
+        def __copy__(self) -> Any:
             return self
 
         def _reparent(self, method_name: str, args: tuple, kwargs: dict, parent_run_id: UUID | None):
@@ -342,11 +357,8 @@ class LangFuseTracer(BaseTracer):
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.trace_id = trace_id
-        # ``user_id`` remains the authenticated Langflow user and drives
-        # ``trace.userId`` unchanged from pre-#9505 behavior. ``tracing_user_id``
-        # is an optional caller-supplied label; when set, it is stamped into
-        # trace metadata as ``langflow.tracing_user_id`` so consumers can still
-        # access the override without redefining ``trace.userId``.
+        # ``user_id`` stays the authenticated user (drives ``trace.userId``); ``tracing_user_id`` is
+        # stamped into metadata as ``langflow.tracing_user_id`` instead of overriding it (#9505).
         self.user_id = user_id
         self.tracing_user_id = tracing_user_id
         self.session_id = session_id

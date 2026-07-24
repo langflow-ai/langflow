@@ -238,6 +238,45 @@ class TestFlowBuilderPromptLegacyComponents:
         )
 
 
+class TestFlowBuilderPromptLoopRecipe:
+    """The prompt's canonical loop spec must stay buildable against the LIVE registry.
+
+    loop_flow eval regression: the 0/3 failure came from a stale recipe — it
+    named legacy components (`ParseData`, `MessagetoData`) that
+    search_components hides, and did not cover the Message-consuming body
+    head (Agent), so `L.item -> A.input_value` failed on type mismatch and
+    the agent burned its recursion budget re-discovering components.
+    """
+
+    @staticmethod
+    def _canonical_loop_spec() -> str:
+        section = FLOW_BUILDER_PROMPT.split("## Loops and branching", 1)[1]
+        block = section.split("```", 2)
+        assert len(block) >= 3, "Loops section must contain a fenced canonical spec"
+        return "name: Loop Recipe\n" + block[1].strip()
+
+    def test_loop_recipe_must_not_use_legacy_components(self):
+        section = FLOW_BUILDER_PROMPT.split("## Loops and branching", 1)[1].split("## ", 1)[0]
+        assert "ParseData" not in section, "legacy component in the loop recipe (hidden from search_components)"
+        assert "MessagetoData" not in section, "legacy component in the loop recipe (hidden from search_components)"
+
+    def test_loop_recipe_spec_builds_against_live_registry(self):
+        from lfx.graph.flow_builder.builder import build_flow_from_spec
+
+        result = build_flow_from_spec(self._canonical_loop_spec())
+        assert "error" not in result, f"canonical loop recipe no longer builds: {result}"
+        edges = result["flow"]["data"]["edges"]
+        feedback = [
+            e for e in edges if "name" in e["data"]["targetHandle"] and "fieldName" not in e["data"]["targetHandle"]
+        ]
+        assert feedback, "canonical loop recipe must produce an output-shaped feedback edge"
+
+    def test_loop_recipe_covers_the_message_consuming_body_head(self):
+        section = FLOW_BUILDER_PROMPT.split("## Loops and branching", 1)[1].split("## ", 1)[0]
+        assert "ParserComponent" in section, "recipe must show how a Data item reaches a Message input"
+        assert "Agent" in section, "recipe must cover the loop-body-with-Agent request shape"
+
+
 class TestFlowBuilderPromptProposePlan:
     """propose_plan is OPTIONAL — used only for genuinely ambiguous or
     large/destructive whole-canvas replacements. Clear/specified requests

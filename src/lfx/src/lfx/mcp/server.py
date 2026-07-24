@@ -136,6 +136,21 @@ def _set_client(client: LangflowClient) -> None:
     _shared_client = client
 
 
+@contextlib.contextmanager
+def client_scope(client: LangflowClient):
+    """Bind ``client`` for the current async context only (host mounts).
+
+    Unlike ``_set_client`` this never touches the shared stdio client, so an
+    HTTP mount can serve concurrent callers with per-request credentials
+    without cross-contaminating sessions.
+    """
+    token = _client_var.set(client)
+    try:
+        yield client
+    finally:
+        _client_var.reset(token)
+
+
 async def _get_registry() -> dict[str, dict]:
     registry = _registry_var.get()
     if registry is not None:
@@ -1533,6 +1548,104 @@ def _resolve_refs(value: Any, results: list[Any]) -> Any:
     if isinstance(value, list):
         return [_resolve_refs(v, results) for v in value]
     return value
+
+
+def _assistant_progress_forwarder(ctx: Context | None):
+    """Bridge assistant ``progress`` SSE events to MCP progress/log notifications.
+
+    Best-effort on purpose: clients without progress support just ignore the
+    notifications, and a failed send must never break the tool call.
+    """
+    if ctx is None:
+        return None
+    step_count = 0
+
+    async def forward(event: dict[str, Any]) -> None:
+        nonlocal step_count
+        step_count += 1
+        message = str(event.get("message") or event.get("step") or "working")
+        try:
+            request_context = ctx.request_context
+            progress_token = request_context.meta.progressToken if request_context.meta else None
+            if progress_token is not None:
+                # Not ctx.report_progress: it omits related_request_id, which the
+                # stateless streamable-http transport needs to route onto the request stream.
+                await request_context.session.send_progress_notification(
+                    progress_token=progress_token,
+                    progress=float(step_count),
+                    message=message,
+                    related_request_id=ctx.request_id,
+                )
+            await ctx.info(message)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Could not forward assistant progress to the MCP client: %s", exc)
+
+    return forward
+
+
+@mcp.tool()
+@_tracked
+async def run_assistant(
+    instruction: str,
+    flow_id: str | None = None,
+    provider: str | None = None,
+    model_name: str | None = None,
+    session_id: str | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """Ask the Langflow Assistant to build, edit, or explain a flow.
+
+    The assistant runs server-side with its full agent loop (component search,
+    flow build, canvas edits); this tool consumes it through the REST API with
+    the caller's own credentials, so identity needs no extra argument. Any
+    resulting canvas change is persisted to the flow and immediately visible
+    in the Langflow UI.
+
+    Args:
+        instruction: Natural-language request, e.g. "Build a flow with a Chat
+            Input connected to a Chat Output". Max 2000 characters.
+        flow_id: Optional id of an existing flow to edit. When omitted, a new
+            flow is created first and the assistant works on it.
+        provider: Optional model provider (e.g. "OpenAI", "Ollama"). Defaults
+            to the first configured provider on the server.
+        model_name: Optional model on that provider.
+        session_id: Optional conversation id to keep multi-turn context.
+        ctx: Injected MCP context; each assistant progress step is forwarded
+            to the caller as an MCP progress notification and info log.
+
+    Returns:
+        Dictionary with ``result`` (the assistant's reply), ``flow_id``,
+        ``link`` (relative UI link), and any fields the assistant reports
+        (``flow_changed``, ``session_id``, ``provider``, ``model_name``).
+    """
+    client = _get_client()
+    forward = _assistant_progress_forwarder(ctx)
+    optional = {"flow_id": flow_id, "provider": provider, "model_name": model_name, "session_id": session_id}
+    payload: dict[str, Any] = {"instruction": instruction, **{k: v for k, v in optional.items() if v}}
+
+    complete: dict[str, Any] | None = None
+    # ``/assist/run`` (not ``/assist/stream``): the headless route APPLIES the canvas
+    # changes. The stream route leaves them as a proposal for a UI card to approve,
+    # which a non-interactive MCP caller has no way to accept — the edit would be lost.
+    async for event in client.stream_post("/agentic/assist/run", json_data=payload, timeout=600.0):
+        kind = event.get("event")
+        if kind == "progress" and forward is not None:
+            await forward(event)
+        elif kind == "error":
+            detail = event.get("message") or "Assistant run failed"
+            raise RuntimeError(str(detail))
+        elif kind == "complete":
+            complete = event.get("data") or {}
+
+    if complete is None:
+        # A truncated stream would otherwise return a success-shaped empty result.
+        msg = "Assistant stream ended without a complete event"
+        raise RuntimeError(msg)
+
+    result: dict[str, Any] = dict(complete)
+    result.setdefault("result", "")
+    result.setdefault("link", f"/flow/{result.get('flow_id')}")
+    return result
 
 
 @mcp.tool()

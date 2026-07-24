@@ -18,7 +18,9 @@ export type FlowPoolObjectType = {
   valid: boolean;
   messages: Array<ChatOutputType | ChatInputType> | [];
   data: {
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
     artifacts: any | ChatOutputType | ChatInputType;
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
     results: any | ChatOutputType | ChatInputType;
   };
   duration?: string;
@@ -34,7 +36,9 @@ export type FlowPoolObjectTypeNew = {
   timestamp: string;
   valid: boolean;
   data: {
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
     outputs?: any | ChatOutputType | ChatInputType;
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
     results: any | ChatOutputType | ChatInputType;
   };
   duration?: string;
@@ -149,6 +153,7 @@ export type FlowStoreType = {
   setEdges: (
     update: EdgeType[] | ((oldState: EdgeType[]) => EdgeType[]),
   ) => void;
+  setNodesAndEdges: (nodes: AllNodeType[], edges: EdgeType[]) => void;
   setNode: (
     id: string,
     update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
@@ -159,16 +164,20 @@ export type FlowStoreType = {
   deleteNode: (nodeId: string | Array<string>) => void;
   deleteEdge: (edgeId: string | Array<string>) => void;
   paste: (
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number },
   ) => void;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
   lastCopiedSelection: { nodes: any; edges: any } | null;
   setLastCopiedSelection: (
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
     newSelection: { nodes: any; edges: any } | null,
     isCrop?: boolean,
   ) => void;
   cleanFlow: () => void;
   setFilterEdge: (newState) => void;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
   getFilterEdge: any[];
   setFilterComponent: (newState) => void;
   getFilterComponent: string;

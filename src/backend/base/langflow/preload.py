@@ -61,7 +61,6 @@ class PreloadStep(Enum):
     TYPES_CACHED = "types_cached"
     STARTER_PROJECTS = "starter_projects"
     AGENTIC_GLOBALS = "agentic_globals"
-    AGENTIC_MCP = "agentic_mcp"
     FLOWS = "flows"
 
 
@@ -71,7 +70,6 @@ _STEP_ATTR: Final[dict[PreloadStep, str]] = {
     PreloadStep.TYPES_CACHED: "types_cached",
     PreloadStep.STARTER_PROJECTS: "starter_projects_created",
     PreloadStep.AGENTIC_GLOBALS: "agentic_globals_initialized",
-    PreloadStep.AGENTIC_MCP: "agentic_mcp_configured",
     PreloadStep.FLOWS: "flows_loaded",
 }
 
@@ -83,7 +81,6 @@ _STEP_PREREQUISITES: Final[dict[PreloadStep, tuple[PreloadStep, ...]]] = {
     PreloadStep.STARTER_PROJECTS: (PreloadStep.TYPES_CACHED,),
     PreloadStep.AGENTIC_GLOBALS: (PreloadStep.TYPES_CACHED,),
     # MCP config may succeed even when globals failed (separate try/except in preload).
-    PreloadStep.AGENTIC_MCP: (PreloadStep.TYPES_CACHED,),
     PreloadStep.FLOWS: (PreloadStep.TYPES_CACHED,),
 }
 
@@ -115,7 +112,6 @@ class _PreloadState:
     types_cached: bool = False
     starter_projects_created: bool = False
     agentic_globals_initialized: bool = False
-    agentic_mcp_configured: bool = False
     flows_loaded: bool = False
 
     def reset(self) -> None:
@@ -143,7 +139,6 @@ class _PreloadState:
         self.types_cached = False
         self.starter_projects_created = False
         self.agentic_globals_initialized = False
-        self.agentic_mcp_configured = False
         self.flows_loaded = False
 
 
@@ -252,10 +247,7 @@ async def _run_master_preload() -> None:
             )
 
         if settings_service.settings.agentic_experience:
-            from langflow.api.utils.mcp.agentic_mcp import (
-                auto_configure_agentic_mcp_server,
-                initialize_agentic_global_variables,
-            )
+            from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables
 
             await logger.adebug("[preload] initializing agentic global variables")
 
@@ -267,18 +259,6 @@ async def _run_master_preload() -> None:
                 PreloadStep.AGENTIC_GLOBALS,
                 "initialize agentic global variables failed",
                 _run_agentic_globals(),
-            )
-
-            await logger.adebug("[preload] auto-configuring agentic MCP server")
-
-            async def _run_agentic_mcp() -> None:
-                async with session_scope() as session:
-                    await auto_configure_agentic_mcp_server(session)
-
-            await _best_effort(
-                PreloadStep.AGENTIC_MCP,
-                "auto-configure agentic MCP server failed",
-                _run_agentic_mcp(),
             )
 
         await logger.adebug("[preload] loading flows from directory")

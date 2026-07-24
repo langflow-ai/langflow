@@ -73,6 +73,8 @@ async def consume_streaming_events(
                 # string form would flash as the answer before the real text arrives.
                 if chunk and chunk.strip() != "[]":
                     yield ("token", chunk)
+            elif event_type == "tool_start":
+                yield ("tool_start", data)
             elif event_type == "flow_preview":
                 yield ("flow_preview", data)
             elif event_type == "end":

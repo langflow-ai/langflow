@@ -901,4 +901,118 @@ describe("cleanEdges", () => {
       expect(resultBasic2.edges.length).toBe(0);
     });
   });
+
+  describe("dropdown-output loop feedback edge (TypeConverter)", () => {
+    // The loop body converts each item back to Data via TypeConverter, whose
+    // JSON output (`data_output`) feeds back into `Loop.item`. TypeConverter is
+    // a single-active dropdown with three outputs; if the canvas auto-selects
+    // its first output (`message_output`) the feedback edge is cleaned away.
+    const TC_ID = "TypeConverterComponent-1";
+    const LOOP_ID = "LoopComponent-1";
+
+    const loopNode: AllNodeType = {
+      id: LOOP_ID,
+      type: "genericNode",
+      data: {
+        id: LOOP_ID,
+        type: "LoopComponent",
+        node: {
+          display_name: "Loop",
+          template: { data: { type: "other", input_types: ["Data"] } },
+          outputs: [
+            {
+              name: "item",
+              types: ["Data"],
+              selected: "Data",
+              allows_loop: true,
+              loop_types: ["Message"],
+            },
+            { name: "done", types: ["DataFrame"] },
+          ],
+        },
+      },
+    };
+
+    const feedbackSourceHandle = scapedJSONStringfy({
+      dataType: "TypeConverterComponent",
+      id: TC_ID,
+      name: "data_output",
+      output_types: ["JSON"],
+    });
+    const feedbackTargetHandle = scapedJSONStringfy({
+      dataType: "LoopComponent",
+      id: LOOP_ID,
+      name: "item",
+      output_types: ["Data", "Message"],
+    });
+    const feedbackEdge: EdgeType = {
+      id: "reactflow__edge-feedback",
+      source: TC_ID,
+      target: LOOP_ID,
+      sourceHandle: feedbackSourceHandle,
+      targetHandle: feedbackTargetHandle,
+    };
+
+    const tcOutputs = (selectedForData: boolean): NodeOutput[] => [
+      { name: "message_output", types: ["Message"], selected: "Message" },
+      {
+        name: "data_output",
+        types: ["JSON"],
+        selected: selectedForData ? "JSON" : undefined,
+      },
+      {
+        name: "dataframe_output",
+        types: ["Table"],
+        selected: selectedForData ? "Table" : undefined,
+      },
+    ];
+
+    it("keeps the feedback edge when the built node pins selected_output to data_output", () => {
+      // The backend flow_builder fix stamps selected_output on the wired output,
+      // so the canvas never auto-flips and cleanEdges resolves data_output.
+      const tcNode: AllNodeType = {
+        id: TC_ID,
+        type: "genericNode",
+        data: {
+          id: TC_ID,
+          type: "TypeConverterComponent",
+          selected_output: "data_output",
+          node: {
+            display_name: "Type Convert",
+            template: {},
+            outputs: tcOutputs(true),
+          },
+        },
+      };
+
+      const result = cleanEdges([tcNode, loopNode], [feedbackEdge]);
+      expect(result.edges.map((e) => e.id)).toContain(
+        "reactflow__edge-feedback",
+      );
+    });
+
+    it("drops the feedback edge once the node has auto-flipped to message_output", () => {
+      // Reproduces the pre-fix state: no selected_output pin, so the canvas
+      // auto-selected the first output and cleared data_output's `selected`.
+      const flippedNode: AllNodeType = {
+        id: TC_ID,
+        type: "genericNode",
+        data: {
+          id: TC_ID,
+          type: "TypeConverterComponent",
+          selected_output: "message_output",
+          node: {
+            display_name: "Type Convert",
+            template: {},
+            outputs: tcOutputs(false),
+          },
+        },
+      };
+
+      const result = cleanEdges([flippedNode, loopNode], [feedbackEdge]);
+      expect(result.edges.map((e) => e.id)).not.toContain(
+        "reactflow__edge-feedback",
+      );
+    });
+  });
 });

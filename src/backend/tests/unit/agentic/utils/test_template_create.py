@@ -60,7 +60,6 @@ class TestCreateFlowFromTemplate:
             patch(f"{MODULE}.get_template_by_id", return_value=TEMPLATE_DATA),
             patch(f"{MODULE}.get_or_create_default_folder", new_callable=AsyncMock, return_value=default_folder),
             patch(f"{MODULE}._new_flow", new_callable=AsyncMock, return_value=db_flow),
-            patch(f"{MODULE}._save_flow_to_fs", new_callable=AsyncMock),
             patch(f"{MODULE}.get_storage_service", return_value=MagicMock()),
         ):
             result = await create_flow_from_template_and_get_link(
@@ -72,6 +71,35 @@ class TestCreateFlowFromTemplate:
         assert result["id"] == str(FLOW_ID)
         assert f"/flow/{FLOW_ID}" in result["link"]
         assert f"/folder/{FOLDER_ID}" in result["link"]
+
+    @pytest.mark.asyncio
+    async def test_should_not_refresh_or_resave_the_flow_new_flow_returns(self):
+        """_new_flow already flushes/refreshes/saves and returns a FlowRead.
+
+        Refreshing that FlowRead raises "Class 'FlowRead' is not mapped" and the
+        re-save is redundant. Regression for the create_flow_from_template MCP
+        crash where the flow was created but the tool response errored.
+        """
+        mock_session = AsyncMock()
+        # A FlowRead is not a mapped ORM instance — refreshing it raises.
+        mock_session.refresh = AsyncMock(side_effect=Exception("Class 'FlowRead' is not mapped"))
+        db_flow = _make_db_flow()
+        default_folder = _make_folder()
+
+        with (
+            patch(f"{MODULE}.get_template_by_id", return_value=TEMPLATE_DATA),
+            patch(f"{MODULE}.get_or_create_default_folder", new_callable=AsyncMock, return_value=default_folder),
+            patch(f"{MODULE}._new_flow", new_callable=AsyncMock, return_value=db_flow),
+            patch(f"{MODULE}.get_storage_service", return_value=MagicMock()),
+        ):
+            result = await create_flow_from_template_and_get_link(
+                session=mock_session,
+                user_id=USER_ID,
+                template_id="test-template",
+            )
+
+        assert result["id"] == str(FLOW_ID)
+        mock_session.refresh.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_should_raise_404_when_template_not_found(self):
@@ -98,7 +126,6 @@ class TestCreateFlowFromTemplate:
         with (
             patch(f"{MODULE}.get_template_by_id", return_value=TEMPLATE_DATA),
             patch(f"{MODULE}._new_flow", new_callable=AsyncMock, return_value=db_flow),
-            patch(f"{MODULE}._save_flow_to_fs", new_callable=AsyncMock),
             patch(f"{MODULE}.get_storage_service", return_value=MagicMock()),
         ):
             result = await create_flow_from_template_and_get_link(
@@ -160,7 +187,6 @@ class TestCreateFlowFromTemplate:
             patch(f"{MODULE}.get_template_by_id", return_value=TEMPLATE_DATA),
             patch(f"{MODULE}.get_or_create_default_folder", new_callable=AsyncMock, return_value=default_folder),
             patch(f"{MODULE}._new_flow", new_callable=AsyncMock, return_value=db_flow),
-            patch(f"{MODULE}._save_flow_to_fs", new_callable=AsyncMock),
             patch(f"{MODULE}.get_storage_service", return_value=MagicMock()),
         ):
             result = await create_flow_from_template_and_get_link(

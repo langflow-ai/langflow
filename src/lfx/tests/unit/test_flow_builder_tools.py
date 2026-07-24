@@ -391,6 +391,28 @@ class TestBuildFlowFromSpec:
         assert "failed" in result.data["text"].lower()
         assert "error" in result.data
 
+    def test_build_type_mismatch_error_carries_repair_guidance(self):
+        # loop_flow eval regression: `L.item -> A.input_value` (Data -> Message)
+        # failed with a bare error and the agent burned its whole recursion
+        # budget re-discovering components instead of fixing the spec.
+        reset_working_flow()
+        comp = BuildFlowFromSpec()
+        comp.set(
+            spec=(
+                "name: Loop Agent\n"
+                "nodes:\n  I: ChatInput\n  L: LoopComponent\n  A: Agent\n  O: ChatOutput\n"
+                "edges:\n  I.message -> L.data\n  L.item -> A.input_value\n"
+                "  A.response -> L.item\n  L.done -> O.input_value"
+            )
+        )
+        result = comp.build_flow()
+
+        assert "error" in result.data
+        text = result.data["text"]
+        assert "ParserComponent" in text
+        assert "call build_flow again" in text
+        assert "do NOT re-run search_components or describe_component" in text
+
     def test_build_pushes_set_flow_event(self):
         reset_working_flow()
         comp = BuildFlowFromSpec()

@@ -1,15 +1,25 @@
 """FastMCP server for Langflow Agentic tools.
 
 This module exposes template search and creation functions as MCP tools using FastMCP decorators.
+
+DEPRECATED as the external MCP surface: the HTTP mount at ``/api/v1/agentic/mcp``
+serves the single lfx toolkit (``lfx.mcp.server``, which includes
+``run_assistant``), where every tool call goes through the REST API with the
+caller's credentials. The per-user auto-configuration that used to register
+this stdio server was removed; the module remains only so previously
+configured entries keep working. Do not add new tools here — add them to
+``lfx.mcp.server`` so both transports pick them up.
 """
 
 import asyncio
 import os
+from collections.abc import Awaitable, Callable
 from typing import Any
 from uuid import UUID
 
 from lfx.base.mcp.security import AGENTIC_USER_ID_ENV_VAR
-from mcp.server.fastmcp import FastMCP
+from lfx.log.logger import logger
+from mcp.server.fastmcp import Context, FastMCP
 
 from langflow.agentic.mcp.support import replace_none_and_null_with_empty_str
 from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
@@ -640,6 +650,39 @@ async def list_flow_component_fields(
     return await list_component_fields(flow_id_or_name, component_id, _bound_user_id())
 
 
+def _make_progress_forwarder(ctx: Context | None) -> Callable[[dict[str, Any]], Awaitable[None]] | None:
+    """Bridge assistant ``progress`` SSE events to MCP progress/log notifications.
+
+    Best-effort on purpose: clients without progress support just ignore the
+    notifications, and a failed send must never break the tool call.
+    """
+    if ctx is None:
+        return None
+    step_count = 0
+
+    async def forward(event: dict[str, Any]) -> None:
+        nonlocal step_count
+        step_count += 1
+        message = str(event.get("message") or event.get("step") or "working")
+        try:
+            request_context = ctx.request_context
+            progress_token = request_context.meta.progressToken if request_context.meta else None
+            if progress_token is not None:
+                # Not ctx.report_progress: it omits related_request_id, which the
+                # stateless streamable-http transport needs to route onto the request stream.
+                await request_context.session.send_progress_notification(
+                    progress_token=progress_token,
+                    progress=float(step_count),
+                    message=message,
+                    related_request_id=ctx.request_id,
+                )
+            await ctx.info(message)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"Could not forward assistant progress to the MCP client: {exc}")
+
+    return forward
+
+
 @mcp.tool()
 async def run_assistant(
     instruction: str,
@@ -647,6 +690,7 @@ async def run_assistant(
     provider: str | None = None,
     model_name: str | None = None,
     session_id: str | None = None,
+    ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Ask the Langflow Assistant to build, edit, or explain a flow.
 
@@ -664,6 +708,8 @@ async def run_assistant(
         model_name: Optional model on that provider. Defaults to an
             available model (for Ollama, an installed one).
         session_id: Optional conversation id to keep multi-turn context.
+        ctx: Injected MCP context; each assistant progress step is forwarded
+            to the caller as an MCP progress notification and info log.
 
     Returns:
         Dictionary containing:
@@ -690,6 +736,7 @@ async def run_assistant(
             provider=provider,
             model_name=model_name,
             session_id=session_id,
+            on_progress=_make_progress_forwarder(ctx),
         )
 
 

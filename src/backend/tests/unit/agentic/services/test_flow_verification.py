@@ -14,6 +14,7 @@ from langflow.agentic.services.flow_probe_input import PROBE_INPUT_TEXT
 from langflow.agentic.services.flow_verification import (
     FlowVerificationStatus,
     verify_built_flow,
+    verify_loop_structure,
 )
 
 
@@ -179,3 +180,67 @@ class TestVerifyBuiltFlow:
 
         assert result.status is FlowVerificationStatus.FAILED
         assert len(runs) == 1
+
+
+class TestVerifyLoopStructure:
+    @pytest.mark.asyncio
+    async def test_should_pass_immediately_when_structure_is_sound(self):
+        fixes = []
+
+        async def fix_fn(_err):
+            fixes.append(_err)
+
+        result = await verify_loop_structure(flow={"a": 1}, validate_fn=lambda _f: [], fix_fn=fix_fn)
+
+        assert result.status is FlowVerificationStatus.PASSED
+        assert result.caveat is None
+        assert fixes == []  # a sound loop is never sent for a fix turn
+
+    @pytest.mark.asyncio
+    async def test_should_retry_then_pass_when_the_fix_repairs_the_wiring(self):
+        state = {"fixed": False}
+
+        def validate_fn(_flow):
+            return [] if state["fixed"] else ["Loop has no data source"]
+
+        async def fix_fn(_err):
+            state["fixed"] = True
+            return {"repaired": True}
+
+        result = await verify_loop_structure(flow={"broken": True}, validate_fn=validate_fn, fix_fn=fix_fn)
+
+        assert result.status is FlowVerificationStatus.PASSED
+        assert result.flow == {"repaired": True}
+
+    @pytest.mark.asyncio
+    async def test_should_caveat_incomplete_when_wiring_stays_broken(self):
+        async def fix_fn(_err):
+            return {"still": "broken"}
+
+        result = await verify_loop_structure(
+            flow={"broken": True},
+            validate_fn=lambda _f: ["Loop has no data source"],
+            fix_fn=fix_fn,
+            max_attempts=3,
+        )
+
+        assert result.status is FlowVerificationStatus.NEEDS_CAVEAT
+        assert "loop" in result.caveat.lower()
+        assert "incomplete" in result.caveat.lower()
+
+    @pytest.mark.asyncio
+    async def test_should_stop_when_the_agent_cannot_produce_a_fix(self):
+        calls = {"n": 0}
+
+        async def fix_fn(_err):
+            calls["n"] += 1
+
+        result = await verify_loop_structure(
+            flow={"broken": True},
+            validate_fn=lambda _f: ["Loop has no data source"],
+            fix_fn=fix_fn,
+            max_attempts=3,
+        )
+
+        assert result.status is FlowVerificationStatus.NEEDS_CAVEAT
+        assert calls["n"] == 1  # gave up after the first fix returned nothing

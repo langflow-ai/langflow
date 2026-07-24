@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
@@ -90,11 +90,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
   const isReadOnly = useIsFlowReadOnly(currentFlowId);
-  // Mirror the FlowPage sidebar's open state. When the sidebar is expanded
-  // the canvas is offset 280px from the viewport's left edge, so the panel
-  // shifts right by half that (140px) to align with the canvas center. When
-  // collapsed (offcanvas slid off), the canvas takes the full viewport and
-  // the panel sits at plain ``left-1/2``.
+  // An open sidebar offsets the canvas 280px, so the panel shifts right by
+  // half (140px) to stay canvas-centered; collapsed uses plain left-1/2.
   const isSidebarOpen = useSidebar().open;
 
   useEffect(() => {
@@ -143,6 +140,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     handleApprove,
     handleUpdateFlowAction,
     handleApplyFlowProposal,
+    handleRevertFlowProposal,
     handleDismissFlowProposal,
     handleApprovePlan,
     handleDismissPlan,
@@ -151,10 +149,21 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     isRefiningPlan,
     skipAll,
     handleRetry,
+    handleMarkReverted,
     handleStopGeneration,
     handleClearHistory,
     loadSession,
   } = useAssistantChat();
+
+  // v1 scope: only the LATEST assistant message with a restore point offers
+  // Revert — restoring an older point mid-chain would confuse the timeline.
+  const latestRestorePointId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.role === "assistant" && m.restoreVersionId) return m.id;
+    }
+    return undefined;
+  }, [messages]);
 
   // Sync processing state to store so the canvas can lock during assistant work
   const setAssistantProcessing = useAssistantManagerStore(
@@ -165,13 +174,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     return () => setAssistantProcessing(false);
   }, [isProcessing, setAssistantProcessing]);
 
-  // Welcome → Assistant hand-off: when the user submits text from the
-  // FlowBuilderWelcome overlay, the typed prompt is stashed as
-  // ``pendingMessage`` and the panel is told to open. Once the panel is
-  // visible AND a model is available (read from localStorage so we don't
-  // race the ModelSelector's auto-select effect), fire a single
-  // ``handleSend`` with the pending text, then clear so a remount or
-  // re-open doesn't replay it.
+  // Welcome→Assistant hand-off: fire ONE handleSend with the stashed prompt
+  // once the panel is open and a model is in localStorage, then clear it.
   const pendingMessage = useFlowBuilderWelcomeStore(
     (state) => state.pendingMessage,
   );
@@ -190,8 +194,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
         }
       }
     } catch {
-      // localStorage may be unavailable (private browsing) — fall through;
-      // handleSend will early-return on null model and the welcome's pending
+      // localStorage may be unavailable (private browsing); the pending
       // message stays around for a manual retry.
     }
     if (!saved) return;
@@ -199,11 +202,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     clearPendingMessage();
   }, [isOpen, pendingMessage, isReadOnly, handleSend, clearPendingMessage]);
 
-  // When the panel opens with a pendingMessage in the store, the user just
-  // submitted from the welcome overlay. Capture that and lock a min-height
-  // so the panel doesn't open in its tiny compact form — the user has just
-  // committed an intent and needs vertical room for their auto-sent message
-  // + the assistant's reply to render without feeling cramped.
+  // Opening with a pendingMessage = welcome submit: lock a min-height so the
+  // auto-sent message + reply aren't cramped in the tiny compact panel.
   const [openedWithPending, setOpenedWithPending] = useState(false);
   useEffect(() => {
     if (isOpen && pendingMessage) {
@@ -247,9 +247,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     }
   }, [isOpen]);
 
-  // Once the user grabs a handle in the empty state, treat the panel as
-  // expanded so its dimensions become driven by panelSize (instead of
-  // auto-fitting to the input height).
+  // First handle grab in the empty state flips the panel to expanded, so its
+  // dimensions become panelSize-driven instead of auto-fitting the input.
   const useExpandedSize = hasMessages || hasExpandedOnce || hasUserResized;
   const [panelSize, setPanelSize] = useState(getStoredSize);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
@@ -265,16 +264,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     (e: React.MouseEvent, edges: { x?: "left" | "right"; y?: "top" }) => {
       e.preventDefault();
       e.stopPropagation();
-      // Only vertical drags transition the empty panel into expanded mode
-      // (height becomes panelSize-driven, input is pushed to the bottom).
-      // Horizontal-only drags should just widen the auto-height panel.
-      //
-      // Seed startH from the actual rendered height (not panelSize.height)
-      // when promoting from compact mode. The compact panel is auto-sized to
-      // the input (~200px) while panelSize.height carries the *expanded*
-      // default/stored value (~600px). Without this seed, the first pixel of
-      // drag flips useExpandedSize and snaps the panel from ~200px to 600px
-      // in one frame — visible as a "glitch" jump on first resize after open.
+      // Only vertical drags expand the empty panel; horizontal drags widen it.
+      // Seed startH from the rendered height or the first pixel snaps 200→600px.
       const startX = e.clientX;
       const startY = e.clientY;
       const startW = panelSize.width;
@@ -285,21 +276,16 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
           const measuredH = panelRef.current.getBoundingClientRect().height;
           if (measuredH > 0) {
             startH = measuredH;
-            // Push the measured height into state before the flip so the
-            // very first frame after useExpandedSize becomes true renders at
-            // the measured height instead of the stored expanded default.
+            // Push the measured height pre-flip so the first expanded frame
+            // renders at the measured height, not the stored default.
             setPanelSize((prev) => ({ ...prev, height: measuredH }));
           }
         }
         setHasUserResized(true);
       }
 
-      // When the user starts dragging the compact panel taller, the measured
-      // start height is below ``MIN_SIZE.height``. Clamping to MIN_SIZE.height
-      // on the very first mousemove would snap the panel from ~200px to 400px
-      // in one frame. The per-drag effective floor lets the panel grow
-      // smoothly from its current size while still preventing the user from
-      // shrinking BELOW where they started.
+      // Compact drags start below MIN_SIZE.height; a per-drag floor lets the
+      // panel grow smoothly instead of snapping to 400px on first mousemove.
       const effectiveMinH = Math.min(MIN_SIZE.height, startH);
 
       const handleMouseMove = (ev: MouseEvent) => {
@@ -331,14 +317,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
       const handleMouseUp = () => {
         cleanup();
         setPanelSize((prev) => {
-          // Clamp to the absolute floor in BOTH in-memory state and the
-          // persisted localStorage value. The per-drag ``effectiveMinH``
-          // intentionally lets a compact-promoted drag stay below
-          // ``MIN_SIZE.height`` while the mouse is held; once the user
-          // releases, the panel commits to at least the floor so a later
-          // transition (e.g. loaded session messages flipping
-          // ``useExpandedSize`` to true) doesn't render the panel
-          // uncomfortably small.
+          // Commit at least the floor (state + localStorage) on release:
+          // effectiveMinH relaxes it only mid-drag, never for later renders.
           const committed = {
             ...prev,
             height: Math.max(MIN_SIZE.height, prev.height),
@@ -368,10 +348,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     "opacity-100 translate-y-0 max-w-[calc(100vw-2rem)]",
   );
 
-  // When the panel was opened from a welcome submit, enforce a 18.75rem
-  // (300px) floor so the auto-sent message + assistant reply have room to
-  // breathe. Compact-mode (no messages yet) would otherwise render at the
-  // input height (~200px) — too short for the user to see what's happening.
+  // Welcome submits enforce a 300px floor — compact mode would render at the
+  // ~200px input height, too short to see the auto-sent message + reply.
   const pendingMinHeight = openedWithPending ? "18.75rem" : undefined;
 
   const containerStyle = useExpandedSize
@@ -380,12 +358,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
         height: panelSize.height,
         minWidth: "28.5rem",
         minHeight: pendingMinHeight,
-        // No inline ``minHeight`` here — that would clamp the rendered height
-        // BEFORE the resize handler runs, snapping a freshly-promoted compact
-        // panel from its measured ~200px straight to MIN_SIZE.height in one
-        // frame. The mousemove clamp (``effectiveMinH``) enforces the floor
-        // for actual user drags instead. (Exception: the welcome-submit
-        // override above intentionally clamps.)
+        // No inline minHeight: it would clamp BEFORE the resize handler and
+        // snap a compact panel; the mousemove clamp enforces the floor.
       }
     : {
         width: panelSize.width,
@@ -434,6 +408,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   onApprove={handleApproveAndClose}
                   onUpdateFlowAction={handleUpdateFlowAction}
                   onApplyFlowProposal={handleApplyFlowProposal}
+                  onRevertFlowProposal={handleRevertFlowProposal}
                   onDismissFlowProposal={handleDismissFlowProposal}
                   onApprovePlan={handleApprovePlan}
                   onDismissPlan={handleDismissPlan}
@@ -441,6 +416,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   onRetry={hasEnabledModels ? handleRetry : undefined}
                   skipApprovalGate={skipAll}
                   onAcknowledgeValidation={handleAcknowledgeValidation}
+                  isLatestRestorePoint={msg.id === latestRestorePointId}
+                  onReverted={handleMarkReverted}
                 />
               ))}
             </StickToBottom.Content>

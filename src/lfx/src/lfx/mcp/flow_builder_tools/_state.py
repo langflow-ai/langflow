@@ -14,14 +14,14 @@ from __future__ import annotations
 
 from collections import deque
 from contextvars import ContextVar
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from lfx.graph.flow_builder.builder import load_local_registry
 from lfx.graph.flow_builder.flow import empty_flow
+from lfx.log.logger import logger
 
-# ---------------------------------------------------------------------------
-# Registry loader (user-overlay aware)
-# ---------------------------------------------------------------------------
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def _load_registry_user_aware() -> dict[str, dict]:
@@ -47,28 +47,23 @@ def _load_registry_user_aware() -> dict[str, dict]:
     return load_registry_for_current_user()
 
 
-# ---------------------------------------------------------------------------
-# Per-request state using contextvars. Each async request gets its own
-# working flow, flow ID, and event queue -- safe under concurrency.
-# ---------------------------------------------------------------------------
-
 _flow_events_var: ContextVar[deque[dict[str, Any]]] = ContextVar("_flow_events_var")
 _working_flow_var: ContextVar[dict | None] = ContextVar("_working_flow_var", default=None)
 _current_flow_id_var: ContextVar[str | None] = ContextVar("_current_flow_id_var", default=None)
-# Snapshot of the component IDs present on the canvas at the START of the turn
-# (captured by init_working_flow). Used to tell a pre-existing component (an
-# EDIT target) apart from one added during this turn (part of a BUILD).
+# Canvas component IDs at the START of the turn (set by init_working_flow) so a
+# pre-existing component (EDIT target) is distinguishable from one added this turn.
 _initial_node_ids_var: ContextVar[frozenset[str]] = ContextVar("_initial_node_ids_var", default=frozenset())
-# When True, a ``configure_component`` on a PRE-EXISTING component is converted
-# into a reviewable ``edit_field`` proposal for its text-content fields instead
-# of being auto-applied. The assistant service sets this for PURE-edit turns
-# (no run requested), guaranteeing "improve the prompt"-style edits ALWAYS show
-# the diff card regardless of which tool the LLM chose. Default False so every
-# other path (fresh build, build+run, run, continuation) keeps applying live.
+# When True, configure_component on a PRE-EXISTING component becomes a reviewable
+# edit_field proposal (pure-edit turns); default False keeps every other path live.
 _propose_existing_edits_var: ContextVar[bool] = ContextVar("_propose_existing_edits_var", default=False)
 # Headless MCP has no UI to apply a reviewable proposal, so the propose tools
 # apply live and narrate it as done. Default False keeps UI review cards.
 _apply_edits_live_var: ContextVar[bool] = ContextVar("_apply_edits_live_var", default=False)
+# Live "tool started" callback installed by the streaming executor; None means
+# no consumer (headless MCP, nested runs) and emits are silent no-ops.
+_tool_start_listener_var: ContextVar[Callable[[dict[str, Any]], None] | None] = ContextVar(
+    "_tool_start_listener_var", default=None
+)
 
 
 def _collect_node_ids(flow_data: dict | None) -> frozenset[str]:
@@ -171,11 +166,37 @@ def isolate_flow_run_context() -> None:
     _initial_node_ids_var.set(frozenset())
     _propose_existing_edits_var.set(False)
     _apply_edits_live_var.set(False)
+    _tool_start_listener_var.set(None)
 
 
 def _emit(action: str, **data: Any) -> None:
     """Push a flow_update event."""
     _get_flow_events().append({"action": action, **data})
+
+
+def set_tool_start_listener(listener: Callable[[dict[str, Any]], None] | None) -> None:
+    """Install (or clear) the per-context live tool-start callback.
+
+    The streaming executor installs a listener that forwards payloads onto its
+    event queue so the SSE consumer sees "tool started" WHILE the tool runs —
+    unlike ``_emit``, whose deque is only drained between LLM tokens.
+    """
+    _tool_start_listener_var.set(listener)
+
+
+def emit_tool_start(tool: str, **data: Any) -> None:
+    """Announce that a canvas-mutating tool began executing.
+
+    Silent no-op when no listener is installed (headless MCP, nested runs).
+    Listener failures are swallowed: a UI indicator must never break the tool.
+    """
+    listener = _tool_start_listener_var.get()
+    if listener is None:
+        return
+    try:
+        listener({"tool": tool, **data})
+    except Exception:  # noqa: BLE001
+        logger.debug("tool_start listener failed for tool=%s", tool)
 
 
 def _ensure_working_flow() -> dict:
@@ -185,11 +206,6 @@ def _ensure_working_flow() -> dict:
         flow = empty_flow()
         _working_flow_var.set(flow)
     return flow
-
-
-# ---------------------------------------------------------------------------
-# Small node-shape utilities (used by every tool layer)
-# ---------------------------------------------------------------------------
 
 
 def _find_node(flow: dict, component_id: str) -> dict | None:
@@ -210,9 +226,8 @@ def _readable_preview(value: Any, limit: int = 120) -> str:
     whitespace so a multi-line system prompt doesn't blow up the card.
     """
     text = value if isinstance(value, str) else str(value)
-    # Collapse BOTH real control chars and their two-char escape sequences
-    # ("\\n"/"\\r"/"\\t") — LLMs emit either, and the card must never show
-    # a literal backslash-n.
+    # Collapse real control chars AND their two-char escape sequences ("\\n" etc.)
+    # — LLMs emit either, and the card must never show a literal backslash-n.
     for esc in ("\\n", "\\r", "\\t"):
         text = text.replace(esc, " ")
     text = " ".join(text.split())
