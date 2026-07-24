@@ -123,9 +123,9 @@ class AuthSettings(BaseSettings):
     # Store password as SecretStr to prevent accidental plaintext exposure
     SUPERUSER_PASSWORD: SecretStr = Field(default=DEFAULT_SUPERUSER_PASSWORD)
 
-    REFRESH_SAME_SITE: Literal["lax", "strict", "none"] = "none"
+    REFRESH_SAME_SITE: Literal["lax", "strict", "none"] = "lax"
     """The SameSite attribute of the refresh token cookie."""
-    REFRESH_SECURE: bool = True
+    REFRESH_SECURE: bool = False
     """The Secure attribute of the refresh token cookie."""
     REFRESH_HTTPONLY: bool = True
     """The HttpOnly attribute of the refresh token cookie."""

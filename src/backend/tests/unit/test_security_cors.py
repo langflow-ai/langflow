@@ -438,35 +438,30 @@ class TestRefreshTokenSecurity:
                         # user_id is converted to string in JWT payload, then back to UUID in service
                         mock_create_tokens.assert_called_once_with(str(user_id), mock_db)
 
-    def test_refresh_token_samesite_setting_current_behavior(self):
-        """Test current refresh token SameSite settings (warns about security)."""
+    def test_refresh_cookie_defaults_support_same_site_http(self):
+        """Refresh cookies use the same safe, HTTP-compatible defaults as access cookies."""
         from lfx.services.settings.auth import AuthSettings
 
         with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
             auth_settings = AuthSettings(CONFIG_DIR=temp_dir)
-            # Current behavior: refresh token uses 'none' (allows cross-site)
-            assert auth_settings.REFRESH_SAME_SITE == "none"  # Current: allows cross-site (less secure)
-            assert auth_settings.ACCESS_SAME_SITE == "lax"  # Access token is already lax (good)
+            assert auth_settings.REFRESH_SAME_SITE == "lax"
+            assert auth_settings.REFRESH_SECURE is False
+            assert auth_settings.ACCESS_SAME_SITE == "lax"
+            assert auth_settings.ACCESS_SECURE is False
             assert auth_settings.ACCESS_HTTPONLY is True
 
-            # Warn about security implications
-            warnings.warn(
-                "SECURITY WARNING: Refresh tokens currently use SameSite=none which allows "
-                "cross-site requests. This should be changed to 'lax' or 'strict' in production. "
-                "In v1.7, this will default to 'lax' for better security.",
-                UserWarning,
-                stacklevel=2,
-            )
+    def test_refresh_cookie_cross_site_https_can_be_enabled(self):
+        """Operators can retain cross-site HTTPS refresh cookies explicitly."""
+        from lfx.services.settings.auth import AuthSettings
 
-    @pytest.mark.skip(reason="Uncomment in v1.7 - represents future secure SameSite behavior")
-    def test_refresh_token_samesite_setting_future_secure(self):
-        """Test future secure refresh token SameSite settings (skip until v1.7)."""
-        # Future secure behavior (uncomment in v1.7):
-        # from langflow.services.settings.auth import AuthSettings
-        # with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
-        #     auth_settings = AuthSettings(CONFIG_DIR=temp_dir)
-        #     assert auth_settings.REFRESH_SAME_SITE == "lax"  # Secure default
-        #     assert auth_settings.ACCESS_SAME_SITE == "lax"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            auth_settings = AuthSettings(
+                CONFIG_DIR=temp_dir,
+                REFRESH_SAME_SITE="none",
+                REFRESH_SECURE=True,
+            )
+            assert auth_settings.REFRESH_SAME_SITE == "none"
+            assert auth_settings.REFRESH_SECURE is True
 
 
 class TestCORSIntegration:
