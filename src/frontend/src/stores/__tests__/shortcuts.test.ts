@@ -190,6 +190,85 @@ describe("useShortcutsStore", () => {
 
       expect(result.current.shortcuts).toEqual(originalShortcuts);
     });
+
+    it("should keep valid custom shortcuts untouched", () => {
+      const saved = [{ name: "Test", display_name: "Test", shortcut: "mod+t" }];
+      localStorage.setItem("langflow-shortcuts", JSON.stringify(saved));
+      const { result } = renderHook(() => useShortcutsStore());
+
+      act(() => {
+        result.current.getShortcutsFromStorage();
+      });
+
+      expect((result.current as unknown as Record<string, string>).Test).toBe(
+        "mod+t",
+      );
+      expect(result.current.shortcuts).toEqual(saved);
+      expect(JSON.parse(localStorage.getItem("langflow-shortcuts")!)).toEqual(
+        saved,
+      );
+    });
+
+    it("should replace a modifier-only saved shortcut with the default for that action", () => {
+      localStorage.setItem(
+        "langflow-shortcuts",
+        JSON.stringify([
+          { name: "Test", display_name: "Test", shortcut: "mod" },
+        ]),
+      );
+      const { result } = renderHook(() => useShortcutsStore());
+
+      act(() => {
+        result.current.getShortcutsFromStorage();
+      });
+
+      expect((result.current as unknown as Record<string, string>).Test).toBe(
+        "t",
+      );
+      expect(result.current.shortcuts).toEqual([
+        { name: "Test", display_name: "Test", shortcut: "t" },
+      ]);
+    });
+
+    it("should persist the sanitized combination back to localStorage", () => {
+      localStorage.setItem(
+        "langflow-shortcuts",
+        JSON.stringify([
+          { name: "Test", display_name: "Test", shortcut: "ctrl+shift" },
+        ]),
+      );
+      const { result } = renderHook(() => useShortcutsStore());
+
+      act(() => {
+        result.current.getShortcutsFromStorage();
+      });
+
+      expect(JSON.parse(localStorage.getItem("langflow-shortcuts")!)).toEqual([
+        { name: "Test", display_name: "Test", shortcut: "t" },
+      ]);
+    });
+
+    it("should drop a modifier-only shortcut that has no default", () => {
+      localStorage.setItem(
+        "langflow-shortcuts",
+        JSON.stringify([
+          { name: "Ghost", display_name: "Ghost", shortcut: "mod" },
+        ]),
+      );
+      const { result } = renderHook(() => useShortcutsStore());
+
+      act(() => {
+        result.current.getShortcutsFromStorage();
+      });
+
+      expect(
+        (result.current as unknown as Record<string, string>).Ghost,
+      ).toBeUndefined();
+      expect(result.current.shortcuts).toEqual([]);
+      expect(JSON.parse(localStorage.getItem("langflow-shortcuts")!)).toEqual(
+        [],
+      );
+    });
   });
 
   describe("state management", () => {
