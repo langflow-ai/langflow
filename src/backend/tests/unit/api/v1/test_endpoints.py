@@ -484,6 +484,8 @@ async def test_get_config_authenticated_returns_full_config(client: AsyncClient,
     assert "feature_flags" in result, "Authenticated response must contain 'feature_flags'"
     # The publish-as-agent UI reads this to explain, rather than 404, when A2A is off server-side.
     assert "a2a_enabled" in result, "Authenticated response must expose the a2a server flag"
+    # The Assistant panel reads this to explain, rather than 404, when the experience is off.
+    assert "agentic_experience" in result, "Authenticated response must expose the agentic experience flag"
 
 
 async def test_get_config_embedded_mode_cascades_hide_flags(client: AsyncClient, logged_in_headers: dict, monkeypatch):

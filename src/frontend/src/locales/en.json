@@ -1288,6 +1288,8 @@
   "assistant.sendMessage": "Send message",
   "assistant.sessionHistory": "Session history",
   "assistant.noModelsDescription": "To use the assistant, please configure at least one model provider in your settings.",
+  "assistant.disabledTitle": "Assistant Disabled",
+  "assistant.disabledDescription": "The Langflow Assistant is disabled on this server. Ask your administrator to enable it by setting the environment variable below and restarting Langflow.",
   "assistant.configureModels": "Configure Model Providers",
   "assistant.maxSessionsTooltip": "Maximum of {{max}} sessions reached. Delete a session to create a new one.",
   "assistant.maxSessionsLabel": "Max sessions",
