@@ -41,6 +41,20 @@ For more information, see [Language model components](/components-models).
 | frequency_penalty | Float | Input parameter. Controls the frequency penalty. Range: [0.0, 2.0]. Default: 0.0. |
 | presence_penalty | Float | Input parameter. Controls the presence penalty. Range: [0.0, 2.0]. Default: 0.0. |
 
+### OpenAI-compatible endpoints
+
+You can use the **OpenAI** component with OpenAI-compatible APIs by setting **OpenAI API Base** to the provider's `/v1` endpoint and using that provider's API key.
+
+For example, to use [TokenLab](https://tokenlab.sh/) models through its OpenAI-compatible endpoint:
+
+| Field | Value |
+|-------|-------|
+| OpenAI API Base | `https://api.tokenlab.sh/v1` |
+| OpenAI API Key | Your TokenLab API key |
+| Model Name | A TokenLab model ID, such as `gpt-5.4-mini`, `claude-sonnet-5`, `gemini-3.5-flash`, or `deepseek-v4-pro` |
+
+TokenLab's current model list is available from `https://api.tokenlab.sh/v1/models`. For TokenLab-specific setup details, see the [TokenLab documentation](https://docs.tokenlab.sh/).
+
 ## OpenAI Embeddings
 
 The **OpenAI Embeddings** component uses [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings) for embedding generation.
