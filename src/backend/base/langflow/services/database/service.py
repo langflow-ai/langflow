@@ -284,10 +284,18 @@ class DatabaseService(Service):
         # Create async session maker for efficient session creation
         # This is the recommended SQLAlchemy 2.0+ pattern
         # IMPORTANT: Must use SQLModel's AsyncSession (not SQLAlchemy's) for exec() method
+        # autoflush=False prevents SQLAlchemy from issuing implicit mid-loop flushes
+        # when session.merge() is called inside _flush_to_database().  Without this,
+        # autoflush can fire between individual span merges and send a child span to the
+        # DB before its parent has been written, triggering a FK violation on
+        # span.parent_span_id → span.id even though topological_sort_spans() has already
+        # ordered them correctly.  We call session.commit() explicitly in session_scope()
+        # so no writes are ever lost.
         self.async_session_maker = async_sessionmaker(
             self.engine,
             class_=SQLModelAsyncSession,  # SQLModel's AsyncSession with exec() support
             expire_on_commit=False,
+            autoflush=False,
         )
 
         # Check if Alembic should log to stdout or a file.
@@ -337,6 +345,7 @@ class DatabaseService(Service):
             self.engine,
             class_=SQLModelAsyncSession,
             expire_on_commit=False,
+            autoflush=False,
         )
 
     def _sanitize_database_url(self):
