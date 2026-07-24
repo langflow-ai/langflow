@@ -1,15 +1,16 @@
-"""Test for GitHub issue #8791: Race condition when component-tool is invoked concurrently.
+"""Tests for race conditions when component tools are invoked concurrently.
 
 When an Agent invokes the same component-based tool multiple times concurrently,
 the same component instance is reused, causing inputs to be overwritten between
 concurrent invocations (data corruption).
 """
 
+import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 
-from lfx.base.tools.component_tool import ComponentToolkit
+from lfx.base.tools.component_tool import ComponentToolkit, send_message_noop
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DataInput, MessageTextInput
 from lfx.io import Output
@@ -50,6 +51,82 @@ class SlowLabelComponent(Component):
                 "label_after": self.label,
             }
         )
+
+
+class CoordinatedSendMessageComponent(Component):
+    """Synchronize two tool calls so they finish in a deterministic order."""
+
+    display_name = "Coordinated Send Message Tool"
+    description = "Checks that tool execution suppresses component messages."
+    inputs = []
+    outputs = [Output(display_name="Result", name="result", method="process")]
+
+    _run_lock = threading.Lock()
+    _run_number = 0
+    _first_started = threading.Event()
+    _second_started = threading.Event()
+    _finish_first = threading.Event()
+    _finish_second = threading.Event()
+
+    @classmethod
+    def reset(cls) -> None:
+        cls._run_number = 0
+        cls._first_started.clear()
+        cls._second_started.clear()
+        cls._finish_first.clear()
+        cls._finish_second.clear()
+
+    def process(self) -> Data:
+        with type(self)._run_lock:
+            run_number = type(self)._run_number
+            type(self)._run_number += 1
+
+        if run_number == 0:
+            type(self)._first_started.set()
+            assert type(self)._second_started.wait(timeout=5)
+            assert type(self)._finish_first.wait(timeout=5)
+        else:
+            type(self)._second_started.set()
+            assert type(self)._finish_second.wait(timeout=5)
+
+        return Data(data={"send_message_is_noop": self.send_message is send_message_noop})
+
+
+class AsyncCoordinatedSendMessageComponent(Component):
+    """Async counterpart used to control the tool-call completion order."""
+
+    display_name = "Async Coordinated Send Message Tool"
+    description = "Checks that async tool execution suppresses component messages."
+    inputs = []
+    outputs = [Output(display_name="Result", name="result", method="process")]
+
+    _run_number = 0
+    _first_started: asyncio.Event
+    _second_started: asyncio.Event
+    _finish_first: asyncio.Event
+    _finish_second: asyncio.Event
+
+    @classmethod
+    def reset(cls) -> None:
+        cls._run_number = 0
+        cls._first_started = asyncio.Event()
+        cls._second_started = asyncio.Event()
+        cls._finish_first = asyncio.Event()
+        cls._finish_second = asyncio.Event()
+
+    async def process(self) -> Data:
+        run_number = type(self)._run_number
+        type(self)._run_number += 1
+
+        if run_number == 0:
+            type(self)._first_started.set()
+            await type(self)._second_started.wait()
+            await type(self)._finish_first.wait()
+        else:
+            type(self)._second_started.set()
+            await type(self)._finish_second.wait()
+
+        return Data(data={"send_message_is_noop": self.send_message is send_message_noop})
 
 
 def test_should_isolate_inputs_when_tool_invoked_concurrently():
@@ -96,6 +173,51 @@ def test_should_isolate_inputs_when_tool_invoked_concurrently():
     assert product_ids == {"PROD-001", "PROD-002"}, (
         f"Expected both products to be processed independently, got: {product_ids}"
     )
+
+
+def test_concurrent_sync_tools_do_not_mutate_component_send_message():
+    """Concurrent tool calls must only suppress messages on their private component copies."""
+    CoordinatedSendMessageComponent.reset()
+    component = CoordinatedSendMessageComponent()
+    original_send_message = component.send_message
+    tool = ComponentToolkit(component=component).get_tools()[0]
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(tool.invoke, {})
+        assert CoordinatedSendMessageComponent._first_started.wait(timeout=5)
+        second = executor.submit(tool.invoke, {})
+        assert CoordinatedSendMessageComponent._second_started.wait(timeout=5)
+
+        CoordinatedSendMessageComponent._finish_first.set()
+        first_result = first.result(timeout=5)
+        CoordinatedSendMessageComponent._finish_second.set()
+        second_result = second.result(timeout=5)
+
+    assert component.send_message == original_send_message
+    assert first_result["send_message_is_noop"] is True
+    assert second_result["send_message_is_noop"] is True
+
+
+async def test_concurrent_async_tools_do_not_mutate_component_send_message():
+    """Async tool calls must not restore a stale no-op method onto the shared component."""
+    AsyncCoordinatedSendMessageComponent.reset()
+    component = AsyncCoordinatedSendMessageComponent()
+    original_send_message = component.send_message
+    tool = ComponentToolkit(component=component).get_tools()[0]
+
+    first = asyncio.create_task(tool.ainvoke({}))
+    await asyncio.wait_for(AsyncCoordinatedSendMessageComponent._first_started.wait(), timeout=5)
+    second = asyncio.create_task(tool.ainvoke({}))
+    await asyncio.wait_for(AsyncCoordinatedSendMessageComponent._second_started.wait(), timeout=5)
+
+    AsyncCoordinatedSendMessageComponent._finish_first.set()
+    first_result = await asyncio.wait_for(first, timeout=5)
+    AsyncCoordinatedSendMessageComponent._finish_second.set()
+    second_result = await asyncio.wait_for(second, timeout=5)
+
+    assert component.send_message == original_send_message
+    assert first_result["send_message_is_noop"] is True
+    assert second_result["send_message_is_noop"] is True
 
 
 def test_deepcopy_with_non_picklable_state():
