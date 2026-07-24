@@ -8,6 +8,7 @@ const SUPPORTED_LANGUAGES = [
   "es",
   "fr",
   "ja",
+  "ko",
   "pt",
   "zh-Hans",
 ] as const;
@@ -70,6 +71,7 @@ export async function loadLanguage(lang: string): Promise<void> {
   try {
     const messages = await import(`./locales/${lang}.json`);
     i18n.addResourceBundle(lang, "translation", messages.default);
+    i18n.changeLanguage(lang);
   } catch {
     // Unknown locale — no bundle file exists. i18next's fallbackLng: "en" takes over.
   }
