@@ -1320,8 +1320,9 @@ class Component(CustomComponent):
         for output in self._get_outputs_to_process():
             self._current_output = output.name
             result = await self._get_output_result(output)
-            results[output.name] = result
-            artifacts[output.name] = self._build_artifact(result)
+            masked_result = self._sanitize_secret_values(result)
+            results[output.name] = masked_result
+            artifacts[output.name] = self._build_artifact(masked_result)
             self._log_output(output)
 
         self._finalize_results(results, artifacts)
@@ -1407,7 +1408,6 @@ class Component(CustomComponent):
         ):
             result.set_flow_id(self._vertex.graph.flow_id)
         result = output.apply_options(result)
-        result = self._sanitize_secret_values(result)
         output.value = result
 
         return result
@@ -1460,11 +1460,13 @@ class Component(CustomComponent):
         if isinstance(value, str):
             return self._sanitize_secret_string(value)
         if isinstance(value, Message):
+            value = value.model_copy()
             if isinstance(value.text, str):
                 value.text = self._sanitize_secret_string(value.text)
             value.data = self._sanitize_secret_values(value.data)
             return value
         if isinstance(value, Data):
+            value = value.model_copy()
             value.data = self._sanitize_secret_values(value.data)
             if isinstance(value.default_value, str):
                 value.default_value = self._sanitize_secret_string(value.default_value)

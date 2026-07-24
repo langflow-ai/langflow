@@ -34,6 +34,14 @@ class ComponentForTesting(Component):
         return {"name": "test_tool", "description": "A test tool"}
 
 
+class SecretOutputComponent(ComponentForTesting):
+    def get_connection_string(self) -> Message:
+        return Message(
+            text="postgresql://demo_user:hunter2@localhost:5432/demo_db",
+            data={"url": "postgresql://demo_user:hunter2@localhost:5432/demo_db"},
+        )
+
+
 @pytest.mark.asyncio
 async def test_component_message_sending():
     """Test component's message sending functionality."""
@@ -171,6 +179,27 @@ async def test_component_build_results():
     assert "text_output" in artifacts
     assert "tool_output" in artifacts
     assert artifacts["text_output"]["type"] == "text"
+
+
+@pytest.mark.asyncio
+async def test_component_build_results_masks_display_values_without_mutating_output_value():
+    component = SecretOutputComponent()
+    component._secret_values = {"hunter2"}
+    component._outputs_map = {
+        "conn_string": Output(name="conn_string", method="get_connection_string"),
+    }
+    component.outputs = [
+        Output(name="conn_string", method="get_connection_string"),
+    ]
+
+    results, artifacts = await component._build_results()
+    output_value = component._outputs_map["conn_string"].value
+
+    assert output_value.text == "postgresql://demo_user:hunter2@localhost:5432/demo_db"
+    assert output_value.data["url"] == "postgresql://demo_user:hunter2@localhost:5432/demo_db"
+    assert results["conn_string"].text == "postgresql://demo_user:**********@localhost:5432/demo_db"
+    assert results["conn_string"].data["url"] == "postgresql://demo_user:**********@localhost:5432/demo_db"
+    assert artifacts["conn_string"]["raw"] == "postgresql://demo_user:**********@localhost:5432/demo_db"
 
 
 @pytest.mark.asyncio
