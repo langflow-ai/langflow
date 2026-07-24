@@ -65,6 +65,12 @@ warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObj
 
 _tasks: list[asyncio.Task] = []
 
+# Enterprise plugin hook registry.
+# Plugins that need to run code inside the lifespan (where on_event / router.on_startup
+# are bypassed) append async callables here during register().
+# Shape: {"startup": [async_fn, ...], "shutdown": [async_fn, ...]}
+_enterprise_lifespan_hooks: dict[str, list] = {"startup": [], "shutdown": []}
+
 MAX_PORT = 65535
 
 
@@ -395,6 +401,14 @@ def get_lifespan(*, fix_migration=False, version=None):
             telemetry_service.start()
             await logger.adebug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            # Run enterprise startup hooks (populated by the Enterprise plugin during register()).
+            # Runs after services are up so hooks can safely call service dependencies.
+            for _hook in _enterprise_lifespan_hooks["startup"]:
+                try:
+                    await _hook()
+                except Exception as _exc:  # noqa: BLE001
+                    await logger.aerror(f"Enterprise startup hook {_hook.__name__!r} failed: {_exc}")
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Starting MCP Composer service")
             mcp_composer_service = cast("MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE))
@@ -653,6 +667,14 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await drain_pending_audit_writes(timeout=5.0)
                     except Exception as drain_exc:  # noqa: BLE001 — never block shutdown on audit
                         await logger.awarning(f"drain_pending_audit_writes failed: {drain_exc}")
+                    # Run enterprise shutdown hooks before services tear down so
+                    # hooks can still reach the DB / queue / cache.
+                    for _hook in reversed(_enterprise_lifespan_hooks["shutdown"]):
+                        try:
+                            await _hook()
+                        except Exception as _exc:  # noqa: BLE001
+                            await logger.aerror(f"Enterprise shutdown hook {_hook.__name__!r} failed: {_exc}")
+
                     try:
                         await asyncio.wait_for(teardown_services(), timeout=30)
                     except asyncio.TimeoutError:
