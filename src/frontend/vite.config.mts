@@ -52,7 +52,7 @@ export default defineConfig(({ mode }) => {
         envLangflow.BACKEND_URL ?? "http://localhost:7860",
       ),
       "import.meta.env.CI": JSON.stringify(envLangflow.CI ?? false),
-      "import.meta.env.LANGFLOW_AUTO_LOGIN": JSON.stringify(
+      __LANGFLOW_AUTO_LOGIN__: JSON.stringify(
         envLangflow.LANGFLOW_AUTO_LOGIN ?? true,
       ),
       "import.meta.env.LANGFLOW_MCP_COMPOSER_ENABLED": JSON.stringify(

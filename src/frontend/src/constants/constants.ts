@@ -7,6 +7,9 @@ import {
 import { customDefaultShortcuts } from "../customization/constants";
 import type { languageMap } from "../types/components";
 
+declare const __LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS__: string | number;
+declare const __LANGFLOW_AUTO_LOGIN__: string | boolean;
+
 export const DEFAULT_SESSION_NAME = "Default Session";
 export const NEW_SESSION_NAME = "New Session";
 export const SLIDING_TRANSITION_MS = 300;
@@ -878,10 +881,14 @@ export const LANGFLOW_AUTO_LOGIN_OPTION = "auto_login_lf";
 export const LANGFLOW_REFRESH_TOKEN = "refresh_token_lf";
 
 export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60 - 60 * 60 * 0.1;
+const viteAccessTokenExpireSeconds =
+  typeof __LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS__ === "undefined"
+    ? undefined
+    : __LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS__;
 const configuredAccessTokenExpireSeconds = Number(
   getEnvVar<string | number>(
     "ACCESS_TOKEN_EXPIRE_SECONDS",
-    import.meta.env.ACCESS_TOKEN_EXPIRE_SECONDS,
+    viteAccessTokenExpireSeconds,
     60 * 60,
   ),
 );
@@ -961,9 +968,13 @@ export const POLLING_MESSAGES = {
 
 export const BUILD_POLLING_INTERVAL = 25;
 
+const viteAutoLogin =
+  typeof __LANGFLOW_AUTO_LOGIN__ === "undefined"
+    ? undefined
+    : __LANGFLOW_AUTO_LOGIN__;
 const autoLoginEnv = getEnvVar<string | boolean>(
   "LANGFLOW_AUTO_LOGIN",
-  import.meta.env.LANGFLOW_AUTO_LOGIN,
+  viteAutoLogin,
 );
 export const IS_AUTO_LOGIN =
   !autoLoginEnv || String(autoLoginEnv).toLowerCase() !== "false";

@@ -1,5 +1,5 @@
 export const ACCESS_TOKEN_EXPIRE_SECONDS_ENV_KEY =
-  "import.meta.env.ACCESS_TOKEN_EXPIRE_SECONDS";
+  "__LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS__";
 export const DEFAULT_ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60;
 
 export const createAccessTokenExpireSecondsDefinition = (

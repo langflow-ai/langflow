@@ -16,6 +16,9 @@ describe("authentication token refresh timing", () => {
   });
 
   it("defaults to refreshing 10% before the one-hour backend expiry", async () => {
+    expect(ACCESS_TOKEN_EXPIRE_SECONDS_ENV_KEY).toBe(
+      "__LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS__",
+    );
     const definitions = createAccessTokenExpireSecondsDefinition();
     expect(definitions[ACCESS_TOKEN_EXPIRE_SECONDS_ENV_KEY]).toBe("3600");
     process.env.ACCESS_TOKEN_EXPIRE_SECONDS = String(
