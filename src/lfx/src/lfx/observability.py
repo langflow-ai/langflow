@@ -116,6 +116,48 @@ PROCESS_METRICS_CONFIG = {
 }
 
 
+# Environment resolution shared with the doctor (``lfx observability doctor``). These are plain
+# os.getenv and deliberately sit outside the otel-guarded block below, so the self-test can
+# import them at module scope and resolve endpoints exactly the way the bootstrap does. Keeping
+# one definition is the point: a doctor that resolved endpoints its own way could report a
+# healthy pipeline the runtime never exports to.
+
+
+def otlp_endpoint(signal: str) -> str | None:
+    """Resolve a signal's endpoint: the per-signal variable first, then the generic one."""
+    return os.getenv(f"OTEL_EXPORTER_OTLP_{signal.upper()}_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+
+
+def otlp_exporter_disabled(signal: str) -> bool:
+    """Whether the operator turned this signal off while leaving a shared endpoint set."""
+    return os.getenv(f"OTEL_{signal.upper()}_EXPORTER", "otlp").strip().lower() == "none"
+
+
+def otlp_exporter_class(signal: str, protocol: str):
+    """The OTLP exporter class for a signal and protocol.
+
+    Returns the class rather than an instance because the callers differ: the bootstrap wants a
+    default-constructed exporter reading the environment, while the doctor passes an explicit
+    timeout. Spelled out once here so a signal/protocol pairing cannot be wrong in one place and
+    right in another.
+    """
+    if signal == "traces":
+        if protocol == "grpc":
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter as ExporterClass
+        else:
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter as ExporterClass
+    elif signal == "metrics":
+        if protocol == "grpc":
+            from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter as ExporterClass
+        else:
+            from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter as ExporterClass
+    elif protocol == "grpc":
+        from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter as ExporterClass
+    else:
+        from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter as ExporterClass
+    return ExporterClass
+
+
 # OpenTelemetry is optional. Resolve the SDK surface once, so the bootstrap functions can be a
 # simple availability check rather than a repeated import attempt. When it is absent, every
 # public entry point below returns without doing anything.
@@ -260,14 +302,6 @@ if _OTEL_AVAILABLE:
             return "http/protobuf"
         return protocol
 
-    def _otlp_span_exporter(protocol: str):
-        """Build the OTLP span exporter; it reads endpoint, headers and timeout from the environment."""
-        if protocol == "grpc":
-            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-        else:
-            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-        return OTLPSpanExporter()
-
     def _prometheus_reader():
         """Build the local Prometheus pull reader, or None when the exporter is not installed.
 
@@ -293,21 +327,18 @@ if _OTEL_AVAILABLE:
         The final flush on exit needs no wiring: MeterProvider registers its own atexit handler
         (shutdown_on_exit defaults to True), which shuts the reader down and drains it.
         """
-        endpoint = os.getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        endpoint = otlp_endpoint("metrics")
         if not endpoint:
             return None
 
         # The operator's documented way to turn metrics off while leaving a shared endpoint set.
-        if os.getenv("OTEL_METRICS_EXPORTER", "otlp").strip().lower() == "none":
+        if otlp_exporter_disabled("metrics"):
             return None
 
         protocol = _otlp_protocol("metrics")
         try:
-            if protocol == "grpc":
-                from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-            else:
-                from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-            reader = PeriodicExportingMetricReader(ApplicationOnlyMetricExporter(OTLPMetricExporter()))
+            exporter = otlp_exporter_class("metrics", protocol)()
+            reader = PeriodicExportingMetricReader(ApplicationOnlyMetricExporter(exporter))
         except Exception:  # noqa: BLE001
             logger.warning("Could not configure the OTLP metric exporter; metrics will not be pushed.")
             return None
@@ -376,12 +407,12 @@ if _OTEL_AVAILABLE:
         Nothing sets a tracer provider otherwise, so spans go nowhere. If application code
         or opentelemetry-instrument already installed one, leave it alone.
         """
-        endpoint = os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        endpoint = otlp_endpoint("traces")
         if not endpoint:
             return None
 
         # The operator's documented way to turn traces off while leaving a shared endpoint set.
-        if os.getenv("OTEL_TRACES_EXPORTER", "otlp").strip().lower() == "none":
+        if otlp_exporter_disabled("traces"):
             return None
 
         if trace.get_tracer_provider().__class__.__name__ != "ProxyTracerProvider":
@@ -399,7 +430,8 @@ if _OTEL_AVAILABLE:
         protocol = _otlp_protocol("traces")
         try:
             tracer_provider = TracerProvider(resource=_resource())
-            tracer_provider.add_span_processor(ApplicationOnlySpanProcessor(_otlp_span_exporter(protocol)))
+            exporter = otlp_exporter_class("traces", protocol)()
+            tracer_provider.add_span_processor(ApplicationOnlySpanProcessor(exporter))
         except Exception:  # noqa: BLE001
             logger.warning("Could not configure the OTLP tracer provider; traces will not be exported.")
             return None
@@ -417,10 +449,10 @@ if _OTEL_AVAILABLE:
         automatic because the SDK stamps the active span's trace_id onto every record, and
         each flow execution already runs inside a span.
         """
-        endpoint = os.getenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        endpoint = otlp_endpoint("logs")
         if not endpoint:
             return None
-        if os.getenv("OTEL_LOGS_EXPORTER", "otlp").strip().lower() == "none":
+        if otlp_exporter_disabled("logs"):
             return None
         if isinstance(_logs.get_logger_provider(), LoggerProvider):
             logger.warning("A logger provider is already installed; not replacing it.")
@@ -428,13 +460,9 @@ if _OTEL_AVAILABLE:
 
         protocol = _otlp_protocol("logs")
         try:
-            if protocol == "grpc":
-                from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-            else:
-                from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-
             provider = LoggerProvider(resource=_resource())
-            provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter()))
+            exporter = otlp_exporter_class("logs", protocol)()
+            provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"Could not configure the OTLP log exporter; logs will not be shipped. {exc}")
             return None
