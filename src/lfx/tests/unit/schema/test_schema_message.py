@@ -1,4 +1,5 @@
 import base64
+import copy
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
@@ -6,6 +7,7 @@ from uuid import uuid4
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
+from lfx.components.input_output import ChatInput
 from lfx.log.logger import logger
 from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
@@ -185,6 +187,44 @@ def test_message_serialization():
     parsed = datetime.strptime(serialized["timestamp"], "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
     assert parsed.tzinfo == timezone.utc
     assert parsed == timestamp_dt
+
+
+def test_deepcopy_preserves_message_type():
+    """Test that deep copying a Message returns a Message and not a bare Data."""
+    message = Message(text="Test message", sender=MESSAGE_SENDER_USER, sender_name="User", session_id="session-1")
+
+    copied = copy.deepcopy(message)
+
+    assert isinstance(copied, Message)
+    assert copied.text == "Test message"
+    assert copied.sender == MESSAGE_SENDER_USER
+    assert copied.sender_name == "User"
+    assert copied.session_id == "session-1"
+    assert copied.properties is not message.properties
+
+
+def test_model_copy_deep_preserves_message_type():
+    """Test that model_copy(deep=True) works on a Message and preserves its type."""
+    message = Message(text="Test message", sender=MESSAGE_SENDER_USER)
+
+    copied = message.model_copy(deep=True)
+
+    assert isinstance(copied, Message)
+    assert copied.text == "Test message"
+    assert copied.sender == MESSAGE_SENDER_USER
+
+
+def test_deepcopy_of_component_output_preserves_message_type():
+    """Test that copying a component keeps Message results typed as Message."""
+    component = ChatInput()
+    output = next(iter(component._outputs_map.values()))
+    output.value = Message(text="Test message", sender=MESSAGE_SENDER_USER)
+
+    copied_component = copy.deepcopy(component)
+
+    copied_value = next(iter(copied_component._outputs_map.values())).value
+    assert isinstance(copied_value, Message)
+    assert copied_value.text == "Test message"
 
 
 def test_message_to_lc_without_sender():

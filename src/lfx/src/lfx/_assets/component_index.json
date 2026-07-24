@@ -255,6 +255,9 @@
               "track_in_telemetry": false,
               "type": "str",
               "value": {
+                "category": "message",
+                "content_blocks": [],
+                "context_id": "",
                 "data": {
                   "category": "message",
                   "content_blocks": [],
@@ -283,6 +286,22 @@
                   "text": "http://localhost:11434"
                 },
                 "default_value": "",
+                "edit": false,
+                "error": false,
+                "files": [],
+                "properties": {
+                  "allow_markdown": false,
+                  "edited": false,
+                  "source": {
+                    "display_name": null,
+                    "id": null,
+                    "source": null
+                  },
+                  "state": "complete",
+                  "targets": []
+                },
+                "session_id": "",
+                "text": "http://localhost:11434",
                 "text_key": "text"
               }
             },
@@ -674,6 +693,9 @@
               "track_in_telemetry": false,
               "type": "str",
               "value": {
+                "category": "message",
+                "content_blocks": [],
+                "context_id": "",
                 "data": {
                   "category": "message",
                   "content_blocks": [],
@@ -702,6 +724,22 @@
                   "text": "http://localhost:11434"
                 },
                 "default_value": "",
+                "edit": false,
+                "error": false,
+                "files": [],
+                "properties": {
+                  "allow_markdown": false,
+                  "edited": false,
+                  "source": {
+                    "display_name": null,
+                    "id": null,
+                    "source": null
+                  },
+                  "state": "complete",
+                  "targets": []
+                },
+                "session_id": "",
+                "text": "http://localhost:11434",
                 "text_key": "text"
               }
             },
@@ -1054,6 +1092,9 @@
               "track_in_telemetry": false,
               "type": "str",
               "value": {
+                "category": "message",
+                "content_blocks": [],
+                "context_id": "",
                 "data": {
                   "category": "message",
                   "content_blocks": [],
@@ -1082,6 +1123,22 @@
                   "text": "http://localhost:11434"
                 },
                 "default_value": "",
+                "edit": false,
+                "error": false,
+                "files": [],
+                "properties": {
+                  "allow_markdown": false,
+                  "edited": false,
+                  "source": {
+                    "display_name": null,
+                    "id": null,
+                    "source": null
+                  },
+                  "state": "complete",
+                  "targets": []
+                },
+                "session_id": "",
+                "text": "http://localhost:11434",
                 "text_key": "text"
               }
             },
@@ -32659,6 +32716,6 @@
     "num_components": 131,
     "num_modules": 17
   },
-  "sha256": "f405177159508e67001482911803b98ab2794e234bd7c0c71ae5a9cb051dad24",
+  "sha256": "5f2906584525dfee428bf20aa09d88d67220665290f401685ece4e5e38ce0a17",
   "version": "1.11.0"
 }

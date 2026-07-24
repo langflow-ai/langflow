@@ -6,7 +6,6 @@ Data is maintained as an alias for backwards compatibility.
 
 from __future__ import annotations
 
-import copy
 import json
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -260,10 +259,14 @@ class JSON(CrossModuleModel):
         else:
             del self.data[key]
 
-    def __deepcopy__(self, memo):
-        """Custom deepcopy implementation to handle copying of the JSON object."""
-        # Create a new JSON object with a deep copy of the data dictionary
-        return JSON(data=copy.deepcopy(self.data, memo), text_key=self.text_key, default_value=self.default_value)
+    def __deepcopy__(self, memo=None):
+        """Deep-copy the object while preserving its concrete class.
+
+        Rebuilding a bare ``JSON`` here would downgrade subclasses such as ``Message`` and drop
+        their fields, so the copy is delegated to pydantic. ``memo`` defaults to ``None`` because
+        ``model_copy(deep=True)`` calls ``__deepcopy__()`` without arguments.
+        """
+        return super().__deepcopy__(memo)
 
     # check which attributes the JSON has by checking the keys in the data dictionary
     def __dir__(self):
