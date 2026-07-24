@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
+import { axe } from "@/utils/a11y-test";
 import HelpDropdown from "../HelpDropdown";
 
 jest.mock("@/components/ui/button", () => ({
@@ -20,14 +21,35 @@ jest.mock("@/components/ui/dropdown-menu", () => ({
     </div>
   ),
   DropdownMenuContent: ({ children, ...props }: any) => (
-    <div data-testid="dropdown-content" {...props}>
+    <div data-testid="dropdown-content" role="menu" {...props}>
       {children}
     </div>
+  ),
+  DropdownMenuItem: ({ children, onClick, ...props }: any) => (
+    <button type="button" role="menuitem" onClick={onClick} {...props}>
+      {children}
+    </button>
+  ),
+  DropdownMenuCheckboxItem: ({
+    children,
+    onCheckedChange,
+    checked,
+    ...props
+  }: any) => (
+    <button
+      type="button"
+      role="menuitemcheckbox"
+      aria-checked={checked}
+      onClick={() => onCheckedChange?.(!checked)}
+      {...props}
+    >
+      {children}
+    </button>
   ),
 }));
 
 jest.mock("@/components/ui/separator", () => ({
-  Separator: () => <div data-testid="separator" />,
+  Separator: () => <div data-testid="separator" role="separator" />,
 }));
 
 jest.mock("@/components/common/genericIconComponent", () => ({
@@ -69,12 +91,15 @@ jest.mock("@/stores/darkStore", () => ({
   }),
 }));
 
+const mockFlowStoreState = {
+  helperLineEnabled: false,
+  setHelperLineEnabled: jest.fn(),
+};
+
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: () => ({
-    helperLineEnabled: false,
-    setHelperLineEnabled: jest.fn(),
-  }),
+  default: (selector: (state: typeof mockFlowStoreState) => unknown) =>
+    selector(mockFlowStoreState),
 }));
 
 // Mock window.open
@@ -88,13 +113,23 @@ describe("HelpDropdown", () => {
     (window.open as jest.Mock).mockClear();
   });
 
+  it("should_have_no_axe_violations", async () => {
+    const { container } = render(
+      <MemoryRouter>
+        <HelpDropdown />
+      </MemoryRouter>,
+    );
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
   it("opens docs in new tab and navigates to shortcuts", () => {
     const mockNavigate = jest.fn();
     (useNavigate as unknown as jest.Mock).mockReturnValue(mockNavigate);
 
     render(
       <MemoryRouter>
-        <HelpDropdown isOpen={true} onOpenChange={() => {}} />
+        <HelpDropdown/>
       </MemoryRouter>,
     );
 

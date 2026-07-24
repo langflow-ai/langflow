@@ -61,7 +61,11 @@ const SidebarSegmentedNav = ({
               />
             )}
             <SidebarMenuItem className="px-1 pt-1">
-              <ShadTooltip content={t(item.tooltip)} side="right">
+              <ShadTooltip
+                content={t(item.tooltip)}
+                side="right"
+                ariaDescribedBy={undefined}
+              >
                 <SidebarMenuButton
                   size="md"
                   onClick={() => {

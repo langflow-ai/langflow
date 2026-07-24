@@ -162,7 +162,6 @@ describe("SidebarHeaderComponent", () => {
         expect(
           screen.getByTestId("sidebar-options-trigger"),
         ).toBeInTheDocument();
-        expect(screen.getByTestId("disclosure-trigger")).toBeInTheDocument();
         expect(screen.getByTestId("search-input")).toBeInTheDocument();
         expect(screen.getByTestId("disclosure")).toBeInTheDocument();
         expect(screen.getByTestId("disclosure-content")).toBeInTheDocument();

@@ -3,15 +3,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { axe } from "@/utils/a11y-test";
 import AppHeader from "../index";
 
-// Mock heavy children — this suite only asserts the header shell semantics
-// (landmark + notification bell) owned by AppHeader itself.
+// This suite intentionally leaves @/alerts/alertDropDown unmocked — index.tsx
+// wraps ShadTooltip's child in a SECOND AlertDropdown (see the outer/inner
+// pair around the notification button), which mounts two independent
+// Popovers on the same trigger. That's invisible under the pass-through
+// mock used by appHeader.a11y.test.tsx, so it needs real-DOM coverage here.
 jest.mock("@/assets/LangflowLogo.svg?react", () => ({
   __esModule: true,
   default: () => null,
-}));
-jest.mock("@/alerts/alertDropDown", () => ({
-  __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 jest.mock("@/components/common/modelProviderCountComponent", () => ({
   __esModule: true,
@@ -44,39 +43,27 @@ const renderHeader = () =>
     </TooltipProvider>,
   );
 
-describe("AppHeader accessibility", () => {
-  it("should_render_header_with_notification_button", () => {
-    renderHeader();
-
-    expect(screen.getByTestId("app-header")).toBeInTheDocument();
-    expect(screen.getByTestId("notification_button")).toBeInTheDocument();
-  });
-
-  it("should_expose_header_as_banner_landmark", () => {
-    renderHeader();
-
-    expect(screen.getByRole("banner")).toBeInTheDocument();
-  });
-
-  it("should_name_notification_bell_button", () => {
-    renderHeader();
-
-    expect(screen.getByTestId("notification_button")).toHaveAttribute(
-      "aria-label",
-    );
-  });
-
-  it("should_name_home_navigation_button", () => {
-    renderHeader();
-
-    expect(screen.getByTestId("icon-ChevronLeft")).toHaveAttribute(
-      "aria-label",
-      "Go to home",
-    );
-  });
-
-  it("should_have_no_axe_violations", async () => {
+describe("AppHeader notification dropdown (real AlertDropdown, unmocked)", () => {
+  it("should_have_no_axe_violations when closed", async () => {
     const { container } = renderHeader();
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("opens exactly one notification popover, not a duplicate nested one", () => {
+    renderHeader();
+
+    fireEvent.click(screen.getByTestId("notification_button"));
+
+    expect(
+      screen.getAllByTestId("notification-dropdown-content"),
+    ).toHaveLength(1);
+  });
+
+  it("should_have_no_axe_violations when the notification popover is open", async () => {
+    const { container } = renderHeader();
+
+    fireEvent.click(screen.getByTestId("notification_button"));
 
     expect(await axe(container)).toHaveNoViolations();
   });

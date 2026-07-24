@@ -87,6 +87,7 @@ import {
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import { computeNoteScreenPosition } from "./utils/compute-note-position";
+import { getNodeAriaLabel } from "./utils/get-node-aria-label";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
@@ -121,9 +122,7 @@ export default function Page({
     () =>
       nodes.map((node) => ({
         ...node,
-        ariaLabel: t("flow.nodeAriaLabel", {
-          name: node.data?.node?.display_name ?? node.data?.type,
-        }),
+        ariaLabel: getNodeAriaLabel(node, t),
       })),
     [nodes, t],
   );
