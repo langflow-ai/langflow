@@ -1141,23 +1141,22 @@ describe("useAssistantChat", () => {
       });
       const msg = result.current.messages[1];
 
-      mockSetNodes.mockClear();
-      mockSetEdges.mockClear();
+      mockSetNodesAndEdges.mockClear();
 
       act(() => {
         result.current.handleApplyFlowProposal(msg.id, "add");
       });
 
-      const nodesArg = mockSetNodes.mock.calls[0][0] as Array<{
-        id: string;
-        data?: { type?: string };
-      }>;
+      // Merge path applies atomically via setNodesAndEdges(nodes, edges).
+      expect(mockSetNodesAndEdges).toHaveBeenCalled();
+      const [nodesArg, edgesArg] = mockSetNodesAndEdges.mock.calls[0] as [
+        Array<{ id: string; data?: { type?: string } }>,
+        Array<{ id: string }>,
+      ];
       expect(nodesArg.filter((n) => n.data?.type === "ChatInput")).toHaveLength(
         1,
       );
       expect(nodesArg.map((n) => n.id)).toContain("ChatInput-old");
-
-      const edgesArg = mockSetEdges.mock.calls[0][0] as Array<{ id: string }>;
       expect(edgesArg).toHaveLength(0);
     });
   });
