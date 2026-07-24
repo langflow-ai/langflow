@@ -41,6 +41,7 @@ export const HelpDropdownView = ({
           size="icon"
           className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
           title={t("help.title")}
+          aria-label={t("help.title")}
           data-testid="canvas_controls_dropdown_help"
         >
           <IconComponent

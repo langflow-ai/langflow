@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { axe } from "@/utils/a11y-test";
 import { SidebarDraggableComponent } from "../sidebarDraggableComponent";
 
 // Mock all external dependencies
@@ -190,7 +191,13 @@ jest.mock("@/components/ui/select-custom", () => ({
     tabIndex?: number;
     [key: string]: unknown;
   }) => (
-    <div data-testid="select-trigger" tabIndex={tabIndex} {...props}>
+    <div
+      data-testid="select-trigger"
+      role="combobox"
+      aria-expanded={false}
+      tabIndex={tabIndex}
+      {...props}
+    >
       {children}
     </div>
   ),
@@ -259,6 +266,16 @@ describe("SidebarDraggableComponent", () => {
     jest.clearAllMocks();
     mockOnValueChange = undefined;
     mockDeleteFlow.mockClear();
+  });
+
+  describe("Accessibility", () => {
+    it("should_have_no_axe_violations", async () => {
+      const { container } = render(
+        <SidebarDraggableComponent {...defaultProps} />,
+      );
+
+      expect(await axe(container)).toHaveNoViolations();
+    });
   });
 
   describe("Basic Rendering", () => {
@@ -477,9 +494,7 @@ describe("SidebarDraggableComponent", () => {
     it("should call addComponent when Enter key is pressed", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
-      const container = screen.getByTestId(
-        "testsection_test component_draggable",
-      );
+      const container = screen.getByTestId(/testsectiontest component/i);
       fireEvent.keyDown(container, { key: "Enter" });
 
       expect(mockAddComponentFn).toHaveBeenCalledWith(
@@ -491,9 +506,7 @@ describe("SidebarDraggableComponent", () => {
     it("should call addComponent when Space key is pressed", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
-      const container = screen.getByTestId(
-        "testsection_test component_draggable",
-      );
+      const container = screen.getByTestId(/testsectiontest component/i);
       fireEvent.keyDown(container, { key: " " });
 
       expect(mockAddComponentFn).toHaveBeenCalledWith(
@@ -505,9 +518,7 @@ describe("SidebarDraggableComponent", () => {
     it("should not call addComponent for other keys", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
-      const container = screen.getByTestId(
-        "testsection_test component_draggable",
-      );
+      const container = screen.getByTestId(/testsectiontest component/i);
       fireEvent.keyDown(container, { key: "Escape" });
 
       expect(mockAddComponentFn).not.toHaveBeenCalled();
@@ -565,23 +576,28 @@ describe("SidebarDraggableComponent", () => {
     it("should have correct tabIndex", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
-      const container = screen.getByTestId(
-        "testsection_test component_draggable",
-      );
+      const container = screen.getByTestId(/testsectiontest component/i);
       expect(container).toHaveAttribute("tabIndex", "0");
     });
 
-    it("should expose role=button and an accessible name on the draggable container", () => {
+    it("should expose role=button and an accessible name on the draggable content, not the outer wrapper", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
-      const container = screen.getByTestId(
-        "testsection_test component_draggable",
-      );
-      expect(container).toHaveAttribute("role", "button");
-      expect(container).toHaveAttribute(
+      const content = screen.getByTestId(/testsectiontest component/i);
+      expect(content).toHaveAttribute("role", "button");
+      expect(content).toHaveAttribute(
         "aria-label",
         "Add Test Component to canvas",
       );
+
+      // The outer wrapper must NOT carry role=button, since it also contains
+      // the SelectTrigger (role=combobox) — an interactive descendant is
+      // invalid inside a button-role element (IBM aria_descendant_valid).
+      const outerWrapper = screen.getByTestId(
+        "testsection_test component_draggable",
+      );
+      expect(outerWrapper).not.toHaveAttribute("role");
+      expect(outerWrapper).not.toHaveAttribute("tabIndex");
     });
 
     it("should have add button with tabIndex -1", () => {

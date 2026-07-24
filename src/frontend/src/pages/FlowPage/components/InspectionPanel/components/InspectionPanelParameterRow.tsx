@@ -216,7 +216,7 @@ export default function InspectionPanelParameterRow({
           <Button
             unstyled
             onClick={handleToggleVisibility}
-            className="flex h-6 min-w-[4.5rem] items-center justify-center gap-0.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="flex h-6 min-w-[4.5rem] items-center justify-center gap-0.5 rounded-md px-2 text-xs text-foreground transition-colors hover:bg-muted"
             data-testid={`inspector-add-${name}`}
             aria-label={`${t("inspectionPanel.add")} ${title}`}
           >
