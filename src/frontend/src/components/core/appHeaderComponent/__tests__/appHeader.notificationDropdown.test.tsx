@@ -55,9 +55,9 @@ describe("AppHeader notification dropdown (real AlertDropdown, unmocked)", () =>
 
     fireEvent.click(screen.getByTestId("notification_button"));
 
-    expect(
-      screen.getAllByTestId("notification-dropdown-content"),
-    ).toHaveLength(1);
+    expect(screen.getAllByTestId("notification-dropdown-content")).toHaveLength(
+      1,
+    );
   });
 
   it("should_have_no_axe_violations when the notification popover is open", async () => {

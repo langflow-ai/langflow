@@ -80,8 +80,8 @@ describe("SidebarHeaderComponent accessibility (real Button/ShadTooltip/sidebar,
   it("names the settings trigger button", () => {
     renderHeader();
 
-    expect(
-      screen.getByTestId("sidebar-options-trigger"),
-    ).toHaveAccessibleName("Component settings");
+    expect(screen.getByTestId("sidebar-options-trigger")).toHaveAccessibleName(
+      "Component settings",
+    );
   });
 });

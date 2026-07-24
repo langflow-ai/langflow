@@ -71,4 +71,3 @@ describe("ShadTooltip ariaDescribedBy override", () => {
     expect("aria-describedby" in lastTriggerProps).toBe(false);
   });
 });
- 

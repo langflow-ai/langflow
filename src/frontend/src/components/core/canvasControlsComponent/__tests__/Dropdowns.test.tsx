@@ -129,7 +129,7 @@ describe("HelpDropdown", () => {
 
     render(
       <MemoryRouter>
-        <HelpDropdown/>
+        <HelpDropdown />
       </MemoryRouter>,
     );
 

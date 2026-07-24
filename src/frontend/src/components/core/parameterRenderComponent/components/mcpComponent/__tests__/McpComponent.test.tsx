@@ -147,9 +147,9 @@ describe("McpComponent", () => {
 
   it("names the server-select button by its current value, and the clear button distinctly", () => {
     render(<McpComponent {...defaultProps()} />);
-    expect(
-      screen.getByTestId("mcp-server-dropdown"),
-    ).toHaveAccessibleName("broken-server");
+    expect(screen.getByTestId("mcp-server-dropdown")).toHaveAccessibleName(
+      "broken-server",
+    );
 
     render(
       <McpComponent
@@ -157,9 +157,9 @@ describe("McpComponent", () => {
         value={{ name: "", config: { command: "test" } }}
       />,
     );
-    expect(screen.getAllByTestId("mcp-server-dropdown")[1]).toHaveAccessibleName(
-      "Clear selected server",
-    );
+    expect(
+      screen.getAllByTestId("mcp-server-dropdown")[1],
+    ).toHaveAccessibleName("Clear selected server");
   });
 
   it("shows the MCP server error and refreshes the node on demand", async () => {
