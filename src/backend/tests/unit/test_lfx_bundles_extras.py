@@ -42,7 +42,11 @@ BUNDLES_DIR = REPO_ROOT / "src" / "bundles"
 # scripts/migrate/consolidate_bundles.py. ``all`` pulls every provider;
 # ``all-no-torch`` is ``all`` minus the torch-pulling providers (TORCH_EXTRAS).
 AGGREGATE_EXTRAS = frozenset({"all", "all-no-torch"})
-COMPATIBILITY_EXTRAS = {"google": ["lfx-google>=0.1.0,<1.0.0"]}
+COMPATIBILITY_EXTRAS = {
+    "azure": ["lfx-azure>=0.1.0,<1.0.0"],
+    "google": ["lfx-google>=0.1.0,<1.0.0"],
+    "ollama": ["lfx-ollama>=0.1.0,<1.0.0"],
+}
 TORCH_EXTRAS = frozenset({"cuga", "codeagents"})
 
 

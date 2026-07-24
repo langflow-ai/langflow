@@ -43,6 +43,16 @@
       "resolved_version": "0.1.3"
     },
     {
+      "distribution": "lfx-azure",
+      "extras": [],
+      "providers": [
+        "lfx-azure"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-azure==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-cohere",
       "extras": [],
       "providers": [
@@ -143,6 +153,16 @@
       "resolved_version": "0.1.1"
     },
     {
+      "distribution": "lfx-ollama",
+      "extras": [],
+      "providers": [
+        "lfx-ollama"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-ollama==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-openai",
       "extras": [],
       "providers": [
@@ -210,11 +230,12 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:95f4c5899131fc3c",
+  "profile_digest": "sha256:858fe851a431eba2",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
     "lfx-arxiv",
+    "lfx-azure",
     "lfx-cohere",
     "lfx-datastax",
     "lfx-docling",
@@ -225,6 +246,7 @@
     "lfx-google",
     "lfx-ibm",
     "lfx-nextplaid",
+    "lfx-ollama",
     "lfx-openai",
     "lfx-openai-compatible",
     "lfx-oracle",

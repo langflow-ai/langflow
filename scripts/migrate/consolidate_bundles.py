@@ -81,7 +81,8 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     # --- tranche 2: model providers ---
     "groq": ["langchain-groq~=1.1.1"],
     "mistral": ["langchain-mistralai~=1.1.1"],
-    "ollama": ["langchain-ollama~=0.3.10"],
+    # "ollama" graduated to the standalone lfx-ollama bundle so it is
+    # available in every default Langflow install.
     "perplexity": ["langchain-perplexity>=1.0.0,<2.0.0"],
     "sambanova": ["langchain-sambanova~=1.0.0"],
     # --- tranche 2: tools / memory / data ---
@@ -103,7 +104,8 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     # All ride the langchain-openai wrapper; the openai SDK is declared only
     # where a component imports it directly (otherwise wrapper-transitive).
     "aiml": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"],
-    "azure": ["langchain-openai>=1.1.6"],
+    # "azure" graduated to the standalone lfx-azure bundle so Azure AI
+    # Foundry is available in every default Langflow install.
     "cometapi": ["langchain-openai>=1.1.6", "requests>=2.32.0"],
     "deepseek": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"],
     # NOTE: the component drives LiteLLM-served endpoints through the OpenAI
@@ -188,7 +190,11 @@ TORCH_EXTRAS = frozenset({"cuga", "codeagents"})
 # Deprecated aliases for providers that graduated to standalone bundles. They
 # remain installable for compatibility but are intentionally excluded from the
 # generated aggregate extras because Langflow already installs them directly.
-COMPATIBILITY_EXTRAS = {"google": ["lfx-google>=0.1.0,<1.0.0"]}
+COMPATIBILITY_EXTRAS = {
+    "azure": ["lfx-azure>=0.1.0,<1.0.0"],
+    "google": ["lfx-google>=0.1.0,<1.0.0"],
+    "ollama": ["lfx-ollama>=0.1.0,<1.0.0"],
+}
 
 
 def normalize_extra(name: str) -> str:

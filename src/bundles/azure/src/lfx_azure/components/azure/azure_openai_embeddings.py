@@ -1,3 +1,5 @@
+"""Azure OpenAI embeddings component."""
+
 from langchain_openai import AzureOpenAIEmbeddings
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES

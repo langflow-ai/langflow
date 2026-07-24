@@ -59,6 +59,7 @@
         "lfx-amazon",
         "lfx-anthropic",
         "lfx-arxiv",
+        "lfx-azure",
         "lfx-cohere",
         "lfx-datastax",
         "lfx-docling",
@@ -69,6 +70,7 @@
         "lfx-google",
         "lfx-ibm",
         "lfx-nextplaid",
+        "lfx-ollama",
         "lfx-openai",
         "lfx-openai-compatible",
         "lfx-oracle",
@@ -85,6 +87,7 @@
           "lfx-amazon",
           "lfx-anthropic",
           "lfx-arxiv",
+          "lfx-azure",
           "lfx-cohere",
           "lfx-datastax",
           "lfx-docling",
@@ -95,6 +98,7 @@
           "lfx-google",
           "lfx-ibm",
           "lfx-nextplaid",
+          "lfx-ollama",
           "lfx-openai",
           "lfx-openai-compatible",
           "lfx-oracle",
@@ -115,12 +119,42 @@
         "lfx-google": [
           "lfx_google/extension.json",
           "lfx_google/components/google/google_generative_ai.py"
+        ],
+        "lfx-azure": [
+          "lfx_azure/extension.json",
+          "lfx_azure/components/azure/azure_openai.py",
+          "lfx_azure/components/azure/azure_openai_embeddings.py"
+        ],
+        "lfx-ollama": [
+          "lfx_ollama/extension.json",
+          "lfx_ollama/components/ollama/ollama.py",
+          "lfx_ollama/components/ollama/ollama_embeddings.py"
         ]
       },
       "module_checks": [
         {
           "module": "lfx.components.google",
           "attribute": "GoogleGenerativeAIComponent",
+          "expect": "success"
+        },
+        {
+          "module": "lfx.components.azure",
+          "attribute": "AzureChatOpenAIComponent",
+          "expect": "success"
+        },
+        {
+          "module": "lfx.components.ollama",
+          "attribute": "ChatOllamaComponent",
+          "expect": "success"
+        },
+        {
+          "module": "langchain_azure_ai.chat_models",
+          "attribute": "AzureAIOpenAIApiChatModel",
+          "expect": "success"
+        },
+        {
+          "module": "langchain_ollama",
+          "attribute": "ChatOllama",
           "expect": "success"
         }
       ]
@@ -138,6 +172,7 @@
           "lfx-amazon",
           "lfx-anthropic",
           "lfx-arxiv",
+          "lfx-azure",
           "lfx-cohere",
           "lfx-datastax",
           "lfx-docling",
@@ -148,6 +183,7 @@
           "lfx-google",
           "lfx-ibm",
           "lfx-nextplaid",
+          "lfx-ollama",
           "lfx-openai",
           "lfx-openai-compatible",
           "lfx-oracle",
@@ -165,7 +201,6 @@
         "altk",
         "apify",
         "assemblyai",
-        "azure",
         "baidu",
         "bing",
         "chroma",
@@ -202,7 +237,6 @@
         "novita",
         "nvidia",
         "olivya",
-        "ollama",
         "openrouter",
         "perplexity",
         "pgvector",
@@ -242,6 +276,16 @@
           "lfx_google/extension.json",
           "lfx_google/components/google/google_generative_ai.py"
         ],
+        "lfx-azure": [
+          "lfx_azure/extension.json",
+          "lfx_azure/components/azure/azure_openai.py",
+          "lfx_azure/components/azure/azure_openai_embeddings.py"
+        ],
+        "lfx-ollama": [
+          "lfx_ollama/extension.json",
+          "lfx_ollama/components/ollama/ollama.py",
+          "lfx_ollama/components/ollama/ollama_embeddings.py"
+        ],
         "lfx-bundles": [
           "lfx_bundles/mongodb/mongodb_atlas.py",
           "lfx_bundles/codeagents/starter_projects/Structured Data Analysis Agent.json",
@@ -252,6 +296,26 @@
         {
           "module": "lfx.components.google",
           "attribute": "GoogleGenerativeAIComponent",
+          "expect": "success"
+        },
+        {
+          "module": "lfx.components.azure",
+          "attribute": "AzureChatOpenAIComponent",
+          "expect": "success"
+        },
+        {
+          "module": "lfx.components.ollama",
+          "attribute": "ChatOllamaComponent",
+          "expect": "success"
+        },
+        {
+          "module": "langchain_azure_ai.chat_models",
+          "attribute": "AzureAIOpenAIApiChatModel",
+          "expect": "success"
+        },
+        {
+          "module": "langchain_ollama",
+          "attribute": "ChatOllama",
           "expect": "success"
         },
         {
