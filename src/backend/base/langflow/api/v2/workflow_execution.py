@@ -350,6 +350,24 @@ async def _stream_event_frames(
         with contextlib.suppress(asyncio.CancelledError):
             await run_task
         await queue.aclose()
+        # Emit a RunPayload so Enterprise metering (run_event_store) and the
+        # Scarf telemetry pipeline both see every v2 workflow run.
+        # Mirrors the v1 endpoints.py instrumentation for the streaming path.
+        with contextlib.suppress(Exception):
+            from langflow.services.deps import get_telemetry_service
+            from langflow.services.telemetry.schema import RunPayload
+
+            _telemetry = get_telemetry_service()
+            if _telemetry is not None:
+                await _telemetry.log_package_run(
+                    RunPayload(
+                        run_is_webhook=False,
+                        run_seconds=0,
+                        run_success=not terminal_error_seen,
+                        run_error_message="" if not terminal_error_seen else "workflow error",
+                        run_id=run_id or "",
+                    )
+                )
 
 
 def _execute_streaming_workflow(
