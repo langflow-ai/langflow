@@ -565,7 +565,7 @@ class DatabaseService(Service):
         legacy_tables = ["flowstyle"]
 
         for table, model in model_mapping.items():
-            expected_columns = list(model.model_fields.keys())
+            expected_columns = list(model.model_fields.keys()) if hasattr(model, "model_fields") else list(model.__fields__.keys())
 
             try:
                 available_columns = [col["name"] for col in inspector.get_columns(table)]
@@ -720,7 +720,7 @@ class DatabaseService(Service):
         results = []
         inspector = inspect(connection)
         table_name = model.__tablename__
-        expected_columns = list(model.__fields__.keys())
+        expected_columns = list(model.model_fields.keys()) if hasattr(model, "model_fields") else list(model.__fields__.keys())
         available_columns = []
         try:
             available_columns = [col["name"] for col in inspector.get_columns(table_name)]
