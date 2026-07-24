@@ -1,0 +1,47 @@
+[project]
+name = "lfx-ollama"
+version = "0.1.0"
+description = "Ollama model components as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "ollama", "local-models"]
+
+# Runtime deps cover both the dedicated Ollama components and the unified
+# Language Model / Embedding Model provider paths. httpx is imported directly
+# by the components for SSRF-safe model discovery and validation.
+dependencies = [
+    "lfx>=1.12.0.dev0,<2.0.0",
+    "httpx>=0.24.0,<1.0.0",
+    "langchain-ollama~=0.3.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+[project.entry-points."langflow.extensions"]
+lfx-ollama = "lfx_ollama"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_ollama"]
+include = [
+    "src/lfx_ollama/extension.json",
+    "src/lfx_ollama/components/**/*.py",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_ollama",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

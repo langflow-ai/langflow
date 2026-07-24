@@ -1,3 +1,5 @@
+"""Lazy component exports for the Ollama bundle."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -5,22 +7,22 @@ from typing import TYPE_CHECKING, Any
 from lfx.utils.lazy_import import import_mod
 
 if TYPE_CHECKING:
-    from .azure_openai import AzureChatOpenAIComponent
-    from .azure_openai_embeddings import AzureOpenAIEmbeddingsComponent
+    from .ollama import ChatOllamaComponent
+    from .ollama_embeddings import OllamaEmbeddingsComponent
 
 _dynamic_imports = {
-    "AzureChatOpenAIComponent": "azure_openai",
-    "AzureOpenAIEmbeddingsComponent": "azure_openai_embeddings",
+    "ChatOllamaComponent": "ollama",
+    "OllamaEmbeddingsComponent": "ollama_embeddings",
 }
 
 __all__ = [
-    "AzureChatOpenAIComponent",
-    "AzureOpenAIEmbeddingsComponent",
+    "ChatOllamaComponent",
+    "OllamaEmbeddingsComponent",
 ]
 
 
 def __getattr__(attr_name: str) -> Any:
-    """Lazily import azure components on attribute access."""
+    """Lazily import ollama components on attribute access."""
     if attr_name not in _dynamic_imports:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"
         raise AttributeError(msg)

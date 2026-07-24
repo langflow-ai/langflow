@@ -56,7 +56,9 @@ def test_contract_tracks_every_curated_extension() -> None:
 def test_contract_required_files_exist_in_sources() -> None:
     source_roots = {
         "langflow-base": REPO_ROOT / "src" / "backend" / "base",
+        "lfx-azure": REPO_ROOT / "src" / "bundles" / "azure" / "src",
         "lfx-google": REPO_ROOT / "src" / "bundles" / "google" / "src",
+        "lfx-ollama": REPO_ROOT / "src" / "bundles" / "ollama" / "src",
         "lfx-openai": REPO_ROOT / "src" / "bundles" / "openai" / "src",
         "lfx-bundles": REPO_ROOT / "src" / "bundles" / "lfx-bundles" / "src",
     }
@@ -70,7 +72,7 @@ def test_contract_required_files_exist_in_sources() -> None:
 
 def test_full_python_profile_uses_the_reviewed_root_extra() -> None:
     root_project = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
-    assert root_project["optional-dependencies"]["bundles"] == ["lfx-bundles[all-no-torch]>=1.1.4,<2.0"]
+    assert root_project["optional-dependencies"]["bundles"] == ["lfx-bundles[all-no-torch]>=1.1.5,<2.0"]
 
     gate_path = REPO_ROOT / ".github" / "workflows" / "release-inventory-gate.yml"
     gate = gate_path.read_text(encoding="utf-8")
