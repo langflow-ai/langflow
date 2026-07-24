@@ -68,7 +68,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          ref: release-1.11.0
+          ref: release-1.12.0
           persist-credentials: true
       - name: Confirm branch
         run: git branch --show-current
@@ -209,7 +209,7 @@ jobs:
       tests_folder: "tests"
       release: true
       runs-on: ubuntu-latest
-      ref: release-1.11.0
+      ref: release-1.12.0
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
@@ -230,7 +230,7 @@ jobs:
       tests_folder: "tests"
       release: true
       runs-on: windows-latest
-      ref: release-1.11.0
+      ref: release-1.12.0
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
@@ -247,7 +247,7 @@ jobs:
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14"]'
       runs-on: ${{ inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
-      ref: release-1.11.0
+      ref: release-1.12.0
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -271,7 +271,7 @@ jobs:
       contents: read
     uses: ./.github/workflows/stress-tests.yml
     with:
-      ref: release-1.11.0
+      ref: release-1.12.0
 
   release-nightly-build:
     if: github.repository == 'langflow-ai/langflow' && always() && needs.create-nightly-tag.result == 'success' && needs.frontend-tests-linux.result != 'failure' && needs.backend-unit-tests.result != 'failure'
