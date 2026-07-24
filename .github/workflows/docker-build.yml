@@ -254,7 +254,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and Push to Docker Hub
-        uses: Wandalen/wretry.action@master
+        uses: Wandalen/wretry.action@e94c43bf2e865e7dbbd90b0c1061053f5888932a # master
         with:
           action: docker/build-push-action@v6
           with: |
@@ -274,7 +274,7 @@ jobs:
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
       - name: Build and push to Github Container Registry
-        uses: Wandalen/wretry.action@master
+        uses: Wandalen/wretry.action@e94c43bf2e865e7dbbd90b0c1061053f5888932a # master
         with:
           action: docker/build-push-action@v6
           with: |
@@ -361,7 +361,7 @@ jobs:
         run: sleep 120
 
       - name: Build and push ${{ matrix.component }}
-        uses: Wandalen/wretry.action@master
+        uses: Wandalen/wretry.action@e94c43bf2e865e7dbbd90b0c1061053f5888932a # master
         with:
           action: docker/build-push-action@v6
           with: |
