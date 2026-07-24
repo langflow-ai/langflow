@@ -22,9 +22,10 @@ class VariablesSettings(BaseModel):
     """List of environment variables to get from the environment and store in the database."""
 
     # Agentic Experience
-    agentic_experience: bool = False
-    """If set to True, Langflow will start the agentic MCP server that provides tools for
-    flow/component operations, template search, and graph visualization."""
+    agentic_experience: bool = True
+    """Enables the Langflow Assistant and its agentic MCP server (tools for flow/component
+    operations, template search, and graph visualization). On by default — the Assistant is
+    Langflow's entry-point experience; set LANGFLOW_AGENTIC_EXPERIENCE=false to opt out."""
 
     # Developer API
     developer_api_enabled: bool = False
@@ -38,7 +39,7 @@ class VariablesSettings(BaseModel):
 
         result = list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
 
-        if os.getenv("LANGFLOW_AGENTIC_EXPERIENCE", "false").lower() == "true":
+        if os.getenv("LANGFLOW_AGENTIC_EXPERIENCE", "true").lower() == "true":
             result.extend(AGENTIC_VARIABLES)
 
         return list(set(result))
