@@ -1234,7 +1234,7 @@ Thread `provider_vars` (resolved from database) through `flow_executor` → `flo
 Users expect assistant session history to persist. A decision was needed on whether to store sessions in the database (like the Playground) or in browser localStorage.
 
 #### Decision
-Session history is stored in browser `localStorage` (key: `langflow-assistant-sessions`), limited to 10 sessions. Sessions are serialized/deserialized with `progress` state stripped and in-flight messages marked as `"cancelled"`.
+Session history is stored in browser `localStorage` (key: `langflow-assistant-sessions`), limited to 10 sessions. Sessions are serialized/deserialized with `progress` state stripped and in-flight messages marked as `"cancelled"`. The transient `inProgressTask` spinner (except on error messages) and the `flowProposalSnapshot` canvas clone are also stripped — the snapshot is a full deep copy of nodes+edges per applied proposal, and persisting it could blow the localStorage quota and silently lose the whole session save; cross-reload revert is covered by the backend restore-point path instead.
 
 #### Consequences
 

@@ -134,6 +134,33 @@ def sync_dropdown_selected_outputs(flow: dict) -> None:
         wired_name = next(iter(wired))
         if any(o.get("name") == wired_name for o in non_group):
             node["data"]["selected_output"] = wired_name
+            _sync_output_type_tab(node_config, non_group, wired_name)
+
+
+def _sync_output_type_tab(node_config: dict, outputs: list[dict], wired_name: str) -> None:
+    """Align a node's ``output_type`` tab with its wired output.
+
+    Components like TypeConverter rebuild ``outputs`` from the tab value on
+    hydration (``update_outputs``), so a tab left on another type deletes the
+    wired output and dangles its edges as soon as the flow reloads. Only
+    overwrites when the current value clearly selects a different output;
+    unknown values (e.g. spec-configured aliases) are left untouched.
+    """
+    tab = node_config.get("template", {}).get("output_type")
+    if not isinstance(tab, dict) or tab.get("type") != "tab":
+        return
+    options = tab.get("options") or []
+    wired = next((o for o in outputs if o.get("name") == wired_name), None)
+    if wired is None:
+        return
+    match = next((opt for opt in options if opt in (wired.get("types") or [])), None)
+    if match is None or tab.get("value") == match:
+        return
+    selects_other_output = any(
+        tab.get("value") in (o.get("types") or []) for o in outputs if o.get("name") != wired_name
+    )
+    if selects_other_output:
+        tab["value"] = match
 
 
 def add_component(

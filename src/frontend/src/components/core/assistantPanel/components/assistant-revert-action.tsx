@@ -49,8 +49,12 @@ export function AssistantRevertAction({
   }
 
   const handleConfirm = async () => {
-    await revert(restoreVersionId, { onSuccess: onReverted });
-    setShowConfirm(false);
+    try {
+      await revert(restoreVersionId, { onSuccess: onReverted });
+      setShowConfirm(false);
+    } catch {
+      // useAssistantRevert already surfaced the error; keep the dialog open.
+    }
   };
 
   return (

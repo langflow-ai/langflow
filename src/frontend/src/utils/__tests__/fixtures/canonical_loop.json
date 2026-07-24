@@ -751,7 +751,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "tab",
-                "value": "Message"
+                "value": "JSON"
               }
             },
             "tool_mode": false,

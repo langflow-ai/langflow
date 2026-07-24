@@ -683,8 +683,13 @@ async def execute_flow_with_validation_streaming(
     current_flow_summary = await _get_current_flow_summary(global_variables.get("FLOW_ID"), user_id=user_id)
 
     # Recent turns + canvas state route follow-up edits to build_flow instead of
-    # question/off_topic; empty context keeps the classifier input byte-identical.
-    recent_turns = get_conversation_buffer().get_recent(user_id, session_id) if user_id and session_id else []
+    # question/off_topic; same turn budget as the main prompt (honors /history N).
+    intent_history_limit = history_limit if history_limit is not None else history_turn_limit()
+    recent_turns = (
+        get_conversation_buffer().get_recent(user_id, session_id, limit=intent_history_limit)
+        if user_id and session_id
+        else []
+    )
     intent_context = build_intent_context(recent_turns, current_flow_summary)
 
     # A separate session keeps TranslationFlow messages out of assistant memory;

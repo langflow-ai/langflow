@@ -1637,7 +1637,12 @@ async def run_assistant(
         elif kind == "complete":
             complete = event.get("data") or {}
 
-    result: dict[str, Any] = dict(complete or {})
+    if complete is None:
+        # A truncated stream would otherwise return a success-shaped empty result.
+        msg = "Assistant stream ended without a complete event"
+        raise RuntimeError(msg)
+
+    result: dict[str, Any] = dict(complete)
     result.setdefault("result", "")
     result.setdefault("link", f"/flow/{result.get('flow_id')}")
     return result

@@ -243,8 +243,10 @@ export function useAssistantChat(): UseAssistantChatReturn {
       setIsProcessing(true);
       proposalPendingRef.current = false;
 
-      // Re-inject the dismissed plan — the LLM has no server-side history.
+      // Re-inject the dismissed plan once — the LLM has no server-side
+      // history, and a turn that never replans must not resend a stale plan.
       const stashedPlan = dismissedPlanMarkdownRef.current;
+      dismissedPlanMarkdownRef.current = null;
       const inputValue = stashedPlan
         ? buildRefinementInput(stashedPlan, content)
         : content;
@@ -635,22 +637,18 @@ export function useAssistantChat(): UseAssistantChatReturn {
 
       applyFlowProposalToCanvas(proposal, mode, updateNodeInternals);
 
-      // Confirm ("Added to canvas"), then re-enable Add/Replace after 3s while
-      // keeping the snapshot so the last apply stays undoable via the pending card.
+      // Keep the snapshot so the last apply stays undoable via the pending card.
       updateMessage(messageId, () => ({
         flowProposalStatus: "applied" as const,
         flowProposalSnapshot: snapshot,
         reverted: false,
       }));
 
-      // Applying is the reveal moment: minimize the panel so the canvas the user
-      // just accepted is visible immediately instead of sitting behind the panel.
+      // Minimize the panel so the just-accepted canvas is immediately visible.
       useAssistantManagerStore.getState().setAssistantSidebarOpen(false);
 
-      // Revert to ``pending`` after the success badge has been on screen
-      // long enough to register — lets the user re-apply the same proposal
-      // (e.g., they edited the canvas and want to overwrite it again).
-      // Matches the 3s pattern used by the legacy "Add to Flow" path.
+      // Back to ``pending`` after 3s (legacy "Add to Flow" pattern) so the
+      // user can re-apply the same proposal after editing the canvas.
       setTimeout(() => {
         updateMessage(messageId, (msg) =>
           msg.flowProposalStatus === "applied"
@@ -777,6 +775,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
               ...msg,
               status: "cancelled" as const,
               progress: undefined,
+              inProgressTask: undefined,
             }
           : msg,
       ),
@@ -795,8 +794,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
     const newId = `${AGENTIC_SESSION_PREFIX}${uid.randomUUID(16)}`;
     sessionIdRef.current = newId;
     setSessionId(newId);
-    // Wipe the user's session-scoped state on the backend so the
-    // freshly-minted session starts from an empty registry overlay.
+    // Backend reset so the new session starts from an empty registry overlay.
     void fireSessionReset(newId);
   }, []);
 
