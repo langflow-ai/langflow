@@ -109,6 +109,14 @@ class TelemetryService(Service):
             await logger.aerror(f"Unexpected error occurred: {err}.")
 
     async def log_package_run(self, payload: RunPayload) -> None:
+        # Append to global store so Enterprise (and other internal consumers)
+        # can read run events without touching the Scarf telemetry pipeline.
+        try:
+            from langflow.services.telemetry.run_event_store import append_run_event
+
+            append_run_event(payload)
+        except Exception:  # noqa: BLE001
+            logger.debug("run_event_store bookkeeping failed; telemetry unaffected", exc_info=True)
         await self._queue_event((self.send_telemetry_data, payload, "run"))
 
     async def log_package_deployment(self, payload: DeploymentPayload) -> None:
