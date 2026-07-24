@@ -63,22 +63,37 @@ def topological_sort_spans(
     sort over the batch so that every parent is inserted first.
 
     Spans whose ``parent_span_id`` points outside the current batch are
-    treated as roots (the parent already exists in the DB from a prior
-    flush).
+    detached from that missing parent. Native tracing persists a trace's
+    spans in a single batch, so retaining the reference would violate the
+    immediate foreign-key constraint.
     """
     batch_ids = {span_uuid for _, span_uuid, _ in resolved}
 
+    normalized: list[tuple[dict[str, Any], UUID, UUID | None]] = []
+    missing_parent_count = 0
+    for span_data, span_uuid, parent_uuid in resolved:
+        normalized_parent_uuid = parent_uuid
+        if normalized_parent_uuid is not None and normalized_parent_uuid not in batch_ids:
+            normalized_parent_uuid = None
+            missing_parent_count += 1
+        normalized.append((span_data, span_uuid, normalized_parent_uuid))
+
+    if missing_parent_count:
+        logger.warning(
+            "Detached %d tracing spans from missing parents to preserve database integrity.",
+            missing_parent_count,
+        )
+
     sorted_spans: list[tuple[dict[str, Any], UUID, UUID | None]] = []
     inserted: set[UUID] = set()
-    remaining = list(resolved)
+    remaining = normalized
 
     while remaining:
         next_round: list[tuple[dict[str, Any], UUID, UUID | None]] = []
         progress = False
         for item in remaining:
             _, span_uuid, parent_uuid = item
-            # Insert if: no parent, parent outside batch, or parent already inserted
-            if parent_uuid is None or parent_uuid not in batch_ids or parent_uuid in inserted:
+            if parent_uuid is None or parent_uuid in inserted:
                 sorted_spans.append(item)
                 inserted.add(span_uuid)
                 progress = True
