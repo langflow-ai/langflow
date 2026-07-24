@@ -1,3 +1,5 @@
+import { normalizeApiTimestamp } from "@/customization/utils/custom-normalizeApiTimeStamp";
+
 const pad2 = (num: number): string => String(num).padStart(2, "0");
 
 const hasExplicitTimezone = (value: string): boolean =>
@@ -9,7 +11,7 @@ export const parseApiTimestamp = (value: unknown): Date | null => {
     return Number.isNaN(value.getTime()) ? null : value;
   }
 
-  const raw = String(value).trim();
+  const raw = normalizeApiTimestamp(String(value).trim());
   if (!raw) return null;
 
   const normalized = hasExplicitTimezone(raw)
