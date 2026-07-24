@@ -451,17 +451,20 @@ LANGFLOW_CORS_ALLOW_METHODS=["GET","POST","PUT"]
 ```
 :::
 
-###  LANGFLOW_ACCESS_* {#session-cookie-hardening}
+### LANGFLOW_ACCESS_* and LANGFLOW_REFRESH_* {#session-cookie-hardening}
 
-For a shared or public deployment served over HTTPS, harden the access-token cookie. These default to permissive values for local HTTP development and for the current frontend, which reads the access token in JavaScript.
+For a shared or public deployment served over HTTPS, harden the session cookies. These default to values that support local HTTP development and same-site deployments. The current frontend reads the access token in JavaScript, while the refresh token remains `HttpOnly`.
 
-The refresh-token cookie is `HttpOnly` + `Secure` + `SameSite` by default.
+Set both `LANGFLOW_ACCESS_SECURE` and `LANGFLOW_REFRESH_SECURE` to `True` for HTTPS deployments. Cross-site HTTPS deployments must also set `LANGFLOW_REFRESH_SAME_SITE=none`.
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | `LANGFLOW_ACCESS_SECURE` | Boolean | `False` | When `true`, the `access_token_lf` cookie is sent only over HTTPS. Recommended `true` for any HTTPS deployment. |
 | `LANGFLOW_ACCESS_HTTPONLY` | Boolean | `False` | When `true`, the `access_token_lf` cookie is not readable by JavaScript. The default is `false` because the bundled frontend currently reads this cookie in JavaScript. |
 | `LANGFLOW_ACCESS_SAME_SITE` | String | `lax` | The `SameSite` attribute of the access-token cookie (`lax`, `strict`, or `none`). |
+| `LANGFLOW_REFRESH_SECURE` | Boolean | `False` | When `true`, the `refresh_token_lf` cookie is sent only over HTTPS. Set this to `true` for any HTTPS deployment. |
+| `LANGFLOW_REFRESH_HTTPONLY` | Boolean | `True` | When `true`, the `refresh_token_lf` cookie is not readable by JavaScript. |
+| `LANGFLOW_REFRESH_SAME_SITE` | String | `lax` | The `SameSite` attribute of the refresh-token cookie (`lax`, `strict`, or `none`). |
 
 ### LANGFLOW_RATE_LIMIT_* {#login-rate-limiting}
 
