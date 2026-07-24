@@ -37,7 +37,7 @@ export interface DataTableTabProps<TData> {
   /** Merged on top of the shared grid options. */
   gridOptions?: AgGridReactProps["gridOptions"];
   /** Wraps the table container (e.g. a file-drop zone). */
-  renderTableWrapper?: (table: ReactNode) => ReactNode;
+  renderTableWrapper?: (table: JSX.Element) => ReactNode;
   /** Feature-specific modals rendered inside the shell root. */
   children?: ReactNode;
 }
