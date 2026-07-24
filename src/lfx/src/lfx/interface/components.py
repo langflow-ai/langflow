@@ -447,6 +447,23 @@ def _discover_component_skip_dirs(search_paths: list[str]) -> set[str]:
     )
 
 
+def _get_component_load_max_workers() -> int | None:
+    value = os.getenv("LANGFLOW_COMPONENT_LOAD_MAX_WORKERS")
+    if not value:
+        return None
+
+    try:
+        max_workers = int(value)
+    except ValueError:
+        max_workers = 0
+
+    if max_workers <= 0:
+        logger.warning("Ignoring LANGFLOW_COMPONENT_LOAD_MAX_WORKERS: expected a positive integer")
+        return None
+
+    return max_workers
+
+
 async def _load_components_dynamically(
     target_modules: list[str] | None = None,
 ) -> dict[str, Any]:
@@ -510,8 +527,17 @@ async def _load_components_dynamically(
     # of the cycle and CPython raises an import ``_DeadlockError``.
     _warm_circular_imports()
 
-    # Create tasks for parallel module processing
-    tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]
+    max_workers = _get_component_load_max_workers()
+    if max_workers is not None:
+        limiter = asyncio.Semaphore(max_workers)
+
+        async def process_module(modname: str):
+            async with limiter:
+                return await asyncio.to_thread(_process_single_module, modname)
+
+        tasks = [process_module(modname) for modname in module_names]
+    else:
+        tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]
 
     # Wait for all modules to be processed
     try:
