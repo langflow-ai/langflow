@@ -37,7 +37,7 @@ dependencies = [
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental~=0.4.1",
     "sqlmodel~=0.0.37",
-    "pydantic>=2.13.0,<3.0.0",
+    "pydantic>=2.13.0,<2.14",
     "pydantic-settings>=2.2.0,<3.0.0",
     "email-validator>=2.0.0",
     "typer>=0.13.0,<1.0.0",
@@ -297,24 +297,18 @@ huggingface = ["huggingface-hub[inference]>=1.0.0,<2.0.0"]
 metaphor = ["exa-py>=1.14,<3"]
 metal = ["metal_sdk==2.5.1"]
 markup = ["MarkupSafe==3.0.2"]
-# Deliberately retained after the lfx-amazon graduation: boto3 also backs
-# langflow-base's own S3 storage backend (services/storage/s3.py, api/v2/files.py)
-# and lfx's S3 ingestion sources -- it is not exclusive to the amazon components.
+# Deliberately retained after the lfx-amazon graduation: boto3 backs lfx's
+# synchronous S3 file helpers. The backend storage service uses aiobotocore.
 aws = ["boto3>=1.34.162,<2.0.0"]
 numexpr = ["numexpr>=2.10.2"]
 qianfan = ["qianfan==0.3.5"]
 pgvector = ["pgvector>=0.4.2"]
 litellm = [
-    # litellm has no Python 3.14-compatible release: every version from 1.83.8
-    # onward declares Requires-Python <3.14, so nothing satisfying our >=1.85.1
-    # floor installs on 3.14 (the newest 3.14-installable litellm is 1.83.7).
-    # Gate it off on 3.14 so `pip install langflow` resolves there instead of
-    # dead-ending; drop the marker once upstream ships a 3.14-compatible litellm.
-    "litellm>=1.85.1,<2.0.0; python_version < '3.14'",
+    "litellm>=1.93.0,<2.0.0",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
-    # [proxy] extra pins boto3==1.43.1, which conflicts with our aioboto3
-    # transitive cap, so we pull in just the missing modules instead.
+    # Pull in only the modules Langflow uses from litellm[proxy] rather than
+    # its much larger dependency surface.
     "apscheduler>=3.10.4,<4.0.0",
     "cryptography",
 ]
@@ -344,17 +338,10 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 # Updated to 0.10.1+ for PyTorch 2.6.0 compatibility (addresses torch.load RCE vulnerability)
 # Upper bound prevents breaking changes in future major versions
 # Excluded on macOS x86_64: PyTorch dropped Intel Mac wheel builds after v2.2.2
-# Python 3.14: re-gated off 3.14. altk 0.10.x itself supports 3.14 (requires-python
-# >=3.10) and no longer depends on OpenDsStar, but it depends on litellm<2.0.0, and
-# litellm has no 3.14-compatible release (every version from 1.83.8 on caps at <3.14,
-# see the litellm extra below). Without this gate the resolver pins an uninstallable
-# litellm on 3.14. Re-enable once upstream litellm supports 3.14.
-altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; (sys_platform != 'darwin' or platform_machine != 'x86_64') and python_version < '3.14'"]
+altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 
 # Toolguard Integration
-# Gated off 3.14: lfx[toolguard] pulls the ToolGuard Policies component, which
-# depends on litellm. Re-enable once upstream litellm supports 3.14.
-toolguard = ["lfx[toolguard]~=1.11.0; python_version < '3.14'"]  # toolguard relocated to lfx
+toolguard = ["lfx[toolguard]~=1.11.0"]  # toolguard relocated to lfx
 
 # Additional LangChain integrations
 # Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels
@@ -365,11 +352,7 @@ langchain-unstructured = ["langchain-unstructured~=1.0.0"]
 langchain-mcp-adapters = ["langchain-mcp-adapters>=0.1.14,<0.2.0"]
 
 # Additional monitoring
-# Gated off 3.14: opik depends on litellm unconditionally, and litellm has no
-# 3.14-compatible release (see the litellm extra above), so allowing it on 3.14
-# would drag in an uninstallable / sub-floor litellm. Re-enable once upstream
-# litellm supports 3.14.
-opik = ["opik>=2.0.0,<3.0.0; python_version < '3.14'"]
+opik = ["opik>=2.0.0,<3.0.0"]
 traceloop = ["traceloop-sdk>=0.43.1,<1.0.0"]
 openlayer = ["openlayer>=0.9.0,<1.0.0"]
 
@@ -414,8 +397,12 @@ mlx = [
 # MCP
 fastmcp = ["fastmcp>=3.2.0"]
 
-# AWS extras
-aioboto3 = ["aioboto3>=15.2.0,<16.0.0"]
+# AWS async client. S3 storage uses aiobotocore directly so boto3 is no longer
+# constrained by aioboto3's exact pin to aiobotocore 2.25.1.
+aiobotocore = ["aiobotocore>=3.7.0,<4.0.0"]
+# Preserve the legacy extra name so existing langflow-base[aioboto3] install
+# commands continue to enable Langflow's async S3 backend.
+aioboto3 = ["aiobotocore>=3.7.0,<4.0.0"]
 
 # Astra
 astrapy = ["astrapy>=2.1.0,<3.0.0"]
@@ -463,7 +450,7 @@ complete = [
     "langflow-base[mcp]",
     # Orchestration / deployment adapters
     "langflow-base[kubernetes]",
-    "langflow-base[aioboto3]",
+    "langflow-base[aiobotocore]",
     "langflow-base[ibm-watsonx-clients]",
     # lfx-core component features: the dependency now lives in lfx (these base
     # extras re-export the matching lfx extra), keeping a single source of truth

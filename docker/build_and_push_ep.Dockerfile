@@ -77,6 +77,16 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv sync --frozen --no-editable --extra nv-ingest --extra postgresql --no-group dev
 
+# Use the release workflow's exact wheels when present, while retaining the
+# frontend compiled specifically for this image. Nightly and local builds leave
+# the artifact directory empty and no-op.
+COPY ./.release-artifacts /tmp/release-artifacts
+COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
+RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
+    --python /app/.venv/bin/python \
+    --mode main \
+    --frontend-source /app/src/backend/langflow/frontend
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
@@ -131,13 +141,6 @@ ENV LANGFLOW_EVENT_DELIVERY=polling
 
 # secuirty options
 ENV LANGFLOW_AUTO_LOGIN=false
-ENV LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false
-ENV LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true
-ENV LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true
-ENV LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK=false
-ENV LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true
-ENV LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING=true
-ENV LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES=mcp-proxy,lfx
 
 USER 1000
 CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--backend-only"]
