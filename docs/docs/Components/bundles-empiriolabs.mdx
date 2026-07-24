@@ -1,5 +1,5 @@
 ---
-title: EmpirioLabs
+title: EmpirioLabs AI
 slug: /bundles-empiriolabs
 ---
 
@@ -10,17 +10,17 @@ import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-ins
 
 [Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
-This page describes the components that are available in the **EmpirioLabs** bundle.
+This page describes the components that are available in the **EmpirioLabs AI** bundle.
 
-For more information about EmpirioLabs features and functionality used by EmpirioLabs components, see the [EmpirioLabs documentation](https://docs.empiriolabs.ai).
+For more information about EmpirioLabs AI features and functionality used by these components, see the [EmpirioLabs AI documentation](https://docs.empiriolabs.ai).
 
 ## EmpirioLabs AI text generation
 
-This component generates text using EmpirioLabs' language models through the EmpirioLabs OpenAI-compatible endpoints.
+This component generates text using EmpirioLabs AI language models through the EmpirioLabs OpenAI-compatible endpoints.
 
 It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
 
-Use the **Language Model** output when you want to use an EmpirioLabs model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
+Use the **Language Model** output when you want to use an EmpirioLabs AI model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
 
 For more information, see [Language model components](/components-models).
 
@@ -33,7 +33,7 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 | Name | Type | Description |
 |------|------|-------------|
 | api_key | SecretString | Input parameter. Your EmpirioLabs API Key for authentication. |
-| model_name | String | Input parameter. The id of the EmpirioLabs model to use. The component automatically fetches the latest available models from EmpirioLabs when you provide a valid API key. For information about supported models, see the [EmpirioLabs documentation](https://docs.empiriolabs.ai). |
+| model_name | String | Input parameter. The id of the EmpirioLabs AI model to use. The component automatically fetches the latest available models from EmpirioLabs when you provide a valid API key. For information about supported models, see the [EmpirioLabs AI documentation](https://docs.empiriolabs.ai). |
 | input_value | String | Input parameter. The input text to send to the model. |
 | system_message | String | Input parameter. A system message that helps set the behavior of the assistant. |
 | max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
@@ -42,11 +42,11 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 | model_kwargs | Dict | Input parameter. Additional keyword arguments to pass to the model. |
 | json_mode | Boolean | Input parameter. If True, it will output JSON regardless of passing a schema. |
 | stream | Boolean | Input parameter. Whether to stream the response. Default: false. |
-| model | LanguageModel | Output parameter. An instance of ChatOpenAI configured with EmpirioLabs parameters. |
+| model | LanguageModel | Output parameter. An instance of ChatOpenAI configured with EmpirioLabs AI parameters. |
 
 ## EmpirioLabs AI image generation
 
-This component generates an image from a text prompt using EmpirioLabs' image models (such as Seedream, Qwen-Image, FLUX, Nova Canvas, and HunyuanImage) through the EmpirioLabs OpenAI-compatible Images endpoint.
+This component generates an image from a text prompt using EmpirioLabs AI image models (such as Seedream, Qwen-Image, FLUX, Nova Canvas, and HunyuanImage) through the EmpirioLabs OpenAI-compatible Images endpoint.
 
 It outputs the API response as [`Data`](/data-types#data), including the generated image URL (or base64 content) when available.
 
@@ -56,24 +56,24 @@ It outputs the API response as [`Data`](/data-types#data), including the generat
 |------|------|-------------|
 | api_key | SecretString | Input parameter. Your EmpirioLabs API Key for authentication. |
 | prompt | String | Input parameter. The text prompt to generate the image from. |
-| model_name | String | Input parameter. The EmpirioLabs image model to use for generation. The component automatically fetches the latest available image models from EmpirioLabs when you provide a valid API key. |
+| model_name | String | Input parameter. The EmpirioLabs AI image model to use for generation. The component automatically fetches the latest available image models from EmpirioLabs when you provide a valid API key. |
 | aspect_ratio | String | Input parameter. The aspect ratio of the generated image. Used when the selected model supports it. |
 | size | String | Input parameter. Optional explicit pixel size such as `1024x1024`. Takes priority over aspect ratio when the selected model supports an explicit size. |
 | n | Integer | Input parameter. The number of images to generate. |
 | seed | Integer | Input parameter. Makes generation deterministic. Used when the selected model supports it. |
 | negative_prompt | String | Input parameter. The text prompt describing what to avoid in the generated image. Used when the selected model supports it. |
-| image_generation_results | Data | Output parameter. The EmpirioLabs API response, including the generated image URL or base64 content. |
+| image_generation_results | Data | Output parameter. The EmpirioLabs AI API response, including the generated image URL or base64 content. |
 
-## Use EmpirioLabs in a flow
+## Use EmpirioLabs AI in a flow
 
-1. Sign up for an [EmpirioLabs account](https://empiriolabs.ai).
-2. Obtain your API key from the EmpirioLabs dashboard.
-3. In Langflow, add the **EmpirioLabs** component to your flow.
+1. Sign up for an [EmpirioLabs AI account](https://empiriolabs.ai).
+2. Obtain your API key from the EmpirioLabs AI dashboard.
+3. In Langflow, add the **EmpirioLabs AI** component to your flow.
 4. Enter your API key in the **EmpirioLabs API Key** field.
 5. Select your preferred model from the **Model Name** menu.
 6. Configure other parameters as needed for your use case.
 7. Add other components to your flow as needed.
 
-    To perform a basic test, add **Chat Input** and **Chat Output** components to your flow, connect them to the **EmpirioLabs** component accordingly, and then click **Playground** to test the connection and chat with your model.
+    To perform a basic test, add **Chat Input** and **Chat Output** components to your flow, connect them to the **EmpirioLabs AI** component accordingly, and then click **Playground** to test the connection and chat with your model.
 
-    For more advanced use cases, you can connect the EmpirioLabs component to other components like **Prompt Template**, **Agent**, or **Smart Transform** components.
+    For more advanced use cases, you can connect the EmpirioLabs AI component to other components like **Prompt Template**, **Agent**, or **Smart Transform** components.
