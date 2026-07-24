@@ -21,7 +21,7 @@ from fastapi_pagination import add_pagination
 from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from lfx.observability import instrument_fastapi_app
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -49,7 +49,6 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.schema import ServiceType
-from langflow.services.tracing.otel_fastapi_patch import patch_otel_fastapi_route_details
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
@@ -915,11 +914,10 @@ def create_app():
             content={"message": str(exc)},
         )
 
-    # FastAPI >=0.137 lazy include_router puts `_IncludedRouter` wrappers (no `.path`)
-    # in `app.routes`, which crashes OTel's span route extraction on partial matches
-    # (e.g. CORS preflight). Patch the helper before instrumenting.
-    patch_otel_fastapi_route_details()
-    FastAPIInstrumentor.instrument_app(app)
+    # Instrument this app for HTTP server telemetry (stable semconv + the FastAPI >=0.137
+    # lazy-include route patch + instrument_app). The helper lives in lfx so lfx serve
+    # instruments its own app the same way.
+    instrument_fastapi_app(app)
 
     add_pagination(app)
 

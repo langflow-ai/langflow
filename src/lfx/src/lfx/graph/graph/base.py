@@ -39,11 +39,21 @@ from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
+from lfx.observability import APPLICATION_TRACER_NAME
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.async_helpers import run_until_complete
+
+try:
+    from opentelemetry import trace as otel_trace
+except ImportError:
+    # lfx does not depend on opentelemetry. Under langflow it is installed and the application
+    # span is emitted; under bare lfx this stays None and the span code path is a no-op.
+    otel_trace = None
+
+FLOW_EXECUTION_SPAN_NAME = "flow.execute"
 
 INPUT_TYPE_COMPONENT_TYPES = {
     "chat": {InterfaceComponentTypes.ChatInput.value},
@@ -394,48 +404,50 @@ class Graph:
         reset_output_values: bool = True,
         fallback_to_env_vars: bool = False,
     ):
-        # Preserve start_component_id from constructor if available
-        start_component_id = self._start.get_id() if self._start else None
-        self.prepare(start_component_id=start_component_id)
-        if reset_output_values:
-            self._reset_all_output_values()
+        # make_current=False: this is an async generator, see flow_execution_span.
+        with self.flow_execution_span(make_current=False):
+            # Preserve start_component_id from constructor if available
+            start_component_id = self._start.get_id() if self._start else None
+            self.prepare(start_component_id=start_component_id)
+            if reset_output_values:
+                self._reset_all_output_values()
 
-        await self.initialize_run()
+            await self.initialize_run()
 
-        # The idea is for this to return a generator that yields the result of
-        # each step call and raise StopIteration when the graph is done
-        if config is not None:
-            self.__apply_config(config)
-        # I want to keep a counter of how many tyimes result.vertex.id
-        # has been yielded
-        yielded_counts: dict[str, int] = defaultdict(int)
+            # The idea is for this to return a generator that yields the result of
+            # each step call and raise StopIteration when the graph is done
+            if config is not None:
+                self.__apply_config(config)
+            # I want to keep a counter of how many tyimes result.vertex.id
+            # has been yielded
+            yielded_counts: dict[str, int] = defaultdict(int)
 
-        while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(
-                event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
-            )
-            yield result
-            if isinstance(result, Finish):
-                return
-            if hasattr(result, "vertex"):
-                yielded_counts[result.vertex.id] += 1
-                # Emit on_end_vertex event for each completed vertex
-                if event_manager is not None:
-                    result_data_dict = None
-                    if hasattr(result, "result_dict") and result.result_dict:
-                        try:
-                            result_data_dict = result.result_dict.model_dump()
-                        except (AttributeError, TypeError):
-                            result_data_dict = result.result_dict
-                    build_data = {
-                        "id": result.vertex.id,
-                        "valid": result.valid if hasattr(result, "valid") else True,
-                        "data": result_data_dict,
-                    }
-                    event_manager.on_end_vertex(data={"build_data": build_data})
+            while should_continue(yielded_counts, max_iterations):
+                result = await self.astep(
+                    event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+                )
+                yield result
+                if isinstance(result, Finish):
+                    return
+                if hasattr(result, "vertex"):
+                    yielded_counts[result.vertex.id] += 1
+                    # Emit on_end_vertex event for each completed vertex
+                    if event_manager is not None:
+                        result_data_dict = None
+                        if hasattr(result, "result_dict") and result.result_dict:
+                            try:
+                                result_data_dict = result.result_dict.model_dump()
+                            except (AttributeError, TypeError):
+                                result_data_dict = result.result_dict
+                        build_data = {
+                            "id": result.vertex.id,
+                            "valid": result.valid if hasattr(result, "valid") else True,
+                            "data": result_data_dict,
+                        }
+                        event_manager.on_end_vertex(data={"build_data": build_data})
 
-        msg = "Max iterations reached"
-        raise ValueError(msg)
+            msg = "Max iterations reached"
+            raise ValueError(msg)
 
     def _snapshot(self):
         return {
@@ -793,6 +805,55 @@ class Graph:
                 tracing_user_id=self.tracing_user_id,
             )
 
+    @contextlib.contextmanager
+    def flow_execution_span(self, *, make_current: bool = True):
+        """One application span per flow execution, for the operator's APM.
+
+        Attributes are set on exit because run_id is assigned by initialize_run, inside this scope.
+        The span carries identifiers only: prompts, completions and component payloads belong to the
+        LLM tracer integrations and must never reach the operator's APM, which is also why the error
+        attribute is the exception type and not its message. Subgraphs (Loop iterations) are skipped
+        so a loop over N items stays one span instead of N.
+
+        make_current attaches the span to the OTel context so a flow run from inside another flow
+        (flow-as-tool, sub-flow components) nests under its caller instead of appearing as a sibling
+        of it. It must stay False when the scope wraps an async generator: the context token would be
+        attached and detached across the generator's suspension points, which leaks it into whatever
+        task resumes the generator.
+        """
+        if otel_trace is None or self._is_subgraph:
+            yield
+            return
+        span = otel_trace.get_tracer(APPLICATION_TRACER_NAME).start_span(FLOW_EXECUTION_SPAN_NAME)
+        try:
+            with contextlib.ExitStack() as stack:
+                if make_current:
+                    # Not end_on_exit: the finally below ends it after the attributes are set.
+                    # Neither recording nor status-setting is delegated, because the SDK's version
+                    # of both writes the exception message onto the span and that can carry flow data.
+                    stack.enter_context(
+                        otel_trace.use_span(
+                            span, end_on_exit=False, record_exception=False, set_status_on_exception=False
+                        )
+                    )
+                yield
+        except GraphPausedException:
+            # A HITL pause suspends the unit of work; it is not a failed request. The resume is
+            # driven through Graph.process by the durable runner, which opens its own span.
+            raise
+        except Exception as exc:
+            span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, type(exc).__name__))
+            span.set_attribute("error.type", type(exc).__name__)
+            raise
+        finally:
+            if self.flow_id:
+                span.set_attribute("flow_id", str(self.flow_id))
+            if self._run_id:
+                span.set_attribute("run_id", self._run_id)
+            if self.session_id:
+                span.set_attribute("session_id", str(self.session_id))
+            span.end()
+
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
         # Subgraphs don't end traces - the parent graph owns the trace lifecycle
         if self._is_subgraph:
@@ -1035,20 +1096,21 @@ class Graph:
             self.session_id = session_id
         for _ in range(len(inputs) - len(types)):
             types.append("chat")  # default to chat
-        for run_inputs, components, input_type in zip(inputs, inputs_components, types, strict=True):
-            run_outputs = await self._run(
-                inputs=run_inputs,
-                input_components=components,
-                input_type=input_type,
-                outputs=outputs or [],
-                stream=stream,
-                session_id=session_id or "",
-                fallback_to_env_vars=fallback_to_env_vars,
-                event_manager=event_manager,
-            )
-            run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
-            await logger.adebug(f"Run outputs: {run_output_object}")
-            vertex_outputs.append(run_output_object)
+        with self.flow_execution_span():
+            for run_inputs, components, input_type in zip(inputs, inputs_components, types, strict=True):
+                run_outputs = await self._run(
+                    inputs=run_inputs,
+                    input_components=components,
+                    input_type=input_type,
+                    outputs=outputs or [],
+                    stream=stream,
+                    session_id=session_id or "",
+                    fallback_to_env_vars=fallback_to_env_vars,
+                    event_manager=event_manager,
+                )
+                run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
+                await logger.adebug(f"Run outputs: {run_output_object}")
+                vertex_outputs.append(run_output_object)
         return vertex_outputs
 
     def next_vertex_to_build(self):

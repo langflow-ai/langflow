@@ -28,6 +28,13 @@ try:
 except ImportError:
     _otel_trace = None
 
+try:
+    from opentelemetry import _logs as _otel_logs  # type: ignore[import-not-found]
+    from opentelemetry._logs import SeverityNumber as _OtelSeverity  # type: ignore[import-not-found]
+except ImportError:
+    _otel_logs = None
+    _OtelSeverity = None
+
 VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 # Map log level names to integers
@@ -307,6 +314,129 @@ def add_otel_trace_context(_logger: Any, _method_name: str, event_dict: dict[str
     return event_dict
 
 
+_OTEL_LOG_SEVERITY = {
+    "debug": 5,  # SeverityNumber.DEBUG
+    "info": 9,  # INFO
+    "warning": 13,  # WARN
+    "warn": 13,
+    "error": 17,  # ERROR
+    "critical": 21,  # FATAL
+    "exception": 17,
+}
+
+# Structured keys that describe the record itself rather than the event. They become
+# first-class LogRecord fields or are already covered by the resource, so re-sending them as
+# attributes would just duplicate bytes on every line.
+_OTEL_LOG_SKIP_KEYS = frozenset({"event", "level", "timestamp", "trace_id", "span_id"})
+
+# Do not ship DEBUG to the operator's backend by default.
+#
+# The console is the developer's, the APM is the operator's, and they are not the same trust
+# boundary. Langflow's DEBUG output includes flow payloads (graph/base.py logs "Run outputs:"
+# with the rendered outputs), and the redaction processor only scrubs known sensitive *keys*,
+# not free text inside a message. INFO is the floor because it drops that bulk payload logging.
+#
+# It does NOT make the channel content-free, and this is the one place worth being precise:
+# unlike the span and metric exporters, which allowlist by instrumentation scope, this is a
+# severity threshold and nothing more. Flow-derived text still reaches the backend at ERROR --
+# vertex_types.py:359 interpolates a component's own output value into the message, and a
+# ComponentBuildError carries the underlying provider exception text. Narrowing that means
+# filtering on content, not level, which is a separate piece of work.
+#
+# An operator who needs DEBUG in their backend can lower it deliberately.
+_OTEL_MIN_LOG_SEVERITY_DEFAULT = "INFO"
+
+
+_INFO_SEVERITY = _OTEL_LOG_SEVERITY["info"]
+_otel_min_severity_cache: int | None = None
+
+
+def _otel_min_severity() -> int:
+    """Resolve the export floor once, and say so out loud when it is lowered past INFO.
+
+    Resolved once rather than per record: this runs on every log line, and the answer cannot
+    change without a restart anyway.
+
+    Lowering it is allowed on purpose -- an operator debugging a live incident may genuinely
+    need DEBUG in their backend, and refusing outright would just get worked around. But it
+    is the one setting that starts sending flow payloads to a third party, and the person who
+    sets it in a Helm chart is often not the person who knows that, so it must never happen
+    quietly. Unknown values fall back to INFO rather than off, so a typo cannot silently open
+    it.
+    """
+    global _otel_min_severity_cache  # noqa: PLW0603
+    if _otel_min_severity_cache is not None:
+        return _otel_min_severity_cache
+
+    raw = os.getenv("LANGFLOW_OTEL_LOG_LEVEL", _OTEL_MIN_LOG_SEVERITY_DEFAULT).strip()
+    severity = _OTEL_LOG_SEVERITY.get(raw.lower())
+    # Cache before warning, not after: this is called from inside a log processor, and if
+    # warnings are routed into logging (logging.captureWarnings) the warning re-enters here.
+    # With the cache already set that re-entry returns immediately instead of recursing.
+    _otel_min_severity_cache = severity if severity is not None else _INFO_SEVERITY
+    # The notice is best-effort, and deliberately cannot fail the caller. warnings.warn raises
+    # when warnings are escalated to errors (-W error, or filterwarnings("error") in a test or
+    # CI config), and this is reached from inside a structlog processor on the first record it
+    # handles. Letting that propagate would take out logging itself, which is a far worse
+    # outcome than a missing notice -- and the floor is already resolved and cached above, so
+    # the export behaviour is correct either way.
+    with contextlib.suppress(Exception):
+        if severity is None:
+            warnings.warn(
+                f"LANGFLOW_OTEL_LOG_LEVEL: ignoring {raw!r} (expected one of "
+                f"{sorted(_OTEL_LOG_SEVERITY)}); exporting {_OTEL_MIN_LOG_SEVERITY_DEFAULT} and above.",
+                stacklevel=2,
+            )
+        elif severity < _INFO_SEVERITY:
+            warnings.warn(
+                f"LANGFLOW_OTEL_LOG_LEVEL={raw!r} exports DEBUG log records to the configured OTLP "
+                "endpoint. Langflow logs flow inputs and outputs at DEBUG, and log redaction only "
+                "covers known sensitive keys, not free text inside a message, so prompt and "
+                "completion content will reach that backend. Use INFO unless that is intended.",
+                stacklevel=2,
+            )
+    if severity is None:
+        severity = _INFO_SEVERITY
+    _otel_min_severity_cache = severity
+    return severity
+
+
+def emit_to_otel_logs(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    """Ship the record to the configured OTel log pipeline, then hand it back unchanged.
+
+    A pass-through: this sits in the processor chain purely for the side effect, so console
+    and file output are unaffected. When no SDK logger provider is installed -- bare lfx, or
+    Langflow with no OTLP endpoint configured -- ``get_logger`` returns a no-op and this costs
+    one attribute lookup.
+
+    Placed after the redaction processor so anything scrubbed there is scrubbed here too.
+    Trace correlation is left to the SDK, which reads the active span from the context, so a
+    log line emitted inside a flow execution lands on that flow's trace in the APM.
+    """
+    if _otel_logs is None:
+        return event_dict
+
+    severity = _OTEL_LOG_SEVERITY.get(str(event_dict.get("level", "")).lower())
+    if severity is None or severity < _otel_min_severity():
+        return event_dict
+
+    try:
+        otel_logger = _otel_logs.get_logger(event_dict.get("logger") or "lfx")
+        otel_logger.emit(
+            body=str(event_dict.get("event", "")),
+            severity_number=_OtelSeverity(severity),
+            severity_text=str(event_dict.get("level", "")).upper(),
+            attributes={
+                k: v if isinstance(v, str | bool | int | float) else str(v)
+                for k, v in event_dict.items()
+                if k not in _OTEL_LOG_SKIP_KEYS and v is not None
+            },
+        )
+    except Exception:  # noqa: BLE001 - logging must never break on a flaky exporter
+        return event_dict
+    return event_dict
+
+
 def _apply_logger_level_overrides() -> None:
     """Apply ``LANGFLOW_LOG_LEVELS`` env var: ``name=LEVEL,name=LEVEL,...``.
 
@@ -520,6 +650,10 @@ def configure(
     processors.extend(
         [
             redact_processor,
+            # After redaction, before rendering: the APM must not see anything the console
+            # would have scrubbed, and the renderers below replace `event` with a formatted
+            # string, which would lose the structure.
+            emit_to_otel_logs,
             add_serialized,
             buffer_writer,
         ]
@@ -565,6 +699,7 @@ def configure(
                 structlog.processors.TimeStamper(fmt="iso", utc=True),
                 _add_service_info,
                 redact_processor,
+                emit_to_otel_logs,
             ]
             file_json_formatter = structlog.stdlib.ProcessorFormatter(
                 foreign_pre_chain=foreign_pre_chain,

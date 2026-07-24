@@ -24,6 +24,7 @@ import secrets
 import time
 import traceback
 import uuid
+from contextlib import asynccontextmanager
 from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
@@ -44,6 +45,7 @@ from lfx.cli.serve_identity import IdentityConfig, build_identity_verifier
 from lfx.cli.serve_workflow import ServeWorkflowHost
 from lfx.load import load_flow_from_json
 from lfx.log.logger import logger
+from lfx.observability import bootstrap_application_telemetry, instrument_fastapi_app
 from lfx.utils.flow_validation import validate_flow_for_current_settings
 from lfx.workflow.router import create_workflow_router
 
@@ -665,6 +667,20 @@ def create_multi_serve_app(
     :mod:`lfx.cli.serve_identity`). ``None`` (the default) means ``off`` mode —
     no identity is read and execution behaves exactly as before.
     """
+    # Application observability. lfx serve is the production HTTP surface, so it installs the
+    # same OTLP providers and HTTP instrumentation the full langflow app does, driven entirely
+    # by the standard OTEL_* environment variables. No-op unless an endpoint is set (and unless
+    # lfx was installed with the ``otel`` extra), so this costs nothing by default.
+    telemetry = bootstrap_application_telemetry()
+
+    @asynccontextmanager
+    async def _lifespan(_app: FastAPI):
+        # Flush the OTLP buffers on shutdown. uvicorn dies by signal and never runs the SDK's
+        # atexit flush, so without this the last batch of spans, metrics and logs drops on every
+        # restart and pod eviction. Off the event loop: the final export can block on the network.
+        yield
+        await asyncio.to_thread(telemetry.shutdown)
+
     app = FastAPI(
         title=f"LFX Multi-Flow Server ({len(registry)})",
         description=(
@@ -673,7 +689,11 @@ def create_multi_serve_app(
             "Use `POST /flows/upload/` to register new flows at runtime."
         ),
         version="1.0.0",
+        lifespan=_lifespan,
     )
+
+    instrument_fastapi_app(app)
+
     app.state.registry = registry
     # Snapshot the API key once so per-request auth (verify_api_key, run on a threadpool
     # thread) never reads live os.environ — see verify_api_key. Stays None until first use
