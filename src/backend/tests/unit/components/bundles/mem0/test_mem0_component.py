@@ -1,6 +1,8 @@
 """Unit tests for Mem0MemoryComponent cloud validation."""
 
 import os
+import subprocess
+import sys
 from unittest.mock import Mock, patch
 
 import pytest
@@ -10,6 +12,29 @@ from lfx.components.mem0.mem0_chat_memory import Mem0MemoryComponent
 @pytest.mark.unit
 class TestMem0CloudValidation:
     """Test Mem0 component cloud validation."""
+
+    def test_component_import_does_not_write_to_mem0_home(self):
+        """Importing the component must not initialize Mem0's user directory."""
+        script = """
+import errno
+import os
+
+real_makedirs = os.makedirs
+
+def reject_mem0_home(path, *args, **kwargs):
+    if os.fspath(path).endswith(".mem0"):
+        raise OSError(errno.EROFS, "Read-only file system", os.fspath(path))
+    return real_makedirs(path, *args, **kwargs)
+
+os.makedirs = reject_mem0_home
+from lfx.components.mem0.mem0_chat_memory import Mem0MemoryComponent
+"""
+
+        result = subprocess.run(  # noqa: S603
+            [sys.executable, "-c", script], capture_output=True, text=True, check=False
+        )
+
+        assert result.returncode == 0, result.stderr
 
     def test_mem0_telemetry_is_disabled_by_default(self):
         """Langflow should not start mem0's PostHog telemetry on component import."""
@@ -30,8 +55,8 @@ class TestMem0CloudValidation:
             error_msg = str(exc_info.value).lower()
             assert "astra" in error_msg or "cloud" in error_msg
 
-    @patch("lfx.components.mem0.mem0_chat_memory.Memory")
-    def test_build_mem0_works_when_not_in_cloud(self, mock_memory):
+    @patch("lfx.components.mem0.mem0_chat_memory.importlib.import_module")
+    def test_build_mem0_works_when_not_in_cloud(self, mock_import_module):
         """build_mem0 works when not in cloud, passing the OpenAI key through mem0 config.
 
         The key must NOT be written to os.environ: that is process-global and persists
@@ -40,13 +65,16 @@ class TestMem0CloudValidation:
         """
         with patch.dict(os.environ, {"ASTRA_CLOUD_DISABLE_COMPONENT": "false"}):
             os.environ.pop("OPENAI_API_KEY", None)
+            mock_mem0 = Mock()
+            mock_import_module.return_value = mock_mem0
             fake_key = "not-a-real-openai-key"
             component = Mem0MemoryComponent(openai_api_key=fake_key)
             component.build_mem0()
 
             # Key flows through config, not the environment.
-            mock_memory.from_config.assert_called_once()
-            config = mock_memory.from_config.call_args.kwargs["config_dict"]
+            mock_import_module.assert_called_once_with("mem0")
+            mock_mem0.Memory.from_config.assert_called_once()
+            config = mock_mem0.Memory.from_config.call_args.kwargs["config_dict"]
             assert config["llm"]["config"]["api_key"] == fake_key
             assert config["embedder"]["config"]["api_key"] == fake_key
             # Regression guard for the credential-bleed bug: never pollute os.environ.

@@ -1,5 +1,6 @@
 import importlib
 import os
+from typing import Any, Protocol
 
 from lfx.base.memory.model import LCChatMemoryComponent
 from lfx.inputs.inputs import DictInput, HandleInput, MessageTextInput, NestedDictInput, SecretStrInput
@@ -12,9 +13,14 @@ from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_componen
 # disabled by default unless the deployer explicitly opts in.
 os.environ.setdefault("MEM0_TELEMETRY", "False")
 
-_mem0 = importlib.import_module("mem0")
-Memory = _mem0.Memory
-MemoryClient = _mem0.MemoryClient
+
+class Memory(Protocol):
+    def add(self, message: str, *, user_id: str, metadata: dict[str, Any]) -> Any: ...
+
+    def search(self, *, query: str, filters: dict[str, str]) -> Any: ...
+
+    def get_all(self, *, filters: dict[str, str]) -> Any: ...
+
 
 disable_component_in_astra_cloud_msg = (
     "Mem0 chat memory is not supported in Astra cloud environment. Please use local storage mode or mem0 cloud."
@@ -113,11 +119,12 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
                 config[section] = sec
 
         try:
+            mem0 = importlib.import_module("mem0")
             if not self.mem0_api_key:
-                return Memory.from_config(config_dict=config) if config else Memory()
+                return mem0.Memory.from_config(config_dict=config) if config else mem0.Memory()
             if self.mem0_config:
-                return MemoryClient.from_config(api_key=self.mem0_api_key, config_dict=dict(self.mem0_config))
-            return MemoryClient(api_key=self.mem0_api_key)
+                return mem0.MemoryClient.from_config(api_key=self.mem0_api_key, config_dict=dict(self.mem0_config))
+            return mem0.MemoryClient(api_key=self.mem0_api_key)
         except ImportError as e:
             msg = "Mem0 is not properly installed. Please install it with 'pip install -U mem0ai'."
             raise ImportError(msg) from e
