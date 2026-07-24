@@ -332,11 +332,19 @@ async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypa
     user = User(username="mcp-resource-reader", password="test-password")  # noqa: S106
     project = Folder(name="MCP Resource Project", user_id=user.id)
     flow = Flow(name="MCP Resource Flow", user_id=user.id, folder_id=project.id)
-    async_session.add_all([user, project, flow])
+    other_project = Folder(name="Other MCP Resource Project", user_id=user.id)
+    other_flow = Flow(name="Other MCP Resource Flow", user_id=user.id, folder_id=other_project.id)
+    async_session.add_all([user, project, flow, other_project, other_flow])
     await async_session.flush()
 
     file_name = "project-resource.txt"
-    storage_service = FakeStorageService({}, {f"{flow.id}/{file_name}": b"project file contents"})
+    storage_service = FakeStorageService(
+        {},
+        {
+            f"{flow.id}/{file_name}": b"project file contents",
+            f"{other_flow.id}/{file_name}": b"other project file contents",
+        },
+    )
 
     monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(async_session))
     monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
@@ -345,6 +353,13 @@ async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypa
     try:
         uri = f"http://host/api/v1/files/download/{flow.id}/{file_name}"
         result = await mcp_utils.handle_read_resource(uri, project_id=project.id)
+
+        other_uri = f"http://host/api/v1/files/download/{other_flow.id}/{file_name}"
+        with pytest.raises(ValueError, match="access denied"):
+            await mcp_utils.handle_read_resource(other_uri, project_id=project.id)
+
+        with pytest.raises(ValueError, match="access denied"):
+            await mcp_utils.handle_read_resource(uri, project_id="not-a-uuid")
     finally:
         mcp_utils.current_user_ctx.reset(token)
 
