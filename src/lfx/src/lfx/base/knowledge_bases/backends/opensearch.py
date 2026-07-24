@@ -603,6 +603,28 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 # connection during shutdown is worth a default-level
                 # warning so it doesn't silently exhaust pool slots.
                 logger.warning("OpenSearch client.close failed: %s", exc)
+        # Close the clients LangChain's ``OpenSearchVectorSearch`` builds in its
+        # own ``__init__`` — not just our sidecar ``_os_client``. The wrapper
+        # eagerly creates an ``AsyncOpenSearch`` (``async_client``) backed by an
+        # aiohttp session; dropping the reference without awaiting its ``close``
+        # leaks the aiohttp ``TCPConnector`` + socket transport, which surfaces
+        # as ``Unclosed connector`` / ``unclosed transport`` ResourceWarnings at
+        # GC time. Read ``_vector_store`` directly (not the ``vector_store``
+        # property) so teardown never rebuilds the store it's tearing down.
+        vector_store = self._vector_store
+        if vector_store is not None:
+            async_client = getattr(vector_store, "async_client", None)
+            if async_client is not None and hasattr(async_client, "close"):
+                try:
+                    await async_client.close()
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("OpenSearch async_client.close failed: %s", exc)
+            wrapper_client = getattr(vector_store, "client", None)
+            if wrapper_client is not None and hasattr(wrapper_client, "close"):
+                try:
+                    await asyncio.to_thread(wrapper_client.close)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("OpenSearch wrapper client.close failed: %s", exc)
         self._os_client = None
         self._vector_store = None
 

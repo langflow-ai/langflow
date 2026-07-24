@@ -235,6 +235,67 @@ async def backfill_all_users_from_disk(*, kb_root: Path | None = None) -> int:
     return inserted
 
 
+async def backfill_memory_base_rows() -> int:
+    """Ensure every Memory Base has a backing ``knowledge_base`` row.
+
+    Memory Bases are DB-driven: their backend + embedding config resolve from the
+    ``knowledge_base`` row, never an on-disk sidecar. Memory Bases created before
+    that row existed have only a ``memory_base`` row, so this startup reconcile
+    creates the missing ``knowledge_base`` row from the ``memory_base`` table
+    itself — no disk access, so it works on a replica whose filesystem never held
+    the KB directory.
+
+    Only Memory Bases *lacking* a ``knowledge_base`` row are fetched (a single
+    ``NOT EXISTS`` query), so after the first run this returns zero rows and does
+    almost nothing — startup cost is proportional to the backlog, not the total
+    Memory Base count. ``backend_type="chroma"`` with empty config is the correct
+    reconstruction: a Memory Base with no row predates the backend selector, when
+    every Memory Base was local Chroma, and the ``memory_base`` table records no
+    backend to recover. Memory Bases created through the selector get their real
+    backend from ``_create_kb_record_for_memory_base`` and never reach this path.
+
+    Returns the number of rows inserted. Never raises — per-MB failures are logged
+    and skipped so one bad row doesn't block startup.
+    """
+    from sqlalchemy import exists
+
+    from langflow.services.database.models.memory_base.model import MemoryBase
+    from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
+
+    # Fetch only Memory Bases with no matching knowledge_base row (by owner + name).
+    orphan_stmt = (
+        select(MemoryBase)
+        .where(MemoryBase.kb_name != "")
+        .where(
+            ~exists(
+                select(KnowledgeBaseRecord.id)
+                .where(KnowledgeBaseRecord.user_id == MemoryBase.user_id)
+                .where(KnowledgeBaseRecord.name == MemoryBase.kb_name)
+            )
+        )
+    )
+    async with session_scope() as session:
+        orphans = list((await session.exec(orphan_stmt)).all())
+
+    inserted = 0
+    for mb in orphans:
+        try:
+            provider = infer_embedding_provider(mb.embedding_model)
+            await create_record(
+                user_id=mb.user_id,
+                name=mb.kb_name,
+                model_selection={"name": mb.embedding_model, "provider": provider},
+                backend_type="chroma",
+                backend_config={},
+                source_types=["memory"],
+            )
+            inserted += 1
+        except Exception as exc:  # noqa: BLE001
+            await logger.aerror("memory-base backfill: failed to upsert KB row for %s: %s", mb.kb_name, exc)
+
+    return inserted
+
+
 async def update_stats(
     record_id: UUID,
     *,

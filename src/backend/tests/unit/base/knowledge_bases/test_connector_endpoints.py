@@ -455,12 +455,10 @@ class TestFolderIngest:
         assert response.status_code == 422
         assert "chunk_size" in response.text
 
-    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_folder_ingest_blocked_for_memory_base_kb(
         self,
         mock_root,
-        mock_meta,
         client: AsyncClient,
         logged_in_headers,
         active_user,
@@ -468,16 +466,18 @@ class TestFolderIngest:
     ):
         # Memory-Base-managed KBs must not be mutable through the
         # generic folder-ingest endpoint — they are owned by the
-        # Memory Base APIs.
+        # Memory Base APIs. The guard reads the ``source_types`` marker off the
+        # knowledge_base row (not an on-disk sidecar), so seed such a row.
+        from langflow.api.utils import knowledge_base_service
+
         mock_root.return_value = tmp_path
-        kb_dir = tmp_path / active_user.username / "mb_kb"
-        kb_dir.mkdir(parents=True)
-        mock_meta.return_value = {
-            "id": "00000000-0000-0000-0000-0000000000aa",
-            "embedding_provider": "OpenAI",
-            "embedding_model": "text-embedding-3-small",
-            "source_types": ["memory"],
-        }
+        (tmp_path / active_user.username / "mb_kb").mkdir(parents=True)
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="mb_kb",
+            model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
+            source_types=["memory"],
+        )
 
         response = await client.post(
             "api/v1/knowledge_bases/mb_kb/ingest/folder",
@@ -488,27 +488,26 @@ class TestFolderIngest:
         assert response.status_code == 403
         assert "managed by a Memory Base" in response.json()["detail"]
 
-    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_connector_ingest_blocked_for_memory_base_kb(
         self,
         mock_root,
-        mock_meta,
         client: AsyncClient,
         logged_in_headers,
         active_user,
         tmp_path,
     ):
-        # Same guard for the generic connector dispatcher.
+        # Same guard for the generic connector dispatcher — driven off the row.
+        from langflow.api.utils import knowledge_base_service
+
         mock_root.return_value = tmp_path
-        kb_dir = tmp_path / active_user.username / "mb_connector_kb"
-        kb_dir.mkdir(parents=True)
-        mock_meta.return_value = {
-            "id": "00000000-0000-0000-0000-0000000000bb",
-            "embedding_provider": "OpenAI",
-            "embedding_model": "text-embedding-3-small",
-            "source_types": ["memory"],
-        }
+        (tmp_path / active_user.username / "mb_connector_kb").mkdir(parents=True)
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="mb_connector_kb",
+            model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
+            source_types=["memory"],
+        )
 
         response = await client.post(
             "api/v1/knowledge_bases/mb_connector_kb/ingest/connector",

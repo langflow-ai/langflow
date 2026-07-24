@@ -14,9 +14,11 @@ from lfx.log.logger import logger
 from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBStorageHelper, chunk_text_for_ingestion
 
 if TYPE_CHECKING:
+    import uuid
     from pathlib import Path
 
     from langchain_chroma import Chroma
+    from lfx.base.knowledge_bases.backends.base import BaseVectorStoreBackend
 
     from langflow.services.database.models.message.model import MessageTable
 
@@ -184,3 +186,47 @@ def sync_kb_metadata(*, kb_path: Path, chroma: Chroma) -> None:
         # Note: this runs inside asyncio.to_thread so we use sync logging here.
         # The lfx logger's sync .warning() method goes through the same structured pipeline.
         logger.warning("KB metadata sync failed for kb_path=%s", kb_path, exc_info=True)
+
+
+async def sync_kb_stats_to_record(
+    *,
+    user_id: uuid.UUID,
+    kb_name: str,
+    backend: BaseVectorStoreBackend,
+) -> None:
+    """Refresh the ``knowledge_base`` row's cached counts after a Memory Base write.
+
+    Memory Bases are DB-driven: their chunk / word / character / size stats live
+    on the row, not an on-disk ``embedding_metadata.json`` sidecar, so a replica
+    with no local KB directory still reports accurate numbers. Counts come from the
+    backend's ``count`` / ``iter_documents`` / ``storage_size_bytes`` abstraction,
+    so every vector store (Chroma / Chroma Cloud / OpenSearch) is covered.
+
+    Best-effort: a stats-refresh failure must never fail an ingestion whose writes
+    already succeeded. Silently returns when no row exists (nothing to update).
+    """
+    from langflow.api.utils import knowledge_base_service
+
+    try:
+        record = await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
+        if record is None:
+            return
+        metrics: dict = {}
+        await KBAnalysisHelper.update_text_metrics_via_backend(metrics, backend)
+        try:
+            size_bytes = await backend.storage_size_bytes()
+        except Exception as exc:  # noqa: BLE001 — size is cosmetic, never fail ingestion for it
+            await logger.adebug(f"Backend storage_size_bytes() failed during stats sync: {exc}")
+            size_bytes = 0
+        # Preserve any existing source_types but always keep the "memory" marker.
+        source_types = sorted(set(record.source_types or []) | {"memory"})
+        await knowledge_base_service.update_stats(
+            record.id,
+            chunks=metrics.get("chunks", 0),
+            words=metrics.get("words", 0),
+            characters=metrics.get("characters", 0),
+            size_bytes=size_bytes,
+            source_types=source_types,
+        )
+    except Exception:  # noqa: BLE001 — stats are best-effort; never fail a committed ingestion
+        await logger.awarning("KB stats sync to row failed for kb_name=%s", kb_name, exc_info=True)

@@ -71,6 +71,12 @@ export interface CreateMemoryPayload {
   preprocessing?: boolean;
   preproc_model?: string;
   preproc_instructions?: string;
+  // Vector-store selection for the Memory Base's backing KB. `backend_type` is
+  // the API form (`chroma` for both local and Chroma Cloud — the server
+  // discriminates via `backend_config.mode`); `backend_config` carries the
+  // per-provider settings (variable-name references, index name, etc.).
+  backend_type?: string;
+  backend_config?: Record<string, unknown>;
 }
 
 export interface UpdateMemoryPayload {
