@@ -1,6 +1,4 @@
-import os
-
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ValidationInfo, field_validator
 
 from lfx.services.settings.constants import AGENTIC_VARIABLES, VARIABLES_TO_GET_FROM_ENVIRONMENT
 
@@ -18,14 +16,14 @@ class VariablesSettings(BaseModel):
     store_environment_variables: bool = True
     """Whether to store environment variables as Global Variables in the database."""
 
-    variables_to_get_from_environment: list[str] = VARIABLES_TO_GET_FROM_ENVIRONMENT
-    """List of environment variables to get from the environment and store in the database."""
-
     # Agentic Experience
     agentic_experience: bool = True
     """Enables the Langflow Assistant and its agentic MCP server (tools for flow/component
     operations, template search, and graph visualization). On by default — the Assistant is
     Langflow's entry-point experience; set LANGFLOW_AGENTIC_EXPERIENCE=false to opt out."""
+
+    variables_to_get_from_environment: list[str] = VARIABLES_TO_GET_FROM_ENVIRONMENT
+    """List of environment variables to get from the environment and store in the database."""
 
     # Developer API
     developer_api_enabled: bool = False
@@ -33,13 +31,13 @@ class VariablesSettings(BaseModel):
 
     @field_validator("variables_to_get_from_environment", mode="before")
     @classmethod
-    def set_variables_to_get_from_environment(cls, value):
+    def set_variables_to_get_from_environment(cls, value, info: ValidationInfo):
         if isinstance(value, str):
             value = value.split(",")
 
         result = list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
 
-        if os.getenv("LANGFLOW_AGENTIC_EXPERIENCE", "true").lower() == "true":
+        if info.data.get("agentic_experience", True):
             result.extend(AGENTIC_VARIABLES)
 
         return list(set(result))

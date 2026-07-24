@@ -445,6 +445,16 @@ def test_agentic_experience_on_by_default(monkeypatch):
         assert var in settings.variables_to_get_from_environment
 
 
+@pytest.mark.parametrize("env_value", ["true", "1", "yes", "on"])
+def test_agentic_variables_included_when_experience_enabled(monkeypatch, env_value):
+    """All supported true values keep the feature and its environment mirror aligned."""
+    monkeypatch.setenv("LANGFLOW_AGENTIC_EXPERIENCE", env_value)
+    settings = Settings()
+    assert settings.agentic_experience is True
+    for var in AGENTIC_VARIABLES:
+        assert var in settings.variables_to_get_from_environment
+
+
 def test_agentic_variables_excluded_when_experience_disabled(monkeypatch):
     """Opting out with LANGFLOW_AGENTIC_EXPERIENCE=false stops the env mirror.
 
