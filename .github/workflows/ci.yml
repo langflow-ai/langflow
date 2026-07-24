@@ -63,6 +63,10 @@ on:
   pull_request:
     types: [opened, synchronize, labeled]
   merge_group:
+
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
