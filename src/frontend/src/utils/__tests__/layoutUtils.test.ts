@@ -74,6 +74,19 @@ describe("needsLayout", () => {
     expect(needsLayout([node])).toBe(true);
   });
 
+  it("flags non-finite coordinates", () => {
+    const positive = {
+      ...makeNode("A"),
+      position: { x: Number.POSITIVE_INFINITY, y: 0 },
+    };
+    const negative = {
+      ...makeNode("B"),
+      position: { x: 0, y: Number.NEGATIVE_INFINITY },
+    };
+    expect(needsLayout([positive])).toBe(true);
+    expect(needsLayout([negative])).toBe(true);
+  });
+
   it("accepts well-formed positions", () => {
     const node = { ...makeNode("A"), position: { x: 0, y: 0 } };
     expect(needsLayout([node])).toBe(false);
@@ -100,6 +113,41 @@ describe("getLayoutedNodes with handle-less edges", () => {
     const nodes = ["A", "B"].map(makeNode);
     const layouted = await getLayoutedNodes(nodes, []);
     expect(layouted.every(hasNumericPosition)).toBe(true);
+  });
+});
+
+describe("getLayoutedNodes when ELK rejects", () => {
+  afterEach(() => {
+    jest.dontMock("elkjs/lib/elk.bundled.js");
+    jest.resetModules();
+    jest.restoreAllMocks();
+  });
+
+  it("falls back to the deterministic grid instead of propagating", async () => {
+    jest.resetModules();
+    jest.doMock("elkjs/lib/elk.bundled.js", () => ({
+      __esModule: true,
+      default: class {
+        layout = jest.fn().mockRejectedValue(new Error("ELK exploded"));
+      },
+    }));
+    jest.spyOn(console, "error").mockImplementation(() => {});
+
+    // Re-require so the module picks up the failing ELK singleton.
+    const {
+      getFallbackGridPositions: freshFallback,
+      getLayoutedNodes: withFailingElk,
+    } = require("../layoutUtils");
+
+    const nodes = ["ChatInput-a", "Prompt-b", "ChatOutput-c"].map(makeNode);
+    const edges = [makeHandlelessEdge("ChatInput-a", "Prompt-b")];
+
+    const layouted = await withFailingElk(nodes, edges);
+
+    // Resolves rather than rejecting, and every node is usable.
+    expect(layouted).toHaveLength(3);
+    expect(layouted.every(hasNumericPosition)).toBe(true);
+    expect(layouted).toEqual(freshFallback(nodes));
   });
 });
 

@@ -609,13 +609,13 @@ export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
 };
 
 export const needsLayout = (nodes: AllNodeType[]) => {
+  // Number.isFinite does not coerce, so this also rejects non-numeric
+  // coordinates as well as NaN and ±Infinity.
   return nodes.some(
     (node) =>
       !node.position ||
-      typeof node.position.x !== "number" ||
-      typeof node.position.y !== "number" ||
-      Number.isNaN(node.position.x) ||
-      Number.isNaN(node.position.y),
+      !Number.isFinite(node.position.x) ||
+      !Number.isFinite(node.position.y),
   );
 };
 
