@@ -1,4 +1,9 @@
-"""Paths and deterministic defaults for V1 flow fixture builders."""
+"""Paths and deterministic defaults for V1 flow fixture builders.
+
+Shared constants (dirs, default inputs, KB/outbound names) used by
+``build_fixtures``, ``builders``, ``fixture_index``, ``validate_fixtures``,
+dataset helpers, and ``tests/locust/tests/``.
+"""
 
 from __future__ import annotations
 

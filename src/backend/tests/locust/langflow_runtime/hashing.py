@@ -1,4 +1,9 @@
-"""Shared hashing helpers for the performance-suite locust package."""
+"""Shared hashing helpers for the performance-suite locust package.
+
+Used by ``flows/build_fixtures`` and ``flows/validate_fixtures`` to pin and
+drift-check fixture JSON and embedded isolator sources, and by unit tests in
+``tests/locust/tests/unit/test_flow_collection.py``.
+"""
 
 from __future__ import annotations
 

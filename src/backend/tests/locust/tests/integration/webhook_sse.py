@@ -1,4 +1,9 @@
-"""Webhook SSE subscribe-before-POST coverage (two clients / two event loops)."""
+"""Webhook SSE subscribe-before-POST coverage (two clients / two event loops).
+
+Coordinates a subscriber thread and a POST client so the webhook protocol is
+exercised the way production clients race. Used by the webhook case in
+``test_subsystem_coverage``.
+"""
 
 from __future__ import annotations
 

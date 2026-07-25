@@ -1,4 +1,9 @@
-"""Bounded subprocess spawn/exit isolator for the performance suite."""
+"""Bounded subprocess spawn/exit isolator for the performance suite.
+
+Embedded into ``perf_multiproc_churn`` by ``flows/build_fixtures.py``. Used to
+stress process spawn without leaving orphaned workers; covered by unit bounds
+and integration workflows tests under ``tests/locust/tests/``.
+"""
 
 from __future__ import annotations
 

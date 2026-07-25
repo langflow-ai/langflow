@@ -1,4 +1,9 @@
-"""Real localhost ASGI serve for concurrent HTTP clients (SSE / MCP)."""
+"""Real localhost ASGI serve for concurrent HTTP clients (SSE / MCP).
+
+The pytest ``client`` is ASGI-only; webhook SSE subscribe-before-POST and the
+MCP streamable-HTTP SDK need a real URL. Used by ``webhook_sse`` helpers and
+``test_subsystem_coverage`` MCP/webhook cases via ``real_http_base_url``.
+"""
 
 from __future__ import annotations
 

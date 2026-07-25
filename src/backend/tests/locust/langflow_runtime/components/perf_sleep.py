@@ -1,4 +1,9 @@
-"""Bounded sleep isolator for the performance suite queue fixtures."""
+"""Bounded sleep isolator for the performance suite queue fixtures.
+
+Embedded into ``perf_queue_short`` by ``flows/build_fixtures.py``. Used to
+hold a workflow in the job queue long enough for admission/completion
+assertions in ``tests/locust/tests/integration/``.
+"""
 
 from __future__ import annotations
 

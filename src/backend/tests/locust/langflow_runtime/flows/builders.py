@@ -1,4 +1,9 @@
-"""Graph builders that write individual V1 performance-suite flow fixtures."""
+"""Graph builders that write individual V1 performance-suite flow fixtures.
+
+Called only by ``build_fixtures.py`` when regenerating committed JSON under
+``flows/fixtures/``. Not imported by Locust users or integration tests
+directly — those load the pinned fixtures instead.
+"""
 
 from __future__ import annotations
 

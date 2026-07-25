@@ -2,6 +2,8 @@
 
 Docs are not committed: call ``materialize_kb_corpus`` before use and
 ``cleanup_kb_corpus`` afterward (or use ``kb_corpus`` as a context manager).
+Used by KB/ensemble cases in ``tests/locust/tests/integration/`` and by any
+Locust profile that selects the KB dataset ids from ``registry``.
 """
 
 from __future__ import annotations

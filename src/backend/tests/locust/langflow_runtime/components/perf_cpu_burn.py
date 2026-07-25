@@ -1,4 +1,9 @@
-"""Bounded in-process CPU burn isolator for the performance suite."""
+"""Bounded in-process CPU burn isolator for the performance suite.
+
+Embedded into ``perf_cpu_graph`` (and ensemble fixtures that include CPU work)
+by ``flows/build_fixtures.py`` / ``flows/builders.py``. Exercised by unit
+bounds checks and live workflows coverage in ``tests/locust/tests/``.
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,10 @@
-"""Provider-boundary stubs (LLM / embeddings) and outbound variable provisioning."""
+"""Provider-boundary stubs (LLM / embeddings) and outbound variable provisioning.
+
+Stubs ``get_llm`` / ``get_embeddings`` so outbound, KB, and ensemble fixtures
+can run without network credentials or model downloads. Also inserts the
+mock OpenAI API-key variable when a fixture expects ``load_from_db``. Used by
+``test_subsystem_coverage``.
+"""
 
 from __future__ import annotations
 
