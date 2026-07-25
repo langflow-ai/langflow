@@ -571,33 +571,35 @@ external = ["RUF027"]
     "SIM102",  # Nested if statements (readability over optimization)
     "E501",    # Line too long (some CLI commands are naturally long)
 ]
+# Same relaxations as locust/* for the V1 runtime performance-suite library
+# (fixture builders, validators, datasets, isolator components).
 "src/backend/tests/locust/langflow_runtime/**" = [
-    "D1",
-    "T201",
-    "S603",
-    "S607",
-    "S104",
-    "S105",
-    "FBT001",
-    "FBT002",
-    "TRY002",
-    "TRY003",
-    "TRY300",
-    "EM101",
-    "EM102",
-    "EXE001",
-    "D415",
-    "F401",
-    "PTH123",
-    "PTH107",
-    "PTH207",
-    "B007",
-    "PLW0602",
-    "PLW0603",
-    "DTZ005",
-    "G004",
-    "SIM102",
-    "E501",
+    "D1",      # undocumented-public-* — helpers/builders skip full pydocstyle
+    "T201",    # print — build_fixtures / validate_fixtures CLI output
+    "S603",    # subprocess-without-shell-equals-true — perf_subprocess_churn
+    "S607",    # start-process-with-partial-path — same isolator / local tools
+    "S104",    # hardcoded-bind-all-interfaces — local serve helpers if added
+    "S105",    # hardcoded-password-string — mock keys / sentinel credentials
+    "FBT001",  # boolean-type-hint-positional-argument — builder flags
+    "FBT002",  # boolean-default-value-positional-argument — same
+    "TRY002",  # raise-vanilla-class — plain Exception OK in tooling
+    "TRY003",  # raise-vanilla-args — long descriptive error strings
+    "TRY300",  # try-consider-else — return-in-try patterns in validators
+    "EM101",   # raw-string-in-exception — inline messages for CLI users
+    "EM102",   # f-string-in-exception — same
+    "EXE001",  # shebang-not-executable — run via `python -m`, not chmod +x
+    "D415",    # ends-with-period — docstring first-line punctuation
+    "F401",    # unused-import — availability / re-export checks
+    "PTH123",  # builtin-open — open() fine in small scripts
+    "PTH107",  # os-remove — os.remove fine in small scripts
+    "PTH207",  # glob — glob.glob fine in small scripts
+    "B007",    # unused-loop-control-variable — tuple unpacking
+    "PLW0602", # global-variable-not-assigned — shared suite state if needed
+    "PLW0603", # global-statement — same
+    "DTZ005",  # call-datetime-now-without-tzinfo — local timestamps in logs
+    "G004",    # logging-f-string — f-strings in diagnostic logging
+    "SIM102",  # collapsible-if — nested ifs kept for readability
+    "E501",    # line-too-long — long fixture paths / messages
 ]
 
 [tool.ruff.lint.flake8-builtins]
