@@ -1,0 +1,1181 @@
+{
+  "data": {
+    "edges": [
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-h9Zsf",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfCpuBurn-E_pO8",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-h9Zsf",
+        "target": "PerfCpuBurn-E_pO8"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "Pass",
+            "id": "PassMessageComponent-9s8Gs",
+            "name": "output_message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-NqttZ",
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "source": "PassMessageComponent-9s8Gs",
+        "target": "ChatOutput-NqttZ"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-h9Zsf",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfCpuBurn--Iyjr",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-h9Zsf",
+        "target": "PerfCpuBurn--Iyjr"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "PerfCpuBurn",
+            "id": "PerfCpuBurn-E_pO8",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "ignored_message",
+            "id": "PassMessageComponent-9s8Gs",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "PerfCpuBurn-E_pO8",
+        "target": "PassMessageComponent-9s8Gs"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "PerfCpuBurn",
+            "id": "PerfCpuBurn--Iyjr",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_message",
+            "id": "PassMessageComponent-9s8Gs",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "PerfCpuBurn--Iyjr",
+        "target": "PassMessageComponent-9s8Gs"
+      }
+    ],
+    "nodes": [
+      {
+        "data": {
+          "id": "ChatInput-h9Zsf",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Get chat inputs from the Playground.",
+            "display_name": "Chat Input",
+            "documentation": "https://docs.langflow.org/chat-input-and-output",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "metadata": {},
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Chat Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.inputs.inputs import BoolInput\nfrom lfx.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom lfx.schema.message import Message\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        # Ensure files is a list and filter out empty/None values\n        files = self.files if self.files else []\n        if files and not isinstance(files, list):\n            files = [files]\n        # Filter out None/empty values\n        files = [f for f in files if f is not None and f != \"\"]\n\n        session_id = self.session_id or self.graph.session_id or \"\"\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=session_id,\n            context_id=self.context_id,\n            files=files,\n        )\n        if session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+              },
+              "context_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Context ID",
+                "dynamic": false,
+                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "context_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "files": {
+                "_input_type": "FileInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Files",
+                "dynamic": false,
+                "fileTypes": [
+                  "csv",
+                  "json",
+                  "pdf",
+                  "txt",
+                  "md",
+                  "mdx",
+                  "yaml",
+                  "yml",
+                  "xml",
+                  "html",
+                  "htm",
+                  "docx",
+                  "py",
+                  "sh",
+                  "sql",
+                  "js",
+                  "ts",
+                  "tsx",
+                  "jpg",
+                  "jpeg",
+                  "png",
+                  "bmp",
+                  "image"
+                ],
+                "file_path": "",
+                "info": "Files to be sent with the message.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "files",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "temp_file": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "file",
+                "value": ""
+              },
+              "input_value": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "api_editable": false,
+                "copy_field": false,
+                "display_name": "Input Text",
+                "dynamic": false,
+                "info": "Message to be passed as input.",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "override_skip": false,
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "perf-cpu"
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "api_editable": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "User"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "User"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "ChatInput"
+        },
+        "id": "ChatInput-h9Zsf"
+      },
+      {
+        "data": {
+          "id": "ChatOutput-NqttZ",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Display a chat message in the Playground.",
+            "display_name": "Chat Output",
+            "documentation": "https://docs.langflow.org/chat-input-and-output",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "metadata": {},
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "clean_data": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Basic Clean Data",
+                "dynamic": false,
+                "info": "Whether to clean data before converting to string.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_data",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              },
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.schema.properties import Source\nfrom lfx.template.field.base import Output\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"JSON\", \"DataFrame\", \"Table\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            advanced=True,\n            info=\"Whether to clean data before converting to string.\",\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Output Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, _, display_name, source_id = self.get_properties_from_source_component()\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message) and not self.is_connected_to_chat_input():\n            message = self.input_value\n            # Update message properties\n            message.text = text\n            # Preserve existing session_id from the incoming message if it exists\n            existing_session_id = message.session_id\n        else:\n            message = Message(text=text)\n            existing_session_id = None\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        # Preserve session_id from incoming message, or use component/graph session_id\n        message.session_id = (\n            self.session_id or existing_session_id or (self.graph.session_id if hasattr(self, \"graph\") else None) or \"\"\n        )\n        message.context_id = self.context_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n\n        # Store message if needed\n        if message.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        # Set accumulated token usage from all upstream LLM vertices.\n        # This must happen AFTER send_message() because streaming captures\n        # usage from chunks and would overwrite accumulated totals.\n        if hasattr(self, \"_vertex\") and self._vertex is not None:\n            accumulated_usage = self._vertex._accumulate_upstream_token_usage()  # noqa: SLF001\n            if accumulated_usage:\n                message.properties.usage = accumulated_usage\n                if self.should_store_message and message.get_id():\n                    message = await self._update_stored_message(message)\n                    await self._send_message_event(message, id_=message.get_id())\n\n        self.status = message\n        return message\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            clean_data: bool = getattr(self, \"clean_data\", False)\n            return \"\\n\".join([safe_convert(item, clean_data=clean_data) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return safe_convert(self.input_value)\n"
+              },
+              "context_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Context ID",
+                "dynamic": false,
+                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "context_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "data_template": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Data Template",
+                "dynamic": false,
+                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "data_template",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "{text}"
+              },
+              "input_value": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Inputs",
+                "dynamic": false,
+                "info": "Message to be passed as output.",
+                "input_types": [
+                  "Data",
+                  "JSON",
+                  "DataFrame",
+                  "Table",
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "api_editable": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "Machine"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "AI"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "ChatOutput"
+        },
+        "id": "ChatOutput-NqttZ"
+      },
+      {
+        "data": {
+          "id": "PassMessageComponent-9s8Gs",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Forwards the input message, unchanged.",
+            "display_name": "Pass",
+            "documentation": "",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "arrow-right",
+            "legacy": true,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output Message",
+                "group_outputs": false,
+                "method": "pass_message",
+                "name": "output_message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "replacement": [
+              "logic.ConditionalRouter"
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.custom.custom_component.component import Component\nfrom lfx.io import MessageInput\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\n\nclass PassMessageComponent(Component):\n    display_name = \"Pass\"\n    description = \"Forwards the input message, unchanged.\"\n    name = \"Pass\"\n    icon = \"arrow-right\"\n    legacy: bool = True\n    replacement = [\"logic.ConditionalRouter\"]\n\n    inputs = [\n        MessageInput(\n            name=\"input_message\",\n            display_name=\"Input Message\",\n            info=\"The message to be passed forward.\",\n            required=True,\n        ),\n        MessageInput(\n            name=\"ignored_message\",\n            display_name=\"Ignored Message\",\n            info=\"A second message to be ignored. Used as a workaround for continuity.\",\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Output Message\", name=\"output_message\", method=\"pass_message\"),\n    ]\n\n    def pass_message(self) -> Message:\n        self.status = self.input_message\n        return self.input_message\n"
+              },
+              "ignored_message": {
+                "_input_type": "MessageInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Ignored Message",
+                "dynamic": false,
+                "info": "A second message to be ignored. Used as a workaround for continuity.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "ignored_message",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": {
+                  "category": "message",
+                  "content_blocks": [],
+                  "context_id": "",
+                  "data": {
+                    "category": "message",
+                    "content_blocks": [],
+                    "context_id": "",
+                    "duration": null,
+                    "edit": false,
+                    "error": false,
+                    "files": [],
+                    "flow_id": null,
+                    "properties": {
+                      "allow_markdown": false,
+                      "edited": false,
+                      "source": {
+                        "display_name": null,
+                        "id": null,
+                        "source": null
+                      },
+                      "state": "complete",
+                      "targets": []
+                    },
+                    "run_id": null,
+                    "sender": null,
+                    "sender_name": null,
+                    "session_id": "",
+                    "session_metadata": null,
+                    "text": "",
+                    "timestamp": "2026-07-24 19:37:46.964230 UTC"
+                  },
+                  "default_value": "",
+                  "edit": false,
+                  "error": false,
+                  "files": [],
+                  "properties": {
+                    "allow_markdown": false,
+                    "edited": false,
+                    "source": {
+                      "display_name": null,
+                      "id": null,
+                      "source": null
+                    },
+                    "state": "complete",
+                    "targets": []
+                  },
+                  "session_id": "",
+                  "text": "",
+                  "text_key": "text",
+                  "timestamp": "2026-07-24 19:37:46.964230 UTC"
+                }
+              },
+              "input_message": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Input Message",
+                "dynamic": false,
+                "info": "The message to be passed forward.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "input_message",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": {
+                  "category": "message",
+                  "content_blocks": [],
+                  "context_id": "",
+                  "data": {
+                    "category": "message",
+                    "content_blocks": [],
+                    "context_id": "",
+                    "duration": null,
+                    "edit": false,
+                    "error": false,
+                    "files": [],
+                    "flow_id": null,
+                    "properties": {
+                      "allow_markdown": false,
+                      "edited": false,
+                      "source": {
+                        "display_name": null,
+                        "id": null,
+                        "source": null
+                      },
+                      "state": "complete",
+                      "targets": []
+                    },
+                    "run_id": null,
+                    "sender": null,
+                    "sender_name": null,
+                    "session_id": "",
+                    "session_metadata": null,
+                    "text": "",
+                    "timestamp": "2026-07-24 19:37:46.964309 UTC"
+                  },
+                  "default_value": "",
+                  "edit": false,
+                  "error": false,
+                  "files": [],
+                  "properties": {
+                    "allow_markdown": false,
+                    "edited": false,
+                    "source": {
+                      "display_name": null,
+                      "id": null,
+                      "source": null
+                    },
+                    "state": "complete",
+                    "targets": []
+                  },
+                  "session_id": "",
+                  "text": "",
+                  "text_key": "text",
+                  "timestamp": "2026-07-24 19:37:46.964309 UTC"
+                }
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "Pass"
+        },
+        "id": "PassMessageComponent-9s8Gs"
+      },
+      {
+        "data": {
+          "id": "PerfCpuBurn--Iyjr",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Bounded in-process CPU burn for performance-suite CPU/graph isolators.",
+            "display_name": "Perf CPU Burn",
+            "documentation": "",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "cpu",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output",
+                "group_outputs": false,
+                "method": "run",
+                "name": "output",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"Bounded in-process CPU burn isolator for the performance suite.\"\"\"\n\nfrom __future__ import annotations\n\nimport hashlib\nimport time\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n# Hard ceiling so a misconfigured profile cannot pin a core indefinitely.\n_MAX_DURATION_MS = 5_000\n_MAX_ITERATIONS = 5_000_000\n\n\nclass PerfCpuBurn(Component):\n    \"\"\"Burn CPU for a bounded duration and return a deterministic digest.\"\"\"\n\n    display_name = \"Perf CPU Burn\"\n    description = \"Bounded in-process CPU burn for performance-suite CPU/graph isolators.\"\n    name = \"PerfCpuBurn\"\n    icon = \"cpu\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload echoed into the deterministic digest.\",\n            value=\"perf-cpu\",\n        ),\n        IntInput(\n            name=\"duration_ms\",\n            display_name=\"Duration ms\",\n            info=f\"Target burn duration in milliseconds (capped at {_MAX_DURATION_MS}).\",\n            value=25,\n            range_spec=RangeSpec(min=1, max=_MAX_DURATION_MS, step=1, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"iterations\",\n            display_name=\"Max iterations\",\n            info=f\"Safety bound on hash iterations (capped at {_MAX_ITERATIONS}).\",\n            value=100_000,\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=_MAX_ITERATIONS, step=1, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        duration_ms = max(1, min(int(self.duration_ms or 1), _MAX_DURATION_MS))\n        max_iters = max(1, min(int(self.iterations or 1), _MAX_ITERATIONS))\n        seed = getattr(self.input_value, \"text\", None) or str(self.input_value)\n        digest = hashlib.sha256(seed.encode(\"utf-8\")).hexdigest()\n        deadline = time.perf_counter() + (duration_ms / 1000.0)\n        completed = 0\n        while completed < max_iters and time.perf_counter() < deadline:\n            digest = hashlib.sha256(digest.encode(\"utf-8\")).hexdigest()\n            completed += 1\n        return Message(text=f\"cpu:{duration_ms}:{completed}:{digest[:16]}:{seed}\")\n"
+              },
+              "duration_ms": {
+                "_input_type": "IntInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Duration ms",
+                "dynamic": false,
+                "info": "Target burn duration in milliseconds (capped at 5000).",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "duration_ms",
+                "override_skip": false,
+                "placeholder": "",
+                "range_spec": {
+                  "max": 5000.0,
+                  "min": 1.0,
+                  "step": 1.0,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 25
+              },
+              "input_value": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "Opaque payload echoed into the deterministic digest.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "perf-cpu"
+              },
+              "iterations": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Max iterations",
+                "dynamic": false,
+                "info": "Safety bound on hash iterations (capped at 5000000).",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "iterations",
+                "override_skip": false,
+                "placeholder": "",
+                "range_spec": {
+                  "max": 5000000.0,
+                  "min": 1.0,
+                  "step": 1.0,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 50000
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "PerfCpuBurn"
+        },
+        "id": "PerfCpuBurn--Iyjr"
+      },
+      {
+        "data": {
+          "id": "PerfCpuBurn-E_pO8",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Bounded in-process CPU burn for performance-suite CPU/graph isolators.",
+            "display_name": "Perf CPU Burn",
+            "documentation": "",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "cpu",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output",
+                "group_outputs": false,
+                "method": "run",
+                "name": "output",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"Bounded in-process CPU burn isolator for the performance suite.\"\"\"\n\nfrom __future__ import annotations\n\nimport hashlib\nimport time\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n# Hard ceiling so a misconfigured profile cannot pin a core indefinitely.\n_MAX_DURATION_MS = 5_000\n_MAX_ITERATIONS = 5_000_000\n\n\nclass PerfCpuBurn(Component):\n    \"\"\"Burn CPU for a bounded duration and return a deterministic digest.\"\"\"\n\n    display_name = \"Perf CPU Burn\"\n    description = \"Bounded in-process CPU burn for performance-suite CPU/graph isolators.\"\n    name = \"PerfCpuBurn\"\n    icon = \"cpu\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload echoed into the deterministic digest.\",\n            value=\"perf-cpu\",\n        ),\n        IntInput(\n            name=\"duration_ms\",\n            display_name=\"Duration ms\",\n            info=f\"Target burn duration in milliseconds (capped at {_MAX_DURATION_MS}).\",\n            value=25,\n            range_spec=RangeSpec(min=1, max=_MAX_DURATION_MS, step=1, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"iterations\",\n            display_name=\"Max iterations\",\n            info=f\"Safety bound on hash iterations (capped at {_MAX_ITERATIONS}).\",\n            value=100_000,\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=_MAX_ITERATIONS, step=1, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        duration_ms = max(1, min(int(self.duration_ms or 1), _MAX_DURATION_MS))\n        max_iters = max(1, min(int(self.iterations or 1), _MAX_ITERATIONS))\n        seed = getattr(self.input_value, \"text\", None) or str(self.input_value)\n        digest = hashlib.sha256(seed.encode(\"utf-8\")).hexdigest()\n        deadline = time.perf_counter() + (duration_ms / 1000.0)\n        completed = 0\n        while completed < max_iters and time.perf_counter() < deadline:\n            digest = hashlib.sha256(digest.encode(\"utf-8\")).hexdigest()\n            completed += 1\n        return Message(text=f\"cpu:{duration_ms}:{completed}:{digest[:16]}:{seed}\")\n"
+              },
+              "duration_ms": {
+                "_input_type": "IntInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Duration ms",
+                "dynamic": false,
+                "info": "Target burn duration in milliseconds (capped at 5000).",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "duration_ms",
+                "override_skip": false,
+                "placeholder": "",
+                "range_spec": {
+                  "max": 5000.0,
+                  "min": 1.0,
+                  "step": 1.0,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 25
+              },
+              "input_value": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "Opaque payload echoed into the deterministic digest.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "perf-cpu"
+              },
+              "iterations": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Max iterations",
+                "dynamic": false,
+                "info": "Safety bound on hash iterations (capped at 5000000).",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "iterations",
+                "override_skip": false,
+                "placeholder": "",
+                "range_spec": {
+                  "max": 5000000.0,
+                  "min": 1.0,
+                  "step": 1.0,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 50000
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "PerfCpuBurn"
+        },
+        "id": "PerfCpuBurn-E_pO8"
+      }
+    ]
+  },
+  "description": "Bounded in-process CPU burn in one representative fan-out/depth graph.",
+  "endpoint_name": "perf-cpu-graph",
+  "is_component": false,
+  "name": "perf_cpu_graph",
+  "tags": [
+    "performance-suite",
+    "v1"
+  ]
+}

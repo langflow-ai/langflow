@@ -1,0 +1,461 @@
+"""Live subsystem coverage for V1 performance-suite fixtures.
+
+These tests prove the fixtures trigger the subsystems they claim to isolate.
+Everything goes through the live app (workflows / webhook HTTP / MCP) except
+two provider factories that would otherwise require network credentials or
+model downloads:
+
+* ``get_llm`` → ``FakeListChatModel`` (outbound / ensemble)
+* ``get_embeddings`` → deterministic local stub (KB ingest / retrieve / ensemble)
+
+KB storage uses the real settings ``knowledge_bases_dir`` (not a private-module
+patch). Components, Chroma, workflows, HITL, webhooks, and MCP stay live.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import re
+from contextlib import nullcontext
+from typing import TYPE_CHECKING
+from uuid import uuid4
+
+import pytest
+from lfx.memory import aget_messages
+
+from tests.locust.langflow_runtime.datasets.kb_corpus import KB_DOC_BYTES, kb_corpus
+from tests.locust.langflow_runtime.datasets.storage_payload import bounded_payload_text
+from tests.locust.langflow_runtime.flows.defaults import (
+    DEFAULT_CHAT_INPUT,
+    DEFAULT_KB_DOC_PREFIX,
+    DEFAULT_KB_NAME,
+    DEFAULT_KB_QUERY,
+    DEFAULT_OUTBOUND_PROMPT,
+    DEFAULT_PASSTHROUGH_INPUT,
+    DEFAULT_PAYLOAD_FILENAME,
+    DEFAULT_QUEUE_INPUT,
+    DEFAULT_QUEUE_SLEEP_MS,
+    FLOWS_DIR,
+)
+
+if TYPE_CHECKING:
+    from httpx import AsyncClient
+from tests.locust.langflow_runtime.v1_contracts import DEFAULT_WEBHOOK_PAYLOAD
+from tests.locust.tests.integration import (
+    delete_flow,
+    delete_project,
+    flow_entry,
+    insert_flow,
+    insert_project,
+    knowledge_bases_dir,
+    load_fixture_payload,
+    local_save_workdir,
+    mcp_initialize_list_call,
+    mock_embedding_model,
+    mock_language_model_responses,
+    post_workflow,
+    provision_local_kb,
+    provision_openai_api_key_variable,
+    real_http_base_url,
+    stream_workflow_until_terminal,
+    wait_job_status,
+    webhook_http_subscribe_before_post,
+)
+
+pytestmark = [pytest.mark.performance_integration, pytest.mark.integration]
+
+
+def _workflow_input(flow_id: str) -> str:
+    fields = flow_entry(flow_id).get("input_fields") or {}
+    raw = fields.get("input_value")
+    if raw is None:
+        return DEFAULT_PASSTHROUGH_INPUT
+    if isinstance(raw, str) and raw.startswith("{{") and raw.endswith("}}"):
+        if "chat.turn_text" in raw:
+            return DEFAULT_CHAT_INPUT
+        if "storage.payload_text" in raw:
+            return bounded_payload_text()
+        return raw
+    return str(raw)
+
+
+@pytest.mark.parametrize(
+    ("flow_id", "needle"),
+    [
+        ("perf_passthrough", DEFAULT_PASSTHROUGH_INPUT),
+        ("perf_queue_short", f"slept:{DEFAULT_QUEUE_SLEEP_MS}:{DEFAULT_QUEUE_INPUT}"),
+        ("perf_cpu_graph", None),  # regex checked below
+        ("perf_multiproc_churn", None),
+        ("perf_payload_echo", DEFAULT_PAYLOAD_FILENAME),
+    ],
+)
+async def test_live_workflows_sync_isolators(
+    client: AsyncClient, created_api_key, tmp_path, flow_id: str, needle: str | None
+):
+    """Isolator axes: live workflows sync through committed fixture JSON."""
+    payload = load_fixture_payload(flow_id)
+    inserted = await insert_flow(user_id=created_api_key.user_id, payload=payload)
+    save_ctx = local_save_workdir(tmp_path) if flow_id == "perf_payload_echo" else nullcontext()
+    try:
+        with save_ctx:
+            result = await post_workflow(
+                client,
+                api_key=created_api_key.api_key,
+                flow_id=inserted,
+                mode="sync",
+                input_value=_workflow_input(flow_id),
+                session_id=f"perf-isolator-{flow_id}-{uuid4().hex[:8]}",
+            )
+        serialized = json.dumps(result)
+        assert result.get("status") in {None, "completed"} or "outputs" in result or result.get("object")
+        if needle is not None:
+            assert needle in serialized or needle.lower() in serialized.lower(), serialized
+        if flow_id == "perf_cpu_graph":
+            assert re.search(r"cpu:\d+:\d+:[0-9a-f]{16}:perf-cpu", serialized)
+        if flow_id == "perf_multiproc_churn":
+            assert re.search(r"multiproc:2:0,0:perf-multiproc", serialized)
+        if flow_id == "perf_payload_echo":
+            assert DEFAULT_PAYLOAD_FILENAME in serialized or "saved" in serialized.lower()
+    finally:
+        await delete_flow(inserted)
+
+
+async def test_queue_background_admission_and_completion(client: AsyncClient, created_api_key):
+    """Queue axis: workflows background accepts a job_id and reaches completed."""
+    payload = load_fixture_payload("perf_queue_short")
+    flow_id = await insert_flow(user_id=created_api_key.user_id, payload=payload)
+    try:
+        result = await post_workflow(
+            client,
+            api_key=created_api_key.api_key,
+            flow_id=flow_id,
+            mode="background",
+            input_value=DEFAULT_QUEUE_INPUT,
+            session_id=f"perf-queue-{uuid4().hex[:8]}",
+        )
+        assert result["object"] == "job"
+        assert result["status"] == "queued"
+        assert result.get("job_id")
+        status = await wait_job_status(result["job_id"], want={"completed"})
+        assert status == "completed"
+
+        status_resp = await client.get(
+            f"api/v2/workflows?job_id={result['job_id']}",
+            headers={"x-api-key": created_api_key.api_key},
+        )
+        assert status_resp.status_code == 200, status_resp.text
+        body = status_resp.json()
+        assert body["status"] == "completed"
+        serialized = json.dumps(body)
+        assert f"slept:{DEFAULT_QUEUE_SLEEP_MS}:{DEFAULT_QUEUE_INPUT}" in serialized
+    finally:
+        await delete_flow(flow_id)
+
+
+async def test_hitl_background_pending_resume_completed(client: AsyncClient, created_api_key):
+    """HITL axis: background → suspended → pending → resume → completed."""
+    payload = load_fixture_payload("human_input_flow")
+    flow_id = await insert_flow(user_id=created_api_key.user_id, payload=payload)
+    headers = {"x-api-key": created_api_key.api_key}
+    try:
+        start = await post_workflow(
+            client,
+            api_key=created_api_key.api_key,
+            flow_id=flow_id,
+            mode="background",
+            input_value="Approve this?",
+            session_id=f"perf-hitl-{uuid4().hex[:8]}",
+        )
+        job_id = start["job_id"]
+        status = await wait_job_status(job_id, want={"suspended"})
+        assert status == "suspended"
+
+        pending = await client.get(f"api/v2/workflows/pending?flow_id={flow_id}", headers=headers)
+        assert pending.status_code == 200, pending.text
+        items = pending.json()
+        match = next(item for item in items if item["job_id"] == job_id)
+        request_id = match["request_id"]
+        assert request_id
+
+        resume = await client.post(
+            f"api/v2/workflows/{job_id}/resume",
+            headers=headers,
+            json={"request_id": request_id, "decision": {"action_id": "approve"}},
+        )
+        assert resume.status_code == 200, resume.text
+        assert resume.json()["status"] == "resuming"
+
+        final = await wait_job_status(job_id, want={"completed"})
+        assert final == "completed"
+    finally:
+        await delete_flow(flow_id)
+
+
+async def test_webhook_http_sse_subscribe_before_post(client: AsyncClient, created_api_key, active_user):
+    """Webhook axis: real HTTP SSE connected → POST 202 → SSE end.
+
+    SSE and POST each run on their own thread/event loop. SSE uses a session
+    cookie; POST uses the API key (API-key auth on long-lived SSE deadlocks
+    SQLite via held ``last_used_at`` writes).
+    """
+    payload = load_fixture_payload("perf_webhook_passthrough")
+    endpoint = payload["endpoint_name"]
+    flow_id = await insert_flow(
+        user_id=created_api_key.user_id,
+        payload=payload,
+        endpoint_name=endpoint,
+    )
+    login = await client.post(
+        "api/v1/login",
+        data={"username": active_user.username, "password": "testpassword"},  # pragma: allowlist secret
+    )
+    assert login.status_code == 200, login.text
+    sse_cookies = {"access_token_lf": client.cookies["access_token_lf"]}
+    try:
+        async with real_http_base_url(client) as base_url:
+            frames = await asyncio.to_thread(
+                webhook_http_subscribe_before_post,
+                base_url=base_url,
+                api_key=created_api_key.api_key,
+                flow_id=flow_id,
+                endpoint_name=endpoint,
+                payload=DEFAULT_WEBHOOK_PAYLOAD,
+                sse_cookies=sse_cookies,
+            )
+        joined = "\n".join(frames).lower()
+        assert "event: connected" in joined
+        assert "event: end" in joined, f"webhook SSE did not complete with end; frames={frames!r}"
+    finally:
+        await delete_flow(flow_id)
+
+
+async def test_workflows_stream_emits_terminal_event(client: AsyncClient, created_api_key):
+    """Workflows stream axis: mode=stream langflow protocol ends with a terminal event."""
+    payload = load_fixture_payload("perf_passthrough")
+    flow_id = await insert_flow(user_id=created_api_key.user_id, payload=payload)
+    try:
+        body = await stream_workflow_until_terminal(
+            client,
+            api_key=created_api_key.api_key,
+            flow_id=flow_id,
+            input_value=DEFAULT_PASSTHROUGH_INPUT,
+            session_id=f"perf-stream-{uuid4().hex[:8]}",
+        )
+        assert '"event": "end"' in body or '"event":"end"' in body or "event: end" in body
+        assert DEFAULT_PASSTHROUGH_INPUT in body or "perf-passthrough" in body.lower()
+    finally:
+        await delete_flow(flow_id)
+
+
+async def test_mcp_initialize_list_call_passthrough(client: AsyncClient, created_api_key):
+    """MCP axis: live streamable-HTTP initialize → list_tools → call_tool on perf_passthrough."""
+    project_id = await insert_project(user_id=created_api_key.user_id)
+    payload = load_fixture_payload("perf_passthrough")
+    action_name = flow_entry("perf_passthrough")["mcp_action_name"]
+    flow_id = await insert_flow(
+        user_id=created_api_key.user_id,
+        payload=payload,
+        folder_id=project_id,
+        mcp_enabled=True,
+        action_name=action_name,
+        name=payload.get("name") or "perf_passthrough",
+    )
+    try:
+        async with real_http_base_url(client) as base_url:
+            result = await mcp_initialize_list_call(
+                base_url=base_url,
+                api_key=created_api_key.api_key,
+                project_id=project_id,
+                tool_name=action_name,
+                arguments={
+                    "input_value": DEFAULT_PASSTHROUGH_INPUT,
+                    "session_id": f"perf-mcp-{uuid4().hex[:8]}",
+                },
+            )
+        serialized = json.dumps(result.model_dump() if hasattr(result, "model_dump") else str(result))
+        assert DEFAULT_PASSTHROUGH_INPUT in serialized
+        assert not getattr(result, "isError", False), serialized
+    finally:
+        await delete_flow(flow_id)
+        await delete_project(project_id)
+
+
+async def test_chat_db_session_persists_messages(client: AsyncClient, created_api_key):
+    """Chat/DB axis: MemoryChatbotNoLLM writes messages for a fixed session_id."""
+    payload = load_fixture_payload("MemoryChatbotNoLLM")
+    flow_id = await insert_flow(user_id=created_api_key.user_id, payload=payload)
+    session_id = f"perf-chat-{uuid4().hex[:8]}"
+    try:
+        result = await post_workflow(
+            client,
+            api_key=created_api_key.api_key,
+            flow_id=flow_id,
+            mode="sync",
+            input_value=DEFAULT_CHAT_INPUT,
+            session_id=session_id,
+        )
+        assert result.get("status") in {None, "completed"} or "outputs" in result or result.get("object")
+        messages = await aget_messages(session_id=session_id)
+        assert len(messages) >= 1
+    finally:
+        await delete_flow(flow_id)
+
+
+async def test_kb_fixture_ingest_then_retrieve(client: AsyncClient, created_api_key, active_user, tmp_path):
+    """KB axes: live workflows ingest then retrieve; only embedding factory is stubbed."""
+    ingest_flow = flow_entry("perf_kb_ingest")
+    retrieve_flow = flow_entry("perf_kb_retrieve")
+    assert ingest_flow.get("binding", {}).get("knowledge_base") == DEFAULT_KB_NAME
+    assert retrieve_flow.get("binding", {}).get("knowledge_base") == DEFAULT_KB_NAME
+
+    docs_root = tmp_path / "kb_docs"
+    with kb_corpus(docs_root) as docs, knowledge_bases_dir(tmp_path / "kb_store"), mock_embedding_model():
+        assert all(doc.stat().st_size == KB_DOC_BYTES for doc in docs)
+        kb_path = await provision_local_kb(
+            username=active_user.username,
+            user_id=created_api_key.user_id,
+            root=tmp_path / "kb_store",
+        )
+        ingest_id = await insert_flow(
+            user_id=created_api_key.user_id,
+            payload=load_fixture_payload("perf_kb_ingest"),
+        )
+        retrieve_id = await insert_flow(
+            user_id=created_api_key.user_id,
+            payload=load_fixture_payload("perf_kb_retrieve"),
+        )
+        try:
+            for doc in docs:
+                await post_workflow(
+                    client,
+                    api_key=created_api_key.api_key,
+                    flow_id=ingest_id,
+                    mode="sync",
+                    input_value=doc.read_text(encoding="ascii"),
+                    session_id=f"perf-kb-ingest-{uuid4().hex[:8]}",
+                )
+            assert (kb_path / "chroma.sqlite3").exists(), f"ingest did not create chroma store under {kb_path}"
+            assert any(kb_path.rglob("*.bin")), f"ingest did not write vector index files under {kb_path}"
+
+            retrieve = await post_workflow(
+                client,
+                api_key=created_api_key.api_key,
+                flow_id=retrieve_id,
+                mode="sync",
+                input_value=DEFAULT_KB_QUERY,
+                session_id=f"perf-kb-retrieve-{uuid4().hex[:8]}",
+            )
+            serialized = json.dumps(retrieve)
+            assert DEFAULT_KB_DOC_PREFIX in serialized, serialized
+        finally:
+            await delete_flow(ingest_id)
+            await delete_flow(retrieve_id)
+
+
+async def test_outbound_language_model_via_workflows(client: AsyncClient, created_api_key):
+    """Outbound axis: live workflows sync; only provider LLM factory is stubbed."""
+    await provision_openai_api_key_variable(user_id=created_api_key.user_id)
+    payload = load_fixture_payload("perf_outbound_basic_prompting")
+    flow_id = await insert_flow(user_id=created_api_key.user_id, payload=payload)
+    try:
+        with mock_language_model_responses("perf-outbound-ok"):
+            result = await post_workflow(
+                client,
+                api_key=created_api_key.api_key,
+                flow_id=flow_id,
+                mode="sync",
+                input_value=DEFAULT_OUTBOUND_PROMPT,
+                session_id=f"perf-outbound-{uuid4().hex[:8]}",
+            )
+        serialized = json.dumps(result)
+        assert "perf-outbound-ok" in serialized
+    finally:
+        await delete_flow(flow_id)
+
+
+async def test_ensemble_journey_via_workflows(client: AsyncClient, created_api_key, active_user, tmp_path):
+    """Ensemble axis: live workflows sync; only LLM + embedding factories are stubbed."""
+    await provision_openai_api_key_variable(user_id=created_api_key.user_id)
+    payload = load_fixture_payload("perf_ensemble_journey")
+    flow_id = await insert_flow(user_id=created_api_key.user_id, payload=payload)
+    session_id = f"perf-ensemble-{uuid4().hex[:8]}"
+    try:
+        with (
+            knowledge_bases_dir(tmp_path),
+            local_save_workdir(tmp_path),
+            mock_embedding_model(),
+            mock_language_model_responses("perf-outbound-ok"),
+        ):
+            await provision_local_kb(
+                username=active_user.username,
+                user_id=created_api_key.user_id,
+                root=tmp_path,
+            )
+            result = await post_workflow(
+                client,
+                api_key=created_api_key.api_key,
+                flow_id=flow_id,
+                mode="sync",
+                input_value=_workflow_input("perf_ensemble_journey"),
+                session_id=session_id,
+            )
+        serialized = json.dumps(result)
+        assert "perf-outbound-ok" in serialized, serialized
+        messages = await aget_messages(session_id=session_id)
+        assert len(messages) >= 1
+    finally:
+        await delete_flow(flow_id)
+
+
+async def test_ensemble_hitl_background_pending_resume(client: AsyncClient, created_api_key, active_user, tmp_path):
+    """Ensemble HITL: live background/pending/resume; only LLM + embedding factories stubbed."""
+    await provision_openai_api_key_variable(user_id=created_api_key.user_id)
+    payload = load_fixture_payload("perf_ensemble_journey_hitl")
+    flow_id = await insert_flow(user_id=created_api_key.user_id, payload=payload)
+    headers = {"x-api-key": created_api_key.api_key}
+    try:
+        with (
+            knowledge_bases_dir(tmp_path),
+            local_save_workdir(tmp_path),
+            mock_embedding_model(),
+            mock_language_model_responses("perf-outbound-ok"),
+        ):
+            await provision_local_kb(
+                username=active_user.username,
+                user_id=created_api_key.user_id,
+                root=tmp_path,
+            )
+            start = await post_workflow(
+                client,
+                api_key=created_api_key.api_key,
+                flow_id=flow_id,
+                mode="background",
+                input_value="perf-ensemble-journey",
+                session_id=f"perf-ensemble-hitl-{uuid4().hex[:8]}",
+            )
+            job_id = start["job_id"]
+            status = await wait_job_status(job_id, want={"suspended", "failed", "completed"}, timeout_s=120.0)
+            assert status == "suspended", f"ensemble HITL did not suspend; status={status}"
+
+            pending = await client.get(f"api/v2/workflows/pending?flow_id={flow_id}", headers=headers)
+            assert pending.status_code == 200, pending.text
+            items = pending.json()
+            match = next(item for item in items if item["job_id"] == job_id)
+            resume = await client.post(
+                f"api/v2/workflows/{job_id}/resume",
+                headers=headers,
+                json={"request_id": match["request_id"], "decision": {"action_id": "approve"}},
+            )
+            assert resume.status_code == 200, resume.text
+            final = await wait_job_status(job_id, want={"completed"}, timeout_s=120.0)
+            assert final == "completed"
+    finally:
+        await delete_flow(flow_id)
+
+
+async def test_fixture_bindings_are_non_empty():
+    """Static regression: KB/outbound fixtures must declare runnable bindings."""
+    from tests.locust.langflow_runtime.flows.validate_fixtures import validate_fixture_bindings
+
+    assert validate_fixture_bindings() == []

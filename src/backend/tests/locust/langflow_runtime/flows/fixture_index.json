@@ -1,0 +1,611 @@
+{
+  "component_source_sha256": {
+    "perf_cpu_burn": "5e92dd0f71229ff41e374bb0b3b608ba5c4a3a75d64db4ce885e302ce8e3bc61",
+    "perf_sleep": "72543184a25a30fc986f9bec068fc22ce405f285c49d7d8f891ca724d877f271",
+    "perf_subprocess_churn": "ec5da2d659a79e0eb0b1c2b0096be4e86504fae0d5fb11fc2731456b6d2c60a1"
+  },
+  "description": "Complete V1 performance-suite flow contract inventory.",
+  "flows": [
+    {
+      "dataset_selector": null,
+      "embedded_component_sha256": {},
+      "endpoint_name": "perf-passthrough",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "contains": "perf-passthrough-ping"
+      },
+      "fixture": "perf_passthrough.json",
+      "fixture_path": "fixtures/perf_passthrough.json",
+      "fixture_sha256": "2b4f938deb8e229679eda7c36458d7ff85496c11bd8ef8eef2af8dcee465c063",
+      "hitl": false,
+      "id": "perf_passthrough",
+      "input_fields": {
+        "input_value": "perf-passthrough-ping"
+      },
+      "mcp_action_name": "perf_passthrough",
+      "node_types": [
+        "ChatInput",
+        "ChatOutput"
+      ],
+      "required_environment_features": [],
+      "source_provenance": "generated:ChatInput->ChatOutput(should_store_message=false)",
+      "stress_category": "protocol_calibration",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "mcp",
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "dataset_selector": "webhook/default_payload",
+      "embedded_component_sha256": {},
+      "endpoint_name": "perf-webhook-passthrough",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "webhook_n_accept_n_complete": true
+      },
+      "fixture": "perf_webhook_passthrough.json",
+      "fixture_path": "fixtures/perf_webhook_passthrough.json",
+      "fixture_sha256": "ed783ea347f04e89c34a46f5b6280907814d7fce98f546a6254a09418a794d5d",
+      "hitl": false,
+      "id": "perf_webhook_passthrough",
+      "input_fields": {
+        "payload": {
+          "event": "perf-webhook",
+          "marker": "PERF_WEBHOOK_V1",
+          "seq": 1
+        }
+      },
+      "mcp_action_name": null,
+      "node_types": [
+        "ChatOutput",
+        "Webhook"
+      ],
+      "required_environment_features": [
+        "webhook_sse"
+      ],
+      "source_provenance": "generated:Webhook->ChatOutput",
+      "stress_category": "webhook",
+      "supported_modes": [
+        "webhook"
+      ],
+      "supported_protocols": [
+        "webhook"
+      ],
+      "webhook_copy_count": 1
+    },
+    {
+      "dataset_selector": null,
+      "embedded_component_sha256": {},
+      "endpoint_name": "perf-memory-chatbot-no-llm",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "chat_message_persisted": true
+      },
+      "fixture": "MemoryChatbotNoLLM.json",
+      "fixture_path": "fixtures/MemoryChatbotNoLLM.json",
+      "fixture_sha256": "1aa60eae54c6d3a5f207935cbab4d4ecb4c98ce46c1812a2f2993aa83c946d17",
+      "hitl": false,
+      "id": "MemoryChatbotNoLLM",
+      "input_fields": {
+        "input_value": "perf-chat-turn"
+      },
+      "mcp_action_name": "MemoryChatbotNoLLM",
+      "node_types": [
+        "ChatInput",
+        "ChatOutput",
+        "Memory",
+        "Prompt",
+        "TypeConverterComponent"
+      ],
+      "required_environment_features": [
+        "message_store"
+      ],
+      "source_provenance": "pinned:src/backend/tests/data/MemoryChatbotNoLLM.json",
+      "stress_category": "chat_db",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "mcp",
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "dataset_selector": "hitl/approve_decision",
+      "embedded_component_sha256": {},
+      "endpoint_name": "perf-human-input",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "hitl_lifecycle": "background->suspended->pending->resume->completed"
+      },
+      "fixture": "human_input_flow.json",
+      "fixture_path": "fixtures/human_input_flow.json",
+      "fixture_sha256": "90d97d4be8c61fac29ff2248bb8eba6467082e866a1b101dcfb979dbf2124a46",
+      "hitl": true,
+      "id": "human_input_flow",
+      "input_fields": {
+        "prompt": "{{hitl.prompt}}"
+      },
+      "mcp_action_name": null,
+      "node_types": [
+        "ChatOutput",
+        "HumanInput"
+      ],
+      "required_environment_features": [
+        "workflows_background",
+        "hitl"
+      ],
+      "source_provenance": "pinned:src/backend/tests/data/human_input_flow.json",
+      "stress_category": "hitl",
+      "supported_modes": [
+        "background"
+      ],
+      "supported_protocols": [
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "dataset_selector": null,
+      "embedded_component_sha256": {
+        "perf_sleep": "72543184a25a30fc986f9bec068fc22ce405f285c49d7d8f891ca724d877f271"
+      },
+      "embedded_components": [
+        "perf_sleep"
+      ],
+      "endpoint_name": "perf-queue-short",
+      "expected_component_sha256": {
+        "perf_sleep": "72543184a25a30fc986f9bec068fc22ce405f285c49d7d8f891ca724d877f271"
+      },
+      "expected_output_rule": {
+        "matches_regex": "^slept:50:perf-queue-ping$"
+      },
+      "fixture": "perf_queue_short.json",
+      "fixture_path": "fixtures/perf_queue_short.json",
+      "fixture_sha256": "4e77ea466af9df21ed42ec3ff49bc8fc8bbdc0d87420cdf35b51c82add52b81d",
+      "hitl": false,
+      "id": "perf_queue_short",
+      "input_fields": {
+        "duration_ms": 50,
+        "input_value": "perf-queue-ping"
+      },
+      "mcp_action_name": "perf_queue_short",
+      "node_types": [
+        "ChatInput",
+        "ChatOutput",
+        "PerfSleep"
+      ],
+      "required_environment_features": [
+        "workflows_background"
+      ],
+      "source_provenance": "generated:ChatInput->PerfSleep->ChatOutput",
+      "stress_category": "queue",
+      "supported_modes": [
+        "background"
+      ],
+      "supported_protocols": [
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "binding": {
+        "knowledge_base": "perf_kb_v1"
+      },
+      "dataset_selector": "kb/bounded_corpus",
+      "embedded_component_sha256": {},
+      "endpoint_name": "perf-kb-ingest",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "contains": "PERF_KB_DOC_V1",
+        "kb_ingest_terminal": true
+      },
+      "fixture": "perf_kb_ingest.json",
+      "fixture_path": "fixtures/perf_kb_ingest.json",
+      "fixture_sha256": "92e3ed03db3a2268687331f385e95882bbd9d41f81e68bc4a88ca2bc04aadb8e",
+      "hitl": false,
+      "id": "perf_kb_ingest",
+      "input_fields": {
+        "input_value": "PERF_KB_DOC_V1"
+      },
+      "mcp_action_name": "perf_kb_ingest",
+      "node_types": [
+        "KnowledgeIngestion",
+        "SplitText",
+        "TextInput"
+      ],
+      "required_environment_features": [
+        "knowledge_base",
+        "embeddings"
+      ],
+      "source_provenance": "generated-equivalent:src/lfx/tests/data/starter_projects_1_6_0/Knowledge Ingestion.json (URL->TextInput deterministic document)",
+      "stress_category": "kb_ingest",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "mcp",
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "binding": {
+        "knowledge_base": "perf_kb_v1"
+      },
+      "dataset_selector": "kb/bounded_corpus",
+      "embedded_component_sha256": {},
+      "endpoint_name": "perf-kb-retrieve",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "known_query": "PERF_KB_QUERY_KNOWN",
+        "retrieval_hits_min": 1
+      },
+      "fixture": "perf_kb_retrieve.json",
+      "fixture_path": "fixtures/perf_kb_retrieve.json",
+      "fixture_sha256": "7176873c87495f9b1a7ee60e05dde7eff57de07a16b58c36909421b3dbeec222",
+      "hitl": false,
+      "id": "perf_kb_retrieve",
+      "input_fields": {
+        "input_value": "PERF_KB_QUERY_KNOWN"
+      },
+      "mcp_action_name": "perf_kb_retrieve",
+      "node_types": [
+        "ChatOutput",
+        "KnowledgeBase",
+        "TextInput"
+      ],
+      "required_environment_features": [
+        "knowledge_base",
+        "embeddings"
+      ],
+      "source_provenance": "generated-equivalent:src/lfx/tests/data/starter_projects_1_6_0/Knowledge Retrieval.json",
+      "stress_category": "kb_retrieve",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "mcp",
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "dataset_selector": null,
+      "embedded_component_sha256": {
+        "perf_cpu_burn": "5e92dd0f71229ff41e374bb0b3b608ba5c4a3a75d64db4ce885e302ce8e3bc61"
+      },
+      "embedded_components": [
+        "perf_cpu_burn"
+      ],
+      "endpoint_name": "perf-cpu-graph",
+      "expected_component_sha256": {
+        "perf_cpu_burn": "5e92dd0f71229ff41e374bb0b3b608ba5c4a3a75d64db4ce885e302ce8e3bc61"
+      },
+      "expected_output_rule": {
+        "matches_regex": "^cpu:\\d+:\\d+:[0-9a-f]{16}:perf-cpu$"
+      },
+      "fixture": "perf_cpu_graph.json",
+      "fixture_path": "fixtures/perf_cpu_graph.json",
+      "fixture_sha256": "2ac15256c21337a9b98f3093487f76255f2746355b72d34077579b1e97329568",
+      "hitl": false,
+      "id": "perf_cpu_graph",
+      "input_fields": {
+        "duration_ms": 25,
+        "input_value": "perf-cpu",
+        "iterations": 50000
+      },
+      "mcp_action_name": "perf_cpu_graph",
+      "node_types": [
+        "ChatInput",
+        "ChatOutput",
+        "Pass",
+        "PerfCpuBurn"
+      ],
+      "required_environment_features": [],
+      "source_provenance": "generated:ChatInput->PerfCpuBurnx2(fan-out)->Pass->ChatOutput",
+      "stress_category": "cpu_graph",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "mcp",
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "dataset_selector": null,
+      "embedded_component_sha256": {
+        "perf_subprocess_churn": "ec5da2d659a79e0eb0b1c2b0096be4e86504fae0d5fb11fc2731456b6d2c60a1"
+      },
+      "embedded_components": [
+        "perf_subprocess_churn"
+      ],
+      "endpoint_name": "perf-multiproc-churn",
+      "expected_component_sha256": {
+        "perf_subprocess_churn": "ec5da2d659a79e0eb0b1c2b0096be4e86504fae0d5fb11fc2731456b6d2c60a1"
+      },
+      "expected_output_rule": {
+        "matches_regex": "^multiproc:2:0(,0)*:perf-multiproc$"
+      },
+      "fixture": "perf_multiproc_churn.json",
+      "fixture_path": "fixtures/perf_multiproc_churn.json",
+      "fixture_sha256": "4df6259b4b278d33f5d01d3e86de42e5f6df98a67ec9238727d608634e19070a",
+      "hitl": false,
+      "id": "perf_multiproc_churn",
+      "input_fields": {
+        "count": 2,
+        "input_value": "perf-multiproc"
+      },
+      "mcp_action_name": "perf_multiproc_churn",
+      "node_types": [
+        "ChatInput",
+        "ChatOutput",
+        "PerfSubprocessChurn"
+      ],
+      "required_environment_features": [],
+      "source_provenance": "generated:ChatInput->PerfSubprocessChurn->ChatOutput",
+      "stress_category": "multiproc",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "mcp",
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "dataset_selector": "storage/bounded_payload",
+      "embedded_component_sha256": {},
+      "endpoint_name": "perf-payload-echo",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "filename_contains": "perf_payload_echo",
+        "save_to_file": true
+      },
+      "fixture": "perf_payload_echo.json",
+      "fixture_path": "fixtures/perf_payload_echo.json",
+      "fixture_sha256": "07d22c153beef11cf16f8533d0a50d524cc68ed3bb9d6a72ada934da2b8da566",
+      "hitl": false,
+      "id": "perf_payload_echo",
+      "input_fields": {
+        "file_name": "perf_payload_echo",
+        "input_value": "{{storage.payload_text}}"
+      },
+      "mcp_action_name": "perf_payload_echo",
+      "node_types": [
+        "ChatInput",
+        "ChatOutput",
+        "SaveToFile"
+      ],
+      "required_environment_features": [
+        "storage"
+      ],
+      "source_provenance": "generated:ChatInput->SaveToFile->ChatOutput",
+      "stress_category": "ram_storage",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "mcp",
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "binding": {
+        "outbound_model": "gpt-4o-mini",
+        "outbound_provider": "OpenAI"
+      },
+      "dataset_selector": null,
+      "embedded_component_sha256": {},
+      "endpoint_name": "perf-outbound-basic-prompting",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "contains": "perf-outbound-ok"
+      },
+      "fixture": "perf_outbound_basic_prompting.json",
+      "fixture_path": "fixtures/perf_outbound_basic_prompting.json",
+      "fixture_sha256": "c667dba5d05e906b5518ee7c4a4013e77aa0a36742a1e02894122db1e66db880",
+      "hitl": false,
+      "id": "perf_outbound_basic_prompting",
+      "input_fields": {
+        "input_value": "Say exactly: perf-outbound-ok"
+      },
+      "mcp_action_name": "perf_outbound_basic_prompting",
+      "node_types": [
+        "ChatInput",
+        "ChatOutput",
+        "LanguageModelComponent"
+      ],
+      "required_environment_features": [
+        "llm_provider"
+      ],
+      "source_provenance": "generated-equivalent:src/lfx/tests/data/starter_projects_1_6_0/Basic Prompting.json (deterministic prompt)",
+      "stress_category": "outbound",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "mcp",
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "binding": {
+        "knowledge_base": "perf_kb_v1",
+        "outbound_model": "gpt-4o-mini",
+        "outbound_provider": "OpenAI"
+      },
+      "dataset_selector": "kb/bounded_corpus",
+      "embedded_component_sha256": {
+        "perf_cpu_burn": "5e92dd0f71229ff41e374bb0b3b608ba5c4a3a75d64db4ce885e302ce8e3bc61",
+        "perf_subprocess_churn": "ec5da2d659a79e0eb0b1c2b0096be4e86504fae0d5fb11fc2731456b6d2c60a1"
+      },
+      "embedded_components": [
+        "perf_cpu_burn",
+        "perf_subprocess_churn"
+      ],
+      "endpoint_name": "perf-ensemble-journey",
+      "expected_component_sha256": {
+        "perf_cpu_burn": "5e92dd0f71229ff41e374bb0b3b608ba5c4a3a75d64db4ce885e302ce8e3bc61",
+        "perf_subprocess_churn": "ec5da2d659a79e0eb0b1c2b0096be4e86504fae0d5fb11fc2731456b6d2c60a1"
+      },
+      "expected_output_rule": {
+        "ensemble_terminal": true
+      },
+      "fixture": "perf_ensemble_journey.json",
+      "fixture_path": "fixtures/perf_ensemble_journey.json",
+      "fixture_sha256": "a712d9f32ee9499dac547850023cf5fb1e0e28e468e7ba909e1d09d240b8f261",
+      "hitl": false,
+      "id": "perf_ensemble_journey",
+      "input_fields": {
+        "input_value": "perf-ensemble-journey"
+      },
+      "mcp_action_name": "perf_ensemble_journey",
+      "node_types": [
+        "ChatInput",
+        "ChatOutput",
+        "KnowledgeBase",
+        "KnowledgeIngestion",
+        "LanguageModelComponent",
+        "Memory",
+        "Pass",
+        "PerfCpuBurn",
+        "PerfSubprocessChurn",
+        "SaveToFile",
+        "SplitText",
+        "TypeConverterComponent"
+      ],
+      "required_environment_features": [
+        "knowledge_base",
+        "embeddings",
+        "storage",
+        "llm_provider"
+      ],
+      "source_provenance": "generated:multiproc->cpu->kb_ingest->save->kb_retrieve->memory->outbound->ChatOutput",
+      "stress_category": "ensemble_flow",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background",
+        "webhook"
+      ],
+      "supported_protocols": [
+        "mcp",
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background",
+        "webhook"
+      ],
+      "webhook_copy_count": 1
+    },
+    {
+      "binding": {
+        "knowledge_base": "perf_kb_v1",
+        "outbound_model": "gpt-4o-mini",
+        "outbound_provider": "OpenAI"
+      },
+      "dataset_selector": "hitl/approve_decision",
+      "embedded_component_sha256": {
+        "perf_cpu_burn": "5e92dd0f71229ff41e374bb0b3b608ba5c4a3a75d64db4ce885e302ce8e3bc61",
+        "perf_subprocess_churn": "ec5da2d659a79e0eb0b1c2b0096be4e86504fae0d5fb11fc2731456b6d2c60a1"
+      },
+      "embedded_components": [
+        "perf_cpu_burn",
+        "perf_subprocess_churn"
+      ],
+      "endpoint_name": "perf-ensemble-journey-hitl",
+      "expected_component_sha256": {
+        "perf_cpu_burn": "5e92dd0f71229ff41e374bb0b3b608ba5c4a3a75d64db4ce885e302ce8e3bc61",
+        "perf_subprocess_churn": "ec5da2d659a79e0eb0b1c2b0096be4e86504fae0d5fb11fc2731456b6d2c60a1"
+      },
+      "expected_output_rule": {
+        "ensemble_terminal": true,
+        "hitl_lifecycle": "background->suspended->pending->resume->completed"
+      },
+      "fixture": "perf_ensemble_journey_hitl.json",
+      "fixture_path": "fixtures/perf_ensemble_journey_hitl.json",
+      "fixture_sha256": "cf57a00bb434f9d67ee3dd1f078ae7871bea8b26186fee03b3f262ad20c6a99f",
+      "hitl": true,
+      "id": "perf_ensemble_journey_hitl",
+      "input_fields": {
+        "input_value": "perf-ensemble-journey"
+      },
+      "mcp_action_name": null,
+      "node_types": [
+        "ChatInput",
+        "ChatOutput",
+        "HumanInput",
+        "KnowledgeBase",
+        "KnowledgeIngestion",
+        "LanguageModelComponent",
+        "Memory",
+        "Pass",
+        "PerfCpuBurn",
+        "PerfSubprocessChurn",
+        "SaveToFile",
+        "SplitText",
+        "TypeConverterComponent"
+      ],
+      "required_environment_features": [
+        "workflows_background",
+        "hitl",
+        "knowledge_base",
+        "embeddings",
+        "storage",
+        "llm_provider"
+      ],
+      "source_provenance": "generated:perf_ensemble_journey+HumanInput(Approve)",
+      "stress_category": "ensemble_flow_hitl",
+      "supported_modes": [
+        "background"
+      ],
+      "supported_protocols": [
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    }
+  ],
+  "version": 1
+}
