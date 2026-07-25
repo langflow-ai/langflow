@@ -281,7 +281,8 @@ markers = [
     "integration: Integration tests",
     "slow: Slow-running tests",
     "security: Security regression tests (IDOR, auth, access control)",
-    "real_services: Tests that need real service instances (real SQLite + real Postgres + real Redis)"
+    "real_services: Tests that need real service instances (real SQLite + real Postgres + real Redis)",
+    "performance_integration: Opt-in performance-suite live fixture/subsystem coverage",
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
@@ -569,6 +570,34 @@ external = ["RUF027"]
     "G004",    # Logging f-strings (detailed error logging)
     "SIM102",  # Nested if statements (readability over optimization)
     "E501",    # Line too long (some CLI commands are naturally long)
+]
+"src/backend/tests/locust/langflow_runtime/**" = [
+    "D1",
+    "T201",
+    "S603",
+    "S607",
+    "S104",
+    "S105",
+    "FBT001",
+    "FBT002",
+    "TRY002",
+    "TRY003",
+    "TRY300",
+    "EM101",
+    "EM102",
+    "EXE001",
+    "D415",
+    "F401",
+    "PTH123",
+    "PTH107",
+    "PTH207",
+    "B007",
+    "PLW0602",
+    "PLW0603",
+    "DTZ005",
+    "G004",
+    "SIM102",
+    "E501",
 ]
 
 [tool.ruff.lint.flake8-builtins]
