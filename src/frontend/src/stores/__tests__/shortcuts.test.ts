@@ -28,6 +28,11 @@ const mockShortcuts = [
   },
 ];
 
+// Reads a shortcut key that is not part of the store type (tests intentionally
+// set arbitrary names to exercise the dynamic-key behavior of the store).
+const getDynamicShortcut = (store: unknown, name: string): unknown =>
+  (store as Record<string, unknown>)[name];
+
 describe("useShortcutsStore", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -163,7 +168,9 @@ describe("useShortcutsStore", () => {
         result.current.updateUniqueShortcut("customShortcut", "mod+custom");
       });
 
-      expect((result.current as any).customShortcut).toBe("mod+custom");
+      expect(getDynamicShortcut(result.current, "customShortcut")).toBe(
+        "mod+custom",
+      );
     });
 
     it("should not affect shortcuts array when updating individual shortcuts", () => {
@@ -307,7 +314,7 @@ describe("useShortcutsStore", () => {
         result.current.updateUniqueShortcut("special", "mod+shift+~");
       });
 
-      expect((result.current as any).special).toBe("mod+shift+~");
+      expect(getDynamicShortcut(result.current, "special")).toBe("mod+shift+~");
     });
 
     it("should handle empty string shortcuts", () => {
@@ -317,7 +324,7 @@ describe("useShortcutsStore", () => {
         result.current.updateUniqueShortcut("empty", "");
       });
 
-      expect((result.current as any).empty).toBe("");
+      expect(getDynamicShortcut(result.current, "empty")).toBe("");
     });
 
     it("should handle shortcuts array with duplicate names", () => {
