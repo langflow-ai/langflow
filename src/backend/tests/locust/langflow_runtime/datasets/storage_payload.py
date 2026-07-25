@@ -1,7 +1,8 @@
 """Bounded storage payload for SaveToFile / payload-echo axes.
 
 Not committed as a file — call ``bounded_payload_text()`` when a test or
-Locust run needs the body.
+Locust run needs the body. Used by ``perf_payload_echo`` coverage in
+``test_subsystem_coverage`` and by fixture_index dataset selectors.
 """
 
 from __future__ import annotations

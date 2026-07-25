@@ -1,4 +1,9 @@
-"""Isolate SaveToFile Local writes outside the repo without process-global chdir."""
+"""Isolate SaveToFile Local writes outside the repo without process-global chdir.
+
+Redirects ``config_dir`` (+ ``restrict_local_file_access``) to a unique temp
+tree so ``perf_payload_echo`` / SaveToFile tests do not write into the
+checkout. Used by ``test_subsystem_coverage`` storage cases.
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Insert/delete performance-suite flows and projects in the live test DB."""
+"""Insert/delete performance-suite flows and projects in the live test DB.
+
+Support helpers for ``test_subsystem_coverage`` (and any future integration
+tests) that need a flow/project row before calling workflows, webhook, or MCP.
+"""
 
 from __future__ import annotations
 

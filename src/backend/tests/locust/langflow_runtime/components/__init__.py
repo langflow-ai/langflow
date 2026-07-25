@@ -1,4 +1,8 @@
-"""Test-only performance isolator components embedded into suite flow fixtures."""
+"""Test-only performance isolator components embedded into suite flow fixtures.
+
+Re-exported for ``build_fixtures`` / unit tests. Prefer editing these modules,
+then rebuilding fixtures — do not hand-edit embedded sources in JSON.
+"""
 
 from tests.locust.langflow_runtime.components.perf_cpu_burn import PerfCpuBurn
 from tests.locust.langflow_runtime.components.perf_sleep import PerfSleep

@@ -1,4 +1,9 @@
-"""Knowledge-base directory settings + local KB provisioning."""
+"""Knowledge-base directory settings + local KB provisioning.
+
+Points live settings ``knowledge_bases_dir`` at a temp root and creates the
+KB directory/DB record expected by ingest/retrieve fixtures. Used by KB and
+ensemble cases in ``test_subsystem_coverage``.
+"""
 
 from __future__ import annotations
 

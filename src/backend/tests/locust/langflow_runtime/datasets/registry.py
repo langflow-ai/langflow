@@ -1,7 +1,8 @@
 """Known dataset ids referenced by ``fixture_index`` ``dataset_selector`` values.
 
 Inputs themselves live in Python modules (``kb_corpus``, ``storage_payload``,
-``v1_contracts``). This registry is only the allow-list of selector ids.
+``v1_contracts``). This registry is only the allow-list of selector ids,
+checked by ``validate_fixtures`` and unit tests.
 """
 
 from __future__ import annotations

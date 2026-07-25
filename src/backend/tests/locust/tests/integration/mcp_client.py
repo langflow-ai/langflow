@@ -1,4 +1,9 @@
-"""Live MCP streamable-HTTP client helper."""
+"""Live MCP streamable-HTTP client helper.
+
+Drives initialize → tools/list → tools/call against a project MCP endpoint
+served via ``real_http_base_url``. Used by the MCP case in
+``test_subsystem_coverage``.
+"""
 
 from __future__ import annotations
 

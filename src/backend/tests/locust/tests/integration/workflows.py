@@ -1,4 +1,9 @@
-"""Workflows API helpers for performance-suite integration tests."""
+"""Workflows API helpers for performance-suite integration tests.
+
+POST/wait helpers around ``/api/v2/workflows`` and job status polling. Used by
+queue, HITL, stream, chat, outbound, and ensemble cases in
+``test_subsystem_coverage``.
+"""
 
 from __future__ import annotations
 

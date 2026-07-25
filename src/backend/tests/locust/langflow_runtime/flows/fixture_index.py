@@ -1,4 +1,9 @@
-"""Author flows/fixture_index.json from built fixture paths."""
+"""Author flows/fixture_index.json from built fixture paths.
+
+Constructs the committed index (ids, hashes, bindings, dataset selectors)
+during ``build_fixtures`` runs. Consumers read ``fixture_index.json`` via
+``validate_fixtures`` and ``tests/locust/tests/integration/fixture_access``.
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Load committed fixture_index entries and fixture JSON payloads."""
+"""Load committed fixture_index entries and fixture JSON payloads.
+
+Used by ``test_subsystem_coverage`` (and re-exported from this package's
+``__init__``) to resolve a flow id to its index entry and on-disk fixture.
+"""
 
 from __future__ import annotations
 
