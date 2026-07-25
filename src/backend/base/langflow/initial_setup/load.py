@@ -1,3 +1,6 @@
+from collections.abc import Callable
+from typing import Any
+
 from .starter_projects import (
     basic_prompting_graph,
     blog_writer_graph,
@@ -6,11 +9,17 @@ from .starter_projects import (
     vector_store_rag_graph,
 )
 
-# Name and description for each starter project, kept in sync with the
-# corresponding files in ``initial_setup/starter_projects/*.json``.
-STARTER_PROJECT_METADATA: list[tuple[str, str]] = [
-    ("Basic Prompting", "Perform basic prompting with an OpenAI model."),
+# Each starter project is declared alongside its canonical name and description so
+# that reordering cannot associate a graph with the wrong metadata. The names and
+# descriptions are kept in sync with ``initial_setup/starter_projects/*.json``.
+STARTER_PROJECTS: list[tuple[Callable[[], Any], str, str]] = [
     (
+        basic_prompting_graph,
+        "Basic Prompting",
+        "Perform basic prompting with an OpenAI model.",
+    ),
+    (
+        blog_writer_graph,
         "Blog Writer",
         (
             "Write blog posts from web references using an Agent. URL fetches references, you provide the "
@@ -18,6 +27,7 @@ STARTER_PROJECT_METADATA: list[tuple[str, str]] = [
         ),
     ),
     (
+        document_qa_graph,
         "Document Q&A",
         (
             "Ask questions about your own document using a built-in Knowledge Base (RAG). File ingests into "
@@ -25,29 +35,26 @@ STARTER_PROJECT_METADATA: list[tuple[str, str]] = [
         ),
     ),
     (
+        memory_chatbot_graph,
         "Memory Chatbot",
         (
             "Create a chatbot that saves and references previous messages, enabling the model to maintain "
             "context throughout the conversation."
         ),
     ),
-    ("Vector Store RAG", "Load your data for chat context with Retrieval Augmented Generation."),
+    (
+        vector_store_rag_graph,
+        "Vector Store RAG",
+        "Load your data for chat context with Retrieval Augmented Generation.",
+    ),
 ]
 
 
 def get_starter_projects_graphs():
-    return [
-        basic_prompting_graph(),
-        blog_writer_graph(),
-        document_qa_graph(),
-        memory_chatbot_graph(),
-        vector_store_rag_graph(),
-    ]
+    return [build_graph() for build_graph, _name, _description in STARTER_PROJECTS]
 
 
 def get_starter_projects_dump():
-    graphs = get_starter_projects_graphs()
     return [
-        graph.dump(name=name, description=description)
-        for graph, (name, description) in zip(graphs, STARTER_PROJECT_METADATA, strict=True)
+        build_graph().dump(name=name, description=description) for build_graph, name, description in STARTER_PROJECTS
     ]

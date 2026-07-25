@@ -12,27 +12,50 @@ async def test_get_starter_projects(client: AsyncClient, logged_in_headers):
     assert isinstance(result, list), "The result must be a list"
 
 
-async def test_get_starter_projects_are_named(client: AsyncClient, logged_in_headers):
-    """Every starter project must expose a non-empty, unique top-level name.
+EXPECTED_STARTER_PROJECTS = {
+    "Basic Prompting": "Perform basic prompting with an OpenAI model.",
+    "Blog Writer": (
+        "Write blog posts from web references using an Agent. URL fetches references, you provide the "
+        "topic via Chat Input, and the Agent writes a grounded post. Core components only."
+    ),
+    "Document Q&A": (
+        "Ask questions about your own document using a built-in Knowledge Base (RAG). File ingests into "
+        "the KB; an Agent answers from retrieved context. No external vector database required."
+    ),
+    "Memory Chatbot": (
+        "Create a chatbot that saves and references previous messages, enabling the model to maintain "
+        "context throughout the conversation."
+    ),
+    "Vector Store RAG": "Load your data for chat context with Retrieval Augmented Generation.",
+}
 
-    Without this, API clients cannot select a template by name.
+
+async def test_get_starter_projects_expose_canonical_metadata(client: AsyncClient, logged_in_headers):
+    """Each starter project must expose its canonical name and description.
+
+    Without a populated top-level name, API clients cannot select a template by name.
+    Comparing the full mapping also catches a graph paired with the wrong metadata.
     """
     response = await client.get("api/v1/starter-projects/", headers=logged_in_headers)
     assert response.status_code == status.HTTP_200_OK, response.text
     result = response.json()
 
-    assert result, "Expected at least one starter project"
+    assert len(result) == len(EXPECTED_STARTER_PROJECTS), (
+        f"Expected {len(EXPECTED_STARTER_PROJECTS)} starter projects, got {len(result)}"
+    )
 
     names = [project["name"] for project in result]
-    assert all(names), f"Every starter project needs a name, got: {names}"
     assert len(set(names)) == len(names), f"Starter project names must be unique, got: {names}"
 
-    descriptions = [project["description"] for project in result]
-    assert all(descriptions), f"Every starter project needs a description, got: {descriptions}"
+    actual = {project["name"]: project["description"] for project in result}
+    assert actual == EXPECTED_STARTER_PROJECTS
 
     # ``endpoint_name`` used to be stringified unconditionally, yielding the literal "None".
+    # The response model always emits the field, so it must be present and null here.
     endpoint_names = [project["endpoint_name"] for project in result]
-    assert "None" not in endpoint_names, f"endpoint_name must be null, not the string 'None': {endpoint_names}"
+    assert endpoint_names == [None] * len(result), (
+        f"endpoint_name must be null, not the string 'None': {endpoint_names}"
+    )
 
 
 def test_starter_projects_keep_optional_crewai_exports_lazy():
