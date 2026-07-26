@@ -3,7 +3,7 @@
     "perf_cpu_burn": "7e941b067228adf3143106179f5b2b55eb37faaf55bf3d95c6bf759a47c179e2",
     "perf_disk_io": "203e15af92c59dfa7624971974f7dcc106b6a8fa28b2149a7a42f02118ad2fed",
     "perf_sleep": "a59ce946c5e26deadc57fab4547c816ba5e97986adef072f92fdac8de9b8b7e9",
-    "perf_subprocess_churn": "bf4bb05ec77c4e8d7b717a17c6c8d91170f8edcff2d8798545d974776359f539"
+    "perf_subprocess_churn": "57175cfc77a372ffcc5a843ad4af77228a332a3e27cd5410fc58a5a9151c5c7e"
   },
   "description": "Complete V1 performance-suite flow contract inventory.",
   "flows": [
@@ -30,6 +30,7 @@
       ],
       "required_environment_features": [],
       "source_provenance": "generated:ChatInput->ChatOutput(should_store_message=false)",
+      "stores_chat_history": false,
       "stress_category": "protocol_calibration",
       "supported_modes": [
         "sync",
@@ -73,6 +74,7 @@
         "webhook_sse"
       ],
       "source_provenance": "generated:Webhook->ChatOutput",
+      "stores_chat_history": false,
       "stress_category": "webhook",
       "supported_modes": [
         "webhook"
@@ -110,6 +112,7 @@
         "message_store"
       ],
       "source_provenance": "pinned:src/backend/tests/data/MemoryChatbotNoLLM.json",
+      "stores_chat_history": true,
       "stress_category": "chat_db",
       "supported_modes": [
         "sync",
@@ -150,6 +153,7 @@
         "hitl"
       ],
       "source_provenance": "pinned:src/backend/tests/data/human_input_flow.json",
+      "stores_chat_history": false,
       "stress_category": "hitl",
       "supported_modes": [
         "background"
@@ -193,6 +197,7 @@
         "workflows_background"
       ],
       "source_provenance": "generated:ChatInput->PerfSleep->ChatOutput",
+      "stores_chat_history": false,
       "stress_category": "queue",
       "supported_modes": [
         "background"
@@ -233,6 +238,7 @@
         "embeddings"
       ],
       "source_provenance": "generated-equivalent:src/lfx/tests/data/starter_projects_1_6_0/Knowledge Ingestion.json (URL->TextInput deterministic document)",
+      "stores_chat_history": false,
       "stress_category": "kb_ingest",
       "supported_modes": [
         "sync",
@@ -278,6 +284,7 @@
         "embeddings"
       ],
       "source_provenance": "generated-equivalent:src/lfx/tests/data/starter_projects_1_6_0/Knowledge Retrieval.json",
+      "stores_chat_history": false,
       "stress_category": "kb_retrieve",
       "supported_modes": [
         "sync",
@@ -326,6 +333,7 @@
       ],
       "required_environment_features": [],
       "source_provenance": "generated:ChatInput->PerfCpuBurnx2(fan-out)->Pass->ChatOutput",
+      "stores_chat_history": false,
       "stress_category": "cpu_graph",
       "supported_modes": [
         "sync",
@@ -343,21 +351,21 @@
     {
       "dataset_selector": null,
       "embedded_component_sha256": {
-        "perf_subprocess_churn": "bf4bb05ec77c4e8d7b717a17c6c8d91170f8edcff2d8798545d974776359f539"
+        "perf_subprocess_churn": "57175cfc77a372ffcc5a843ad4af77228a332a3e27cd5410fc58a5a9151c5c7e"
       },
       "embedded_components": [
         "perf_subprocess_churn"
       ],
       "endpoint_name": "perf-multiproc-churn",
       "expected_component_sha256": {
-        "perf_subprocess_churn": "bf4bb05ec77c4e8d7b717a17c6c8d91170f8edcff2d8798545d974776359f539"
+        "perf_subprocess_churn": "57175cfc77a372ffcc5a843ad4af77228a332a3e27cd5410fc58a5a9151c5c7e"
       },
       "expected_output_rule": {
         "matches_regex": "^multiproc:2:0(,0)*:\\d+:\\d+:\\d+:\\d+:\\d+:perf-multiproc(?:\\|child:[^|]+)+$"
       },
       "fixture": "perf_multiproc_churn.json",
       "fixture_path": "fixtures/perf_multiproc_churn.json",
-      "fixture_sha256": "94685a6fcc5c84bc9e1f7a358c2dfc9a21cde6f6aff7b70b8a97e77248bea972",
+      "fixture_sha256": "6ae75b010d35e257c64f2c4df79ae1dde651f72614f07d59bc52c0681ae444b8",
       "hitl": false,
       "id": "perf_multiproc_churn",
       "input_fields": {
@@ -374,6 +382,7 @@
       ],
       "required_environment_features": [],
       "source_provenance": "generated:ChatInput->PerfSubprocessChurn->ChatOutput",
+      "stores_chat_history": false,
       "stress_category": "multiproc",
       "supported_modes": [
         "sync",
@@ -420,6 +429,7 @@
       ],
       "required_environment_features": [],
       "source_provenance": "generated:ChatInput->PerfDiskIo->ChatOutput",
+      "stores_chat_history": false,
       "stress_category": "disk_io",
       "supported_modes": [
         "sync",
@@ -462,6 +472,7 @@
         "storage"
       ],
       "source_provenance": "generated:ChatInput->SaveToFile->ChatOutput",
+      "stores_chat_history": false,
       "stress_category": "ram_storage",
       "supported_modes": [
         "sync",
@@ -506,6 +517,7 @@
         "llm_provider"
       ],
       "source_provenance": "generated-equivalent:src/lfx/tests/data/starter_projects_1_6_0/Basic Prompting.json (deterministic prompt)",
+      "stores_chat_history": false,
       "stress_category": "outbound",
       "supported_modes": [
         "sync",
@@ -530,7 +542,7 @@
       "embedded_component_sha256": {
         "perf_cpu_burn": "7e941b067228adf3143106179f5b2b55eb37faaf55bf3d95c6bf759a47c179e2",
         "perf_disk_io": "203e15af92c59dfa7624971974f7dcc106b6a8fa28b2149a7a42f02118ad2fed",
-        "perf_subprocess_churn": "bf4bb05ec77c4e8d7b717a17c6c8d91170f8edcff2d8798545d974776359f539"
+        "perf_subprocess_churn": "57175cfc77a372ffcc5a843ad4af77228a332a3e27cd5410fc58a5a9151c5c7e"
       },
       "embedded_components": [
         "perf_cpu_burn",
@@ -541,14 +553,14 @@
       "expected_component_sha256": {
         "perf_cpu_burn": "7e941b067228adf3143106179f5b2b55eb37faaf55bf3d95c6bf759a47c179e2",
         "perf_disk_io": "203e15af92c59dfa7624971974f7dcc106b6a8fa28b2149a7a42f02118ad2fed",
-        "perf_subprocess_churn": "bf4bb05ec77c4e8d7b717a17c6c8d91170f8edcff2d8798545d974776359f539"
+        "perf_subprocess_churn": "57175cfc77a372ffcc5a843ad4af77228a332a3e27cd5410fc58a5a9151c5c7e"
       },
       "expected_output_rule": {
         "ensemble_terminal": true
       },
       "fixture": "perf_ensemble_journey.json",
       "fixture_path": "fixtures/perf_ensemble_journey.json",
-      "fixture_sha256": "338b59200ad79ea158559d4e7214e5aa8f35270eb5243be39d2d4bcd0b661725",
+      "fixture_sha256": "ed5f138a2cc050b7d4fc1dbd55bffec9c3d52d408a7fbdc99635cc7909b9fcd1",
       "hitl": false,
       "id": "perf_ensemble_journey",
       "input_fields": {
@@ -577,6 +589,7 @@
         "llm_provider"
       ],
       "source_provenance": "generated:multiproc->disk->cpu->kb_ingest->save->kb_retrieve->memory->outbound->ChatOutput",
+      "stores_chat_history": true,
       "stress_category": "ensemble_flow",
       "supported_modes": [
         "sync",
@@ -603,7 +616,7 @@
       "embedded_component_sha256": {
         "perf_cpu_burn": "7e941b067228adf3143106179f5b2b55eb37faaf55bf3d95c6bf759a47c179e2",
         "perf_disk_io": "203e15af92c59dfa7624971974f7dcc106b6a8fa28b2149a7a42f02118ad2fed",
-        "perf_subprocess_churn": "bf4bb05ec77c4e8d7b717a17c6c8d91170f8edcff2d8798545d974776359f539"
+        "perf_subprocess_churn": "57175cfc77a372ffcc5a843ad4af77228a332a3e27cd5410fc58a5a9151c5c7e"
       },
       "embedded_components": [
         "perf_cpu_burn",
@@ -614,7 +627,7 @@
       "expected_component_sha256": {
         "perf_cpu_burn": "7e941b067228adf3143106179f5b2b55eb37faaf55bf3d95c6bf759a47c179e2",
         "perf_disk_io": "203e15af92c59dfa7624971974f7dcc106b6a8fa28b2149a7a42f02118ad2fed",
-        "perf_subprocess_churn": "bf4bb05ec77c4e8d7b717a17c6c8d91170f8edcff2d8798545d974776359f539"
+        "perf_subprocess_churn": "57175cfc77a372ffcc5a843ad4af77228a332a3e27cd5410fc58a5a9151c5c7e"
       },
       "expected_output_rule": {
         "ensemble_terminal": true,
@@ -622,7 +635,7 @@
       },
       "fixture": "perf_ensemble_journey_hitl.json",
       "fixture_path": "fixtures/perf_ensemble_journey_hitl.json",
-      "fixture_sha256": "5b09b9eac35d5db88c3b50b8cde79109f35ea77940cbf0659a44d9094e7aff8c",
+      "fixture_sha256": "dd9a7c566194c3006521196d8a14daf6da722d3a84a5605b3ed3b56d6b4910b9",
       "hitl": true,
       "id": "perf_ensemble_journey_hitl",
       "input_fields": {
@@ -654,6 +667,7 @@
         "llm_provider"
       ],
       "source_provenance": "generated:perf_ensemble_journey+HumanInput(Approve)",
+      "stores_chat_history": true,
       "stress_category": "ensemble_flow_hitl",
       "supported_modes": [
         "background"
