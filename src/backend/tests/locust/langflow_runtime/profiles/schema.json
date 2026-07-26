@@ -1,0 +1,491 @@
+{
+  "$defs": {
+    "CorrectnessSampling": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "sample_every_n_requests": {
+          "default": 10,
+          "minimum": 1,
+          "title": "Sample Every N Requests",
+          "type": "integer"
+        },
+        "verify_lifecycle": {
+          "default": true,
+          "title": "Verify Lifecycle",
+          "type": "boolean"
+        },
+        "verify_outputs": {
+          "default": true,
+          "title": "Verify Outputs",
+          "type": "boolean"
+        }
+      },
+      "title": "CorrectnessSampling",
+      "type": "object"
+    },
+    "DrainWindow": {
+      "additionalProperties": false,
+      "properties": {
+        "deadline_s": {
+          "exclusiveMinimum": 0,
+          "title": "Deadline S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "deadline_s"
+      ],
+      "title": "DrainWindow",
+      "type": "object"
+    },
+    "MeasuredStep": {
+      "additionalProperties": false,
+      "properties": {
+        "arrival_rate_per_s": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Arrival Rate Per S"
+        },
+        "duration_s": {
+          "exclusiveMinimum": 0,
+          "title": "Duration S",
+          "type": "number"
+        },
+        "spawn_rate": {
+          "exclusiveMinimum": 0,
+          "title": "Spawn Rate",
+          "type": "number"
+        },
+        "users": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Users"
+        }
+      },
+      "required": [
+        "duration_s",
+        "spawn_rate"
+      ],
+      "title": "MeasuredStep",
+      "type": "object"
+    },
+    "ResetRules": {
+      "additionalProperties": false,
+      "properties": {
+        "reset_kb_corpus": {
+          "default": false,
+          "title": "Reset Kb Corpus",
+          "type": "boolean"
+        },
+        "reset_mcp_sessions": {
+          "default": false,
+          "title": "Reset Mcp Sessions",
+          "type": "boolean"
+        },
+        "reset_message_store": {
+          "default": false,
+          "title": "Reset Message Store",
+          "type": "boolean"
+        },
+        "reset_storage_artifacts": {
+          "default": false,
+          "title": "Reset Storage Artifacts",
+          "type": "boolean"
+        },
+        "reset_webhook_subscriptions": {
+          "default": false,
+          "title": "Reset Webhook Subscriptions",
+          "type": "boolean"
+        }
+      },
+      "title": "ResetRules",
+      "type": "object"
+    },
+    "SafetyLimits": {
+      "additionalProperties": false,
+      "properties": {
+        "backlog_max": {
+          "minimum": 0,
+          "title": "Backlog Max",
+          "type": "integer"
+        },
+        "cleanup_timeout_s": {
+          "exclusiveMinimum": 0,
+          "title": "Cleanup Timeout S",
+          "type": "number"
+        },
+        "drain_timeout_s": {
+          "exclusiveMinimum": 0,
+          "title": "Drain Timeout S",
+          "type": "number"
+        },
+        "error_storm_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Error Storm Rate",
+          "type": "number"
+        },
+        "provider_spend_usd": {
+          "minimum": 0,
+          "title": "Provider Spend Usd",
+          "type": "number"
+        },
+        "storage_growth_bytes": {
+          "minimum": 0,
+          "title": "Storage Growth Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "provider_spend_usd",
+        "backlog_max",
+        "storage_growth_bytes",
+        "error_storm_rate",
+        "drain_timeout_s",
+        "cleanup_timeout_s"
+      ],
+      "title": "SafetyLimits",
+      "type": "object"
+    },
+    "ThinkTime": {
+      "additionalProperties": false,
+      "properties": {
+        "max_s": {
+          "minimum": 0,
+          "title": "Max S",
+          "type": "number"
+        },
+        "min_s": {
+          "minimum": 0,
+          "title": "Min S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "min_s",
+        "max_s"
+      ],
+      "title": "ThinkTime",
+      "type": "object"
+    },
+    "UserMixEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Count"
+        },
+        "user_class": {
+          "minLength": 1,
+          "title": "User Class",
+          "type": "string"
+        },
+        "weight": {
+          "minimum": 0,
+          "title": "Weight",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "user_class",
+        "weight"
+      ],
+      "title": "UserMixEntry",
+      "type": "object"
+    },
+    "ValidityConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_scheduling_lateness_s": {
+          "minimum": 0,
+          "title": "Allowed Scheduling Lateness S",
+          "type": "number"
+        },
+        "cold_warm": {
+          "enum": [
+            "cold",
+            "warm",
+            "either"
+          ],
+          "title": "Cold Warm",
+          "type": "string"
+        },
+        "max_generator_cpu_pct": {
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "title": "Max Generator Cpu Pct",
+          "type": "number"
+        }
+      },
+      "required": [
+        "max_generator_cpu_pct",
+        "allowed_scheduling_lateness_s",
+        "cold_warm"
+      ],
+      "title": "ValidityConfig",
+      "type": "object"
+    },
+    "WarmUpWindow": {
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "exclusiveMinimum": 0,
+          "title": "Duration S",
+          "type": "number"
+        },
+        "users": {
+          "minimum": 0,
+          "title": "Users",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "duration_s",
+        "users"
+      ],
+      "title": "WarmUpWindow",
+      "type": "object"
+    },
+    "WindowsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "drain": {
+          "$ref": "#/$defs/DrainWindow"
+        },
+        "measured_steps": {
+          "items": {
+            "$ref": "#/$defs/MeasuredStep"
+          },
+          "minItems": 1,
+          "title": "Measured Steps",
+          "type": "array"
+        },
+        "poll_interval_s": {
+          "exclusiveMinimum": 0,
+          "title": "Poll Interval S",
+          "type": "number"
+        },
+        "sampling_interval_s": {
+          "exclusiveMinimum": 0,
+          "title": "Sampling Interval S",
+          "type": "number"
+        },
+        "warm_up": {
+          "$ref": "#/$defs/WarmUpWindow"
+        }
+      },
+      "required": [
+        "warm_up",
+        "measured_steps",
+        "drain",
+        "sampling_interval_s",
+        "poll_interval_s"
+      ],
+      "title": "WindowsConfig",
+      "type": "object"
+    },
+    "WorkloadConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "arrival_rate_per_s": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Arrival Rate Per S"
+        },
+        "think_time": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ThinkTime"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "user_mix": {
+          "items": {
+            "$ref": "#/$defs/UserMixEntry"
+          },
+          "minItems": 1,
+          "title": "User Mix",
+          "type": "array"
+        },
+        "workload_model": {
+          "enum": [
+            "closed",
+            "paced_closed"
+          ],
+          "title": "Workload Model",
+          "type": "string"
+        }
+      },
+      "required": [
+        "workload_model",
+        "user_mix"
+      ],
+      "title": "WorkloadConfig",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "correctness_sampling": {
+      "$ref": "#/$defs/CorrectnessSampling"
+    },
+    "dataset_selectors": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Dataset Selectors",
+      "type": "array"
+    },
+    "extends": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Extends"
+    },
+    "flow_selectors": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Flow Selectors",
+      "type": "array"
+    },
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "modes": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Modes",
+      "type": "array"
+    },
+    "movement_kind": {
+      "enum": [
+        "solo",
+        "duet",
+        "tutti"
+      ],
+      "title": "Movement Kind",
+      "type": "string"
+    },
+    "protocols": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Protocols",
+      "type": "array"
+    },
+    "purpose": {
+      "minLength": 1,
+      "title": "Purpose",
+      "type": "string"
+    },
+    "reset_rules": {
+      "$ref": "#/$defs/ResetRules"
+    },
+    "safety_limits": {
+      "$ref": "#/$defs/SafetyLimits"
+    },
+    "schema_version": {
+      "const": "1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "stress_categories": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Stress Categories",
+      "type": "array"
+    },
+    "test_type": {
+      "enum": [
+        "smoke",
+        "load",
+        "capacity"
+      ],
+      "title": "Test Type",
+      "type": "string"
+    },
+    "validity": {
+      "$ref": "#/$defs/ValidityConfig"
+    },
+    "windows": {
+      "$ref": "#/$defs/WindowsConfig"
+    },
+    "workload": {
+      "$ref": "#/$defs/WorkloadConfig"
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "test_type",
+    "purpose",
+    "movement_kind",
+    "stress_categories",
+    "protocols",
+    "modes",
+    "flow_selectors",
+    "workload",
+    "windows",
+    "safety_limits",
+    "validity"
+  ],
+  "title": "MovementProfile",
+  "type": "object"
+}

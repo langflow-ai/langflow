@@ -571,35 +571,54 @@ external = ["RUF027"]
     "SIM102",  # Nested if statements (readability over optimization)
     "E501",    # Line too long (some CLI commands are naturally long)
 ]
-# Same relaxations as locust/* for the V1 runtime performance-suite library
-# (fixture builders, validators, datasets, isolator components).
+# Beta performance suite under langflow_runtime/ (CLI, clients, Locust users,
+# provisioners, fixture builders). Same tool-oriented relaxations as locust/*.
 "src/backend/tests/locust/langflow_runtime/**" = [
-    "D1",      # undocumented-public-* — helpers/builders skip full pydocstyle
-    "T201",    # print — build_fixtures / validate_fixtures CLI output
-    "S603",    # subprocess-without-shell-equals-true — perf_subprocess_churn
-    "S607",    # start-process-with-partial-path — same isolator / local tools
+    "D1",      # undocumented-public-* — helpers/builders/CLI skip full pydocstyle
+    "T201",    # print — CLI / build_fixtures / validate_fixtures stdout
+    "S603",    # subprocess-without-shell-equals-true — isolators and runner spawn
+    "S607",    # start-process-with-partial-path — local tools invoked by basename
     "S104",    # hardcoded-bind-all-interfaces — local serve helpers if added
-    "S105",    # hardcoded-password-string — mock keys / sentinel credentials
-    "FBT001",  # boolean-type-hint-positional-argument — builder flags
+    "S105",    # hardcoded-password-string — mock keys / sentinel test credentials
+    "FBT001",  # boolean-type-hint-positional-argument — CLI/builder flags
     "FBT002",  # boolean-default-value-positional-argument — same
     "TRY002",  # raise-vanilla-class — plain Exception OK in tooling
-    "TRY003",  # raise-vanilla-args — long descriptive error strings
+    "TRY003",  # raise-vanilla-args — long descriptive error strings for operators
     "TRY300",  # try-consider-else — return-in-try patterns in validators
     "EM101",   # raw-string-in-exception — inline messages for CLI users
     "EM102",   # f-string-in-exception — same
     "EXE001",  # shebang-not-executable — run via `python -m`, not chmod +x
     "D415",    # ends-with-period — docstring first-line punctuation
-    "F401",    # unused-import — availability / re-export checks
+    "F401",    # unused-import — availability / optional-dep / re-export checks
+    "PTH101",  # os-chmod — atomic state write keeps chmod next to fdopen
+    "PTH105",  # os-replace — same atomic rename pattern
     "PTH123",  # builtin-open — open() fine in small scripts
     "PTH107",  # os-remove — os.remove fine in small scripts
     "PTH207",  # glob — glob.glob fine in small scripts
-    "B007",    # unused-loop-control-variable — tuple unpacking
-    "PLW0602", # global-variable-not-assigned — shared suite state if needed
-    "PLW0603", # global-statement — same
+    "B007",    # unused-loop-control-variable — intentional tuple unpacking
+    "PLW0602", # global-variable-not-assigned — Locust/suite shared state reads
+    "PLW0603", # global-statement — Locust/suite shared state updates
     "DTZ005",  # call-datetime-now-without-tzinfo — local timestamps in logs
     "G004",    # logging-f-string — f-strings in diagnostic logging
     "SIM102",  # collapsible-if — nested ifs kept for readability
-    "E501",    # line-too-long — long fixture paths / messages
+    "SIM108",  # if-else-block-instead-of-if-exp — prefer readable branches
+    "E501",    # line-too-long — long fixture paths / Locust command lines
+    "E402",    # module-import-not-at-top — perf_locustfile bootstraps sys.path first
+    "TC001",   # typing-only-first-party-import — avoid TYPE_CHECKING churn for annotations
+    "TC003",   # typing-only-standard-library-import — same for Path/datetime
+    "PERF401", # manual-list-comprehension — clarity in validators / pool builders
+    "ARG001",  # unused-function-argument — CLI/protocol forward-compat params
+    "RUF007",  # zip-instead-of-pairwise — explicit zip(curve, curve[1:]) is fine
+    "PYI034",  # non-self-return-type — keep explicit ProvisionHttp on __enter__
+    "RET504",  # unnecessary-assign-before-return — named locals aid CLI readability
+    "F822",    # undefined-name-in-all — STATE_DIR exported via module __getattr__
+]
+# Suite unit/integration tests (locust/* is non-recursive).
+"src/backend/tests/locust/tests/**" = [
+    "D1",
+    "S105",    # sentinel credentials in redaction / client unit tests
+    "TC003",   # Path imports used at runtime in pytest fixtures
+    "E501",
 ]
 
 [tool.ruff.lint.flake8-builtins]

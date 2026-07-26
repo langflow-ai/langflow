@@ -1,0 +1,34 @@
+{
+  "schema_version": "1",
+  "id": "kb_retrieve_v1",
+  "test_type": "load",
+  "purpose": "Measure knowledge-base retrieval latency.",
+  "movement_kind": "solo",
+  "stress_categories": ["kb_retrieve"],
+  "protocols": ["workflows_sync", "workflows_stream"],
+  "modes": ["sync", "stream"],
+  "flow_selectors": ["perf_kb_retrieve"],
+  "dataset_selectors": ["kb/bounded_corpus"],
+  "workload": {
+    "workload_model": "closed",
+    "user_mix": [{"user_class": "KbRetrieveUser", "weight": 1, "count": 1}],
+    "think_time": {"min_s": 0.5, "max_s": 1.0}
+  },
+  "windows": {
+    "warm_up": {"duration_s": 5, "users": 0},
+    "measured_steps": [{"users": 1, "duration_s": 30, "spawn_rate": 1}],
+    "drain": {"deadline_s": 30},
+    "sampling_interval_s": 5,
+    "poll_interval_s": 1
+  },
+  "safety_limits": {
+    "provider_spend_usd": 0,
+    "backlog_max": 20,
+    "storage_growth_bytes": 1048576,
+    "error_storm_rate": 0.25,
+    "drain_timeout_s": 60,
+    "cleanup_timeout_s": 120
+  },
+  "validity": {"max_generator_cpu_pct": 85, "allowed_scheduling_lateness_s": 2, "cold_warm": "warm"},
+  "reset_rules": {"reset_kb_corpus": false}
+}

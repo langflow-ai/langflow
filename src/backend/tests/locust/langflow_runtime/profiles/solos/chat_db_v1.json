@@ -1,0 +1,34 @@
+{
+  "schema_version": "1",
+  "id": "chat_db_v1",
+  "test_type": "load",
+  "purpose": "Stress chat history persistence without LLM calls.",
+  "movement_kind": "solo",
+  "stress_categories": ["chat_db"],
+  "protocols": ["workflows_sync", "workflows_stream", "workflows_background"],
+  "modes": ["sync", "stream", "background"],
+  "flow_selectors": ["MemoryChatbotNoLLM"],
+  "dataset_selectors": [],
+  "workload": {
+    "workload_model": "closed",
+    "user_mix": [{"user_class": "ChatDbUser", "weight": 1, "count": 1}],
+    "think_time": {"min_s": 0.5, "max_s": 1.5}
+  },
+  "windows": {
+    "warm_up": {"duration_s": 5, "users": 0},
+    "measured_steps": [{"users": 1, "duration_s": 30, "spawn_rate": 1}],
+    "drain": {"deadline_s": 30},
+    "sampling_interval_s": 5,
+    "poll_interval_s": 1
+  },
+  "safety_limits": {
+    "provider_spend_usd": 0,
+    "backlog_max": 30,
+    "storage_growth_bytes": 5242880,
+    "error_storm_rate": 0.25,
+    "drain_timeout_s": 60,
+    "cleanup_timeout_s": 120
+  },
+  "validity": {"max_generator_cpu_pct": 85, "allowed_scheduling_lateness_s": 2, "cold_warm": "either"},
+  "reset_rules": {"reset_message_store": true}
+}

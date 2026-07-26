@@ -1,0 +1,37 @@
+{
+  "schema_version": "1",
+  "id": "disk_io_ram_storage_v1",
+  "test_type": "load",
+  "purpose": "Contrast direct local disk I/O pressure with SaveToFile/storage-abstraction writes.",
+  "movement_kind": "duet",
+  "stress_categories": ["disk_io", "ram_storage"],
+  "protocols": ["workflows_sync"],
+  "modes": ["sync"],
+  "flow_selectors": ["perf_disk_io", "perf_payload_echo"],
+  "dataset_selectors": ["storage/bounded_payload"],
+  "workload": {
+    "workload_model": "closed",
+    "user_mix": [
+      {"user_class": "DiskIoUser", "weight": 1, "count": 1},
+      {"user_class": "StorageUser", "weight": 1, "count": 1}
+    ],
+    "think_time": {"min_s": 0.5, "max_s": 1.0}
+  },
+  "windows": {
+    "warm_up": {"duration_s": 5, "users": 0},
+    "measured_steps": [{"users": 2, "duration_s": 30, "spawn_rate": 1}],
+    "drain": {"deadline_s": 45},
+    "sampling_interval_s": 5,
+    "poll_interval_s": 1
+  },
+  "safety_limits": {
+    "provider_spend_usd": 0,
+    "backlog_max": 30,
+    "storage_growth_bytes": 104857600,
+    "error_storm_rate": 0.25,
+    "drain_timeout_s": 90,
+    "cleanup_timeout_s": 120
+  },
+  "validity": {"max_generator_cpu_pct": 90, "allowed_scheduling_lateness_s": 3, "cold_warm": "either"},
+  "reset_rules": {"reset_storage_artifacts": true}
+}

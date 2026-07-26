@@ -1,0 +1,34 @@
+{
+  "schema_version": "1",
+  "id": "ram_storage_v1",
+  "test_type": "load",
+  "purpose": "Stress bounded payload storage writes.",
+  "movement_kind": "solo",
+  "stress_categories": ["ram_storage"],
+  "protocols": ["workflows_sync", "workflows_background"],
+  "modes": ["sync", "background"],
+  "flow_selectors": ["perf_payload_echo"],
+  "dataset_selectors": ["storage/bounded_payload"],
+  "workload": {
+    "workload_model": "closed",
+    "user_mix": [{"user_class": "StorageUser", "weight": 1, "count": 1}],
+    "think_time": {"min_s": 0.5, "max_s": 1.0}
+  },
+  "windows": {
+    "warm_up": {"duration_s": 5, "users": 0},
+    "measured_steps": [{"users": 1, "duration_s": 30, "spawn_rate": 1}],
+    "drain": {"deadline_s": 30},
+    "sampling_interval_s": 5,
+    "poll_interval_s": 1
+  },
+  "safety_limits": {
+    "provider_spend_usd": 0,
+    "backlog_max": 20,
+    "storage_growth_bytes": 52428800,
+    "error_storm_rate": 0.25,
+    "drain_timeout_s": 60,
+    "cleanup_timeout_s": 120
+  },
+  "validity": {"max_generator_cpu_pct": 85, "allowed_scheduling_lateness_s": 2, "cold_warm": "either"},
+  "reset_rules": {"reset_storage_artifacts": true}
+}

@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build build_langflow_core publish_core publish_core_testpypi run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax
+.PHONY: all init format_backend format lint build build_langflow_core publish_core publish_core_testpypi run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help perf-provision perf-provision-validate perf-teardown perf-solo perf-duet perf-tutti perf-smoke perf-profile perf-help docs docs_build docs_install api_examples_local api_examples_local_syntax
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -911,6 +911,84 @@ load_test_help: ## Show detailed load testing help
 	@echo "  - *_results_*.csv      - Raw performance data"
 	@echo "  - *_detailed_errors_*.log - Comprehensive error logs"
 	@echo "  - *_error_summary_*.json  - Error analysis"
+	@echo ""
+	@echo "$(YELLOW)Beta performance suite (MCP / Workflows v2 / Webhooks):$(NC)"
+	@echo "  make perf-help"
+
+######################
+# BETA PERFORMANCE SUITE (MCP / Workflows v2 / Webhooks)
+# Sibling to the legacy load_test_* harness above — does not replace it.
+######################
+
+perf_host ?= http://127.0.0.1:7860
+perf_env_id ?= perf-local
+perf_backend := src/backend
+
+perf-provision: ## Provision beta perf suite resources (PERF_HOST / perf_env_id)
+	@cd $(perf_backend) && PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.provision.cli apply \
+		--host $(perf_host) --env-id $(perf_env_id) $(PERF_PROVISION_ARGS)
+
+perf-provision-validate: ## Validate provisioned beta perf suite state
+	@cd $(perf_backend) && PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.provision.cli validate \
+		--host $(perf_host) --env-id $(perf_env_id)
+
+perf-teardown: ## Tear down beta perf suite resources for env id
+	@cd $(perf_backend) && PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.provision.cli teardown \
+		--host $(perf_host) --env-id $(perf_env_id)
+
+perf-smoke: ## Run beta three-protocol smoke profile (one movement)
+	@$(MAKE) perf-profile PROFILE=smoke/all_protocols_v1
+
+perf-solo: ## Run one solo axis (CATEGORY=protocol_calibration|chat_db|queue|...)
+	@test -n "$(CATEGORY)" || (echo "$(RED)CATEGORY required, e.g. make perf-solo CATEGORY=protocol_calibration$(NC)" && exit 1)
+	@$(MAKE) perf-profile PROFILE=solos/$(CATEGORY)_v1
+
+perf-duet: ## Run one duet (PAIR=chat_db_cpu_graph|kb_ingest_kb_retrieve|disk_io_ram_storage)
+	@test -n "$(PAIR)" || (echo "$(RED)PAIR required, e.g. make perf-duet PAIR=chat_db_cpu_graph$(NC)" && exit 1)
+	@$(MAKE) perf-profile PROFILE=duets/$(PAIR)_v1
+
+perf-tutti: ## Run tutti movement (MODE=suite|flow|hitl)
+	@test -n "$(MODE)" || (echo "$(RED)MODE required: suite|flow|hitl$(NC)" && exit 1)
+	@case "$(MODE)" in \
+		suite) $(MAKE) perf-profile PROFILE=tutti/ensemble_suite_v1 ;; \
+		flow) $(MAKE) perf-profile PROFILE=tutti/ensemble_flow_v1 ;; \
+		hitl) $(MAKE) perf-profile PROFILE=tutti/ensemble_hitl_v1 ;; \
+		*) echo "$(RED)MODE must be suite|flow|hitl$(NC)"; exit 1 ;; \
+	esac
+
+perf-profile: ## Run exactly one movement profile (PROFILE=smoke/all_protocols_v1)
+	@test -n "$(PROFILE)" || (echo "$(RED)PROFILE required, e.g. PROFILE=smoke/all_protocols_v1$(NC)" && exit 1)
+	@cd $(perf_backend) && \
+	export PERF_HOST=$(perf_host) && \
+	export PERF_ENV_ID=$(perf_env_id) && \
+	PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run run --profile $(PROFILE) --host $(perf_host) --env-id $(perf_env_id)
+
+perf-help: ## Show beta performance suite help
+	@echo "$(GREEN)Langflow Beta Performance Suite$(NC)"
+	@echo "Measures project MCP, Workflows v2, and Webhooks. One profile = one movement."
+	@echo "Legacy load_test_* targets remain available for the older harness."
+	@echo ""
+	@echo "$(YELLOW)Typical sequence:$(NC)"
+	@echo "  1. make perf-provision perf_host=http://127.0.0.1:7860"
+	@echo "  2. make perf-smoke"
+	@echo "  3. make perf-solo CATEGORY=protocol_calibration"
+	@echo "  4. make perf-duet PAIR=chat_db_cpu_graph"
+	@echo "  5. make perf-tutti MODE=suite"
+	@echo "  6. make perf-teardown"
+	@echo ""
+	@echo "$(YELLOW)Commands:$(NC)"
+	@echo "  perf-provision[-validate]  - Create / validate suite-tagged resources"
+	@echo "  perf-teardown              - Idempotent teardown for perf_env_id"
+	@echo "  perf-smoke                 - Three-protocol smoke movement"
+	@echo "  perf-solo CATEGORY=...     - One stress-axis solo"
+	@echo "  perf-duet PAIR=...         - One pairwise duet"
+	@echo "  perf-tutti MODE=suite|flow|hitl"
+	@echo "  perf-profile PROFILE=...   - Arbitrary profile under langflow_runtime/profiles/"
+	@echo ""
+	@echo "$(YELLOW)Notes:$(NC)"
+	@echo "  - CI / certification are out of beta scope"
+	@echo "  - Artifacts default to \$$XDG_CACHE_HOME/langflow-perf or ~/.cache/langflow-perf"
+	@echo "    (override with PERF_DATA_DIR); state files are mode 0600"
 
 ######################
 # HELP COMMANDS

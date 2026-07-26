@@ -1,6 +1,102 @@
 # Langflow Load Testing
 
-This directory contains comprehensive load testing tools for both Langflow and LFX APIs using Locust.
+This directory contains Locust-based load and performance tooling.
+
+## Beta Performance Suite (MCP / Workflows v2 / Webhooks)
+
+The maintained beta suite lives alongside the older flat harness. It measures **project MCP (Streamable HTTP)**, **Workflows v2**, and **Webhooks** with one representative profile per stress axis, three Duets, and Tutti movements. Each runner invocation executes **exactly one movement** (Overture → measured work → Coda). CI and certification are out of beta scope.
+
+### Layout
+
+| Path | Role |
+|------|------|
+| `langflow_runtime/` | Entire beta suite package (fixtures, runner, clients, profiles, provision) |
+| `langflow_runtime/run.py` / `perf_locustfile.py` | One-movement runner + thin Locust entry |
+| `langflow_runtime/profiles/` | Smoke, solos, duets, tutti + `schema.json` |
+| `langflow_runtime/flows/` + `components/` + `datasets/` | Flow fixtures, isolators, `fixture_index` |
+| `langflow_runtime/provision/` | Idempotent plan/apply/validate/teardown |
+| `langflow_runtime/clients/` / `users/` / `shapes/` / `metrics/` | Protocol clients, workloads, load shape, reports |
+| `langflow_runtime/preflight/` | Health + one-shot protocol checks |
+| `tests/` | Unit + opt-in live integration coverage |
+
+Legacy files (`langflow_*.py`, `lfx_*.py`, root `locustfile.py`, `diagnose_remote.py`, `names.txt`) and `make load_test_*` remain for the older harness — do not delete them.
+
+### Prerequisites
+
+- Running Langflow target (`LANGFLOW_HOST` / `PERF_HOST`)
+- Superuser credentials or `LANGFLOW_AUTO_LOGIN` for provisioning
+- From `src/backend`: `PYTHONPATH=.`
+
+### Quick start
+
+```bash
+# Provision suite-tagged users/keys/projects/flows (smoke fixture set by default)
+make perf-provision perf_host=http://127.0.0.1:7860
+
+# Optional preflight (--env-id resolves ~/.cache/langflow-perf/state/{env_id}.json)
+cd src/backend && PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.preflight.cli \
+  --host http://127.0.0.1:7860 --env-id perf-local --profile smoke/all_protocols_v1
+
+# One smoke movement (MCP + workflows + webhook)
+make perf-smoke
+
+# Full-song ordering = separate runs
+make perf-solo CATEGORY=protocol_calibration
+make perf-duet PAIR=chat_db_cpu_graph
+make perf-duet PAIR=kb_ingest_kb_retrieve
+make perf-duet PAIR=disk_io_ram_storage
+make perf-tutti MODE=suite
+make perf-tutti MODE=flow
+make perf-tutti MODE=hitl
+
+# Tear down shared environment once
+make perf-teardown
+```
+
+Or via modules:
+
+```bash
+cd src/backend
+PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.provision.cli apply --host http://127.0.0.1:7860 --env-id perf-local
+PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run run --profile smoke/all_protocols_v1 --host http://127.0.0.1:7860 --env-id perf-local
+PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run validate
+```
+
+### Methodology notes
+
+- **Profiles** are the source of truth (`langflow_runtime/profiles/schema.json`). Flow/dataset selectors must resolve to `fixture_index` / `DATASET_IDS`.
+- **Workload models:** closed-loop for chat/MCP/HITL; paced closed-loop for webhook/background with intended/attempted/missed/accepted/terminal accounting (misses are not replayed as catch-up bursts).
+- **Candidate knee:** reports keep raw step curves and a *manual* candidate-knee bracket — never labeled certified or pass/fail.
+- **Coda:** stop new arrivals, drain tracked jobs/webhooks/HITL, correctness checks, reset movement-scoped state. Shared env teardown is separate (`perf-teardown`).
+- **Safety:** profiles declare spend/backlog/storage/error/drain limits; a safety stop is not a performance failure.
+- **Secrets / artifacts:** provision state and reports live under `~/.cache/langflow-perf/` (or `$XDG_CACHE_HOME/langflow-perf`, override with `PERF_DATA_DIR`) — not inside the git checkout. State files are mode `0600`; reports redact credentials and forbid high-cardinality metric names (no UUIDs in Locust names).
+- **Deferred:** depth matrices, resilience edge cases, telemetry adapters, distributed generators, result DB, CI gates.
+
+### Unit tests
+
+Locust’s gevent monkey-patch can hang pytest plugin autoload. Prefer:
+
+```bash
+cd src/backend
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=. uv run pytest \
+  tests/locust/tests/unit/ -q --noconftest -k 'not flow_collection'
+```
+
+Live three-protocol smoke (opt-in):
+
+```bash
+PERF_LIVE=1 PYTHONPATH=. uv run pytest tests/locust/tests/integration/test_perf_smoke.py -q --noconftest
+# Or point at an explicit state file:
+# PERF_LIVE=1 PERF_STATE_PATH=$HOME/.cache/langflow-perf/state/perf-local.json ...
+```
+
+See `make perf-help` for the full target list.
+
+---
+
+## Legacy harness (Langflow `/api/v1/run` + LFX)
+
+The sections below document the **older** flat Locust files and `make load_test_*` targets.
 
 ## 🔧 **Two Testing Systems**
 
