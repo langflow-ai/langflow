@@ -107,7 +107,11 @@ def _workflows_client_from_environment(environment: Any) -> WorkflowsClient | No
         import httpx
     except ImportError:  # pragma: no cover
         return None
+    from tests.locust.langflow_runtime.clients.base import ApiClient
+
     http = httpx.Client(base_url=str(host).rstrip("/"), timeout=30.0)
     # Keep client alive for the drain loop via environment attribute.
     environment._perf_drain_http = http
-    return WorkflowsClient(http, base_url=str(host).rstrip("/"), api_key=str(api_key))
+    return WorkflowsClient(
+        api=ApiClient.from_httpx(http, base_url=str(host).rstrip("/"), api_key=str(api_key)),
+    )

@@ -62,11 +62,15 @@ def test_mcp_jsonrpc_id_increment() -> None:
                 },
             )()
 
+    from tests.locust.langflow_runtime.clients.base import ApiClient
+
     client = McpStreamableClient(
-        FakeHttp(),
-        base_url="http://localhost:7860",
+        api=ApiClient.from_locust(
+            FakeHttp(),
+            base_url="http://localhost:7860",
+            api_key="test-key",  # pragma: allowlist secret
+        ),
         project_id="00000000-0000-4000-8000-000000000001",
-        api_key="test-key",  # pragma: allowlist secret
     )
     first = client._build_request("initialize", params={"protocolVersion": "x"})
     second = client._build_request("tools/list", params={})

@@ -24,16 +24,13 @@ class McpStreamableClient:
 
     def __init__(
         self,
-        http: Any,
         *,
-        base_url: str,
+        api: ApiClient,
         project_id: str,
-        api_key: str,
         workload: str = "mcp",
         flow_class: str = "passthrough",
-        api: ApiClient | None = None,
     ) -> None:
-        self.api = api or ApiClient(http, base_url=base_url, api_key=api_key)
+        self.api = api
         self.project_id = str(project_id)
         self.workload = workload
         self.flow_class = flow_class

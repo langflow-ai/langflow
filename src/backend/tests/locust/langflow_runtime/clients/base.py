@@ -1,4 +1,13 @@
-"""HTTP client primitives for Locust performance-suite protocol drivers."""
+"""HTTP client primitives for Locust performance-suite protocol drivers.
+
+Protocol clients (MCP / Workflows / Webhooks) talk only to ``ApiClient``.
+Transports are explicit:
+
+- ``LocustTransport`` — Locust ``HttpSession`` / ``FastHttpSession`` (load runs)
+- ``HttpxTransport`` — plain ``httpx.Client`` (provision / preflight / drain)
+
+Construct via ``ApiClient.from_locust(...)`` or ``ApiClient.from_httpx(...)``.
+"""
 
 from __future__ import annotations
 
@@ -30,8 +39,20 @@ class ApplicationError(ClientError):
         self.body = body
 
 
-class HttpClient(Protocol):
-    def request(self, method: str, url: str, **kwargs: Any) -> Any: ...
+class HttpTransport(Protocol):
+    """Backend that issues HTTP requests and returns a response-like object."""
+
+    def request(
+        self,
+        method: str,
+        url: str,
+        *,
+        headers: dict[str, str],
+        timeout: Any,
+        stream: bool = False,
+        name: str | None = None,
+        **kwargs: Any,
+    ) -> Any: ...
 
 
 @dataclass(frozen=True)
@@ -100,24 +121,93 @@ def wrap_response(response: Any, *, expect_json: bool = False) -> ParsedResponse
     return ParsedResponse(status_code=status_code, headers=headers, text=text, json_data=json_data)
 
 
-def _supports_locust_catch_response(http: Any) -> bool:
-    """Return True only for Locust HttpSession-like clients (not httpx)."""
-    module = type(http).__module__
-    if module == "httpx" or module.startswith("httpx."):
-        return False
-    name = type(http).__name__
+def _locust_supports_catch_response(session: Any) -> bool:
+    name = type(session).__name__
     if name in {"HttpSession", "FastHttpSession"}:
         return True
-    # Locust sessions typically expose cookiejar; plain mocks usually do not.
-    return hasattr(http, "cookiejar") and hasattr(http, "request")
+    return hasattr(session, "cookiejar") and hasattr(session, "request")
+
+
+class LocustTransport:
+    """Locust ``HttpSession`` / ``FastHttpSession`` (and session-shaped test doubles).
+
+    Uses ``stream=True`` on ``.get()``/``.post()`` and optional ``catch_response`` so
+    timings land in Locust stats during load runs.
+    """
+
+    def __init__(self, session: Any) -> None:
+        self.session = session
+
+    def request(
+        self,
+        method: str,
+        url: str,
+        *,
+        headers: dict[str, str],
+        timeout: Any,
+        stream: bool = False,
+        name: str | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        method_lower = method.lower()
+        request_fn = getattr(self.session, method_lower, None)
+        request_kwargs: dict[str, Any] = {
+            "headers": headers,
+            "timeout": timeout,
+            **kwargs,
+        }
+        if stream:
+            request_kwargs["stream"] = True
+
+        if name is not None and _locust_supports_catch_response(self.session) and request_fn is not None:
+            with request_fn(url, catch_response=True, name=name, **request_kwargs) as response:
+                return response
+        if request_fn is not None:
+            return request_fn(url, **request_kwargs)
+        return self.session.request(method, url, **request_kwargs)
+
+
+class HttpxTransport:
+    """Plain ``httpx.Client`` for provision / preflight / drain (no Locust process).
+
+    httpx 0.28+ removed ``stream=`` from ``.get()`` / ``.request()``; streaming uses
+    ``build_request`` + ``send(..., stream=True)`` so callers still get ``iter_lines``.
+    """
+
+    def __init__(self, client: Any) -> None:
+        self.client = client
+
+    @staticmethod
+    def _timeout(timeout: Any) -> Any:
+        if isinstance(timeout, tuple) and len(timeout) == 2:
+            connect_s, read_s = timeout
+            import httpx
+
+            return httpx.Timeout(read_s, connect=connect_s)
+        return timeout
+
+    def request(
+        self,
+        method: str,
+        url: str,
+        *,
+        headers: dict[str, str],
+        timeout: Any,
+        stream: bool = False,
+        name: str | None = None,  # noqa: ARG002 — Locust metric name; unused here
+        **kwargs: Any,
+    ) -> Any:
+        req_timeout = self._timeout(timeout)
+        request = self.client.build_request(method.upper(), url, headers=headers, timeout=req_timeout, **kwargs)
+        return self.client.send(request, stream=stream)
 
 
 class ApiClient:
-    """Thin wrapper over Locust HttpSession-like clients or ``httpx.Client``."""
+    """Auth + URL helpers over an explicit ``HttpTransport``."""
 
     def __init__(
         self,
-        http: HttpClient,
+        transport: HttpTransport,
         *,
         base_url: str,
         api_key: str | None = None,
@@ -125,12 +215,52 @@ class ApiClient:
         connect_timeout_s: float = DEFAULT_CONNECT_TIMEOUT_S,
         read_timeout_s: float = DEFAULT_READ_TIMEOUT_S,
     ) -> None:
-        self.http = http
+        self.transport = transport
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.bearer_token = bearer_token
         self.connect_timeout_s = connect_timeout_s
         self.read_timeout_s = read_timeout_s
+
+    @classmethod
+    def from_locust(
+        cls,
+        session: Any,
+        *,
+        base_url: str,
+        api_key: str | None = None,
+        bearer_token: str | None = None,
+        connect_timeout_s: float = DEFAULT_CONNECT_TIMEOUT_S,
+        read_timeout_s: float = DEFAULT_READ_TIMEOUT_S,
+    ) -> ApiClient:
+        return cls(
+            LocustTransport(session),
+            base_url=base_url,
+            api_key=api_key,
+            bearer_token=bearer_token,
+            connect_timeout_s=connect_timeout_s,
+            read_timeout_s=read_timeout_s,
+        )
+
+    @classmethod
+    def from_httpx(
+        cls,
+        client: Any,
+        *,
+        base_url: str,
+        api_key: str | None = None,
+        bearer_token: str | None = None,
+        connect_timeout_s: float = DEFAULT_CONNECT_TIMEOUT_S,
+        read_timeout_s: float = DEFAULT_READ_TIMEOUT_S,
+    ) -> ApiClient:
+        return cls(
+            HttpxTransport(client),
+            base_url=base_url,
+            api_key=api_key,
+            bearer_token=bearer_token,
+            connect_timeout_s=connect_timeout_s,
+            read_timeout_s=read_timeout_s,
+        )
 
     def url(self, path: str) -> str:
         if path.startswith(("http://", "https://")):
@@ -159,27 +289,16 @@ class ApiClient:
         stream: bool = False,
         **kwargs: Any,
     ) -> Any:
-        url = self.url(path)
-        req_headers = self._merge_headers(headers)
-        req_timeout = self._timeout(timeout)
-        method_lower = method.lower()
-        request_fn = getattr(self.http, method_lower, None)
-
-        request_kwargs: dict[str, Any] = {
-            "headers": req_headers,
-            "timeout": req_timeout,
-            **kwargs,
-        }
-        if stream:
-            request_kwargs["stream"] = True
-
         try:
-            if name is not None and _supports_locust_catch_response(self.http) and request_fn is not None:
-                with request_fn(url, catch_response=True, name=name, **request_kwargs) as response:
-                    return response
-            if request_fn is not None:
-                return request_fn(url, **request_kwargs)
-            return self.http.request(method, url, **request_kwargs)
+            return self.transport.request(
+                method,
+                self.url(path),
+                headers=self._merge_headers(headers),
+                timeout=self._timeout(timeout),
+                stream=stream,
+                name=name,
+                **kwargs,
+            )
         except Exception as exc:
             if isinstance(exc, ClientError):
                 raise

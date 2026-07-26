@@ -4,6 +4,8 @@ from tests.locust.langflow_runtime.clients.base import (
     ApiClient,
     ApplicationError,
     ClientError,
+    HttpxTransport,
+    LocustTransport,
     TransportError,
     auth_headers,
 )
@@ -38,6 +40,8 @@ __all__ = [
     "ApiClient",
     "ApplicationError",
     "ClientError",
+    "HttpxTransport",
+    "LocustTransport",
     "McpStreamableClient",
     "SseDeadlines",
     "SseError",

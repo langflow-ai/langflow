@@ -8,6 +8,7 @@ from typing import Any
 
 from locust import FastHttpUser, between
 
+from tests.locust.langflow_runtime.clients.base import ApiClient
 from tests.locust.langflow_runtime.clients.mcp_streamable import McpStreamableClient
 from tests.locust.langflow_runtime.clients.webhooks import WebhookCopy, WebhookCopyPool, WebhooksClient
 from tests.locust.langflow_runtime.clients.workflows import WorkflowsClient
@@ -207,9 +208,7 @@ class PerfBaseUser(FastHttpUser):
         if not self.api_key:
             return None
         return WorkflowsClient(
-            self.client,
-            base_url=self.base_url,
-            api_key=self.api_key,
+            api=ApiClient.from_locust(self.client, base_url=self.base_url, api_key=self.api_key),
             workload=workload or self.workload_name,
             flow_class=flow_class or self.flow_class,
         )
@@ -218,10 +217,8 @@ class PerfBaseUser(FastHttpUser):
         if not self.api_key or not self.project_id:
             return None
         return McpStreamableClient(
-            self.client,
-            base_url=self.base_url,
+            api=ApiClient.from_locust(self.client, base_url=self.base_url, api_key=self.api_key),
             project_id=self.project_id,
-            api_key=self.api_key,
             workload=workload or self.workload_name,
             flow_class=flow_class or self.flow_class,
         )
@@ -231,9 +228,7 @@ class PerfBaseUser(FastHttpUser):
             return None
         pool = get_or_create_webhook_pool(self.environment, self.provision_state)
         return WebhooksClient(
-            self.client,
-            base_url=self.base_url,
-            api_key=self.api_key,
+            api=ApiClient.from_locust(self.client, base_url=self.base_url, api_key=self.api_key),
             workload=workload or self.workload_name,
             flow_class=flow_class or self.flow_class,
             pool=pool,

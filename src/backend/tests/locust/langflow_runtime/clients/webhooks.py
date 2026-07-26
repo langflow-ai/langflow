@@ -90,17 +90,14 @@ class WebhooksClient:
 
     def __init__(
         self,
-        http: Any,
         *,
-        base_url: str,
-        api_key: str,
+        api: ApiClient,
         workload: str = "webhook",
         flow_class: str = "passthrough",
-        api: ApiClient | None = None,
         pool: WebhookCopyPool | None = None,
     ) -> None:
-        self.api = api or ApiClient(http, base_url=base_url, api_key=api_key)
-        self.api_key = api_key
+        self.api = api
+        self.api_key = api.api_key or ""
         self.workload = workload
         self.flow_class = flow_class
         self.pool = pool
@@ -136,6 +133,7 @@ class WebhooksClient:
 
         def listen() -> None:
             sse_url = f"/api/v1/webhook-events/{copy.flow_id}"
+            response = None
             try:
                 response = self.api.request(
                     "GET",
@@ -171,6 +169,10 @@ class WebhooksClient:
             except Exception as exc:
                 errors.append(str(exc))
                 ended.set()
+            finally:
+                close = getattr(response, "close", None) if response is not None else None
+                if callable(close):
+                    close()
 
         def post_when_ready() -> None:
             if not connected.wait(timeout=timeout_s):
@@ -232,6 +234,7 @@ class WebhooksClient:
 
         def listen() -> None:
             sse_url = f"/api/v1/webhook-events/{copy.flow_id}"
+            response = None
             try:
                 response = self.api.request(
                     "GET",
@@ -268,6 +271,10 @@ class WebhooksClient:
             except Exception as exc:
                 errors.append(str(exc))
                 ended.set()
+            finally:
+                close = getattr(response, "close", None) if response is not None else None
+                if callable(close):
+                    close()
 
         def post_when_ready() -> None:
             if not connected.wait(timeout=timeout_s):

@@ -7,6 +7,7 @@ from typing import Any
 
 import httpx
 
+from tests.locust.langflow_runtime.clients.base import ApiClient
 from tests.locust.langflow_runtime.clients.mcp_streamable import McpStreamableClient
 from tests.locust.langflow_runtime.clients.webhooks import WebhookCopy, WebhooksClient
 from tests.locust.langflow_runtime.clients.workflows import WorkflowsClient
@@ -29,10 +30,8 @@ def check_mcp(host: str, state: dict[str, Any], *, timeout_s: float = 60.0) -> C
     tool_name = str(flow.get("mcp_action_name") or "perf_passthrough")
     with _http(host) as http:
         client = McpStreamableClient(
-            http,
-            base_url=host.rstrip("/"),
+            api=ApiClient.from_httpx(http, base_url=host.rstrip("/"), api_key=str(api_key)),
             project_id=str(project_id),
-            api_key=str(api_key),
             workload="preflight",
             flow_class="passthrough",
         )
@@ -50,9 +49,7 @@ def check_workflows_sync(host: str, state: dict[str, Any]) -> CheckResult:
         return CheckResult(name="workflows_sync", ok=True, detail="skipped (missing state)")
     with _http(host) as http:
         client = WorkflowsClient(
-            http,
-            base_url=host.rstrip("/"),
-            api_key=str(api_key),
+            api=ApiClient.from_httpx(http, base_url=host.rstrip("/"), api_key=str(api_key)),
             workload="preflight",
             flow_class="passthrough",
         )
@@ -83,9 +80,7 @@ def check_webhook(host: str, state: dict[str, Any]) -> CheckResult:
 
     with _http(host) as http:
         client = WebhooksClient(
-            http,
-            base_url=host.rstrip("/"),
-            api_key=str(api_key),
+            api=ApiClient.from_httpx(http, base_url=host.rstrip("/"), api_key=str(api_key)),
             workload="preflight",
             flow_class="passthrough",
         )

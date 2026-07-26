@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
-from tests.locust.langflow_runtime.clients.base import ApiClient, _supports_locust_catch_response
+from tests.locust.langflow_runtime.clients.base import ApiClient, HttpxTransport, LocustTransport
 from tests.locust.langflow_runtime.metrics.registry import TrackedWorkflowJob, get_registry
 from tests.locust.langflow_runtime.shapes.drain import drain_remaining_s, drain_tracked_work, reset_movement_state
 
@@ -30,10 +30,11 @@ def test_reset_movement_state_clears_registry() -> None:
     assert environment.perf_drain_started is False
 
 
-def test_httpx_client_does_not_use_catch_response() -> None:
+def test_httpx_and_locust_transports_are_distinct() -> None:
     import httpx
 
-    assert _supports_locust_catch_response(httpx.Client()) is False
+    assert isinstance(ApiClient.from_httpx(httpx.Client(), base_url="http://example.test").transport, HttpxTransport)
+    assert isinstance(ApiClient.from_locust(object(), base_url="http://example.test").transport, LocustTransport)
 
 
 def test_drain_tracked_work_advances_workflow_terminal() -> None:
@@ -75,25 +76,47 @@ def test_drain_tracked_work_advances_workflow_terminal() -> None:
     assert jobs[0].success is True
 
 
-def test_api_client_named_request_with_httpx_does_not_raise() -> None:
-    import httpx
-
+def test_locust_transport_named_request_skips_catch_response_on_plain_session() -> None:
     class FakeResp:
         status_code = 200
         text = '{"ok": true}'
         headers = {"content-type": "application/json"}
 
-    class FakeHttp:
+    class FakeSession:
         def get(self, url: str, **kwargs):  # noqa: ARG002
             assert "catch_response" not in kwargs
             return FakeResp()
 
-        def request(self, method: str, url: str, **kwargs):  # noqa: ARG002
-            assert "catch_response" not in kwargs
-            return FakeResp()
-
-    # Pretend to be httpx by setting module attribute on the class.
-    FakeHttp.__module__ = "httpx"
-    client = ApiClient(FakeHttp(), base_url="http://example.test", api_key="k")
+    client = ApiClient.from_locust(FakeSession(), base_url="http://example.test", api_key="k")
     response = client.request("GET", "/health", name="health:get:test:passthrough")
     assert response.status_code == 200
+
+
+def test_httpx_transport_uses_send_stream() -> None:
+    class FakeResp:
+        status_code = 200
+        text = "ok"
+        headers = {}
+
+        def iter_lines(self):
+            return iter(())
+
+        def close(self) -> None:
+            return None
+
+    class FakeHttpx:
+        def __init__(self) -> None:
+            self.sent_stream: bool | None = None
+
+        def build_request(self, method: str, url: str, **kwargs):  # noqa: ARG002
+            return {"method": method, "url": url}
+
+        def send(self, request, *, stream: bool = False):  # noqa: ARG002
+            self.sent_stream = stream
+            return FakeResp()
+
+    fake = FakeHttpx()
+    client = ApiClient.from_httpx(fake, base_url="http://example.test", api_key="k")
+    response = client.request("GET", "/events", stream=True)
+    assert response.status_code == 200
+    assert fake.sent_stream is True

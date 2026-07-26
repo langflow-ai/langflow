@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
 import httpx
+
+if TYPE_CHECKING:
+    from tests.locust.langflow_runtime.clients.base import ApiClient
 
 DEFAULT_TIMEOUT_S = 60.0
 
@@ -48,6 +51,23 @@ class ProvisionHttp:
 
     def __exit__(self, *args: object) -> None:
         self.close()
+
+    def api_client(self, *, api_key: str | None = None, bearer_token: str | None = None) -> ApiClient:
+        """Build a protocol-suite ``ApiClient`` over this provision httpx session.
+
+        Prefer this over reaching into ``_client``. Credentials default to whatever
+        is already set on the provisioner (API key / bearer from auth).
+        """
+        from tests.locust.langflow_runtime.clients.base import ApiClient
+
+        return ApiClient.from_httpx(
+            self._client,
+            base_url=self.base_url,
+            api_key=api_key if api_key is not None else self.api_key,
+            bearer_token=bearer_token if bearer_token is not None else self.bearer_token,
+            connect_timeout_s=float(self.timeout_s),
+            read_timeout_s=float(self.timeout_s),
+        )
 
     def url(self, path: str) -> str:
         if path.startswith(("http://", "https://")):

@@ -30,9 +30,7 @@ def seed_chat_history(
         return result
 
     client = WorkflowsClient(
-        http._client,
-        base_url=http.base_url,
-        api_key=str(api_key),
+        api=http.api_client(api_key=str(api_key)),
         workload="chat_seed",
         flow_class="memory",
     )

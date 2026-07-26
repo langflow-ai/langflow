@@ -62,10 +62,8 @@ def validate_mcp_tools_listable(http: ProvisionHttp, state: dict[str, Any]) -> b
         if not action:
             continue
         client = McpStreamableClient(
-            http._client,
-            base_url=http.base_url,
+            api=http.api_client(api_key=str(api_key)),
             project_id=str(record["project_id"]),
-            api_key=str(api_key),
         )
         client.initialize()
         client.notify_initialized()

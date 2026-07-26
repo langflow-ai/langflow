@@ -29,9 +29,7 @@ def validate_hitl_lifecycle(
         return False
 
     client = WorkflowsClient(
-        http._client,
-        base_url=http.base_url,
-        api_key=str(api_key),
+        api=http.api_client(api_key=str(api_key)),
         workload="hitl",
         flow_class="human_input",
     )

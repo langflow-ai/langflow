@@ -87,9 +87,7 @@ def validate_webhook_subscribe_before_post(
 
     first = copies[0]
     client = WebhooksClient(
-        http._client,
-        base_url=http.base_url,
-        api_key=str(api_key),
+        api=http.api_client(api_key=str(api_key)),
         workload="provision",
         flow_class="webhook",
     )

@@ -84,15 +84,12 @@ class WorkflowsClient:
 
     def __init__(
         self,
-        http: Any,
         *,
-        base_url: str,
-        api_key: str,
+        api: ApiClient,
         workload: str = "workflows",
         flow_class: str = "passthrough",
-        api: ApiClient | None = None,
     ) -> None:
-        self.api = api or ApiClient(http, base_url=base_url, api_key=api_key)
+        self.api = api
         self.workload = workload
         self.flow_class = flow_class
 

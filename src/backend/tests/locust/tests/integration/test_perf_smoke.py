@@ -44,6 +44,7 @@ def test_live_mcp_workflow_webhook_smoke(provision_state: dict) -> None:
     """One pass each: MCP, workflow sync/stream/background, webhook subscribe-before-POST."""
     import httpx
 
+    from tests.locust.langflow_runtime.clients.base import ApiClient
     from tests.locust.langflow_runtime.clients.mcp_streamable import McpStreamableClient
     from tests.locust.langflow_runtime.clients.webhooks import WebhookCopy, WebhooksClient
     from tests.locust.langflow_runtime.clients.workflows import WorkflowsClient
@@ -63,18 +64,17 @@ def test_live_mcp_workflow_webhook_smoke(provision_state: dict) -> None:
     assert project_id, "missing project_id for MCP"
 
     with httpx.Client(base_url=host, timeout=60.0) as http:
+        api = ApiClient.from_httpx(http, base_url=host, api_key=str(api_key))
         mcp = McpStreamableClient(
-            http,
-            base_url=host,
+            api=api,
             project_id=str(project_id),
-            api_key=str(api_key),
             workload="protocol_calibration",
             flow_class="passthrough",
         )
         tool = str(passthrough.get("mcp_action_name") or "perf_passthrough")
         mcp.full_lifecycle_call(tool, {"input_value": DEFAULT_PASSTHROUGH_INPUT})
 
-        workflows = WorkflowsClient(http, base_url=host, api_key=str(api_key))
+        workflows = WorkflowsClient(api=api)
         flow_id = str(passthrough["flow_id"])
         workflows.run_sync(
             flow_id=flow_id,
@@ -100,7 +100,7 @@ def test_live_mcp_workflow_webhook_smoke(provision_state: dict) -> None:
 
         copies = webhook.get("copies") or [{"flow_id": webhook["flow_id"], "endpoint_name": webhook["endpoint_name"]}]
         copy_row = copies[0]
-        client = WebhooksClient(http, base_url=host, api_key=str(api_key))
+        client = WebhooksClient(api=api)
         result = client.subscribe_post_complete(
             WebhookCopy(
                 flow_id=str(copy_row["flow_id"]),
