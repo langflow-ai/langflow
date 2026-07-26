@@ -371,6 +371,55 @@ def test_validate_fixture_index_detects_duplicate_endpoint() -> None:
     assert any("duplicate mcp_action_name" in e for e in errors)
 
 
+def test_chat_history_store_policy_matches_fixtures() -> None:
+    """Isolators must keep Store Messages off; chat_db/ensemble flows keep it on."""
+    errors = validate_fixtures.validate_fixture_index()
+    assert errors == [], errors
+
+    manifest = json.loads((FLOWS_DIR / "fixture_index.json").read_text(encoding="utf-8"))
+    by_id = {flow["id"]: flow for flow in manifest["flows"]}
+    assert by_id["MemoryChatbotNoLLM"]["stores_chat_history"] is True
+    assert by_id["perf_ensemble_journey"]["stores_chat_history"] is True
+    assert by_id["perf_ensemble_journey_hitl"]["stores_chat_history"] is True
+    for flow_id, flow in by_id.items():
+        if flow_id in {"MemoryChatbotNoLLM", "perf_ensemble_journey", "perf_ensemble_journey_hitl"}:
+            continue
+        assert flow["stores_chat_history"] is False, flow_id
+
+    # Direct fixture inspection (defense in depth vs index-only drift).
+    for flow in manifest["flows"]:
+        payload = json.loads((FLOWS_DIR / flow["fixture_path"]).read_text(encoding="utf-8"))
+        settings = validate_fixtures.chat_store_message_settings(payload)
+        expected = flow["stores_chat_history"]
+        if expected:
+            assert settings, flow["id"]
+            assert all(value is True for _, value in settings), (flow["id"], settings)
+        else:
+            assert all(value is False for _, value in settings), (flow["id"], settings)
+
+
+def test_validate_fixture_index_detects_accidental_chat_history_store() -> None:
+    manifest = json.loads((FLOWS_DIR / "fixture_index.json").read_text(encoding="utf-8"))
+    flow = next(f for f in manifest["flows"] if f["id"] == "perf_passthrough")
+    payload = json.loads((FLOWS_DIR / flow["fixture_path"]).read_text(encoding="utf-8"))
+    for node in payload["data"]["nodes"]:
+        template = node["data"]["node"]["template"]
+        if "should_store_message" in template:
+            template["should_store_message"]["value"] = True
+    broken_path = FIXTURES_DIR / "_tmp_store_policy_broken.json"
+    try:
+        broken_path.write_text(json.dumps(payload), encoding="utf-8")
+        broken = deepcopy(manifest)
+        entry = next(f for f in broken["flows"] if f["id"] == "perf_passthrough")
+        entry["fixture"] = broken_path.name
+        entry["fixture_path"] = f"fixtures/{broken_path.name}"
+        entry["fixture_sha256"] = sha256_file(broken_path)
+        errors = validate_fixtures.validate_fixture_index(broken)
+        assert any("should_store_message must be false" in e for e in errors)
+    finally:
+        broken_path.unlink(missing_ok=True)
+
+
 def test_validate_fixture_index_detects_missing_contract_keys() -> None:
     manifest = json.loads((FLOWS_DIR / "fixture_index.json").read_text(encoding="utf-8"))
     broken = deepcopy(manifest)

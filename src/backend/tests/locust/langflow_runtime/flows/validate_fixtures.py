@@ -65,6 +65,7 @@ REQUIRED_FLOW_KEYS = {
     "webhook_copy_count",
     "hitl",
     "endpoint_name",
+    "stores_chat_history",
 }
 
 
@@ -117,6 +118,53 @@ def _fixture_path_contained(fixture_path: Path) -> bool:
     except ValueError:
         return False
     return True
+
+
+def chat_store_message_settings(payload: dict[str, Any]) -> list[tuple[str, Any]]:
+    """Return ``(node_type, should_store_message)`` for Chat Input/Output nodes."""
+    settings: list[tuple[str, Any]] = []
+    for node in payload.get("data", {}).get("nodes", []):
+        node_data = node.get("data") or {}
+        node_type = node_data.get("type")
+        if node_type not in {"ChatInput", "ChatOutput"}:
+            continue
+        template = (node_data.get("node") or {}).get("template") or {}
+        field = template.get("should_store_message")
+        if not isinstance(field, dict):
+            settings.append((node_type, None))
+            continue
+        settings.append((node_type, field.get("value")))
+    return settings
+
+
+def _validate_chat_history_policy(flow_id: str, flow: dict[str, Any], payload: dict[str, Any]) -> list[str]:
+    """Ensure Chat* Store Messages matches the flow's ``stores_chat_history`` contract."""
+    if "stores_chat_history" not in flow:
+        return []
+    expected = flow["stores_chat_history"]
+    if not isinstance(expected, bool):
+        return [f"{flow_id}: stores_chat_history must be a bool"]
+
+    settings = chat_store_message_settings(payload)
+    errors: list[str] = []
+    if expected:
+        if not settings:
+            errors.append(f"{flow_id}: stores_chat_history=true but fixture has no ChatInput/ChatOutput")
+        for node_type, value in settings:
+            if value is not True:
+                errors.append(
+                    f"{flow_id}: {node_type} should_store_message must be true "
+                    f"(got {value!r}; flow stores_chat_history=true)"
+                )
+        return errors
+
+    for node_type, value in settings:
+        if value is not False:
+            errors.append(
+                f"{flow_id}: {node_type} should_store_message must be false "
+                f"(got {value!r}; flow stores_chat_history=false — isolators must not write chat history)"
+            )
+    return errors
 
 
 def validate_fixture_index(manifest: dict[str, Any] | None = None) -> list[str]:
@@ -175,6 +223,7 @@ def validate_fixture_index(manifest: dict[str, Any] | None = None) -> list[str]:
         errors.extend(
             f"{flow_id}: possible embedded secret matching {secret_pat}" for secret_pat in _has_secret_literals(payload)
         )
+        errors.extend(_validate_chat_history_policy(flow_id, flow, payload))
 
         endpoint = payload.get("endpoint_name") or flow.get("endpoint_name")
         if not endpoint:

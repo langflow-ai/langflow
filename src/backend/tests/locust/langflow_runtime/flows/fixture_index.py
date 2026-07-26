@@ -63,6 +63,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "dataset_selector": None,
             "webhook_copy_count": 0,
             "hitl": False,
+            "stores_chat_history": False,
         },
         {
             "id": "perf_webhook_passthrough",
@@ -78,6 +79,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "dataset_selector": "webhook/default_payload",
             "webhook_copy_count": 1,
             "hitl": False,
+            "stores_chat_history": False,
         },
         {
             "id": "MemoryChatbotNoLLM",
@@ -93,6 +95,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "dataset_selector": None,
             "webhook_copy_count": 0,
             "hitl": False,
+            "stores_chat_history": True,
         },
         {
             "id": "human_input_flow",
@@ -108,6 +111,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "dataset_selector": "hitl/approve_decision",
             "webhook_copy_count": 0,
             "hitl": True,
+            "stores_chat_history": False,
         },
         {
             "id": "perf_queue_short",
@@ -123,6 +127,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "dataset_selector": None,
             "webhook_copy_count": 0,
             "hitl": False,
+            "stores_chat_history": False,
             "embedded_components": ["perf_sleep"],
         },
         {
@@ -143,6 +148,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "binding": {"knowledge_base": DEFAULT_KB_NAME},
             "webhook_copy_count": 0,
             "hitl": False,
+            "stores_chat_history": False,
         },
         {
             "id": "perf_kb_retrieve",
@@ -159,6 +165,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "binding": {"knowledge_base": DEFAULT_KB_NAME},
             "webhook_copy_count": 0,
             "hitl": False,
+            "stores_chat_history": False,
         },
         {
             "id": "perf_cpu_graph",
@@ -178,6 +185,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "dataset_selector": None,
             "webhook_copy_count": 0,
             "hitl": False,
+            "stores_chat_history": False,
             "embedded_components": ["perf_cpu_burn"],
         },
         {
@@ -204,6 +212,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "dataset_selector": None,
             "webhook_copy_count": 0,
             "hitl": False,
+            "stores_chat_history": False,
             "embedded_components": ["perf_subprocess_churn"],
         },
         {
@@ -229,6 +238,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "dataset_selector": None,
             "webhook_copy_count": 0,
             "hitl": False,
+            "stores_chat_history": False,
             "embedded_components": ["perf_disk_io"],
         },
         {
@@ -245,6 +255,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "dataset_selector": "storage/bounded_payload",
             "webhook_copy_count": 0,
             "hitl": False,
+            "stores_chat_history": False,
         },
         {
             "id": "perf_outbound_basic_prompting",
@@ -266,6 +277,7 @@ def flow_specs() -> list[dict[str, Any]]:
             },
             "webhook_copy_count": 0,
             "hitl": False,
+            "stores_chat_history": False,
         },
         {
             "id": "perf_ensemble_journey",
@@ -292,6 +304,7 @@ def flow_specs() -> list[dict[str, Any]]:
             },
             "webhook_copy_count": 1,
             "hitl": False,
+            "stores_chat_history": True,
             "embedded_components": ["perf_cpu_burn", "perf_disk_io", "perf_subprocess_churn"],
         },
         {
@@ -323,6 +336,7 @@ def flow_specs() -> list[dict[str, Any]]:
             },
             "webhook_copy_count": 0,
             "hitl": True,
+            "stores_chat_history": True,
             "embedded_components": ["perf_cpu_burn", "perf_disk_io", "perf_subprocess_churn"],
         },
     ]
