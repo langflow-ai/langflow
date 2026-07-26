@@ -32,6 +32,7 @@ IN_PROCESS_ONE_RUN_IDS = frozenset(
         "perf_passthrough",
         "perf_cpu_graph",
         "perf_multiproc_churn",
+        "perf_disk_io",
         "perf_queue_short",  # proves sleep work; queue admission is integration-only
         "MemoryChatbotNoLLM",
         # perf_payload_echo needs a real user_id for SaveToFile → covered in integration

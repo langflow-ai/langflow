@@ -17,10 +17,13 @@ from tests.locust.langflow_runtime.flows.defaults import (
     DEFAULT_CHAT_INPUT,
     DEFAULT_CPU_DURATION_MS,
     DEFAULT_CPU_ITERATIONS,
+    DEFAULT_DISK_IO_SIZE_BYTES,
     DEFAULT_KB_DOC_PREFIX,
     DEFAULT_KB_NAME,
     DEFAULT_KB_QUERY,
     DEFAULT_MULTIPROC_COUNT,
+    DEFAULT_MULTIPROC_DURATION_MS,
+    DEFAULT_MULTIPROC_WORKING_SET_BYTES,
     DEFAULT_OUTBOUND_MODEL,
     DEFAULT_OUTBOUND_PROMPT,
     DEFAULT_OUTBOUND_PROVIDER,
@@ -184,14 +187,49 @@ def flow_specs() -> list[dict[str, Any]]:
             "source_provenance": "generated:ChatInput->PerfSubprocessChurn->ChatOutput",
             "supported_protocols": ["mcp", "workflows_sync", "workflows_stream", "workflows_background"],
             "supported_modes": ["sync", "stream", "background"],
-            "input_fields": {"input_value": "perf-multiproc", "count": DEFAULT_MULTIPROC_COUNT},
-            "expected_output_rule": {"matches_regex": rf"^multiproc:{DEFAULT_MULTIPROC_COUNT}:0(,0)*:perf-multiproc$"},
+            "input_fields": {
+                "input_value": "perf-multiproc",
+                "count": DEFAULT_MULTIPROC_COUNT,
+                "duration_ms": DEFAULT_MULTIPROC_DURATION_MS,
+                "working_set_bytes": DEFAULT_MULTIPROC_WORKING_SET_BYTES,
+            },
+            "expected_output_rule": {
+                "matches_regex": (
+                    rf"^multiproc:{DEFAULT_MULTIPROC_COUNT}:0(,0)*:\d+:\d+:\d+:\d+:\d+:perf-multiproc"
+                    r"(?:\|child:[^|]+)+$"
+                )
+            },
             "mcp_action_name": "perf_multiproc_churn",
             "required_environment_features": [],
             "dataset_selector": None,
             "webhook_copy_count": 0,
             "hitl": False,
             "embedded_components": ["perf_subprocess_churn"],
+        },
+        {
+            "id": "perf_disk_io",
+            "fixture": "perf_disk_io.json",
+            "stress_category": "disk_io",
+            "source_provenance": "generated:ChatInput->PerfDiskIo->ChatOutput",
+            "supported_protocols": ["mcp", "workflows_sync", "workflows_stream", "workflows_background"],
+            "supported_modes": ["sync", "stream", "background"],
+            "input_fields": {
+                "input_value": "perf-disk",
+                "size_bytes": DEFAULT_DISK_IO_SIZE_BYTES,
+            },
+            "expected_output_rule": {
+                "matches_regex": (
+                    r"^diskio:size=\d+:written=\d+:read=\d+:cksum_ok=1:write_ms=\d+:fsync_ms=\d+:"
+                    r"read_ms=\d+:advise=[01]:rchar=\d+:wchar=\d+:read_bytes=\d+:write_bytes=\d+:"
+                    r"cached_read=[01]:seed=perf-disk$"
+                )
+            },
+            "mcp_action_name": "perf_disk_io",
+            "required_environment_features": [],
+            "dataset_selector": None,
+            "webhook_copy_count": 0,
+            "hitl": False,
+            "embedded_components": ["perf_disk_io"],
         },
         {
             "id": "perf_payload_echo",
@@ -233,7 +271,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "id": "perf_ensemble_journey",
             "fixture": "perf_ensemble_journey.json",
             "stress_category": "ensemble_flow",
-            "source_provenance": "generated:multiproc->cpu->kb_ingest->save->kb_retrieve->memory->outbound->ChatOutput",
+            "source_provenance": "generated:multiproc->disk->cpu->kb_ingest->save->kb_retrieve->memory->outbound->ChatOutput",
             "supported_protocols": [
                 "mcp",
                 "workflows_sync",
@@ -254,7 +292,7 @@ def flow_specs() -> list[dict[str, Any]]:
             },
             "webhook_copy_count": 1,
             "hitl": False,
-            "embedded_components": ["perf_cpu_burn", "perf_subprocess_churn"],
+            "embedded_components": ["perf_cpu_burn", "perf_disk_io", "perf_subprocess_churn"],
         },
         {
             "id": "perf_ensemble_journey_hitl",
@@ -285,7 +323,7 @@ def flow_specs() -> list[dict[str, Any]]:
             },
             "webhook_copy_count": 0,
             "hitl": True,
-            "embedded_components": ["perf_cpu_burn", "perf_subprocess_churn"],
+            "embedded_components": ["perf_cpu_burn", "perf_disk_io", "perf_subprocess_churn"],
         },
     ]
 

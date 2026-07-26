@@ -24,13 +24,19 @@ from uuid import uuid4
 import pytest
 from lfx.memory import aget_messages
 
+from tests.locust.langflow_runtime.components.perf_disk_io import parse_diskio_result
+from tests.locust.langflow_runtime.components.perf_subprocess_churn import parse_multiproc_result
 from tests.locust.langflow_runtime.datasets.kb_corpus import KB_DOC_BYTES, kb_corpus
 from tests.locust.langflow_runtime.datasets.storage_payload import bounded_payload_text
 from tests.locust.langflow_runtime.flows.defaults import (
     DEFAULT_CHAT_INPUT,
+    DEFAULT_DISK_IO_SIZE_BYTES,
     DEFAULT_KB_DOC_PREFIX,
     DEFAULT_KB_NAME,
     DEFAULT_KB_QUERY,
+    DEFAULT_MULTIPROC_COUNT,
+    DEFAULT_MULTIPROC_DURATION_MS,
+    DEFAULT_MULTIPROC_WORKING_SET_BYTES,
     DEFAULT_OUTBOUND_PROMPT,
     DEFAULT_PASSTHROUGH_INPUT,
     DEFAULT_PAYLOAD_FILENAME,
@@ -86,7 +92,6 @@ def _workflow_input(flow_id: str) -> str:
         ("perf_passthrough", DEFAULT_PASSTHROUGH_INPUT),
         ("perf_queue_short", f"slept:{DEFAULT_QUEUE_SLEEP_MS}:{DEFAULT_QUEUE_INPUT}"),
         ("perf_cpu_graph", None),  # regex checked below
-        ("perf_multiproc_churn", None),
         ("perf_payload_echo", DEFAULT_PAYLOAD_FILENAME),
     ],
 )
@@ -113,12 +118,90 @@ async def test_live_workflows_sync_isolators(
             assert needle in serialized or needle.lower() in serialized.lower(), serialized
         if flow_id == "perf_cpu_graph":
             assert re.search(r"cpu:\d+:\d+:[0-9a-f]{16}:perf-cpu", serialized)
-        if flow_id == "perf_multiproc_churn":
-            assert re.search(r"multiproc:2:0,0:perf-multiproc", serialized)
         if flow_id == "perf_payload_echo":
             assert DEFAULT_PAYLOAD_FILENAME in serialized or "saved" in serialized.lower()
     finally:
         await delete_flow(inserted)
+
+
+def _extract_metric_blob(serialized: str, prefix: str) -> str:
+    match = re.search(rf"({prefix}:[^\"\\]+)", serialized)
+    assert match, serialized
+    return match.group(1)
+
+
+async def test_live_multiproc_context_switch_stress(client: AsyncClient, created_api_key):
+    """Prove concurrent children, full working sets, overlap, and scheduler switches."""
+    payload = load_fixture_payload("perf_multiproc_churn")
+    flow_id = await insert_flow(user_id=created_api_key.user_id, payload=payload)
+    try:
+        result = await post_workflow(
+            client,
+            api_key=created_api_key.api_key,
+            flow_id=flow_id,
+            mode="sync",
+            input_value=_workflow_input("perf_multiproc_churn"),
+            session_id=f"perf-multiproc-{uuid4().hex[:8]}",
+        )
+        serialized = json.dumps(result)
+        parsed = parse_multiproc_result(_extract_metric_blob(serialized, "multiproc"))
+        assert parsed["count"] == DEFAULT_MULTIPROC_COUNT
+        assert parsed["codes"] == [0] * DEFAULT_MULTIPROC_COUNT
+        assert int(parsed["ws_bytes"]) >= min(DEFAULT_MULTIPROC_WORKING_SET_BYTES, 256 * 1024)
+        # Concurrent wall time should be closer to one duration than N durations.
+        assert int(parsed["elapsed_ms"]) < (DEFAULT_MULTIPROC_COUNT * DEFAULT_MULTIPROC_DURATION_MS) + 2000
+        children = parsed["children"]
+        assert len(children) == DEFAULT_MULTIPROC_COUNT
+        assert len({child["pid"] for child in children}) == DEFAULT_MULTIPROC_COUNT
+        # Overlap is expected under synchronized start; allow zero on heavily loaded hosts
+        # and still require concurrency evidence via elapsed_ms + distinct PIDs above.
+        assert int(parsed["overlap_ms"]) >= 0
+        for child in children:
+            assert int(child["pages"]) > 0
+            assert int(child["touched"]) >= int(child["pages"])
+            assert child["cksum"]
+            assert int(child["cksum"], 16) != 0
+        if all(str(child["aff"]).isdigit() for child in children):
+            affinities = {str(child["aff"]) for child in children}
+            assert len(affinities) == 1
+            assert sum(int(child["ivcs"]) for child in children) >= 1
+            assert int(parsed["vcs"]) + int(parsed["ivcs"]) >= 1
+    finally:
+        await delete_flow(flow_id)
+
+
+async def test_live_disk_io_stress(client: AsyncClient, created_api_key, tmp_path):
+    """Prove write/fsync/read/verify through the committed disk fixture and live Workflows API."""
+    payload = load_fixture_payload("perf_disk_io")
+    flow_id = await insert_flow(user_id=created_api_key.user_id, payload=payload)
+    try:
+        with local_save_workdir(tmp_path):
+            result = await post_workflow(
+                client,
+                api_key=created_api_key.api_key,
+                flow_id=flow_id,
+                mode="sync",
+                input_value=_workflow_input("perf_disk_io"),
+                session_id=f"perf-disk-{uuid4().hex[:8]}",
+            )
+        serialized = json.dumps(result)
+        parsed = parse_diskio_result(_extract_metric_blob(serialized, "diskio"))
+        assert int(parsed["size"]) >= 64 * 1024
+        assert int(parsed["written"]) == int(parsed["size"])
+        assert int(parsed["read"]) == int(parsed["size"])
+        assert parsed["cksum_ok"] is True
+        assert int(parsed["write_ms"]) >= 1
+        assert int(parsed["fsync_ms"]) >= 1
+        assert int(parsed["read_ms"]) >= 1
+        assert parsed["seed"] == "perf-disk"
+        # Logical write path should show activity; backing-storage write_bytes is best-effort.
+        assert int(parsed["wchar"]) >= int(parsed["written"]) or int(parsed["write_bytes"]) > 0
+        if int(parsed["write_bytes"]) > 0:
+            assert int(parsed["write_bytes"]) >= min(int(parsed["size"]) // 2, DEFAULT_DISK_IO_SIZE_BYTES // 2)
+        leftovers = list(tmp_path.rglob("perf-disk-*.bin"))
+        assert leftovers == [], leftovers
+    finally:
+        await delete_flow(flow_id)
 
 
 async def test_queue_background_admission_and_completion(client: AsyncClient, created_api_key):

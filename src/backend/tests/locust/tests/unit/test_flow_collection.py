@@ -9,7 +9,9 @@ from typing import TYPE_CHECKING
 
 import pytest  # noqa: TC002
 
-from tests.locust.langflow_runtime.components import PerfCpuBurn, PerfSleep, PerfSubprocessChurn
+from tests.locust.langflow_runtime.components import PerfCpuBurn, PerfDiskIo, PerfSleep, PerfSubprocessChurn
+from tests.locust.langflow_runtime.components.perf_disk_io import parse_diskio_result
+from tests.locust.langflow_runtime.components.perf_subprocess_churn import parse_multiproc_result
 from tests.locust.langflow_runtime.datasets.registry import DATASET_IDS, DATASETS
 from tests.locust.langflow_runtime.flows import validate_fixtures
 from tests.locust.langflow_runtime.flows.build_fixtures import (
@@ -46,6 +48,7 @@ def test_flows_fixture_index_lists_all_v1_fixtures() -> None:
         "perf_kb_retrieve",
         "perf_cpu_graph",
         "perf_multiproc_churn",
+        "perf_disk_io",
         "perf_payload_echo",
         "perf_outbound_basic_prompting",
         "perf_ensemble_journey",
@@ -208,28 +211,108 @@ def test_perf_cpu_burn_component_is_bounded_and_deterministic() -> None:
     assert re.match(r"^cpu:5:\d+:[0-9a-f]{16}:seed$", first.text)
 
 
-def test_perf_subprocess_churn_component_is_bounded_and_deterministic() -> None:
+def test_perf_subprocess_churn_component_is_bounded_and_concurrent() -> None:
     component = PerfSubprocessChurn()
-    component.set(input_value="mp", count=2, timeout_s=2)
-    result = component.run()
-    assert result.text == "multiproc:2:0,0:mp"
+    component.set(
+        input_value="mp",
+        count=2,
+        duration_ms=50,
+        working_set_bytes=256 * 1024,
+        timeout_s=5,
+    )
+    result = parse_multiproc_result(component.run().text)
+    assert result["count"] == 2
+    assert result["codes"] == [0, 0]
+    assert result["seed"] == "mp"
+    assert int(result["ws_bytes"]) >= 256 * 1024
+    assert int(result["overlap_ms"]) >= 0
+    assert int(result["elapsed_ms"]) < 2 * 50 + 1500  # concurrent, not sequential + overhead
+    children = result["children"]
+    assert len(children) == 2
+    assert len({child["pid"] for child in children}) == 2
+    pages = int(result["ws_bytes"]) // 4096
+    for child in children:
+        assert int(child["pages"]) >= pages // 2  # page size may differ slightly
+        assert int(child["touched"]) >= int(child["pages"])
+        assert child["cksum"]
+        assert int(child["vcs"]) + int(child["ivcs"]) >= 0
 
-    component.set(count=100)  # above hard ceiling
-    capped = component.run()
-    assert capped.text.startswith("multiproc:8:")
+    component.set(input_value="bad|seed\nline", count=1, duration_ms=20, working_set_bytes=256 * 1024)
+    sanitized = parse_multiproc_result(component.run().text)
+    assert sanitized["seed"] == "bad_seed_line"
+    assert "|" not in sanitized["seed"]
+
+    component.set(input_value="mp", count=100)  # above hard ceiling
+    capped = parse_multiproc_result(component.run().text)
+    assert capped["count"] == 8
 
 
-def test_perf_subprocess_churn_timeout_returns_sentinel(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_perf_subprocess_churn_timeout_terminates_children(monkeypatch: pytest.MonkeyPatch) -> None:
     import subprocess
 
-    def _raise_timeout(*_args, **_kwargs):
-        raise subprocess.TimeoutExpired(cmd="x", timeout=1)
+    class _FakeProc:
+        def __init__(self):
+            self.stdin = _FakeStdin()
+            self.returncode = None
+            self._timed_out = False
 
-    monkeypatch.setattr(subprocess, "run", _raise_timeout)
+        def communicate(self, timeout=None):
+            if not self._timed_out:
+                self._timed_out = True
+                raise subprocess.TimeoutExpired(cmd="x", timeout=timeout or 1)
+            return ("", "")
+
+        def kill(self):
+            self.returncode = -9
+
+        def poll(self):
+            return self.returncode
+
+        def wait(self, timeout=None):  # noqa: ARG002
+            return self.returncode
+
+    class _FakeStdin:
+        def write(self, _data):
+            return None
+
+        def flush(self):
+            return None
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(subprocess, "Popen", lambda *_a, **_k: _FakeProc())
     component = PerfSubprocessChurn()
-    component.set(input_value="mp", count=1, timeout_s=1)
+    component.set(input_value="mp", count=1, duration_ms=10, working_set_bytes=256 * 1024, timeout_s=1)
     result = component.run()
-    assert result.text == "multiproc:1:-9:mp"
+    assert result.text.startswith("multiproc:1:-9:")
+
+
+def test_perf_disk_io_component_writes_fsyncs_reads_and_cleans_up(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tests.locust.langflow_runtime.components import perf_disk_io as disk_mod
+
+    monkeypatch.setattr(disk_mod, "_work_root", lambda: tmp_path / "disk")
+    (tmp_path / "disk").mkdir()
+    component = PerfDiskIo()
+    component.set(input_value="disk-seed", size_bytes=128 * 1024)
+    parsed = parse_diskio_result(component.run().text)
+    assert parsed["size"] == 128 * 1024
+    assert parsed["written"] == 128 * 1024
+    assert parsed["read"] == 128 * 1024
+    assert parsed["cksum_ok"] is True
+    assert int(parsed["write_ms"]) >= 1
+    assert int(parsed["fsync_ms"]) >= 1
+    assert int(parsed["read_ms"]) >= 1
+    assert parsed["seed"] == "disk-seed"
+    # Temporary payload must be removed; work root may remain if non-empty.
+    leftovers = list((tmp_path / "disk").glob("perf-disk-*.bin"))
+    assert leftovers == []
+
+    component.set(size_bytes=10**12)  # above hard ceiling / budget
+    capped = parse_diskio_result(component.run().text)
+    assert int(capped["size"]) <= 64 * 1024 * 1024
 
 
 def test_queue_fixture_embeds_perf_sleep_source() -> None:

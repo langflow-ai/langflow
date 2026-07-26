@@ -1,8 +1,9 @@
 {
   "component_source_sha256": {
-    "perf_cpu_burn": "5e92dd0f71229ff41e374bb0b3b608ba5c4a3a75d64db4ce885e302ce8e3bc61",
-    "perf_sleep": "72543184a25a30fc986f9bec068fc22ce405f285c49d7d8f891ca724d877f271",
-    "perf_subprocess_churn": "ec5da2d659a79e0eb0b1c2b0096be4e86504fae0d5fb11fc2731456b6d2c60a1"
+    "perf_cpu_burn": "7e941b067228adf3143106179f5b2b55eb37faaf55bf3d95c6bf759a47c179e2",
+    "perf_disk_io": "203e15af92c59dfa7624971974f7dcc106b6a8fa28b2149a7a42f02118ad2fed",
+    "perf_sleep": "a59ce946c5e26deadc57fab4547c816ba5e97986adef072f92fdac8de9b8b7e9",
+    "perf_subprocess_churn": "bf4bb05ec77c4e8d7b717a17c6c8d91170f8edcff2d8798545d974776359f539"
   },
   "description": "Complete V1 performance-suite flow contract inventory.",
   "flows": [
@@ -161,21 +162,21 @@
     {
       "dataset_selector": null,
       "embedded_component_sha256": {
-        "perf_sleep": "72543184a25a30fc986f9bec068fc22ce405f285c49d7d8f891ca724d877f271"
+        "perf_sleep": "a59ce946c5e26deadc57fab4547c816ba5e97986adef072f92fdac8de9b8b7e9"
       },
       "embedded_components": [
         "perf_sleep"
       ],
       "endpoint_name": "perf-queue-short",
       "expected_component_sha256": {
-        "perf_sleep": "72543184a25a30fc986f9bec068fc22ce405f285c49d7d8f891ca724d877f271"
+        "perf_sleep": "a59ce946c5e26deadc57fab4547c816ba5e97986adef072f92fdac8de9b8b7e9"
       },
       "expected_output_rule": {
         "matches_regex": "^slept:50:perf-queue-ping$"
       },
       "fixture": "perf_queue_short.json",
       "fixture_path": "fixtures/perf_queue_short.json",
-      "fixture_sha256": "4e77ea466af9df21ed42ec3ff49bc8fc8bbdc0d87420cdf35b51c82add52b81d",
+      "fixture_sha256": "60fc5cd902e01d96ca1a8ae87aed0bfceee299c1abcd2cb9d7f5d87d39946e23",
       "hitl": false,
       "id": "perf_queue_short",
       "input_fields": {
@@ -294,21 +295,21 @@
     {
       "dataset_selector": null,
       "embedded_component_sha256": {
-        "perf_cpu_burn": "5e92dd0f71229ff41e374bb0b3b608ba5c4a3a75d64db4ce885e302ce8e3bc61"
+        "perf_cpu_burn": "7e941b067228adf3143106179f5b2b55eb37faaf55bf3d95c6bf759a47c179e2"
       },
       "embedded_components": [
         "perf_cpu_burn"
       ],
       "endpoint_name": "perf-cpu-graph",
       "expected_component_sha256": {
-        "perf_cpu_burn": "5e92dd0f71229ff41e374bb0b3b608ba5c4a3a75d64db4ce885e302ce8e3bc61"
+        "perf_cpu_burn": "7e941b067228adf3143106179f5b2b55eb37faaf55bf3d95c6bf759a47c179e2"
       },
       "expected_output_rule": {
         "matches_regex": "^cpu:\\d+:\\d+:[0-9a-f]{16}:perf-cpu$"
       },
       "fixture": "perf_cpu_graph.json",
       "fixture_path": "fixtures/perf_cpu_graph.json",
-      "fixture_sha256": "2ac15256c21337a9b98f3093487f76255f2746355b72d34077579b1e97329568",
+      "fixture_sha256": "68e9cd12bf8facb42854fd8ae9107c0309616cc6888269d2fd1b8ac287f22039",
       "hitl": false,
       "id": "perf_cpu_graph",
       "input_fields": {
@@ -342,26 +343,28 @@
     {
       "dataset_selector": null,
       "embedded_component_sha256": {
-        "perf_subprocess_churn": "ec5da2d659a79e0eb0b1c2b0096be4e86504fae0d5fb11fc2731456b6d2c60a1"
+        "perf_subprocess_churn": "bf4bb05ec77c4e8d7b717a17c6c8d91170f8edcff2d8798545d974776359f539"
       },
       "embedded_components": [
         "perf_subprocess_churn"
       ],
       "endpoint_name": "perf-multiproc-churn",
       "expected_component_sha256": {
-        "perf_subprocess_churn": "ec5da2d659a79e0eb0b1c2b0096be4e86504fae0d5fb11fc2731456b6d2c60a1"
+        "perf_subprocess_churn": "bf4bb05ec77c4e8d7b717a17c6c8d91170f8edcff2d8798545d974776359f539"
       },
       "expected_output_rule": {
-        "matches_regex": "^multiproc:2:0(,0)*:perf-multiproc$"
+        "matches_regex": "^multiproc:2:0(,0)*:\\d+:\\d+:\\d+:\\d+:\\d+:perf-multiproc(?:\\|child:[^|]+)+$"
       },
       "fixture": "perf_multiproc_churn.json",
       "fixture_path": "fixtures/perf_multiproc_churn.json",
-      "fixture_sha256": "4df6259b4b278d33f5d01d3e86de42e5f6df98a67ec9238727d608634e19070a",
+      "fixture_sha256": "94685a6fcc5c84bc9e1f7a358c2dfc9a21cde6f6aff7b70b8a97e77248bea972",
       "hitl": false,
       "id": "perf_multiproc_churn",
       "input_fields": {
         "count": 2,
-        "input_value": "perf-multiproc"
+        "duration_ms": 100,
+        "input_value": "perf-multiproc",
+        "working_set_bytes": 4194304
       },
       "mcp_action_name": "perf_multiproc_churn",
       "node_types": [
@@ -372,6 +375,52 @@
       "required_environment_features": [],
       "source_provenance": "generated:ChatInput->PerfSubprocessChurn->ChatOutput",
       "stress_category": "multiproc",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "mcp",
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "dataset_selector": null,
+      "embedded_component_sha256": {
+        "perf_disk_io": "203e15af92c59dfa7624971974f7dcc106b6a8fa28b2149a7a42f02118ad2fed"
+      },
+      "embedded_components": [
+        "perf_disk_io"
+      ],
+      "endpoint_name": "perf-disk-io",
+      "expected_component_sha256": {
+        "perf_disk_io": "203e15af92c59dfa7624971974f7dcc106b6a8fa28b2149a7a42f02118ad2fed"
+      },
+      "expected_output_rule": {
+        "matches_regex": "^diskio:size=\\d+:written=\\d+:read=\\d+:cksum_ok=1:write_ms=\\d+:fsync_ms=\\d+:read_ms=\\d+:advise=[01]:rchar=\\d+:wchar=\\d+:read_bytes=\\d+:write_bytes=\\d+:cached_read=[01]:seed=perf-disk$"
+      },
+      "fixture": "perf_disk_io.json",
+      "fixture_path": "fixtures/perf_disk_io.json",
+      "fixture_sha256": "31c93ab08e0a69dd658e83520ac2edeb9ac6ecf52c3ad2a8bf7eb845c321c4fa",
+      "hitl": false,
+      "id": "perf_disk_io",
+      "input_fields": {
+        "input_value": "perf-disk",
+        "size_bytes": 4194304
+      },
+      "mcp_action_name": "perf_disk_io",
+      "node_types": [
+        "ChatInput",
+        "ChatOutput",
+        "PerfDiskIo"
+      ],
+      "required_environment_features": [],
+      "source_provenance": "generated:ChatInput->PerfDiskIo->ChatOutput",
+      "stress_category": "disk_io",
       "supported_modes": [
         "sync",
         "stream",
@@ -479,24 +528,27 @@
       },
       "dataset_selector": "kb/bounded_corpus",
       "embedded_component_sha256": {
-        "perf_cpu_burn": "5e92dd0f71229ff41e374bb0b3b608ba5c4a3a75d64db4ce885e302ce8e3bc61",
-        "perf_subprocess_churn": "ec5da2d659a79e0eb0b1c2b0096be4e86504fae0d5fb11fc2731456b6d2c60a1"
+        "perf_cpu_burn": "7e941b067228adf3143106179f5b2b55eb37faaf55bf3d95c6bf759a47c179e2",
+        "perf_disk_io": "203e15af92c59dfa7624971974f7dcc106b6a8fa28b2149a7a42f02118ad2fed",
+        "perf_subprocess_churn": "bf4bb05ec77c4e8d7b717a17c6c8d91170f8edcff2d8798545d974776359f539"
       },
       "embedded_components": [
         "perf_cpu_burn",
+        "perf_disk_io",
         "perf_subprocess_churn"
       ],
       "endpoint_name": "perf-ensemble-journey",
       "expected_component_sha256": {
-        "perf_cpu_burn": "5e92dd0f71229ff41e374bb0b3b608ba5c4a3a75d64db4ce885e302ce8e3bc61",
-        "perf_subprocess_churn": "ec5da2d659a79e0eb0b1c2b0096be4e86504fae0d5fb11fc2731456b6d2c60a1"
+        "perf_cpu_burn": "7e941b067228adf3143106179f5b2b55eb37faaf55bf3d95c6bf759a47c179e2",
+        "perf_disk_io": "203e15af92c59dfa7624971974f7dcc106b6a8fa28b2149a7a42f02118ad2fed",
+        "perf_subprocess_churn": "bf4bb05ec77c4e8d7b717a17c6c8d91170f8edcff2d8798545d974776359f539"
       },
       "expected_output_rule": {
         "ensemble_terminal": true
       },
       "fixture": "perf_ensemble_journey.json",
       "fixture_path": "fixtures/perf_ensemble_journey.json",
-      "fixture_sha256": "a712d9f32ee9499dac547850023cf5fb1e0e28e468e7ba909e1d09d240b8f261",
+      "fixture_sha256": "338b59200ad79ea158559d4e7214e5aa8f35270eb5243be39d2d4bcd0b661725",
       "hitl": false,
       "id": "perf_ensemble_journey",
       "input_fields": {
@@ -512,6 +564,7 @@
         "Memory",
         "Pass",
         "PerfCpuBurn",
+        "PerfDiskIo",
         "PerfSubprocessChurn",
         "SaveToFile",
         "SplitText",
@@ -523,7 +576,7 @@
         "storage",
         "llm_provider"
       ],
-      "source_provenance": "generated:multiproc->cpu->kb_ingest->save->kb_retrieve->memory->outbound->ChatOutput",
+      "source_provenance": "generated:multiproc->disk->cpu->kb_ingest->save->kb_retrieve->memory->outbound->ChatOutput",
       "stress_category": "ensemble_flow",
       "supported_modes": [
         "sync",
@@ -548,17 +601,20 @@
       },
       "dataset_selector": "hitl/approve_decision",
       "embedded_component_sha256": {
-        "perf_cpu_burn": "5e92dd0f71229ff41e374bb0b3b608ba5c4a3a75d64db4ce885e302ce8e3bc61",
-        "perf_subprocess_churn": "ec5da2d659a79e0eb0b1c2b0096be4e86504fae0d5fb11fc2731456b6d2c60a1"
+        "perf_cpu_burn": "7e941b067228adf3143106179f5b2b55eb37faaf55bf3d95c6bf759a47c179e2",
+        "perf_disk_io": "203e15af92c59dfa7624971974f7dcc106b6a8fa28b2149a7a42f02118ad2fed",
+        "perf_subprocess_churn": "bf4bb05ec77c4e8d7b717a17c6c8d91170f8edcff2d8798545d974776359f539"
       },
       "embedded_components": [
         "perf_cpu_burn",
+        "perf_disk_io",
         "perf_subprocess_churn"
       ],
       "endpoint_name": "perf-ensemble-journey-hitl",
       "expected_component_sha256": {
-        "perf_cpu_burn": "5e92dd0f71229ff41e374bb0b3b608ba5c4a3a75d64db4ce885e302ce8e3bc61",
-        "perf_subprocess_churn": "ec5da2d659a79e0eb0b1c2b0096be4e86504fae0d5fb11fc2731456b6d2c60a1"
+        "perf_cpu_burn": "7e941b067228adf3143106179f5b2b55eb37faaf55bf3d95c6bf759a47c179e2",
+        "perf_disk_io": "203e15af92c59dfa7624971974f7dcc106b6a8fa28b2149a7a42f02118ad2fed",
+        "perf_subprocess_churn": "bf4bb05ec77c4e8d7b717a17c6c8d91170f8edcff2d8798545d974776359f539"
       },
       "expected_output_rule": {
         "ensemble_terminal": true,
@@ -566,7 +622,7 @@
       },
       "fixture": "perf_ensemble_journey_hitl.json",
       "fixture_path": "fixtures/perf_ensemble_journey_hitl.json",
-      "fixture_sha256": "cf57a00bb434f9d67ee3dd1f078ae7871bea8b26186fee03b3f262ad20c6a99f",
+      "fixture_sha256": "5b09b9eac35d5db88c3b50b8cde79109f35ea77940cbf0659a44d9094e7aff8c",
       "hitl": true,
       "id": "perf_ensemble_journey_hitl",
       "input_fields": {
@@ -583,6 +639,7 @@
         "Memory",
         "Pass",
         "PerfCpuBurn",
+        "PerfDiskIo",
         "PerfSubprocessChurn",
         "SaveToFile",
         "SplitText",

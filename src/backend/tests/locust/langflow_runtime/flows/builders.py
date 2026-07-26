@@ -23,15 +23,18 @@ from lfx.components.processing.converter import TypeConverterComponent
 from lfx.components.processing.split_text import SplitTextComponent
 from lfx.graph import Graph
 
-from tests.locust.langflow_runtime.components import PerfCpuBurn, PerfSleep, PerfSubprocessChurn
+from tests.locust.langflow_runtime.components import PerfCpuBurn, PerfDiskIo, PerfSleep, PerfSubprocessChurn
 from tests.locust.langflow_runtime.flows.defaults import (
     DATA_DIR,
     DEFAULT_CPU_DURATION_MS,
     DEFAULT_CPU_ITERATIONS,
+    DEFAULT_DISK_IO_SIZE_BYTES,
     DEFAULT_KB_DOC_PREFIX,
     DEFAULT_KB_NAME,
     DEFAULT_KB_QUERY,
     DEFAULT_MULTIPROC_COUNT,
+    DEFAULT_MULTIPROC_DURATION_MS,
+    DEFAULT_MULTIPROC_WORKING_SET_BYTES,
     DEFAULT_OUTBOUND_API_KEY_VAR,
     DEFAULT_OUTBOUND_MODEL,
     DEFAULT_OUTBOUND_PROMPT,
@@ -186,7 +189,13 @@ def build_multiproc_churn() -> Path:
     chat_input = ChatInput()
     chat_input.set(should_store_message=False, input_value="perf-multiproc")
     churn = PerfSubprocessChurn()
-    churn.set(input_value=chat_input.message_response, count=DEFAULT_MULTIPROC_COUNT, timeout_s=2)
+    churn.set(
+        input_value=chat_input.message_response,
+        count=DEFAULT_MULTIPROC_COUNT,
+        duration_ms=DEFAULT_MULTIPROC_DURATION_MS,
+        working_set_bytes=DEFAULT_MULTIPROC_WORKING_SET_BYTES,
+        timeout_s=5,
+    )
     chat_output = ChatOutput()
     chat_output.set(should_store_message=False, input_value=churn.run)
     return write_fixture(
@@ -195,8 +204,33 @@ def build_multiproc_churn() -> Path:
             chat_input,
             chat_output,
             name="perf_multiproc_churn",
-            description="Bounded subprocess spawn/exit pressure without Agent, KB, or provider work.",
+            description=(
+                "Bounded concurrent multiprocess context-switch pressure with memory-resident "
+                "working sets (no Agent, KB, or provider work)."
+            ),
             endpoint_name="perf-multiproc-churn",
+        ),
+    )
+
+
+def build_disk_io() -> Path:
+    chat_input = ChatInput()
+    chat_input.set(should_store_message=False, input_value="perf-disk")
+    disk = PerfDiskIo()
+    disk.set(input_value=chat_input.message_response, size_bytes=DEFAULT_DISK_IO_SIZE_BYTES)
+    chat_output = ChatOutput()
+    chat_output.set(should_store_message=False, input_value=disk.run)
+    return write_fixture(
+        "perf_disk_io.json",
+        dump_graph(
+            chat_input,
+            chat_output,
+            name="perf_disk_io",
+            description=(
+                "Bounded mixed local disk I/O (write, fsync, advisory cold-read, verify). "
+                "Distinct from SaveToFile/storage abstraction coverage."
+            ),
+            endpoint_name="perf-disk-io",
         ),
     )
 
@@ -333,16 +367,25 @@ def _rewire_human_input_approve_edge(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_ensemble_graph(*, hitl: bool) -> dict[str, Any]:
-    """Sequential journey covering multiproc, CPU, KB ingest/retrieve, storage, chat/db, outbound."""
+    """Sequential journey covering multiproc, disk, CPU, KB ingest/retrieve, storage, chat/db, outbound."""
     chat_input = ChatInput()
     chat_input.set(should_store_message=True, input_value="perf-ensemble-journey")
 
     multiproc = PerfSubprocessChurn()
-    multiproc.set(input_value=chat_input.message_response, count=DEFAULT_MULTIPROC_COUNT, timeout_s=2)
+    multiproc.set(
+        input_value=chat_input.message_response,
+        count=DEFAULT_MULTIPROC_COUNT,
+        duration_ms=DEFAULT_MULTIPROC_DURATION_MS,
+        working_set_bytes=DEFAULT_MULTIPROC_WORKING_SET_BYTES,
+        timeout_s=5,
+    )
+
+    disk = PerfDiskIo()
+    disk.set(input_value=multiproc.run, size_bytes=DEFAULT_DISK_IO_SIZE_BYTES)
 
     cpu = PerfCpuBurn()
     cpu.set(
-        input_value=multiproc.run,
+        input_value=disk.run,
         duration_ms=DEFAULT_CPU_DURATION_MS,
         iterations=DEFAULT_CPU_ITERATIONS,
     )
@@ -400,7 +443,7 @@ def build_ensemble_graph(*, hitl: bool) -> dict[str, Any]:
         chat_output,
         name="perf_ensemble_journey",
         description=(
-            "Graph-side multiproc, CPU/graph, KB ingest/retrieve, payload/storage, "
+            "Graph-side multiproc, disk I/O, CPU/graph, KB ingest/retrieve, payload/storage, "
             "chat/database, and outbound journey for MCP, Workflows, and Webhooks."
         ),
         endpoint_name="perf-ensemble-journey",

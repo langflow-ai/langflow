@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 # Node data.type values from Graph.dump for the suite isolators.
 ISOLATOR_TYPE_TO_KEY = {
     "PerfCpuBurn": "perf_cpu_burn",
+    "PerfDiskIo": "perf_disk_io",
     "PerfSleep": "perf_sleep",
     "PerfSubprocessChurn": "perf_subprocess_churn",
 }
@@ -51,6 +52,7 @@ def embedded_isolator_hashes(payload: dict[str, Any]) -> dict[str, str]:
 def component_source_hashes(components_dir: Path) -> dict[str, str]:
     return {
         "perf_cpu_burn": sha256_file(components_dir / "perf_cpu_burn.py"),
+        "perf_disk_io": sha256_file(components_dir / "perf_disk_io.py"),
         "perf_sleep": sha256_file(components_dir / "perf_sleep.py"),
         "perf_subprocess_churn": sha256_file(components_dir / "perf_subprocess_churn.py"),
     }

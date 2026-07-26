@@ -4,78 +4,8 @@
       {
         "data": {
           "sourceHandle": {
-            "dataType": "SaveToFile",
-            "id": "SaveToFileComponent-niczp",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "ignored_message",
-            "id": "PassMessageComponent-R8lTd",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "SaveToFileComponent-niczp",
-        "target": "PassMessageComponent-R8lTd"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "Pass",
-            "id": "PassMessageComponent-R8lTd",
-            "name": "output_message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "search_query",
-            "id": "KnowledgeBaseComponent-DPHqf",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "PassMessageComponent-R8lTd",
-        "target": "KnowledgeBaseComponent-DPHqf"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "KnowledgeIngestion",
-            "id": "KnowledgeIngestionComponent-_yDUL",
-            "name": "dataframe_output",
-            "output_types": [
-              "JSON"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input",
-            "id": "SaveToFileComponent-niczp",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
-            "type": "other"
-          }
-        },
-        "source": "KnowledgeIngestionComponent-_yDUL",
-        "target": "SaveToFileComponent-niczp"
-      },
-      {
-        "data": {
-          "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-e55Si",
+            "id": "LanguageModelComponent-hh8iI",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -83,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-kBMQ5",
+            "id": "ChatOutput-Qhsh5",
             "inputTypes": [
               "Data",
               "JSON",
@@ -94,202 +24,14 @@
             "type": "other"
           }
         },
-        "source": "LanguageModelComponent-e55Si",
-        "target": "ChatOutput-kBMQ5"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "KnowledgeBase",
-            "id": "KnowledgeBaseComponent-DPHqf",
-            "name": "retrieve_data",
-            "output_types": [
-              "Table"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_data",
-            "id": "TypeConverterComponent-ax9qm",
-            "inputTypes": [
-              "Message",
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table"
-            ],
-            "type": "other"
-          }
-        },
-        "source": "KnowledgeBaseComponent-DPHqf",
-        "target": "TypeConverterComponent-ax9qm"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "SplitText",
-            "id": "SplitTextComponent-g_g3t",
-            "name": "dataframe",
-            "output_types": [
-              "Table"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_df",
-            "id": "KnowledgeIngestionComponent-_yDUL",
-            "inputTypes": [
-              "Message",
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table"
-            ],
-            "type": "other"
-          }
-        },
-        "source": "SplitTextComponent-g_g3t",
-        "target": "KnowledgeIngestionComponent-_yDUL"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "PerfCpuBurn",
-            "id": "PerfCpuBurn-Nuizt",
-            "name": "output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data_inputs",
-            "id": "SplitTextComponent-g_g3t",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
-            "type": "other"
-          }
-        },
-        "source": "PerfCpuBurn-Nuizt",
-        "target": "SplitTextComponent-g_g3t"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "Memory",
-            "id": "MemoryComponent-Hznv6",
-            "name": "messages_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_message",
-            "id": "LanguageModelComponent-e55Si",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "MemoryComponent-Hznv6",
-        "target": "LanguageModelComponent-e55Si"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-xiOQh",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "message",
-            "id": "MemoryComponent-Hznv6",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "ChatInput-xiOQh",
-        "target": "MemoryComponent-Hznv6"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-xiOQh",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_message",
-            "id": "PassMessageComponent-R8lTd",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "ChatInput-xiOQh",
-        "target": "PassMessageComponent-R8lTd"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-xiOQh",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "PerfSubprocessChurn--521Y",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "ChatInput-xiOQh",
-        "target": "PerfSubprocessChurn--521Y"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "PerfSubprocessChurn",
-            "id": "PerfSubprocessChurn--521Y",
-            "name": "output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "PerfCpuBurn-Nuizt",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "PerfSubprocessChurn--521Y",
-        "target": "PerfCpuBurn-Nuizt"
+        "source": "LanguageModelComponent-hh8iI",
+        "target": "ChatOutput-Qhsh5"
       },
       {
         "data": {
           "sourceHandle": {
             "dataType": "TypeConverterComponent",
-            "id": "TypeConverterComponent-ax9qm",
+            "id": "TypeConverterComponent-cx0x9",
             "name": "message_output",
             "output_types": [
               "Message"
@@ -297,21 +39,301 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-e55Si",
+            "id": "LanguageModelComponent-hh8iI",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "source": "TypeConverterComponent-ax9qm",
-        "target": "LanguageModelComponent-e55Si"
+        "source": "TypeConverterComponent-cx0x9",
+        "target": "LanguageModelComponent-hh8iI"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-mzMtA",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_message",
+            "id": "PassMessageComponent-Eeq6q",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-mzMtA",
+        "target": "PassMessageComponent-Eeq6q"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-mzMtA",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfSubprocessChurn-VKDIA",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-mzMtA",
+        "target": "PerfSubprocessChurn-VKDIA"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "PerfSubprocessChurn",
+            "id": "PerfSubprocessChurn-VKDIA",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfDiskIo-IGvmc",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "PerfSubprocessChurn-VKDIA",
+        "target": "PerfDiskIo-IGvmc"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "SaveToFile",
+            "id": "SaveToFileComponent-qCj45",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "ignored_message",
+            "id": "PassMessageComponent-Eeq6q",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "SaveToFileComponent-qCj45",
+        "target": "PassMessageComponent-Eeq6q"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "Memory",
+            "id": "MemoryComponent-13jPQ",
+            "name": "messages_text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "system_message",
+            "id": "LanguageModelComponent-hh8iI",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "MemoryComponent-13jPQ",
+        "target": "LanguageModelComponent-hh8iI"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "KnowledgeIngestion",
+            "id": "KnowledgeIngestionComponent-Hgddj",
+            "name": "dataframe_output",
+            "output_types": [
+              "JSON"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input",
+            "id": "SaveToFileComponent-qCj45",
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "source": "KnowledgeIngestionComponent-Hgddj",
+        "target": "SaveToFileComponent-qCj45"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-mzMtA",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "message",
+            "id": "MemoryComponent-13jPQ",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-mzMtA",
+        "target": "MemoryComponent-13jPQ"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "KnowledgeBase",
+            "id": "KnowledgeBaseComponent-Q3N6s",
+            "name": "retrieve_data",
+            "output_types": [
+              "Table"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "TypeConverterComponent-cx0x9",
+            "inputTypes": [
+              "Message",
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table"
+            ],
+            "type": "other"
+          }
+        },
+        "source": "KnowledgeBaseComponent-Q3N6s",
+        "target": "TypeConverterComponent-cx0x9"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "PerfCpuBurn",
+            "id": "PerfCpuBurn-qgx3T",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data_inputs",
+            "id": "SplitTextComponent-5LkHc",
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "source": "PerfCpuBurn-qgx3T",
+        "target": "SplitTextComponent-5LkHc"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "Pass",
+            "id": "PassMessageComponent-Eeq6q",
+            "name": "output_message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "search_query",
+            "id": "KnowledgeBaseComponent-Q3N6s",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "PassMessageComponent-Eeq6q",
+        "target": "KnowledgeBaseComponent-Q3N6s"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "SplitText",
+            "id": "SplitTextComponent-5LkHc",
+            "name": "dataframe",
+            "output_types": [
+              "Table"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_df",
+            "id": "KnowledgeIngestionComponent-Hgddj",
+            "inputTypes": [
+              "Message",
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table"
+            ],
+            "type": "other"
+          }
+        },
+        "source": "SplitTextComponent-5LkHc",
+        "target": "KnowledgeIngestionComponent-Hgddj"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "PerfDiskIo",
+            "id": "PerfDiskIo-IGvmc",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfCpuBurn-qgx3T",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "PerfDiskIo-IGvmc",
+        "target": "PerfCpuBurn-qgx3T"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-xiOQh",
+          "id": "ChatInput-mzMtA",
           "node": {
             "base_classes": [
               "Message"
@@ -576,11 +598,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-xiOQh"
+        "id": "ChatInput-mzMtA"
       },
       {
         "data": {
-          "id": "ChatOutput-kBMQ5",
+          "id": "ChatOutput-Qhsh5",
           "node": {
             "base_classes": [
               "Message"
@@ -843,11 +865,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-kBMQ5"
+        "id": "ChatOutput-Qhsh5"
       },
       {
         "data": {
-          "id": "LanguageModelComponent-e55Si",
+          "id": "LanguageModelComponent-hh8iI",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1034,7 +1056,7 @@
                     "session_id": "",
                     "session_metadata": null,
                     "text": "",
-                    "timestamp": "2026-07-24 19:37:46.998107 UTC"
+                    "timestamp": "2026-07-26 00:40:36.384564 UTC"
                   },
                   "default_value": "",
                   "edit": false,
@@ -1054,7 +1076,7 @@
                   "session_id": "",
                   "text": "",
                   "text_key": "text",
-                  "timestamp": "2026-07-24 19:37:46.998107 UTC"
+                  "timestamp": "2026-07-26 00:40:36.384564 UTC"
                 }
               },
               "max_tokens": {
@@ -1303,11 +1325,11 @@
           },
           "type": "LanguageModelComponent"
         },
-        "id": "LanguageModelComponent-e55Si"
+        "id": "LanguageModelComponent-hh8iI"
       },
       {
         "data": {
-          "id": "TypeConverterComponent-ax9qm",
+          "id": "TypeConverterComponent-cx0x9",
           "node": {
             "base_classes": [
               "JSON",
@@ -1472,11 +1494,11 @@
           },
           "type": "TypeConverterComponent"
         },
-        "id": "TypeConverterComponent-ax9qm"
+        "id": "TypeConverterComponent-cx0x9"
       },
       {
         "data": {
-          "id": "KnowledgeBaseComponent-DPHqf",
+          "id": "KnowledgeBaseComponent-Q3N6s",
           "node": {
             "base_classes": [
               "Table"
@@ -1974,11 +1996,11 @@
           },
           "type": "KnowledgeBase"
         },
-        "id": "KnowledgeBaseComponent-DPHqf"
+        "id": "KnowledgeBaseComponent-Q3N6s"
       },
       {
         "data": {
-          "id": "PassMessageComponent-R8lTd",
+          "id": "PassMessageComponent-Eeq6q",
           "node": {
             "base_classes": [
               "Message"
@@ -2092,7 +2114,7 @@
                     "session_id": "",
                     "session_metadata": null,
                     "text": "",
-                    "timestamp": "2026-07-24 19:37:47.001963 UTC"
+                    "timestamp": "2026-07-26 00:40:36.389253 UTC"
                   },
                   "default_value": "",
                   "edit": false,
@@ -2112,7 +2134,7 @@
                   "session_id": "",
                   "text": "",
                   "text_key": "text",
-                  "timestamp": "2026-07-24 19:37:47.001963 UTC"
+                  "timestamp": "2026-07-26 00:40:36.389253 UTC"
                 }
               },
               "input_message": {
@@ -2169,7 +2191,7 @@
                     "session_id": "",
                     "session_metadata": null,
                     "text": "",
-                    "timestamp": "2026-07-24 19:37:47.002018 UTC"
+                    "timestamp": "2026-07-26 00:40:36.389312 UTC"
                   },
                   "default_value": "",
                   "edit": false,
@@ -2189,7 +2211,7 @@
                   "session_id": "",
                   "text": "",
                   "text_key": "text",
-                  "timestamp": "2026-07-24 19:37:47.002018 UTC"
+                  "timestamp": "2026-07-26 00:40:36.389312 UTC"
                 }
               }
             },
@@ -2197,11 +2219,11 @@
           },
           "type": "Pass"
         },
-        "id": "PassMessageComponent-R8lTd"
+        "id": "PassMessageComponent-Eeq6q"
       },
       {
         "data": {
-          "id": "SaveToFileComponent-niczp",
+          "id": "SaveToFileComponent-qCj45",
           "node": {
             "base_classes": [
               "Message"
@@ -2652,11 +2674,11 @@
           },
           "type": "SaveToFile"
         },
-        "id": "SaveToFileComponent-niczp"
+        "id": "SaveToFileComponent-qCj45"
       },
       {
         "data": {
-          "id": "KnowledgeIngestionComponent-_yDUL",
+          "id": "KnowledgeIngestionComponent-Hgddj",
           "node": {
             "base_classes": [
               "JSON"
@@ -3154,11 +3176,11 @@
           },
           "type": "KnowledgeIngestion"
         },
-        "id": "KnowledgeIngestionComponent-_yDUL"
+        "id": "KnowledgeIngestionComponent-Hgddj"
       },
       {
         "data": {
-          "id": "SplitTextComponent-g_g3t",
+          "id": "SplitTextComponent-5LkHc",
           "node": {
             "base_classes": [
               "Table"
@@ -3392,11 +3414,11 @@
           },
           "type": "SplitText"
         },
-        "id": "SplitTextComponent-g_g3t"
+        "id": "SplitTextComponent-5LkHc"
       },
       {
         "data": {
-          "id": "PerfCpuBurn-Nuizt",
+          "id": "PerfCpuBurn-qgx3T",
           "node": {
             "base_classes": [
               "Message"
@@ -3451,7 +3473,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "\"\"\"Bounded in-process CPU burn isolator for the performance suite.\"\"\"\n\nfrom __future__ import annotations\n\nimport hashlib\nimport time\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n# Hard ceiling so a misconfigured profile cannot pin a core indefinitely.\n_MAX_DURATION_MS = 5_000\n_MAX_ITERATIONS = 5_000_000\n\n\nclass PerfCpuBurn(Component):\n    \"\"\"Burn CPU for a bounded duration and return a deterministic digest.\"\"\"\n\n    display_name = \"Perf CPU Burn\"\n    description = \"Bounded in-process CPU burn for performance-suite CPU/graph isolators.\"\n    name = \"PerfCpuBurn\"\n    icon = \"cpu\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload echoed into the deterministic digest.\",\n            value=\"perf-cpu\",\n        ),\n        IntInput(\n            name=\"duration_ms\",\n            display_name=\"Duration ms\",\n            info=f\"Target burn duration in milliseconds (capped at {_MAX_DURATION_MS}).\",\n            value=25,\n            range_spec=RangeSpec(min=1, max=_MAX_DURATION_MS, step=1, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"iterations\",\n            display_name=\"Max iterations\",\n            info=f\"Safety bound on hash iterations (capped at {_MAX_ITERATIONS}).\",\n            value=100_000,\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=_MAX_ITERATIONS, step=1, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        duration_ms = max(1, min(int(self.duration_ms or 1), _MAX_DURATION_MS))\n        max_iters = max(1, min(int(self.iterations or 1), _MAX_ITERATIONS))\n        seed = getattr(self.input_value, \"text\", None) or str(self.input_value)\n        digest = hashlib.sha256(seed.encode(\"utf-8\")).hexdigest()\n        deadline = time.perf_counter() + (duration_ms / 1000.0)\n        completed = 0\n        while completed < max_iters and time.perf_counter() < deadline:\n            digest = hashlib.sha256(digest.encode(\"utf-8\")).hexdigest()\n            completed += 1\n        return Message(text=f\"cpu:{duration_ms}:{completed}:{digest[:16]}:{seed}\")\n"
+                "value": "\"\"\"Bounded in-process CPU burn isolator for the performance suite.\n\nEmbedded into ``perf_cpu_graph`` (and ensemble fixtures that include CPU work)\nby ``flows/build_fixtures.py`` / ``flows/builders.py``. Exercised by unit\nbounds checks and live workflows coverage in ``tests/locust/tests/``.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport hashlib\nimport time\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n# Hard ceiling so a misconfigured profile cannot pin a core indefinitely.\n_MAX_DURATION_MS = 5_000\n_MAX_ITERATIONS = 5_000_000\n\n\nclass PerfCpuBurn(Component):\n    \"\"\"Burn CPU for a bounded duration and return a deterministic digest.\"\"\"\n\n    display_name = \"Perf CPU Burn\"\n    description = \"Bounded in-process CPU burn for performance-suite CPU/graph isolators.\"\n    name = \"PerfCpuBurn\"\n    icon = \"cpu\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload echoed into the deterministic digest.\",\n            value=\"perf-cpu\",\n        ),\n        IntInput(\n            name=\"duration_ms\",\n            display_name=\"Duration ms\",\n            info=f\"Target burn duration in milliseconds (capped at {_MAX_DURATION_MS}).\",\n            value=25,\n            range_spec=RangeSpec(min=1, max=_MAX_DURATION_MS, step=1, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"iterations\",\n            display_name=\"Max iterations\",\n            info=f\"Safety bound on hash iterations (capped at {_MAX_ITERATIONS}).\",\n            value=100_000,\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=_MAX_ITERATIONS, step=1, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        duration_ms = max(1, min(int(self.duration_ms or 1), _MAX_DURATION_MS))\n        max_iters = max(1, min(int(self.iterations or 1), _MAX_ITERATIONS))\n        seed = getattr(self.input_value, \"text\", None) or str(self.input_value)\n        digest = hashlib.sha256(seed.encode(\"utf-8\")).hexdigest()\n        deadline = time.perf_counter() + (duration_ms / 1000.0)\n        completed = 0\n        while completed < max_iters and time.perf_counter() < deadline:\n            digest = hashlib.sha256(digest.encode(\"utf-8\")).hexdigest()\n            completed += 1\n        return Message(text=f\"cpu:{duration_ms}:{completed}:{digest[:16]}:{seed}\")\n"
               },
               "duration_ms": {
                 "_input_type": "IntInput",
@@ -3538,11 +3560,11 @@
           },
           "type": "PerfCpuBurn"
         },
-        "id": "PerfCpuBurn-Nuizt"
+        "id": "PerfCpuBurn-qgx3T"
       },
       {
         "data": {
-          "id": "PerfSubprocessChurn--521Y",
+          "id": "PerfDiskIo-IGvmc",
           "node": {
             "base_classes": [
               "Message"
@@ -3550,7 +3572,126 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Bounded subprocess spawn/exit pressure for performance-suite multiproc isolators.",
+            "description": "Bounded mixed local disk I/O (write, fsync, advisory cold-read, verify).",
+            "display_name": "Perf Disk IO",
+            "documentation": "",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "hard-drive",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output",
+                "group_outputs": false,
+                "method": "run",
+                "name": "output",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"Bounded mixed local disk I/O isolator for the performance suite.\n\nEmbedded into ``perf_disk_io`` (and ensemble fixtures) by ``flows/build_fixtures.py``.\nWrites deterministic blocks with normal buffered I/O, ``fsync``s, optionally advises\nthe kernel to drop clean cached pages (``POSIX_FADV_DONTNEED``), then reads back and\nverifies a checksum. Distinct from ``perf_payload_echo``, which validates the\nSaveToFile/storage abstraction rather than sustained filesystem I/O.\n\nFile size is clamped using free disk space plus portable ``os.sysconf``\navailable-memory hints (``SC_AVPHYS_PAGES`` * ``SC_PAGE_SIZE``) and suite hard\ncaps. Logical vs backing-storage I/O counters are reported on Linux\n(``/proc/thread-self/io``). Cached reads are reported, not failed — tmpfs /\ndevice caches prevent a portable physical-media guarantee.\n\nCovered by unit checks and live Workflows tests under ``tests/locust/tests/``.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport contextlib\nimport hashlib\nimport os\nimport re\nimport shutil\nimport tempfile\nimport time\nfrom pathlib import Path\nfrom uuid import uuid4\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n_MIN_SIZE_BYTES = 64 * 1024  # 64 KiB\n_DEFAULT_SIZE_BYTES = 4 * 1024 * 1024  # 4 MiB\n_MAX_SIZE_BYTES = 64 * 1024 * 1024  # 64 MiB\n_BLOCK_SIZE = 64 * 1024\n\n_RESULT_RE = re.compile(\n    r\"^diskio:size=(?P<size>\\d+):written=(?P<written>\\d+):read=(?P<read>\\d+):\"\n    r\"cksum_ok=(?P<cksum_ok>[01]):write_ms=(?P<write_ms>\\d+):fsync_ms=(?P<fsync_ms>\\d+):\"\n    r\"read_ms=(?P<read_ms>\\d+):advise=(?P<advise>[01]):rchar=(?P<rchar>\\d+):wchar=(?P<wchar>\\d+):\"\n    r\"read_bytes=(?P<read_bytes>\\d+):write_bytes=(?P<write_bytes>\\d+):\"\n    r\"cached_read=(?P<cached_read>[01]):seed=(?P<seed>.*)$\"\n)\n\n\ndef available_memory_bytes(*, fallback: int = _MAX_SIZE_BYTES) -> int:\n    \"\"\"Estimate available physical RAM via portable ``os.sysconf`` names.\n\n    Uses POSIX system-configuration queries when present:\n\n    * ``SC_AVPHYS_PAGES`` — available physical memory pages\n    * ``SC_PAGE_SIZE`` — bytes per memory page\n\n    Product ≈ currently available physical RAM. This is an OS estimate, not a\n    container/cgroup limit. On platforms without these names (e.g. Windows),\n    return ``fallback`` so suite hard caps still bound the workload.\n\n    Note: duplicated in ``perf_subprocess_churn`` on purpose — each isolator's\n    source is embedded into fixture JSON and must stay import-free of sibling\n    modules.\n    \"\"\"\n    try:\n        pages = int(os.sysconf(\"SC_AVPHYS_PAGES\"))\n        page_size = int(os.sysconf(\"SC_PAGE_SIZE\"))\n    except (AttributeError, OSError, TypeError, ValueError):\n        return fallback\n    if pages <= 0 or page_size <= 0:\n        return fallback\n    return pages * page_size\n\n\ndef resolve_size_bytes(*, requested: int, root: Path) -> int:\n    \"\"\"Clamp file size against free disk, memory budget, and suite hard caps.\"\"\"\n    if requested <= 0:\n        requested = _DEFAULT_SIZE_BYTES\n    try:\n        free_disk = shutil.disk_usage(root).free\n    except OSError:\n        free_disk = _MAX_SIZE_BYTES\n    mem_budget = available_memory_bytes() // 8\n    return max(\n        _MIN_SIZE_BYTES,\n        min(requested, free_disk // 4, mem_budget, _MAX_SIZE_BYTES),\n    )\n\n\ndef _work_root() -> Path:\n    \"\"\"Prefer Langflow ``config_dir`` when settings are available; else system temp.\"\"\"\n    with contextlib.suppress(Exception):\n        from lfx.services.deps import get_settings_service\n\n        config_dir = get_settings_service().settings.config_dir\n        if config_dir:\n            root = Path(config_dir) / \"perf_disk_io\"\n            root.mkdir(parents=True, exist_ok=True)\n            return root\n    root = Path(tempfile.gettempdir()) / \"langflow_perf_disk_io\"\n    root.mkdir(parents=True, exist_ok=True)\n    return root\n\n\ndef _read_thread_io() -> dict[str, int]:\n    for path in (Path(\"/proc/thread-self/io\"), Path(\"/proc/self/io\")):\n        try:\n            text = path.read_text(encoding=\"utf-8\")\n        except OSError:\n            continue\n        values: dict[str, int] = {}\n        for line in text.splitlines():\n            if \":\" not in line:\n                continue\n            key, raw = line.split(\":\", 1)\n            try:\n                values[key.strip()] = int(raw.strip())\n            except ValueError:\n                continue\n        if values:\n            return values\n    return {}\n\n\ndef _io_delta(before: dict[str, int], after: dict[str, int], key: str) -> int:\n    return max(0, after.get(key, 0) - before.get(key, 0))\n\n\ndef _render_block(seed: str, index: int, size: int) -> bytes:\n    material = f\"{seed}:{index}:\".encode()\n    repeats = (size // len(material)) + 1\n    return (material * repeats)[:size]\n\n\ndef parse_diskio_result(text: str) -> dict[str, object]:\n    match = _RESULT_RE.match(text.strip())\n    if match is None:\n        msg = f\"malformed diskio result: {text!r}\"\n        raise ValueError(msg)\n    data = match.groupdict()\n    return {\n        \"size\": int(data[\"size\"]),\n        \"written\": int(data[\"written\"]),\n        \"read\": int(data[\"read\"]),\n        \"cksum_ok\": data[\"cksum_ok\"] == \"1\",\n        \"write_ms\": int(data[\"write_ms\"]),\n        \"fsync_ms\": int(data[\"fsync_ms\"]),\n        \"read_ms\": int(data[\"read_ms\"]),\n        \"advise\": data[\"advise\"] == \"1\",\n        \"rchar\": int(data[\"rchar\"]),\n        \"wchar\": int(data[\"wchar\"]),\n        \"read_bytes\": int(data[\"read_bytes\"]),\n        \"write_bytes\": int(data[\"write_bytes\"]),\n        \"cached_read\": data[\"cached_read\"] == \"1\",\n        \"seed\": data[\"seed\"],\n    }\n\n\nclass PerfDiskIo(Component):\n    \"\"\"Write/fsync/read/verify a bounded temporary file and report I/O metrics.\"\"\"\n\n    display_name = \"Perf Disk IO\"\n    description = \"Bounded mixed local disk I/O (write, fsync, advisory cold-read, verify).\"\n    name = \"PerfDiskIo\"\n    icon = \"hard-drive\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload mixed into deterministic file contents and echoed in the result.\",\n            value=\"perf-disk\",\n        ),\n        IntInput(\n            name=\"size_bytes\",\n            display_name=\"Size bytes\",\n            info=(\n                \"Target file size. Zero selects the suite default; values are clamped to free \"\n                f\"disk / memory budget and {_MAX_SIZE_BYTES} bytes.\"\n            ),\n            value=_DEFAULT_SIZE_BYTES,\n            range_spec=RangeSpec(min=0, max=_MAX_SIZE_BYTES, step=4096, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        seed = getattr(self.input_value, \"text\", None) or str(self.input_value)\n        root = _work_root()\n        root.mkdir(parents=True, exist_ok=True)\n        size = resolve_size_bytes(requested=int(self.size_bytes or 0), root=root)\n        path = root / f\"perf-disk-{uuid4().hex}.bin\"\n        digest = hashlib.sha256()\n        written = 0\n        read_total = 0\n        advise_ok = 0\n        cksum_ok = 0\n        io_before = _read_thread_io()\n        write_ms = 0\n        fsync_ms = 0\n        read_ms = 0\n        try:\n            write_start = time.perf_counter()\n            with path.open(\"wb\") as handle:\n                remaining = size\n                index = 0\n                while remaining > 0:\n                    chunk = _render_block(seed, index, min(_BLOCK_SIZE, remaining))\n                    handle.write(chunk)\n                    digest.update(chunk)\n                    written += len(chunk)\n                    remaining -= len(chunk)\n                    index += 1\n                handle.flush()\n                write_ms = max(1, int((time.perf_counter() - write_start) * 1000))\n                fsync_start = time.perf_counter()\n                os.fsync(handle.fileno())\n                fsync_ms = max(1, int((time.perf_counter() - fsync_start) * 1000))\n                if hasattr(os, \"posix_fadvise\") and hasattr(os, \"POSIX_FADV_DONTNEED\"):\n                    try:\n                        os.posix_fadvise(handle.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)\n                        advise_ok = 1\n                    except OSError:\n                        advise_ok = 0\n\n            expected = digest.hexdigest()\n            verify = hashlib.sha256()\n            read_start = time.perf_counter()\n            with path.open(\"rb\") as handle:\n                while True:\n                    chunk = handle.read(_BLOCK_SIZE)\n                    if not chunk:\n                        break\n                    verify.update(chunk)\n                    read_total += len(chunk)\n            read_ms = max(1, int((time.perf_counter() - read_start) * 1000))\n            cksum_ok = 1 if verify.hexdigest() == expected else 0\n        finally:\n            path.unlink(missing_ok=True)\n            with contextlib.suppress(OSError):\n                root.rmdir()\n\n        io_after = _read_thread_io()\n        rchar = _io_delta(io_before, io_after, \"rchar\")\n        wchar = _io_delta(io_before, io_after, \"wchar\")\n        read_bytes = _io_delta(io_before, io_after, \"read_bytes\")\n        write_bytes = _io_delta(io_before, io_after, \"write_bytes\")\n        # Report whether the kernel appears to have served the read from page cache.\n        cached_read = 1 if (advise_ok and read_total > 0 and read_bytes < (read_total // 2)) else 0\n        text = (\n            f\"diskio:size={size}:written={written}:read={read_total}:cksum_ok={cksum_ok}:\"\n            f\"write_ms={write_ms}:fsync_ms={fsync_ms}:read_ms={read_ms}:advise={advise_ok}:\"\n            f\"rchar={rchar}:wchar={wchar}:read_bytes={read_bytes}:write_bytes={write_bytes}:\"\n            f\"cached_read={cached_read}:seed={seed}\"\n        )\n        return Message(text=text)\n"
+              },
+              "input_value": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "Opaque payload mixed into deterministic file contents and echoed in the result.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "perf-disk"
+              },
+              "size_bytes": {
+                "_input_type": "IntInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Size bytes",
+                "dynamic": false,
+                "info": "Target file size. Zero selects the suite default; values are clamped to free disk / memory budget and 67108864 bytes.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "size_bytes",
+                "override_skip": false,
+                "placeholder": "",
+                "range_spec": {
+                  "max": 67108864.0,
+                  "min": 0.0,
+                  "step": 4096.0,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 4194304
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "PerfDiskIo"
+        },
+        "id": "PerfDiskIo-IGvmc"
+      },
+      {
+        "data": {
+          "id": "PerfSubprocessChurn-VKDIA",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Bounded concurrent multiprocess context-switch pressure with memory-resident working sets.",
             "display_name": "Perf Subprocess Churn",
             "documentation": "",
             "edited": false,
@@ -3597,7 +3738,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "\"\"\"Bounded subprocess spawn/exit isolator for the performance suite.\"\"\"\n\nfrom __future__ import annotations\n\nimport subprocess\nimport sys\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n# Hard ceilings so a misconfigured profile cannot fork-bomb the host.\n_MAX_COUNT = 8\n_MAX_TIMEOUT_S = 5\n# Deterministic sentinel when a child exceeds timeout_s (not a real OS status).\n_TIMEOUT_SENTINEL = -9\n\n\nclass PerfSubprocessChurn(Component):\n    \"\"\"Spawn a bounded number of short-lived subprocesses and return their exit codes.\n\n    Blocking subprocess work is intentional for the multiproc isolator. Langflow runs\n    sync ``run()`` via a thread pool; under high concurrency that pool can saturate —\n    size generator threads accordingly when profiling this axis.\n    \"\"\"\n\n    display_name = \"Perf Subprocess Churn\"\n    description = \"Bounded subprocess spawn/exit pressure for performance-suite multiproc isolators.\"\n    name = \"PerfSubprocessChurn\"\n    icon = \"terminal\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload echoed into the deterministic result.\",\n            value=\"perf-multiproc\",\n        ),\n        IntInput(\n            name=\"count\",\n            display_name=\"Subprocess count\",\n            info=f\"Number of short-lived subprocesses to spawn (capped at {_MAX_COUNT}).\",\n            value=2,\n            range_spec=RangeSpec(min=1, max=_MAX_COUNT, step=1, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"timeout_s\",\n            display_name=\"Timeout seconds\",\n            info=f\"Per-subprocess timeout in seconds (capped at {_MAX_TIMEOUT_S}).\",\n            value=2,\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=_MAX_TIMEOUT_S, step=1, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        count = max(1, min(int(self.count or 1), _MAX_COUNT))\n        timeout_s = max(1, min(int(self.timeout_s or 1), _MAX_TIMEOUT_S))\n        seed = getattr(self.input_value, \"text\", None) or str(self.input_value)\n        codes: list[int] = []\n        for index in range(count):\n            # Tiny, deterministic child: print index and exit 0. No shell.\n            try:\n                completed = subprocess.run(\n                    [sys.executable, \"-c\", f\"print({index})\"],\n                    check=False,\n                    capture_output=True,\n                    text=True,\n                    timeout=timeout_s,\n                )\n                codes.append(int(completed.returncode))\n            except subprocess.TimeoutExpired:\n                codes.append(_TIMEOUT_SENTINEL)\n        code_csv = \",\".join(str(code) for code in codes)\n        return Message(text=f\"multiproc:{count}:{code_csv}:{seed}\")\n"
+                "value": "\"\"\"Bounded concurrent multiprocess context-switch isolator for the performance suite.\n\nEmbedded into ``perf_multiproc_churn`` (and ensemble fixtures) by\n``flows/build_fixtures.py``. Children run concurrently with independent\nmemory-resident working sets on one CPU (when affinity is available) so the\nOS must schedule among them. This stresses spawn, context switching, and\ncache/TLB disruption — not disk paging.\n\nWorking-set size is clamped using portable ``os.sysconf`` available-memory\nhints (``SC_AVPHYS_PAGES`` * ``SC_PAGE_SIZE``) plus suite hard caps — not\nLinux-only ``/proc`` or cgroup paths.\n\nCovered by unit bounds checks and live Workflows assertions under\n``tests/locust/tests/``. Child scheduler counters prefer Unix ``resource``;\nwhen unavailable they report zeros (affinity metrics remain best-effort).\n\"\"\"\n\nfrom __future__ import annotations\n\nimport contextlib\nimport os\nimport re\nimport subprocess\nimport sys\nimport time\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n# Hard ceilings so a misconfigured profile cannot fork-bomb or OOM the host.\n_MAX_COUNT = 8\n_MAX_TIMEOUT_S = 30\n_MAX_DURATION_MS = 5_000\n_MIN_WORKING_SET_BYTES = 256 * 1024  # 256 KiB\n_DEFAULT_WORKING_SET_BYTES = 4 * 1024 * 1024  # 4 MiB\n_MAX_WORKING_SET_BYTES = 64 * 1024 * 1024  # 64 MiB per child\n_MAX_TOTAL_WORKING_SET_BYTES = 128 * 1024 * 1024  # 128 MiB across children\n# Deterministic sentinel when a child exceeds timeout_s (not a real OS status).\n_TIMEOUT_SENTINEL = -9\n_PAGE_SIZE = 4096\n\n# Compact child: wait for synchronized start, pin CPU, touch working set, report metrics.\n# ``resource`` is Unix-only; on other platforms vcs/ivcs are reported as 0.\n_CHILD_SCRIPT = r\"\"\"\nimport hashlib\nimport os\nimport sys\nimport time\n\ntry:\n    import resource\nexcept ImportError:\n    resource = None\n\nindex = int(sys.argv[1])\nws_bytes = int(sys.argv[2])\nduration_ms = int(sys.argv[3])\ncpu_token = sys.argv[4]\npage = int(sys.argv[5])\nsys.stdin.readline()\naff = \"none\"\nif cpu_token != \"\":\n    try:\n        cpu = int(cpu_token)\n        os.sched_setaffinity(0, {cpu})\n        aff = str(sorted(os.sched_getaffinity(0))[0])\n    except (AttributeError, OSError, ValueError):\n        aff = \"unsupported\"\npages = max(1, ws_bytes // page)\nbuf = bytearray(pages * page)\nfor i in range(pages):\n    buf[i * page] = (index + i) & 0xFF\nstart = time.perf_counter()\ndeadline = start + (duration_ms / 1000.0)\ntouched = 0\nround_i = 0\nwhile time.perf_counter() < deadline:\n    for i in range(pages):\n        off = ((i + round_i) % pages) * page\n        buf[off] = (buf[off] + 1) & 0xFF\n        touched += 1\n    round_i += 1\nend = time.perf_counter()\ndigest = hashlib.sha256(bytes(buf[::page][:64])).hexdigest()[:16]\nif resource is not None:\n    usage = resource.getrusage(resource.RUSAGE_SELF)\n    vcs = int(usage.ru_nvcsw)\n    ivcs = int(usage.ru_nivcsw)\nelse:\n    vcs = 0\n    ivcs = 0\nprint(\n    f\"child:pid={os.getpid()}:start={start:.6f}:end={end:.6f}:\"\n    f\"pages={pages}:touched={touched}:cksum={digest}:aff={aff}:\"\n    f\"vcs={vcs}:ivcs={ivcs}\"\n)\n\"\"\"\n\n_CHILD_RE = re.compile(\n    r\"^child:pid=(?P<pid>\\d+):start=(?P<start>[0-9.]+):end=(?P<end>[0-9.]+):\"\n    r\"pages=(?P<pages>\\d+):touched=(?P<touched>\\d+):cksum=(?P<cksum>[0-9a-f]+):\"\n    r\"aff=(?P<aff>[^:]+):vcs=(?P<vcs>\\d+):ivcs=(?P<ivcs>\\d+)$\"\n)\n\n\ndef _sanitize_seed(raw: object) -> str:\n    \"\"\"Return a delimiter-safe seed for the multiproc metrics framing.\n\n    Child records are joined with ``|`` after the header, so ``|`` and newlines\n    are replaced. Colons inside the seed are left as-is (``split(\":\", 8)`` keeps\n    the remainder intact).\n    \"\"\"\n    text = getattr(raw, \"text\", None)\n    seed = text if text is not None else str(raw)\n    for ch in (\"|\", \"\\n\", \"\\r\"):\n        seed = seed.replace(ch, \"_\")\n    return seed\n\n\ndef available_memory_bytes(*, fallback: int = _MAX_TOTAL_WORKING_SET_BYTES) -> int:\n    \"\"\"Estimate available physical RAM via portable ``os.sysconf`` names.\n\n    Uses POSIX system-configuration queries when present:\n\n    * ``SC_AVPHYS_PAGES`` — available physical memory pages\n    * ``SC_PAGE_SIZE`` — bytes per memory page\n\n    Product ≈ currently available physical RAM. This is an OS estimate, not a\n    container/cgroup limit. On platforms without these names (e.g. Windows),\n    return ``fallback`` so suite hard caps still bound the workload.\n\n    Note: duplicated in ``perf_disk_io`` on purpose — each isolator's source is\n    embedded into fixture JSON and must stay import-free of sibling modules.\n    \"\"\"\n    try:\n        pages = int(os.sysconf(\"SC_AVPHYS_PAGES\"))\n        page_size = int(os.sysconf(\"SC_PAGE_SIZE\"))\n    except (AttributeError, OSError, TypeError, ValueError):\n        return fallback\n    if pages <= 0 or page_size <= 0:\n        return fallback\n    return pages * page_size\n\n\ndef resolve_working_set_bytes(*, requested: int, count: int) -> int:\n    \"\"\"Clamp per-child working set against host memory and suite hard caps.\"\"\"\n    if requested <= 0:\n        requested = _DEFAULT_WORKING_SET_BYTES\n    budget = available_memory_bytes() // 8  # leave headroom for the parent + Locust workers\n    per_child_budget = max(_MIN_WORKING_SET_BYTES, min(_MAX_WORKING_SET_BYTES, budget // max(count, 1)))\n    total_cap = _MAX_TOTAL_WORKING_SET_BYTES // max(count, 1)\n    return max(_MIN_WORKING_SET_BYTES, min(requested, per_child_budget, total_cap, _MAX_WORKING_SET_BYTES))\n\n\ndef pick_affinity_cpu() -> str:\n    \"\"\"Return one allowed CPU id as a string, or empty when affinity is unavailable.\"\"\"\n    try:\n        allowed = sorted(os.sched_getaffinity(0))\n    except (AttributeError, OSError):\n        return \"\"\n    if not allowed:\n        return \"\"\n    return str(allowed[0])\n\n\ndef parse_child_line(line: str) -> dict[str, object] | None:\n    match = _CHILD_RE.match(line.strip())\n    if match is None:\n        return None\n    data = match.groupdict()\n    return {\n        \"pid\": int(data[\"pid\"]),\n        \"start\": float(data[\"start\"]),\n        \"end\": float(data[\"end\"]),\n        \"pages\": int(data[\"pages\"]),\n        \"touched\": int(data[\"touched\"]),\n        \"cksum\": data[\"cksum\"],\n        \"aff\": data[\"aff\"],\n        \"vcs\": int(data[\"vcs\"]),\n        \"ivcs\": int(data[\"ivcs\"]),\n    }\n\n\ndef parse_multiproc_result(text: str) -> dict[str, object]:\n    \"\"\"Parse the component Message text into aggregate + child metrics.\"\"\"\n    header, *child_parts = text.split(\"|\")\n    # multiproc:count:codes:ws:elapsed_ms:overlap_ms:vcs:ivcs:seed\n    parts = header.split(\":\", 8)\n    if len(parts) != 9 or parts[0] != \"multiproc\":\n        msg = f\"malformed multiproc header: {header!r}\"\n        raise ValueError(msg)\n    children = []\n    for part in child_parts:\n        parsed = parse_child_line(part)\n        if parsed is None:\n            msg = f\"malformed child metrics: {part!r}\"\n            raise ValueError(msg)\n        children.append(parsed)\n    return {\n        \"count\": int(parts[1]),\n        \"codes\": [int(code) for code in parts[2].split(\",\") if code != \"\"],\n        \"ws_bytes\": int(parts[3]),\n        \"elapsed_ms\": int(parts[4]),\n        \"overlap_ms\": int(parts[5]),\n        \"vcs\": int(parts[6]),\n        \"ivcs\": int(parts[7]),\n        \"seed\": parts[8],\n        \"children\": children,\n    }\n\n\nclass PerfSubprocessChurn(Component):\n    \"\"\"Spawn concurrent short-lived processes that thrash independent working sets.\n\n    Blocking multiprocess work is intentional for the multiproc isolator. Langflow\n    runs sync ``run()`` via a thread pool; under high concurrency that pool can\n    saturate — size generator threads accordingly when profiling this axis.\n    \"\"\"\n\n    display_name = \"Perf Subprocess Churn\"\n    description = (\n        \"Bounded concurrent multiprocess context-switch pressure with memory-resident working sets.\"\n    )\n    name = \"PerfSubprocessChurn\"\n    icon = \"terminal\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload echoed into the deterministic result.\",\n            value=\"perf-multiproc\",\n        ),\n        IntInput(\n            name=\"count\",\n            display_name=\"Subprocess count\",\n            info=f\"Number of concurrent subprocesses to spawn (capped at {_MAX_COUNT}).\",\n            value=2,\n            range_spec=RangeSpec(min=1, max=_MAX_COUNT, step=1, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"duration_ms\",\n            display_name=\"Duration ms\",\n            info=f\"How long each child stays runnable while touching memory (capped at {_MAX_DURATION_MS}).\",\n            value=100,\n            range_spec=RangeSpec(min=1, max=_MAX_DURATION_MS, step=1, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"working_set_bytes\",\n            display_name=\"Working set bytes\",\n            info=(\n                \"Per-child memory-resident working set. Zero selects the suite default; \"\n                f\"values are clamped to host budget and {_MAX_WORKING_SET_BYTES} bytes.\"\n            ),\n            value=_DEFAULT_WORKING_SET_BYTES,\n            advanced=True,\n            range_spec=RangeSpec(min=0, max=_MAX_WORKING_SET_BYTES, step=4096, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"timeout_s\",\n            display_name=\"Timeout seconds\",\n            info=f\"Wall-clock timeout for the whole concurrent batch (capped at {_MAX_TIMEOUT_S}).\",\n            value=5,\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=_MAX_TIMEOUT_S, step=1, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        count = max(1, min(int(self.count or 1), _MAX_COUNT))\n        duration_ms = max(1, min(int(self.duration_ms or 1), _MAX_DURATION_MS))\n        timeout_s = max(1, min(int(self.timeout_s or 1), _MAX_TIMEOUT_S))\n        requested_ws = int(self.working_set_bytes or 0)\n        ws_bytes = resolve_working_set_bytes(requested=requested_ws, count=count)\n        seed = _sanitize_seed(self.input_value)\n        cpu = pick_affinity_cpu()\n        page = _PAGE_SIZE\n        try:\n            page = int(os.sysconf(\"SC_PAGE_SIZE\"))\n        except (AttributeError, OSError, ValueError):\n            page = _PAGE_SIZE\n\n        procs: list[subprocess.Popen[str]] = []\n        codes: list[int] = []\n        children: list[dict[str, object]] = []\n        wall_start = time.perf_counter()\n        try:\n            for index in range(count):\n                proc = subprocess.Popen(\n                    [\n                        sys.executable,\n                        \"-c\",\n                        _CHILD_SCRIPT,\n                        str(index),\n                        str(ws_bytes),\n                        str(duration_ms),\n                        cpu,\n                        str(page),\n                    ],\n                    stdin=subprocess.PIPE,\n                    stdout=subprocess.PIPE,\n                    stderr=subprocess.PIPE,\n                    text=True,\n                )\n                procs.append(proc)\n            for proc in procs:\n                if proc.stdin is None:\n                    msg = \"subprocess stdin pipe was not created\"\n                    raise RuntimeError(msg)\n                proc.stdin.write(\"go\\n\")\n                proc.stdin.flush()\n                proc.stdin.close()\n\n            deadline = wall_start + timeout_s\n            for proc in procs:\n                remaining = max(0.01, deadline - time.perf_counter())\n                try:\n                    stdout, stderr = proc.communicate(timeout=remaining)\n                except subprocess.TimeoutExpired:\n                    proc.kill()\n                    stdout, stderr = proc.communicate()\n                    codes.append(_TIMEOUT_SENTINEL)\n                    continue\n                code = int(proc.returncode if proc.returncode is not None else _TIMEOUT_SENTINEL)\n                codes.append(code)\n                line = (stdout or \"\").strip().splitlines()[-1] if (stdout or \"\").strip() else \"\"\n                parsed = parse_child_line(line) if line else None\n                if parsed is None:\n                    detail = (stderr or \"\").strip() or line or f\"exit={code}\"\n                    msg = f\"child produced malformed metrics: {detail}\"\n                    raise RuntimeError(msg)\n                children.append(parsed)\n        finally:\n            for proc in procs:\n                if proc.poll() is None:\n                    proc.kill()\n                    with contextlib.suppress(Exception):\n                        proc.wait(timeout=1)\n\n        elapsed_ms = max(1, int((time.perf_counter() - wall_start) * 1000))\n        if children:\n            latest_start = max(float(child[\"start\"]) for child in children)\n            earliest_end = min(float(child[\"end\"]) for child in children)\n            overlap_ms = max(0, int((earliest_end - latest_start) * 1000))\n        else:\n            overlap_ms = 0\n        total_vcs = sum(int(child[\"vcs\"]) for child in children)\n        total_ivcs = sum(int(child[\"ivcs\"]) for child in children)\n        code_csv = \",\".join(str(code) for code in codes)\n        child_csv = \"|\".join(\n            (\n                f\"child:pid={child['pid']}:start={float(child['start']):.6f}:end={float(child['end']):.6f}:\"\n                f\"pages={child['pages']}:touched={child['touched']}:cksum={child['cksum']}:\"\n                f\"aff={child['aff']}:vcs={child['vcs']}:ivcs={child['ivcs']}\"\n            )\n            for child in children\n        )\n        header = (\n            f\"multiproc:{count}:{code_csv}:{ws_bytes}:{elapsed_ms}:{overlap_ms}:{total_vcs}:{total_ivcs}:{seed}\"\n        )\n        text = header if not child_csv else f\"{header}|{child_csv}\"\n        return Message(text=text)\n"
               },
               "count": {
                 "_input_type": "IntInput",
@@ -3605,7 +3746,7 @@
                 "api_editable": false,
                 "display_name": "Subprocess count",
                 "dynamic": false,
-                "info": "Number of short-lived subprocesses to spawn (capped at 8).",
+                "info": "Number of concurrent subprocesses to spawn (capped at 8).",
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "count",
@@ -3625,6 +3766,33 @@
                 "track_in_telemetry": true,
                 "type": "int",
                 "value": 2
+              },
+              "duration_ms": {
+                "_input_type": "IntInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Duration ms",
+                "dynamic": false,
+                "info": "How long each child stays runnable while touching memory (capped at 5000).",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "duration_ms",
+                "override_skip": false,
+                "placeholder": "",
+                "range_spec": {
+                  "max": 5000.0,
+                  "min": 1.0,
+                  "step": 1.0,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 100
               },
               "input_value": {
                 "_input_type": "MessageTextInput",
@@ -3658,14 +3826,14 @@
                 "api_editable": false,
                 "display_name": "Timeout seconds",
                 "dynamic": false,
-                "info": "Per-subprocess timeout in seconds (capped at 5).",
+                "info": "Wall-clock timeout for the whole concurrent batch (capped at 30).",
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "timeout_s",
                 "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
-                  "max": 5.0,
+                  "max": 30.0,
                   "min": 1.0,
                   "step": 1.0,
                   "step_type": "int"
@@ -3677,18 +3845,45 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "int",
-                "value": 2
+                "value": 5
+              },
+              "working_set_bytes": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Working set bytes",
+                "dynamic": false,
+                "info": "Per-child memory-resident working set. Zero selects the suite default; values are clamped to host budget and 67108864 bytes.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "working_set_bytes",
+                "override_skip": false,
+                "placeholder": "",
+                "range_spec": {
+                  "max": 67108864.0,
+                  "min": 0.0,
+                  "step": 4096.0,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 4194304
               }
             },
             "tool_mode": false
           },
           "type": "PerfSubprocessChurn"
         },
-        "id": "PerfSubprocessChurn--521Y"
+        "id": "PerfSubprocessChurn-VKDIA"
       },
       {
         "data": {
-          "id": "MemoryComponent-Hznv6",
+          "id": "MemoryComponent-13jPQ",
           "node": {
             "base_classes": [
               "Message",
@@ -4050,11 +4245,11 @@
           },
           "type": "Memory"
         },
-        "id": "MemoryComponent-Hznv6"
+        "id": "MemoryComponent-13jPQ"
       }
     ]
   },
-  "description": "Graph-side multiproc, CPU/graph, KB ingest/retrieve, payload/storage, chat/database, and outbound journey for MCP, Workflows, and Webhooks.",
+  "description": "Graph-side multiproc, disk I/O, CPU/graph, KB ingest/retrieve, payload/storage, chat/database, and outbound journey for MCP, Workflows, and Webhooks.",
   "endpoint_name": "perf-ensemble-journey",
   "is_component": false,
   "name": "perf_ensemble_journey",
