@@ -1,4 +1,4 @@
-"""In-process one-run validation for V1 performance-suite fixtures.
+"""In-process one-run validation for performance-suite fixtures.
 
 Executes fixture graphs via ``run_graph_internal`` and checks expected-output
 rules plus subsystem side effects (message store, storage upload markers).

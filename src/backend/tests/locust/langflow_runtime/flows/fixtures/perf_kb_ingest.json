@@ -4,34 +4,8 @@
       {
         "data": {
           "sourceHandle": {
-            "dataType": "SplitText",
-            "id": "SplitTextComponent-OcGXm",
-            "name": "dataframe",
-            "output_types": [
-              "Table"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_df",
-            "id": "KnowledgeIngestionComponent-jqAsy",
-            "inputTypes": [
-              "Message",
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table"
-            ],
-            "type": "other"
-          }
-        },
-        "source": "SplitTextComponent-OcGXm",
-        "target": "KnowledgeIngestionComponent-jqAsy"
-      },
-      {
-        "data": {
-          "sourceHandle": {
             "dataType": "TextInput",
-            "id": "TextInputComponent-ZwjaT",
+            "id": "TextInputComponent-V35r2",
             "name": "text",
             "output_types": [
               "Message"
@@ -39,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitTextComponent-OcGXm",
+            "id": "SplitTextComponent-XEZDa",
             "inputTypes": [
               "Data",
               "JSON",
@@ -50,14 +24,40 @@
             "type": "other"
           }
         },
-        "source": "TextInputComponent-ZwjaT",
-        "target": "SplitTextComponent-OcGXm"
+        "source": "TextInputComponent-V35r2",
+        "target": "SplitTextComponent-XEZDa"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "SplitText",
+            "id": "SplitTextComponent-XEZDa",
+            "name": "dataframe",
+            "output_types": [
+              "Table"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_df",
+            "id": "KnowledgeIngestionComponent-NhUQf",
+            "inputTypes": [
+              "Message",
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table"
+            ],
+            "type": "other"
+          }
+        },
+        "source": "SplitTextComponent-XEZDa",
+        "target": "KnowledgeIngestionComponent-NhUQf"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "TextInputComponent-ZwjaT",
+          "id": "TextInputComponent-V35r2",
           "node": {
             "base_classes": [
               "Message"
@@ -145,7 +145,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "PERF_KB_DOC_V1\n\nDeterministic knowledge document for ingest."
+                "value": "PERF_KB_DOC\n\nDeterministic knowledge document for ingest."
               },
               "use_global_variable": {
                 "_input_type": "BoolInput",
@@ -174,11 +174,11 @@
           },
           "type": "TextInput"
         },
-        "id": "TextInputComponent-ZwjaT"
+        "id": "TextInputComponent-V35r2"
       },
       {
         "data": {
-          "id": "KnowledgeIngestionComponent-jqAsy",
+          "id": "KnowledgeIngestionComponent-NhUQf",
           "node": {
             "base_classes": [
               "JSON"
@@ -550,7 +550,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "str",
-                "value": "perf_kb_v1"
+                "value": "perf_kb"
               },
               "metadata_filter": {
                 "_input_type": "MessageTextInput",
@@ -676,11 +676,11 @@
           },
           "type": "KnowledgeIngestion"
         },
-        "id": "KnowledgeIngestionComponent-jqAsy"
+        "id": "KnowledgeIngestionComponent-NhUQf"
       },
       {
         "data": {
-          "id": "SplitTextComponent-OcGXm",
+          "id": "SplitTextComponent-XEZDa",
           "node": {
             "base_classes": [
               "Table"
@@ -914,7 +914,7 @@
           },
           "type": "SplitText"
         },
-        "id": "SplitTextComponent-OcGXm"
+        "id": "SplitTextComponent-XEZDa"
       }
     ]
   },
@@ -923,7 +923,6 @@
   "is_component": false,
   "name": "perf_kb_ingest",
   "tags": [
-    "performance-suite",
-    "v1"
+    "performance-suite"
   ]
 }

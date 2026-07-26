@@ -1,4 +1,4 @@
-"""Validate the V1 performance-suite flow fixtures against flows/fixture_index.json.
+"""Validate the performance-suite flow fixtures against flows/fixture_index.json.
 
 Step 1 gate: fixture_index contracts, binding checks, optional ``Graph.from_payload``
 import, and optional in-process one-run for isolators that do not need external
@@ -32,7 +32,6 @@ FIXTURE_INDEX_PATH = FLOWS_DIR / "fixture_index.json"
 
 REQUIRED_STRESS_CATEGORIES = {
     "protocol_calibration",
-    "webhook",
     "chat_db",
     "hitl",
     "queue",

@@ -4,7 +4,7 @@ This directory contains Locust-based load and performance tooling.
 
 ## Beta Performance Suite (MCP / Workflows v2 / Webhooks)
 
-The maintained beta suite lives alongside the older flat harness. It measures **project MCP (Streamable HTTP)**, **Workflows v2**, and **Webhooks** with one representative profile per stress axis, three Duets, and Tutti movements. Each runner invocation executes **exactly one movement** (Overture → measured work → Coda). CI and certification are out of beta scope.
+The maintained beta suite lives alongside the older flat harness. It drives load over **project MCP (Streamable HTTP)**, **Workflows v2**, and **Webhooks** (protocols), with one representative profile per **stress axis** (chat/DB, queue, KB, CPU, …), three Duets, and Tutti movements. Protocol overhead is measured under the `protocol_calibration` solo — MCP and webhook are not separate stress axes. Each runner invocation executes **exactly one movement** (Overture → measured work → Coda). CI and certification are out of beta scope.
 
 ### Layout
 
@@ -35,7 +35,7 @@ make perf-provision perf_host=http://127.0.0.1:7860
 
 # Optional preflight (--env-id resolves ~/.cache/langflow-perf/state/{env_id}.json)
 cd src/backend && PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.preflight.cli \
-  --host http://127.0.0.1:7860 --env-id perf-local --profile smoke/all_protocols_v1
+  --host http://127.0.0.1:7860 --env-id perf-local --profile smoke/all_protocols
 
 # One smoke movement (MCP + workflows + webhook)
 make perf-smoke
@@ -58,14 +58,15 @@ Or via modules:
 ```bash
 cd src/backend
 PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.provision.cli apply --host http://127.0.0.1:7860 --env-id perf-local
-PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run run --profile smoke/all_protocols_v1 --host http://127.0.0.1:7860 --env-id perf-local
+PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run run --profile smoke/all_protocols --host http://127.0.0.1:7860 --env-id perf-local
 PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run validate
 ```
 
 ### Methodology notes
 
 - **Profiles** are the source of truth (`langflow_runtime/profiles/schema.json`). Flow/dataset selectors must resolve to `fixture_index` / `DATASET_IDS`.
-- **Workload models:** closed-loop for chat/MCP/HITL; paced closed-loop for webhook/background with intended/attempted/missed/accepted/terminal accounting (misses are not replayed as catch-up bursts).
+- **Protocols vs stress axes:** MCP, Workflows v2 modes, and Webhooks are transport/lifecycle surfaces listed under `protocols`. Stress axes (`stress_categories`) are resource pressures such as chat/DB, queue, KB, CPU/graph, multiproc, disk I/O, RAM/storage, HITL, and outbound (e.g., an LLM provider API). Do not list MCP or webhook as stress categories.
+- **Workload models:** closed-loop for most solos (including protocol calibration); paced closed-loop for background/queue axes with intended/attempted/missed/accepted/terminal accounting (misses are not replayed as catch-up bursts).
 - **Candidate knee:** reports keep raw step curves and a *manual* candidate-knee bracket — never labeled certified or pass/fail.
 - **Coda:** stop new arrivals, drain tracked jobs/webhooks/HITL, correctness checks, reset movement-scoped state. Shared env teardown is separate (`perf-teardown`).
 - **Safety:** profiles declare spend/backlog/storage/error/drain limits; a safety stop is not a performance failure.

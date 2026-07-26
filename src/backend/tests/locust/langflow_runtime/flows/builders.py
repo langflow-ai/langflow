@@ -1,4 +1,4 @@
-"""Graph builders that write individual V1 performance-suite flow fixtures.
+"""Graph builders that write individual performance-suite flow fixtures.
 
 Called only by ``build_fixtures.py`` when regenerating committed JSON under
 ``flows/fixtures/``. Not imported by Locust users or integration tests
@@ -65,7 +65,7 @@ def dump_graph(
     payload["description"] = description
     payload["endpoint_name"] = endpoint_name
     payload["is_component"] = False
-    payload["tags"] = ["performance-suite", "v1"]
+    payload["tags"] = ["performance-suite"]
     return payload
 
 
@@ -95,7 +95,7 @@ def copy_pinned(source: Path, dest_name: str, *, name: str, description: str, en
     payload["name"] = name
     payload["description"] = description
     payload["endpoint_name"] = endpoint_name
-    payload["tags"] = sorted(set(payload.get("tags") or []) | {"performance-suite", "v1"})
+    payload["tags"] = sorted(set(payload.get("tags") or []) | {"performance-suite"})
     payload["is_component"] = False
     payload.pop("id", None)
     return write_fixture(dest_name, payload)

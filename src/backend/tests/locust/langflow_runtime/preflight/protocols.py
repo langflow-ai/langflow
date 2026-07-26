@@ -10,10 +10,10 @@ import httpx
 from tests.locust.langflow_runtime.clients.mcp_streamable import McpStreamableClient
 from tests.locust.langflow_runtime.clients.webhooks import WebhookCopy, WebhooksClient
 from tests.locust.langflow_runtime.clients.workflows import WorkflowsClient
+from tests.locust.langflow_runtime.contracts import DEFAULT_WEBHOOK_PAYLOAD
 from tests.locust.langflow_runtime.flows.defaults import DEFAULT_PASSTHROUGH_INPUT
 from tests.locust.langflow_runtime.preflight.health import CheckResult
 from tests.locust.langflow_runtime.users.base import require_flow
-from tests.locust.langflow_runtime.v1_contracts import DEFAULT_WEBHOOK_PAYLOAD
 
 
 def _http(host: str) -> httpx.Client:

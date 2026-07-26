@@ -1,0 +1,75 @@
+{
+  "schema_version": "1",
+  "id": "chat_db_cpu_graph",
+  "test_type": "load",
+  "purpose": "Measure chat/message-store persistence under in-process CPU graph contention.",
+  "movement_kind": "duet",
+  "stress_categories": [
+    "chat_db",
+    "cpu_graph"
+  ],
+  "protocols": [
+    "workflows_sync"
+  ],
+  "modes": [
+    "sync"
+  ],
+  "flow_selectors": [
+    "MemoryChatbotNoLLM",
+    "perf_cpu_graph"
+  ],
+  "dataset_selectors": [],
+  "workload": {
+    "workload_model": "closed",
+    "user_mix": [
+      {
+        "user_class": "ChatDbUser",
+        "weight": 1,
+        "count": 1
+      },
+      {
+        "user_class": "CpuGraphUser",
+        "weight": 1,
+        "count": 1
+      }
+    ],
+    "think_time": {
+      "min_s": 0.5,
+      "max_s": 1.0
+    }
+  },
+  "windows": {
+    "warm_up": {
+      "duration_s": 5,
+      "users": 0
+    },
+    "measured_steps": [
+      {
+        "users": 2,
+        "duration_s": 30,
+        "spawn_rate": 1
+      }
+    ],
+    "drain": {
+      "deadline_s": 45
+    },
+    "sampling_interval_s": 5,
+    "poll_interval_s": 1
+  },
+  "safety_limits": {
+    "provider_spend_usd": 0,
+    "backlog_max": 40,
+    "storage_growth_bytes": 5242880,
+    "error_storm_rate": 0.25,
+    "drain_timeout_s": 90,
+    "cleanup_timeout_s": 120
+  },
+  "validity": {
+    "max_generator_cpu_pct": 95,
+    "allowed_scheduling_lateness_s": 3,
+    "cold_warm": "either"
+  },
+  "reset_rules": {
+    "reset_message_store": true
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "id": "ensemble_hitl",
+  "test_type": "load",
+  "purpose": "Stress the ensemble journey with HITL approval gate.",
+  "movement_kind": "tutti",
+  "stress_categories": [
+    "ensemble_flow_hitl",
+    "hitl"
+  ],
+  "protocols": [
+    "workflows_background"
+  ],
+  "modes": [
+    "background"
+  ],
+  "flow_selectors": [
+    "perf_ensemble_journey_hitl"
+  ],
+  "dataset_selectors": [
+    "kb/bounded_corpus",
+    "storage/bounded_payload",
+    "hitl/approve_decision"
+  ],
+  "workload": {
+    "workload_model": "closed",
+    "user_mix": [
+      {
+        "user_class": "EnsembleFlowUser",
+        "weight": 1,
+        "count": 1
+      }
+    ],
+    "think_time": {
+      "min_s": 1.0,
+      "max_s": 2.0
+    }
+  },
+  "windows": {
+    "warm_up": {
+      "duration_s": 10,
+      "users": 0
+    },
+    "measured_steps": [
+      {
+        "users": 1,
+        "duration_s": 60,
+        "spawn_rate": 1
+      }
+    ],
+    "drain": {
+      "deadline_s": 120
+    },
+    "sampling_interval_s": 5,
+    "poll_interval_s": 1
+  },
+  "safety_limits": {
+    "provider_spend_usd": 2.0,
+    "backlog_max": 20,
+    "storage_growth_bytes": 104857600,
+    "error_storm_rate": 0.25,
+    "drain_timeout_s": 180,
+    "cleanup_timeout_s": 240
+  },
+  "validity": {
+    "max_generator_cpu_pct": 90,
+    "allowed_scheduling_lateness_s": 8,
+    "cold_warm": "either"
+  },
+  "reset_rules": {
+    "reset_kb_corpus": true,
+    "reset_storage_artifacts": true
+  }
+}

@@ -9,10 +9,10 @@ from datetime import UTC, datetime
 from locust import task
 
 from tests.locust.langflow_runtime.config.naming import metric_name
+from tests.locust.langflow_runtime.contracts import DEFAULT_WEBHOOK_PAYLOAD
 from tests.locust.langflow_runtime.metrics.lifecycle import lifecycle_timer
 from tests.locust.langflow_runtime.metrics.registry import TrackedHitlRequest, TrackedWorkflowJob
 from tests.locust.langflow_runtime.users.base import PerfBaseUser, get_or_create_webhook_pool
-from tests.locust.langflow_runtime.v1_contracts import DEFAULT_WEBHOOK_PAYLOAD
 
 _DEFAULT_DECISION = {"action_id": "approve"}
 

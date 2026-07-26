@@ -1,6 +1,6 @@
 """Ensemble suite Locust user — optional marker only.
 
-Prefer listing solo user classes in ``user_mix`` (see ``ensemble_suite_v1.json``).
+Prefer listing solo user classes in ``user_mix`` (see ``ensemble_suite.json``).
 This class remains registered for backward-compatible profiles that name it
 explicitly; it should not be the only entry in a Tutti suite profile.
 """

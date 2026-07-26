@@ -1,4 +1,4 @@
-"""CLI for the V1 Langflow performance suite."""
+"""CLI for the Langflow performance suite."""
 
 from __future__ import annotations
 
@@ -206,7 +206,7 @@ def _cmd_emit_schema(_args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Langflow V1 performance suite runner")
+    parser = argparse.ArgumentParser(description="Langflow performance suite runner")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     list_parser = subparsers.add_parser("list", help="List available movement profiles")

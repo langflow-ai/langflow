@@ -4,8 +4,30 @@
       {
         "data": {
           "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-m-ONp",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "LanguageModelComponent-Ka8lr",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-m-ONp",
+        "target": "LanguageModelComponent-Ka8lr"
+      },
+      {
+        "data": {
+          "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-dhyt7",
+            "id": "LanguageModelComponent-Ka8lr",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -13,7 +35,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-nNR7d",
+            "id": "ChatOutput-XX-uh",
             "inputTypes": [
               "Data",
               "JSON",
@@ -24,36 +46,14 @@
             "type": "other"
           }
         },
-        "source": "LanguageModelComponent-dhyt7",
-        "target": "ChatOutput-nNR7d"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-y1cWx",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "LanguageModelComponent-dhyt7",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "ChatInput-y1cWx",
-        "target": "LanguageModelComponent-dhyt7"
+        "source": "LanguageModelComponent-Ka8lr",
+        "target": "ChatOutput-XX-uh"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-y1cWx",
+          "id": "ChatInput-m-ONp",
           "node": {
             "base_classes": [
               "Message"
@@ -318,11 +318,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-y1cWx"
+        "id": "ChatInput-m-ONp"
       },
       {
         "data": {
-          "id": "ChatOutput-nNR7d",
+          "id": "ChatOutput-XX-uh",
           "node": {
             "base_classes": [
               "Message"
@@ -585,11 +585,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-nNR7d"
+        "id": "ChatOutput-XX-uh"
       },
       {
         "data": {
-          "id": "LanguageModelComponent-dhyt7",
+          "id": "LanguageModelComponent-Ka8lr",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -776,7 +776,7 @@
                     "session_id": "",
                     "session_metadata": null,
                     "text": "",
-                    "timestamp": "2026-07-24 19:37:46.986771 UTC"
+                    "timestamp": "2026-07-26 05:35:16.520439 UTC"
                   },
                   "default_value": "",
                   "edit": false,
@@ -796,7 +796,7 @@
                   "session_id": "",
                   "text": "",
                   "text_key": "text",
-                  "timestamp": "2026-07-24 19:37:46.986771 UTC"
+                  "timestamp": "2026-07-26 05:35:16.520439 UTC"
                 }
               },
               "max_tokens": {
@@ -1045,7 +1045,7 @@
           },
           "type": "LanguageModelComponent"
         },
-        "id": "LanguageModelComponent-dhyt7"
+        "id": "LanguageModelComponent-Ka8lr"
       }
     ]
   },
@@ -1054,7 +1054,6 @@
   "is_component": false,
   "name": "perf_outbound_basic_prompting",
   "tags": [
-    "performance-suite",
-    "v1"
+    "performance-suite"
   ]
 }

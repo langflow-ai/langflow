@@ -1,4 +1,4 @@
-"""Load-shape phase helpers for the V1 performance suite."""
+"""Load-shape phase helpers for the performance suite."""
 
 from __future__ import annotations
 

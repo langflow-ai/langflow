@@ -5,7 +5,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "SaveToFile",
-            "id": "SaveToFileComponent-j5jgZ",
+            "id": "SaveToFileComponent-Gcfrk",
             "name": "message",
             "output_types": [
               "Message"
@@ -13,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-MJYIr",
+            "id": "ChatOutput-ekhcl",
             "inputTypes": [
               "Data",
               "JSON",
@@ -24,14 +24,14 @@
             "type": "other"
           }
         },
-        "source": "SaveToFileComponent-j5jgZ",
-        "target": "ChatOutput-MJYIr"
+        "source": "SaveToFileComponent-Gcfrk",
+        "target": "ChatOutput-ekhcl"
       },
       {
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-H9skb",
+            "id": "ChatInput-E4WlH",
             "name": "message",
             "output_types": [
               "Message"
@@ -39,7 +39,7 @@
           },
           "targetHandle": {
             "fieldName": "input",
-            "id": "SaveToFileComponent-j5jgZ",
+            "id": "SaveToFileComponent-Gcfrk",
             "inputTypes": [
               "Data",
               "JSON",
@@ -50,14 +50,14 @@
             "type": "other"
           }
         },
-        "source": "ChatInput-H9skb",
-        "target": "SaveToFileComponent-j5jgZ"
+        "source": "ChatInput-E4WlH",
+        "target": "SaveToFileComponent-Gcfrk"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-H9skb",
+          "id": "ChatInput-E4WlH",
           "node": {
             "base_classes": [
               "Message"
@@ -322,11 +322,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-H9skb"
+        "id": "ChatInput-E4WlH"
       },
       {
         "data": {
-          "id": "ChatOutput-MJYIr",
+          "id": "ChatOutput-ekhcl",
           "node": {
             "base_classes": [
               "Message"
@@ -589,11 +589,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-MJYIr"
+        "id": "ChatOutput-ekhcl"
       },
       {
         "data": {
-          "id": "SaveToFileComponent-j5jgZ",
+          "id": "SaveToFileComponent-Gcfrk",
           "node": {
             "base_classes": [
               "Message"
@@ -1044,7 +1044,7 @@
           },
           "type": "SaveToFile"
         },
-        "id": "SaveToFileComponent-j5jgZ"
+        "id": "SaveToFileComponent-Gcfrk"
       }
     ]
   },
@@ -1053,7 +1053,6 @@
   "is_component": false,
   "name": "perf_payload_echo",
   "tags": [
-    "performance-suite",
-    "v1"
+    "performance-suite"
   ]
 }

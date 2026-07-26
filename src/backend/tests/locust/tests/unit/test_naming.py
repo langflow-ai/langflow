@@ -30,7 +30,7 @@ def test_metric_name_rejects_job_id_tokens() -> None:
 
 def test_metric_name_rejects_env_tagged_kb_names() -> None:
     with pytest.raises(ValueError, match="high-cardinality"):
-        metric_name("workflows", "run_sync", "kb_retrieve", "perf_kb_v1_perf_local")
+        metric_name("workflows", "run_sync", "kb_retrieve", "perf_kb_perf_local")
 
 
 def test_metric_name_rejects_session_tokens() -> None:

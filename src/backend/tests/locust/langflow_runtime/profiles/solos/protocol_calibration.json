@@ -1,0 +1,90 @@
+{
+  "schema_version": "1",
+  "id": "protocol_calibration",
+  "test_type": "load",
+  "purpose": "Measure protocol overhead across MCP, Workflows v2, and Webhooks on passthrough fixtures.",
+  "movement_kind": "solo",
+  "stress_categories": [
+    "protocol_calibration"
+  ],
+  "protocols": [
+    "mcp",
+    "workflows_sync",
+    "workflows_stream",
+    "workflows_background",
+    "webhook"
+  ],
+  "modes": [
+    "sync",
+    "stream",
+    "background",
+    "webhook"
+  ],
+  "flow_selectors": [
+    "perf_passthrough",
+    "perf_webhook_passthrough"
+  ],
+  "dataset_selectors": [
+    "webhook/default_payload"
+  ],
+  "workload": {
+    "workload_model": "closed",
+    "user_mix": [
+      {
+        "user_class": "ProtocolCalibrationUser",
+        "weight": 3,
+        "count": 1
+      },
+      {
+        "user_class": "WebhookUser",
+        "weight": 1,
+        "count": 1
+      }
+    ],
+    "think_time": {
+      "min_s": 0.5,
+      "max_s": 1.0
+    }
+  },
+  "windows": {
+    "warm_up": {
+      "duration_s": 5,
+      "users": 0
+    },
+    "measured_steps": [
+      {
+        "users": 2,
+        "duration_s": 30,
+        "spawn_rate": 1
+      }
+    ],
+    "drain": {
+      "deadline_s": 30
+    },
+    "sampling_interval_s": 5,
+    "poll_interval_s": 1
+  },
+  "correctness_sampling": {
+    "enabled": true,
+    "sample_every_n_requests": 10,
+    "verify_outputs": true,
+    "verify_lifecycle": true
+  },
+  "safety_limits": {
+    "provider_spend_usd": 0,
+    "backlog_max": 20,
+    "storage_growth_bytes": 1048576,
+    "error_storm_rate": 0.25,
+    "drain_timeout_s": 60,
+    "cleanup_timeout_s": 120
+  },
+  "validity": {
+    "max_generator_cpu_pct": 85,
+    "allowed_scheduling_lateness_s": 2,
+    "cold_warm": "either"
+  },
+  "reset_rules": {
+    "reset_mcp_sessions": true,
+    "reset_webhook_subscriptions": true
+  }
+}

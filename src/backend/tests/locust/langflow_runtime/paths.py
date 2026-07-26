@@ -1,4 +1,4 @@
-"""Filesystem locations for V1 performance-suite runtime artifacts.
+"""Filesystem locations for performance-suite runtime artifacts.
 
 Reports, provision state, and generated corpora are written **outside** the
 repository by default (under the user cache). Override with ``PERF_DATA_DIR``.

@@ -1,4 +1,4 @@
-"""Build and pin the V1 performance-suite flow fixtures.
+"""Build and pin the performance-suite flow fixtures.
 
 Generates isolator flows via ``Graph.dump`` (embedding the committed custom-component
 sources), copies pinned fixtures, and builds generated-equivalent KB/outbound graphs.

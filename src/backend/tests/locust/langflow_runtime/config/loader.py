@@ -1,4 +1,4 @@
-"""Load and validate V1 performance-suite movement profiles."""
+"""Load and validate performance-suite movement profiles."""
 
 from __future__ import annotations
 

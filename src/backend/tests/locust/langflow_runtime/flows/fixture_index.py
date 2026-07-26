@@ -68,7 +68,7 @@ def flow_specs() -> list[dict[str, Any]]:
         {
             "id": "perf_webhook_passthrough",
             "fixture": "perf_webhook_passthrough.json",
-            "stress_category": "webhook",
+            "stress_category": "protocol_calibration",
             "source_provenance": "generated:Webhook->ChatOutput",
             "supported_protocols": ["webhook"],
             "supported_modes": ["webhook"],
@@ -363,7 +363,7 @@ def build_fixture_index(fixture_paths: dict[str, Path]) -> Path:
 
     index = {
         "version": FIXTURE_INDEX_VERSION,
-        "description": "Complete V1 performance-suite flow contract inventory.",
+        "description": "Complete performance-suite flow contract inventory.",
         "component_source_sha256": hashes,
         "flows": entries,
     }

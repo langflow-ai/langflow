@@ -1,4 +1,4 @@
-"""Shared V1 contract constants for flows and datasets.
+"""Shared performance-suite contract constants for flows and datasets.
 
 HITL lifecycle steps, default webhook payload, and other cross-cutting
 strings referenced by ``flows/defaults``, ``flows/fixture_index``,
@@ -20,5 +20,5 @@ HITL_LIFECYCLE_RULE = "->".join(HITL_LIFECYCLE_STEPS)
 DEFAULT_WEBHOOK_PAYLOAD = {
     "event": "perf-webhook",
     "seq": 1,
-    "marker": "PERF_WEBHOOK_V1",
+    "marker": "PERF_WEBHOOK",
 }

@@ -12,6 +12,11 @@ import pytest  # noqa: TC002
 from tests.locust.langflow_runtime.components import PerfCpuBurn, PerfDiskIo, PerfSleep, PerfSubprocessChurn
 from tests.locust.langflow_runtime.components.perf_disk_io import parse_diskio_result
 from tests.locust.langflow_runtime.components.perf_subprocess_churn import parse_multiproc_result
+from tests.locust.langflow_runtime.contracts import (
+    DEFAULT_WEBHOOK_PAYLOAD,
+    HITL_LIFECYCLE_RULE,
+    HITL_LIFECYCLE_STEPS,
+)
 from tests.locust.langflow_runtime.datasets.registry import DATASET_IDS, DATASETS
 from tests.locust.langflow_runtime.flows import validate_fixtures
 from tests.locust.langflow_runtime.flows.build_fixtures import (
@@ -21,11 +26,6 @@ from tests.locust.langflow_runtime.flows.build_fixtures import (
 )
 from tests.locust.langflow_runtime.flows.defaults import COMPONENTS_DIR, DEFAULT_KB_QUERY, FIXTURES_DIR, FLOWS_DIR
 from tests.locust.langflow_runtime.hashing import embedded_isolator_hashes, sha256_file, sha256_text
-from tests.locust.langflow_runtime.v1_contracts import (
-    DEFAULT_WEBHOOK_PAYLOAD,
-    HITL_LIFECYCLE_RULE,
-    HITL_LIFECYCLE_STEPS,
-)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -36,7 +36,7 @@ def test_flows_fixture_index_validates() -> None:
     assert errors == [], errors
 
 
-def test_flows_fixture_index_lists_all_v1_fixtures() -> None:
+def test_flows_fixture_index_lists_all_suite_fixtures() -> None:
     manifest = json.loads((FLOWS_DIR / "fixture_index.json").read_text(encoding="utf-8"))
     expected = {
         "perf_passthrough",
@@ -110,7 +110,7 @@ def test_webhook_payload_is_python_constant() -> None:
     manifest = json.loads((FLOWS_DIR / "fixture_index.json").read_text(encoding="utf-8"))
     flow = next(f for f in manifest["flows"] if f["id"] == "perf_webhook_passthrough")
     assert flow["input_fields"]["payload"] == DEFAULT_WEBHOOK_PAYLOAD
-    assert DEFAULT_WEBHOOK_PAYLOAD["marker"] == "PERF_WEBHOOK_V1"
+    assert DEFAULT_WEBHOOK_PAYLOAD["marker"] == "PERF_WEBHOOK"
     assert set(DEFAULT_WEBHOOK_PAYLOAD) == {"event", "seq", "marker"}
 
 
@@ -155,7 +155,7 @@ def test_bounded_payload_text_size_and_contents() -> None:
 
     body = bounded_payload_text()
     assert len(body) == STORAGE_PAYLOAD_BYTES
-    assert body.startswith("PERF_PAYLOAD_V1:")
+    assert body.startswith("PERF_PAYLOAD:")
     assert bounded_payload_text() == body
 
 
@@ -174,7 +174,7 @@ def test_kb_corpus_materialize_and_cleanup(tmp_path: Path) -> None:
         data = path.read_bytes()
         assert len(data) == KB_DOC_BYTES
         text = data.decode("ascii")
-        assert "PERF_KB_DOC_V1" in text
+        assert "PERF_KB_DOC" in text
         assert f"PERF_KB_TOKEN_{index}" in text
         assert DEFAULT_KB_QUERY in text
     cleanup_kb_corpus(root)
@@ -337,8 +337,8 @@ def test_fixture_bindings_are_declared() -> None:
 def test_kb_and_outbound_bindings_in_fixture_index() -> None:
     manifest = json.loads((FLOWS_DIR / "fixture_index.json").read_text(encoding="utf-8"))
     by_id = {flow["id"]: flow for flow in manifest["flows"]}
-    assert by_id["perf_kb_ingest"]["binding"]["knowledge_base"] == "perf_kb_v1"
-    assert by_id["perf_kb_retrieve"]["binding"]["knowledge_base"] == "perf_kb_v1"
+    assert by_id["perf_kb_ingest"]["binding"]["knowledge_base"] == "perf_kb"
+    assert by_id["perf_kb_retrieve"]["binding"]["knowledge_base"] == "perf_kb"
     assert by_id["perf_outbound_basic_prompting"]["binding"]["outbound_provider"] == "OpenAI"
     assert by_id["perf_outbound_basic_prompting"]["binding"]["outbound_model"] == "gpt-4o-mini"
 

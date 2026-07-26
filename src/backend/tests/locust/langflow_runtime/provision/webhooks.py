@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from tests.locust.langflow_runtime.clients.webhooks import WebhookCopy, WebhooksClient
+from tests.locust.langflow_runtime.contracts import DEFAULT_WEBHOOK_PAYLOAD
 from tests.locust.langflow_runtime.provision.api import ProvisionHttp
 from tests.locust.langflow_runtime.provision.flows import import_flow, load_fixture_index
-from tests.locust.langflow_runtime.v1_contracts import DEFAULT_WEBHOOK_PAYLOAD
 
 
 def webhook_copy_count(entry: dict[str, Any], *, profile_max: int | None = None) -> int:

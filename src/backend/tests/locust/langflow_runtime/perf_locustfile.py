@@ -1,4 +1,4 @@
-"""Thin Locust entrypoint for the V1 performance suite."""
+"""Thin Locust entrypoint for the performance suite."""
 
 from __future__ import annotations
 

@@ -5,7 +5,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Webhook",
-            "id": "WebhookComponent-K1mPH",
+            "id": "WebhookComponent-VSlis",
             "name": "output_data",
             "output_types": [
               "JSON"
@@ -13,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-cQAXb",
+            "id": "ChatOutput-fEk7F",
             "inputTypes": [
               "Data",
               "JSON",
@@ -24,14 +24,14 @@
             "type": "other"
           }
         },
-        "source": "WebhookComponent-K1mPH",
-        "target": "ChatOutput-cQAXb"
+        "source": "WebhookComponent-VSlis",
+        "target": "ChatOutput-fEk7F"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "WebhookComponent-K1mPH",
+          "id": "WebhookComponent-VSlis",
           "node": {
             "base_classes": [
               "JSON"
@@ -178,11 +178,11 @@
           },
           "type": "Webhook"
         },
-        "id": "WebhookComponent-K1mPH"
+        "id": "WebhookComponent-VSlis"
       },
       {
         "data": {
-          "id": "ChatOutput-cQAXb",
+          "id": "ChatOutput-fEk7F",
           "node": {
             "base_classes": [
               "Message"
@@ -445,7 +445,7 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-cQAXb"
+        "id": "ChatOutput-fEk7F"
       }
     ]
   },
@@ -454,7 +454,6 @@
   "is_component": false,
   "name": "perf_webhook_passthrough",
   "tags": [
-    "performance-suite",
-    "v1"
+    "performance-suite"
   ]
 }

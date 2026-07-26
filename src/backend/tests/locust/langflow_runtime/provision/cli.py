@@ -86,7 +86,7 @@ def build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
     _add_common_flags(common)
 
-    parser = argparse.ArgumentParser(description="Langflow V1 performance-suite provisioner")
+    parser = argparse.ArgumentParser(description="Langflow performance-suite provisioner")
     sub = parser.add_subparsers(dest="command", required=True)
     for name, help_text in (
         ("plan", "Print what would be created"),

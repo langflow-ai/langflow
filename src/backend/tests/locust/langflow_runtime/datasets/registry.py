@@ -1,7 +1,7 @@
 """Known dataset ids referenced by ``fixture_index`` ``dataset_selector`` values.
 
 Inputs themselves live in Python modules (``kb_corpus``, ``storage_payload``,
-``v1_contracts``). This registry is only the allow-list of selector ids,
+``contracts``). This registry is only the allow-list of selector ids,
 checked by ``validate_fixtures`` and unit tests.
 """
 
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from types import MappingProxyType
 
+from tests.locust.langflow_runtime.contracts import DEFAULT_WEBHOOK_PAYLOAD, HITL_LIFECYCLE_STEPS
 from tests.locust.langflow_runtime.datasets.kb_corpus import (
     KB_CHUNK_SIZE,
     KB_DOC_BYTES,
@@ -17,7 +18,6 @@ from tests.locust.langflow_runtime.datasets.kb_corpus import (
 )
 from tests.locust.langflow_runtime.datasets.storage_payload import STORAGE_PAYLOAD_BYTES, bounded_payload_text
 from tests.locust.langflow_runtime.flows.defaults import DEFAULT_KB_QUERY, DEFAULT_PAYLOAD_FILENAME
-from tests.locust.langflow_runtime.v1_contracts import DEFAULT_WEBHOOK_PAYLOAD, HITL_LIFECYCLE_STEPS
 
 DATASETS = MappingProxyType(
     {

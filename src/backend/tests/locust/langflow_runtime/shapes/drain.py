@@ -1,4 +1,4 @@
-"""Drain-phase helpers for the V1 performance suite."""
+"""Drain-phase helpers for the performance suite."""
 
 from __future__ import annotations
 

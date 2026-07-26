@@ -1,4 +1,4 @@
-"""Paths and deterministic defaults for V1 flow fixture builders.
+"""Paths and deterministic defaults for flow fixture builders.
 
 Shared constants (dirs, default inputs, KB/outbound names) used by
 ``build_fixtures``, ``builders``, ``fixture_index``, ``validate_fixtures``,
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests.locust.langflow_runtime.v1_contracts import DEFAULT_WEBHOOK_PAYLOAD, HITL_LIFECYCLE_RULE
+from tests.locust.langflow_runtime.contracts import DEFAULT_WEBHOOK_PAYLOAD, HITL_LIFECYCLE_RULE
 
 FLOWS_DIR = Path(__file__).resolve().parent
 FIXTURES_DIR = FLOWS_DIR / "fixtures"
@@ -33,10 +33,10 @@ DEFAULT_MULTIPROC_COUNT = 2
 DEFAULT_MULTIPROC_DURATION_MS = 100
 DEFAULT_MULTIPROC_WORKING_SET_BYTES = 4 * 1024 * 1024  # 4 MiB
 DEFAULT_DISK_IO_SIZE_BYTES = 4 * 1024 * 1024  # 4 MiB
-DEFAULT_KB_DOC_PREFIX = "PERF_KB_DOC_V1"
+DEFAULT_KB_DOC_PREFIX = "PERF_KB_DOC"
 DEFAULT_KB_QUERY = "PERF_KB_QUERY_KNOWN"
 # Deterministic KB name provisioners must create/bind before live KB runs.
-DEFAULT_KB_NAME = "perf_kb_v1"
+DEFAULT_KB_NAME = "perf_kb"
 DEFAULT_OUTBOUND_PROMPT = "Say exactly: perf-outbound-ok"
 DEFAULT_OUTBOUND_SYSTEM = (
     "You are a performance-suite outbound probe. Reply with exactly the user text and nothing else."

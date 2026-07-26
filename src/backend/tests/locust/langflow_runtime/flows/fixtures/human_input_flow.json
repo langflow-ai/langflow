@@ -479,7 +479,6 @@
   "is_component": false,
   "name": "human_input_flow",
   "tags": [
-    "performance-suite",
-    "v1"
+    "performance-suite"
   ]
 }

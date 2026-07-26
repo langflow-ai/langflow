@@ -1,4 +1,4 @@
-"""Static Locust metric names for the V1 performance suite."""
+"""Static Locust metric names for the performance suite."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ _UUID_RE = re.compile(
 _HIGH_CARDINALITY_RE = re.compile(
     r"(session[_-]?id|job[_-]?id|request[_-]?id|run[_-]?id|"
     r"kb[_-]?[a-z0-9_-]*\d{4,}|"
-    r"perf_kb_v1_[a-z0-9_-]+|"
+    r"perf_kb_[a-z0-9_-]+|"
     r"[0-9a-f]{32})",
     re.IGNORECASE,
 )

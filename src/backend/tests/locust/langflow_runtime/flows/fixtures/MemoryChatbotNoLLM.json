@@ -1380,7 +1380,6 @@
   "last_tested_version": "1.4.2",
   "name": "MemoryChatbotNoLLM",
   "tags": [
-    "performance-suite",
-    "v1"
+    "performance-suite"
   ]
 }

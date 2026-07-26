@@ -5,7 +5,7 @@
     "perf_sleep": "a59ce946c5e26deadc57fab4547c816ba5e97986adef072f92fdac8de9b8b7e9",
     "perf_subprocess_churn": "57175cfc77a372ffcc5a843ad4af77228a332a3e27cd5410fc58a5a9151c5c7e"
   },
-  "description": "Complete V1 performance-suite flow contract inventory.",
+  "description": "Complete performance-suite flow contract inventory.",
   "flows": [
     {
       "dataset_selector": null,
@@ -17,7 +17,7 @@
       },
       "fixture": "perf_passthrough.json",
       "fixture_path": "fixtures/perf_passthrough.json",
-      "fixture_sha256": "2b4f938deb8e229679eda7c36458d7ff85496c11bd8ef8eef2af8dcee465c063",
+      "fixture_sha256": "3dfcace1ea6f11e2e62b9be55a7a764f62ab9479a6ba7b9c4a45ca7495f4e8ba",
       "hitl": false,
       "id": "perf_passthrough",
       "input_fields": {
@@ -55,13 +55,13 @@
       },
       "fixture": "perf_webhook_passthrough.json",
       "fixture_path": "fixtures/perf_webhook_passthrough.json",
-      "fixture_sha256": "ed783ea347f04e89c34a46f5b6280907814d7fce98f546a6254a09418a794d5d",
+      "fixture_sha256": "4144c3bcab3bcea1204a83398566bac082484a4b46547076ea966132ab7c8c06",
       "hitl": false,
       "id": "perf_webhook_passthrough",
       "input_fields": {
         "payload": {
           "event": "perf-webhook",
-          "marker": "PERF_WEBHOOK_V1",
+          "marker": "PERF_WEBHOOK",
           "seq": 1
         }
       },
@@ -75,7 +75,7 @@
       ],
       "source_provenance": "generated:Webhook->ChatOutput",
       "stores_chat_history": false,
-      "stress_category": "webhook",
+      "stress_category": "protocol_calibration",
       "supported_modes": [
         "webhook"
       ],
@@ -94,7 +94,7 @@
       },
       "fixture": "MemoryChatbotNoLLM.json",
       "fixture_path": "fixtures/MemoryChatbotNoLLM.json",
-      "fixture_sha256": "1aa60eae54c6d3a5f207935cbab4d4ecb4c98ce46c1812a2f2993aa83c946d17",
+      "fixture_sha256": "fa1f4d518a7b7375f81afa0e8d7972d2b035878bfa8434923a80bb464ee34512",
       "hitl": false,
       "id": "MemoryChatbotNoLLM",
       "input_fields": {
@@ -137,7 +137,7 @@
       },
       "fixture": "human_input_flow.json",
       "fixture_path": "fixtures/human_input_flow.json",
-      "fixture_sha256": "90d97d4be8c61fac29ff2248bb8eba6467082e866a1b101dcfb979dbf2124a46",
+      "fixture_sha256": "d30beaf381acf075af3060e435ab2d716ba93f572cc8f5cf65521427e214e64c",
       "hitl": true,
       "id": "human_input_flow",
       "input_fields": {
@@ -180,7 +180,7 @@
       },
       "fixture": "perf_queue_short.json",
       "fixture_path": "fixtures/perf_queue_short.json",
-      "fixture_sha256": "60fc5cd902e01d96ca1a8ae87aed0bfceee299c1abcd2cb9d7f5d87d39946e23",
+      "fixture_sha256": "20791be7795a93fdcf84e2e1c6ef5af34c2372a4dc1f8c630fb16ce9186bbce4",
       "hitl": false,
       "id": "perf_queue_short",
       "input_fields": {
@@ -209,23 +209,23 @@
     },
     {
       "binding": {
-        "knowledge_base": "perf_kb_v1"
+        "knowledge_base": "perf_kb"
       },
       "dataset_selector": "kb/bounded_corpus",
       "embedded_component_sha256": {},
       "endpoint_name": "perf-kb-ingest",
       "expected_component_sha256": {},
       "expected_output_rule": {
-        "contains": "PERF_KB_DOC_V1",
+        "contains": "PERF_KB_DOC",
         "kb_ingest_terminal": true
       },
       "fixture": "perf_kb_ingest.json",
       "fixture_path": "fixtures/perf_kb_ingest.json",
-      "fixture_sha256": "92e3ed03db3a2268687331f385e95882bbd9d41f81e68bc4a88ca2bc04aadb8e",
+      "fixture_sha256": "d82446565bdd558814975057390dccbf52c0e8ef9afe2dbf7dabb9b0afda2bc6",
       "hitl": false,
       "id": "perf_kb_ingest",
       "input_fields": {
-        "input_value": "PERF_KB_DOC_V1"
+        "input_value": "PERF_KB_DOC"
       },
       "mcp_action_name": "perf_kb_ingest",
       "node_types": [
@@ -255,7 +255,7 @@
     },
     {
       "binding": {
-        "knowledge_base": "perf_kb_v1"
+        "knowledge_base": "perf_kb"
       },
       "dataset_selector": "kb/bounded_corpus",
       "embedded_component_sha256": {},
@@ -267,7 +267,7 @@
       },
       "fixture": "perf_kb_retrieve.json",
       "fixture_path": "fixtures/perf_kb_retrieve.json",
-      "fixture_sha256": "7176873c87495f9b1a7ee60e05dde7eff57de07a16b58c36909421b3dbeec222",
+      "fixture_sha256": "5a3a5f5023bc747c8162f49c4a625388eb1e59c43709f2e3f50118c16def9a93",
       "hitl": false,
       "id": "perf_kb_retrieve",
       "input_fields": {
@@ -316,7 +316,7 @@
       },
       "fixture": "perf_cpu_graph.json",
       "fixture_path": "fixtures/perf_cpu_graph.json",
-      "fixture_sha256": "68e9cd12bf8facb42854fd8ae9107c0309616cc6888269d2fd1b8ac287f22039",
+      "fixture_sha256": "f3ad98dfbd4909fba0329c8d6acfbc0f95b33afad9074c0d3dc7ed08d632fd5a",
       "hitl": false,
       "id": "perf_cpu_graph",
       "input_fields": {
@@ -365,7 +365,7 @@
       },
       "fixture": "perf_multiproc_churn.json",
       "fixture_path": "fixtures/perf_multiproc_churn.json",
-      "fixture_sha256": "6ae75b010d35e257c64f2c4df79ae1dde651f72614f07d59bc52c0681ae444b8",
+      "fixture_sha256": "e0c3e0fe563a3539cce4fc35b16c1f29ecebaccc7f7371f6c2f66da1fc6e836c",
       "hitl": false,
       "id": "perf_multiproc_churn",
       "input_fields": {
@@ -414,7 +414,7 @@
       },
       "fixture": "perf_disk_io.json",
       "fixture_path": "fixtures/perf_disk_io.json",
-      "fixture_sha256": "31c93ab08e0a69dd658e83520ac2edeb9ac6ecf52c3ad2a8bf7eb845c321c4fa",
+      "fixture_sha256": "f4e700aa58335a6b7f6503973351d30bbd55ec675635be9c588f9a3fee152c18",
       "hitl": false,
       "id": "perf_disk_io",
       "input_fields": {
@@ -455,7 +455,7 @@
       },
       "fixture": "perf_payload_echo.json",
       "fixture_path": "fixtures/perf_payload_echo.json",
-      "fixture_sha256": "07d22c153beef11cf16f8533d0a50d524cc68ed3bb9d6a72ada934da2b8da566",
+      "fixture_sha256": "af457cc0c3a28eb7a6e0976e0152302338429a5d56d0ab9ed5fd34b408220194",
       "hitl": false,
       "id": "perf_payload_echo",
       "input_fields": {
@@ -501,7 +501,7 @@
       },
       "fixture": "perf_outbound_basic_prompting.json",
       "fixture_path": "fixtures/perf_outbound_basic_prompting.json",
-      "fixture_sha256": "c667dba5d05e906b5518ee7c4a4013e77aa0a36742a1e02894122db1e66db880",
+      "fixture_sha256": "5613931306044ee3ef4b5133caad5632e49ecbad6e6fbd91f539bd86bbcf194b",
       "hitl": false,
       "id": "perf_outbound_basic_prompting",
       "input_fields": {
@@ -534,7 +534,7 @@
     },
     {
       "binding": {
-        "knowledge_base": "perf_kb_v1",
+        "knowledge_base": "perf_kb",
         "outbound_model": "gpt-4o-mini",
         "outbound_provider": "OpenAI"
       },
@@ -560,7 +560,7 @@
       },
       "fixture": "perf_ensemble_journey.json",
       "fixture_path": "fixtures/perf_ensemble_journey.json",
-      "fixture_sha256": "ed5f138a2cc050b7d4fc1dbd55bffec9c3d52d408a7fbdc99635cc7909b9fcd1",
+      "fixture_sha256": "45f8211afd3895d304048c0f15d5c9503fb6bceb9a3b414fc2b81f1017200548",
       "hitl": false,
       "id": "perf_ensemble_journey",
       "input_fields": {
@@ -608,7 +608,7 @@
     },
     {
       "binding": {
-        "knowledge_base": "perf_kb_v1",
+        "knowledge_base": "perf_kb",
         "outbound_model": "gpt-4o-mini",
         "outbound_provider": "OpenAI"
       },
@@ -635,7 +635,7 @@
       },
       "fixture": "perf_ensemble_journey_hitl.json",
       "fixture_path": "fixtures/perf_ensemble_journey_hitl.json",
-      "fixture_sha256": "dd9a7c566194c3006521196d8a14daf6da722d3a84a5605b3ed3b56d6b4910b9",
+      "fixture_sha256": "028cf76e6a4cb13622b64b0c8221346d6d1c648055acabff7ae7a119e5ab495e",
       "hitl": true,
       "id": "perf_ensemble_journey_hitl",
       "input_fields": {

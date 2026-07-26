@@ -1,4 +1,4 @@
-"""User class registry for the V1 performance suite."""
+"""User class registry for the performance suite."""
 
 from __future__ import annotations
 

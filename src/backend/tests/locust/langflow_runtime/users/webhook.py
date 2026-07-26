@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from locust import task
 
+from tests.locust.langflow_runtime.contracts import DEFAULT_WEBHOOK_PAYLOAD
 from tests.locust.langflow_runtime.metrics.correctness import expect_webhook_n_accept_n_complete
 from tests.locust.langflow_runtime.metrics.registry import TrackedWebhookCopy
 from tests.locust.langflow_runtime.users.base import (
@@ -11,7 +12,6 @@ from tests.locust.langflow_runtime.users.base import (
     get_or_create_arrival_accountant,
     get_or_create_webhook_pool,
 )
-from tests.locust.langflow_runtime.v1_contracts import DEFAULT_WEBHOOK_PAYLOAD
 
 
 class WebhookUser(PerfBaseUser):

@@ -10,7 +10,7 @@ from __future__ import annotations
 from tests.locust.langflow_runtime.flows.defaults import DEFAULT_PAYLOAD_FILENAME
 
 STORAGE_PAYLOAD_BYTES = 4_096
-STORAGE_PAYLOAD_UNIT = "PERF_PAYLOAD_V1:"
+STORAGE_PAYLOAD_UNIT = "PERF_PAYLOAD:"
 
 __all__ = [
     "DEFAULT_PAYLOAD_FILENAME",

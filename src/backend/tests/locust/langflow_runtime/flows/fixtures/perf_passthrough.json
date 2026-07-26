@@ -5,7 +5,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-iBd7R",
+            "id": "ChatInput-PsTh6",
             "name": "message",
             "output_types": [
               "Message"
@@ -13,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-oLihj",
+            "id": "ChatOutput-uuqk8",
             "inputTypes": [
               "Data",
               "JSON",
@@ -24,14 +24,14 @@
             "type": "other"
           }
         },
-        "source": "ChatInput-iBd7R",
-        "target": "ChatOutput-oLihj"
+        "source": "ChatInput-PsTh6",
+        "target": "ChatOutput-uuqk8"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-iBd7R",
+          "id": "ChatInput-PsTh6",
           "node": {
             "base_classes": [
               "Message"
@@ -296,11 +296,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-iBd7R"
+        "id": "ChatInput-PsTh6"
       },
       {
         "data": {
-          "id": "ChatOutput-oLihj",
+          "id": "ChatOutput-uuqk8",
           "node": {
             "base_classes": [
               "Message"
@@ -563,7 +563,7 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-oLihj"
+        "id": "ChatOutput-uuqk8"
       }
     ]
   },
@@ -572,7 +572,6 @@
   "is_component": false,
   "name": "perf_passthrough",
   "tags": [
-    "performance-suite",
-    "v1"
+    "performance-suite"
   ]
 }

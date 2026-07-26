@@ -1,4 +1,4 @@
-"""Load shapes for the V1 performance suite."""
+"""Load shapes for the performance suite."""
 
 from tests.locust.langflow_runtime.shapes.drain import (
     drain_remaining_s,

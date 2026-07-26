@@ -1,4 +1,4 @@
-"""CLI for V1 performance-suite preflight checks."""
+"""CLI for performance-suite preflight checks."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def _load_fixture_index() -> dict | None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Langflow V1 performance-suite preflight")
+    parser = argparse.ArgumentParser(description="Langflow performance-suite preflight")
     parser.add_argument("--host", required=True, help="Langflow base URL")
     parser.add_argument("--state", default=None, help="Path to provision state JSON")
     parser.add_argument(
@@ -56,8 +56,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--profile",
-        default="smoke/all_protocols_v1",
-        help="Profile id or path (default: smoke/all_protocols_v1)",
+        default="smoke/all_protocols",
+        help="Profile id or path (default: smoke/all_protocols)",
     )
     args = parser.parse_args(argv)
 

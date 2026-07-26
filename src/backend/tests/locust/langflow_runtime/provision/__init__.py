@@ -1,4 +1,4 @@
-"""Idempotent HTTP provisioning for the V1 performance suite."""
+"""Idempotent HTTP provisioning for the performance suite."""
 
 from __future__ import annotations
 

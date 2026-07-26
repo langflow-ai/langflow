@@ -1,4 +1,4 @@
-"""Pydantic models for V1 performance-suite movement profiles."""
+"""Pydantic models for performance-suite movement profiles."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 STRESS_CATEGORIES = frozenset(
     {
         "protocol_calibration",
-        "webhook",
         "chat_db",
         "hitl",
         "queue",

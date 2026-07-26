@@ -13,17 +13,26 @@ def test_all_committed_profiles_validate() -> None:
     assert not failures, failures
 
 
-def test_queue_and_webhook_use_paced_closed() -> None:
-    queue = load_profile("solos/queue_v1")
-    webhook = load_profile("solos/webhook_v1")
+def test_queue_uses_paced_closed() -> None:
+    queue = load_profile("solos/queue")
     assert queue.workload.workload_model == "paced_closed"
-    assert webhook.workload.workload_model == "paced_closed"
     assert queue.workload.arrival_rate_per_s is not None
-    assert webhook.workload.arrival_rate_per_s is not None
+
+
+def test_protocol_calibration_covers_mcp_workflows_and_webhook() -> None:
+    profile = load_profile("solos/protocol_calibration")
+    assert profile.stress_categories == ["protocol_calibration"]
+    assert "mcp" in profile.protocols
+    assert "webhook" in profile.protocols
+    assert "workflows_sync" in profile.protocols
+    classes = {entry.user_class for entry in profile.workload.user_mix}
+    assert "ProtocolCalibrationUser" in classes
+    assert "WebhookUser" in classes
+    assert "webhook" not in profile.stress_categories
 
 
 def test_ensemble_suite_composes_solo_users() -> None:
-    profile = load_profile("tutti/ensemble_suite_v1")
+    profile = load_profile("tutti/ensemble_suite")
     classes = [entry.user_class for entry in profile.workload.user_mix]
     assert "EnsembleSuiteUser" not in classes
     assert "ChatDbUser" in classes
@@ -58,4 +67,4 @@ def test_preflight_dependencies_fail_when_selector_missing() -> None:
 
 
 def test_smoke_profile_ok() -> None:
-    assert validate_profile("smoke/all_protocols_v1") == []
+    assert validate_profile("smoke/all_protocols") == []

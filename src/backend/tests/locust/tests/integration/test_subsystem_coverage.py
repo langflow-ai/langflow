@@ -1,4 +1,4 @@
-"""Live subsystem coverage for V1 performance-suite fixtures.
+"""Live subsystem coverage for performance-suite fixtures.
 
 These tests prove the fixtures trigger the subsystems they claim to isolate.
 Everything goes through the live app (workflows / webhook HTTP / MCP) except
@@ -47,7 +47,7 @@ from tests.locust.langflow_runtime.flows.defaults import (
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
-from tests.locust.langflow_runtime.v1_contracts import DEFAULT_WEBHOOK_PAYLOAD
+from tests.locust.langflow_runtime.contracts import DEFAULT_WEBHOOK_PAYLOAD
 from tests.locust.tests.integration import (
     delete_flow,
     delete_project,

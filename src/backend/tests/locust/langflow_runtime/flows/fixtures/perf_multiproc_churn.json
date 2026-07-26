@@ -4,30 +4,8 @@
       {
         "data": {
           "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-WzJwi",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "PerfSubprocessChurn-K4QNX",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "ChatInput-WzJwi",
-        "target": "PerfSubprocessChurn-K4QNX"
-      },
-      {
-        "data": {
-          "sourceHandle": {
             "dataType": "PerfSubprocessChurn",
-            "id": "PerfSubprocessChurn-K4QNX",
+            "id": "PerfSubprocessChurn-58LW0",
             "name": "output",
             "output_types": [
               "Message"
@@ -35,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-K_RVe",
+            "id": "ChatOutput-UM7Cb",
             "inputTypes": [
               "Data",
               "JSON",
@@ -46,14 +24,36 @@
             "type": "other"
           }
         },
-        "source": "PerfSubprocessChurn-K4QNX",
-        "target": "ChatOutput-K_RVe"
+        "source": "PerfSubprocessChurn-58LW0",
+        "target": "ChatOutput-UM7Cb"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-Qiev_",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfSubprocessChurn-58LW0",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-Qiev_",
+        "target": "PerfSubprocessChurn-58LW0"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-WzJwi",
+          "id": "ChatInput-Qiev_",
           "node": {
             "base_classes": [
               "Message"
@@ -318,11 +318,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-WzJwi"
+        "id": "ChatInput-Qiev_"
       },
       {
         "data": {
-          "id": "ChatOutput-K_RVe",
+          "id": "ChatOutput-UM7Cb",
           "node": {
             "base_classes": [
               "Message"
@@ -585,11 +585,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-K_RVe"
+        "id": "ChatOutput-UM7Cb"
       },
       {
         "data": {
-          "id": "PerfSubprocessChurn-K4QNX",
+          "id": "PerfSubprocessChurn-58LW0",
           "node": {
             "base_classes": [
               "Message"
@@ -785,7 +785,7 @@
           },
           "type": "PerfSubprocessChurn"
         },
-        "id": "PerfSubprocessChurn-K4QNX"
+        "id": "PerfSubprocessChurn-58LW0"
       }
     ]
   },
@@ -794,7 +794,6 @@
   "is_component": false,
   "name": "perf_multiproc_churn",
   "tags": [
-    "performance-suite",
-    "v1"
+    "performance-suite"
   ]
 }

@@ -571,7 +571,7 @@ external = ["RUF027"]
     "SIM102",  # Nested if statements (readability over optimization)
     "E501",    # Line too long (some CLI commands are naturally long)
 ]
-# Beta performance suite under langflow_runtime/ (CLI, clients, Locust users,
+# Performance suite under langflow_runtime/ (CLI, clients, Locust users,
 # provisioners, fixture builders). Same tool-oriented relaxations as locust/*.
 "src/backend/tests/locust/langflow_runtime/**" = [
     "D1",      # undocumented-public-* — helpers/builders/CLI skip full pydocstyle

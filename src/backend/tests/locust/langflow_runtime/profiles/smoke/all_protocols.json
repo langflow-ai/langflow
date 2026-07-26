@@ -1,0 +1,93 @@
+{
+  "schema_version": "1",
+  "id": "all_protocols",
+  "test_type": "smoke",
+  "purpose": "Smoke-check MCP, workflow sync/stream/background, and webhook surfaces.",
+  "movement_kind": "solo",
+  "stress_categories": [
+    "protocol_calibration"
+  ],
+  "protocols": [
+    "mcp",
+    "workflows_sync",
+    "workflows_stream",
+    "workflows_background",
+    "webhook"
+  ],
+  "modes": [
+    "sync",
+    "stream",
+    "background",
+    "webhook"
+  ],
+  "flow_selectors": [
+    "perf_passthrough",
+    "perf_webhook_passthrough"
+  ],
+  "dataset_selectors": [
+    "webhook/default_payload"
+  ],
+  "workload": {
+    "workload_model": "closed",
+    "user_mix": [
+      {
+        "user_class": "ProtocolCalibrationUser",
+        "weight": 3,
+        "count": 1
+      },
+      {
+        "user_class": "WebhookUser",
+        "weight": 1,
+        "count": 1
+      }
+    ],
+    "think_time": {
+      "min_s": 0.1,
+      "max_s": 0.5
+    }
+  },
+  "windows": {
+    "warm_up": {
+      "duration_s": 3,
+      "users": 0
+    },
+    "measured_steps": [
+      {
+        "users": 1,
+        "duration_s": 15,
+        "spawn_rate": 1
+      }
+    ],
+    "drain": {
+      "deadline_s": 10
+    },
+    "sampling_interval_s": 3,
+    "poll_interval_s": 1
+  },
+  "correctness_sampling": {
+    "enabled": true,
+    "sample_every_n_requests": 1,
+    "verify_outputs": true,
+    "verify_lifecycle": true
+  },
+  "safety_limits": {
+    "provider_spend_usd": 0,
+    "backlog_max": 10,
+    "storage_growth_bytes": 1048576,
+    "error_storm_rate": 0.5,
+    "drain_timeout_s": 30,
+    "cleanup_timeout_s": 60
+  },
+  "validity": {
+    "max_generator_cpu_pct": 90,
+    "allowed_scheduling_lateness_s": 5,
+    "cold_warm": "either"
+  },
+  "reset_rules": {
+    "reset_message_store": false,
+    "reset_kb_corpus": false,
+    "reset_storage_artifacts": false,
+    "reset_webhook_subscriptions": false,
+    "reset_mcp_sessions": true
+  }
+}

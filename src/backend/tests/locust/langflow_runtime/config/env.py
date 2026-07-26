@@ -1,4 +1,4 @@
-"""Environment loading for the V1 performance suite."""
+"""Environment loading for the performance suite."""
 
 from __future__ import annotations
 

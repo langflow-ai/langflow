@@ -5,7 +5,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-JuuuR",
+            "id": "ChatInput-ES5f0",
             "name": "message",
             "output_types": [
               "Message"
@@ -13,21 +13,21 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "PerfDiskIo-IESCt",
+            "id": "PerfDiskIo-gww-U",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "source": "ChatInput-JuuuR",
-        "target": "PerfDiskIo-IESCt"
+        "source": "ChatInput-ES5f0",
+        "target": "PerfDiskIo-gww-U"
       },
       {
         "data": {
           "sourceHandle": {
             "dataType": "PerfDiskIo",
-            "id": "PerfDiskIo-IESCt",
+            "id": "PerfDiskIo-gww-U",
             "name": "output",
             "output_types": [
               "Message"
@@ -35,7 +35,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-49vVf",
+            "id": "ChatOutput-ffgYt",
             "inputTypes": [
               "Data",
               "JSON",
@@ -46,14 +46,14 @@
             "type": "other"
           }
         },
-        "source": "PerfDiskIo-IESCt",
-        "target": "ChatOutput-49vVf"
+        "source": "PerfDiskIo-gww-U",
+        "target": "ChatOutput-ffgYt"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-JuuuR",
+          "id": "ChatInput-ES5f0",
           "node": {
             "base_classes": [
               "Message"
@@ -318,11 +318,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-JuuuR"
+        "id": "ChatInput-ES5f0"
       },
       {
         "data": {
-          "id": "ChatOutput-49vVf",
+          "id": "ChatOutput-ffgYt",
           "node": {
             "base_classes": [
               "Message"
@@ -585,11 +585,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-49vVf"
+        "id": "ChatOutput-ffgYt"
       },
       {
         "data": {
-          "id": "PerfDiskIo-IESCt",
+          "id": "PerfDiskIo-gww-U",
           "node": {
             "base_classes": [
               "Message"
@@ -704,7 +704,7 @@
           },
           "type": "PerfDiskIo"
         },
-        "id": "PerfDiskIo-IESCt"
+        "id": "PerfDiskIo-gww-U"
       }
     ]
   },
@@ -713,7 +713,6 @@
   "is_component": false,
   "name": "perf_disk_io",
   "tags": [
-    "performance-suite",
-    "v1"
+    "performance-suite"
   ]
 }

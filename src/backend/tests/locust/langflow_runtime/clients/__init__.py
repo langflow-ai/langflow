@@ -1,4 +1,4 @@
-"""Protocol lifecycle clients for the Langflow V1 performance suite."""
+"""Protocol lifecycle clients for the Langflow performance suite."""
 
 from tests.locust.langflow_runtime.clients.base import (
     ApiClient,

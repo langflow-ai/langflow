@@ -5,7 +5,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-OZjsv",
+            "id": "ChatInput-0lV-f",
             "name": "message",
             "output_types": [
               "Message"
@@ -13,21 +13,21 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "PerfSleep-kRDJs",
+            "id": "PerfSleep-m8VVy",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "source": "ChatInput-OZjsv",
-        "target": "PerfSleep-kRDJs"
+        "source": "ChatInput-0lV-f",
+        "target": "PerfSleep-m8VVy"
       },
       {
         "data": {
           "sourceHandle": {
             "dataType": "PerfSleep",
-            "id": "PerfSleep-kRDJs",
+            "id": "PerfSleep-m8VVy",
             "name": "output",
             "output_types": [
               "Message"
@@ -35,7 +35,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-9zdde",
+            "id": "ChatOutput-QKDmy",
             "inputTypes": [
               "Data",
               "JSON",
@@ -46,14 +46,14 @@
             "type": "other"
           }
         },
-        "source": "PerfSleep-kRDJs",
-        "target": "ChatOutput-9zdde"
+        "source": "PerfSleep-m8VVy",
+        "target": "ChatOutput-QKDmy"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-OZjsv",
+          "id": "ChatInput-0lV-f",
           "node": {
             "base_classes": [
               "Message"
@@ -318,11 +318,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-OZjsv"
+        "id": "ChatInput-0lV-f"
       },
       {
         "data": {
-          "id": "ChatOutput-9zdde",
+          "id": "ChatOutput-QKDmy",
           "node": {
             "base_classes": [
               "Message"
@@ -585,11 +585,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-9zdde"
+        "id": "ChatOutput-QKDmy"
       },
       {
         "data": {
-          "id": "PerfSleep-kRDJs",
+          "id": "PerfSleep-m8VVy",
           "node": {
             "base_classes": [
               "Message"
@@ -704,7 +704,7 @@
           },
           "type": "PerfSleep"
         },
-        "id": "PerfSleep-kRDJs"
+        "id": "PerfSleep-m8VVy"
       }
     ]
   },
@@ -713,7 +713,6 @@
   "is_component": false,
   "name": "perf_queue_short",
   "tags": [
-    "performance-suite",
-    "v1"
+    "performance-suite"
   ]
 }

@@ -1,4 +1,4 @@
-"""Base Locust user for the V1 performance suite."""
+"""Base Locust user for the performance suite."""
 
 from __future__ import annotations
 

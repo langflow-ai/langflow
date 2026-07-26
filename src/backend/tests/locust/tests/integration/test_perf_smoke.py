@@ -1,4 +1,4 @@
-"""Opt-in live smoke for the V1 performance suite (three protocols).
+"""Opt-in live smoke for the performance suite (three protocols).
 
 Skipped unless ``PERF_LIVE=1`` and a provisioned state file exists.
 Exercises clients against the live target (MCP, workflow sync/stream/background,
@@ -134,7 +134,7 @@ def test_live_locust_smoke_headless(provision_state: dict) -> None:
             "tests.locust.langflow_runtime.run",
             "run",
             "--profile",
-            "smoke/all_protocols_v1",
+            "smoke/all_protocols",
             "--host",
             host,
             "--env-id",
