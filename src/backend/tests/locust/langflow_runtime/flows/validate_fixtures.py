@@ -40,6 +40,7 @@ REQUIRED_STRESS_CATEGORIES = {
     "kb_retrieve",
     "cpu_graph",
     "multiproc",
+    "disk_io",
     "ram_storage",
     "outbound",
     "ensemble_flow",

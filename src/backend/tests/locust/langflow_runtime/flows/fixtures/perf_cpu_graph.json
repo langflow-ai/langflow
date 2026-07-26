@@ -4,8 +4,30 @@
       {
         "data": {
           "sourceHandle": {
+            "dataType": "PerfCpuBurn",
+            "id": "PerfCpuBurn-GMUII",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "ignored_message",
+            "id": "PassMessageComponent-kbi-9",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "PerfCpuBurn-GMUII",
+        "target": "PassMessageComponent-kbi-9"
+      },
+      {
+        "data": {
+          "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-h9Zsf",
+            "id": "ChatInput-JGDjL",
             "name": "message",
             "output_types": [
               "Message"
@@ -13,21 +35,21 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "PerfCpuBurn-E_pO8",
+            "id": "PerfCpuBurn-I11TA",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "source": "ChatInput-h9Zsf",
-        "target": "PerfCpuBurn-E_pO8"
+        "source": "ChatInput-JGDjL",
+        "target": "PerfCpuBurn-I11TA"
       },
       {
         "data": {
           "sourceHandle": {
             "dataType": "Pass",
-            "id": "PassMessageComponent-9s8Gs",
+            "id": "PassMessageComponent-kbi-9",
             "name": "output_message",
             "output_types": [
               "Message"
@@ -35,7 +57,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-NqttZ",
+            "id": "ChatOutput-I9bEI",
             "inputTypes": [
               "Data",
               "JSON",
@@ -46,58 +68,14 @@
             "type": "other"
           }
         },
-        "source": "PassMessageComponent-9s8Gs",
-        "target": "ChatOutput-NqttZ"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-h9Zsf",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "PerfCpuBurn--Iyjr",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "ChatInput-h9Zsf",
-        "target": "PerfCpuBurn--Iyjr"
+        "source": "PassMessageComponent-kbi-9",
+        "target": "ChatOutput-I9bEI"
       },
       {
         "data": {
           "sourceHandle": {
             "dataType": "PerfCpuBurn",
-            "id": "PerfCpuBurn-E_pO8",
-            "name": "output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "ignored_message",
-            "id": "PassMessageComponent-9s8Gs",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "PerfCpuBurn-E_pO8",
-        "target": "PassMessageComponent-9s8Gs"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "PerfCpuBurn",
-            "id": "PerfCpuBurn--Iyjr",
+            "id": "PerfCpuBurn-I11TA",
             "name": "output",
             "output_types": [
               "Message"
@@ -105,21 +83,43 @@
           },
           "targetHandle": {
             "fieldName": "input_message",
-            "id": "PassMessageComponent-9s8Gs",
+            "id": "PassMessageComponent-kbi-9",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "source": "PerfCpuBurn--Iyjr",
-        "target": "PassMessageComponent-9s8Gs"
+        "source": "PerfCpuBurn-I11TA",
+        "target": "PassMessageComponent-kbi-9"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-JGDjL",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfCpuBurn-GMUII",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-JGDjL",
+        "target": "PerfCpuBurn-GMUII"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-h9Zsf",
+          "id": "ChatInput-JGDjL",
           "node": {
             "base_classes": [
               "Message"
@@ -384,11 +384,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-h9Zsf"
+        "id": "ChatInput-JGDjL"
       },
       {
         "data": {
-          "id": "ChatOutput-NqttZ",
+          "id": "ChatOutput-I9bEI",
           "node": {
             "base_classes": [
               "Message"
@@ -651,11 +651,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-NqttZ"
+        "id": "ChatOutput-I9bEI"
       },
       {
         "data": {
-          "id": "PassMessageComponent-9s8Gs",
+          "id": "PassMessageComponent-kbi-9",
           "node": {
             "base_classes": [
               "Message"
@@ -769,7 +769,7 @@
                     "session_id": "",
                     "session_metadata": null,
                     "text": "",
-                    "timestamp": "2026-07-24 19:37:46.964230 UTC"
+                    "timestamp": "2026-07-26 00:40:36.362473 UTC"
                   },
                   "default_value": "",
                   "edit": false,
@@ -789,7 +789,7 @@
                   "session_id": "",
                   "text": "",
                   "text_key": "text",
-                  "timestamp": "2026-07-24 19:37:46.964230 UTC"
+                  "timestamp": "2026-07-26 00:40:36.362473 UTC"
                 }
               },
               "input_message": {
@@ -846,7 +846,7 @@
                     "session_id": "",
                     "session_metadata": null,
                     "text": "",
-                    "timestamp": "2026-07-24 19:37:46.964309 UTC"
+                    "timestamp": "2026-07-26 00:40:36.362559 UTC"
                   },
                   "default_value": "",
                   "edit": false,
@@ -866,7 +866,7 @@
                   "session_id": "",
                   "text": "",
                   "text_key": "text",
-                  "timestamp": "2026-07-24 19:37:46.964309 UTC"
+                  "timestamp": "2026-07-26 00:40:36.362559 UTC"
                 }
               }
             },
@@ -874,11 +874,11 @@
           },
           "type": "Pass"
         },
-        "id": "PassMessageComponent-9s8Gs"
+        "id": "PassMessageComponent-kbi-9"
       },
       {
         "data": {
-          "id": "PerfCpuBurn--Iyjr",
+          "id": "PerfCpuBurn-I11TA",
           "node": {
             "base_classes": [
               "Message"
@@ -933,7 +933,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "\"\"\"Bounded in-process CPU burn isolator for the performance suite.\"\"\"\n\nfrom __future__ import annotations\n\nimport hashlib\nimport time\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n# Hard ceiling so a misconfigured profile cannot pin a core indefinitely.\n_MAX_DURATION_MS = 5_000\n_MAX_ITERATIONS = 5_000_000\n\n\nclass PerfCpuBurn(Component):\n    \"\"\"Burn CPU for a bounded duration and return a deterministic digest.\"\"\"\n\n    display_name = \"Perf CPU Burn\"\n    description = \"Bounded in-process CPU burn for performance-suite CPU/graph isolators.\"\n    name = \"PerfCpuBurn\"\n    icon = \"cpu\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload echoed into the deterministic digest.\",\n            value=\"perf-cpu\",\n        ),\n        IntInput(\n            name=\"duration_ms\",\n            display_name=\"Duration ms\",\n            info=f\"Target burn duration in milliseconds (capped at {_MAX_DURATION_MS}).\",\n            value=25,\n            range_spec=RangeSpec(min=1, max=_MAX_DURATION_MS, step=1, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"iterations\",\n            display_name=\"Max iterations\",\n            info=f\"Safety bound on hash iterations (capped at {_MAX_ITERATIONS}).\",\n            value=100_000,\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=_MAX_ITERATIONS, step=1, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        duration_ms = max(1, min(int(self.duration_ms or 1), _MAX_DURATION_MS))\n        max_iters = max(1, min(int(self.iterations or 1), _MAX_ITERATIONS))\n        seed = getattr(self.input_value, \"text\", None) or str(self.input_value)\n        digest = hashlib.sha256(seed.encode(\"utf-8\")).hexdigest()\n        deadline = time.perf_counter() + (duration_ms / 1000.0)\n        completed = 0\n        while completed < max_iters and time.perf_counter() < deadline:\n            digest = hashlib.sha256(digest.encode(\"utf-8\")).hexdigest()\n            completed += 1\n        return Message(text=f\"cpu:{duration_ms}:{completed}:{digest[:16]}:{seed}\")\n"
+                "value": "\"\"\"Bounded in-process CPU burn isolator for the performance suite.\n\nEmbedded into ``perf_cpu_graph`` (and ensemble fixtures that include CPU work)\nby ``flows/build_fixtures.py`` / ``flows/builders.py``. Exercised by unit\nbounds checks and live workflows coverage in ``tests/locust/tests/``.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport hashlib\nimport time\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n# Hard ceiling so a misconfigured profile cannot pin a core indefinitely.\n_MAX_DURATION_MS = 5_000\n_MAX_ITERATIONS = 5_000_000\n\n\nclass PerfCpuBurn(Component):\n    \"\"\"Burn CPU for a bounded duration and return a deterministic digest.\"\"\"\n\n    display_name = \"Perf CPU Burn\"\n    description = \"Bounded in-process CPU burn for performance-suite CPU/graph isolators.\"\n    name = \"PerfCpuBurn\"\n    icon = \"cpu\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload echoed into the deterministic digest.\",\n            value=\"perf-cpu\",\n        ),\n        IntInput(\n            name=\"duration_ms\",\n            display_name=\"Duration ms\",\n            info=f\"Target burn duration in milliseconds (capped at {_MAX_DURATION_MS}).\",\n            value=25,\n            range_spec=RangeSpec(min=1, max=_MAX_DURATION_MS, step=1, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"iterations\",\n            display_name=\"Max iterations\",\n            info=f\"Safety bound on hash iterations (capped at {_MAX_ITERATIONS}).\",\n            value=100_000,\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=_MAX_ITERATIONS, step=1, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        duration_ms = max(1, min(int(self.duration_ms or 1), _MAX_DURATION_MS))\n        max_iters = max(1, min(int(self.iterations or 1), _MAX_ITERATIONS))\n        seed = getattr(self.input_value, \"text\", None) or str(self.input_value)\n        digest = hashlib.sha256(seed.encode(\"utf-8\")).hexdigest()\n        deadline = time.perf_counter() + (duration_ms / 1000.0)\n        completed = 0\n        while completed < max_iters and time.perf_counter() < deadline:\n            digest = hashlib.sha256(digest.encode(\"utf-8\")).hexdigest()\n            completed += 1\n        return Message(text=f\"cpu:{duration_ms}:{completed}:{digest[:16]}:{seed}\")\n"
               },
               "duration_ms": {
                 "_input_type": "IntInput",
@@ -1020,11 +1020,11 @@
           },
           "type": "PerfCpuBurn"
         },
-        "id": "PerfCpuBurn--Iyjr"
+        "id": "PerfCpuBurn-I11TA"
       },
       {
         "data": {
-          "id": "PerfCpuBurn-E_pO8",
+          "id": "PerfCpuBurn-GMUII",
           "node": {
             "base_classes": [
               "Message"
@@ -1079,7 +1079,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "\"\"\"Bounded in-process CPU burn isolator for the performance suite.\"\"\"\n\nfrom __future__ import annotations\n\nimport hashlib\nimport time\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n# Hard ceiling so a misconfigured profile cannot pin a core indefinitely.\n_MAX_DURATION_MS = 5_000\n_MAX_ITERATIONS = 5_000_000\n\n\nclass PerfCpuBurn(Component):\n    \"\"\"Burn CPU for a bounded duration and return a deterministic digest.\"\"\"\n\n    display_name = \"Perf CPU Burn\"\n    description = \"Bounded in-process CPU burn for performance-suite CPU/graph isolators.\"\n    name = \"PerfCpuBurn\"\n    icon = \"cpu\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload echoed into the deterministic digest.\",\n            value=\"perf-cpu\",\n        ),\n        IntInput(\n            name=\"duration_ms\",\n            display_name=\"Duration ms\",\n            info=f\"Target burn duration in milliseconds (capped at {_MAX_DURATION_MS}).\",\n            value=25,\n            range_spec=RangeSpec(min=1, max=_MAX_DURATION_MS, step=1, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"iterations\",\n            display_name=\"Max iterations\",\n            info=f\"Safety bound on hash iterations (capped at {_MAX_ITERATIONS}).\",\n            value=100_000,\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=_MAX_ITERATIONS, step=1, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        duration_ms = max(1, min(int(self.duration_ms or 1), _MAX_DURATION_MS))\n        max_iters = max(1, min(int(self.iterations or 1), _MAX_ITERATIONS))\n        seed = getattr(self.input_value, \"text\", None) or str(self.input_value)\n        digest = hashlib.sha256(seed.encode(\"utf-8\")).hexdigest()\n        deadline = time.perf_counter() + (duration_ms / 1000.0)\n        completed = 0\n        while completed < max_iters and time.perf_counter() < deadline:\n            digest = hashlib.sha256(digest.encode(\"utf-8\")).hexdigest()\n            completed += 1\n        return Message(text=f\"cpu:{duration_ms}:{completed}:{digest[:16]}:{seed}\")\n"
+                "value": "\"\"\"Bounded in-process CPU burn isolator for the performance suite.\n\nEmbedded into ``perf_cpu_graph`` (and ensemble fixtures that include CPU work)\nby ``flows/build_fixtures.py`` / ``flows/builders.py``. Exercised by unit\nbounds checks and live workflows coverage in ``tests/locust/tests/``.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport hashlib\nimport time\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n# Hard ceiling so a misconfigured profile cannot pin a core indefinitely.\n_MAX_DURATION_MS = 5_000\n_MAX_ITERATIONS = 5_000_000\n\n\nclass PerfCpuBurn(Component):\n    \"\"\"Burn CPU for a bounded duration and return a deterministic digest.\"\"\"\n\n    display_name = \"Perf CPU Burn\"\n    description = \"Bounded in-process CPU burn for performance-suite CPU/graph isolators.\"\n    name = \"PerfCpuBurn\"\n    icon = \"cpu\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload echoed into the deterministic digest.\",\n            value=\"perf-cpu\",\n        ),\n        IntInput(\n            name=\"duration_ms\",\n            display_name=\"Duration ms\",\n            info=f\"Target burn duration in milliseconds (capped at {_MAX_DURATION_MS}).\",\n            value=25,\n            range_spec=RangeSpec(min=1, max=_MAX_DURATION_MS, step=1, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"iterations\",\n            display_name=\"Max iterations\",\n            info=f\"Safety bound on hash iterations (capped at {_MAX_ITERATIONS}).\",\n            value=100_000,\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=_MAX_ITERATIONS, step=1, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        duration_ms = max(1, min(int(self.duration_ms or 1), _MAX_DURATION_MS))\n        max_iters = max(1, min(int(self.iterations or 1), _MAX_ITERATIONS))\n        seed = getattr(self.input_value, \"text\", None) or str(self.input_value)\n        digest = hashlib.sha256(seed.encode(\"utf-8\")).hexdigest()\n        deadline = time.perf_counter() + (duration_ms / 1000.0)\n        completed = 0\n        while completed < max_iters and time.perf_counter() < deadline:\n            digest = hashlib.sha256(digest.encode(\"utf-8\")).hexdigest()\n            completed += 1\n        return Message(text=f\"cpu:{duration_ms}:{completed}:{digest[:16]}:{seed}\")\n"
               },
               "duration_ms": {
                 "_input_type": "IntInput",
@@ -1166,7 +1166,7 @@
           },
           "type": "PerfCpuBurn"
         },
-        "id": "PerfCpuBurn-E_pO8"
+        "id": "PerfCpuBurn-GMUII"
       }
     ]
   },

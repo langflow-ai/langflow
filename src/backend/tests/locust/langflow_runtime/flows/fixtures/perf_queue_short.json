@@ -5,7 +5,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-d0qpd",
+            "id": "ChatInput-OZjsv",
             "name": "message",
             "output_types": [
               "Message"
@@ -13,21 +13,21 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "PerfSleep-Uvpi5",
+            "id": "PerfSleep-kRDJs",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "source": "ChatInput-d0qpd",
-        "target": "PerfSleep-Uvpi5"
+        "source": "ChatInput-OZjsv",
+        "target": "PerfSleep-kRDJs"
       },
       {
         "data": {
           "sourceHandle": {
             "dataType": "PerfSleep",
-            "id": "PerfSleep-Uvpi5",
+            "id": "PerfSleep-kRDJs",
             "name": "output",
             "output_types": [
               "Message"
@@ -35,7 +35,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-lmxfm",
+            "id": "ChatOutput-9zdde",
             "inputTypes": [
               "Data",
               "JSON",
@@ -46,14 +46,14 @@
             "type": "other"
           }
         },
-        "source": "PerfSleep-Uvpi5",
-        "target": "ChatOutput-lmxfm"
+        "source": "PerfSleep-kRDJs",
+        "target": "ChatOutput-9zdde"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-d0qpd",
+          "id": "ChatInput-OZjsv",
           "node": {
             "base_classes": [
               "Message"
@@ -318,11 +318,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-d0qpd"
+        "id": "ChatInput-OZjsv"
       },
       {
         "data": {
-          "id": "ChatOutput-lmxfm",
+          "id": "ChatOutput-9zdde",
           "node": {
             "base_classes": [
               "Message"
@@ -585,11 +585,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-lmxfm"
+        "id": "ChatOutput-9zdde"
       },
       {
         "data": {
-          "id": "PerfSleep-Uvpi5",
+          "id": "PerfSleep-kRDJs",
           "node": {
             "base_classes": [
               "Message"
@@ -644,7 +644,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "\"\"\"Bounded sleep isolator for the performance suite queue fixtures.\"\"\"\n\nfrom __future__ import annotations\n\nimport time\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n# Hard ceiling so a misconfigured profile cannot stall workers indefinitely.\n_MAX_DURATION_MS = 5_000\n\n\nclass PerfSleep(Component):\n    \"\"\"Sleep for a bounded duration and return a deterministic result.\"\"\"\n\n    display_name = \"Perf Sleep\"\n    description = \"Bounded sleep isolator for performance-suite background-queue fixtures.\"\n    name = \"PerfSleep\"\n    icon = \"timer\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload echoed into the deterministic result.\",\n            value=\"ping\",\n        ),\n        IntInput(\n            name=\"duration_ms\",\n            display_name=\"Duration ms\",\n            info=f\"Sleep duration in milliseconds (capped at {_MAX_DURATION_MS}).\",\n            value=50,\n            range_spec=RangeSpec(min=1, max=_MAX_DURATION_MS, step=1, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        duration_ms = max(1, min(int(self.duration_ms or 1), _MAX_DURATION_MS))\n        time.sleep(duration_ms / 1000.0)\n        text = getattr(self.input_value, \"text\", None) or str(self.input_value)\n        return Message(text=f\"slept:{duration_ms}:{text}\")\n"
+                "value": "\"\"\"Bounded sleep isolator for the performance suite queue fixtures.\n\nEmbedded into ``perf_queue_short`` by ``flows/build_fixtures.py``. Used to\nhold a workflow in the job queue long enough for admission/completion\nassertions in ``tests/locust/tests/integration/``.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport time\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n# Hard ceiling so a misconfigured profile cannot stall workers indefinitely.\n_MAX_DURATION_MS = 5_000\n\n\nclass PerfSleep(Component):\n    \"\"\"Sleep for a bounded duration and return a deterministic result.\"\"\"\n\n    display_name = \"Perf Sleep\"\n    description = \"Bounded sleep isolator for performance-suite background-queue fixtures.\"\n    name = \"PerfSleep\"\n    icon = \"timer\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload echoed into the deterministic result.\",\n            value=\"ping\",\n        ),\n        IntInput(\n            name=\"duration_ms\",\n            display_name=\"Duration ms\",\n            info=f\"Sleep duration in milliseconds (capped at {_MAX_DURATION_MS}).\",\n            value=50,\n            range_spec=RangeSpec(min=1, max=_MAX_DURATION_MS, step=1, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        duration_ms = max(1, min(int(self.duration_ms or 1), _MAX_DURATION_MS))\n        time.sleep(duration_ms / 1000.0)\n        text = getattr(self.input_value, \"text\", None) or str(self.input_value)\n        return Message(text=f\"slept:{duration_ms}:{text}\")\n"
               },
               "duration_ms": {
                 "_input_type": "IntInput",
@@ -704,7 +704,7 @@
           },
           "type": "PerfSleep"
         },
-        "id": "PerfSleep-Uvpi5"
+        "id": "PerfSleep-kRDJs"
       }
     ]
   },

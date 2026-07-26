@@ -4,6 +4,12 @@ Generates isolator flows via ``Graph.dump`` (embedding the committed custom-comp
 sources), copies pinned fixtures, and builds generated-equivalent KB/outbound graphs.
 Writes ``flows/fixture_index.json`` with content hashes for every fixture.
 
+``Graph.dump`` assigns fresh node IDs on every rebuild, so a full ``build_all``
+rewrites *all* generated fixtures even when only one isolator changed. Prefer
+rebuilding only when component sources or graph topology change, and keep
+unrelated fixture diffs out of PRs (restore + selective rebuild, or accept the
+noise only when intentionally refreshing the whole set).
+
 Run from ``src/backend``::
 
     PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.flows.build_fixtures
@@ -19,6 +25,7 @@ from typing import TYPE_CHECKING
 from tests.locust.langflow_runtime.flows import validate_fixtures
 from tests.locust.langflow_runtime.flows.builders import (
     build_cpu_graph,
+    build_disk_io,
     build_ensemble_journey,
     build_ensemble_journey_hitl,
     build_kb_ingest,
@@ -71,6 +78,7 @@ def build_all() -> dict[str, Path]:
         "perf_kb_retrieve.json": build_kb_retrieve(),
         "perf_cpu_graph.json": build_cpu_graph(),
         "perf_multiproc_churn.json": build_multiproc_churn(),
+        "perf_disk_io.json": build_disk_io(),
         "perf_payload_echo.json": build_payload_echo(),
         "perf_outbound_basic_prompting.json": build_outbound_basic_prompting(),
         "perf_ensemble_journey.json": build_ensemble_journey(),
