@@ -28,3 +28,4 @@ export const ENABLE_FETCH_CREDENTIALS = false;
 // extension id to send to /api/v1/extensions/{id}/bundles/{name}/reload.
 export const ENABLE_EXTENSION_RELOAD =
   import.meta.env.LANGFLOW_EXTENSION_RELOAD_ENABLED === "true";
+export const ENABLE_ENTERPRISE = true;

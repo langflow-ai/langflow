@@ -28,6 +28,7 @@ jest.mock("@/customization/hooks/use-custom-navigate", () => ({
 
 jest.mock("@/customization/feature-flags", () => ({
   ENABLE_DATASTAX_LANGFLOW: false,
+  ENABLE_ENTERPRISE: true,
 }));
 
 jest.mock("@/stores/authStore", () => ({

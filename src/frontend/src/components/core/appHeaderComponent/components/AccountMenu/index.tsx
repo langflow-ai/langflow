@@ -9,8 +9,12 @@ import {
   TWITTER_URL,
 } from "@/constants/constants";
 import { useLogout } from "@/controllers/API/queries/auth";
+import { CustomAdminPageMenuItem } from "@/customization/components/custom-admin-page-menu-item";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import {
+  ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_ENTERPRISE,
+} from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
@@ -118,6 +122,9 @@ export const AccountMenu = () => {
                   </span>
                 </HeaderMenuItemButton>
               </div>
+            )}
+            {ENABLE_ENTERPRISE && isAdmin && (
+              <CustomAdminPageMenuItem onNavigate={(path) => navigate(path)} />
             )}
             <HeaderMenuItemLink
               newPage
