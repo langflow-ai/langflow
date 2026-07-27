@@ -110,8 +110,8 @@ RUN ARCH=$(uname -m) \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
     && npm install -g npm@latest \
-    # remove once tar and brace-expansion in UBI10 are updated
-    && npm install --prefix /usr/local/lib/node_modules/npm brace-expansion@latest tar@latest
+    # remove once tar and brace-expansion in UBI10 are updated \
+    && cd /usr/local/lib/node_modules/npm && npm install --no-save brace-expansion@latest tar@latest
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
