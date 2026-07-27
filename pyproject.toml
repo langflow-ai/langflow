@@ -45,6 +45,7 @@ dependencies = [
     "lfx-paddle>=0.1.0,<1.0.0",
     "lfx-vllm>=0.1.0,<1.0.0",
     "lfx-empiriolabs>=0.1.0,<1.0.0",
+    "lfx-greenpt>=0.1.0,<1.0.0",
     "lfx-openai-compatible>=0.1.0,<1.0.0",
     "lfx-exa>=0.1.0,<1.0.0",
     "lfx-valkey>=0.1.0,<1.0.0",
@@ -125,6 +126,7 @@ lfx-nextplaid = { workspace = true }
 lfx-paddle = { workspace = true }
 lfx-vllm = { workspace = true }
 lfx-empiriolabs = { workspace = true }
+lfx-greenpt = { workspace = true }
 lfx-openai-compatible = { workspace = true }
 lfx-exa = { workspace = true }
 lfx-valkey = { workspace = true }
@@ -160,6 +162,7 @@ members = [
     "src/bundles/paddle",
     "src/bundles/vllm",
     "src/bundles/empiriolabs",
+    "src/bundles/greenpt",
     "src/bundles/openai-compatible",
     "src/bundles/exa",
     "src/bundles/valkey",

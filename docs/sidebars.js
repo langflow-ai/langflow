@@ -516,6 +516,7 @@ module.exports = {
             "Components/bundles-firecrawl",
             "Components/bundles-glean",
             "Components/bundles-google",
+            "Components/bundles-greenpt",
             "Components/bundles-groq",
             "Components/bundles-huggingface",
             "Components/bundles-ibm",

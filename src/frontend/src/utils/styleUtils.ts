@@ -466,6 +466,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Glean", name: "glean", icon: "Glean" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   { display_name: "Google", name: "google", icon: "Google" },
+  { display_name: "GreenPT", name: "greenpt", icon: "GreenPT" },
   { display_name: "Groq", name: "groq", icon: "Groq" },
   {
     display_name: "Home Assistant",
@@ -620,6 +621,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   Discord: "FaDiscord",
   ElasticsearchStore: "ElasticsearchStore",
   empiriolabs: "EmpirioLabs",
+  greenpt: "GreenPT",
   EverNoteLoader: "Evernote",
   ExaSearch: "Exa",
   FacebookChatLoader: "FacebookMessenger",

@@ -175,6 +175,10 @@ export const lazyIconsMapping = {
     import("@/icons/EmpirioLabs").then((mod) => ({
       default: mod.EmpirioLabsIcon,
     })),
+  GreenPT: () =>
+    import("@/icons/GreenPT").then((mod) => ({
+      default: mod.GreenPTIcon,
+    })),
   Evernote: () =>
     import("@/icons/Evernote").then((mod) => ({ default: mod.EvernoteIcon })),
   Exa: () => import("@/icons/Exa").then((mod) => ({ default: mod.ExaIcon })),

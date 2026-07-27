@@ -133,6 +133,16 @@
       "resolved_version": "0.1.0"
     },
     {
+      "distribution": "lfx-greenpt",
+      "extras": [],
+      "providers": [
+        "lfx-greenpt"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-greenpt==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-ibm",
       "extras": [],
       "providers": [
@@ -199,8 +209,8 @@
         "lfx-paddle"
       ],
       "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-paddle==0.1.1",
-      "resolved_version": "0.1.1"
+      "requirement": "lfx-paddle==0.1.2",
+      "resolved_version": "0.1.2"
     },
     {
       "distribution": "lfx-valkey",
@@ -230,7 +240,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:858fe851a431eba2",
+  "profile_digest": "sha256:e58f989e9467393d",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -244,6 +254,7 @@
     "lfx-exa",
     "lfx-firecrawl",
     "lfx-google",
+    "lfx-greenpt",
     "lfx-ibm",
     "lfx-nextplaid",
     "lfx-ollama",

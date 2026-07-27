@@ -1,0 +1,71 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-greenpt",
+  "version": "0.1.0",
+  "name": "GreenPT",
+  "description": "GreenPT is a European AI provider with an OpenAI-compatible API, optimized infrastructure, and data centers powered by 100% renewable energy.",
+  "lfx": {
+    "compat": ["1"]
+  },
+  "bundles": [
+    {
+      "name": "greenpt",
+      "path": "components/greenpt"
+    }
+  ],
+  "providers": [
+    {
+      "name": "GreenPT",
+      "metadata": {
+        "icon": "GreenPT",
+        "max_tokens_field_name": "max_tokens",
+        "variables": [
+          {
+            "variable_name": "GreenPT API Key",
+            "variable_key": "GREENPT_API_KEY",
+            "description": "API key for GreenPT's OpenAI-compatible API.",
+            "required": true,
+            "is_secret": true,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "api_key",
+            "component_metadata": {
+              "mapping_field": "api_key",
+              "required": false,
+              "advanced": true,
+              "info": "Falls back to the GREENPT_API_KEY environment variable"
+            }
+          }
+        ],
+        "api_docs_url": "https://docs.greenpt.ai",
+        "mapping": {
+          "model_class": "ChatGreenPT",
+          "model_param": "model"
+        }
+      },
+      "model_class": {
+        "module": "lfx_greenpt.models",
+        "attr": "ChatGreenPT"
+      },
+      "embedding": {
+        "class_name": "GreenPTEmbeddings",
+        "module": "lfx_greenpt.models",
+        "attr": "GreenPTEmbeddings",
+        "param_mapping_key": "GreenPT",
+        "param_mapping": {
+          "model": "model",
+          "dimensions": "dimensions",
+          "chunk_size": "chunk_size",
+          "request_timeout": "timeout",
+          "max_retries": "max_retries",
+          "show_progress_bar": "show_progress_bar",
+          "model_kwargs": "model_kwargs"
+        }
+      },
+      "api_key_required": true,
+      "live": true,
+      "live_discovery": "lfx_greenpt.discovery:fetch_live_greenpt_models",
+      "validator": "lfx_greenpt.discovery:validate_greenpt_credentials"
+    }
+  ]
+}

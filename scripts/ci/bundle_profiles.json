@@ -165,6 +165,14 @@
           ]
         },
         {
+          "distribution": "lfx-greenpt",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-greenpt"
+          ]
+        },
+        {
           "distribution": "lfx-openai-compatible",
           "extras": [],
           "version": ">=0.1.0,<1.0.0",

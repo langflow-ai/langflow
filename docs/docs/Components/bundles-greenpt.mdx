@@ -1,0 +1,36 @@
+---
+title: GreenPT
+slug: /bundles-greenpt
+---
+
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="greenpt" />
+
+GreenPT is a European AI provider with an OpenAI-compatible API, optimized
+infrastructure, and data centers powered by 100% renewable energy.
+
+The GreenPT extension adds GreenPT to Langflow's model provider picker and
+discovers the models available to your API key from the live `/v1/models`
+endpoint. It also includes dedicated reranking and speech-to-text components.
+
+## Models and embeddings
+
+Configure your **GreenPT API Key** in the model provider dialog. Langflow then
+shows the current language and embedding models available to the key. Flagship
+language models include `glm-5.2` and `kimi-k2.7-code`; GreenPT embeddings are
+available through `green-embedding`.
+
+## GreenPT Rerank
+
+The **GreenPT Rerank** component reranks documents against a search query with
+`green-rerank`. Connect vector-store search results, enter the query and API
+key, and select the number of results to return.
+
+## GreenPT Speech to Text
+
+The **GreenPT Speech to Text** component transcribes a public HTTP or HTTPS
+audio URL with GreenS Pro or GreenS. It returns the transcript as a
+[`Message`](/data-types#message).
+
+For API details, see the [GreenPT documentation](https://docs.greenpt.ai).
