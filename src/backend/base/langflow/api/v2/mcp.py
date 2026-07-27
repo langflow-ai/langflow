@@ -506,7 +506,7 @@ async def update_server(
         # (version = version + 1) so it stays strictly monotonic even when our ORM copy
         # is stale. An ORM `+= 1` off a stale read could reuse a version a concurrent
         # PATCH already consumed, letting a later guarded PATCH pass its version check.
-        await session.execute(
+        replaced = await session.execute(
             update(MCPServer)
             .where(MCPServer.id == existing.id)
             .values(
@@ -517,7 +517,16 @@ async def update_server(
             )
         )
         await session.commit()
-        break
+        if replaced.rowcount == 1:
+            break
+        # Row deleted under us: re-read, and a still-missing row takes the create path
+        # next iteration — the replace converges to a re-create instead of silently
+        # returning None with the write lost.
+        session.expire(existing)
+        result = await session.exec(
+            select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == server_name)
+        )
+        existing = result.first()
     else:
         raise HTTPException(status_code=409, detail="MCP server was updated concurrently; please retry.")
 

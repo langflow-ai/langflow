@@ -444,3 +444,48 @@ async def test_full_replace_bumps_version_db_side_under_concurrent_write(tmp_pat
     await engine.dispose()
     assert row.version == 6, f"replace must bump DB-side (5 + 1 = 6), got {row.version} (stale/reused version)"
     assert row.config.get("replaced") == "yes", "replace must overwrite the config"
+
+
+@pytest.mark.asyncio
+async def test_replace_losing_to_concurrent_delete_recreates(tmp_path):
+    """A full replace whose row is deleted between its read and its UPDATE re-creates the row.
+
+    Without the rowcount check the unguarded UPDATE matches nothing, the loop breaks, and the
+    request returns None with the write silently lost (200, no row). With it, the re-read finds
+    no row and the next iteration takes the create path, so the replace converges to a re-create.
+    """
+    engine = await _file_engine(tmp_path / "mcp.db")
+    db_path = str(tmp_path / "mcp.db")
+    user = SimpleNamespace(id=uuid.uuid4())
+
+    import langflow.api.v2.mcp as mcp_mod
+
+    real_derive = mcp_mod._derive_transport
+    raced = {"done": False}
+
+    def derive_then_delete(config):
+        # The replace calls _derive_transport between its read and its unguarded UPDATE;
+        # delete the row right there (raw sqlite = synchronous) so the UPDATE matches 0 rows.
+        if not raced["done"]:
+            raced["done"] = True
+            con = sqlite3.connect(db_path, timeout=30)
+            con.execute("DELETE FROM mcp_server WHERE name = 'svc'")
+            con.commit()
+            con.close()
+        return real_derive(config)
+
+    with patch.multiple("langflow.api.v2.mcp", **CACHE_PATCH):
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            await update_server("svc", {"url": "https://x", "old": "1"}, user, session, None, None)
+        with patch.object(mcp_mod, "_derive_transport", derive_then_delete):
+            async with AsyncSession(engine, expire_on_commit=False) as session:
+                result = await update_server("svc", {"url": "https://y", "replaced": "yes"}, user, session, None, None)
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            row = (await session.exec(select(MCPServer).where(MCPServer.name == "svc"))).first()
+
+    await engine.dispose()
+    assert row is not None, "replace raced by a delete must re-create the row, not silently no-op"
+    assert row.version == 1, f"re-created row starts fresh at version 1, got {row.version}"
+    assert row.config.get("replaced") == "yes", "re-created row must carry the replace's config"
+    assert row.config.get("old") is None, "re-created row must not resurrect the deleted config"
+    assert result == {"url": "https://y", "replaced": "yes"}, f"replace must return the written config, got {result!r}"
