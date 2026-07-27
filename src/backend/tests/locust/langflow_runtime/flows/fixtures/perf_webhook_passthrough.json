@@ -5,7 +5,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Webhook",
-            "id": "WebhookComponent-VSlis",
+            "id": "WebhookComponent-jyQes",
             "name": "output_data",
             "output_types": [
               "JSON"
@@ -13,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-fEk7F",
+            "id": "ChatOutput-t3_1C",
             "inputTypes": [
               "Data",
               "JSON",
@@ -24,14 +24,14 @@
             "type": "other"
           }
         },
-        "source": "WebhookComponent-VSlis",
-        "target": "ChatOutput-fEk7F"
+        "source": "WebhookComponent-jyQes",
+        "target": "ChatOutput-t3_1C"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "WebhookComponent-VSlis",
+          "id": "WebhookComponent-jyQes",
           "node": {
             "base_classes": [
               "JSON"
@@ -178,11 +178,11 @@
           },
           "type": "Webhook"
         },
-        "id": "WebhookComponent-VSlis"
+        "id": "WebhookComponent-jyQes"
       },
       {
         "data": {
-          "id": "ChatOutput-fEk7F",
+          "id": "ChatOutput-t3_1C",
           "node": {
             "base_classes": [
               "Message"
@@ -445,7 +445,7 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-fEk7F"
+        "id": "ChatOutput-t3_1C"
       }
     ]
   },

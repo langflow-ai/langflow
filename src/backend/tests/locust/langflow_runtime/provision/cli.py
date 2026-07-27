@@ -16,6 +16,7 @@ import os
 import sys
 from typing import Any
 
+from tests.locust.langflow_runtime.datasets.storage_payload import bounded_payload_text
 from tests.locust.langflow_runtime.provision import DEFAULT_ENV_ID, SMOKE_FLOW_IDS
 from tests.locust.langflow_runtime.provision.api import ProvisionHttp
 from tests.locust.langflow_runtime.provision.api_keys import create_suite_api_key
@@ -35,6 +36,7 @@ from tests.locust.langflow_runtime.provision.state import (
     load_state,
     new_state,
     redact_state_for_log,
+    register_resource,
     save_state,
     state_path_for,
 )
@@ -75,7 +77,10 @@ def _add_common_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--flows",
         default=None,
-        help=f"Comma-separated fixture ids, or 'all'. Default: smoke set ({', '.join(SMOKE_FLOW_IDS)})",
+        help=(
+            "Comma-separated fixture ids, or 'smoke' default, 'v1' (all non-deferred), "
+            f"or 'all'. Default: smoke set ({', '.join(SMOKE_FLOW_IDS)})"
+        ),
     )
     parser.add_argument("--dry-run", action="store_true", help="Plan only (no mutations)")
     parser.add_argument("--skip-validate", action="store_true", help="On apply, skip live HITL/webhook/MCP checks")
@@ -139,7 +144,7 @@ def plan_resources(*, env_id: str, host: str, flow_ids: list[str], mode: str) ->
         "flows": planned_flows,
         "webhook_fixtures": planned_webhooks,
         "kb": needs_kb(flow_ids, by_id),
-        "chat_seed": "MemoryChatbotNoLLM" in flow_ids,
+        "chat_seed": any(fid == "MemoryChatbotNoLLM" or fid.startswith("natural_memory_chatbot__") for fid in flow_ids),
         "hitl_validate": "human_input_flow" in flow_ids,
         "user_pool": mode == "superuser-pool",
     }
@@ -161,7 +166,6 @@ def _teardown_existing_if_present(
     http: ProvisionHttp,
     *,
     env_id: str,
-    mode: str,
     username: str | None,
     password: str | None,
 ) -> None:
@@ -174,17 +178,62 @@ def _teardown_existing_if_present(
     except FileNotFoundError:
         return
     print(f"tearing down prior state for {env_id} before re-apply", file=sys.stderr)
-    # Prefer superuser for teardown so suite users can be deleted.
-    authenticate(http, mode="superuser-pool", username=username, password=password)
-    results = teardown_state(http, prior)
-    refused = [r for r in results if r.get("status") == "refused"]
-    if refused:
-        print(json.dumps({"prior_teardown_refused": refused}, indent=2), file=sys.stderr)
+    results = _teardown_provisioned_state(
+        http,
+        prior,
+        username=username,
+        password=password,
+    )
+    failures = _teardown_failures(results)
+    if failures:
+        print(json.dumps({"prior_teardown_failed": failures}, indent=2), file=sys.stderr)
+        msg = f"prior teardown for {env_id!r} did not complete safely"
+        raise RuntimeError(msg)
     try:
         path.unlink(missing_ok=True)
     except TypeError:
         if path.exists():
             path.unlink()
+
+
+def _teardown_failures(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [result for result in results if result.get("status") not in {"deleted", "missing"}]
+
+
+def _teardown_provisioned_state(
+    http: ProvisionHttp,
+    state: dict[str, Any],
+    *,
+    username: str | None,
+    password: str | None,
+) -> list[dict[str, Any]]:
+    """Delete owner-scoped resources before deleting a suite user as administrator."""
+    mode = str(state.get("mode") or "superuser_pool").replace("_", "-")
+    credentials = state.get("credentials") or {}
+    suite_username = credentials.get("suite_username")
+    suite_password = credentials.get("password")
+
+    if mode == "superuser-pool":
+        if not suite_username or not suite_password:
+            msg = "superuser-pool teardown state is missing suite-user credentials"
+            raise RuntimeError(msg)
+        http.login(str(suite_username), str(suite_password))
+    else:
+        authenticate(http, mode="existing-user", username=username, password=password)
+
+    teardown_tokens = state.get("teardown_order") or []
+    results = [{"token": str(token), "status": "invalid_token"} for token in teardown_tokens if ":" not in str(token)]
+    resource_kinds = {str(token).split(":", 1)[0] for token in teardown_tokens if ":" in str(token)}
+    owner_kinds = resource_kinds - {"user"}
+    results.extend(teardown_state(http, state, resource_kinds=owner_kinds))
+
+    if _teardown_failures(results):
+        return results
+
+    if "user" in resource_kinds:
+        authenticate(http, mode="superuser-pool", username=username, password=password)
+        results.extend(teardown_state(http, state, resource_kinds={"user"}))
+    return results
 
 
 def cmd_apply(args: argparse.Namespace) -> int:
@@ -217,7 +266,6 @@ def cmd_apply(args: argparse.Namespace) -> int:
         _teardown_existing_if_present(
             http,
             env_id=env_id,
-            mode=args.mode,
             username=args.username,
             password=args.password,
         )
@@ -227,6 +275,22 @@ def cmd_apply(args: argparse.Namespace) -> int:
         state["username"] = state.get("username") or (args.username or "unknown")
 
         create_suite_api_key(http, state)
+        if needs_kb(flow_ids, by_id):
+            provision_kb(http, state)
+        if any(fid.startswith("natural_file_parser_agent__") for fid in flow_ids):
+            uploaded = http.upload_user_file(
+                filename=f"perf-natural-{env_id}.txt",
+                content=bounded_payload_text().encode(),
+            )
+            state["natural_file"] = uploaded
+            register_resource(
+                state,
+                kind="user_file",
+                resource_id=str(uploaded["id"]),
+                name=str(uploaded.get("name") or f"perf-natural-{env_id}.txt"),
+                env_id=env_id,
+            )
+
         provision_flows(http, state, flow_ids=regular, index=index)
         provision_webhook_copies(
             http,
@@ -235,9 +299,6 @@ def cmd_apply(args: argparse.Namespace) -> int:
             index=index,
             profile_max=args.webhook_copy_max,
         )
-
-        if needs_kb(flow_ids, by_id):
-            provision_kb(http, state)
 
         configure_mcp_for_state(http, state)
 
@@ -249,7 +310,9 @@ def cmd_apply(args: argparse.Namespace) -> int:
             if any((state.get("flows") or {}).get(fid, {}).get("mcp_action_name") for fid in regular):
                 if not validate_mcp_tools_listable(http, state):
                     validation_errors.append("mcp tools/list validation failed")
-            if "MemoryChatbotNoLLM" in flow_ids and not validation_errors:
+            if (
+                "MemoryChatbotNoLLM" in flow_ids or any(fid.startswith("natural_memory_chatbot__") for fid in flow_ids)
+            ) and not validation_errors:
                 seed_chat_history(http, state)
 
         # Always persist state so failed applies remain tear-downable.
@@ -325,11 +388,14 @@ def cmd_teardown(args: argparse.Namespace) -> int:
         return 0
 
     with ProvisionHttp(host) as http:
-        # Prefer superuser so suite-created users can be deleted.
-        authenticate(http, mode="superuser-pool", username=args.username, password=args.password)
-        results = teardown_state(http, state)
+        results = _teardown_provisioned_state(
+            http,
+            state,
+            username=args.username,
+            password=args.password,
+        )
     print(json.dumps({"env_id": env_id, "results": results}, indent=2))
-    failed = [r for r in results if r.get("status") == "error"]
+    failed = _teardown_failures(results)
     path = state_path_for(env_id)
     if not failed and path.exists():
         path.unlink()

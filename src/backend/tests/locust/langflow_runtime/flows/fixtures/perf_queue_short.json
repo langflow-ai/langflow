@@ -4,30 +4,8 @@
       {
         "data": {
           "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-0lV-f",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "PerfSleep-m8VVy",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "ChatInput-0lV-f",
-        "target": "PerfSleep-m8VVy"
-      },
-      {
-        "data": {
-          "sourceHandle": {
             "dataType": "PerfSleep",
-            "id": "PerfSleep-m8VVy",
+            "id": "PerfSleep-nxjJq",
             "name": "output",
             "output_types": [
               "Message"
@@ -35,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-QKDmy",
+            "id": "ChatOutput-hgEiW",
             "inputTypes": [
               "Data",
               "JSON",
@@ -46,14 +24,36 @@
             "type": "other"
           }
         },
-        "source": "PerfSleep-m8VVy",
-        "target": "ChatOutput-QKDmy"
+        "source": "PerfSleep-nxjJq",
+        "target": "ChatOutput-hgEiW"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-jrfNf",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfSleep-nxjJq",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-jrfNf",
+        "target": "PerfSleep-nxjJq"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-0lV-f",
+          "id": "ChatInput-jrfNf",
           "node": {
             "base_classes": [
               "Message"
@@ -318,11 +318,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-0lV-f"
+        "id": "ChatInput-jrfNf"
       },
       {
         "data": {
-          "id": "ChatOutput-QKDmy",
+          "id": "ChatOutput-hgEiW",
           "node": {
             "base_classes": [
               "Message"
@@ -585,11 +585,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-QKDmy"
+        "id": "ChatOutput-hgEiW"
       },
       {
         "data": {
-          "id": "PerfSleep-m8VVy",
+          "id": "PerfSleep-nxjJq",
           "node": {
             "base_classes": [
               "Message"
@@ -704,7 +704,7 @@
           },
           "type": "PerfSleep"
         },
-        "id": "PerfSleep-m8VVy"
+        "id": "PerfSleep-nxjJq"
       }
     ]
   },

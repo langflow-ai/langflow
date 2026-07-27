@@ -3,7 +3,7 @@
   "id": "protocol_calibration",
   "test_type": "load",
   "purpose": "Measure protocol overhead across MCP, Workflows v2, and Webhooks on passthrough fixtures.",
-  "movement_kind": "solo",
+  "movement_kind": "axis_set",
   "stress_categories": [
     "protocol_calibration"
   ],

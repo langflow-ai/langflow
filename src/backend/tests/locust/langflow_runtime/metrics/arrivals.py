@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import math
+import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 try:
@@ -24,18 +27,18 @@ class ArrivalAccountant:
     miss_reasons: dict[str, int] = field(default_factory=dict)
     _lock: RLock = field(default_factory=RLock, repr=False)
 
-    def record_intended_slot(self) -> None:
+    def record_intended_slot(self, count: int = 1) -> None:
         with self._lock:
-            self.intended += 1
+            self.intended += count
 
     def record_attempt(self) -> None:
         with self._lock:
             self.attempted += 1
 
-    def record_miss(self, reason: str) -> None:
+    def record_miss(self, reason: str, count: int = 1) -> None:
         with self._lock:
-            self.missed += 1
-            self.miss_reasons[reason] = self.miss_reasons.get(reason, 0) + 1
+            self.missed += count
+            self.miss_reasons[reason] = self.miss_reasons.get(reason, 0) + count
 
     def record_accepted(self) -> None:
         with self._lock:
@@ -63,3 +66,52 @@ class ArrivalAccountant:
                 "successful": self.successful,
                 "miss_reasons": dict(self.miss_reasons),
             }
+
+
+@dataclass(frozen=True)
+class ArrivalReservation:
+    """One scheduled admission slot plus slots skipped without catch-up replay."""
+
+    delay_s: float
+    missed_slots: int
+    lateness_s: float
+
+
+class PacedArrivalScheduler:
+    """Reserve global monotonic arrival slots shared by all queue users."""
+
+    def __init__(
+        self,
+        rate_per_s: float,
+        *,
+        allowed_lateness_s: float,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        if rate_per_s <= 0:
+            msg = "rate_per_s must be positive"
+            raise ValueError(msg)
+        if allowed_lateness_s < 0:
+            msg = "allowed_lateness_s must be non-negative"
+            raise ValueError(msg)
+        self.interval_s = 1.0 / rate_per_s
+        self.allowed_lateness_s = allowed_lateness_s
+        self._clock = clock
+        self._next_slot = clock()
+        self._lock = RLock()
+
+    def reserve(self) -> ArrivalReservation:
+        """Reserve the next usable slot and count expired slots as misses."""
+        with self._lock:
+            now = self._clock()
+            slot = self._next_slot
+            lateness = max(0.0, now - slot)
+            missed = 0
+            if lateness > self.allowed_lateness_s:
+                missed = max(1, math.ceil((lateness - self.allowed_lateness_s) / self.interval_s))
+                slot += missed * self.interval_s
+            self._next_slot = slot + self.interval_s
+            return ArrivalReservation(
+                delay_s=max(0.0, slot - now),
+                missed_slots=missed,
+                lateness_s=max(0.0, now - slot),
+            )

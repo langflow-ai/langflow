@@ -19,7 +19,7 @@ class RedactedRunReport:
     drain: dict[str, object]
     correctness_summary: dict[str, object]
     locust_stats_summary: dict[str, object]
-    hashes: dict[str, str] = field(default_factory=dict)
+    hashes: dict[str, object] = field(default_factory=dict)
     generated_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
@@ -60,7 +60,8 @@ def write_report(
     drain: dict[str, object],
     correctness_summary: dict[str, object],
     locust_stats_summary: dict[str, object],
-    hashes: dict[str, str],
+    hashes: dict[str, object],
+    selection: dict[str, object] | None = None,
 ) -> Path:
     """Write a redacted JSON summary beside Locust CSV/HTML artifacts."""
     report = RedactedRunReport(
@@ -82,6 +83,7 @@ def write_report(
             "correctness_summary": report.correctness_summary,
             "locust_stats_summary": report.locust_stats_summary,
             "hashes": report.hashes,
+            "selection": selection or {},
         }
     )
     out_dir = Path(report_dir)
@@ -98,6 +100,7 @@ _LISTENER_STATE: dict[str, Any] = {
     "drain": {},
     "correctness_summary": {},
     "hashes": {},
+    "selection": {},
     "attached": False,
 }
 
@@ -109,7 +112,8 @@ def set_report_context(
     arrivals: dict[str, object] | None = None,
     drain: dict[str, object] | None = None,
     correctness_summary: dict[str, object] | None = None,
-    hashes: dict[str, str] | None = None,
+    hashes: dict[str, object] | None = None,
+    selection: dict[str, object] | None = None,
 ) -> None:
     """Update context used when listeners write the JSON summary."""
     if profile is not None:
@@ -124,6 +128,8 @@ def set_report_context(
         _LISTENER_STATE["correctness_summary"] = correctness_summary
     if hashes is not None:
         _LISTENER_STATE["hashes"] = hashes
+    if selection is not None:
+        _LISTENER_STATE["selection"] = selection
 
 
 def finalize_reports(environment: Any) -> None:
@@ -145,6 +151,7 @@ def finalize_reports(environment: Any) -> None:
         correctness_summary=dict(_LISTENER_STATE["correctness_summary"]),
         locust_stats_summary=_locust_stats_summary(environment),
         hashes=dict(_LISTENER_STATE["hashes"]),
+        selection=dict(_LISTENER_STATE["selection"]),
     )
 
 
@@ -158,7 +165,29 @@ def attach_listeners(environment: Any) -> None:
     _LISTENER_STATE["attached"] = True
     run_context = getattr(environment, "run_context", None)
     if run_context is not None:
-        set_report_context(profile=getattr(run_context.profile, "id", "default"))
+        overrides = getattr(run_context, "overrides", {}) or {}
+        selection = dict(overrides.get("selection") or {})
+        if overrides.get("external_apis") is not None:
+            selection.setdefault("external_apis", overrides.get("external_apis"))
+        if overrides.get("movement_role") is not None:
+            selection.setdefault("movement_role", overrides.get("movement_role"))
+        if overrides.get("profile_sha256") is not None:
+            selection.setdefault("profile_sha256", overrides.get("profile_sha256"))
+        for key in ("flow_selectors", "dataset_selectors", "seed"):
+            if overrides.get(key) is not None:
+                selection.setdefault(key, overrides.get(key))
+        set_report_context(
+            profile=getattr(run_context.profile, "id", "default"),
+            selection=selection,
+            hashes={
+                key: value
+                for key, value in {
+                    "profile_sha256": overrides.get("profile_sha256"),
+                    "fixture_hashes": overrides.get("fixture_hashes"),
+                }.items()
+                if value is not None
+            },
+        )
         environment.report_dir = getattr(run_context, "report_dir", None)
 
 

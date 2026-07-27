@@ -5,10 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from tests.locust.langflow_runtime.preflight.health import CheckResult
+from tests.locust.langflow_runtime.provision.flows import index_by_id, load_fixture_index
 
 # Protocol family → fixture ids that satisfy it when present in state.
 _PROTOCOL_FLOW_REQUIREMENTS: dict[str, tuple[str, ...]] = {
-    "mcp": ("perf_passthrough", "perf_ensemble_journey", "MemoryChatbotNoLLM"),
+    "mcp": ("perf_passthrough", "MemoryChatbotNoLLM"),
     "workflows_sync": (),  # any provisioned workflow fixture is fine
     "workflows_stream": (),
     "workflows_background": (),
@@ -60,6 +61,64 @@ def check_dependencies(
             )
         else:
             results.append(CheckResult(name="profile_flows", ok=True, detail="ok"))
+
+        manifest_entries = index_by_id(load_fixture_index())
+        pinned_hashes = state.get("fixture_hashes") if isinstance(state.get("fixture_hashes"), dict) else {}
+        stale = [
+            fid
+            for fid in selectors
+            if fid in manifest_entries and pinned_hashes.get(fid) != manifest_entries[fid].get("fixture_sha256")
+        ]
+        if stale:
+            results.append(
+                CheckResult(
+                    name="fixture_hashes",
+                    ok=False,
+                    detail=f"missing or stale fixture hashes: {', '.join(stale)}; re-run provision apply",
+                )
+            )
+        else:
+            results.append(CheckResult(name="fixture_hashes", ok=True, detail="ok"))
+
+        if any(fid in {"perf_kb_ingest", "perf_kb_retrieve"} or "vector_store_rag" in fid for fid in selectors):
+            kb = state.get("kb") if isinstance(state.get("kb"), dict) else {}
+            kb_ok = bool(kb.get("name")) and str(kb.get("status") or "").lower() in {
+                "ready",
+                "completed",
+                "succeeded",
+            }
+            results.append(
+                CheckResult(
+                    name="knowledge_base",
+                    ok=kb_ok,
+                    detail="ok" if kb_ok else "seeded ready knowledge base missing from state",
+                )
+            )
+
+        memory_selectors = [fid for fid in selectors if fid.startswith("natural_memory_chatbot__")]
+        if memory_selectors:
+            memory_bases = state.get("memory_bases") if isinstance(state.get("memory_bases"), dict) else {}
+            missing_memory = [fid for fid in memory_selectors if fid not in memory_bases]
+            results.append(
+                CheckResult(
+                    name="memory_bases",
+                    ok=not missing_memory,
+                    detail="ok"
+                    if not missing_memory
+                    else f"missing attached memory bases: {', '.join(missing_memory)}",
+                )
+            )
+
+        if any(fid.startswith("natural_file_parser_agent__") for fid in selectors):
+            natural_file = state.get("natural_file") if isinstance(state.get("natural_file"), dict) else {}
+            file_ok = bool(natural_file.get("id") and natural_file.get("path"))
+            results.append(
+                CheckResult(
+                    name="natural_file",
+                    ok=file_ok,
+                    detail="ok" if file_ok else "uploaded Natural parser file missing from state",
+                )
+            )
     else:
         # Fall back to protocol-family hints when no selectors are provided.
         for protocol in profile_protocols:

@@ -3,7 +3,7 @@
   "id": "ensemble_hitl",
   "test_type": "load",
   "purpose": "Stress the ensemble journey with HITL approval gate.",
-  "movement_kind": "tutti",
+  "movement_kind": "suite",
   "stress_categories": [
     "ensemble_flow_hitl",
     "hitl"

@@ -3,7 +3,7 @@
   "id": "all_protocols",
   "test_type": "smoke",
   "purpose": "Smoke-check MCP, workflow sync/stream/background, and webhook surfaces.",
-  "movement_kind": "solo",
+  "movement_kind": "suite",
   "stress_categories": [
     "protocol_calibration"
   ],

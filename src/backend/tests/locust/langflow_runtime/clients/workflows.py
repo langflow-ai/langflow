@@ -128,7 +128,6 @@ class WorkflowsClient:
             "/api/v2/workflows",
             name=self._tx("workflow_post_sync"),
             json=self._post_body(flow_id=flow_id, input_value=input_value, mode="sync", session_id=session_id),
-            expect_json=True,
         )
         parsed = wrap_response(response, expect_json=True)
         if parsed.status_code != 200:

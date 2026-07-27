@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import Any
 
@@ -47,10 +48,27 @@ def provision_kb(
     if materialize_corpus:
         root = corpus_root_for(env_id)
         paths = materialize_kb_corpus(root)
+        ingestion = http.ingest_knowledge_base(resolved_name, [str(path) for path in paths])
+        deadline = time.monotonic() + 120.0
+        kb_info: dict[str, Any] | None = None
+        while time.monotonic() < deadline:
+            kb_info = http.get_knowledge_base(resolved_name)
+            status = str((kb_info or {}).get("status") or "").lower()
+            if status in {"ready", "completed", "succeeded"}:
+                break
+            if status in {"failed", "cancelled", "timed_out"}:
+                msg = f"knowledge base {resolved_name!r} ingestion ended with status {status!r}"
+                raise RuntimeError(msg)
+            time.sleep(0.5)
+        else:
+            msg = f"knowledge base {resolved_name!r} ingestion did not become ready within 120s"
+            raise TimeoutError(msg)
         state["kb"] = {
             "name": resolved_name,
             "corpus_path": str(root),
             "document_count": len(paths),
+            "ingestion": ingestion,
+            "status": (kb_info or {}).get("status"),
             "already_exists": bool(created.get("already_exists")),
             "env_id": env_id,
         }

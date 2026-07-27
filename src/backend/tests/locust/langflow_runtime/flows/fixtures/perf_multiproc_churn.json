@@ -5,7 +5,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "PerfSubprocessChurn",
-            "id": "PerfSubprocessChurn-58LW0",
+            "id": "PerfSubprocessChurn-NDz_q",
             "name": "output",
             "output_types": [
               "Message"
@@ -13,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-UM7Cb",
+            "id": "ChatOutput-3l5Gj",
             "inputTypes": [
               "Data",
               "JSON",
@@ -24,14 +24,14 @@
             "type": "other"
           }
         },
-        "source": "PerfSubprocessChurn-58LW0",
-        "target": "ChatOutput-UM7Cb"
+        "source": "PerfSubprocessChurn-NDz_q",
+        "target": "ChatOutput-3l5Gj"
       },
       {
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Qiev_",
+            "id": "ChatInput-_ckgM",
             "name": "message",
             "output_types": [
               "Message"
@@ -39,21 +39,21 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "PerfSubprocessChurn-58LW0",
+            "id": "PerfSubprocessChurn-NDz_q",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "source": "ChatInput-Qiev_",
-        "target": "PerfSubprocessChurn-58LW0"
+        "source": "ChatInput-_ckgM",
+        "target": "PerfSubprocessChurn-NDz_q"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-Qiev_",
+          "id": "ChatInput-_ckgM",
           "node": {
             "base_classes": [
               "Message"
@@ -318,11 +318,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-Qiev_"
+        "id": "ChatInput-_ckgM"
       },
       {
         "data": {
-          "id": "ChatOutput-UM7Cb",
+          "id": "ChatOutput-3l5Gj",
           "node": {
             "base_classes": [
               "Message"
@@ -585,11 +585,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-UM7Cb"
+        "id": "ChatOutput-3l5Gj"
       },
       {
         "data": {
-          "id": "PerfSubprocessChurn-58LW0",
+          "id": "PerfSubprocessChurn-NDz_q",
           "node": {
             "base_classes": [
               "Message"
@@ -785,7 +785,7 @@
           },
           "type": "PerfSubprocessChurn"
         },
-        "id": "PerfSubprocessChurn-58LW0"
+        "id": "PerfSubprocessChurn-NDz_q"
       }
     ]
   },

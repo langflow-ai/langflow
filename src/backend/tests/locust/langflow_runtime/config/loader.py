@@ -154,13 +154,23 @@ def load_profile(path_or_id: str, *, validate_references: bool = True) -> Moveme
     return profile
 
 
-def list_profiles() -> list[Path]:
-    """Discover committed profile JSON files under profiles/."""
-    profiles = [
-        path
-        for path in sorted(PROFILES_DIR.rglob("*.json"))
-        if path.name != "schema.json" and not path.name.startswith("_")
-    ]
+def list_profiles(*, include_deferred: bool = False) -> list[Path]:
+    """Discover committed profile JSON files under profiles/.
+
+    Skips schema.json, suites.json, underscore-prefixed files, and (by default)
+    anything under profiles/deferred/ (mega-graph journeys out of V1 CLI).
+    """
+    profiles: list[Path] = []
+    for path in sorted(PROFILES_DIR.rglob("*.json")):
+        if path.name in {"schema.json", "suites.json"} or path.name.startswith("_"):
+            continue
+        try:
+            rel = path.relative_to(PROFILES_DIR)
+        except ValueError:
+            continue
+        if not include_deferred and rel.parts and rel.parts[0] == "deferred":
+            continue
+        profiles.append(path)
     return profiles
 
 

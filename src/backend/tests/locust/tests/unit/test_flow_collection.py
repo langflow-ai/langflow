@@ -53,6 +53,16 @@ def test_flows_fixture_index_lists_all_suite_fixtures() -> None:
         "perf_outbound_basic_prompting",
         "perf_ensemble_journey",
         "perf_ensemble_journey_hitl",
+        "natural_basic_prompting__external_stubbed",
+        "natural_basic_prompting__external_live",
+        "natural_simple_agent__external_stubbed",
+        "natural_simple_agent__external_live",
+        "natural_memory_chatbot__external_stubbed",
+        "natural_memory_chatbot__external_live",
+        "natural_vector_store_rag__external_stubbed",
+        "natural_vector_store_rag__external_live",
+        "natural_file_parser_agent__external_stubbed",
+        "natural_file_parser_agent__external_live",
     }
     assert {flow["id"] for flow in manifest["flows"]} == expected
 
@@ -372,17 +382,23 @@ def test_validate_fixture_index_detects_duplicate_endpoint() -> None:
 
 
 def test_chat_history_store_policy_matches_fixtures() -> None:
-    """Isolators must keep Store Messages off; chat_db/ensemble flows keep it on."""
+    """Isolators must keep Store Messages off; chat_db/natural memory/ensemble flows keep it on."""
     errors = validate_fixtures.validate_fixture_index()
     assert errors == [], errors
 
     manifest = json.loads((FLOWS_DIR / "fixture_index.json").read_text(encoding="utf-8"))
     by_id = {flow["id"]: flow for flow in manifest["flows"]}
-    assert by_id["MemoryChatbotNoLLM"]["stores_chat_history"] is True
-    assert by_id["perf_ensemble_journey"]["stores_chat_history"] is True
-    assert by_id["perf_ensemble_journey_hitl"]["stores_chat_history"] is True
+    history_on = {
+        "MemoryChatbotNoLLM",
+        "perf_ensemble_journey",
+        "perf_ensemble_journey_hitl",
+        "natural_memory_chatbot__external_stubbed",
+        "natural_memory_chatbot__external_live",
+    }
+    for flow_id in history_on:
+        assert by_id[flow_id]["stores_chat_history"] is True
     for flow_id, flow in by_id.items():
-        if flow_id in {"MemoryChatbotNoLLM", "perf_ensemble_journey", "perf_ensemble_journey_hitl"}:
+        if flow_id in history_on:
             continue
         assert flow["stores_chat_history"] is False, flow_id
 

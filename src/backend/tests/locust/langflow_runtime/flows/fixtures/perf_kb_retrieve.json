@@ -4,8 +4,30 @@
       {
         "data": {
           "sourceHandle": {
+            "dataType": "TextInput",
+            "id": "TextInputComponent-8KO5P",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "search_query",
+            "id": "KnowledgeBaseComponent-ej7dz",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "TextInputComponent-8KO5P",
+        "target": "KnowledgeBaseComponent-ej7dz"
+      },
+      {
+        "data": {
+          "sourceHandle": {
             "dataType": "KnowledgeBase",
-            "id": "KnowledgeBaseComponent-9WdwJ",
+            "id": "KnowledgeBaseComponent-ej7dz",
             "name": "retrieve_data",
             "output_types": [
               "Table"
@@ -13,7 +35,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput--k4ro",
+            "id": "ChatOutput-6ob4c",
             "inputTypes": [
               "Data",
               "JSON",
@@ -24,36 +46,14 @@
             "type": "other"
           }
         },
-        "source": "KnowledgeBaseComponent-9WdwJ",
-        "target": "ChatOutput--k4ro"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "TextInput",
-            "id": "TextInputComponent-Yq4ot",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "search_query",
-            "id": "KnowledgeBaseComponent-9WdwJ",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "TextInputComponent-Yq4ot",
-        "target": "KnowledgeBaseComponent-9WdwJ"
+        "source": "KnowledgeBaseComponent-ej7dz",
+        "target": "ChatOutput-6ob4c"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "TextInputComponent-Yq4ot",
+          "id": "TextInputComponent-8KO5P",
           "node": {
             "base_classes": [
               "Message"
@@ -170,11 +170,11 @@
           },
           "type": "TextInput"
         },
-        "id": "TextInputComponent-Yq4ot"
+        "id": "TextInputComponent-8KO5P"
       },
       {
         "data": {
-          "id": "ChatOutput--k4ro",
+          "id": "ChatOutput-6ob4c",
           "node": {
             "base_classes": [
               "Message"
@@ -437,11 +437,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput--k4ro"
+        "id": "ChatOutput-6ob4c"
       },
       {
         "data": {
-          "id": "KnowledgeBaseComponent-9WdwJ",
+          "id": "KnowledgeBaseComponent-ej7dz",
           "node": {
             "base_classes": [
               "Table"
@@ -939,7 +939,7 @@
           },
           "type": "KnowledgeBase"
         },
-        "id": "KnowledgeBaseComponent-9WdwJ"
+        "id": "KnowledgeBaseComponent-ej7dz"
       }
     ]
   },

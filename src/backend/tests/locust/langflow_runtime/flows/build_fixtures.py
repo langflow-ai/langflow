@@ -31,6 +31,7 @@ from tests.locust.langflow_runtime.flows.builders import (
     build_kb_ingest,
     build_kb_retrieve,
     build_multiproc_churn,
+    build_natural_fixtures,
     build_outbound_basic_prompting,
     build_passthrough,
     build_payload_echo,
@@ -81,9 +82,11 @@ def build_all() -> dict[str, Path]:
         "perf_disk_io.json": build_disk_io(),
         "perf_payload_echo.json": build_payload_echo(),
         "perf_outbound_basic_prompting.json": build_outbound_basic_prompting(),
+        # Deferred mega-graph journeys (kept built; out of V1 CLI).
         "perf_ensemble_journey.json": build_ensemble_journey(),
         "perf_ensemble_journey_hitl.json": build_ensemble_journey_hitl(),
     }
+    paths.update(build_natural_fixtures())
     allowed = set(paths)
     for path in FIXTURES_DIR.glob("*.json"):
         if path.name not in allowed:

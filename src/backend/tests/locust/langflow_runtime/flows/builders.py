@@ -477,3 +477,27 @@ def copy_human_input_flow() -> Path:
         description="Pinned HITL suspend/pending/resume flow; Workflows background only.",
         endpoint_name="perf-human-input",
     )
+
+
+def build_natural_fixtures() -> dict[str, Path]:
+    """Build Natural suite fixtures (5 shapes x stubbed|live) from pinned starters.
+
+    Stubbed variants keep starter topology (Agent, MemoryBase, Knowledge, File,
+    Parser, URL, WebSearch, Prompt) and replace only vendor edges (LLM, web/URL
+    HTTP, embedding provider). Live variants bind the configured provider.
+    """
+    from tests.locust.langflow_runtime.flows.natural_adapt import adapt_natural_starter
+
+    paths: dict[str, Path] = {}
+    for shape in (
+        "basic_prompting",
+        "simple_agent",
+        "memory_chatbot",
+        "vector_store_rag",
+        "file_parser_agent",
+    ):
+        for stubbed, mode in ((True, "stubbed"), (False, "live")):
+            fid = f"natural_{shape}__external_{mode}"
+            payload = adapt_natural_starter(shape, stubbed=stubbed)
+            paths[f"{fid}.json"] = write_fixture(f"{fid}.json", payload)
+    return paths

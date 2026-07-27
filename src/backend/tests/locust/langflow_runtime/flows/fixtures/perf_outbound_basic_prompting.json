@@ -5,7 +5,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-m-ONp",
+            "id": "ChatInput-OT3VL",
             "name": "message",
             "output_types": [
               "Message"
@@ -13,21 +13,21 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-Ka8lr",
+            "id": "LanguageModelComponent-WJeXM",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "source": "ChatInput-m-ONp",
-        "target": "LanguageModelComponent-Ka8lr"
+        "source": "ChatInput-OT3VL",
+        "target": "LanguageModelComponent-WJeXM"
       },
       {
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-Ka8lr",
+            "id": "LanguageModelComponent-WJeXM",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -35,7 +35,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-XX-uh",
+            "id": "ChatOutput-B59r6",
             "inputTypes": [
               "Data",
               "JSON",
@@ -46,14 +46,14 @@
             "type": "other"
           }
         },
-        "source": "LanguageModelComponent-Ka8lr",
-        "target": "ChatOutput-XX-uh"
+        "source": "LanguageModelComponent-WJeXM",
+        "target": "ChatOutput-B59r6"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-m-ONp",
+          "id": "ChatInput-OT3VL",
           "node": {
             "base_classes": [
               "Message"
@@ -318,11 +318,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-m-ONp"
+        "id": "ChatInput-OT3VL"
       },
       {
         "data": {
-          "id": "ChatOutput-XX-uh",
+          "id": "ChatOutput-B59r6",
           "node": {
             "base_classes": [
               "Message"
@@ -585,11 +585,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-XX-uh"
+        "id": "ChatOutput-B59r6"
       },
       {
         "data": {
-          "id": "LanguageModelComponent-Ka8lr",
+          "id": "LanguageModelComponent-WJeXM",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -776,7 +776,7 @@
                     "session_id": "",
                     "session_metadata": null,
                     "text": "",
-                    "timestamp": "2026-07-26 05:35:16.520439 UTC"
+                    "timestamp": "2026-07-26 22:13:37.620703 UTC"
                   },
                   "default_value": "",
                   "edit": false,
@@ -796,7 +796,7 @@
                   "session_id": "",
                   "text": "",
                   "text_key": "text",
-                  "timestamp": "2026-07-26 05:35:16.520439 UTC"
+                  "timestamp": "2026-07-26 22:13:37.620703 UTC"
                 }
               },
               "max_tokens": {
@@ -1045,7 +1045,7 @@
           },
           "type": "LanguageModelComponent"
         },
-        "id": "LanguageModelComponent-Ka8lr"
+        "id": "LanguageModelComponent-WJeXM"
       }
     ]
   },

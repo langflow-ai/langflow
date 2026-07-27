@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from tests.locust.langflow_runtime.metrics.arrivals import ArrivalAccountant
+from tests.locust.langflow_runtime.metrics.arrivals import ArrivalAccountant, PacedArrivalScheduler
 from tests.locust.langflow_runtime.metrics.correctness import expect_webhook_n_accept_n_complete
 from tests.locust.langflow_runtime.metrics.registry import (
     TrackedHitlRequest,
@@ -104,6 +104,25 @@ def test_arrival_miss_accounting_without_catch_up_replay() -> None:
     # Missed slots are recorded but not replayed as extra attempts.
     assert snapshot["attempted"] < snapshot["intended"]
     assert snapshot["missed"] + snapshot["attempted"] <= snapshot["intended"]
+
+
+def test_paced_scheduler_skips_expired_slots_without_catch_up() -> None:
+    now = [10.0]
+    scheduler = PacedArrivalScheduler(2.0, allowed_lateness_s=0.1, clock=lambda: now[0])
+
+    first = scheduler.reserve()
+    assert first.delay_s == 0
+    assert first.missed_slots == 0
+
+    now[0] = 10.5
+    second = scheduler.reserve()
+    assert second.delay_s == 0
+    assert second.missed_slots == 0
+
+    now[0] = 12.0
+    late = scheduler.reserve()
+    assert late.missed_slots == 2
+    assert late.delay_s == 0
 
 
 def test_webhook_n_accept_n_complete_correctness() -> None:

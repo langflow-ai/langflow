@@ -3,7 +3,7 @@
   "id": "kb_retrieve",
   "test_type": "load",
   "purpose": "Measure knowledge-base retrieval latency.",
-  "movement_kind": "solo",
+  "movement_kind": "axis_set",
   "stress_categories": [
     "kb_retrieve"
   ],

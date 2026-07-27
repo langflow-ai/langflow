@@ -330,6 +330,14 @@
           "default": null,
           "title": "Arrival Rate Per S"
         },
+        "axis_arrival_rates": {
+          "additionalProperties": {
+            "exclusiveMinimum": 0,
+            "type": "number"
+          },
+          "title": "Axis Arrival Rates",
+          "type": "object"
+        },
         "think_time": {
           "anyOf": [
             {
@@ -390,6 +398,22 @@
       "default": null,
       "title": "Extends"
     },
+    "external_apis": {
+      "anyOf": [
+        {
+          "enum": [
+            "stubbed",
+            "live"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "External Apis"
+    },
     "flow_selectors": {
       "items": {
         "type": "string"
@@ -413,12 +437,24 @@
     },
     "movement_kind": {
       "enum": [
-        "solo",
-        "duet",
-        "tutti"
+        "axis_set",
+        "suite"
       ],
       "title": "Movement Kind",
       "type": "string"
+    },
+    "movement_role": {
+      "anyOf": [
+        {
+          "const": "natural",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Movement Role"
     },
     "protocols": {
       "items": {

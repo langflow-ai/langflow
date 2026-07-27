@@ -3,7 +3,7 @@
   "id": "hitl",
   "test_type": "load",
   "purpose": "Stress human-in-the-loop background lifecycle.",
-  "movement_kind": "solo",
+  "movement_kind": "axis_set",
   "stress_categories": [
     "hitl"
   ],

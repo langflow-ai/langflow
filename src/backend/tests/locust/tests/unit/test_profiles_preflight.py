@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from tests.locust.langflow_runtime.config.loader import load_profile, validate_all_profiles, validate_profile
 from tests.locust.langflow_runtime.preflight.dependencies import check_dependencies
+from tests.locust.langflow_runtime.provision.flows import index_by_id, load_fixture_index
 from tests.locust.langflow_runtime.users.registry import USER_REGISTRY
 
 
@@ -42,10 +43,12 @@ def test_ensemble_suite_composes_solo_users() -> None:
 
 
 def test_preflight_dependencies_use_profile_selectors() -> None:
+    entry = index_by_id(load_fixture_index())["perf_queue_short"]
     state = {
         "api_key": "k",
         "project_id": "p",
         "flows": {"perf_queue_short": {"flow_id": "f1"}},
+        "fixture_hashes": {"perf_queue_short": entry["fixture_sha256"]},
     }
     # Must not require perf_passthrough for a queue-only profile.
     results = check_dependencies(
@@ -64,6 +67,16 @@ def test_preflight_dependencies_fail_when_selector_missing() -> None:
         flow_selectors=["MemoryChatbotNoLLM"],
     )
     assert any(not r.ok and r.name == "profile_flows" for r in results)
+
+
+def test_preflight_dependencies_fail_on_stale_fixture_hash() -> None:
+    state = {
+        "api_key": "k",
+        "flows": {"perf_queue_short": {"flow_id": "f1"}},
+        "fixture_hashes": {"perf_queue_short": "stale"},
+    }
+    results = check_dependencies(state, ["workflows_background"], flow_selectors=["perf_queue_short"])
+    assert any(not result.ok and result.name == "fixture_hashes" for result in results)
 
 
 def test_smoke_profile_ok() -> None:

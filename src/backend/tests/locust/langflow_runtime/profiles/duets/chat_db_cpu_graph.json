@@ -3,7 +3,7 @@
   "id": "chat_db_cpu_graph",
   "test_type": "load",
   "purpose": "Measure chat/message-store persistence under in-process CPU graph contention.",
-  "movement_kind": "duet",
+  "movement_kind": "axis_set",
   "stress_categories": [
     "chat_db",
     "cpu_graph"

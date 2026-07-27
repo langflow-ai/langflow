@@ -17,6 +17,11 @@ from tests.locust.langflow_runtime.config.loader import (
     validate_all_profiles,
     validate_profile,
 )
+from tests.locust.langflow_runtime.config.selection import (
+    STRESS_AXES,
+    load_suites_catalog,
+    resolve_selection,
+)
 from tests.locust.langflow_runtime.paths import reports_dir, state_path_for
 
 # Suite package root (…/tests/locust/langflow_runtime)
@@ -33,7 +38,7 @@ def _profile_ref(path: Path) -> str:
     return str(path.relative_to(profiles_dir))
 
 
-def _build_locust_command(context_host: str, report_dir: Path, profile_path: Path) -> list[str]:
+def _build_locust_command(context_host: str, report_dir: Path) -> list[str]:
     csv_prefix = str(report_dir / "locust")
     html_path = str(report_dir / "report.html")
     return [
@@ -51,8 +56,16 @@ def _build_locust_command(context_host: str, report_dir: Path, profile_path: Pat
 
 
 def _cmd_list(_args: argparse.Namespace) -> int:
+    print("axes:")
+    for axis in STRESS_AXES:
+        print(f"  {axis}")
+    print("suites:")
+    for name, entry in sorted(load_suites_catalog().items()):
+        desc = entry.get("description", "")
+        print(f"  {name}: {desc}")
+    print("committed profiles:")
     for path in list_profiles():
-        print(_profile_ref(path))
+        print(f"  {_profile_ref(path)}")
     return 0
 
 
@@ -108,15 +121,74 @@ def _profile_content_hash(profile_path: Path) -> str:
     return hashlib.sha256(profile_path.read_bytes()).hexdigest()
 
 
+def _add_selection_args(parser: argparse.ArgumentParser) -> None:
+    group = parser.add_mutually_exclusive_group(required=False)
+    group.add_argument(
+        "--axes",
+        help="Comma-separated stress axes (1..N), e.g. chat_db or chat_db,cpu_graph",
+    )
+    group.add_argument(
+        "--suite",
+        help="Named suite: duet ids, tutti, smoke, or natural",
+    )
+    parser.add_argument(
+        "--external-apis",
+        choices=("stubbed", "live"),
+        help="Required with --suite natural",
+    )
+    parser.add_argument("--host")
+    parser.add_argument("--env-id")
+    parser.add_argument("--run-id")
+    parser.add_argument("--seed", type=int, default=0, help="Deterministic workload seed (default: 0)")
+    # Escape hatch for debugging committed profiles (not part of Make sugar).
+    parser.add_argument(
+        "--profile",
+        dest="profile_opt",
+        help=argparse.SUPPRESS,
+    )
+
+
+def _reject_deferred_profile(profile_ref: str) -> None:
+    """Fail closed when a deferred mega-graph profile is selected for execution."""
+    normalized = profile_ref.replace("\\", "/")
+    if "deferred/" in normalized or normalized.startswith("deferred"):
+        msg = (
+            "deferred profiles (mega-graph ensemble journeys) are out of V1 "
+            "and cannot be executed via run/dry-run; use validate if needed"
+        )
+        raise SystemExit(msg)
+
+
 def _resolve_context(args: argparse.Namespace):
     from tests.locust.langflow_runtime.config.context import build_run_context
 
-    profile_ref = getattr(args, "profile", None) or getattr(args, "profile_opt", None)
-    if not profile_ref:
-        msg = "profile is required"
-        raise SystemExit(msg)
-    profile = load_profile(profile_ref)
-    profile_path = resolve_profile_path(profile_ref)
+    # Hidden --profile escape hatch for validate/debug of committed JSON.
+    profile_ref = getattr(args, "profile_opt", None)
+    axes = getattr(args, "axes", None)
+    suite = getattr(args, "suite", None)
+    selection_meta: dict = {}
+    if profile_ref:
+        if axes or suite:
+            msg = "use either --profile or --axes/--suite, not both"
+            raise SystemExit(msg)
+        _reject_deferred_profile(profile_ref)
+        profile = load_profile(profile_ref)
+        profile_path = resolve_profile_path(profile_ref)
+        _reject_deferred_profile(str(profile_path))
+        selection_meta = {"kind": "profile", "profile": profile_ref}
+    else:
+        if bool(axes) == bool(suite):
+            msg = "exactly one of --axes or --suite is required"
+            raise SystemExit(msg)
+        try:
+            profile, profile_path, selection_meta = resolve_selection(
+                axes=axes,
+                suite=suite,
+                external_apis=getattr(args, "external_apis", None),
+            )
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+
     run_id = args.run_id or uuid4().hex[:12]
     report_dir = reports_dir() / run_id
     state_path = _default_state_path(args.env_id)
@@ -124,6 +196,7 @@ def _resolve_context(args: argparse.Namespace):
         msg = f"provision state missing for --env-id {args.env_id!r} (expected {state_path})"
         raise SystemExit(msg)
     provision_state = _load_state(state_path)
+    selection = selection_meta.get("selection", selection_meta)
     return build_run_context(
         profile,
         host=args.host,
@@ -138,6 +211,10 @@ def _resolve_context(args: argparse.Namespace):
             "flow_selectors": list(profile.flow_selectors),
             "dataset_selectors": list(profile.dataset_selectors),
             "fixture_hashes": (provision_state or {}).get("fixture_hashes"),
+            "selection": selection,
+            "external_apis": getattr(profile, "external_apis", None),
+            "movement_role": getattr(profile, "movement_role", None),
+            "seed": args.seed,
         },
     )
 
@@ -164,7 +241,7 @@ def _redact_env_value(key: str, value: str) -> str:
 
 def _cmd_dry_run(args: argparse.Namespace) -> int:
     context = _resolve_context(args)
-    command = _build_locust_command(context.host, context.report_dir, Path(context.overrides["profile_path"]))
+    command = _build_locust_command(context.host, context.report_dir)
     env = _runtime_env(context)
     print(" ".join(command))
     for key in sorted(env):
@@ -174,6 +251,8 @@ def _cmd_dry_run(args: argparse.Namespace) -> int:
 
 
 def _runtime_env(context) -> dict[str, str]:
+    import json
+
     env = dict(os.environ)
     env["PYTHONPATH"] = os.pathsep.join(
         [str(BACKEND_ROOT), env["PYTHONPATH"]] if env.get("PYTHONPATH") else [str(BACKEND_ROOT)]
@@ -187,13 +266,36 @@ def _runtime_env(context) -> dict[str, str]:
         env["PERF_ENV_ID"] = context.env_id
     if context.state_path:
         env["PERF_STATE_PATH"] = context.state_path
+    # Forward safe selection/reproducibility metadata into the Locust process.
+    context_payload = {
+        "selection": context.overrides.get("selection"),
+        "profile_sha256": context.overrides.get("profile_sha256"),
+        "flow_selectors": context.overrides.get("flow_selectors"),
+        "dataset_selectors": context.overrides.get("dataset_selectors"),
+        "fixture_hashes": context.overrides.get("fixture_hashes"),
+        "external_apis": context.overrides.get("external_apis"),
+        "movement_role": context.overrides.get("movement_role"),
+        "seed": context.overrides.get("seed"),
+    }
+    env["PERF_RUN_CONTEXT_JSON"] = json.dumps(context_payload, sort_keys=True)
     return env
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
     context = _resolve_context(args)
+    from tests.locust.langflow_runtime.preflight.dependencies import check_dependencies
+
+    dependency_results = check_dependencies(
+        context.provision_state,
+        list(context.profile.protocols),
+        flow_selectors=list(context.profile.flow_selectors),
+    )
+    failures = [result for result in dependency_results if not result.ok]
+    if failures:
+        detail = "\n".join(f"  - {result.name}: {result.detail}" for result in failures)
+        raise SystemExit(f"preflight dependency check failed:\n{detail}")
     context.report_dir.mkdir(parents=True, exist_ok=True)
-    command = _build_locust_command(context.host, context.report_dir, Path(context.overrides["profile_path"]))
+    command = _build_locust_command(context.host, context.report_dir)
     env = _runtime_env(context)
     completed = subprocess.run(command, cwd=BACKEND_ROOT, env=env, check=False)
     return int(completed.returncode)
@@ -209,27 +311,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Langflow performance suite runner")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    list_parser = subparsers.add_parser("list", help="List available movement profiles")
+    list_parser = subparsers.add_parser("list", help="List axes, suites, and committed profiles")
     list_parser.set_defaults(func=_cmd_list)
 
-    validate_parser = subparsers.add_parser("validate", help="Validate one or all profiles")
-    validate_parser.add_argument("profiles", nargs="*", help="Profile id/path (default: all)")
+    validate_parser = subparsers.add_parser("validate", help="Validate one or all committed profiles")
+    validate_parser.add_argument("profiles", nargs="*", help="Profile id/path (default: all V1)")
     validate_parser.set_defaults(func=_cmd_validate)
 
     dry_run_parser = subparsers.add_parser("dry-run", help="Print resolved Locust command")
-    dry_run_parser.add_argument("profile", nargs="?", help="Exactly one profile id/path")
-    dry_run_parser.add_argument("--profile", dest="profile_opt", help="Alias for positional profile")
-    dry_run_parser.add_argument("--host")
-    dry_run_parser.add_argument("--env-id")
-    dry_run_parser.add_argument("--run-id")
+    _add_selection_args(dry_run_parser)
     dry_run_parser.set_defaults(func=_cmd_dry_run)
 
-    run_parser = subparsers.add_parser("run", help="Execute exactly one profile")
-    run_parser.add_argument("profile", nargs="?", help="Exactly one profile id/path")
-    run_parser.add_argument("--profile", dest="profile_opt", help="Alias for positional profile")
-    run_parser.add_argument("--host")
-    run_parser.add_argument("--env-id")
-    run_parser.add_argument("--run-id")
+    run_parser = subparsers.add_parser("run", help="Execute exactly one movement")
+    _add_selection_args(run_parser)
     run_parser.set_defaults(func=_cmd_run)
 
     schema_parser = subparsers.add_parser("emit-schema", help="Write profiles/schema.json")

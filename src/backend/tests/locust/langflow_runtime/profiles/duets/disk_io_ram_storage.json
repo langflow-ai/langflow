@@ -3,7 +3,7 @@
   "id": "disk_io_ram_storage",
   "test_type": "load",
   "purpose": "Contrast direct local disk I/O pressure with SaveToFile/storage-abstraction writes.",
-  "movement_kind": "duet",
+  "movement_kind": "axis_set",
   "stress_categories": [
     "disk_io",
     "ram_storage"

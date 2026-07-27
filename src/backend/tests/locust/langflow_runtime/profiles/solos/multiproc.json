@@ -3,7 +3,7 @@
   "id": "multiproc",
   "test_type": "load",
   "purpose": "Stress subprocess multiprocessing churn.",
-  "movement_kind": "solo",
+  "movement_kind": "axis_set",
   "stress_categories": [
     "multiproc"
   ],

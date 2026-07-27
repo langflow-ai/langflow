@@ -3,7 +3,7 @@
   "id": "outbound",
   "test_type": "load",
   "purpose": "Measure outbound LLM provider call overhead.",
-  "movement_kind": "solo",
+  "movement_kind": "axis_set",
   "stress_categories": [
     "outbound"
   ],

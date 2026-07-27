@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Collection
 from typing import Any
 
 from tests.locust.langflow_runtime.provision.api import ProvisionApiError, ProvisionHttp
@@ -45,6 +46,10 @@ def _delete_one(http: ProvisionHttp, kind: str, resource_id: str) -> str:
             http.delete_api_key(resource_id)
         elif kind == "kb":
             http.delete_knowledge_base(resource_id)
+        elif kind == "memory_base":
+            http.delete_memory_base(resource_id)
+        elif kind == "user_file":
+            http.delete_user_file(resource_id)
         elif kind == "user":
             http.delete_user(resource_id)
         else:
@@ -60,19 +65,24 @@ def teardown_state(
     http: ProvisionHttp,
     state: dict[str, Any],
     *,
+    resource_kinds: Collection[str] | None = None,
     retries: int = 3,
     retry_delay_s: float = 0.5,
 ) -> list[dict[str, Any]]:
-    """Delete resources in teardown_order; missing resources count as success."""
+    """Delete selected resources in teardown_order; missing resources count as success."""
     env_id = str(state["env_id"])
     results: list[dict[str, Any]] = []
     order = list(state.get("teardown_order") or [])
 
     for token in order:
         if ":" not in token:
+            if resource_kinds is not None:
+                continue
             results.append({"token": token, "status": "invalid_token"})
             continue
         kind, resource_id = token.split(":", 1)
+        if resource_kinds is not None and kind not in resource_kinds:
+            continue
         resource = _find_resource(state, kind, resource_id)
         if resource is None:
             results.append(

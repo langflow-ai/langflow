@@ -3,9 +3,8 @@
   "id": "ensemble_suite",
   "test_type": "capacity",
   "purpose": "Concurrent sweep across representative solo stress categories as separate user classes.",
-  "movement_kind": "tutti",
+  "movement_kind": "axis_set",
   "stress_categories": [
-    "ensemble_suite",
     "protocol_calibration",
     "chat_db",
     "queue",

@@ -42,6 +42,15 @@ REQUIRED_STRESS_CATEGORIES = {
     "disk_io",
     "ram_storage",
     "outbound",
+}
+
+# Named non-axis suites are indexed but not required stress axes.
+SUITE_CATEGORIES = {
+    "natural",
+}
+
+# Built and indexed but not required for V1 CLI / full-song gates.
+DEFERRED_STRESS_CATEGORIES = {
     "ensemble_flow",
     "ensemble_flow_hitl",
 }

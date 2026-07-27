@@ -116,6 +116,35 @@ def test_workflow_active_status_200() -> None:
     assert status.status == "in_progress"
 
 
+def test_workflow_sync_uses_httpx_transport_without_internal_kwargs() -> None:
+    import httpx
+
+    from tests.locust.langflow_runtime.clients.base import ApiClient
+    from tests.locust.langflow_runtime.clients.workflows import WorkflowsClient
+
+    observed: dict[str, Any] = {}
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        observed.update(json.loads(request.content))
+        return httpx.Response(200, json={"outputs": [{"outputs": {"message": {"message": "ok"}}}]})
+
+    transport = httpx.MockTransport(handle)
+    with httpx.Client(transport=transport) as http:
+        client = WorkflowsClient(
+            api=ApiClient.from_httpx(http, base_url="http://example.test", api_key="test-key"),
+        )
+        result = client.run_sync(flow_id="flow-1", input_value="hello", session_id="session-1")
+
+    assert observed == {
+        "flow_id": "flow-1",
+        "input_value": "hello",
+        "mode": "sync",
+        "stream_protocol": "langflow",
+        "session_id": "session-1",
+    }
+    assert result["outputs"][0]["outputs"]["message"]["message"] == "ok"
+
+
 def test_parse_sse_events_records_timing() -> None:
     from tests.locust.langflow_runtime.clients.sse import SseTimingStats
 

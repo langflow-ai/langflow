@@ -3,7 +3,7 @@
   "id": "disk_io",
   "test_type": "load",
   "purpose": "Stress disk I/O isolator component.",
-  "movement_kind": "solo",
+  "movement_kind": "axis_set",
   "stress_categories": [
     "disk_io"
   ],

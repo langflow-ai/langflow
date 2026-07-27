@@ -72,20 +72,8 @@ def mock_embedding_model(*, size: int = 8) -> Iterator[Any]:
     """
     from unittest.mock import patch
 
-    class _DeterministicEmbeddings:
-        def __init__(self, dimension: int) -> None:
-            self.dimension = dimension
+    from tests.locust.langflow_runtime.components.perf_deterministic_embeddings import DeterministicEmbeddings
 
-        def _embed(self, text: str) -> list[float]:
-            digest = abs(hash(text))
-            return [((digest >> (i * 4)) & 0xF) / 15.0 for i in range(self.dimension)]
-
-        def embed_documents(self, texts: list[str]) -> list[list[float]]:
-            return [self._embed(t) for t in texts]
-
-        def embed_query(self, text: str) -> list[float]:
-            return self._embed(text)
-
-    embeddings = _DeterministicEmbeddings(size)
+    embeddings = DeterministicEmbeddings(size)
     with patch("lfx.base.models.unified_models.get_embeddings", return_value=embeddings):
         yield embeddings

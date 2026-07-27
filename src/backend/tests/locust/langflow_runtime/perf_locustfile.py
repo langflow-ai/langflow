@@ -14,6 +14,8 @@ if _backend_root in sys.path:
     sys.path.remove(_backend_root)
 sys.path.insert(0, _backend_root)
 
+import contextlib
+
 from locust import events
 
 from tests.locust.langflow_runtime.config.context import RunContext, build_run_context
@@ -42,6 +44,11 @@ def _resolve_run_context() -> RunContext:
     profile = load_profile(profile_path)
     state = _load_provision_state(os.environ.get("PERF_STATE_PATH"))
     report_dir = os.environ.get("PERF_REPORT_DIR")
+    overrides: dict = {"profile_path": profile_path, "state_path": os.environ.get("PERF_STATE_PATH")}
+    raw_ctx = os.environ.get("PERF_RUN_CONTEXT_JSON")
+    if raw_ctx:
+        with contextlib.suppress(json.JSONDecodeError):
+            overrides.update(json.loads(raw_ctx))
     return build_run_context(
         profile,
         host=os.environ.get("PERF_HOST") or os.environ.get("LANGFLOW_HOST"),
@@ -49,7 +56,7 @@ def _resolve_run_context() -> RunContext:
         report_dir=report_dir,
         env_id=os.environ.get("PERF_ENV_ID"),
         provision_state=state,
-        overrides={"profile_path": profile_path, "state_path": os.environ.get("PERF_STATE_PATH")},
+        overrides=overrides,
     )
 
 
@@ -68,6 +75,9 @@ def _register_profile_users(context: RunContext) -> list[type]:
             raise RuntimeError(msg)
         user_cls = _import_user_class(dotted)
         user_cls.weight = entry.weight
+        # Locust: fixed_count > 0 pins an exact population for this class.
+        # count=None leaves the class weight-distributed (fixed_count=0).
+        user_cls.fixed_count = int(entry.count) if entry.count is not None else 0
         selected.append(user_cls)
     return selected
 

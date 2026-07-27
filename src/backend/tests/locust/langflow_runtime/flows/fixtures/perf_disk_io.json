@@ -4,30 +4,8 @@
       {
         "data": {
           "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-ES5f0",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "PerfDiskIo-gww-U",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "ChatInput-ES5f0",
-        "target": "PerfDiskIo-gww-U"
-      },
-      {
-        "data": {
-          "sourceHandle": {
             "dataType": "PerfDiskIo",
-            "id": "PerfDiskIo-gww-U",
+            "id": "PerfDiskIo-QyhCF",
             "name": "output",
             "output_types": [
               "Message"
@@ -35,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-ffgYt",
+            "id": "ChatOutput-lPNIh",
             "inputTypes": [
               "Data",
               "JSON",
@@ -46,14 +24,36 @@
             "type": "other"
           }
         },
-        "source": "PerfDiskIo-gww-U",
-        "target": "ChatOutput-ffgYt"
+        "source": "PerfDiskIo-QyhCF",
+        "target": "ChatOutput-lPNIh"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-LGXLw",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfDiskIo-QyhCF",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-LGXLw",
+        "target": "PerfDiskIo-QyhCF"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-ES5f0",
+          "id": "ChatInput-LGXLw",
           "node": {
             "base_classes": [
               "Message"
@@ -318,11 +318,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-ES5f0"
+        "id": "ChatInput-LGXLw"
       },
       {
         "data": {
-          "id": "ChatOutput-ffgYt",
+          "id": "ChatOutput-lPNIh",
           "node": {
             "base_classes": [
               "Message"
@@ -585,11 +585,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-ffgYt"
+        "id": "ChatOutput-lPNIh"
       },
       {
         "data": {
-          "id": "PerfDiskIo-gww-U",
+          "id": "PerfDiskIo-QyhCF",
           "node": {
             "base_classes": [
               "Message"
@@ -704,7 +704,7 @@
           },
           "type": "PerfDiskIo"
         },
-        "id": "PerfDiskIo-gww-U"
+        "id": "PerfDiskIo-QyhCF"
       }
     ]
   },

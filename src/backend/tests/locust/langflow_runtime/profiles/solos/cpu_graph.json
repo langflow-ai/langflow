@@ -3,7 +3,7 @@
   "id": "cpu_graph",
   "test_type": "load",
   "purpose": "Stress in-process CPU graph execution.",
-  "movement_kind": "solo",
+  "movement_kind": "axis_set",
   "stress_categories": [
     "cpu_graph"
   ],

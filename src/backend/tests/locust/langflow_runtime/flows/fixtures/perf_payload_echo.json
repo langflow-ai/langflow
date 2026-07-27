@@ -4,34 +4,8 @@
       {
         "data": {
           "sourceHandle": {
-            "dataType": "SaveToFile",
-            "id": "SaveToFileComponent-Gcfrk",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-ekhcl",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
-            "type": "other"
-          }
-        },
-        "source": "SaveToFileComponent-Gcfrk",
-        "target": "ChatOutput-ekhcl"
-      },
-      {
-        "data": {
-          "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-E4WlH",
+            "id": "ChatInput-fe5RN",
             "name": "message",
             "output_types": [
               "Message"
@@ -39,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "input",
-            "id": "SaveToFileComponent-Gcfrk",
+            "id": "SaveToFileComponent-c1j9j",
             "inputTypes": [
               "Data",
               "JSON",
@@ -50,14 +24,40 @@
             "type": "other"
           }
         },
-        "source": "ChatInput-E4WlH",
-        "target": "SaveToFileComponent-Gcfrk"
+        "source": "ChatInput-fe5RN",
+        "target": "SaveToFileComponent-c1j9j"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "SaveToFile",
+            "id": "SaveToFileComponent-c1j9j",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-leW5U",
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "source": "SaveToFileComponent-c1j9j",
+        "target": "ChatOutput-leW5U"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-E4WlH",
+          "id": "ChatInput-fe5RN",
           "node": {
             "base_classes": [
               "Message"
@@ -322,11 +322,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-E4WlH"
+        "id": "ChatInput-fe5RN"
       },
       {
         "data": {
-          "id": "ChatOutput-ekhcl",
+          "id": "ChatOutput-leW5U",
           "node": {
             "base_classes": [
               "Message"
@@ -589,11 +589,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-ekhcl"
+        "id": "ChatOutput-leW5U"
       },
       {
         "data": {
-          "id": "SaveToFileComponent-Gcfrk",
+          "id": "SaveToFileComponent-c1j9j",
           "node": {
             "base_classes": [
               "Message"
@@ -1044,7 +1044,7 @@
           },
           "type": "SaveToFile"
         },
-        "id": "SaveToFileComponent-Gcfrk"
+        "id": "SaveToFileComponent-c1j9j"
       }
     ]
   },

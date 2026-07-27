@@ -5,7 +5,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-PsTh6",
+            "id": "ChatInput-UhVS8",
             "name": "message",
             "output_types": [
               "Message"
@@ -13,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-uuqk8",
+            "id": "ChatOutput-fTEDq",
             "inputTypes": [
               "Data",
               "JSON",
@@ -24,14 +24,14 @@
             "type": "other"
           }
         },
-        "source": "ChatInput-PsTh6",
-        "target": "ChatOutput-uuqk8"
+        "source": "ChatInput-UhVS8",
+        "target": "ChatOutput-fTEDq"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-PsTh6",
+          "id": "ChatInput-UhVS8",
           "node": {
             "base_classes": [
               "Message"
@@ -296,11 +296,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-PsTh6"
+        "id": "ChatInput-UhVS8"
       },
       {
         "data": {
-          "id": "ChatOutput-uuqk8",
+          "id": "ChatOutput-fTEDq",
           "node": {
             "base_classes": [
               "Message"
@@ -563,7 +563,7 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-uuqk8"
+        "id": "ChatOutput-fTEDq"
       }
     ]
   },

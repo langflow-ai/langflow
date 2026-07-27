@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
@@ -258,8 +259,57 @@ class ProvisionHttp:
             return None
         return response.json()
 
+    def ingest_knowledge_base(self, kb_name: str, paths: list[str]) -> dict[str, Any]:
+        files = [("files", (Path(path).name, Path(path).read_bytes(), "text/plain")) for path in paths]
+        response = self.request(
+            "POST",
+            f"/api/v1/knowledge_bases/{kb_name}/ingest",
+            data={"chunk_size": "1000", "chunk_overlap": "200", "source_name": "perf-suite"},
+            files=files,
+            ok_statuses={200},
+        )
+        return response.json()
+
     def delete_knowledge_base(self, kb_name: str) -> None:
         self.request("DELETE", f"/api/v1/knowledge_bases/{kb_name}", ok_statuses={200, 204, 404})
+
+    def create_memory_base(
+        self,
+        *,
+        name: str,
+        flow_id: str,
+        embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
+    ) -> dict[str, Any]:
+        response = self.request(
+            "POST",
+            "/api/v1/memories/",
+            json={
+                "name": name,
+                "flow_id": flow_id,
+                "threshold": 1,
+                "auto_capture": True,
+                "embedding_model": embedding_model,
+                "preprocessing": False,
+            },
+            ok_statuses={201},
+        )
+        return response.json()
+
+    def delete_memory_base(self, memory_base_id: str) -> None:
+        self.request("DELETE", f"/api/v1/memories/{memory_base_id}", ok_statuses={200, 204, 404})
+
+    def upload_user_file(self, *, filename: str, content: bytes, content_type: str = "text/plain") -> dict[str, Any]:
+        response = self.request(
+            "POST",
+            "/api/v2/files/",
+            params={"ephemeral": "false"},
+            files={"file": (filename, content, content_type)},
+            ok_statuses={201},
+        )
+        return response.json()
+
+    def delete_user_file(self, file_id: str) -> None:
+        self.request("DELETE", f"/api/v2/files/{file_id}", ok_statuses={200, 204, 404})
 
     def create_user(self, username: str, password: str) -> dict[str, Any]:
         response = self.request(

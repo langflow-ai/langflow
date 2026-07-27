@@ -3,7 +3,7 @@
   "id": "kb_ingest_kb_retrieve",
   "test_type": "load",
   "purpose": "Measure vector-store write vs read contention on the same knowledge base.",
-  "movement_kind": "duet",
+  "movement_kind": "axis_set",
   "stress_categories": [
     "kb_ingest",
     "kb_retrieve"

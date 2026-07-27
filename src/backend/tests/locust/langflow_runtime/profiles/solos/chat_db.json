@@ -3,7 +3,7 @@
   "id": "chat_db",
   "test_type": "load",
   "purpose": "Stress chat history persistence without LLM calls.",
-  "movement_kind": "solo",
+  "movement_kind": "axis_set",
   "stress_categories": [
     "chat_db"
   ],

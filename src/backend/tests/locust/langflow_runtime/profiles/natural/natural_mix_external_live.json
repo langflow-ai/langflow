@@ -1,0 +1,79 @@
+{
+  "schema_version": "1",
+  "test_type": "load",
+  "movement_kind": "suite",
+  "stress_categories": [
+    "natural"
+  ],
+  "protocols": [
+    "workflows_sync"
+  ],
+  "modes": [
+    "sync"
+  ],
+  "dataset_selectors": [
+    "kb/bounded_corpus",
+    "storage/bounded_payload"
+  ],
+  "workload": {
+    "workload_model": "closed",
+    "user_mix": [
+      {
+        "user_class": "NaturalUser",
+        "weight": 1,
+        "count": 1
+      }
+    ],
+    "think_time": {
+      "min_s": 0.5,
+      "max_s": 1.5
+    }
+  },
+  "windows": {
+    "warm_up": {
+      "duration_s": 5,
+      "users": 0
+    },
+    "measured_steps": [
+      {
+        "users": 1,
+        "duration_s": 30,
+        "spawn_rate": 1
+      }
+    ],
+    "drain": {
+      "deadline_s": 60
+    },
+    "sampling_interval_s": 5,
+    "poll_interval_s": 1
+  },
+  "safety_limits": {
+    "provider_spend_usd": 5,
+    "backlog_max": 30,
+    "storage_growth_bytes": 52428800,
+    "error_storm_rate": 0.25,
+    "drain_timeout_s": 120,
+    "cleanup_timeout_s": 180
+  },
+  "validity": {
+    "max_generator_cpu_pct": 90,
+    "allowed_scheduling_lateness_s": 2,
+    "cold_warm": "either"
+  },
+  "reset_rules": {
+    "reset_message_store": true,
+    "reset_kb_corpus": false,
+    "reset_storage_artifacts": true
+  },
+  "id": "natural_mix_external_live",
+  "movement_role": "natural",
+  "external_apis": "live",
+  "purpose": "Natural starter-derived mix with external_apis=live (uniform random shape selection).",
+  "flow_selectors": [
+    "natural_basic_prompting__external_live",
+    "natural_simple_agent__external_live",
+    "natural_memory_chatbot__external_live",
+    "natural_vector_store_rag__external_live",
+    "natural_file_parser_agent__external_live"
+  ]
+}

@@ -6,6 +6,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+# V1 stress axes (also --suite tutti). Mega-graph ensemble_* categories are deferred.
 STRESS_CATEGORIES = frozenset(
     {
         "protocol_calibration",
@@ -19,6 +20,19 @@ STRESS_CATEGORIES = frozenset(
         "disk_io",
         "ram_storage",
         "outbound",
+    }
+)
+
+# Named non-axis suites (not expanded by --suite tutti / --axes).
+SUITE_CATEGORIES = frozenset(
+    {
+        "natural",
+    }
+)
+
+# Kept for deferred fixture_index / profiles under profiles/deferred/ only.
+DEFERRED_STRESS_CATEGORIES = frozenset(
+    {
         "ensemble_flow",
         "ensemble_flow_hitl",
         "ensemble_suite",
@@ -69,6 +83,7 @@ class WorkloadConfig(StrictModel):
     user_mix: list[UserMixEntry] = Field(min_length=1)
     think_time: ThinkTime | None = None
     arrival_rate_per_s: Annotated[float, Field(gt=0)] | None = None
+    axis_arrival_rates: dict[str, Annotated[float, Field(gt=0)]] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _validate_workload(self) -> WorkloadConfig:
@@ -149,8 +164,10 @@ class MovementProfile(StrictModel):
     id: str = Field(min_length=1)
     test_type: Literal["smoke", "load", "capacity"]
     purpose: str = Field(min_length=1)
-    movement_kind: Literal["solo", "duet", "tutti"]
+    movement_kind: Literal["axis_set", "suite"]
     stress_categories: list[str] = Field(min_length=1)
+    movement_role: Literal["natural"] | None = None
+    external_apis: Literal["stubbed", "live"] | None = None
     protocols: list[str] = Field(min_length=1)
     modes: list[str] = Field(min_length=1)
     flow_selectors: list[str] = Field(min_length=1)
@@ -166,11 +183,28 @@ class MovementProfile(StrictModel):
     @field_validator("stress_categories")
     @classmethod
     def _validate_stress_categories(cls, value: list[str]) -> list[str]:
-        unknown = sorted(set(value) - STRESS_CATEGORIES)
+        allowed = STRESS_CATEGORIES | DEFERRED_STRESS_CATEGORIES | SUITE_CATEGORIES
+        unknown = sorted(set(value) - allowed)
         if unknown:
             msg = f"unknown stress_categories: {', '.join(unknown)}"
             raise ValueError(msg)
         return value
+
+    @model_validator(mode="after")
+    def _natural_external_apis(self) -> MovementProfile:
+        is_natural = self.movement_role == "natural" or "natural" in self.stress_categories
+        if is_natural and self.external_apis is None:
+            msg = "external_apis is required for natural suite profiles"
+            raise ValueError(msg)
+        if self.external_apis is not None and not is_natural:
+            msg = "external_apis is only valid for natural suite profiles"
+            raise ValueError(msg)
+        if is_natural and self.movement_kind != "suite":
+            msg = "natural profiles must use movement_kind='suite'"
+            raise ValueError(msg)
+        if is_natural and self.movement_role is None:
+            return self.model_copy(update={"movement_role": "natural"})
+        return self
 
     @field_validator("protocols")
     @classmethod

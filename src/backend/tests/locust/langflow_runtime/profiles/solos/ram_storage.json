@@ -3,7 +3,7 @@
   "id": "ram_storage",
   "test_type": "load",
   "purpose": "Stress bounded payload storage writes.",
-  "movement_kind": "solo",
+  "movement_kind": "axis_set",
   "stress_categories": [
     "ram_storage"
   ],

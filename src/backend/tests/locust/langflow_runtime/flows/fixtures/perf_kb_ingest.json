@@ -4,34 +4,8 @@
       {
         "data": {
           "sourceHandle": {
-            "dataType": "TextInput",
-            "id": "TextInputComponent-V35r2",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data_inputs",
-            "id": "SplitTextComponent-XEZDa",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
-            "type": "other"
-          }
-        },
-        "source": "TextInputComponent-V35r2",
-        "target": "SplitTextComponent-XEZDa"
-      },
-      {
-        "data": {
-          "sourceHandle": {
             "dataType": "SplitText",
-            "id": "SplitTextComponent-XEZDa",
+            "id": "SplitTextComponent-C5FQ1",
             "name": "dataframe",
             "output_types": [
               "Table"
@@ -39,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "input_df",
-            "id": "KnowledgeIngestionComponent-NhUQf",
+            "id": "KnowledgeIngestionComponent-cn03p",
             "inputTypes": [
               "Message",
               "Data",
@@ -50,14 +24,40 @@
             "type": "other"
           }
         },
-        "source": "SplitTextComponent-XEZDa",
-        "target": "KnowledgeIngestionComponent-NhUQf"
+        "source": "SplitTextComponent-C5FQ1",
+        "target": "KnowledgeIngestionComponent-cn03p"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "TextInput",
+            "id": "TextInputComponent-PeWQT",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data_inputs",
+            "id": "SplitTextComponent-C5FQ1",
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "source": "TextInputComponent-PeWQT",
+        "target": "SplitTextComponent-C5FQ1"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "TextInputComponent-V35r2",
+          "id": "TextInputComponent-PeWQT",
           "node": {
             "base_classes": [
               "Message"
@@ -174,11 +174,11 @@
           },
           "type": "TextInput"
         },
-        "id": "TextInputComponent-V35r2"
+        "id": "TextInputComponent-PeWQT"
       },
       {
         "data": {
-          "id": "KnowledgeIngestionComponent-NhUQf",
+          "id": "KnowledgeIngestionComponent-cn03p",
           "node": {
             "base_classes": [
               "JSON"
@@ -676,11 +676,11 @@
           },
           "type": "KnowledgeIngestion"
         },
-        "id": "KnowledgeIngestionComponent-NhUQf"
+        "id": "KnowledgeIngestionComponent-cn03p"
       },
       {
         "data": {
-          "id": "SplitTextComponent-XEZDa",
+          "id": "SplitTextComponent-C5FQ1",
           "node": {
             "base_classes": [
               "Table"
@@ -914,7 +914,7 @@
           },
           "type": "SplitText"
         },
-        "id": "SplitTextComponent-XEZDa"
+        "id": "SplitTextComponent-C5FQ1"
       }
     ]
   },

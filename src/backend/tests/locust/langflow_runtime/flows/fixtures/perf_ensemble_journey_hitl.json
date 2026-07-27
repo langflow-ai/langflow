@@ -4,310 +4,8 @@
       {
         "data": {
           "sourceHandle": {
-            "dataType": "SaveToFile",
-            "id": "SaveToFileComponent-vqLPx",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "ignored_message",
-            "id": "PassMessageComponent-dU8GC",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "SaveToFileComponent-vqLPx",
-        "target": "PassMessageComponent-dU8GC"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "KnowledgeIngestion",
-            "id": "KnowledgeIngestionComponent-uU2mM",
-            "name": "dataframe_output",
-            "output_types": [
-              "JSON"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input",
-            "id": "SaveToFileComponent-vqLPx",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
-            "type": "other"
-          }
-        },
-        "source": "KnowledgeIngestionComponent-uU2mM",
-        "target": "SaveToFileComponent-vqLPx"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-_x9EO",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "prompt",
-            "id": "HumanInput-B-VRm",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "LanguageModelComponent-_x9EO",
-        "target": "HumanInput-B-VRm"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-aT-pu",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "message",
-            "id": "MemoryComponent-1YV5w",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "ChatInput-aT-pu",
-        "target": "MemoryComponent-1YV5w"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "TypeConverterComponent",
-            "id": "TypeConverterComponent-KD2cE",
-            "name": "message_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "LanguageModelComponent-_x9EO",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "TypeConverterComponent-KD2cE",
-        "target": "LanguageModelComponent-_x9EO"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "KnowledgeBase",
-            "id": "KnowledgeBaseComponent-6M25i",
-            "name": "retrieve_data",
-            "output_types": [
-              "Table"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_data",
-            "id": "TypeConverterComponent-KD2cE",
-            "inputTypes": [
-              "Message",
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table"
-            ],
-            "type": "other"
-          }
-        },
-        "source": "KnowledgeBaseComponent-6M25i",
-        "target": "TypeConverterComponent-KD2cE"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "Memory",
-            "id": "MemoryComponent-1YV5w",
-            "name": "messages_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_message",
-            "id": "LanguageModelComponent-_x9EO",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "MemoryComponent-1YV5w",
-        "target": "LanguageModelComponent-_x9EO"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-aT-pu",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_message",
-            "id": "PassMessageComponent-dU8GC",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "ChatInput-aT-pu",
-        "target": "PassMessageComponent-dU8GC"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "Pass",
-            "id": "PassMessageComponent-dU8GC",
-            "name": "output_message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "search_query",
-            "id": "KnowledgeBaseComponent-6M25i",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "PassMessageComponent-dU8GC",
-        "target": "KnowledgeBaseComponent-6M25i"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "PerfCpuBurn",
-            "id": "PerfCpuBurn-_NTiW",
-            "name": "output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data_inputs",
-            "id": "SplitTextComponent-CbQpc",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
-            "type": "other"
-          }
-        },
-        "source": "PerfCpuBurn-_NTiW",
-        "target": "SplitTextComponent-CbQpc"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-aT-pu",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "PerfSubprocessChurn-V1fWT",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "ChatInput-aT-pu",
-        "target": "PerfSubprocessChurn-V1fWT"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "SplitText",
-            "id": "SplitTextComponent-CbQpc",
-            "name": "dataframe",
-            "output_types": [
-              "Table"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_df",
-            "id": "KnowledgeIngestionComponent-uU2mM",
-            "inputTypes": [
-              "Message",
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table"
-            ],
-            "type": "other"
-          }
-        },
-        "source": "SplitTextComponent-CbQpc",
-        "target": "KnowledgeIngestionComponent-uU2mM"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "PerfSubprocessChurn",
-            "id": "PerfSubprocessChurn-V1fWT",
-            "name": "output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "PerfDiskIo-5Xd8j",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "PerfSubprocessChurn-V1fWT",
-        "target": "PerfDiskIo-5Xd8j"
-      },
-      {
-        "data": {
-          "sourceHandle": {
             "dataType": "HumanInput",
-            "id": "HumanInput-B-VRm",
+            "id": "HumanInput-xjf4z",
             "name": "branch_approve",
             "output_types": [
               "Message"
@@ -315,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-JWNmK",
+            "id": "ChatOutput-eMiNG",
             "inputTypes": [
               "Data",
               "JSON",
@@ -326,14 +24,14 @@
             "type": "other"
           }
         },
-        "source": "HumanInput-B-VRm",
-        "target": "ChatOutput-JWNmK"
+        "source": "HumanInput-xjf4z",
+        "target": "ChatOutput-eMiNG"
       },
       {
         "data": {
           "sourceHandle": {
             "dataType": "PerfDiskIo",
-            "id": "PerfDiskIo-5Xd8j",
+            "id": "PerfDiskIo-1rAiD",
             "name": "output",
             "output_types": [
               "Message"
@@ -341,21 +39,323 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "PerfCpuBurn-_NTiW",
+            "id": "PerfCpuBurn-DZz_v",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "source": "PerfDiskIo-5Xd8j",
-        "target": "PerfCpuBurn-_NTiW"
+        "source": "PerfDiskIo-1rAiD",
+        "target": "PerfCpuBurn-DZz_v"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-aqZTL",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfSubprocessChurn-natVD",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-aqZTL",
+        "target": "PerfSubprocessChurn-natVD"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "SaveToFile",
+            "id": "SaveToFileComponent-V1QmZ",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "ignored_message",
+            "id": "PassMessageComponent-E96sC",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "SaveToFileComponent-V1QmZ",
+        "target": "PassMessageComponent-E96sC"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-aqZTL",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "message",
+            "id": "MemoryComponent-We3Gs",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-aqZTL",
+        "target": "MemoryComponent-We3Gs"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "PerfSubprocessChurn",
+            "id": "PerfSubprocessChurn-natVD",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfDiskIo-1rAiD",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "PerfSubprocessChurn-natVD",
+        "target": "PerfDiskIo-1rAiD"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-aqZTL",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_message",
+            "id": "PassMessageComponent-E96sC",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-aqZTL",
+        "target": "PassMessageComponent-E96sC"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "KnowledgeBase",
+            "id": "KnowledgeBaseComponent-cU2pK",
+            "name": "retrieve_data",
+            "output_types": [
+              "Table"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "TypeConverterComponent-Uy_C0",
+            "inputTypes": [
+              "Message",
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table"
+            ],
+            "type": "other"
+          }
+        },
+        "source": "KnowledgeBaseComponent-cU2pK",
+        "target": "TypeConverterComponent-Uy_C0"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "PerfCpuBurn",
+            "id": "PerfCpuBurn-DZz_v",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data_inputs",
+            "id": "SplitTextComponent-Td0nr",
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "source": "PerfCpuBurn-DZz_v",
+        "target": "SplitTextComponent-Td0nr"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "Memory",
+            "id": "MemoryComponent-We3Gs",
+            "name": "messages_text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "system_message",
+            "id": "LanguageModelComponent-OZ-BW",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "MemoryComponent-We3Gs",
+        "target": "LanguageModelComponent-OZ-BW"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "Pass",
+            "id": "PassMessageComponent-E96sC",
+            "name": "output_message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "search_query",
+            "id": "KnowledgeBaseComponent-cU2pK",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "PassMessageComponent-E96sC",
+        "target": "KnowledgeBaseComponent-cU2pK"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "TypeConverterComponent",
+            "id": "TypeConverterComponent-Uy_C0",
+            "name": "message_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "LanguageModelComponent-OZ-BW",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "TypeConverterComponent-Uy_C0",
+        "target": "LanguageModelComponent-OZ-BW"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "SplitText",
+            "id": "SplitTextComponent-Td0nr",
+            "name": "dataframe",
+            "output_types": [
+              "Table"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_df",
+            "id": "KnowledgeIngestionComponent-8ODtt",
+            "inputTypes": [
+              "Message",
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table"
+            ],
+            "type": "other"
+          }
+        },
+        "source": "SplitTextComponent-Td0nr",
+        "target": "KnowledgeIngestionComponent-8ODtt"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "KnowledgeIngestion",
+            "id": "KnowledgeIngestionComponent-8ODtt",
+            "name": "dataframe_output",
+            "output_types": [
+              "JSON"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input",
+            "id": "SaveToFileComponent-V1QmZ",
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "source": "KnowledgeIngestionComponent-8ODtt",
+        "target": "SaveToFileComponent-V1QmZ"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "LanguageModelComponent",
+            "id": "LanguageModelComponent-OZ-BW",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "prompt",
+            "id": "HumanInput-xjf4z",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "LanguageModelComponent-OZ-BW",
+        "target": "HumanInput-xjf4z"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-aT-pu",
+          "id": "ChatInput-aqZTL",
           "node": {
             "base_classes": [
               "Message"
@@ -620,11 +620,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-aT-pu"
+        "id": "ChatInput-aqZTL"
       },
       {
         "data": {
-          "id": "ChatOutput-JWNmK",
+          "id": "ChatOutput-eMiNG",
           "node": {
             "base_classes": [
               "Message"
@@ -887,11 +887,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-JWNmK"
+        "id": "ChatOutput-eMiNG"
       },
       {
         "data": {
-          "id": "HumanInput-B-VRm",
+          "id": "HumanInput-xjf4z",
           "node": {
             "base_classes": [
               "Message"
@@ -1080,11 +1080,11 @@
           },
           "type": "HumanInput"
         },
-        "id": "HumanInput-B-VRm"
+        "id": "HumanInput-xjf4z"
       },
       {
         "data": {
-          "id": "LanguageModelComponent-_x9EO",
+          "id": "LanguageModelComponent-OZ-BW",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1271,7 +1271,7 @@
                     "session_id": "",
                     "session_metadata": null,
                     "text": "",
-                    "timestamp": "2026-07-26 05:35:16.581367 UTC"
+                    "timestamp": "2026-07-26 22:13:37.656211 UTC"
                   },
                   "default_value": "",
                   "edit": false,
@@ -1291,7 +1291,7 @@
                   "session_id": "",
                   "text": "",
                   "text_key": "text",
-                  "timestamp": "2026-07-26 05:35:16.581367 UTC"
+                  "timestamp": "2026-07-26 22:13:37.656211 UTC"
                 }
               },
               "max_tokens": {
@@ -1540,11 +1540,11 @@
           },
           "type": "LanguageModelComponent"
         },
-        "id": "LanguageModelComponent-_x9EO"
+        "id": "LanguageModelComponent-OZ-BW"
       },
       {
         "data": {
-          "id": "TypeConverterComponent-KD2cE",
+          "id": "TypeConverterComponent-Uy_C0",
           "node": {
             "base_classes": [
               "JSON",
@@ -1709,11 +1709,11 @@
           },
           "type": "TypeConverterComponent"
         },
-        "id": "TypeConverterComponent-KD2cE"
+        "id": "TypeConverterComponent-Uy_C0"
       },
       {
         "data": {
-          "id": "KnowledgeBaseComponent-6M25i",
+          "id": "KnowledgeBaseComponent-cU2pK",
           "node": {
             "base_classes": [
               "Table"
@@ -2211,11 +2211,11 @@
           },
           "type": "KnowledgeBase"
         },
-        "id": "KnowledgeBaseComponent-6M25i"
+        "id": "KnowledgeBaseComponent-cU2pK"
       },
       {
         "data": {
-          "id": "PassMessageComponent-dU8GC",
+          "id": "PassMessageComponent-E96sC",
           "node": {
             "base_classes": [
               "Message"
@@ -2329,7 +2329,7 @@
                     "session_id": "",
                     "session_metadata": null,
                     "text": "",
-                    "timestamp": "2026-07-26 05:35:16.588707 UTC"
+                    "timestamp": "2026-07-26 22:13:37.660420 UTC"
                   },
                   "default_value": "",
                   "edit": false,
@@ -2349,7 +2349,7 @@
                   "session_id": "",
                   "text": "",
                   "text_key": "text",
-                  "timestamp": "2026-07-26 05:35:16.588707 UTC"
+                  "timestamp": "2026-07-26 22:13:37.660420 UTC"
                 }
               },
               "input_message": {
@@ -2406,7 +2406,7 @@
                     "session_id": "",
                     "session_metadata": null,
                     "text": "",
-                    "timestamp": "2026-07-26 05:35:16.588852 UTC"
+                    "timestamp": "2026-07-26 22:13:37.660479 UTC"
                   },
                   "default_value": "",
                   "edit": false,
@@ -2426,7 +2426,7 @@
                   "session_id": "",
                   "text": "",
                   "text_key": "text",
-                  "timestamp": "2026-07-26 05:35:16.588852 UTC"
+                  "timestamp": "2026-07-26 22:13:37.660479 UTC"
                 }
               }
             },
@@ -2434,11 +2434,11 @@
           },
           "type": "Pass"
         },
-        "id": "PassMessageComponent-dU8GC"
+        "id": "PassMessageComponent-E96sC"
       },
       {
         "data": {
-          "id": "SaveToFileComponent-vqLPx",
+          "id": "SaveToFileComponent-V1QmZ",
           "node": {
             "base_classes": [
               "Message"
@@ -2889,11 +2889,11 @@
           },
           "type": "SaveToFile"
         },
-        "id": "SaveToFileComponent-vqLPx"
+        "id": "SaveToFileComponent-V1QmZ"
       },
       {
         "data": {
-          "id": "KnowledgeIngestionComponent-uU2mM",
+          "id": "KnowledgeIngestionComponent-8ODtt",
           "node": {
             "base_classes": [
               "JSON"
@@ -3391,11 +3391,11 @@
           },
           "type": "KnowledgeIngestion"
         },
-        "id": "KnowledgeIngestionComponent-uU2mM"
+        "id": "KnowledgeIngestionComponent-8ODtt"
       },
       {
         "data": {
-          "id": "SplitTextComponent-CbQpc",
+          "id": "SplitTextComponent-Td0nr",
           "node": {
             "base_classes": [
               "Table"
@@ -3629,11 +3629,11 @@
           },
           "type": "SplitText"
         },
-        "id": "SplitTextComponent-CbQpc"
+        "id": "SplitTextComponent-Td0nr"
       },
       {
         "data": {
-          "id": "PerfCpuBurn-_NTiW",
+          "id": "PerfCpuBurn-DZz_v",
           "node": {
             "base_classes": [
               "Message"
@@ -3775,11 +3775,11 @@
           },
           "type": "PerfCpuBurn"
         },
-        "id": "PerfCpuBurn-_NTiW"
+        "id": "PerfCpuBurn-DZz_v"
       },
       {
         "data": {
-          "id": "PerfDiskIo-5Xd8j",
+          "id": "PerfDiskIo-1rAiD",
           "node": {
             "base_classes": [
               "Message"
@@ -3894,11 +3894,11 @@
           },
           "type": "PerfDiskIo"
         },
-        "id": "PerfDiskIo-5Xd8j"
+        "id": "PerfDiskIo-1rAiD"
       },
       {
         "data": {
-          "id": "PerfSubprocessChurn-V1fWT",
+          "id": "PerfSubprocessChurn-natVD",
           "node": {
             "base_classes": [
               "Message"
@@ -4094,11 +4094,11 @@
           },
           "type": "PerfSubprocessChurn"
         },
-        "id": "PerfSubprocessChurn-V1fWT"
+        "id": "PerfSubprocessChurn-natVD"
       },
       {
         "data": {
-          "id": "MemoryComponent-1YV5w",
+          "id": "MemoryComponent-We3Gs",
           "node": {
             "base_classes": [
               "Message",
@@ -4460,7 +4460,7 @@
           },
           "type": "Memory"
         },
-        "id": "MemoryComponent-1YV5w"
+        "id": "MemoryComponent-We3Gs"
       }
     ]
   },

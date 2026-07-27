@@ -3,7 +3,7 @@
   "id": "ensemble_flow",
   "test_type": "load",
   "purpose": "Stress the full ensemble journey flow across workflows, MCP, and webhooks.",
-  "movement_kind": "tutti",
+  "movement_kind": "suite",
   "stress_categories": [
     "ensemble_flow"
   ],

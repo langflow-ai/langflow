@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import uuid
 from typing import Any
 
@@ -13,58 +12,20 @@ from tests.locust.langflow_runtime.clients.mcp_streamable import McpStreamableCl
 from tests.locust.langflow_runtime.clients.webhooks import WebhookCopy, WebhookCopyPool, WebhooksClient
 from tests.locust.langflow_runtime.clients.workflows import WorkflowsClient
 from tests.locust.langflow_runtime.config.context import RunContext
-from tests.locust.langflow_runtime.metrics.arrivals import ArrivalAccountant
+from tests.locust.langflow_runtime.metrics.arrivals import ArrivalAccountant, PacedArrivalScheduler
 from tests.locust.langflow_runtime.metrics.registry import get_registry
+from tests.locust.langflow_runtime.users.helpers import extract_output_text, require_flow
 
-
-def require_flow(state: dict[str, Any] | None, fixture_id: str) -> dict[str, Any] | None:
-    """Return provisioned flow metadata for ``fixture_id``, or None if unavailable."""
-    if not isinstance(state, dict):
-        return None
-    flows = state.get("flows")
-    if not isinstance(flows, dict):
-        return None
-    entry = flows.get(fixture_id)
-    if not isinstance(entry, dict):
-        return None
-    if not entry.get("flow_id"):
-        return None
-    return entry
-
-
-def extract_output_text(payload: Any) -> str:
-    """Best-effort extraction of textual workflow output for correctness checks."""
-    if payload is None:
-        return ""
-    if isinstance(payload, str):
-        return payload
-    if isinstance(payload, dict):
-        for key in ("text", "output", "result", "message"):
-            value = payload.get(key)
-            if isinstance(value, str):
-                return value
-            if isinstance(value, dict):
-                nested = extract_output_text(value)
-                if nested:
-                    return nested
-        outputs = payload.get("outputs")
-        if isinstance(outputs, list):
-            parts = [extract_output_text(item) for item in outputs]
-            return "\n".join(part for part in parts if part)
-        if isinstance(outputs, dict):
-            return extract_output_text(outputs)
-        messages = payload.get("messages")
-        if isinstance(messages, list):
-            parts = [extract_output_text(item) for item in messages]
-            return "\n".join(part for part in parts if part)
-        try:
-            return json.dumps(payload)
-        except (TypeError, ValueError):
-            return str(payload)
-    if isinstance(payload, list):
-        parts = [extract_output_text(item) for item in payload]
-        return "\n".join(part for part in parts if part)
-    return str(payload)
+__all__ = [
+    "PerfBaseUser",
+    "extract_output_text",
+    "get_or_create_arrival_accountant",
+    "get_or_create_paced_arrival_scheduler",
+    "get_or_create_webhook_pool",
+    "parse_kv_metrics",
+    "parse_multiproc_header",
+    "require_flow",
+]
 
 
 def parse_kv_metrics(text: str, *, prefix: str) -> dict[str, Any] | None:
@@ -113,6 +74,19 @@ def get_or_create_arrival_accountant(environment: Any) -> ArrivalAccountant:
         accountant = ArrivalAccountant()
         environment.arrival_accountant = accountant
     return accountant
+
+
+def get_or_create_paced_arrival_scheduler(
+    environment: Any,
+    *,
+    rate_per_s: float,
+    allowed_lateness_s: float,
+) -> PacedArrivalScheduler:
+    scheduler = getattr(environment, "queue_arrival_scheduler", None)
+    if scheduler is None:
+        scheduler = PacedArrivalScheduler(rate_per_s, allowed_lateness_s=allowed_lateness_s)
+        environment.queue_arrival_scheduler = scheduler
+    return scheduler
 
 
 def get_or_create_webhook_pool(environment: Any, state: dict[str, Any] | None) -> WebhookCopyPool | None:

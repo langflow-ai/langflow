@@ -4,8 +4,96 @@
       {
         "data": {
           "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-NEBht",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfCpuBurn-BJTv5",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-NEBht",
+        "target": "PerfCpuBurn-BJTv5"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "PerfCpuBurn",
+            "id": "PerfCpuBurn-mr4Eh",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_message",
+            "id": "PassMessageComponent-7gc7P",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "PerfCpuBurn-mr4Eh",
+        "target": "PassMessageComponent-7gc7P"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-NEBht",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfCpuBurn-mr4Eh",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-NEBht",
+        "target": "PerfCpuBurn-mr4Eh"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "PerfCpuBurn",
+            "id": "PerfCpuBurn-BJTv5",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "ignored_message",
+            "id": "PassMessageComponent-7gc7P",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "PerfCpuBurn-BJTv5",
+        "target": "PassMessageComponent-7gc7P"
+      },
+      {
+        "data": {
+          "sourceHandle": {
             "dataType": "Pass",
-            "id": "PassMessageComponent-TwRlR",
+            "id": "PassMessageComponent-7gc7P",
             "name": "output_message",
             "output_types": [
               "Message"
@@ -13,7 +101,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-Iws3y",
+            "id": "ChatOutput-0unO5",
             "inputTypes": [
               "Data",
               "JSON",
@@ -24,102 +112,14 @@
             "type": "other"
           }
         },
-        "source": "PassMessageComponent-TwRlR",
-        "target": "ChatOutput-Iws3y"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-kA9Cz",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "PerfCpuBurn-WNvaj",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "ChatInput-kA9Cz",
-        "target": "PerfCpuBurn-WNvaj"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "PerfCpuBurn",
-            "id": "PerfCpuBurn-WNvaj",
-            "name": "output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "ignored_message",
-            "id": "PassMessageComponent-TwRlR",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "PerfCpuBurn-WNvaj",
-        "target": "PassMessageComponent-TwRlR"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "PerfCpuBurn",
-            "id": "PerfCpuBurn-xjAze",
-            "name": "output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_message",
-            "id": "PassMessageComponent-TwRlR",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "PerfCpuBurn-xjAze",
-        "target": "PassMessageComponent-TwRlR"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-kA9Cz",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "PerfCpuBurn-xjAze",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "source": "ChatInput-kA9Cz",
-        "target": "PerfCpuBurn-xjAze"
+        "source": "PassMessageComponent-7gc7P",
+        "target": "ChatOutput-0unO5"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-kA9Cz",
+          "id": "ChatInput-NEBht",
           "node": {
             "base_classes": [
               "Message"
@@ -384,11 +384,11 @@
           },
           "type": "ChatInput"
         },
-        "id": "ChatInput-kA9Cz"
+        "id": "ChatInput-NEBht"
       },
       {
         "data": {
-          "id": "ChatOutput-Iws3y",
+          "id": "ChatOutput-0unO5",
           "node": {
             "base_classes": [
               "Message"
@@ -651,11 +651,11 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-Iws3y"
+        "id": "ChatOutput-0unO5"
       },
       {
         "data": {
-          "id": "PassMessageComponent-TwRlR",
+          "id": "PassMessageComponent-7gc7P",
           "node": {
             "base_classes": [
               "Message"
@@ -769,7 +769,7 @@
                     "session_id": "",
                     "session_metadata": null,
                     "text": "",
-                    "timestamp": "2026-07-26 05:35:16.480162 UTC"
+                    "timestamp": "2026-07-26 22:13:37.595484 UTC"
                   },
                   "default_value": "",
                   "edit": false,
@@ -789,7 +789,7 @@
                   "session_id": "",
                   "text": "",
                   "text_key": "text",
-                  "timestamp": "2026-07-26 05:35:16.480162 UTC"
+                  "timestamp": "2026-07-26 22:13:37.595484 UTC"
                 }
               },
               "input_message": {
@@ -846,7 +846,7 @@
                     "session_id": "",
                     "session_metadata": null,
                     "text": "",
-                    "timestamp": "2026-07-26 05:35:16.480256 UTC"
+                    "timestamp": "2026-07-26 22:13:37.595579 UTC"
                   },
                   "default_value": "",
                   "edit": false,
@@ -866,7 +866,7 @@
                   "session_id": "",
                   "text": "",
                   "text_key": "text",
-                  "timestamp": "2026-07-26 05:35:16.480256 UTC"
+                  "timestamp": "2026-07-26 22:13:37.595579 UTC"
                 }
               }
             },
@@ -874,11 +874,11 @@
           },
           "type": "Pass"
         },
-        "id": "PassMessageComponent-TwRlR"
+        "id": "PassMessageComponent-7gc7P"
       },
       {
         "data": {
-          "id": "PerfCpuBurn-xjAze",
+          "id": "PerfCpuBurn-mr4Eh",
           "node": {
             "base_classes": [
               "Message"
@@ -1020,11 +1020,11 @@
           },
           "type": "PerfCpuBurn"
         },
-        "id": "PerfCpuBurn-xjAze"
+        "id": "PerfCpuBurn-mr4Eh"
       },
       {
         "data": {
-          "id": "PerfCpuBurn-WNvaj",
+          "id": "PerfCpuBurn-BJTv5",
           "node": {
             "base_classes": [
               "Message"
@@ -1166,7 +1166,7 @@
           },
           "type": "PerfCpuBurn"
         },
-        "id": "PerfCpuBurn-WNvaj"
+        "id": "PerfCpuBurn-BJTv5"
       }
     ]
   },

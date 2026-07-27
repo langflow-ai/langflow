@@ -936,56 +936,39 @@ perf-teardown: ## Tear down perf suite resources for env id
 	@cd $(perf_backend) && PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.provision.cli teardown \
 		--host $(perf_host) --env-id $(perf_env_id)
 
-perf-smoke: ## Run three-protocol smoke profile (one movement)
-	@$(MAKE) perf-profile PROFILE=smoke/all_protocols
-
-perf-solo: ## Run one solo axis (CATEGORY=protocol_calibration|chat_db|queue|...)
-	@test -n "$(CATEGORY)" || (echo "$(RED)CATEGORY required, e.g. make perf-solo CATEGORY=protocol_calibration$(NC)" && exit 1)
-	@$(MAKE) perf-profile PROFILE=solos/$(CATEGORY)
-
-perf-duet: ## Run one duet (PAIR=chat_db_cpu_graph|kb_ingest_kb_retrieve|disk_io_ram_storage)
-	@test -n "$(PAIR)" || (echo "$(RED)PAIR required, e.g. make perf-duet PAIR=chat_db_cpu_graph$(NC)" && exit 1)
-	@$(MAKE) perf-profile PROFILE=duets/$(PAIR)
-
-perf-tutti: ## Run tutti movement (MODE=suite|flow|hitl)
-	@test -n "$(MODE)" || (echo "$(RED)MODE required: suite|flow|hitl$(NC)" && exit 1)
-	@case "$(MODE)" in \
-		suite) $(MAKE) perf-profile PROFILE=tutti/ensemble_suite ;; \
-		flow) $(MAKE) perf-profile PROFILE=tutti/ensemble_flow ;; \
-		hitl) $(MAKE) perf-profile PROFILE=tutti/ensemble_hitl ;; \
-		*) echo "$(RED)MODE must be suite|flow|hitl$(NC)"; exit 1 ;; \
-	esac
-
-perf-profile: ## Run exactly one movement profile (PROFILE=smoke/all_protocols)
-	@test -n "$(PROFILE)" || (echo "$(RED)PROFILE required, e.g. PROFILE=smoke/all_protocols$(NC)" && exit 1)
+perf-run: ## Run one movement (ARGS='--axes chat_db' or ARGS='--suite smoke')
+	@test -n "$(ARGS)" || (echo "$(RED)ARGS required, e.g. make perf-run ARGS='--axes chat_db' or ARGS='--suite smoke'$(NC)" && exit 1)
 	@cd $(perf_backend) && \
 	export PERF_HOST=$(perf_host) && \
 	export PERF_ENV_ID=$(perf_env_id) && \
-	PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run run --profile $(PROFILE) --host $(perf_host) --env-id $(perf_env_id)
+	PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run run $(ARGS) --host $(perf_host) --env-id $(perf_env_id)
 
 perf-help: ## Show performance suite help
 	@echo "$(GREEN)Langflow performance suite$(NC)"
-	@echo "Measures project MCP, Workflows v2, and Webhooks. One profile = one movement."
+	@echo "Measures project MCP, Workflows v2, and Webhooks. One run = one movement."
+	@echo "Select with --axes (1..N stress axes) or --suite (named shortcut)."
 	@echo "Legacy load_test_* targets remain available for the older harness."
 	@echo ""
 	@echo "$(YELLOW)Typical sequence:$(NC)"
-	@echo "  1. make perf-provision perf_host=http://127.0.0.1:7860"
-	@echo "  2. make perf-smoke"
-	@echo "  3. make perf-solo CATEGORY=protocol_calibration"
-	@echo "  4. make perf-duet PAIR=chat_db_cpu_graph"
-	@echo "  5. make perf-tutti MODE=suite"
-	@echo "  6. make perf-teardown"
+	@echo "  1. make perf-provision PERF_PROVISION_ARGS='--flows v1' perf_host=http://127.0.0.1:7860"
+	@echo "  2. make perf-run ARGS='--suite smoke'"
+	@echo "  3. make perf-run ARGS='--axes protocol_calibration'"
+	@echo "  4. make perf-run ARGS='--suite chat_db_cpu_graph'"
+	@echo "  5. make perf-run ARGS='--suite tutti'"
+	@echo "  6. make perf-run ARGS='--suite natural --external-apis stubbed'"
+	@echo "  7. make perf-run ARGS='--suite natural --external-apis live'"
+	@echo "  8. make perf-teardown"
 	@echo ""
 	@echo "$(YELLOW)Commands:$(NC)"
 	@echo "  perf-provision[-validate]  - Create / validate suite-tagged resources"
 	@echo "  perf-teardown              - Idempotent teardown for perf_env_id"
-	@echo "  perf-smoke                 - Three-protocol smoke movement"
-	@echo "  perf-solo CATEGORY=...     - One stress-axis solo"
-	@echo "  perf-duet PAIR=...         - One pairwise duet"
-	@echo "  perf-tutti MODE=suite|flow|hitl"
-	@echo "  perf-profile PROFILE=...   - Arbitrary profile under langflow_runtime/profiles/"
+	@echo "  perf-run ARGS='...'        - One movement (--axes or --suite)"
 	@echo ""
 	@echo "$(YELLOW)Notes:$(NC)"
+	@echo "  - Exactly one of --axes or --suite; natural requires --external-apis"
+	@echo "  - Full-song provisioning uses PERF_PROVISION_ARGS='--flows v1' (excludes deferred mega-graphs)"
+	@echo "  - Default perf-provision without ARGS provisions the smoke set only"
+	@echo "  - No MODE flag; mega-graph ensemble journeys are out of V1"
 	@echo "  - CI / certification are out of scope for this suite"
 	@echo "  - Artifacts default to \$$XDG_CACHE_HOME/langflow-perf or ~/.cache/langflow-perf"
 	@echo "    (override with PERF_DATA_DIR); state files are mode 0600"

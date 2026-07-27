@@ -3,7 +3,7 @@
   "id": "queue",
   "test_type": "load",
   "purpose": "Stress background queue admission and completion with paced arrivals.",
-  "movement_kind": "solo",
+  "movement_kind": "axis_set",
   "stress_categories": [
     "queue"
   ],

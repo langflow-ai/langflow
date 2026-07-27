@@ -1,7 +1,13 @@
 {
   "component_source_sha256": {
     "perf_cpu_burn": "7e941b067228adf3143106179f5b2b55eb37faaf55bf3d95c6bf759a47c179e2",
+    "perf_deterministic_embeddings": "d9babb2272f020b24bf6258af997fa41d5c24d4b4a9e53c03dcab935219aad89",
     "perf_disk_io": "203e15af92c59dfa7624971974f7dcc106b6a8fa28b2149a7a42f02118ad2fed",
+    "perf_mock_agent": "cb95a1777dcab7c144786c0151a0c034a9b0bca757a817527d51e42981c0ab94",
+    "perf_mock_language_model": "09ee1217b8bbf0cb6863cec5e915bf3b9dd41974a26684fd488508bdcd507b3f",
+    "perf_mock_llm": "1a5122d66c28f20dd7b55de230a0c43f200cae2e006e460d597022bc3ed51e36",
+    "perf_mock_url": "176a23ed70b4246219d22b2d5f19e96b70d6cd98b45533cc594da7932de1afe4",
+    "perf_mock_web_search": "9069e176dc0793fcc421f025dd6d53a3e966a20df15a178a79d532c55cd82ed3",
     "perf_sleep": "a59ce946c5e26deadc57fab4547c816ba5e97986adef072f92fdac8de9b8b7e9",
     "perf_subprocess_churn": "57175cfc77a372ffcc5a843ad4af77228a332a3e27cd5410fc58a5a9151c5c7e"
   },
@@ -17,7 +23,7 @@
       },
       "fixture": "perf_passthrough.json",
       "fixture_path": "fixtures/perf_passthrough.json",
-      "fixture_sha256": "3dfcace1ea6f11e2e62b9be55a7a764f62ab9479a6ba7b9c4a45ca7495f4e8ba",
+      "fixture_sha256": "a3938a6e8059eda4805e019fc8b403a3456182c230dca2d7b8cbc587c8e361bd",
       "hitl": false,
       "id": "perf_passthrough",
       "input_fields": {
@@ -55,7 +61,7 @@
       },
       "fixture": "perf_webhook_passthrough.json",
       "fixture_path": "fixtures/perf_webhook_passthrough.json",
-      "fixture_sha256": "4144c3bcab3bcea1204a83398566bac082484a4b46547076ea966132ab7c8c06",
+      "fixture_sha256": "be731b5560b6cd4adfe0bae649b3f5d2583942cdcd9f6391426bf4eb0fabe1d2",
       "hitl": false,
       "id": "perf_webhook_passthrough",
       "input_fields": {
@@ -180,7 +186,7 @@
       },
       "fixture": "perf_queue_short.json",
       "fixture_path": "fixtures/perf_queue_short.json",
-      "fixture_sha256": "20791be7795a93fdcf84e2e1c6ef5af34c2372a4dc1f8c630fb16ce9186bbce4",
+      "fixture_sha256": "d7a30f011150253d7da2952e4e6487febc915a42b804b827cde6abc6962a962a",
       "hitl": false,
       "id": "perf_queue_short",
       "input_fields": {
@@ -221,7 +227,7 @@
       },
       "fixture": "perf_kb_ingest.json",
       "fixture_path": "fixtures/perf_kb_ingest.json",
-      "fixture_sha256": "d82446565bdd558814975057390dccbf52c0e8ef9afe2dbf7dabb9b0afda2bc6",
+      "fixture_sha256": "b9bdc325a983863c8b45e298202cc4bc30ee8c4b78846389653d3d3022450cf1",
       "hitl": false,
       "id": "perf_kb_ingest",
       "input_fields": {
@@ -267,7 +273,7 @@
       },
       "fixture": "perf_kb_retrieve.json",
       "fixture_path": "fixtures/perf_kb_retrieve.json",
-      "fixture_sha256": "5a3a5f5023bc747c8162f49c4a625388eb1e59c43709f2e3f50118c16def9a93",
+      "fixture_sha256": "dafda1a3f5683b65075c16aec228853c1890a08d2114ec0b57ba4a4e340abf94",
       "hitl": false,
       "id": "perf_kb_retrieve",
       "input_fields": {
@@ -316,7 +322,7 @@
       },
       "fixture": "perf_cpu_graph.json",
       "fixture_path": "fixtures/perf_cpu_graph.json",
-      "fixture_sha256": "f3ad98dfbd4909fba0329c8d6acfbc0f95b33afad9074c0d3dc7ed08d632fd5a",
+      "fixture_sha256": "9b675f50aeb0a32c358a593ea16d95a61bc893953b7b2d2d619a4689081a489f",
       "hitl": false,
       "id": "perf_cpu_graph",
       "input_fields": {
@@ -365,7 +371,7 @@
       },
       "fixture": "perf_multiproc_churn.json",
       "fixture_path": "fixtures/perf_multiproc_churn.json",
-      "fixture_sha256": "e0c3e0fe563a3539cce4fc35b16c1f29ecebaccc7f7371f6c2f66da1fc6e836c",
+      "fixture_sha256": "5de4ed63ea9dfe2386c8f1920c11b7d7d632bda8077ba4f896f5b88c74c14b46",
       "hitl": false,
       "id": "perf_multiproc_churn",
       "input_fields": {
@@ -414,7 +420,7 @@
       },
       "fixture": "perf_disk_io.json",
       "fixture_path": "fixtures/perf_disk_io.json",
-      "fixture_sha256": "f4e700aa58335a6b7f6503973351d30bbd55ec675635be9c588f9a3fee152c18",
+      "fixture_sha256": "9f026832d660d52c6c4676593dd2931b5cf5ff28e91e30afdcca7406a83da847",
       "hitl": false,
       "id": "perf_disk_io",
       "input_fields": {
@@ -455,7 +461,7 @@
       },
       "fixture": "perf_payload_echo.json",
       "fixture_path": "fixtures/perf_payload_echo.json",
-      "fixture_sha256": "af457cc0c3a28eb7a6e0976e0152302338429a5d56d0ab9ed5fd34b408220194",
+      "fixture_sha256": "9d048dbf35f6660f7edce24330da8af904b54f9675b15f8f14aefb3e9ab7a4dd",
       "hitl": false,
       "id": "perf_payload_echo",
       "input_fields": {
@@ -501,7 +507,7 @@
       },
       "fixture": "perf_outbound_basic_prompting.json",
       "fixture_path": "fixtures/perf_outbound_basic_prompting.json",
-      "fixture_sha256": "5613931306044ee3ef4b5133caad5632e49ecbad6e6fbd91f539bd86bbcf194b",
+      "fixture_sha256": "67dab615648511fbf8f7284d49cdc10d505cde36cd1efdd39dd01dd875eae076",
       "hitl": false,
       "id": "perf_outbound_basic_prompting",
       "input_fields": {
@@ -526,6 +532,510 @@
       ],
       "supported_protocols": [
         "mcp",
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "binding": null,
+      "dataset_selector": null,
+      "embedded_component_sha256": {
+        "perf_mock_language_model": "09ee1217b8bbf0cb6863cec5e915bf3b9dd41974a26684fd488508bdcd507b3f"
+      },
+      "embedded_components": [
+        "perf_mock_language_model"
+      ],
+      "endpoint_name": "natural-basic-prompting--external-stubbed",
+      "expected_component_sha256": {
+        "perf_mock_language_model": "09ee1217b8bbf0cb6863cec5e915bf3b9dd41974a26684fd488508bdcd507b3f"
+      },
+      "expected_output_rule": {
+        "contains_any": [
+          "PERF_MOCK_LLM",
+          "perf-outbound-ok"
+        ]
+      },
+      "external_apis": "stubbed",
+      "fixture": "natural_basic_prompting__external_stubbed.json",
+      "fixture_path": "fixtures/natural_basic_prompting__external_stubbed.json",
+      "fixture_sha256": "2a35871fd7ac283c9d3d2d8f4db16d28a98f909cd201036d8249f51dd8522959",
+      "hitl": false,
+      "id": "natural_basic_prompting__external_stubbed",
+      "input_fields": {
+        "input_value": "Say exactly: perf-outbound-ok"
+      },
+      "mcp_action_name": null,
+      "movement_role": "natural",
+      "node_types": [
+        "ChatInput",
+        "ChatOutput",
+        "LanguageModelComponent",
+        "Prompt"
+      ],
+      "required_environment_features": [],
+      "source_provenance": "starter:Basic Prompting.json (LanguageModel edge stubbed|live)",
+      "stores_chat_history": false,
+      "stress_category": "natural",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "binding": null,
+      "dataset_selector": null,
+      "embedded_component_sha256": {},
+      "endpoint_name": "natural-basic-prompting--external-live",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "contains_any": [
+          "PERF_MOCK_LLM",
+          "perf-outbound-ok"
+        ]
+      },
+      "external_apis": "live",
+      "fixture": "natural_basic_prompting__external_live.json",
+      "fixture_path": "fixtures/natural_basic_prompting__external_live.json",
+      "fixture_sha256": "eeac57617e817fb27fff081b5f18943ee28f300eba2373dc21fdda8132fc476d",
+      "hitl": false,
+      "id": "natural_basic_prompting__external_live",
+      "input_fields": {
+        "input_value": "Say exactly: perf-outbound-ok"
+      },
+      "mcp_action_name": null,
+      "movement_role": "natural",
+      "node_types": [
+        "ChatInput",
+        "ChatOutput",
+        "LanguageModelComponent",
+        "Prompt"
+      ],
+      "required_environment_features": [
+        "llm_provider"
+      ],
+      "source_provenance": "starter:Basic Prompting.json (LanguageModel edge stubbed|live)",
+      "stores_chat_history": false,
+      "stress_category": "natural",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "binding": null,
+      "dataset_selector": null,
+      "embedded_component_sha256": {
+        "perf_mock_url": "176a23ed70b4246219d22b2d5f19e96b70d6cd98b45533cc594da7932de1afe4",
+        "perf_mock_web_search": "9069e176dc0793fcc421f025dd6d53a3e966a20df15a178a79d532c55cd82ed3"
+      },
+      "embedded_components": [
+        "perf_mock_url",
+        "perf_mock_web_search"
+      ],
+      "endpoint_name": "natural-simple-agent--external-stubbed",
+      "expected_component_sha256": {
+        "perf_mock_url": "176a23ed70b4246219d22b2d5f19e96b70d6cd98b45533cc594da7932de1afe4",
+        "perf_mock_web_search": "9069e176dc0793fcc421f025dd6d53a3e966a20df15a178a79d532c55cd82ed3"
+      },
+      "expected_output_rule": {
+        "contains_any": [
+          "PERF_MOCK_LLM",
+          "perf-outbound-ok"
+        ]
+      },
+      "external_apis": "stubbed",
+      "fixture": "natural_simple_agent__external_stubbed.json",
+      "fixture_path": "fixtures/natural_simple_agent__external_stubbed.json",
+      "fixture_sha256": "607b3a543e3d4d922d04c54554a1b1f9721660afa7efaa8274d67943b3dee1b0",
+      "hitl": false,
+      "id": "natural_simple_agent__external_stubbed",
+      "input_fields": {
+        "input_value": "Say exactly: perf-outbound-ok"
+      },
+      "mcp_action_name": null,
+      "movement_role": "natural",
+      "node_types": [
+        "Agent",
+        "ChatInput",
+        "ChatOutput",
+        "URLComponent",
+        "UnifiedWebSearch"
+      ],
+      "required_environment_features": [],
+      "source_provenance": "starter:Simple Agent.json (Agent+URL+WebSearch; vendor edges stubbed|live)",
+      "stores_chat_history": false,
+      "stress_category": "natural",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "binding": null,
+      "dataset_selector": null,
+      "embedded_component_sha256": {},
+      "endpoint_name": "natural-simple-agent--external-live",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "contains_any": [
+          "PERF_MOCK_LLM",
+          "perf-outbound-ok"
+        ]
+      },
+      "external_apis": "live",
+      "fixture": "natural_simple_agent__external_live.json",
+      "fixture_path": "fixtures/natural_simple_agent__external_live.json",
+      "fixture_sha256": "d0b05b036cfe3d61b081ab0f362f839694dd79b258d950017760a6b62b543af0",
+      "hitl": false,
+      "id": "natural_simple_agent__external_live",
+      "input_fields": {
+        "input_value": "Say exactly: perf-outbound-ok"
+      },
+      "mcp_action_name": null,
+      "movement_role": "natural",
+      "node_types": [
+        "Agent",
+        "ChatInput",
+        "ChatOutput",
+        "URLComponent",
+        "UnifiedWebSearch"
+      ],
+      "required_environment_features": [
+        "llm_provider"
+      ],
+      "source_provenance": "starter:Simple Agent.json (Agent+URL+WebSearch; vendor edges stubbed|live)",
+      "stores_chat_history": false,
+      "stress_category": "natural",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "binding": null,
+      "dataset_selector": null,
+      "embedded_component_sha256": {},
+      "endpoint_name": "natural-memory-chatbot--external-stubbed",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "chat_message_persisted": true,
+        "contains_any": [
+          "PERF_MOCK_LLM",
+          "perf-outbound-ok"
+        ]
+      },
+      "external_apis": "stubbed",
+      "fixture": "natural_memory_chatbot__external_stubbed.json",
+      "fixture_path": "fixtures/natural_memory_chatbot__external_stubbed.json",
+      "fixture_sha256": "3daa4d2beb639cf128946772ec3accd3f1b0c44be532ec7a554249ae109f64dd",
+      "hitl": false,
+      "id": "natural_memory_chatbot__external_stubbed",
+      "input_fields": {
+        "input_value": "Say exactly: perf-outbound-ok"
+      },
+      "mcp_action_name": null,
+      "movement_role": "natural",
+      "node_types": [
+        "Agent",
+        "ChatInput",
+        "ChatOutput",
+        "MemoryBase"
+      ],
+      "required_environment_features": [
+        "message_store",
+        "memory_base"
+      ],
+      "source_provenance": "starter:Memory Chatbot.json (Agent+MemoryBase; LLM/embed edges stubbed|live)",
+      "stores_chat_history": true,
+      "stress_category": "natural",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "binding": null,
+      "dataset_selector": null,
+      "embedded_component_sha256": {},
+      "endpoint_name": "natural-memory-chatbot--external-live",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "chat_message_persisted": true,
+        "contains_any": [
+          "PERF_MOCK_LLM",
+          "perf-outbound-ok"
+        ]
+      },
+      "external_apis": "live",
+      "fixture": "natural_memory_chatbot__external_live.json",
+      "fixture_path": "fixtures/natural_memory_chatbot__external_live.json",
+      "fixture_sha256": "8f91763ec23d4ae095c73b37cfaa31319aed64f350a8534cc908adf295bcb2c0",
+      "hitl": false,
+      "id": "natural_memory_chatbot__external_live",
+      "input_fields": {
+        "input_value": "Say exactly: perf-outbound-ok"
+      },
+      "mcp_action_name": null,
+      "movement_role": "natural",
+      "node_types": [
+        "Agent",
+        "ChatInput",
+        "ChatOutput",
+        "MemoryBase"
+      ],
+      "required_environment_features": [
+        "llm_provider",
+        "message_store",
+        "memory_base",
+        "embeddings"
+      ],
+      "source_provenance": "starter:Memory Chatbot.json (Agent+MemoryBase; LLM/embed edges stubbed|live)",
+      "stores_chat_history": true,
+      "stress_category": "natural",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "binding": {
+        "knowledge_base": "perf_kb"
+      },
+      "dataset_selector": "kb/bounded_corpus",
+      "embedded_component_sha256": {},
+      "endpoint_name": "natural-vector-store-rag--external-stubbed",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "contains_any": [
+          "PERF_MOCK_LLM",
+          "PERF_KB"
+        ],
+        "retrieval": true
+      },
+      "external_apis": "stubbed",
+      "fixture": "natural_vector_store_rag__external_stubbed.json",
+      "fixture_path": "fixtures/natural_vector_store_rag__external_stubbed.json",
+      "fixture_sha256": "fda8632adc41a0745af5398d3817b4f8e8b4b71b820df6cd3ad43bd0370ac2ff",
+      "hitl": false,
+      "id": "natural_vector_store_rag__external_stubbed",
+      "input_fields": {
+        "input_value": "Say exactly: perf-outbound-ok"
+      },
+      "mcp_action_name": null,
+      "movement_role": "natural",
+      "node_types": [
+        "Agent",
+        "ChatInput",
+        "ChatOutput",
+        "Knowledge",
+        "Prompt",
+        "parser"
+      ],
+      "required_environment_features": [
+        "knowledge_base"
+      ],
+      "source_provenance": "starter:Vector Store RAG.json (Agent+Knowledge+Prompt; embed/LLM stubbed|live)",
+      "stores_chat_history": false,
+      "stress_category": "natural",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "binding": {
+        "knowledge_base": "perf_kb"
+      },
+      "dataset_selector": "kb/bounded_corpus",
+      "embedded_component_sha256": {},
+      "endpoint_name": "natural-vector-store-rag--external-live",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "contains_any": [
+          "PERF_MOCK_LLM",
+          "PERF_KB"
+        ],
+        "retrieval": true
+      },
+      "external_apis": "live",
+      "fixture": "natural_vector_store_rag__external_live.json",
+      "fixture_path": "fixtures/natural_vector_store_rag__external_live.json",
+      "fixture_sha256": "65ff0ddb4740992ff144d755b70e925bdabb5a1524961a4182b9130bc790d2fd",
+      "hitl": false,
+      "id": "natural_vector_store_rag__external_live",
+      "input_fields": {
+        "input_value": "Say exactly: perf-outbound-ok"
+      },
+      "mcp_action_name": null,
+      "movement_role": "natural",
+      "node_types": [
+        "Agent",
+        "ChatInput",
+        "ChatOutput",
+        "Knowledge",
+        "Prompt",
+        "parser"
+      ],
+      "required_environment_features": [
+        "llm_provider",
+        "knowledge_base",
+        "embeddings"
+      ],
+      "source_provenance": "starter:Vector Store RAG.json (Agent+Knowledge+Prompt; embed/LLM stubbed|live)",
+      "stores_chat_history": false,
+      "stress_category": "natural",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "binding": null,
+      "dataset_selector": "storage/bounded_payload",
+      "embedded_component_sha256": {},
+      "endpoint_name": "natural-file-parser-agent--external-stubbed",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "contains_any": [
+          "PERF_MOCK_LLM",
+          "perf-outbound-ok"
+        ]
+      },
+      "external_apis": "stubbed",
+      "fixture": "natural_file_parser_agent__external_stubbed.json",
+      "fixture_path": "fixtures/natural_file_parser_agent__external_stubbed.json",
+      "fixture_sha256": "7704368b861fa2a8b139665a0c0f44c7d51a0de315a6ddece4d0169127cea6e0",
+      "hitl": false,
+      "id": "natural_file_parser_agent__external_stubbed",
+      "input_fields": {
+        "input_value": "Say exactly: perf-outbound-ok"
+      },
+      "mcp_action_name": null,
+      "movement_role": "natural",
+      "node_types": [
+        "Agent",
+        "ChatOutput",
+        "File",
+        "ParserComponent"
+      ],
+      "required_environment_features": [
+        "storage"
+      ],
+      "source_provenance": "starter:Financial Report Parser.json (File+Parser+Agent; LLM stubbed|live)",
+      "stores_chat_history": false,
+      "stress_category": "natural",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
+        "workflows_sync",
+        "workflows_stream",
+        "workflows_background"
+      ],
+      "webhook_copy_count": 0
+    },
+    {
+      "binding": null,
+      "dataset_selector": "storage/bounded_payload",
+      "embedded_component_sha256": {},
+      "endpoint_name": "natural-file-parser-agent--external-live",
+      "expected_component_sha256": {},
+      "expected_output_rule": {
+        "contains_any": [
+          "PERF_MOCK_LLM",
+          "perf-outbound-ok"
+        ]
+      },
+      "external_apis": "live",
+      "fixture": "natural_file_parser_agent__external_live.json",
+      "fixture_path": "fixtures/natural_file_parser_agent__external_live.json",
+      "fixture_sha256": "f5778c01f0b40fc8fe595f13f8dab1f58ff7e63f556cd73cc982f031908ab073",
+      "hitl": false,
+      "id": "natural_file_parser_agent__external_live",
+      "input_fields": {
+        "input_value": "Say exactly: perf-outbound-ok"
+      },
+      "mcp_action_name": null,
+      "movement_role": "natural",
+      "node_types": [
+        "Agent",
+        "ChatOutput",
+        "File",
+        "ParserComponent"
+      ],
+      "required_environment_features": [
+        "llm_provider",
+        "storage"
+      ],
+      "source_provenance": "starter:Financial Report Parser.json (File+Parser+Agent; LLM stubbed|live)",
+      "stores_chat_history": false,
+      "stress_category": "natural",
+      "supported_modes": [
+        "sync",
+        "stream",
+        "background"
+      ],
+      "supported_protocols": [
         "workflows_sync",
         "workflows_stream",
         "workflows_background"
@@ -560,7 +1070,7 @@
       },
       "fixture": "perf_ensemble_journey.json",
       "fixture_path": "fixtures/perf_ensemble_journey.json",
-      "fixture_sha256": "45f8211afd3895d304048c0f15d5c9503fb6bceb9a3b414fc2b81f1017200548",
+      "fixture_sha256": "22ba00159ec9e312a164483a124930f35704a946246d66c594a3c232b331aa7c",
       "hitl": false,
       "id": "perf_ensemble_journey",
       "input_fields": {
@@ -588,7 +1098,7 @@
         "storage",
         "llm_provider"
       ],
-      "source_provenance": "generated:multiproc->disk->cpu->kb_ingest->save->kb_retrieve->memory->outbound->ChatOutput",
+      "source_provenance": "deferred:generated:multiproc->disk->cpu->kb_ingest->save->kb_retrieve->memory->outbound->ChatOutput",
       "stores_chat_history": true,
       "stress_category": "ensemble_flow",
       "supported_modes": [
@@ -635,7 +1145,7 @@
       },
       "fixture": "perf_ensemble_journey_hitl.json",
       "fixture_path": "fixtures/perf_ensemble_journey_hitl.json",
-      "fixture_sha256": "028cf76e6a4cb13622b64b0c8221346d6d1c648055acabff7ae7a119e5ab495e",
+      "fixture_sha256": "6ef8a114f8d13ce6f3a3995fed34b62804752d570a9f34cfa275cfcc3d745148",
       "hitl": true,
       "id": "perf_ensemble_journey_hitl",
       "input_fields": {
@@ -666,7 +1176,7 @@
         "storage",
         "llm_provider"
       ],
-      "source_provenance": "generated:perf_ensemble_journey+HumanInput(Approve)",
+      "source_provenance": "deferred:generated:perf_ensemble_journey+HumanInput(Approve)",
       "stores_chat_history": true,
       "stress_category": "ensemble_flow_hitl",
       "supported_modes": [

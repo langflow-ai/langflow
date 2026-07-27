@@ -1,0 +1,33 @@
+{
+  "suites": {
+    "chat_db_cpu_graph": {
+      "kind": "axes",
+      "axes": ["chat_db", "cpu_graph"],
+      "description": "Chat/DB persistence under in-process CPU/graph contention."
+    },
+    "kb_ingest_kb_retrieve": {
+      "kind": "axes",
+      "axes": ["kb_ingest", "kb_retrieve"],
+      "description": "Concurrent KB ingestion and known-query retrieval."
+    },
+    "disk_io_ram_storage": {
+      "kind": "axes",
+      "axes": ["disk_io", "ram_storage"],
+      "description": "Concurrent local disk I/O and SaveToFile/storage-abstraction pressure."
+    },
+    "tutti": {
+      "kind": "axes",
+      "axes": "all",
+      "description": "All stress-axis solo user classes concurrently."
+    },
+    "smoke": {
+      "kind": "profile",
+      "profile": "smoke/all_protocols",
+      "description": "Three-protocol smoke (MCP + Workflows + Webhooks)."
+    },
+    "natural": {
+      "kind": "natural",
+      "description": "Unweighted starter-derived flow mix; requires --external-apis stubbed|live."
+    }
+  }
+}

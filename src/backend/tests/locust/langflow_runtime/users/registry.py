@@ -16,6 +16,7 @@ USER_REGISTRY: dict[str, str] = {
     "WebhookUser": "tests.locust.langflow_runtime.users.webhook.WebhookUser",
     "OutboundUser": "tests.locust.langflow_runtime.users.outbound.OutboundUser",
     "McpUser": "tests.locust.langflow_runtime.users.mcp.McpUser",
+    "NaturalUser": "tests.locust.langflow_runtime.users.natural.NaturalUser",
     "EnsembleSuiteUser": "tests.locust.langflow_runtime.users.ensemble_suite.EnsembleSuiteUser",
     "EnsembleFlowUser": "tests.locust.langflow_runtime.users.ensemble_flow.EnsembleFlowUser",
 }

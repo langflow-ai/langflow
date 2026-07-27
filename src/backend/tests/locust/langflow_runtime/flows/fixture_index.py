@@ -279,11 +279,108 @@ def flow_specs() -> list[dict[str, Any]]:
             "hitl": False,
             "stores_chat_history": False,
         },
+        # Natural suite (starter-derived; stubbed|live external API modes).
+        *[
+            {
+                "id": fid,
+                "fixture": f"{fid}.json",
+                "stress_category": "natural",
+                "movement_role": "natural",
+                "external_apis": mode,
+                "source_provenance": provenance,
+                "supported_protocols": ["workflows_sync", "workflows_stream", "workflows_background"],
+                "supported_modes": ["sync", "stream", "background"],
+                "input_fields": {"input_value": DEFAULT_OUTBOUND_PROMPT},
+                "expected_output_rule": expected,
+                "mcp_action_name": None,
+                "required_environment_features": features,
+                "dataset_selector": dataset,
+                "binding": binding,
+                "webhook_copy_count": 0,
+                "hitl": False,
+                "stores_chat_history": stores_history,
+                **(
+                    {
+                        "embedded_components": embedded,
+                    }
+                    if embedded
+                    else {}
+                ),
+            }
+            for shape, provenance, expected, base_features, dataset, binding, stores_history, stub_embedded in (
+                (
+                    "basic_prompting",
+                    "starter:Basic Prompting.json (LanguageModel edge stubbed|live)",
+                    {"contains_any": ["PERF_MOCK_LLM", "perf-outbound-ok"]},
+                    [],
+                    None,
+                    None,
+                    False,
+                    ["perf_mock_language_model"],
+                ),
+                (
+                    "simple_agent",
+                    "starter:Simple Agent.json (Agent+URL+WebSearch; vendor edges stubbed|live)",
+                    {"contains_any": ["PERF_MOCK_LLM", "perf-outbound-ok"]},
+                    [],
+                    None,
+                    None,
+                    False,
+                    ["perf_mock_url", "perf_mock_web_search"],
+                ),
+                (
+                    "memory_chatbot",
+                    "starter:Memory Chatbot.json (Agent+MemoryBase; LLM/embed edges stubbed|live)",
+                    {"chat_message_persisted": True, "contains_any": ["PERF_MOCK_LLM", "perf-outbound-ok"]},
+                    ["message_store", "memory_base"],
+                    None,
+                    None,
+                    True,
+                    [],
+                ),
+                (
+                    "vector_store_rag",
+                    "starter:Vector Store RAG.json (Agent+Knowledge+Prompt; embed/LLM stubbed|live)",
+                    {"retrieval": True, "contains_any": ["PERF_MOCK_LLM", "PERF_KB"]},
+                    ["knowledge_base"],
+                    "kb/bounded_corpus",
+                    {"knowledge_base": DEFAULT_KB_NAME},
+                    False,
+                    [],
+                ),
+                (
+                    "file_parser_agent",
+                    "starter:Financial Report Parser.json (File+Parser+Agent; LLM stubbed|live)",
+                    {"contains_any": ["PERF_MOCK_LLM", "perf-outbound-ok"]},
+                    ["storage"],
+                    "storage/bounded_payload",
+                    None,
+                    False,
+                    [],
+                ),
+            )
+            for mode in ("stubbed", "live")
+            for fid in [f"natural_{shape}__external_{mode}"]
+            for features in [
+                (
+                    [
+                        "llm_provider",
+                        *base_features,
+                        *(["embeddings"] if shape in {"vector_store_rag", "memory_chatbot"} else []),
+                    ]
+                    if mode == "live"
+                    else list(base_features)
+                )
+            ]
+            for embedded in [stub_embedded if mode == "stubbed" else []]
+        ],
         {
             "id": "perf_ensemble_journey",
             "fixture": "perf_ensemble_journey.json",
             "stress_category": "ensemble_flow",
-            "source_provenance": "generated:multiproc->disk->cpu->kb_ingest->save->kb_retrieve->memory->outbound->ChatOutput",
+            "source_provenance": (
+                "deferred:generated:multiproc->disk->cpu->kb_ingest->save->kb_retrieve->memory->outbound->ChatOutput"
+            ),
             "supported_protocols": [
                 "mcp",
                 "workflows_sync",
@@ -311,7 +408,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "id": "perf_ensemble_journey_hitl",
             "fixture": "perf_ensemble_journey_hitl.json",
             "stress_category": "ensemble_flow_hitl",
-            "source_provenance": "generated:perf_ensemble_journey+HumanInput(Approve)",
+            "source_provenance": "deferred:generated:perf_ensemble_journey+HumanInput(Approve)",
             "supported_protocols": ["workflows_background"],
             "supported_modes": ["background"],
             "input_fields": {"input_value": "perf-ensemble-journey"},
