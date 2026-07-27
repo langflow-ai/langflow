@@ -22,7 +22,7 @@
       "uuid": "^11.1.0"
     },
     "playwright": "1.60.0",
-    "brace-expansion": "^5.0.5",
+    "brace-expansion": "^5.0.8",
     "handlebars": "^4.7.9",
     "minimatch": "^10.2.5",
     "serialize-javascript": ">=7.0.3",
@@ -74,7 +74,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
-    "dompurify": "^3.2.4",
+    "dompurify": "^3.4.12",
     "dotenv": "^16.4.5",
     "elkjs": "^0.9.3",
     "emoji-regex": "^10.3.0",
