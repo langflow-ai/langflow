@@ -83,7 +83,7 @@ RUN ARCH=$(uname -m) \
     | tar -xJ -C /usr/local --strip-components=1 \
     && npm install -g npm@latest \
     # remove once tar and brace-expansion in UBI10 are updated \
-    && cd /usr/local/lib/node_modules/npm && npm install --no-save brace-expansion@latest tar@latest
+    && npm install --no-save brace-expansion@latest tar@latest
 
 # Create non-root user
 RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
