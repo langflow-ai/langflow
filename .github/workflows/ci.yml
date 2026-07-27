@@ -259,6 +259,7 @@ jobs:
       needs.set-ci-condition.outputs.should-run-tests == 'true' &&
       (
         inputs.run-all-tests ||
+        needs.path-filter.result == 'failure' ||
         (needs.path-filter.result != 'skipped' &&
         needs.path-filter.outputs.docs-only != 'true' &&
         needs.path-filter.outputs.python == 'true')
@@ -282,6 +283,7 @@ jobs:
       needs.set-ci-condition.outputs.should-run-ci == 'true' &&
       (
         inputs.run-all-tests ||
+        needs.path-filter.result == 'failure' ||
         (needs.path-filter.result != 'skipped' &&
         needs.path-filter.outputs.frontend == 'true')
       )
@@ -298,6 +300,7 @@ jobs:
       needs.set-ci-condition.outputs.should-run-tests == 'true' &&
       (
         inputs.run-all-tests ||
+        needs.path-filter.result == 'failure' ||
         (needs.path-filter.result != 'skipped' &&
         needs.path-filter.outputs.docs-only != 'true')
       )
@@ -316,6 +319,7 @@ jobs:
       needs.set-ci-condition.outputs.should-run-tests == 'true' &&
       (
         inputs.run-all-tests ||
+        needs.path-filter.result == 'failure' ||
         (needs.path-filter.result != 'skipped' &&
         needs.path-filter.outputs.docs-only != 'true')
       )
@@ -336,7 +340,7 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-      (inputs.run-all-tests || needs.path-filter.outputs.docs == 'true')
+      (inputs.run-all-tests || needs.path-filter.result == 'failure' || needs.path-filter.outputs.docs == 'true')
     name: Test Docs Build
     uses: ./.github/workflows/docs_test.yml
 
@@ -347,7 +351,7 @@ jobs:
       always() &&
       !cancelled() &&
       needs.set-ci-condition.outputs.should-run-tests == 'true' &&
-      (inputs.run-all-tests || needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true')
+      (inputs.run-all-tests || needs.path-filter.result == 'failure' || needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -376,7 +380,11 @@ jobs:
   test-docker:
     needs: [path-filter, set-ci-condition]
     name: Test Docker Images
-    if: ${{ needs.path-filter.outputs.docker == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (needs.path-filter.result == 'failure' || needs.path-filter.outputs.docker == 'true')
     uses: ./.github/workflows/docker_test.yml
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -385,7 +393,10 @@ jobs:
   lint-design-md:
     needs: path-filter
     name: Lint DESIGN.md
-    if: ${{ inputs.run-all-tests || needs.path-filter.outputs.design-md == 'true' }}
+    if: |
+      always() &&
+      !cancelled() &&
+      (inputs.run-all-tests || needs.path-filter.result == 'failure' || needs.path-filter.outputs.design-md == 'true')
     runs-on: ubuntu-latest
     env:
       DESIGN_MD_CLI_VERSION: "0.1.1"
@@ -412,6 +423,7 @@ jobs:
       needs.set-ci-condition.outputs.should-run-tests == 'true' &&
       (
         inputs.run-all-tests ||
+        needs.path-filter.result == 'failure' ||
         (needs.path-filter.result != 'skipped' &&
         needs.path-filter.outputs.docs-only != 'true')
       )
