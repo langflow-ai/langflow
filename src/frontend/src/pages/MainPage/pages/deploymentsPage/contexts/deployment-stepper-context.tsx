@@ -12,6 +12,10 @@ import type { ProviderAccountCreateRequest } from "@/controllers/API/queries/dep
 import type { DeploymentUpdateRequest } from "@/controllers/API/queries/deployments/use-patch-deployment";
 import type { DeploymentCreateRequest } from "@/controllers/API/queries/deployments/use-post-deployment";
 import {
+  type StepperStepConfig,
+  useStepperState,
+} from "@/modals/stepperModal/StepperModal";
+import {
   buildDeploymentPayload as buildDeploymentPayloadValue,
   buildDeploymentUpdatePayload as buildDeploymentUpdatePayloadValue,
   buildProviderAccountPayload as buildProviderAccountPayloadValue,
@@ -129,10 +133,7 @@ export function DeploymentStepperProvider({
   const editingDeployment = initialState?.editingDeployment ?? null;
   const isEditMode = editingDeployment !== null;
 
-  // In edit mode: 3 steps (Type → Attach → Review), skip Provider.
-  const totalSteps = isEditMode ? 3 : 4;
   const minStep = initialState?.initialStep ?? 1;
-  const [currentStep, setCurrentStep] = useState(minStep);
 
   const [selectedProvider, setSelectedProviderState] =
     useState<DeploymentProvider | null>(initialState?.initialProvider ?? null);
@@ -247,38 +248,47 @@ export function DeploymentStepperProvider({
     credentials.api_key.trim() !== "" &&
     credentials.url.trim() !== "";
 
-  // In edit mode, steps are shifted: 1=Type, 2=Attach, 3=Review.
-  const getLogicalStep = useCallback(
-    (step: number) => (isEditMode ? step + 1 : step),
+  // Navigation runs on the shared stepper primitive. Conditional steps are
+  // the computed-list model: edit mode omits the Provider step entirely
+  // (3 steps: Type → Attach → Review), so no index shifting is needed.
+  const steps = useMemo<StepperStepConfig[]>(
+    () =>
+      isEditMode
+        ? [{ id: "type" }, { id: "flows" }, { id: "review" }]
+        : [
+            { id: "provider" },
+            { id: "type" },
+            { id: "flows" },
+            { id: "review" },
+          ],
     [isEditMode],
   );
 
+  const stepper = useStepperState({ steps, initialStep: minStep, minStep });
+  const { currentStep, totalSteps } = stepper;
+
   const canGoNext = useMemo(() => {
-    const logical = getLogicalStep(currentStep);
-    if (logical === 1) {
-      return (
-        selectedProvider !== null &&
-        (selectedInstance !== null || hasValidCredentials)
-      );
+    switch (stepper.currentStepId) {
+      case "provider":
+        return (
+          selectedProvider !== null &&
+          (selectedInstance !== null || hasValidCredentials)
+        );
+      case "type":
+        return isDeploymentNameValid && selectedLlm.trim() !== "";
+      case "flows":
+        // In edit mode, user can proceed without new attachments (may just change desc/LLM).
+        return isEditMode || selectedVersionByFlow.size > 0;
+      case "review":
+        return !hasToolNameErrors;
+      default:
+        return true;
     }
-    if (logical === 2) {
-      return isDeploymentNameValid && selectedLlm.trim() !== "";
-    }
-    if (logical === 3) {
-      // In edit mode, user can proceed without new attachments (may just change desc/LLM).
-      return isEditMode || selectedVersionByFlow.size > 0;
-    }
-    if (logical === 4) {
-      return !hasToolNameErrors;
-    }
-    return true;
   }, [
-    currentStep,
-    getLogicalStep,
+    stepper.currentStepId,
     selectedProvider,
     selectedInstance,
     hasValidCredentials,
-    deploymentName,
     isDeploymentNameValid,
     selectedLlm,
     selectedVersionByFlow,
@@ -286,13 +296,14 @@ export function DeploymentStepperProvider({
     hasToolNameErrors,
   ]);
 
+  // Ungated like the setState machine it replaces — the per-step gate is
+  // canGoNext, consumed by the footer's disabled state; goTo clamps to
+  // [minStep, totalSteps].
   const handleNext = useCallback(() => {
-    setCurrentStep((prev) => (prev < totalSteps ? prev + 1 : prev));
-  }, [totalSteps]);
+    stepper.goTo(stepper.currentStep + 1);
+  }, [stepper]);
 
-  const handleBack = useCallback(() => {
-    setCurrentStep((prev) => (prev > minStep ? prev - 1 : prev));
-  }, [minStep]);
+  const handleBack = stepper.back;
 
   const setSelectedProvider = useCallback((provider: DeploymentProvider) => {
     setSelectedProviderState(provider);
