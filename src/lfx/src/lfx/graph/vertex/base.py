@@ -647,6 +647,7 @@ class Vertex:
     async def _build_vertex_and_update_params(self, key, vertex: Vertex) -> None:
         """Builds a given vertex and updates the params dictionary accordingly."""
         result = await vertex.get_result(self, target_handle_name=key)
+        self._inherit_secret_values_from_vertex(vertex)
         self._handle_func(key, result)
         if isinstance(result, list):
             self._extend_params_list_with_result(key, result)
@@ -668,6 +669,7 @@ class Vertex:
             if not vertex.built and vertex.id in self.graph.conditionally_excluded_vertices:
                 continue
             result = await vertex.get_result(self, target_handle_name=key)
+            self._inherit_secret_values_from_vertex(vertex)
             # Weird check to see if the params[key] is a list
             # because sometimes it is a Data and breaks the code
             if not isinstance(self.params[key], list):
@@ -688,6 +690,16 @@ class Vertex:
                         f"Error building Component {self.display_name}: \n\n{e}"
                     )
                     raise ValueError(msg) from e
+
+    def _inherit_secret_values_from_vertex(self, vertex: Vertex) -> None:
+        source_component = getattr(vertex, "custom_component", None)
+        target_component = self.custom_component
+        if source_component is None or target_component is None:
+            return
+
+        secret_values = getattr(source_component, "_secret_values", None)
+        if secret_values and hasattr(target_component, "add_secret_values"):
+            target_component.add_secret_values(secret_values)
 
     def _handle_func(self, key, result) -> None:
         """Handles 'func' key by checking if the result is a function and setting it as coroutine."""

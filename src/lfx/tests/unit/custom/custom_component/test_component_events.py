@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 from lfx.custom.custom_component.component import Component
 from lfx.events.event_manager import EventManager
+from lfx.graph.vertex.base import Vertex
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.message import Message
@@ -39,6 +40,14 @@ class SecretOutputComponent(ComponentForTesting):
         return Message(
             text="postgresql://demo_user:hunter2@localhost:5432/demo_db",
             data={"url": "postgresql://demo_user:hunter2@localhost:5432/demo_db"},
+        )
+
+
+class SecretEchoComponent(ComponentForTesting):
+    def get_connection_string(self) -> Message:
+        return Message(
+            text=self.connection_string,
+            data={"url": self.connection_string},
         )
 
 
@@ -185,6 +194,41 @@ async def test_component_build_results():
 async def test_component_build_results_masks_display_values_without_mutating_output_value():
     component = SecretOutputComponent()
     component._secret_values = {"hunter2"}
+    component._outputs_map = {
+        "conn_string": Output(name="conn_string", method="get_connection_string"),
+    }
+    component.outputs = [
+        Output(name="conn_string", method="get_connection_string"),
+    ]
+
+    results, artifacts = await component._build_results()
+    output_value = component._outputs_map["conn_string"].value
+
+    assert output_value.text == "postgresql://demo_user:hunter2@localhost:5432/demo_db"
+    assert output_value.data["url"] == "postgresql://demo_user:hunter2@localhost:5432/demo_db"
+    assert results["conn_string"].text == "postgresql://demo_user:**********@localhost:5432/demo_db"
+    assert results["conn_string"].data["url"] == "postgresql://demo_user:**********@localhost:5432/demo_db"
+    assert artifacts["conn_string"]["raw"] == "postgresql://demo_user:**********@localhost:5432/demo_db"
+
+
+def test_vertex_inherits_secret_values_from_upstream_component():
+    source_component = ComponentForTesting()
+    source_component.add_secret_values({"hunter2"})
+    target_component = ComponentForTesting()
+    source_vertex = MagicMock(custom_component=source_component)
+    target_vertex = object.__new__(Vertex)
+    target_vertex.custom_component = target_component
+
+    target_vertex._inherit_secret_values_from_vertex(source_vertex)
+
+    assert target_component._sanitize_secret_values("hunter2") == "**********"
+
+
+@pytest.mark.asyncio
+async def test_component_build_results_masks_inherited_secret_values_without_mutating_output_value():
+    component = SecretEchoComponent()
+    component.connection_string = "postgresql://demo_user:hunter2@localhost:5432/demo_db"
+    component.add_secret_values({"hunter2"})
     component._outputs_map = {
         "conn_string": Output(name="conn_string", method="get_connection_string"),
     }
