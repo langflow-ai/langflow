@@ -4,5 +4,5 @@ import SvgGreenPT from "./greenpt";
 
 export const GreenPTIcon = forwardRef<
   SVGSVGElement,
-  React.PropsWithChildren<{}>
+  React.SVGProps<SVGSVGElement> & { isDark?: boolean }
 >((props, ref) => <SvgGreenPT ref={ref} {...props} />);

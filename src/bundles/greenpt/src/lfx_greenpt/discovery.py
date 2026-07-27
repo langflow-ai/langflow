@@ -10,10 +10,11 @@ from lfx.base.models.model_utils import MIN_DEFAULT_MODELS, get_provider_variabl
 from lfx.log.logger import logger
 from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get
 
+from lfx_greenpt.models import GREENPT_BASE_URL
+
 if TYPE_CHECKING:
     from uuid import UUID
 
-GREENPT_BASE_URL = "https://api.greenpt.ai/v1"
 MODELS_URL = f"{GREENPT_BASE_URL}/models"
 _TIMEOUT_SECONDS = 5
 _PROVIDER = "GreenPT"
@@ -22,6 +23,7 @@ _FEATURED_MODELS = ("glm-5.2", "kimi-k2.7-code")
 
 
 def _parse_model_names(payload: object) -> list[str]:
+    """Return unique model ids with GreenPT's flagship models first."""
     if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
         return []
     names = {
@@ -32,15 +34,12 @@ def _parse_model_names(payload: object) -> list[str]:
     return sorted(names, key=lambda name: (_FEATURED_MODELS.index(name) if name in _FEATURED_MODELS else 2, name))
 
 
-def _matches_model_type(name: str, model_type: str) -> bool:
-    lowered = name.lower()
-    if model_type in {"embedding", "embeddings"}:
-        return "embedding" in lowered
-    return "embedding" not in lowered and "rerank" not in lowered and not lowered.startswith(("green-s", "greens"))
-
-
 def fetch_live_greenpt_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
-    """Return the current GreenPT models for Langflow's unified model picker."""
+    """Return current GreenPT models tagged for Langflow's requested picker.
+
+    The OpenAI-compatible models response has no reliable capability metadata,
+    so every discovered model is offered for each requested model type.
+    """
     try:
         api_key = get_provider_variable_value(user_id, "GREENPT_API_KEY")
     except Exception:  # noqa: BLE001 - unset credentials should not break the provider catalog
@@ -56,7 +55,7 @@ def fetch_live_greenpt_models(user_id: UUID | str | None, model_type: str = "llm
             follow_redirects=False,
         )
         response.raise_for_status()
-        names = [name for name in _parse_model_names(response.json()) if _matches_model_type(name, model_type)]
+        names = _parse_model_names(response.json())
         return [
             create_model_metadata(
                 provider=_PROVIDER,

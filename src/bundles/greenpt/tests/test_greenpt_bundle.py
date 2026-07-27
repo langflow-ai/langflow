@@ -40,7 +40,7 @@ def test_bundle_registers_provider_and_components_end_to_end():
         provider_registry.clear()
 
 
-def test_discovery_prioritizes_flagship_models_and_filters_by_type():
+def test_discovery_prioritizes_flagship_models_for_each_type():
     response = _ok_response(
         {
             "data": [
@@ -60,8 +60,9 @@ def test_discovery_prioritizes_flagship_models_and_filters_by_type():
         language_models = discovery.fetch_live_greenpt_models("user", "llm")
         embedding_models = discovery.fetch_live_greenpt_models("user", "embeddings")
 
-    assert [model["name"] for model in language_models] == ["glm-5.2", "kimi-k2.7-code", "other-chat"]
-    assert [model["name"] for model in embedding_models] == ["green-embedding"]
+    expected = ["glm-5.2", "kimi-k2.7-code", "GreenS Pro", "green-embedding", "green-rerank", "other-chat"]
+    assert [model["name"] for model in language_models] == expected
+    assert [model["name"] for model in embedding_models] == expected
     assert all(model["tool_calling"] for model in language_models)
     assert all(not model["tool_calling"] for model in embedding_models)
     assert mock_get.call_args.kwargs["headers"] == {"Authorization": "Bearer secret"}

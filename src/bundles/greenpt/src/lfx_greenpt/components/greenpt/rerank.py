@@ -11,13 +11,11 @@ from lfx.field_typing import BaseDocumentCompressor
 from lfx.inputs.inputs import SecretStrInput
 from lfx.io import DropdownInput
 from lfx.template.field.base import Output
+from lfx_greenpt._utils import secret_value
+from lfx_greenpt.models import GREENPT_BASE_URL
 from pydantic import SecretStr
 
-RERANK_URL = "https://api.greenpt.ai/v1/rerank"
-
-
-def _secret_value(value: str | SecretStr) -> str:
-    return value.get_secret_value() if isinstance(value, SecretStr) else value
+RERANK_URL = f"{GREENPT_BASE_URL}/rerank"
 
 
 class GreenPTReranker(BaseDocumentCompressor):
@@ -33,6 +31,7 @@ class GreenPTReranker(BaseDocumentCompressor):
         query: str,
         callbacks: Callbacks = None,
     ) -> Sequence[Document]:
+        """Return documents ordered by GreenPT relevance score."""
         del callbacks
         source_documents = list(documents)
         response = httpx.post(
@@ -80,6 +79,8 @@ class GreenPTReranker(BaseDocumentCompressor):
 
 
 class GreenPTRerankComponent(LCCompressorComponent):
+    """Build a GreenPT reranker for use in Langflow pipelines."""
+
     display_name = "GreenPT Rerank"
     description = "Rerank documents with GreenPT's renewable-powered optimized AI infrastructure."
     name = "GreenPTRerank"
@@ -110,8 +111,9 @@ class GreenPTRerankComponent(LCCompressorComponent):
     ]
 
     def build_compressor(self) -> BaseDocumentCompressor:
+        """Build the configured GreenPT reranker."""
         return GreenPTReranker(
-            api_key=SecretStr(_secret_value(self.api_key)),
+            api_key=SecretStr(secret_value(self.api_key)),
             model=self.model,
             top_n=self.top_n,
         )

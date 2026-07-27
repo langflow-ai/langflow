@@ -6,16 +6,14 @@ import httpx
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DropdownInput, MessageTextInput, Output, SecretStrInput, StrInput
 from lfx.schema.message import Message
-from pydantic import SecretStr
+from lfx_greenpt._utils import secret_value
+from lfx_greenpt.models import GREENPT_BASE_URL
 
-LISTEN_URL = "https://api.greenpt.ai/v1/listen"
-
-
-def _secret_value(value: str | SecretStr) -> str:
-    return value.get_secret_value() if isinstance(value, SecretStr) else value
+LISTEN_URL = f"{GREENPT_BASE_URL}/listen"
 
 
 def _transcript(payload: object) -> str:
+    """Extract a non-empty transcript from a GreenPT response."""
     try:
         transcript = payload["results"]["channels"][0]["alternatives"][0]["transcript"]  # type: ignore[index]
     except (KeyError, IndexError, TypeError) as e:
@@ -28,6 +26,8 @@ def _transcript(payload: object) -> str:
 
 
 class GreenPTSpeechToTextComponent(Component):
+    """Transcribe public audio URLs through GreenPT."""
+
     display_name = "GreenPT Speech to Text"
     description = "Transcribe public audio URLs with GreenPT's renewable-powered optimized AI infrastructure."
     name = "GreenPTSpeechToText"
@@ -67,6 +67,7 @@ class GreenPTSpeechToTextComponent(Component):
     outputs = [Output(display_name="Transcript", name="transcript", method="transcribe")]
 
     def transcribe(self) -> Message:
+        """Transcribe a public audio URL with GreenPT."""
         parsed = urlsplit(self.audio_url)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.username or parsed.password:
             msg = "Audio URL must be a public HTTP or HTTPS URL without embedded credentials."
@@ -81,7 +82,7 @@ class GreenPTSpeechToTextComponent(Component):
             params["language"] = self.language
         response = httpx.post(
             LISTEN_URL,
-            headers={"Authorization": f"Token {_secret_value(self.api_key)}"},
+            headers={"Authorization": f"Token {secret_value(self.api_key)}"},
             params=params,
             json={"url": self.audio_url},
             timeout=120,
