@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from typing import Any
 
 from tests.locust.langflow_runtime.provision.api import ProvisionHttp
@@ -9,7 +10,12 @@ from tests.locust.langflow_runtime.provision.state import register_resource
 
 
 def project_name(env_id: str, fixture_id: str) -> str:
-    return f"perf-{env_id}-{fixture_id}"
+    # Langflow derives an MCP server name from only the first 26 sanitized
+    # project-name characters. Put a stable fixture discriminator up front so
+    # similarly prefixed fixtures (for example perf_passthrough and
+    # perf_webhook_passthrough) cannot collide after that truncation.
+    fixture_digest = hashlib.sha256(fixture_id.encode()).hexdigest()[:12]
+    return f"perf-{fixture_digest}-{env_id}-{fixture_id}"
 
 
 def create_isolated_project(http: ProvisionHttp, state: dict[str, Any], *, fixture_id: str) -> dict[str, Any]:

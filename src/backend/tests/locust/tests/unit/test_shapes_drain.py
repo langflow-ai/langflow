@@ -76,7 +76,7 @@ def test_drain_tracked_work_advances_workflow_terminal() -> None:
     assert jobs[0].success is True
 
 
-def test_locust_transport_named_request_skips_catch_response_on_plain_session() -> None:
+def test_locust_transport_named_request_skips_catch_response() -> None:
     class FakeResp:
         status_code = 200
         text = '{"ok": true}'
@@ -85,6 +85,7 @@ def test_locust_transport_named_request_skips_catch_response_on_plain_session() 
     class FakeSession:
         def get(self, url: str, **kwargs):  # noqa: ARG002
             assert "catch_response" not in kwargs
+            assert kwargs["name"] == "health:get:test:passthrough"
             return FakeResp()
 
     client = ApiClient.from_locust(FakeSession(), base_url="http://example.test", api_key="k")

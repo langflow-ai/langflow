@@ -923,17 +923,18 @@ load_test_help: ## Show detailed load testing help
 perf_host ?= http://127.0.0.1:7860
 perf_env_id ?= perf-local
 perf_backend := src/backend
+perf_uv_env := $(if $(wildcard $(env)),--env-file $(abspath $(env)),)
 
 perf-provision: ## Provision perf suite resources (PERF_HOST / perf_env_id)
-	@cd $(perf_backend) && PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.provision.cli apply \
+	@cd $(perf_backend) && PYTHONPATH=. uv run $(perf_uv_env) python -m tests.locust.langflow_runtime.provision.cli apply \
 		--host $(perf_host) --env-id $(perf_env_id) $(PERF_PROVISION_ARGS)
 
 perf-provision-validate: ## Validate provisioned perf suite state
-	@cd $(perf_backend) && PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.provision.cli validate \
+	@cd $(perf_backend) && PYTHONPATH=. uv run $(perf_uv_env) python -m tests.locust.langflow_runtime.provision.cli validate \
 		--host $(perf_host) --env-id $(perf_env_id)
 
 perf-teardown: ## Tear down perf suite resources for env id
-	@cd $(perf_backend) && PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.provision.cli teardown \
+	@cd $(perf_backend) && PYTHONPATH=. uv run $(perf_uv_env) python -m tests.locust.langflow_runtime.provision.cli teardown \
 		--host $(perf_host) --env-id $(perf_env_id)
 
 perf-run: ## Run one movement (ARGS='--axes chat_db' or ARGS='--suite smoke')
@@ -941,7 +942,7 @@ perf-run: ## Run one movement (ARGS='--axes chat_db' or ARGS='--suite smoke')
 	@cd $(perf_backend) && \
 	export PERF_HOST=$(perf_host) && \
 	export PERF_ENV_ID=$(perf_env_id) && \
-	PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run run $(ARGS) --host $(perf_host) --env-id $(perf_env_id)
+	PYTHONPATH=. uv run $(perf_uv_env) python -m tests.locust.langflow_runtime.run run $(ARGS) --host $(perf_host) --env-id $(perf_env_id)
 
 perf-help: ## Show performance suite help
 	@echo "$(GREEN)Langflow performance suite$(NC)"

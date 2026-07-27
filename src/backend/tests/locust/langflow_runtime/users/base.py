@@ -128,7 +128,7 @@ class PerfBaseUser(FastHttpUser):
             self.provision_state = self.run_context.provision_state
             think = self.run_context.profile.workload.think_time
             if think is not None:
-                self.wait_time = between(think.min_s, think.max_s)
+                self.wait_time = between(think.min_s, think.max_s).__get__(self, type(self))
 
     @property
     def api_key(self) -> str | None:

@@ -7,7 +7,13 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from tests.locust.langflow_runtime.clients.base import ApiClient, ApplicationError, TransportError
+from tests.locust.langflow_runtime.clients.base import (
+    ApiClient,
+    ApplicationError,
+    LocustTransport,
+    close_response,
+    iter_response_lines,
+)
 from tests.locust.langflow_runtime.clients.sse import SseDeadlines, SseEvent, parse_sse_events
 
 try:
@@ -110,7 +116,13 @@ class WebhooksClient:
     ) -> WebhookResult:
         started = time.monotonic()
 
-        if gevent is not None and GeventEvent is not None:
+        # gevent is installed with Locust even in ordinary CLI processes, but
+        # plain httpx I/O is not monkey-patched there. Using greenlets with an
+        # HttpxTransport blocks the gevent hub in the SSE reader, so the webhook
+        # POST cannot run until the read deadline expires. Greenlets are only
+        # appropriate for the Locust transport; live provision/preflight uses
+        # real threads around the thread-safe httpx client.
+        if isinstance(self.api.transport, LocustTransport) and gevent is not None and GeventEvent is not None:
             return self._subscribe_post_complete_gevent(copy, payload, timeout_s=timeout_s, started=started)
 
         return self._subscribe_post_complete_threaded(copy, payload, timeout_s=timeout_s, started=started)
@@ -148,13 +160,8 @@ class WebhooksClient:
                     errors.append(f"SSE HTTP {status}")
                     ended.set()
                     return
-                iter_lines = getattr(response, "iter_lines", None)
-                if iter_lines is None:
-                    errors.append("SSE response lacks iter_lines()")
-                    ended.set()
-                    return
                 for event in parse_sse_events(
-                    iter_lines(),
+                    iter_response_lines(response),
                     deadlines=SseDeadlines(connect_s=timeout_s, read_s=timeout_s, idle_s=timeout_s),
                     terminal_events={"end", "error"},
                 ):
@@ -170,9 +177,8 @@ class WebhooksClient:
                 errors.append(str(exc))
                 ended.set()
             finally:
-                close = getattr(response, "close", None) if response is not None else None
-                if callable(close):
-                    close()
+                if response is not None:
+                    close_response(response)
 
         def post_when_ready() -> None:
             if not connected.wait(timeout=timeout_s):
@@ -249,13 +255,8 @@ class WebhooksClient:
                     errors.append(f"SSE HTTP {status}")
                     ended.set()
                     return
-                iter_lines = getattr(response, "iter_lines", None)
-                if iter_lines is None:
-                    errors.append("SSE response lacks iter_lines()")
-                    ended.set()
-                    return
                 for event in parse_sse_events(
-                    iter_lines(),
+                    iter_response_lines(response),
                     deadlines=SseDeadlines(connect_s=timeout_s, read_s=timeout_s, idle_s=timeout_s),
                     terminal_events={"end", "error"},
                 ):
@@ -272,9 +273,8 @@ class WebhooksClient:
                 errors.append(str(exc))
                 ended.set()
             finally:
-                close = getattr(response, "close", None) if response is not None else None
-                if callable(close):
-                    close()
+                if response is not None:
+                    close_response(response)
 
         def post_when_ready() -> None:
             if not connected.wait(timeout=timeout_s):

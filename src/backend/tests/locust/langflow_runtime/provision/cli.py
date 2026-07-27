@@ -32,6 +32,7 @@ from tests.locust.langflow_runtime.provision.flows import (
 from tests.locust.langflow_runtime.provision.hitl import validate_hitl_lifecycle
 from tests.locust.langflow_runtime.provision.kbs import needs_kb, provision_kb
 from tests.locust.langflow_runtime.provision.mcp import configure_mcp_for_state, validate_mcp_tools_listable
+from tests.locust.langflow_runtime.provision.projects import project_name
 from tests.locust.langflow_runtime.provision.state import (
     load_state,
     new_state,
@@ -127,7 +128,7 @@ def plan_resources(*, env_id: str, host: str, flow_ids: list[str], mode: str) ->
                 "fixture_id": fid,
                 "endpoint_name": tagged_endpoint_name(env_id, entry.get("endpoint_name"), fid),
                 "mcp_action_name": entry.get("mcp_action_name"),
-                "project": f"perf-{env_id}-{fid}",
+                "project": project_name(env_id, fid),
             }
         )
     planned_webhooks = []
@@ -260,65 +261,74 @@ def cmd_apply(args: argparse.Namespace) -> int:
 
     validation_errors: list[str] = []
 
-    with ProvisionHttp(host) as http:
-        http.health()
-        authenticate(http, mode=args.mode, username=args.username, password=args.password)
-        _teardown_existing_if_present(
-            http,
-            env_id=env_id,
-            username=args.username,
-            password=args.password,
-        )
-        # Re-auth after optional prior teardown (session may still be valid).
-        authenticate(http, mode=args.mode, username=args.username, password=args.password)
-        ensure_suite_user_pool(http, state, mode=args.mode)
-        state["username"] = state.get("username") or (args.username or "unknown")
-
-        create_suite_api_key(http, state)
-        if needs_kb(flow_ids, by_id):
-            provision_kb(http, state)
-        if any(fid.startswith("natural_file_parser_agent__") for fid in flow_ids):
-            uploaded = http.upload_user_file(
-                filename=f"perf-natural-{env_id}.txt",
-                content=bounded_payload_text().encode(),
-            )
-            state["natural_file"] = uploaded
-            register_resource(
-                state,
-                kind="user_file",
-                resource_id=str(uploaded["id"]),
-                name=str(uploaded.get("name") or f"perf-natural-{env_id}.txt"),
+    try:
+        with ProvisionHttp(host) as http:
+            http.health()
+            authenticate(http, mode=args.mode, username=args.username, password=args.password)
+            _teardown_existing_if_present(
+                http,
                 env_id=env_id,
+                username=args.username,
+                password=args.password,
+            )
+            # Re-auth after optional prior teardown (session may still be valid).
+            authenticate(http, mode=args.mode, username=args.username, password=args.password)
+            ensure_suite_user_pool(http, state, mode=args.mode)
+            state["username"] = state.get("username") or (args.username or "unknown")
+
+            create_suite_api_key(http, state)
+            if needs_kb(flow_ids, by_id):
+                provision_kb(http, state)
+            if any(fid.startswith("natural_file_parser_agent__") for fid in flow_ids):
+                uploaded = http.upload_user_file(
+                    filename=f"perf-natural-{env_id}.txt",
+                    content=bounded_payload_text().encode(),
+                )
+                state["natural_file"] = uploaded
+                register_resource(
+                    state,
+                    kind="user_file",
+                    resource_id=str(uploaded["id"]),
+                    name=str(uploaded.get("name") or f"perf-natural-{env_id}.txt"),
+                    env_id=env_id,
+                )
+
+            provision_flows(http, state, flow_ids=regular, index=index)
+            provision_webhook_copies(
+                http,
+                state,
+                flow_ids=webhook,
+                index=index,
+                profile_max=args.webhook_copy_max,
             )
 
-        provision_flows(http, state, flow_ids=regular, index=index)
-        provision_webhook_copies(
-            http,
-            state,
-            flow_ids=webhook,
-            index=index,
-            profile_max=args.webhook_copy_max,
-        )
+            configure_mcp_for_state(http, state)
 
-        configure_mcp_for_state(http, state)
+            if not args.skip_validate:
+                if webhook and not validate_webhook_subscribe_before_post(http, state):
+                    validation_errors.append("webhook subscribe-before-POST validation failed")
+                if "human_input_flow" in flow_ids and not validate_hitl_lifecycle(http, state):
+                    validation_errors.append("hitl lifecycle validation failed")
+                if any((state.get("flows") or {}).get(fid, {}).get("mcp_action_name") for fid in regular):
+                    if not validate_mcp_tools_listable(http, state):
+                        validation_errors.append("mcp tools/list validation failed")
+                if (
+                    "MemoryChatbotNoLLM" in flow_ids
+                    or any(fid.startswith("natural_memory_chatbot__") for fid in flow_ids)
+                ) and not validation_errors:
+                    seed_chat_history(http, state)
+    except BaseException:
+        # Resource helpers register each successful mutation immediately. Keep
+        # that ownership record even when a later API call fails so teardown or
+        # a retry can safely clean up the partial apply.
+        if state.get("resources"):
+            path = save_state(state)
+            print(f"provision failed; wrote partial state: {path}", file=sys.stderr)
+        raise
 
-        if not args.skip_validate:
-            if webhook and not validate_webhook_subscribe_before_post(http, state):
-                validation_errors.append("webhook subscribe-before-POST validation failed")
-            if "human_input_flow" in flow_ids and not validate_hitl_lifecycle(http, state):
-                validation_errors.append("hitl lifecycle validation failed")
-            if any((state.get("flows") or {}).get(fid, {}).get("mcp_action_name") for fid in regular):
-                if not validate_mcp_tools_listable(http, state):
-                    validation_errors.append("mcp tools/list validation failed")
-            if (
-                "MemoryChatbotNoLLM" in flow_ids or any(fid.startswith("natural_memory_chatbot__") for fid in flow_ids)
-            ) and not validation_errors:
-                seed_chat_history(http, state)
-
-        # Always persist state so failed applies remain tear-downable.
-        path = save_state(state)
-        print(json.dumps(redact_state_for_log(state), indent=2))
-        print(f"wrote state: {path}", file=sys.stderr)
+    path = save_state(state)
+    print(json.dumps(redact_state_for_log(state), indent=2))
+    print(f"wrote state: {path}", file=sys.stderr)
 
     if validation_errors:
         print(json.dumps({"ok": False, "errors": validation_errors}, indent=2), file=sys.stderr)
@@ -333,9 +343,21 @@ def cmd_validate(args: argparse.Namespace) -> int:
     errors: list[str] = []
 
     with ProvisionHttp(host, api_key=state.get("api_key"), bearer_token=None) as http:
-        # Re-auth so GET flow works if api-key alone is insufficient for admin reads.
+        # Re-auth as the resource owner so owner-scoped flow fetches work. The
+        # generated suite user owns everything in superuser-pool mode; logging
+        # in as the administrator would correctly return 404 for those flows.
         try:
-            authenticate(http, mode=args.mode, username=args.username, password=args.password)
+            state_mode = str(state.get("mode") or args.mode).replace("_", "-")
+            if state_mode == "superuser-pool":
+                credentials = state.get("credentials") or {}
+                suite_username = credentials.get("suite_username")
+                suite_password = credentials.get("password")
+                if not suite_username or not suite_password:
+                    msg = "superuser-pool validation state is missing suite-user credentials"
+                    raise RuntimeError(msg)
+                http.login(str(suite_username), str(suite_password))
+            else:
+                authenticate(http, mode="existing-user", username=args.username, password=args.password)
         except Exception as exc:
             errors.append(f"auth failed: {exc}")
 

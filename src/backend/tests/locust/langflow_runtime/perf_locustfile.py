@@ -93,9 +93,20 @@ except RuntimeError as exc:
             "perf_locustfile requires PERF_PROFILE_PATH (launch via tests.locust.langflow_runtime.run)"
         ) from exc
 
+
+def _expose_profile_users(context: RunContext) -> None:
+    """Expose selected users without leaking a duplicate class alias.
+
+    Locust discovers every user class referenced by a locustfile module global.
+    A module-level ``for user_cls in ...`` leaves ``user_cls`` bound to the last
+    class in addition to its named global, causing Locust to register that class
+    twice and reject the suite before it starts.
+    """
+    globals().update({user_class.__name__: user_class for user_class in _register_profile_users(context)})
+
+
 if run_context is not None:
-    for user_cls in _register_profile_users(run_context):
-        globals()[user_cls.__name__] = user_cls
+    _expose_profile_users(run_context)
 
 
 @events.init.add_listener

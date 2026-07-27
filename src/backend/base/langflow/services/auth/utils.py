@@ -20,6 +20,7 @@ from langflow.services.auth.exceptions import (
     MissingCredentialsError,
 )
 from langflow.services.auth.external import extract_external_token
+from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_auth_service, get_settings_service
 
 if TYPE_CHECKING:
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-    from langflow.services.database.models.user.model import User, UserRead
+    from langflow.services.database.models.user.model import User
 
 
 class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
@@ -74,7 +75,7 @@ def _get_external_token(headers, cookies) -> str | None:
 
 oauth2_login = OAuth2PasswordBearerCookie(tokenUrl="api/v1/login", auto_error=False)
 
-API_KEY_NAME = "x-api-key"
+API_KEY_NAME = "x-api-key"  # pragma: allowlist secret
 
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
@@ -243,11 +244,17 @@ async def get_current_user_for_websocket(
 
 async def get_current_user_for_sse(
     request: Request,
-    db: AsyncSession = Depends(injectable_session_scope),
-) -> User | UserRead:
-    """Extracts credentials from request and delegates to auth service.
+) -> UserRead:
+    """Extract credentials without holding a DB transaction for the SSE lifetime.
 
     Accepts cookie (access_token_lf) or API key (x-api-key query param).
+
+    FastAPI keeps yield-based dependency sessions open until a streaming response
+    finishes. API-key authentication updates usage counters, so using
+    ``injectable_session_scope`` here held that write transaction for the entire
+    webhook event stream. A concurrent webhook POST using the same key then
+    blocked on SQLite (and on the same row in other databases). Resolve and
+    detach the user inside a short-lived session instead.
     """
     # Keep the native token and the external credential separate (see
     # get_current_user_for_websocket) so the external credential remains a usable
@@ -256,13 +263,15 @@ async def get_current_user_for_sse(
     external_token = _get_external_token(request.headers, request.cookies)
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
 
-    try:
-        return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
-    except AuthenticationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Missing or invalid credentials (cookie or API key).",
-        ) from e
+    async with session_scope() as db:
+        try:
+            user = await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
+        except AuthenticationError as e:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Missing or invalid credentials (cookie or API key).",
+            ) from e
+        return UserRead.model_validate(user, from_attributes=True)
 
 
 async def get_current_user_for_workflow(

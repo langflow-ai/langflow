@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from tests.locust.langflow_runtime.clients.base import ApiClient, ApplicationError, TransportError, wrap_response
+from tests.locust.langflow_runtime.clients.base import ApiClient, ApplicationError, iter_response_lines, wrap_response
 from tests.locust.langflow_runtime.clients.sse import SseDeadlines, parse_sse_events
 
 try:
@@ -112,12 +112,8 @@ class McpStreamableClient:
             return result
 
         if content_type.startswith(SSE_CONTENT):
-            iter_lines = getattr(response, "iter_lines", None)
-            if iter_lines is None:
-                msg = "streaming MCP response lacks iter_lines()"
-                raise TransportError(msg)
             for event in parse_sse_events(
-                iter_lines(),
+                iter_response_lines(response),
                 deadlines=SseDeadlines(read_s=60.0, idle_s=30.0),
                 terminal_events={"message"},
             ):

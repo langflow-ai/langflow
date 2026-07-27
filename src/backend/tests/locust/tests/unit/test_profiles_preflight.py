@@ -81,3 +81,6 @@ def test_preflight_dependencies_fail_on_stale_fixture_hash() -> None:
 
 def test_smoke_profile_ok() -> None:
     assert validate_profile("smoke/all_protocols") == []
+    profile = load_profile("smoke/all_protocols")
+    fixed_users = sum(entry.count or 0 for entry in profile.workload.user_mix)
+    assert min(step.users for step in profile.windows.measured_steps) >= fixed_users

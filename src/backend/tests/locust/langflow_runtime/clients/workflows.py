@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 import uuid
 from dataclasses import dataclass
@@ -11,13 +12,29 @@ from tests.locust.langflow_runtime.clients.base import (
     ApiClient,
     ApplicationError,
     TransportError,
+    iter_response_lines,
     parse_json_body,
     wrap_response,
 )
-from tests.locust.langflow_runtime.clients.sse import SseDeadlines, parse_sse_events
+from tests.locust.langflow_runtime.clients.sse import SseDeadlines, SseEvent, SseTruncationError, parse_sse_events
 
 TERMINAL_STATUSES = frozenset({"completed", "failed", "timed_out", "cancelled"})
 SUCCESS_STATUSES = frozenset({"completed"})
+
+
+def normalize_langflow_stream_event(event: SseEvent) -> SseEvent:
+    """Unwrap the Langflow adapter's logical event from an SSE data frame."""
+    if event.event != "message" or not event.data:
+        return event
+    try:
+        payload = json.loads(event.data)
+    except json.JSONDecodeError:
+        return event
+    if not isinstance(payload, dict) or not payload.get("event"):
+        return event
+    data = payload.get("data")
+    data_text = data if isinstance(data, str) else json.dumps(data, default=str)
+    return SseEvent(event=str(payload["event"]), data=data_text, id=event.id)
 
 
 @dataclass(frozen=True)
@@ -157,19 +174,19 @@ class WorkflowsClient:
             parsed = wrap_response(response)
             raise ApplicationError(f"stream workflow HTTP {status}", status_code=status, body=parsed.text)
 
-        iter_lines = getattr(response, "iter_lines", None)
-        if iter_lines is None:
-            raise TransportError("stream response lacks iter_lines()")
-
         chunks: list[str] = []
+        terminal_seen = False
         for event in parse_sse_events(
-            iter_lines(),
+            iter_response_lines(response),
             deadlines=SseDeadlines(read_s=timeout_s, idle_s=timeout_s),
-            terminal_events={"end", "error"},
         ):
-            chunks.append(f"event: {event.event}\ndata: {event.data}\n")
-            if event.event in {"end", "error"}:
+            normalized_event = normalize_langflow_stream_event(event)
+            chunks.append(f"event: {normalized_event.event}\ndata: {normalized_event.data}\n")
+            if normalized_event.event in {"end", "error"}:
+                terminal_seen = True
                 break
+        if not terminal_seen:
+            raise SseTruncationError("workflow stream ended before terminal event")
         return "".join(chunks)
 
     def submit_background(

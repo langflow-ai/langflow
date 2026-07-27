@@ -53,7 +53,7 @@
     },
     "measured_steps": [
       {
-        "users": 1,
+        "users": 2,
         "duration_s": 15,
         "spawn_rate": 1
       }

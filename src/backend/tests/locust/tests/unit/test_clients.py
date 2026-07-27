@@ -7,15 +7,60 @@ from typing import Any
 
 import pytest
 
+from tests.locust.langflow_runtime.clients.base import iter_response_lines
 from tests.locust.langflow_runtime.clients.mcp_streamable import McpStreamableClient
 from tests.locust.langflow_runtime.clients.sse import SseEvent, SseOverflowError, SseTruncationError, parse_sse_events
-from tests.locust.langflow_runtime.clients.webhooks import correlate_webhook_events
-from tests.locust.langflow_runtime.clients.workflows import classify_workflow_status_response
+from tests.locust.langflow_runtime.clients.webhooks import (
+    WebhookCopy,
+    WebhookResult,
+    WebhooksClient,
+    correlate_webhook_events,
+)
+from tests.locust.langflow_runtime.clients.workflows import (
+    classify_workflow_status_response,
+    normalize_langflow_stream_event,
+)
 from tests.locust.langflow_runtime.config.naming import metric_name
 
 
 def _line_iter(lines: list[str]):
     yield from lines
+
+
+def test_iter_response_lines_uses_fast_http_buffered_content() -> None:
+    class BufferedResponse:
+        # geventhttpclient reads from a bytearray body buffer.
+        _cached_content = bytearray(b"event: connected\ndata: {}\n\n")
+
+        def iter_content(self, **_kwargs: Any):
+            pytest.fail("buffered FastHttp content must not read the exhausted socket")
+
+    assert list(iter_response_lines(BufferedResponse())) == ["event: connected", "data: {}", ""]
+
+
+def test_iter_response_lines_adapts_fast_http_stream_chunks() -> None:
+    class RawResponse:
+        def __init__(self) -> None:
+            self.lines = iter(
+                [
+                    bytearray(b"event: connected\r\n"),
+                    b"data: {}\r\n",
+                    b"\r\n",
+                    b"",
+                ]
+            )
+
+        def readline(self, *, sep: bytes):
+            assert sep == b"\n"
+            return next(self.lines)
+
+    class StreamingResponse:
+        _response = RawResponse()
+
+        def iter_content(self, **_kwargs: Any):
+            pytest.fail("FastHttp SSE must use readline() to avoid chunk buffering")
+
+    assert list(iter_response_lines(StreamingResponse())) == ["event: connected", "data: {}", ""]
 
 
 def test_parse_sse_events_multiframe() -> None:
@@ -116,6 +161,20 @@ def test_workflow_active_status_200() -> None:
     assert status.status == "in_progress"
 
 
+def test_normalize_langflow_stream_event_unwraps_data_payload() -> None:
+    event = normalize_langflow_stream_event(
+        SseEvent(event="message", data='{"event":"end","data":{"ok":true}}', id="7")
+    )
+
+    assert event == SseEvent(event="end", data='{"ok": true}', id="7")
+
+
+def test_normalize_langflow_stream_event_preserves_explicit_sse_event() -> None:
+    event = SseEvent(event="end", data='{"ok":true}')
+
+    assert normalize_langflow_stream_event(event) is event
+
+
 def test_workflow_sync_uses_httpx_transport_without_internal_kwargs() -> None:
     import httpx
 
@@ -174,6 +233,26 @@ def test_correlate_webhook_events() -> None:
     assert correlation.accepted is True
     assert correlation.completed is True
     assert correlation.terminal_event == "end"
+
+
+def test_webhook_httpx_transport_uses_threads_when_gevent_is_installed(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+
+    from tests.locust.langflow_runtime.clients.base import ApiClient
+
+    with httpx.Client() as http:
+        client = WebhooksClient(api=ApiClient.from_httpx(http, base_url="http://example.test"))
+        expected = WebhookResult(accepted=True, completed=True)
+        monkeypatch.setattr(client, "_subscribe_post_complete_threaded", lambda *_args, **_kwargs: expected)
+        monkeypatch.setattr(
+            client,
+            "_subscribe_post_complete_gevent",
+            lambda *_args, **_kwargs: pytest.fail("httpx must not use the gevent webhook path"),
+        )
+
+        result = client.subscribe_post_complete(WebhookCopy("flow-1", "endpoint-1"), {})
+
+    assert result is expected
 
 
 def test_metric_name_format() -> None:

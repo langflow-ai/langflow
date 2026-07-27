@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from lfx.base.mcp.util import sanitize_mcp_name
+
 from tests.locust.langflow_runtime.clients.mcp_streamable import McpStreamableClient
 from tests.locust.langflow_runtime.provision.api import ProvisionHttp
 
@@ -69,7 +71,9 @@ def validate_mcp_tools_listable(http: ProvisionHttp, state: dict[str, Any]) -> b
         client.notify_initialized()
         tools = client.list_tools()
         names = {tool.get("name") for tool in tools}
-        ok = str(action) in names or any(str(action) in str(n) for n in names)
+        expected_name = sanitize_mcp_name(str(action))
+        normalized_names = {sanitize_mcp_name(str(name)) for name in names if name}
+        ok = expected_name in normalized_names or any(expected_name in name for name in normalized_names)
         state.setdefault("flags", {})["mcp_tools_ok"] = ok
         state["mcp"]["tools_ok"] = ok
         state["mcp"]["discovered"] = sorted(str(n) for n in names if n)

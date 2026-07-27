@@ -213,3 +213,119 @@ def test_redact_nested_list() -> None:
     assert out["resources"][0]["api_key"] == "***"
     assert out["token"] == "***"
     assert json.dumps(out)
+
+
+def test_project_names_remain_unique_after_mcp_name_truncation() -> None:
+    from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
+    from lfx.base.mcp.util import sanitize_mcp_name
+
+    from tests.locust.langflow_runtime.provision.projects import project_name
+
+    env_id = "perf-smoke-check"
+    fixture_ids = [
+        "perf_passthrough",
+        "perf_webhook_passthrough-copy-0",
+        "perf_webhook_passthrough-copy-1",
+        "human_input_flow",
+        "MemoryChatbotNoLLM",
+    ]
+    names = [project_name(env_id, fixture_id) for fixture_id in fixture_ids]
+    server_names = {f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}" for name in names}
+
+    assert len(server_names) == len(fixture_ids)
+    assert all(env_id in name for name in names)
+
+
+def test_cli_validate_authenticates_as_suite_resource_owner(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from types import SimpleNamespace
+
+    from tests.locust.langflow_runtime.provision import cli
+
+    state = new_state(
+        env_id="perf-unit",
+        host="http://example.test",
+        mode="superuser_pool",
+        fixture_index_hash="hash",
+    )
+    state["credentials"] = {
+        "suite_username": "perf-unit-user",
+        "password": _SUITE_CREDENTIAL_PASSWORD,
+    }
+    state["api_key"] = "perf-unit-key"  # pragma: allowlist secret
+    state["flows"] = {"fixture": {"flow_id": "flow-1", "mcp_action_name": None}}
+    state_path = tmp_path / "perf-unit.json"
+    identities: list[str] = []
+
+    class FakeHttp:
+        identity = ""
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def login(self, username: str, password: str) -> str:
+            assert password == _SUITE_CREDENTIAL_PASSWORD
+            self.identity = username
+            identities.append(username)
+            return _PERF_SUITE_TOKEN
+
+        def get_flow(self, flow_id: str) -> dict[str, str] | None:
+            assert self.identity == "perf-unit-user"
+            return {"id": flow_id}
+
+    fake_http = FakeHttp()
+    monkeypatch.setattr(cli, "ProvisionHttp", lambda *_args, **_kwargs: fake_http)
+    monkeypatch.setattr(cli, "load_state", lambda _env_id: state)
+    monkeypatch.setattr(cli, "save_state", lambda _state: state_path)
+    monkeypatch.setattr(cli, "state_path_for", lambda _env_id: state_path)
+
+    result = cli.cmd_validate(
+        SimpleNamespace(
+            env_id="perf-unit",
+            host=None,
+            mode="superuser-pool",
+            username=None,
+            password=None,
+        )
+    )
+
+    assert result == 0
+    assert identities == ["perf-unit-user"]
+
+
+def test_mcp_validation_normalizes_configured_action_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    from types import SimpleNamespace
+
+    from tests.locust.langflow_runtime.provision import mcp
+
+    class FakeMcpClient:
+        def __init__(self, **_kwargs: object) -> None:
+            pass
+
+        def initialize(self) -> None:
+            pass
+
+        def notify_initialized(self) -> None:
+            pass
+
+        def list_tools(self) -> list[dict[str, str]]:
+            return [{"name": "memorychatbotnollm"}]
+
+    monkeypatch.setattr(mcp, "McpStreamableClient", FakeMcpClient)
+    http = SimpleNamespace(api_client=lambda **_kwargs: object())
+    state = {
+        "api_key": "perf-unit-key",  # pragma: allowlist secret
+        "flows": {
+            "MemoryChatbotNoLLM": {
+                "project_id": "project-1",
+                "mcp_action_name": "MemoryChatbotNoLLM",
+            }
+        },
+        "mcp": {},
+        "flags": {},
+    }
+
+    assert mcp.validate_mcp_tools_listable(http, state) is True
+    assert state["mcp"]["discovered"] == ["memorychatbotnollm"]

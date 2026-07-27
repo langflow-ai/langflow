@@ -13,10 +13,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 from urllib.parse import urljoin
 
 from tests.locust.langflow_runtime.config.naming import metric_name
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 DEFAULT_CONNECT_TIMEOUT_S = 10.0
 DEFAULT_READ_TIMEOUT_S = 60.0
@@ -111,6 +114,75 @@ def _response_status(response: Any) -> int:
     raise TransportError(msg)
 
 
+def iter_response_lines(response: Any, *, chunk_size: int = 1024) -> Iterator[str]:
+    """Yield response lines across httpx/requests and Locust FastHttp clients."""
+    iter_lines = getattr(response, "iter_lines", None)
+    if callable(iter_lines):
+        yield from iter_lines()
+        return
+
+    # FastHttp eagerly buffers non-streaming responses. Prefer that cache when
+    # present because its underlying socket has already been consumed.
+    cached = getattr(response, "_cached_content", None)
+    if cached is not None:
+        text = (
+            bytes(cached).decode("utf-8", errors="replace")
+            if isinstance(cached, (bytes, bytearray, memoryview))
+            else str(cached)
+        )
+        yield from text.splitlines()
+        return
+
+    # geventhttpclient's read(length) waits until the requested byte count is
+    # available. That stalls low-volume SSE streams when iter_content asks for
+    # 1 KiB but the initial ``connected`` frame is much smaller. Its readline()
+    # returns as soon as a frame line arrives and remains gevent-cooperative.
+    raw_response = getattr(response, "_response", None)
+    readline = getattr(raw_response, "readline", None)
+    if callable(readline):
+        while True:
+            # geventhttpclient defaults to CRLF, while Starlette streams use LF.
+            raw = readline(sep=b"\n")
+            if not raw:
+                return
+            line = (
+                bytes(raw).decode("utf-8", errors="replace")
+                if isinstance(raw, (bytes, bytearray, memoryview))
+                else str(raw)
+            )
+            yield line.rstrip("\r\n")
+
+    # FastHttp streaming responses expose iter_content(), not iter_lines().
+    iter_content = getattr(response, "iter_content", None)
+    if not callable(iter_content):
+        raise TransportError("stream response lacks iter_lines() and iter_content()")
+
+    buffer = ""
+    for chunk in iter_content(chunk_size=chunk_size, decode_content=True):
+        text = (
+            bytes(chunk).decode("utf-8", errors="replace")
+            if isinstance(chunk, (bytes, bytearray, memoryview))
+            else str(chunk)
+        )
+        buffer += text
+        while "\n" in buffer:
+            line, buffer = buffer.split("\n", 1)
+            yield line.rstrip("\r")
+    if buffer:
+        yield buffer.rstrip("\r")
+
+
+def close_response(response: Any) -> None:
+    """Close or release a response across supported transports."""
+    close = getattr(response, "close", None)
+    if callable(close):
+        close()
+        return
+    release = getattr(response, "release", None)
+    if callable(release):
+        release()
+
+
 def wrap_response(response: Any, *, expect_json: bool = False) -> ParsedResponse:
     status_code = _response_status(response)
     headers = _header_map(response)
@@ -121,17 +193,10 @@ def wrap_response(response: Any, *, expect_json: bool = False) -> ParsedResponse
     return ParsedResponse(status_code=status_code, headers=headers, text=text, json_data=json_data)
 
 
-def _locust_supports_catch_response(session: Any) -> bool:
-    name = type(session).__name__
-    if name in {"HttpSession", "FastHttpSession"}:
-        return True
-    return hasattr(session, "cookiejar") and hasattr(session, "request")
-
-
 class LocustTransport:
     """Locust ``HttpSession`` / ``FastHttpSession`` (and session-shaped test doubles).
 
-    Uses ``stream=True`` on ``.get()``/``.post()`` and optional ``catch_response`` so
+    Uses ``stream=True`` on ``.get()``/``.post()`` and supplies the metric name so
     timings land in Locust stats during load runs.
     """
 
@@ -159,11 +224,12 @@ class LocustTransport:
         if stream:
             request_kwargs["stream"] = True
 
-        if name is not None and _locust_supports_catch_response(self.session) and request_fn is not None:
-            with request_fn(url, catch_response=True, name=name, **request_kwargs) as response:
-                return response
         if request_fn is not None:
+            if name is not None:
+                request_kwargs["name"] = name
             return request_fn(url, **request_kwargs)
+        if name is not None:
+            request_kwargs["name"] = name
         return self.session.request(method, url, **request_kwargs)
 
 
