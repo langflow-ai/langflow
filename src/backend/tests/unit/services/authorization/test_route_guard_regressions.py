@@ -138,41 +138,41 @@ def test_read_project_paginated_branch_filters_via_filter_visible_resources(proj
 
 
 def test_read_flows_wires_db_layer_prefilter(flows_routes):
-    """read_flows must call ``visible_id_prefilter`` so an EE plugin can prefilter at the DB.
+    """read_flows must call ``visible_scope_prefilter`` so an EE plugin can prefilter at the DB.
 
-    Without this the plugin's ``list_visible_resource_ids`` override has no
+    Without this the plugin's ``get_resource_visibility`` override has no
     effect on the listing — every candidate row is fetched and filtered in
     memory, defeating the hook at large-tenant scale.
     """
     func = flows_routes["read_flows"]
-    assert _calls(func, "visible_id_prefilter"), "read_flows must consult visible_id_prefilter"
+    assert _calls(func, "visible_scope_prefilter"), "read_flows must consult visible_scope_prefilter"
 
 
 def test_read_projects_wires_db_layer_prefilter(projects_routes):
-    """read_projects must call ``visible_id_prefilter`` (DB-layer prefilter)."""
+    """read_projects must call ``visible_scope_prefilter`` (DB-layer prefilter)."""
     func = projects_routes["read_projects"]
-    assert _calls(func, "visible_id_prefilter"), "read_projects must consult visible_id_prefilter"
+    assert _calls(func, "visible_scope_prefilter"), "read_projects must consult visible_scope_prefilter"
 
 
 def test_read_project_wires_db_layer_prefilter(projects_routes):
-    """read_project (flows-in-project) must call ``visible_id_prefilter`` too."""
+    """read_project (flows-in-project) must call ``visible_scope_prefilter`` too."""
     func = projects_routes["read_project"]
-    assert _calls(func, "visible_id_prefilter"), "read_project must consult visible_id_prefilter"
+    assert _calls(func, "visible_scope_prefilter"), "read_project must consult visible_scope_prefilter"
 
 
 def test_list_deployments_threads_prefilter_into_synced_query(deployments_routes):
     """list_deployments must consult the prefilter AND thread it into the synced query.
 
-    Passing ``allowed_ids`` into ``list_deployments_synced`` is what pushes the
+    Passing ``visibility_scope`` into ``list_deployments_synced`` is what pushes the
     prefilter down to both the page query and its count, so pagination totals
     reflect the constraint instead of overcounting denied rows.
     """
     func = deployments_routes["list_deployments"]
-    assert _calls(func, "visible_id_prefilter"), "list_deployments must consult visible_id_prefilter"
+    assert _calls(func, "visible_scope_prefilter"), "list_deployments must consult visible_scope_prefilter"
     synced_calls = _calls(func, "list_deployments_synced")
     assert synced_calls, "list_deployments must call list_deployments_synced"
-    assert any(_has_keyword(call, "allowed_ids") for call in synced_calls), (
-        "list_deployments must thread allowed_ids into list_deployments_synced so the "
+    assert any(_has_keyword(call, "visibility_scope") for call in synced_calls), (
+        "list_deployments must thread visibility_scope into list_deployments_synced so the "
         "page query and its total share the prefilter"
     )
 
@@ -183,9 +183,9 @@ def test_list_deployments_relaxes_provider_gate_on_prefilter(deployments_routes)
     A shared deployment lives under its *owner's* provider account, so the strict
     ``get_owned_provider_account_or_404`` 404s a cross-user reader before the
     ``(owner ⊕ visible)`` prefilter union can surface the row. When
-    ``visible_id_prefilter`` returns a concrete list, the handler must resolve the
+    ``visible_scope_prefilter`` returns cross-user visibility, the handler must resolve the
     provider account by id alone (``get_shared_listing_provider_account_or_404``)
-    so ``allowed_ids`` can actually widen cross-user shared listing — while the
+    so ``visibility_scope`` can actually widen cross-user shared listing — while the
     OSS / no-plugin path keeps the strict owner gate.
     """
     func = deployments_routes["list_deployments"]

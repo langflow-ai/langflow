@@ -241,6 +241,16 @@ module.exports = {
             },
             {
               type: "doc",
+              id: "Deployment/docker-image-profiles",
+              label: "Choose a Langflow image"
+            },
+            {
+              type: "doc",
+              id: "Deployment/downstream-bundle-profiles",
+              label: "Downstream bundle profiles"
+            },
+            {
+              type: "doc",
               id: "Deployment/deployment-caddyfile",
               label: "Deploy Langflow on a remote server"
             },

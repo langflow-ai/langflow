@@ -1,6 +1,6 @@
 [project]
 name = "lfx-exa"
-version = "0.1.0"
+version = "0.1.1"
 description = "Exa web-search and contents tools (exa-py SDK) as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -23,7 +23,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "exa", "search"]
 # Fine-grained BUNDLE_API compatibility is enforced via extension.json's
 # lfx.compat list against BUNDLE_API_VERSION.
 dependencies = [
-    "lfx>=1.11.0.dev0,<2.0.0",
+    "lfx>=1.12.0.dev0,<2.0.0",
     "exa-py>=1.14,<3",
     "langchain-core>=1.2.28,<2.0.0",
 ]

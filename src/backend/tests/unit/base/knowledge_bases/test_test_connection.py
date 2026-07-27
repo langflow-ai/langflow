@@ -21,6 +21,8 @@ from lfx.base.knowledge_bases.backends import (
 )
 from lfx.base.knowledge_bases.backends.base import BaseVectorStoreBackend
 
+pytestmark = pytest.mark.usefixtures("fake_opensearchpy")
+
 if TYPE_CHECKING:
     from pathlib import Path
 

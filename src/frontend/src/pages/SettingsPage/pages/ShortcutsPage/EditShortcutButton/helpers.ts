@@ -47,6 +47,8 @@ export function checkForKeys(keys: string, keyToCompare: string): boolean {
   );
 }
 
+export { isModifierOnlyCombination } from "@/utils/shortcuts";
+
 export function normalizeRecordedCombination(recorded: string): string {
   const parts = recorded.split(" ");
   if (

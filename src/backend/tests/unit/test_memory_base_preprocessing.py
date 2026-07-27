@@ -348,6 +348,31 @@ class TestRunPreprocessing:
         llm_cls.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_policy_denial_happens_before_api_key_lookup(self):
+        from langflow.services.memory_base.preprocessing import run_preprocessing
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        key_lookup = MagicMock()
+        with (
+            patch("langflow.services.memory_base.preprocessing.infer_llm_provider", return_value="Anthropic"),
+            patch(
+                "lfx.services.model_provider_policy.require_model_provider",
+                side_effect=ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.USE),
+            ),
+            patch("langflow.services.memory_base.preprocessing.get_api_key_for_provider", key_lookup),
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            await run_preprocessing(
+                messages=[_make_message(text="hello")],
+                preproc_model="claude-test",
+                preproc_instructions="Summarize.",
+                kill_phrase="NO_INGEST",
+                user_id=uuid.uuid4(),
+            )
+
+        key_lookup.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_normal_response_returns_ingested(self):
         from langflow.services.memory_base.preprocessing import run_preprocessing
 

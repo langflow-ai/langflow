@@ -25,6 +25,8 @@ from lfx.base.knowledge_bases.backends.opensearch import (
     DEFAULT_VECTOR_FIELD,
 )
 
+pytestmark = pytest.mark.usefixtures("fake_opensearchpy")
+
 if TYPE_CHECKING:
     from pathlib import Path
 

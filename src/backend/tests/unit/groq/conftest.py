@@ -1,8 +1,11 @@
+import importlib.util
 import json
 import os
+import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import ModuleType
 from unittest.mock import MagicMock, Mock
 
 import pytest
@@ -22,6 +25,16 @@ def pytest_collection_modifyitems(config, items):  # noqa: ARG001
     for item in items:
         if "requires_api_key" in item.keywords and not os.getenv("GROQ_API_KEY"):
             item.add_marker(skip_no_api_key)
+
+
+@pytest.fixture(autouse=True)
+def fake_groq(monkeypatch):
+    if importlib.util.find_spec("groq") is not None:
+        return
+
+    groq = ModuleType("groq")
+    groq.Groq = MagicMock(name="Groq")
+    monkeypatch.setitem(sys.modules, "groq", groq)
 
 
 @pytest.fixture

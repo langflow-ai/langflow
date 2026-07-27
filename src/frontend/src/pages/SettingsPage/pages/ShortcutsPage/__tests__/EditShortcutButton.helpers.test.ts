@@ -3,6 +3,7 @@ import {
   findShortcutByName,
   getFixedCombination,
   isDuplicateCombination,
+  isModifierOnlyCombination,
   normalizeRecordedCombination,
 } from "../EditShortcutButton/helpers";
 
@@ -45,5 +46,18 @@ describe("EditShortcutButton helpers", () => {
   it("checks for existing keys", () => {
     expect(checkForKeys("Ctrl + K", "Ctrl")).toBe(true);
     expect(checkForKeys("Ctrl + K", "Shift")).toBe(false);
+  });
+
+  it("rejects modifier-only combinations", () => {
+    expect(isModifierOnlyCombination("Cmd")).toBe(true);
+    expect(isModifierOnlyCombination("Ctrl + Shift")).toBe(true);
+    expect(isModifierOnlyCombination("Cmd + Alt + Shift")).toBe(true);
+    expect(isModifierOnlyCombination("")).toBe(true);
+  });
+
+  it("accepts combinations that include a non-modifier key", () => {
+    expect(isModifierOnlyCombination("Cmd + C")).toBe(false);
+    expect(isModifierOnlyCombination("Shift + K")).toBe(false);
+    expect(isModifierOnlyCombination("Space")).toBe(false);
   });
 });

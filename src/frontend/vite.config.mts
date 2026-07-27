@@ -11,6 +11,7 @@ import {
   PORT,
   PROXY_TARGET,
 } from "./src/customization/config-constants";
+import { createAccessTokenExpireSecondsDefinition } from "./vite-env-definitions";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -44,14 +45,14 @@ export default defineConfig(({ mode }) => {
       outDir: "build",
     },
     define: {
+      ...createAccessTokenExpireSecondsDefinition(
+        envLangflow.ACCESS_TOKEN_EXPIRE_SECONDS,
+      ),
       "import.meta.env.BACKEND_URL": JSON.stringify(
         envLangflow.BACKEND_URL ?? "http://localhost:7860",
       ),
-      "import.meta.env.ACCESS_TOKEN_EXPIRE_SECONDS": JSON.stringify(
-        envLangflow.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60,
-      ),
       "import.meta.env.CI": JSON.stringify(envLangflow.CI ?? false),
-      "import.meta.env.LANGFLOW_AUTO_LOGIN": JSON.stringify(
+      __LANGFLOW_AUTO_LOGIN__: JSON.stringify(
         envLangflow.LANGFLOW_AUTO_LOGIN ?? true,
       ),
       "import.meta.env.LANGFLOW_MCP_COMPOSER_ENABLED": JSON.stringify(

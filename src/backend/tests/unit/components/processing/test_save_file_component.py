@@ -440,6 +440,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         mock_upload.assert_not_called()
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("fake_googleapiclient")
     async def test_google_drive_credential_parsing_with_control_characters(self, component_class):
         """Test that GCP service account JSON with literal newlines (control characters) can be parsed.
 
@@ -495,6 +496,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             assert "file123" in result.text
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("fake_googleapiclient")
     async def test_google_drive_credential_parsing_strategies(self, component_class):
         """Test various GCP credential parsing strategies."""
         component = component_class(_user_id=str(uuid4()))

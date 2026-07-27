@@ -44,7 +44,7 @@ export default function TextModal({
           tabIndex={-1}
           data-langflow-text-cell-trigger
           aria-haspopup="dialog"
-          className="h-full w-full truncate text-left"
+          className="flex h-6 min-h-6 w-full items-center truncate text-left leading-6"
         >
           {children}
         </button>
