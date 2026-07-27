@@ -3,6 +3,10 @@ import { usePatchSnapshot } from "@/controllers/API/queries/deployments";
 import { useGetDeploymentAttachments } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
 import { useGetDeployments } from "@/controllers/API/queries/deployments/use-get-deployments";
 import i18n from "@/i18n";
+import {
+  type StepperStepConfig,
+  useStepperState,
+} from "@/modals/stepperModal/StepperModal";
 import { useErrorAlert } from "@/pages/MainPage/pages/deploymentsPage/hooks/use-error-alert";
 import type {
   DeploymentProvider,
@@ -22,6 +26,15 @@ const PROVIDER_KEY_MAP: Record<string, DeploymentProvider> = {
 
 type Phase = "provider" | "deployments" | "review";
 
+// The dialog's phase machine runs on the shared stepper primitive; the
+// phases are named steps and jumps go through goTo (auto-skip opens on
+// "deployments" while Back stays free to reach "provider").
+const DEPLOY_CHOICE_STEPS: StepperStepConfig[] = [
+  { id: "provider" },
+  { id: "deployments" },
+  { id: "review" },
+];
+
 interface UseDeployChoiceDialogStateParams {
   open: boolean;
   providers: ProviderAccount[];
@@ -40,7 +53,8 @@ export function useDeployChoiceDialogState({
   snapshotVersionId,
   onChooseNew,
 }: UseDeployChoiceDialogStateParams) {
-  const [phase, setPhase] = useState<Phase>("provider");
+  const stepper = useStepperState({ steps: DEPLOY_CHOICE_STEPS });
+  const phase = stepper.currentStepId as Phase;
   const [selectedProviderId, setSelectedProviderId] =
     useState<string>(NEW_DEPLOYMENT_VALUE);
   const [selectedDeployment, setSelectedDeployment] =
@@ -149,7 +163,7 @@ export function useDeployChoiceDialogState({
         i18n.t("errors.failedToLoadDeployment"),
         i18n.t("errors.noProviderSnapshotFoundOnSelectedDeployment"),
       );
-      setPhase("deployments");
+      stepper.goTo("deployments");
       setReviewAttachments([]);
       setReviewAttachment(null);
       return;
@@ -183,10 +197,10 @@ export function useDeployChoiceDialogState({
 
     if (providers.length === 1) {
       setSelectedProviderId(providers[0].id);
-      setPhase("deployments");
+      stepper.goTo("deployments");
     } else {
       setSelectedProviderId(providers[0]?.id ?? "");
-      setPhase("provider");
+      stepper.goTo("provider");
     }
     setSelectedDeployment(NEW_DEPLOYMENT_VALUE);
     setReviewAttachments([]);
@@ -226,8 +240,8 @@ export function useDeployChoiceDialogState({
   ]);
 
   const handleProviderContinue = useCallback(() => {
-    setPhase("deployments");
-  }, []);
+    stepper.goTo("deployments");
+  }, [stepper.goTo]);
 
   const handleDeploymentContinue = useCallback(() => {
     if (selectedDeployment === NEW_DEPLOYMENT_VALUE) {
@@ -237,12 +251,13 @@ export function useDeployChoiceDialogState({
     if (!selectedDeploymentEntry) return;
     setReviewAttachments([]);
     setReviewAttachment(null);
-    setPhase("review");
+    stepper.goTo("review");
   }, [
     selectedDeployment,
     onChooseNew,
     buildProviderPreselection,
     selectedDeploymentEntry,
+    stepper.goTo,
   ]);
 
   const handleReviewConfirm = useCallback(async () => {
@@ -265,14 +280,14 @@ export function useDeployChoiceDialogState({
 
   const handleBack = useCallback(() => {
     if (phase === "review") {
-      setPhase("deployments");
+      stepper.goTo("deployments");
       setReviewAttachments([]);
       setReviewAttachment(null);
       return;
     }
-    setPhase("provider");
+    stepper.goTo("provider");
     setSelectedDeployment(NEW_DEPLOYMENT_VALUE);
-  }, [phase]);
+  }, [phase, stepper.goTo]);
 
   const handleSelectAttachment = useCallback(
     (providerSnapshotId: string) => {
