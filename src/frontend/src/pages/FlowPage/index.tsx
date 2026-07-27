@@ -176,7 +176,18 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         const isAnExistingFlow = flows.find((flow) => flow.id === id);
 
         if (!isAnExistingFlow) {
-          navigate("/all");
+          // The flows store is not authoritative here: right after
+          // create-then-navigate (the "New Flow" button), an in-flight list
+          // refetch snapshotted BEFORE the create can land now and rewrite
+          // the store without the new flow. Bouncing on the store alone
+          // silently kicks the user back to the list, so confirm with the
+          // server before giving up on the route.
+          try {
+            const flow = await getFlow({ id: id! });
+            applyFlowToCanvas(flow);
+          } catch {
+            navigate("/all");
+          }
           return;
         }
 
