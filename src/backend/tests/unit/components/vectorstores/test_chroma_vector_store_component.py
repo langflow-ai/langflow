@@ -3,6 +3,9 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from langchain_core.embeddings import Embeddings
 from lfx.base.vectorstores.chroma_security import (
     chroma_client_create_collection_kwargs,

@@ -6,6 +6,7 @@ from lfx.io import IntInput
 
 
 class FakeEmbeddingsComponent(LCEmbeddingsModel):
+    model_provider_policy_mode = "none"
     display_name = "Fake Embeddings"
     description = "Generate fake embeddings, useful for initial testing and connecting components."
     icon = "LangChain"

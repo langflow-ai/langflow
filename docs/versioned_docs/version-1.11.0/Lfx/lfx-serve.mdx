@@ -1,0 +1,166 @@
+---
+title: Serve flows with LFX
+slug: /lfx-serve
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import LfxPrereqs from '@site/docs/_partial-lfx-run-serve-prereqs.mdx';
+import LfxComponentCategories from '@site/docs/_partial-lfx-component-categories.mdx';
+
+`lfx serve` starts a FastAPI server that exposes your flows as HTTP API endpoints at `POST /flows/{flow_id}/run`.
+
+A `LANGFLOW_API_KEY` is required because `lfx serve` starts a publicly accessible server.
+
+To execute a flow once and stream results to `stdout` instead, see [Run flows with LFX](./lfx-run).
+
+Both `lfx serve` and `lfx run` accept a `.json` flow file or a `.py` Python script.
+
+<LfxPrereqs />
+
+## Start the server
+
+1. Generate a Langflow API key.
+
+   For LFX, generate a secure token locally:
+
+   ```bash
+   uv run python -c "import secrets; print(secrets.token_urlsafe(32))"
+   ```
+
+   This is different from creating an API key through the Langflow UI or CLI, which stores the key in the Langflow database. LFX only needs a secure token string to authenticate requests.
+
+2. Set your environment variables. Use a `.env` file or export directly:
+
+   **`.env` file**:
+
+   ```text
+   LANGFLOW_API_KEY="sk..."
+   OPENAI_API_KEY="sk-..."
+   ```
+
+   **Export**:
+
+   ```bash
+   export LANGFLOW_API_KEY="sk..."
+   export OPENAI_API_KEY="sk-..."
+   ```
+
+3. Start the server with your flow:
+
+   **With a `.env` file**:
+
+   ```bash
+   uv run lfx serve simple-agent-flow.json --env-file .env
+   ```
+
+   **With exported variables**:
+
+   ```bash
+   uv run lfx serve simple-agent-flow.json
+   ```
+
+4. Copy the `flow_id` from the startup output:
+
+   ```
+    LFX Server
+    Flow loaded: simple-agent-flow.json (c1dab29d-3364-58ef-8fef-99311d32ee42)
+    Server:      http://127.0.0.1:8000
+    Run flows at: POST /flows/{flow_id}/run
+    API key:     x-api-key header or ?x-api-key= query parameter
+   ```
+
+## Call the server
+
+In a new terminal, set your API key and flow ID, then send a test request:
+
+```bash
+export LANGFLOW_API_KEY="sk..."
+export FLOW_ID="c1dab29d-3364-58ef-8fef-99311d32ee42"
+```
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import os
+
+import requests
+
+flow_id = os.environ["FLOW_ID"]
+api_key = os.environ["LANGFLOW_API_KEY"]
+
+url = f"http://localhost:8000/flows/{flow_id}/run"
+
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": api_key,
+}
+
+payload = {
+    "input_value": "Hello, world!",
+}
+
+response = requests.post(url, headers=headers, json=payload, timeout=60)
+response.raise_for_status()
+print(response.text)
+```
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+```js
+const flowId = process.env.FLOW_ID;
+const apiKey = process.env.LANGFLOW_API_KEY;
+
+const options = {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-api-key": apiKey,
+  },
+  body: JSON.stringify({
+    input_value: "Hello, world!",
+  }),
+};
+
+fetch(`http://localhost:8000/flows/${flowId}/run`, options)
+  .then(async (response) => {
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    console.log(await response.text());
+  })
+  .catch((error) => console.error(error));
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+```bash
+curl -X POST http://localhost:8000/flows/$FLOW_ID/run \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{"input_value": "Hello, world!"}'
+```
+
+</TabItem>
+</Tabs>
+
+## Serve multiple flows
+
+To serve multiple flows, pass a directory to `lfx serve` to load all `.json` flows at server startup:
+
+```bash
+uv run lfx serve ./flows/
+```
+
+<LfxComponentCategories />
+
+## See also
+
+- [Run flows with LFX](./lfx-run)
+- [About LFX](./lfx-overview)
+- [Install LFX](./lfx-install)
+- [Flow DevOps Toolkit SDK](./lfx-devops-sdk.mdx)
+- [Extensions overview](./extensions-overview)

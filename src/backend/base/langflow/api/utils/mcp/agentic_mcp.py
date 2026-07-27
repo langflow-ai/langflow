@@ -151,14 +151,18 @@ async def remove_agentic_mcp_server(session: AsyncSession) -> None:
 
         for user in users:
             try:
-                # Remove the server by passing empty config
+                # An empty config without delete=True would *replace* the config (or even
+                # create an empty-config row for users who never had the server), leaving a
+                # broken entry in the server list. delete=True removes the row; a user
+                # without the server raises HTTPException, caught below.
                 await update_server(
                     server_name=server_name,
-                    server_config={},  # Empty config removes the server
+                    server_config={},
                     current_user=user,
                     session=session,
                     storage_service=storage_service,
                     settings_service=settings_service,
+                    delete=True,
                 )
 
                 servers_removed += 1

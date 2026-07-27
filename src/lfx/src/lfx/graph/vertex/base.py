@@ -72,6 +72,8 @@ class Vertex:
         self._is_loop = None
         self.has_session_id = None
         self.custom_component = None
+        # Runtime-only metadata used to mask downstream display results without changing edge values.
+        self._upstream_secret_values: set[str] = set()
         self.has_external_input = False
         self.has_external_output = False
         self.graph = graph
@@ -228,6 +230,7 @@ class Vertex:
         state = self.__dict__.copy()
         state["_lock"] = None  # Locks are not serializable
         state["custom_component"] = None  # Component instances are rebuilt and may hold non-serializable runtime state
+        state["_upstream_secret_values"] = set()  # Never persist raw secrets carried between components
         state["built_object"] = None if isinstance(self.built_object, UnbuiltObject) else self.built_object
         state["built_result"] = None if isinstance(self.built_result, UnbuiltResult) else self.built_result
         return state
@@ -235,6 +238,7 @@ class Vertex:
     def __setstate__(self, state):
         self.__dict__.update(state)
         self._lock = asyncio.Lock()  # Reinitialize the lock
+        self._upstream_secret_values = state.get("_upstream_secret_values", set())
         self.built_object = state.get("built_object") or UnbuiltObject()
         self.built_result = state.get("built_result") or UnbuiltResult()
 
@@ -413,6 +417,9 @@ class Vertex:
                 self.custom_component.set_event_manager(event_manager)
             custom_params = initialize.loading.get_params(self.params)
             custom_params.pop("code", None)
+
+        if hasattr(custom_component, "_secret_values"):
+            custom_component._secret_values.update(self._upstream_secret_values)  # noqa: SLF001
 
         await self._build_results(
             custom_component=custom_component,
@@ -604,7 +611,15 @@ class Vertex:
             The result of the vertex.
         """
         async with self.lock:
-            return await self._get_result(requester, target_handle_name)
+            result = await self._get_result(requester, target_handle_name)
+            requester._inherit_secret_values(self)
+            return result
+
+    def _inherit_secret_values(self, source_vertex: Vertex) -> None:
+        """Track secrets carried by an upstream component so displayed results stay masked."""
+        source_component = source_vertex.custom_component
+        if source_component is not None:
+            self._upstream_secret_values.update(getattr(source_component, "_secret_values", set()))
 
     async def _log_transaction_async(
         self,

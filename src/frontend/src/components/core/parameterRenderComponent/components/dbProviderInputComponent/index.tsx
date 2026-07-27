@@ -26,6 +26,7 @@ import {
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
+import { focusCommandListOnOpen } from "../../utils/focus-command-list-on-open";
 
 export type DBProviderSelection = {
   // Wire keys stay snake_case to match the backend payload format.
@@ -38,6 +39,8 @@ interface DBProviderInputProps {
   value: AvailableDBProviderId;
   globalVariables: GlobalVariable[];
   disabled?: boolean;
+  /** Accessible name for the combobox trigger (WCAG 4.1.2). */
+  "aria-label"?: string;
   onValueChange: (
     backendType: AvailableDBProviderId,
     backendConfig: Record<string, DBProviderConfigValue>,
@@ -95,6 +98,7 @@ export function DBProviderInput({
   value,
   globalVariables,
   disabled,
+  "aria-label": ariaLabel,
   onValueChange,
 }: DBProviderInputProps) {
   const { t } = useTranslation();
@@ -142,12 +146,14 @@ export function DBProviderInput({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           disabled={disabled}
           variant="primary"
           size="xs"
           role="combobox"
           ref={refButton}
           aria-expanded={open}
+          aria-label={ariaLabel}
           data-testid={id}
           className={cn(
             "dropdown-component-false-outline py-2",
@@ -191,10 +197,14 @@ export function DBProviderInput({
       <PopoverContentWithoutPortal
         side="bottom"
         avoidCollisions={true}
+        onOpenAutoFocus={focusCommandListOnOpen}
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "240px" }}
       >
-        <Command className="flex flex-col">
+        <Command
+          label={t("knowledge.dbProviderLabel")}
+          className="flex flex-col"
+        >
           <CommandList className="max-h-[300px] overflow-y-auto">
             {selectableOptions.map(({ provider, configured }) => (
               <DBProviderOptionItem
@@ -206,8 +216,10 @@ export function DBProviderInput({
               />
             ))}
           </CommandList>
+        </Command>
+        <div className="flex flex-col border-t border-border bg-background">
           <Button
-            className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group"
+            className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
             unstyled
             data-testid="manage-db-providers"
             onClick={handleManageProviders}
@@ -220,7 +232,7 @@ export function DBProviderInput({
               />
             </div>
           </Button>
-        </Command>
+        </div>
       </PopoverContentWithoutPortal>
     </Popover>
   );

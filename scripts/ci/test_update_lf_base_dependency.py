@@ -85,3 +85,23 @@ def test_pattern_skips_unrelated_packages(pyproject: Path) -> None:
     # ...but `lfx-bundles` / `lfxthing` keep their own floors untouched.
     assert re.search(r'"lfx-bundles~=1\.11\.0"', result)
     assert re.search(r'"lfxthing~=1\.11\.0"', result)
+
+
+def test_core_base_pins_preserve_each_optional_extra(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "pyproject.toml"
+    path.write_text(
+        "[project]\n"
+        'dependencies = ["langflow-base[complete]~=0.11.0"]\n'
+        "[project.optional-dependencies]\n"
+        'audio = ["langflow-base[audio]~=0.11.0"]\n'
+        'postgresql = ["langflow-base[postgresql]~=0.11.0"]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mod, "BASE_DIR", tmp_path)
+
+    mod.update_base_dep(path.name, "1.11.0.dev26")
+
+    result = path.read_text(encoding="utf-8")
+    assert '"langflow-base[complete]==1.11.0.dev26"' in result
+    assert '"langflow-base[audio]==1.11.0.dev26"' in result
+    assert '"langflow-base[postgresql]==1.11.0.dev26"' in result

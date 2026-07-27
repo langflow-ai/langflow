@@ -17,7 +17,9 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
+from lfx.base.models.provider_registry import is_api_key_optional
 from lfx.base.models.unified_models import get_api_key_for_provider
+from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, require_model_provider
 from sqlmodel import col, select
 
 from langflow.services.base import Service
@@ -58,6 +60,7 @@ from langflow.services.memory_base.kb_path_helpers import (
 )
 
 if TYPE_CHECKING:
+    from lfx.services.authorization.base import ResourceVisibilityScope
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -65,14 +68,29 @@ class PreprocessingValidationError(ValueError):
     """Raised when preprocessing is enabled but the provider API key is absent."""
 
 
-def _validate_preprocessing_api_key(user_id: uuid.UUID, preproc_model: str | None) -> None:
-    """Raise PreprocessingValidationError if the preprocessing provider API key is missing."""
+def _require_preprocessing_model_provider(user_id: uuid.UUID, preproc_model: str | None) -> str | None:
+    """Require CONFIGURE access for a supplied preprocessing model identity."""
     if not preproc_model:
-        return
+        return None
     try:
         provider = infer_llm_provider(preproc_model)
     except ValueError as exc:
         raise PreprocessingValidationError(str(exc)) from exc
+    require_model_provider(
+        user_id=user_id,
+        provider=provider,
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+    )
+    return provider
+
+
+def _validate_preprocessing_api_key(user_id: uuid.UUID, preproc_model: str | None) -> None:
+    """Raise PreprocessingValidationError if the preprocessing provider API key is missing."""
+    provider = _require_preprocessing_model_provider(user_id, preproc_model)
+    if provider is None:
+        return
+    if provider == "Ollama" or is_api_key_optional(provider):
+        return
     api_key = get_api_key_for_provider(user_id, provider)
     if not api_key:
         msg = (
@@ -101,9 +119,21 @@ class MemoryBaseService(Service):
                 msg = f"Flow {payload.flow_id} not found"
                 raise PermissionError(msg)
 
-        # 1b. Validate preprocessing API key before touching the filesystem.
+        # 1b. Validate every supplied preprocessing identity even while the
+        # feature is disabled; enabling it additionally requires credentials.
         if payload.preprocessing:
             _validate_preprocessing_api_key(user_id, payload.preproc_model)
+        elif payload.preproc_model:
+            _require_preprocessing_model_provider(user_id, payload.preproc_model)
+
+        # 1c. Resolve and authorize the embedding provider before filesystem
+        # initialization or any persistence work.
+        embedding_provider = infer_embedding_provider(payload.embedding_model)
+        require_model_provider(
+            user_id=user_id,
+            provider=embedding_provider,
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
 
         # 2. Resolve username — needed for the KB path.
         async with session_scope() as db:
@@ -113,7 +143,6 @@ class MemoryBaseService(Service):
         kb_name = f"{sanitize_kb_name(payload.name)}_{uuid.uuid4().hex[:8]}"
 
         # 4. Create KB directory and embedding_metadata.json on disk.
-        embedding_provider = infer_embedding_provider(payload.embedding_model)
         await initialize_kb(
             kb_name=kb_name,
             kb_username=kb_username,
@@ -153,9 +182,28 @@ class MemoryBaseService(Service):
             result = await db.exec(stmt)
             return list(result.all())
 
-    def list_for_user_stmt(self, user_id: uuid.UUID, flow_id: uuid.UUID | None = None):  # type: ignore[return]
+    def list_for_user_stmt(
+        self,
+        user_id: uuid.UUID,
+        flow_id: uuid.UUID | None = None,
+        *,
+        visibility: ResourceVisibilityScope | None = None,
+    ):  # type: ignore[return]
         """Return the SQLModel select statement for pagination at the API layer."""
-        stmt = select(MemoryBase).where(MemoryBase.user_id == user_id)
+        stmt = select(MemoryBase)
+        if visibility is None:
+            stmt = stmt.where(MemoryBase.user_id == user_id)
+        else:
+            from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope
+
+            # MemoryBase has no canonical workspace/project columns, so
+            # domain-only grants intentionally remain owner-scoped.
+            stmt = restrict_to_owned_or_visible_scope(
+                stmt,
+                id_column=MemoryBase.id,
+                owner_clause=MemoryBase.user_id == user_id,
+                visibility=visibility,
+            )
         if flow_id is not None:
             stmt = stmt.where(MemoryBase.flow_id == flow_id)
         return stmt
@@ -183,6 +231,13 @@ class MemoryBaseService(Service):
             mb = result.first()
             if mb is None:
                 return None
+
+            embedding_provider = infer_embedding_provider(mb.embedding_model)
+            require_model_provider(
+                user_id=user_id,
+                provider=embedding_provider,
+                purpose=ModelProviderPolicyPurpose.CONFIGURE,
+            )
 
             if mb.preprocessing:
                 _validate_preprocessing_api_key(user_id, mb.preproc_model)

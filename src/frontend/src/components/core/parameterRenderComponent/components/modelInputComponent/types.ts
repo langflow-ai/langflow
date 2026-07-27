@@ -23,4 +23,6 @@ export interface ModelInputComponentType {
   showEmptyState?: boolean;
   /** Explicitly set the model type filter ("llm" or "embeddings"). Overrides the nodeClass-derived default. */
   modelType?: "llm" | "embeddings";
+  /** Accessible name for the combobox trigger (WCAG 4.1.2). */
+  "aria-label"?: string;
 }

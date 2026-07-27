@@ -7,6 +7,10 @@ and that model options are populated dynamically via update_build_config.
 import contextlib
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+pytest.importorskip("lfx_bundles")
+
 
 class TestNVIDIAModelComponentLazyLoading:
     """Ensure NVIDIA model list is fetched lazily, not at import time."""

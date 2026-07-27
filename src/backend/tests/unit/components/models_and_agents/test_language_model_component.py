@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_anthropic import ChatAnthropic
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
 from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
@@ -355,6 +354,8 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
 
     async def test_google_live_api(self, component_class, google_api_key):
         """Test that the component can create a model with a real API key."""
+        chat_google_generative_ai = pytest.importorskip("langchain_google_genai").ChatGoogleGenerativeAI
+
         component = component_class(
             model=[
                 {
@@ -374,7 +375,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         )
 
         model = component.build_model()
-        assert isinstance(model, ChatGoogleGenerativeAI)
+        assert isinstance(model, chat_google_generative_ai)
 
     # ---------------------------------------------------------------------------
     # update_build_config field-visibility tests (#2 + #5)

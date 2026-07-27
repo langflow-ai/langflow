@@ -13,6 +13,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 from lfx.log.logger import logger
+from lfx.services.authorization import AuthorizationMutation, AuthorizationMutationKind
 from lfx.utils.util_strings import escape_like_pattern
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
@@ -25,10 +26,7 @@ from langflow.api.v1.schemas.authz_teams import (
     TeamRead,
     TeamUpdate,
 )
-from langflow.services.authorization.invalidation import (
-    safe_invalidate_all,
-    safe_invalidate_user,
-)
+from langflow.services.authorization.lifecycle import safe_identity_mutation_committed, stage_identity_mutation
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzTeam, AuthzTeamMember
 from langflow.services.database.models.user.model import User
@@ -107,7 +105,17 @@ async def create_team(
         is_active=payload.is_active,
     )
     session.add(team)
+    authorization_service = get_authorization_service()
+    mutation = AuthorizationMutation(
+        kind=AuthorizationMutationKind.TEAM_CREATED,
+        entity_id=team.id,
+        actor_user_id=current_user.id,
+        team_id=team.id,
+        policy_relevant_fields=("adom_name", "is_active"),
+    )
     try:
+        await session.flush()
+        await stage_identity_mutation(authorization_service, session, mutation)
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
@@ -115,6 +123,7 @@ async def create_team(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Team with adom_name {payload.adom_name!r} already exists",
         ) from exc
+    await safe_identity_mutation_committed(authorization_service, mutation)
     await session.refresh(team)
     await audit_decision(
         user_id=current_user.id,
@@ -139,19 +148,14 @@ async def update_team(
     if team is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
 
-    # Track whether the change affects fields a plugin may read during
-    # policy sync (the team's domain slug or active state). description-only
-    # / team_name-only edits are display metadata; adom_name and is_active
-    # can influence which rules match.
-    policy_relevant_changed = False
     changed_fields: list[str] = []
+    previous_adom_name = team.adom_name
     if payload.team_name is not None and team.team_name != payload.team_name:
         team.team_name = payload.team_name
         changed_fields.append("team_name")
     if payload.adom_name is not None and team.adom_name != payload.adom_name:
         team.adom_name = payload.adom_name
         changed_fields.append("adom_name")
-        policy_relevant_changed = True
     # description is nullable on the DB side, so use a presence check
     # (model_fields_set) instead of ``is not None`` — an explicit "description":
     # null in the body clears the field, while omitting it leaves the row alone.
@@ -161,10 +165,20 @@ async def update_team(
     if payload.is_active is not None and team.is_active != payload.is_active:
         team.is_active = payload.is_active
         changed_fields.append("is_active")
-        policy_relevant_changed = True
     team.updated_at = datetime.now(timezone.utc)
+    mutation = AuthorizationMutation(
+        kind=AuthorizationMutationKind.TEAM_UPDATED,
+        entity_id=team.id,
+        actor_user_id=current_user.id,
+        team_id=team.id,
+        policy_relevant_fields=tuple(sorted(set(changed_fields) & {"adom_name", "is_active"})),
+        previous_identifier=previous_adom_name if team.adom_name != previous_adom_name else None,
+    )
+    authorization_service = get_authorization_service()
 
     try:
+        await session.flush()
+        await stage_identity_mutation(authorization_service, session, mutation)
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
@@ -172,13 +186,8 @@ async def update_team(
             status_code=status.HTTP_409_CONFLICT,
             detail="adom_name conflict — another team already uses this slug",
         ) from exc
+    await safe_identity_mutation_committed(authorization_service, mutation)
     await session.refresh(team)
-    # Pure display edits (team_name, description) don't change policy. But
-    # adom_name is the slug a plugin may use to compile rules against, and
-    # is_active gates whether the team's memberships should grant access at
-    # all — invalidate so the next enforce reflects the new state.
-    if policy_relevant_changed:
-        await safe_invalidate_all(get_authorization_service(), op="team:update")
     await audit_decision(
         user_id=current_user.id,
         action="team:update",
@@ -201,11 +210,22 @@ async def delete_team(
     if team is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
     team_name = team.team_name
+    mutation = AuthorizationMutation(
+        kind=AuthorizationMutationKind.TEAM_DELETED,
+        entity_id=team_id,
+        actor_user_id=current_user.id,
+        team_id=team_id,
+        policy_relevant_fields=("adom_name", "is_active"),
+        previous_identifier=team.adom_name,
+    )
+    authorization_service = get_authorization_service()
     # Cascade on team_members handles cleanup; share rows targeting this team
     # are left in place (caller may want to migrate them before deleting).
     await session.delete(team)
+    await session.flush()
+    await stage_identity_mutation(authorization_service, session, mutation)
     await session.commit()
-    await safe_invalidate_all(get_authorization_service(), op="team:delete")
+    await safe_identity_mutation_committed(authorization_service, mutation)
     await audit_decision(
         user_id=current_user.id,
         action="team:delete",
@@ -271,7 +291,18 @@ async def add_member(
         source=payload.source,
     )
     session.add(member)
+    authorization_service = get_authorization_service()
+    mutation = AuthorizationMutation(
+        kind=AuthorizationMutationKind.TEAM_MEMBER_ADDED,
+        entity_id=member.id,
+        actor_user_id=current_user.id,
+        affected_user_ids=(payload.user_id,),
+        team_id=team_id,
+        policy_relevant_fields=("team_id", "user_id", "source"),
+    )
     try:
+        await session.flush()
+        await stage_identity_mutation(authorization_service, session, mutation)
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
@@ -279,12 +310,8 @@ async def add_member(
             status_code=status.HTTP_409_CONFLICT,
             detail="User is already a member of this team",
         ) from exc
+    await safe_identity_mutation_committed(authorization_service, mutation)
     await session.refresh(member)
-    await safe_invalidate_user(
-        get_authorization_service(),
-        payload.user_id,
-        op="team_member:create",
-    )
     await audit_decision(
         user_id=current_user.id,
         action="team_member:create",
@@ -324,13 +351,20 @@ async def remove_member(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Membership not found",
         )
-    await session.delete(member)
-    await session.commit()
-    await safe_invalidate_user(
-        get_authorization_service(),
-        user_id,
-        op="team_member:delete",
+    mutation = AuthorizationMutation(
+        kind=AuthorizationMutationKind.TEAM_MEMBER_REMOVED,
+        entity_id=member.id,
+        actor_user_id=current_user.id,
+        affected_user_ids=(user_id,),
+        team_id=team_id,
+        policy_relevant_fields=("team_id", "user_id", "source"),
     )
+    authorization_service = get_authorization_service()
+    await session.delete(member)
+    await session.flush()
+    await stage_identity_mutation(authorization_service, session, mutation)
+    await session.commit()
+    await safe_identity_mutation_committed(authorization_service, mutation)
     await audit_decision(
         user_id=current_user.id,
         action="team_member:delete",

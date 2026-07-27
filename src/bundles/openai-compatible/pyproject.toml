@@ -1,6 +1,6 @@
 [project]
 name = "lfx-openai-compatible"
-version = "0.1.0"
+version = "0.1.1"
 description = "Generic OpenAI-compatible endpoints (OpenRouter, Together, Groq, self-hosted vLLM/TGI, ...) as a first-class Langflow model provider, packaged as a standalone Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -21,7 +21,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "model-provider", "openai-
 # re-synced on ``make patch`` via scripts/ci/sync_bundle_lfx_pin.py; fine-grained
 # BUNDLE_API compatibility is enforced via extension.json's lfx.compat list.
 dependencies = [
-    "lfx>=1.11.0.dev0,<2.0.0",
+    "lfx>=1.12.0.dev0,<2.0.0",
     "httpx>=0.24.0,<1.0.0",
 ]
 

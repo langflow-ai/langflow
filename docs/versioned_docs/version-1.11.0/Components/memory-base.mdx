@@ -1,0 +1,33 @@
+---
+title: Memory Base
+slug: /memory-base
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+A memory base is a per-flow vector store that automatically ingests conversation messages after each flow run.
+The Memory Base component retrieves context from a [memory base](../Develop/memory-bases.mdx) attached to the current flow using semantic search.
+The most relevant conversation chunks are returned as a [DataFrame](/data-types#dataframe).
+
+## Memory Base parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| `memory_base` | Memory Base | Input parameter. Select the memory base to search. Only memory bases attached to the current flow are listed. Click the refresh button to reload the list after creating a new memory base. |
+| `search_query` | Search Query | Input parameter. The query string used for semantic retrieval. If empty, no results are returned. Supports tool mode for agent use. |
+| `top_k` | Top K Results | Input parameter. Number of top results to return. Default: `5`. |
+| `include_metadata` | Include Metadata | Input parameter. Whether to include chunk metadata (session ID, sender, timestamp, and so on) on each output row. Default: enabled. |
+| `filter_by_session` | Filter by Session | Input parameter. If enabled, only chunks from the current `session_id` are returned. Disable to search across all sessions ingested into this memory base, which is useful for cross-conversation recall. Default: enabled. |
+
+The output is a `DataFrame` named **Results** where each row represents one matching memory chunk.
+
+When **Include Metadata** is enabled, each row also contains fields such as `session_id`, `sender`, `sender_name`, and `timestamp`.
+
+When a search query is provided, each row includes a `_score` field with the similarity score.
+
+## Use the Memory Base component in a flow
+
+For more information, see [Manage memory bases](../Develop/memory-bases.mdx).

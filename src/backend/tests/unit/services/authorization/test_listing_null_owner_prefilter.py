@@ -34,7 +34,8 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_auth_service, get_settings_service, session_scope
-from lfx.services.authorization.base import BaseAuthorizationService
+from lfx.services.authorization.base import BaseAuthorizationService, ResourceVisibilityScope
+from sqlmodel import select
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -55,10 +56,16 @@ class _PrefilterAuthorizationService(BaseAuthorizationService):
 
     SUPPORTS_CROSS_USER_FETCH = True
 
-    def __init__(self, settings_service: SettingsService, visible_by_type: dict[str, list[UUID]]) -> None:
+    def __init__(
+        self,
+        settings_service: SettingsService,
+        visible_by_type: dict[str, list[UUID]],
+        scope_by_type: dict[str, ResourceVisibilityScope] | None = None,
+    ) -> None:
         super().__init__()
         self.settings_service = settings_service
         self._visible_by_type = visible_by_type
+        self._scope_by_type = scope_by_type or {}
         self.batch_calls = 0
         self.set_ready()
 
@@ -76,6 +83,11 @@ class _PrefilterAuthorizationService(BaseAuthorizationService):
     async def list_visible_resource_ids(self, *, resource_type: str, **_kwargs: Any) -> list[UUID] | None:
         return list(self._visible_by_type.get(resource_type, []))
 
+    async def get_resource_visibility(self, *, resource_type: str, **kwargs: Any) -> ResourceVisibilityScope | None:
+        if resource_type in self._scope_by_type:
+            return self._scope_by_type[resource_type]
+        return await super().get_resource_visibility(resource_type=resource_type, **kwargs)
+
 
 @contextlib.contextmanager
 def _install_prefilter_authz(
@@ -83,6 +95,7 @@ def _install_prefilter_authz(
     visible_by_type: dict[str, list[UUID]],
     *,
     auto_login: bool = False,
+    scope_by_type: dict[str, ResourceVisibilityScope] | None = None,
 ) -> Iterator[_PrefilterAuthorizationService]:
     """Install the prefilter double + enable AUTHZ (and optionally AUTO_LOGIN); restore on exit."""
     from langflow.services.schema import ServiceType
@@ -99,7 +112,7 @@ def _install_prefilter_authz(
     auth_settings.AUTHZ_ENABLED = True
     auth_settings.AUTHZ_SUPERUSER_BYPASS = False
     auth_settings.AUTO_LOGIN = auto_login
-    double = _PrefilterAuthorizationService(settings_service, visible_by_type)
+    double = _PrefilterAuthorizationService(settings_service, visible_by_type, scope_by_type)
     service_manager.services[ServiceType.AUTHORIZATION_SERVICE] = double
     try:
         yield double
@@ -129,9 +142,9 @@ async def _login(client, username: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-async def _make_folder(name: str, *, user_id: UUID | None) -> UUID:
+async def _make_folder(name: str, *, user_id: UUID | None, workspace_id: UUID | None = None) -> UUID:
     async with session_scope() as session:
-        folder = Folder(name=name, user_id=user_id)
+        folder = Folder(name=name, user_id=user_id, workspace_id=workspace_id)
         session.add(folder)
         await session.flush()
         folder_id = folder.id
@@ -139,9 +152,21 @@ async def _make_folder(name: str, *, user_id: UUID | None) -> UUID:
     return folder_id
 
 
-async def _make_flow(name: str, *, user_id: UUID | None) -> UUID:
+async def _make_flow(
+    name: str,
+    *,
+    user_id: UUID | None,
+    folder_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+) -> UUID:
     async with session_scope() as session:
-        flow = Flow(name=name, user_id=user_id, data={"nodes": [], "edges": []})
+        flow = Flow(
+            name=name,
+            user_id=user_id,
+            folder_id=folder_id,
+            workspace_id=workspace_id,
+            data={"nodes": [], "edges": []},
+        )
         session.add(flow)
         await session.flush()
         flow_id = flow.id
@@ -163,6 +188,13 @@ def _flow_ids(response) -> set[UUID]:
         with contextlib.suppress(OSError):
             body = gzip.decompress(body)
     return {UUID(f["id"]) for f in json.loads(body)}
+
+
+def _project_flow_ids(response, *, paginated: bool) -> set[UUID]:
+    assert response.status_code == 200, response.text
+    body = response.json()
+    rows = body["flows"]["items"] if paginated else body["flows"]
+    return {UUID(flow["id"]) for flow in rows}
 
 
 # --------------------------------------------------------------------------- #
@@ -259,3 +291,115 @@ async def test_flows_prefilter_includes_null_owner_flow_when_plugin_lists_it(cli
 
     assert owned_id in ids
     assert null_id in ids
+
+
+async def test_flow_workspace_prefilter_uses_project_workspace_not_denormalized_flow_value(client):
+    settings = get_settings_service()
+    username = f"owner_{uuid4().hex}"
+    await _make_user(username)
+    other_id = await _make_user(f"other_{uuid4().hex}")
+    headers = await _login(client, username)
+    visible_workspace = uuid4()
+    hidden_workspace = uuid4()
+    hidden_project = await _make_folder(
+        f"hidden_project_{uuid4().hex}",
+        user_id=other_id,
+        workspace_id=hidden_workspace,
+    )
+    visible_project = await _make_folder(
+        f"visible_project_{uuid4().hex}",
+        user_id=other_id,
+        workspace_id=visible_workspace,
+    )
+    spoofed_visible = await _make_flow(
+        f"spoofed_{uuid4().hex}",
+        user_id=other_id,
+        folder_id=hidden_project,
+        workspace_id=visible_workspace,
+    )
+    canonical_visible = await _make_flow(
+        f"canonical_{uuid4().hex}",
+        user_id=other_id,
+        folder_id=visible_project,
+        workspace_id=hidden_workspace,
+    )
+
+    scope = ResourceVisibilityScope(workspace_ids=(visible_workspace,))
+    with _install_prefilter_authz(settings, {}, scope_by_type={"flow": scope}):
+        ids = _flow_ids(await client.get("api/v1/flows/", headers=headers))
+
+    assert canonical_visible in ids
+    assert spoofed_visible not in ids
+
+
+async def test_shared_project_flow_listing_uses_project_workspace_for_both_response_shapes(client):
+    settings = get_settings_service()
+    username = f"owner_{uuid4().hex}"
+    await _make_user(username)
+    other_id = await _make_user(f"other_{uuid4().hex}")
+    headers = await _login(client, username)
+    visible_workspace = uuid4()
+    hidden_workspace = uuid4()
+    hidden_project = await _make_folder(
+        f"hidden_project_{uuid4().hex}",
+        user_id=other_id,
+        workspace_id=hidden_workspace,
+    )
+    visible_project = await _make_folder(
+        f"visible_project_{uuid4().hex}",
+        user_id=other_id,
+        workspace_id=visible_workspace,
+    )
+    spoofed_visible = await _make_flow(
+        f"spoofed_{uuid4().hex}",
+        user_id=other_id,
+        folder_id=hidden_project,
+        workspace_id=visible_workspace,
+    )
+    canonical_visible = await _make_flow(
+        f"canonical_{uuid4().hex}",
+        user_id=other_id,
+        folder_id=visible_project,
+        workspace_id=hidden_workspace,
+    )
+    scope = ResourceVisibilityScope(workspace_ids=(visible_workspace,))
+
+    with _install_prefilter_authz(settings, {}, scope_by_type={"flow": scope}):
+        for paginated, params in ((False, {}), (True, {"page": 1, "size": 50})):
+            hidden_ids = _project_flow_ids(
+                await client.get(f"api/v1/projects/{hidden_project}", headers=headers, params=params),
+                paginated=paginated,
+            )
+            visible_ids = _project_flow_ids(
+                await client.get(f"api/v1/projects/{visible_project}", headers=headers, params=params),
+                paginated=paginated,
+            )
+            assert spoofed_visible not in hidden_ids
+            assert canonical_visible in visible_ids
+
+
+async def test_shared_project_get_does_not_delete_flows_hidden_from_response(client):
+    settings = get_settings_service()
+    username = f"owner_{uuid4().hex}"
+    await _make_user(username)
+    other_id = await _make_user(f"other_{uuid4().hex}")
+    headers = await _login(client, username)
+    project_id = await _make_folder(
+        f"shared_project_{uuid4().hex}",
+        user_id=other_id,
+        workspace_id=uuid4(),
+    )
+    visible_id = await _make_flow(f"visible_{uuid4().hex}", user_id=other_id, folder_id=project_id)
+    hidden_id = await _make_flow(f"hidden_{uuid4().hex}", user_id=other_id, folder_id=project_id)
+    scope = ResourceVisibilityScope(resource_ids=(visible_id,))
+
+    with _install_prefilter_authz(settings, {}, scope_by_type={"flow": scope}):
+        response_ids = _project_flow_ids(
+            await client.get(f"api/v1/projects/{project_id}", headers=headers),
+            paginated=False,
+        )
+
+    assert response_ids == {visible_id}
+    async with session_scope() as session:
+        persisted = set((await session.exec(select(Flow.id).where(Flow.folder_id == project_id))).all())
+    assert persisted == {visible_id, hidden_id}
