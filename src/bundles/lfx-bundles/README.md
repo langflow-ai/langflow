@@ -50,8 +50,9 @@ generated `all` extra pulls every provider's deps for users who explicitly
 install `lfx[bundles]` or `lfx-bundles[all]`.
 
 Deprecated extras for graduated providers may remain as compatibility aliases.
-For example, `lfx-bundles[google]` now installs `lfx-google`, but is excluded
-from the generated aggregate extras because Langflow installs it directly.
+For example, `lfx-bundles[google]`, `lfx-bundles[azure]`, and
+`lfx-bundles[ollama]` now install their standalone bundles, but are excluded
+from the generated aggregate extras because Langflow installs them directly.
 
 ## Adding a provider
 

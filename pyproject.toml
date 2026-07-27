@@ -35,6 +35,8 @@ dependencies = [
     "lfx-datastax>=0.1.0,<1.0.0",
     "lfx-openai>=0.1.0,<1.0.0",
     "lfx-anthropic>=0.1.0,<1.0.0",
+    "lfx-azure>=0.1.0,<1.0.0",
+    "lfx-ollama>=0.1.0,<1.0.0",
     "lfx-amazon>=0.1.0,<1.0.0",
     "lfx-cohere>=0.1.0,<1.0.0",
     "lfx-oracle>=0.1.0,<1.0.0",
@@ -113,6 +115,8 @@ lfx-bundles = { workspace = true }
 lfx-datastax = { workspace = true }
 lfx-openai = { workspace = true }
 lfx-anthropic = { workspace = true }
+lfx-azure = { workspace = true }
+lfx-ollama = { workspace = true }
 lfx-amazon = { workspace = true }
 lfx-cohere = { workspace = true }
 lfx-oracle = { workspace = true }
@@ -146,6 +150,8 @@ members = [
     "src/bundles/datastax",
     "src/bundles/openai",
     "src/bundles/anthropic",
+    "src/bundles/azure",
+    "src/bundles/ollama",
     "src/bundles/amazon",
     "src/bundles/cohere",
     "src/bundles/oracle",
@@ -170,7 +176,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.4,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.5,<2.0",
 ]
 
 docling = [
