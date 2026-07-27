@@ -10603,7 +10603,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-paddle"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/paddle" }
 dependencies = [
     { name = "httpx" },
