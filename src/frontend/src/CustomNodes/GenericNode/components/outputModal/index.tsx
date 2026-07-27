@@ -36,7 +36,8 @@ export default function OutputModal({
 
     if (!results) return "";
 
-    let content = (!Array.isArray(results) && results.message) ? results.message : results;
+    let content =
+      !Array.isArray(results) && results.message ? results.message : results;
     content = content?.raw ?? content;
 
     return typeof content === "string"
