@@ -118,7 +118,8 @@ RUN ARCH=$(uname -m) \
     && if [ -z "$NODE_VERSION" ]; then echo "ERROR: Could not determine Node.js version" && exit 1; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
-    && npm install -g npm@latest
+    && npm install -g npm@latest \
+    && rm -rf /usr/local/lib/node_modules/npm/node_modules
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
