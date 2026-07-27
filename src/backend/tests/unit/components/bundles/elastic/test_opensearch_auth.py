@@ -3,6 +3,9 @@
 from typing import Any
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx_bundles.elastic.opensearch import OpenSearchVectorStoreComponent
 from lfx_bundles.elastic.opensearch_multimodal import OpenSearchVectorStoreComponentMultimodalMultiEmbedding
 from pydantic import SecretStr

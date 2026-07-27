@@ -525,3 +525,79 @@ def test_card_payload_clips_untrusted_strings():
 
     assert len(payload["title"]) <= 500
     assert len(payload["sections"][0]["text"]) <= 500
+
+
+class TestInternalSubSessionIsolation:
+    """The internal sub-run must not share the caller's LangGraph thread.
+
+    Running the target on the caller's raw session_id makes the target's Agent inherit the
+    caller's in-flight thread — which, mid tool-approval, holds the send_to_agent call as an
+    orphan tool_use with no tool_result — so the target's LLM call is rejected with
+    'tool_use ids were found without tool_result blocks'. The sub-run must get an isolated
+    session namespaced off the caller's.
+    """
+
+    def test_sub_session_is_namespaced_off_caller_session(self):
+        from types import SimpleNamespace
+
+        component = A2AAgentComponent(mode="Internal", input_value="hi")
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(session_id="caller-session-abc"))
+
+        sub = component._isolated_sub_session("flow-123")
+
+        assert sub == "caller-session-abc:a2a:flow-123"
+        assert sub != "caller-session-abc"  # never the caller's own thread
+
+    def test_sub_session_is_unique_when_caller_has_no_session(self):
+        from types import SimpleNamespace
+
+        component = A2AAgentComponent(mode="Internal", input_value="hi")
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(session_id=None))
+
+        sub = component._isolated_sub_session("flow-123")
+
+        assert sub  # non-empty
+        assert sub != "flow-123"
+        assert ":a2a:" not in sub  # falls back to a fresh uuid, not a namespaced base
+
+
+class TestNestedRunConfigIsolation:
+    """The nested target run must not inherit the caller's LangChain RunnableConfig.
+
+    Under tool-approval (HITL), the caller Agent runs inside a LangGraph whose config carries
+    ``configurable.thread_id`` + the durable checkpointer. LangChain propagates that config to
+    child runnables via ``var_child_runnable_config``, and ``graph.arun`` copies the context, so
+    the target flow's Agent would checkpoint against the CALLER's HITL thread and corrupt its own
+    tool loop ("tool_use ids were found without tool_result blocks"). ``_run_target_isolated``
+    must reset the contextvar for the duration of the nested run and restore it after.
+    """
+
+    async def test_nested_run_sees_reset_config_and_restores_after(self, monkeypatch):
+        from types import SimpleNamespace
+
+        from langchain_core.runnables.config import var_child_runnable_config
+
+        from lfx import helpers
+
+        seen: dict = {}
+
+        async def fake_run_flow(**kwargs):
+            seen["config_during_run"] = var_child_runnable_config.get()
+            seen["session_id"] = kwargs.get("session_id")
+            return []
+
+        monkeypatch.setattr(helpers, "run_flow", fake_run_flow)
+
+        component = A2AAgentComponent(mode="Internal", input_value="hi")
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(session_id="caller-1"))
+        component._user_id = "user-1"
+
+        sentinel = {"configurable": {"thread_id": "caller-hitl-thread"}}
+        token = var_child_runnable_config.set(sentinel)
+        try:
+            await component._run_target_isolated(graph=object(), flow_id="target-flow")
+            assert seen["config_during_run"] is None  # caller's HITL thread never leaks in
+            assert seen["session_id"] == "caller-1:a2a:target-flow"
+            assert var_child_runnable_config.get() == sentinel  # restored for the caller loop
+        finally:
+            var_child_runnable_config.reset(token)

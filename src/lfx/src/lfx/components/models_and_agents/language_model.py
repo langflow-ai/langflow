@@ -15,6 +15,7 @@ DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
 
 class LanguageModelComponent(LCModelComponent):
+    model_provider_policy_mode = "delegate"
     display_name = "Language Model"
     description = "Runs a language model given a specified provider."
     documentation: str = "https://docs.langflow.org/components-models"

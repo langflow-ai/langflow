@@ -479,6 +479,8 @@ async def generate_flow_events(
             # or expired checkpoint is unrecoverable, so surface a clean 404 instead.
             raise HTTPException(status_code=404, detail="Checkpoint expired or not found; cannot resume this run.")
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+        if not graph.user_id:
+            graph.user_id = str(current_user.id)
         # Resume skips the initial run's trace setup (trace_context_var stays unset → post-pause
         # vertices like Chat Output never trace); re-init so the resumed vertices trace.
         graph.flow_name = graph.flow_name or flow_name

@@ -449,11 +449,16 @@ def _discover_component_skip_dirs(search_paths: list[str]) -> set[str]:
 
 async def _load_components_dynamically(
     target_modules: list[str] | None = None,
+    *,
+    parallel: bool = True,
 ) -> dict[str, Any]:
     """Load components dynamically by scanning and importing modules.
 
     Args:
         target_modules: Optional list of specific module names to load (e.g., ["mistral", "openai"])
+        parallel: Process modules concurrently. Index generation disables this because
+            concurrent imports can expose partially initialized compatibility modules and
+            make the generated component set nondeterministic.
 
     Returns:
         Dictionary mapping top-level module names to their components
@@ -510,15 +515,22 @@ async def _load_components_dynamically(
     # of the cycle and CPython raises an import ``_DeadlockError``.
     _warm_circular_imports()
 
-    # Create tasks for parallel module processing
-    tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]
+    if parallel:
+        # Create tasks for parallel module processing
+        tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]
 
-    # Wait for all modules to be processed
-    try:
-        module_results = await asyncio.gather(*tasks, return_exceptions=True)
-    except Exception as e:  # noqa: BLE001
-        await logger.aerror(f"Error during parallel module processing: {e}", exc_info=True)
-        return modules_dict
+        # Wait for all modules to be processed
+        try:
+            module_results = await asyncio.gather(*tasks, return_exceptions=True)
+        except Exception as e:  # noqa: BLE001
+            await logger.aerror(f"Error during parallel module processing: {e}", exc_info=True)
+            return modules_dict
+    else:
+        # Static index generation values reproducibility over startup speed. Importing
+        # and processing one module at a time avoids cross-thread import cycles that can
+        # otherwise make a component disappear from one generated index and reappear in
+        # the next.
+        module_results = [_process_single_module(modname) for modname in module_names]
 
     # Merge results from all modules
     for result in module_results:

@@ -27,12 +27,14 @@ resolution-markers = [
 members = [
     "langflow",
     "langflow-base",
+    "langflow-core",
     "langflow-sdk",
     "langflow-stepflow",
     "lfx",
     "lfx-amazon",
     "lfx-anthropic",
     "lfx-arxiv",
+    "lfx-azure",
     "lfx-bundles",
     "lfx-cohere",
     "lfx-datastax",
@@ -41,8 +43,10 @@ members = [
     "lfx-empiriolabs",
     "lfx-exa",
     "lfx-firecrawl",
+    "lfx-google",
     "lfx-ibm",
     "lfx-nextplaid",
+    "lfx-ollama",
     "lfx-openai",
     "lfx-openai-compatible",
     "lfx-oracle",
@@ -8125,14 +8129,14 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.11.0"
+version = "1.12.0"
 source = { editable = "." }
 dependencies = [
-    { name = "langflow-base", extra = ["complete"] },
+    { name = "langflow-core" },
     { name = "lfx-amazon" },
     { name = "lfx-anthropic" },
     { name = "lfx-arxiv" },
-    { name = "lfx-bundles", extra = ["all-no-torch"] },
+    { name = "lfx-azure" },
     { name = "lfx-cohere" },
     { name = "lfx-datastax" },
     { name = "lfx-docling" },
@@ -8140,8 +8144,10 @@ dependencies = [
     { name = "lfx-empiriolabs" },
     { name = "lfx-exa" },
     { name = "lfx-firecrawl" },
+    { name = "lfx-google" },
     { name = "lfx-ibm" },
     { name = "lfx-nextplaid" },
+    { name = "lfx-ollama" },
     { name = "lfx-openai" },
     { name = "lfx-openai-compatible" },
     { name = "lfx-oracle" },
@@ -8152,7 +8158,10 @@ dependencies = [
 
 [package.optional-dependencies]
 audio = [
-    { name = "webrtcvad" },
+    { name = "langflow-core", extra = ["audio"] },
+]
+bundles = [
+    { name = "lfx-bundles", extra = ["all-no-torch"] },
 ]
 cassio = [
     { name = "cassio" },
@@ -8181,7 +8190,7 @@ nv-ingest = [
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
 ]
 postgresql = [
-    { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
+    { name = "langflow-core", extra = ["postgresql"] },
 ]
 
 [package.dev-dependencies]
@@ -8233,11 +8242,14 @@ requires-dist = [
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
+    { name = "langflow-core", editable = "src/langflow-core" },
+    { name = "langflow-core", extras = ["audio"], marker = "extra == 'audio'", editable = "src/langflow-core" },
+    { name = "langflow-core", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "src/langflow-core" },
     { name = "lfx-amazon", editable = "src/bundles/amazon" },
     { name = "lfx-anthropic", editable = "src/bundles/anthropic" },
     { name = "lfx-arxiv", editable = "src/bundles/arxiv" },
-    { name = "lfx-bundles", extras = ["all-no-torch"], editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-azure", editable = "src/bundles/azure" },
+    { name = "lfx-bundles", extras = ["all-no-torch"], marker = "extra == 'bundles'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-cohere", editable = "src/bundles/cohere" },
     { name = "lfx-datastax", editable = "src/bundles/datastax" },
     { name = "lfx-docling", editable = "src/bundles/docling" },
@@ -8248,8 +8260,10 @@ requires-dist = [
     { name = "lfx-empiriolabs", editable = "src/bundles/empiriolabs" },
     { name = "lfx-exa", editable = "src/bundles/exa" },
     { name = "lfx-firecrawl", editable = "src/bundles/firecrawl" },
+    { name = "lfx-google", editable = "src/bundles/google" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-nextplaid", editable = "src/bundles/nextplaid" },
+    { name = "lfx-ollama", editable = "src/bundles/ollama" },
     { name = "lfx-openai", editable = "src/bundles/openai" },
     { name = "lfx-openai-compatible", editable = "src/bundles/openai-compatible" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
@@ -8259,11 +8273,8 @@ requires-dist = [
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<26.3.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
-    { name = "webrtcvad", marker = "extra == 'audio'", specifier = ">=2.0.10" },
 ]
-provides-extras = ["docling", "docling-chunking", "docling-image-description", "audio", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
+provides-extras = ["bundles", "docling", "docling-chunking", "docling-image-description", "audio", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -8309,7 +8320,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.11.0"
+version = "0.12.0"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "a2a-sdk" },
@@ -9020,7 +9031,7 @@ requires-dist = [
     { name = "prometheus-client", specifier = ">=0.20.0,<1.0.0" },
     { name = "pyarrow", marker = "extra == 'pyarrow'", specifier = ">=23.0.1,<24.0.0" },
     { name = "pyasn1", specifier = ">=0.6.3,<0.7.0" },
-    { name = "pydantic", specifier = ">=2.13.0,<3.0.0" },
+    { name = "pydantic", specifier = ">=2.13.0,<2.14" },
     { name = "pydantic", marker = "extra == 'langfuse'", specifier = ">=2.13.0" },
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
     { name = "pyjwt", specifier = ">=2.12.1" },
@@ -9105,8 +9116,32 @@ dev = [
 ]
 
 [[package]]
+name = "langflow-core"
+version = "1.12.0"
+source = { editable = "src/langflow-core" }
+dependencies = [
+    { name = "langflow-base", extra = ["complete"] },
+]
+
+[package.optional-dependencies]
+audio = [
+    { name = "langflow-base", extra = ["audio"] },
+]
+postgresql = [
+    { name = "langflow-base", extra = ["postgresql"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langflow-base", extras = ["audio"], marker = "extra == 'audio'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "src/backend/base" },
+]
+provides-extras = ["audio", "postgresql"]
+
+[[package]]
 name = "langflow-sdk"
-version = "0.3.0"
+version = "0.4.0"
 source = { editable = "src/sdk" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
@@ -9380,7 +9415,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "1.11.0"
+version = "1.12.0"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "a2wsgi", marker = "sys_platform != 'win32'" },
@@ -9514,7 +9549,7 @@ requires-dist = [
     { name = "pillow", specifier = ">=11.1.0,<13.0.0" },
     { name = "platformdirs", specifier = ">=4.3.8,<5.0.0" },
     { name = "psutil", specifier = ">=5.9.0,<8.0.0" },
-    { name = "pydantic", specifier = ">=2.0.0,<3.0.0" },
+    { name = "pydantic", specifier = ">=2.0.0,<2.14" },
     { name = "pydantic-settings", specifier = ">=2.10.1,<3.0.0" },
     { name = "pyjwt", specifier = ">=2.10.0,<3.0.0" },
     { name = "pypdf", specifier = ">=6.10.0,<7.0.0" },
@@ -9559,7 +9594,7 @@ integration = [
 
 [[package]]
 name = "lfx-amazon"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/amazon" }
 dependencies = [
     { name = "boto3" },
@@ -9576,7 +9611,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-anthropic"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "src/bundles/anthropic" }
 dependencies = [
     { name = "langchain-anthropic" },
@@ -9593,7 +9628,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-arxiv"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "src/bundles/arxiv" }
 dependencies = [
     { name = "defusedxml" },
@@ -9607,8 +9642,25 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-azure"
+version = "0.1.0"
+source = { editable = "src/bundles/azure" }
+dependencies = [
+    { name = "langchain-azure-ai" },
+    { name = "langchain-openai" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-azure-ai", specifier = ">=1.1.0,<2.0.0" },
+    { name = "langchain-openai", specifier = ">=1.1.6" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
 name = "lfx-bundles"
-version = "1.1.1"
+version = "1.1.5"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -9638,16 +9690,12 @@ all = [
     { name = "gassist", marker = "sys_platform == 'win32'" },
     { name = "gitpython" },
     { name = "google-api-python-client" },
-    { name = "google-auth-oauthlib" },
     { name = "google-search-results" },
     { name = "huggingface-hub" },
     { name = "jigsawstack" },
-    { name = "langchain-azure-ai" },
     { name = "langchain-chroma" },
     { name = "langchain-community" },
     { name = "langchain-elasticsearch" },
-    { name = "langchain-google-community" },
-    { name = "langchain-google-genai" },
     { name = "langchain-google-vertexai" },
     { name = "langchain-groq" },
     { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
@@ -9655,7 +9703,6 @@ all = [
     { name = "langchain-mistralai" },
     { name = "langchain-mongodb" },
     { name = "langchain-nvidia-ai-endpoints" },
-    { name = "langchain-ollama" },
     { name = "langchain-openai" },
     { name = "langchain-perplexity" },
     { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
@@ -9710,16 +9757,12 @@ all-no-torch = [
     { name = "gassist", marker = "sys_platform == 'win32'" },
     { name = "gitpython" },
     { name = "google-api-python-client" },
-    { name = "google-auth-oauthlib" },
     { name = "google-search-results" },
     { name = "huggingface-hub" },
     { name = "jigsawstack" },
-    { name = "langchain-azure-ai" },
     { name = "langchain-chroma" },
     { name = "langchain-community" },
     { name = "langchain-elasticsearch" },
-    { name = "langchain-google-community" },
-    { name = "langchain-google-genai" },
     { name = "langchain-google-vertexai" },
     { name = "langchain-groq" },
     { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
@@ -9727,7 +9770,6 @@ all-no-torch = [
     { name = "langchain-mistralai" },
     { name = "langchain-mongodb" },
     { name = "langchain-nvidia-ai-endpoints" },
-    { name = "langchain-ollama" },
     { name = "langchain-openai" },
     { name = "langchain-perplexity" },
     { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
@@ -9774,8 +9816,7 @@ assemblyai = [
     { name = "assemblyai" },
 ]
 azure = [
-    { name = "langchain-azure-ai" },
-    { name = "langchain-openai" },
+    { name = "lfx-azure" },
 ]
 baidu = [
     { name = "langchain-community" },
@@ -9842,10 +9883,7 @@ git = [
     { name = "langchain-community" },
 ]
 google = [
-    { name = "google-api-python-client" },
-    { name = "google-auth-oauthlib" },
-    { name = "langchain-google-community" },
-    { name = "langchain-google-genai" },
+    { name = "lfx-google" },
 ]
 groq = [
     { name = "langchain-groq" },
@@ -9907,7 +9945,7 @@ nvidia = [
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
 ]
 ollama = [
-    { name = "langchain-ollama" },
+    { name = "lfx-ollama" },
 ]
 openrouter = [
     { name = "langchain-openai" },
@@ -10018,13 +10056,10 @@ requires-dist = [
     { name = "faiss-cpu", marker = "python_full_version < '3.14' and extra == 'faiss'", specifier = "==1.9.0.post1" },
     { name = "gassist", marker = "sys_platform == 'win32' and extra == 'nvidia'", specifier = ">=0.0.1" },
     { name = "gitpython", marker = "extra == 'git'", specifier = ">=3.1.50" },
-    { name = "google-api-python-client", marker = "extra == 'google'", specifier = "~=2.161" },
     { name = "google-api-python-client", marker = "extra == 'youtube'", specifier = "~=2.161" },
-    { name = "google-auth-oauthlib", marker = "extra == 'google'", specifier = ">=1.2.0,<2.0.0" },
     { name = "google-search-results", marker = "extra == 'serpapi'", specifier = ">=2.4.1,<3.0.0" },
     { name = "huggingface-hub", extras = ["inference"], marker = "extra == 'huggingface'", specifier = ">=1.0.0,<2.0.0" },
     { name = "jigsawstack", marker = "extra == 'jigsawstack'", specifier = "==0.2.7" },
-    { name = "langchain-azure-ai", marker = "extra == 'azure'", specifier = ">=1.1.0,<2" },
     { name = "langchain-chroma", marker = "extra == 'chroma'", specifier = "~=0.2.6" },
     { name = "langchain-community", marker = "extra == 'apify'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'baidu'", specifier = ">=0.4.1,<1.0.0" },
@@ -10049,8 +10084,6 @@ requires-dist = [
     { name = "langchain-community", marker = "extra == 'wikipedia'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'wolframalpha'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-elasticsearch", marker = "extra == 'elastic'", specifier = "~=1.0.0" },
-    { name = "langchain-google-community", marker = "extra == 'google'", specifier = "~=3.0.2" },
-    { name = "langchain-google-genai", marker = "extra == 'google'", specifier = "~=4.1.2" },
     { name = "langchain-google-vertexai", marker = "extra == 'vertexai'", specifier = ">=3.2.0" },
     { name = "langchain-groq", marker = "extra == 'groq'", specifier = "~=1.1.1" },
     { name = "langchain-huggingface", marker = "(platform_machine != 'x86_64' and extra == 'huggingface') or (sys_platform != 'darwin' and extra == 'huggingface')", specifier = "~=1.2.0" },
@@ -10059,9 +10092,7 @@ requires-dist = [
     { name = "langchain-mongodb", marker = "extra == 'mongodb'", specifier = ">=0.11.0" },
     { name = "langchain-nvidia-ai-endpoints", marker = "extra == 'lmstudio'", specifier = "~=1.0.0" },
     { name = "langchain-nvidia-ai-endpoints", marker = "extra == 'nvidia'", specifier = "~=1.0.0" },
-    { name = "langchain-ollama", marker = "extra == 'ollama'", specifier = "~=0.3.10" },
     { name = "langchain-openai", marker = "extra == 'aiml'", specifier = ">=1.1.6" },
-    { name = "langchain-openai", marker = "extra == 'azure'", specifier = ">=1.1.6" },
     { name = "langchain-openai", marker = "extra == 'cometapi'", specifier = ">=1.1.6" },
     { name = "langchain-openai", marker = "extra == 'deepseek'", specifier = ">=1.1.6" },
     { name = "langchain-openai", marker = "extra == 'litellm'", specifier = ">=1.1.6" },
@@ -10076,6 +10107,7 @@ requires-dist = [
     { name = "langchain-unstructured", marker = "extra == 'unstructured'", specifier = "~=1.0.0" },
     { name = "langchain-weaviate", marker = "extra == 'weaviate'", specifier = ">=0.0.6" },
     { name = "lfx", editable = "src/lfx" },
+    { name = "lfx-azure", marker = "extra == 'azure'", editable = "src/bundles/azure" },
     { name = "lfx-bundles", extras = ["agentql"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["agentql"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["aiml"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -10086,8 +10118,6 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["apify"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["assemblyai"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["assemblyai"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
-    { name = "lfx-bundles", extras = ["azure"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
-    { name = "lfx-bundles", extras = ["azure"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["baidu"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["baidu"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["bing"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -10120,8 +10150,6 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["git"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["glean"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["glean"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
-    { name = "lfx-bundles", extras = ["google"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
-    { name = "lfx-bundles", extras = ["google"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["groq"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["groq"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["homeassistant"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -10160,8 +10188,6 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["nvidia"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["olivya"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["olivya"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
-    { name = "lfx-bundles", extras = ["ollama"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
-    { name = "lfx-bundles", extras = ["ollama"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["openrouter"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["openrouter"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["perplexity"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -10214,6 +10240,8 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["youtube"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["zep"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["zep"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-google", marker = "extra == 'google'", editable = "src/bundles/google" },
+    { name = "lfx-ollama", marker = "extra == 'ollama'", editable = "src/bundles/ollama" },
     { name = "markdown", marker = "extra == 'notion'", specifier = ">=3.8.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.2,<3.0.0" },
     { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
@@ -10256,7 +10284,7 @@ provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "b
 
 [[package]]
 name = "lfx-cohere"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/cohere" }
 dependencies = [
     { name = "langchain-cohere" },
@@ -10271,7 +10299,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-datastax"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/datastax" }
 dependencies = [
     { name = "astrapy" },
@@ -10294,7 +10322,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-docling"
-version = "0.1.3"
+version = "0.1.4"
 source = { editable = "src/bundles/docling" }
 dependencies = [
     { name = "docling-core", version = "2.78.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.13.*' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.12' and sys_platform == 'darwin')" },
@@ -10369,7 +10397,7 @@ provides-extras = ["local", "chunking", "image-description", "all"]
 
 [[package]]
 name = "lfx-duckduckgo"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "src/bundles/duckduckgo" }
 dependencies = [
     { name = "ddgs" },
@@ -10386,7 +10414,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-empiriolabs"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/empiriolabs" }
 dependencies = [
     { name = "langchain-openai" },
@@ -10403,7 +10431,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-exa"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/exa" }
 dependencies = [
     { name = "exa-py" },
@@ -10420,7 +10448,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-firecrawl"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/firecrawl" }
 dependencies = [
     { name = "firecrawl-py" },
@@ -10434,8 +10462,41 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-google"
+version = "0.1.0"
+source = { editable = "src/bundles/google" }
+dependencies = [
+    { name = "google-api-python-client" },
+    { name = "google-auth" },
+    { name = "google-auth-oauthlib" },
+    { name = "google-cloud-bigquery" },
+    { name = "google-genai" },
+    { name = "langchain-community" },
+    { name = "langchain-core" },
+    { name = "langchain-google-community" },
+    { name = "langchain-google-genai" },
+    { name = "lfx" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "google-api-python-client", specifier = "~=2.161" },
+    { name = "google-auth", specifier = ">=2.38.0,<3.0.0" },
+    { name = "google-auth-oauthlib", specifier = ">=1.2.0,<2.0.0" },
+    { name = "google-cloud-bigquery", specifier = ">=3.35,<4.0.0" },
+    { name = "google-genai", specifier = ">=1.75.0,<2.0.0" },
+    { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-core", specifier = ">=1.2.28,<2.0.0" },
+    { name = "langchain-google-community", specifier = "~=3.0.2" },
+    { name = "langchain-google-genai", specifier = "~=4.1.2" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "requests", specifier = ">=2.32.0" },
+]
+
+[[package]]
 name = "lfx-ibm"
-version = "0.1.2"
+version = "0.1.4"
 source = { editable = "src/bundles/ibm" }
 dependencies = [
     { name = "ibm-db", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
@@ -10457,7 +10518,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-nextplaid"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/nextplaid" }
 dependencies = [
     { name = "langchain-plaid" },
@@ -10473,8 +10534,25 @@ requires-dist = [
 ]
 
 [[package]]
-name = "lfx-openai"
+name = "lfx-ollama"
 version = "0.1.0"
+source = { editable = "src/bundles/ollama" }
+dependencies = [
+    { name = "httpx" },
+    { name = "langchain-ollama" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "langchain-ollama", specifier = "~=0.3.10" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-openai"
+version = "0.1.1"
 source = { editable = "src/bundles/openai" }
 dependencies = [
     { name = "langchain-openai" },
@@ -10491,7 +10569,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-openai-compatible"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/openai-compatible" }
 dependencies = [
     { name = "httpx" },
@@ -10506,7 +10584,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-oracle"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/oracle" }
 dependencies = [
     { name = "langchain-community" },
@@ -10525,7 +10603,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-paddle"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/paddle" }
 dependencies = [
     { name = "httpx" },
@@ -10540,7 +10618,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-valkey"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/valkey" }
 dependencies = [
     { name = "langchain-aws" },
@@ -10563,7 +10641,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-vllm"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/vllm" }
 dependencies = [
     { name = "httpx" },

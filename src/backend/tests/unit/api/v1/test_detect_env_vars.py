@@ -69,6 +69,54 @@ class TestDetectEnvVars:
         assert result.variables == ["MY_OPENAI_KEY"]
 
     @pytest.mark.asyncio
+    async def test_filters_hidden_provider_variable_names(self):
+        fv_id = uuid4()
+        version = _flow_version_with_data(
+            {
+                "nodes": [
+                    _node(
+                        {
+                            "hidden_provider_key": {
+                                "load_from_db": True,
+                                "value": "ANTHROPIC_API_KEY",
+                            },
+                            "generic_key": {
+                                "load_from_db": True,
+                                "value": "MY_GENERIC_KEY",
+                            },
+                        }
+                    )
+                ]
+            }
+        )
+
+        def _openai_only_policy(_current_user, purpose):
+            from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+            assert purpose is ModelProviderPolicyPurpose.CONFIGURE
+            return SimpleNamespace(allows=lambda provider: provider == "OpenAI")
+
+        with (
+            patch(
+                f"{MODULE}.get_flow_version_entries_by_ids",
+                new_callable=AsyncMock,
+                return_value={fv_id: version},
+            ),
+            patch(
+                f"{MODULE}.get_variable_service",
+                return_value=_variable_service_with_names(["ANTHROPIC_API_KEY", "MY_GENERIC_KEY"]),
+            ),
+            patch(f"{MODULE}._resolve_policy", side_effect=_openai_only_policy),
+        ):
+            result = await detect_env_vars(
+                payload=DetectVarsRequest(flow_version_ids=[fv_id]),
+                session=AsyncMock(),
+                current_user=SimpleNamespace(id=uuid4()),
+            )
+
+        assert result.variables == ["MY_GENERIC_KEY"]
+
+    @pytest.mark.asyncio
     async def test_ignores_password_only_fields(self):
         fv_id = uuid4()
         version = _flow_version_with_data({"nodes": [_node({"api_key": {"password": True}})]})

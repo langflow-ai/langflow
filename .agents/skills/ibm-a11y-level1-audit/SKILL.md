@@ -1,18 +1,21 @@
 ---
 name: ibm-a11y-level1-audit
-description: Audit Langflow frontend UI against IBM Equal Access Level 1 criteria, produce a compliance report, fix violations, and verify with Playwright a11y specs under src/frontend/tests/a11y. Use when the user asks for an IBM Level 1 a11y audit, Level 1 compliance report, accessibility remediation against IBM Able requirements, or to find/report/fix Level 1 WCAG issues.
+description: Perform a scoped IBM Equal Access Level 1 compliance audit of a chosen Langflow frontend surface (routes, components, or a PR) and produce a findings report mapped to WCAG/IBM Level 1 criteria. Default behavior is audit and report only — fixes are applied only when the user explicitly asks for remediation in the same request. Use when the user asks for an IBM Level 1 audit, a Level 1 compliance report, or to find/report Level 1 WCAG issues on a specific surface. For scanning a batch of routes without a report, see ibm-a11y-route-scan. For scanning and fixing an entire PR/branch end-to-end by default, see ibm-a11y-pr-remediation.
 ---
 
 # IBM Accessibility Level 1 Audit
 
-Audit → report → fix → verify. Scope is **IBM Equal Access Toolkit v7.3 Level 1 only**. Do not expand into Level 2/3 unless the user asks.
+Audit → report → (fix only if asked) → verify. Scope is **IBM Equal Access Toolkit v7.3 Level 1 only**. Do not expand into Level 2/3 unless the user asks.
+
+This skill's default deliverable is a **report**, not a diff. If the user wants a full scan-and-fix pass across an entire PR/branch, use `ibm-a11y-pr-remediation` instead — it is fix-by-default. This skill fixes only when the user explicitly asks for remediation of the audited surface in the same request.
 
 ## Related skills
 
 | Skill | Use for |
 |-------|---------|
-| [frontend-a11y-check](../frontend-a11y-check/SKILL.md) | How to write/run axe + IBM scans, baselines, component gotchas |
-| [ibm-a11y-automation](../ibm-a11y-automation/SKILL.md) | Python route scanner + Markdown/HTML report generation |
+| [ibm-a11y-testing-guide](../ibm-a11y-testing-guide/SKILL.md) | How to write/run axe + IBM scans, baselines, component gotchas |
+| [ibm-a11y-route-scan](../ibm-a11y-route-scan/SKILL.md) | Python route scanner + Markdown/HTML report generation |
+| [ibm-a11y-pr-remediation](../ibm-a11y-pr-remediation/SKILL.md) | Fix-by-default scan of an entire PR/branch |
 | [frontend-i18n](../frontend-i18n/SKILL.md) | Any new/changed accessible names or UI strings |
 
 ## Sources of truth
@@ -31,9 +34,9 @@ Level 1 Audit Progress:
 - [ ] 2. Scan (IBM + axe as applicable)
 - [ ] 3. Map findings to Level 1 criteria
 - [ ] 4. Write the report
-- [ ] 5. Fix violations
-- [ ] 6. Verify with tests/a11y
-- [ ] 7. Re-scan and update report status
+- [ ] 5. Fix violations (only if the user asked for remediation)
+- [ ] 6. Verify with tests/a11y (only if step 5 ran)
+- [ ] 7. Re-scan and update report status (only if step 5 ran)
 ```
 
 ### 1. Scope the surface
@@ -48,7 +51,7 @@ Read `src/frontend/tests/a11y/README.md` and list existing specs that already co
 
 ### 2. Scan
 
-Run **both** engines when the surface is interactive UI (see `frontend-a11y-check`):
+Run **both** engines when the surface is interactive UI (see `ibm-a11y-testing-guide`):
 
 ```bash
 # Playwright IBM scans (live DOM / stateful)
@@ -59,7 +62,7 @@ RUN_A11Y=true RUN_A11Y_ASSERT=true npx playwright test tests/a11y/<feature>.a11y
 npm run a11y:html-report --silent
 # → coverage/accessibility-reports/index.html
 
-# Ad-hoc route batch (default-loaded page only)
+# Ad-hoc route batch (default-loaded page only) — see ibm-a11y-route-scan for details
 uv run --with playwright python scripts/a11y/a11y_scan.py \
   --url http://localhost:3000 \
   --routes-file scripts/a11y/a11y_routes.json \
@@ -89,17 +92,17 @@ Use [references/report-template.md](references/report-template.md). Deliver the 
 
 Required sections: Summary, Scope, Findings table, Fixes applied / proposed, Verification, Remaining risk / baselines.
 
-### 5. Fix violations
+**Stop here by default.** List proposed fixes in the report without editing files, unless the user's request explicitly also asked for remediation (e.g. "audit and fix", "fix what you find"). If they only asked for an audit or report, do not proceed to step 5.
 
-When this skill is invoked for audit+fix (default), fix in-scope Level 1 violations:
+### 5. Fix violations (only when explicitly requested)
+
+Only continue past the report if the user's request explicitly asked for fixes alongside the audit. Otherwise stop after step 4.
 
 - Prefer semantic HTML over ARIA.
-- Follow Langflow patterns in `frontend-a11y-check` (AG Grid, Radix `asChild`, focus restore, icon-only `aria-label`).
+- Follow Langflow patterns in `ibm-a11y-testing-guide` (AG Grid, Radix `asChild`, focus restore, icon-only `aria-label`).
 - Route new UI strings / `aria-label`s through `frontend-i18n`.
-- Do **not** silently disable scans. Use IBM baselines under `src/frontend/tests/a11y/baselines/` only for documented framework debt (see `frontend-a11y-check`).
+- Do **not** silently disable scans. Use IBM baselines under `src/frontend/tests/a11y/baselines/` only for documented framework debt (see `ibm-a11y-testing-guide`).
 - Keep fixes minimal; do not refactor unrelated UI.
-
-If the user asked for **report only**, stop after step 4 and list proposed fixes without editing.
 
 ### 6. Verify with `tests/a11y`
 
@@ -139,7 +142,7 @@ Scanners miss some Level 1 tasks — spot-check when relevant:
 
 ## Best practices (data grids + modals)
 
-When auditing or fixing **settings tables** (especially `/settings/global-variables`) and similar AG Grid + modal flows, treat these as Level 1 best practices (2.1.1 / 2.4.3) — not edge-case gotchas.
+When auditing **settings tables** (especially `/settings/global-variables`) and similar AG Grid + modal flows, treat these as Level 1 best practices (2.1.1 / 2.4.3) — not edge-case gotchas.
 
 ### Selectable-row keyboard map
 
@@ -163,10 +166,11 @@ Implementation notes:
 - Create modal opened from **Add New** should restore to that trigger (Radix default when a real `DialogTrigger` exists).
 - Verify with a Playwright keyboard test: open from a cell → Escape → `document.activeElement` is still that cell (or its `col-id`), then Enter can open again without a manual mouse re-focus.
 
-For AG Grid pagination/tab traps, Radix `asChild`, and popover Esc restore details, see [frontend-a11y-check](../frontend-a11y-check/SKILL.md) (Gotchas vs Best practices sections).
+For AG Grid pagination/tab traps, Radix `asChild`, and popover Esc restore details, see [ibm-a11y-testing-guide](../ibm-a11y-testing-guide/SKILL.md) (Gotchas vs Best practices sections).
 
 ## Out of scope (unless asked)
 
 - IBM Level 2/3 criteria listed as deferred in the criteria reference
 - Section 508 software-only rows (web UI covered via 4.1.2)
 - Media captions (1.2.x) when the surface has no audio/video
+- Fixing violations without an explicit remediation request (report only by default)

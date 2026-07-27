@@ -69,8 +69,10 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     The legacy value `langflow` is not allowed, even if `LANGFLOW_AUTO_LOGIN=True`.
 
     ```bash
-    export LANGFLOW_SUPERUSER_PASSWORD='your-strong-password'
+    export LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD
     ```
+
+    Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
 
     If `LANGFLOW_AUTO_LOGIN=true`, setting `LANGFLOW_SUPERUSER_PASSWORD` is optional. If you omit it, Langflow generates a random bootstrap password for the auto-login account.
 
@@ -84,10 +86,12 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
       -e LANGFLOW_HOST=0.0.0.0 \
       -e LANGFLOW_PORT=7860 \
       -e LANGFLOW_AUTO_LOGIN=false \
-      -e LANGFLOW_SUPERUSER_PASSWORD \
+      -e LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD \
       -v langflow-data:/app/langflow \
       ${IMAGE}
     ```
+
+    Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
 
 - Docker images disable auto-login by default
 
@@ -96,22 +100,20 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
 
-- Ongoing breaking changes: bundle separation
+- Long-tail component bundles are now opt-in
 
-    Langflow 1.10.x introduced the Extension bundles model.
-    In Langflow 1.11.x, many third-party provider integrations are now shipped as *long-tail bundles* inside the `lfx-bundles` package, instead of in the core `langflow` installation.
-
-    `uv pip install langflow` still includes these bundles automatically, but if you install standalone `lfx`, you will need to install the providers your flows require:
+    Starting in Langflow 1.11.x, `pip install langflow` no longer installs the long-tail providers in the `lfx-bundles` metapackage.
+    If an existing flow uses components such as Chroma, Ollama, Qdrant, Redis, PGVector, Tavily, Wikipedia, MongoDB, Weaviate, or Milvus, install the metapackage in the same environment after upgrading:
 
     ```bash
-    # Install one third party provider
-    uv pip install "lfx-bundles[<bundle-name>]"
-
-    # Install all third party providers
-    uv pip install "lfx[bundles]"
+    pip install lfx-bundles
     ```
 
-    For more information, see [Langflow Extensions overview](./extensions-overview).
+    You can instead install one provider and its dependencies, for example `pip install "lfx-bundles[qdrant]"`.
+    Missing-provider errors use the same install guidance.
+    Graduated providers such as OpenAI, Anthropic, Cohere, and Exa remain part of the default Langflow installation through their standalone `lfx-*` packages.
+
+    For the complete package list and provider-specific commands, see [Extension bundle list](./extensions-bundle-list).
 
 - PyTorch components are opt-in by default
 
@@ -244,11 +246,15 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - LFX is now engine-only
 
     `uv pip install lfx` now installs the LFX executor only, with no bundle components included.
-    `uv pip install langflow` is unchanged.
-    This only affects users who install `lfx` directly.
+    `uv pip install langflow` installs the server and curated standalone providers, but not the long-tail `lfx-bundles` metapackage.
 
-    If you install `lfx` directly and your flows use bundle components, install the required packages in the same environment.
+    If your flows use long-tail bundle components, install the required packages in the same environment.
 
+    About 70 long-tail providers ship in the `lfx-bundles` metapackage.
+    Install one provider with `uv pip install "lfx-bundles[<bundle-name>]"`, or install every long-tail provider with `uv pip install "lfx[bundles]"`.
+    Graduated providers, such as OpenAI, Anthropic, Cohere, and Exa, ship as individual packages and are installed separately with `uv pip install lfx-<provider>`.
+
+    The `lfx-bundles` long tail is opt-in for both `lfx` and `langflow` installations.
     For more information, see [Extensions overview](./extensions-overview).
 
 ## 1.10.x

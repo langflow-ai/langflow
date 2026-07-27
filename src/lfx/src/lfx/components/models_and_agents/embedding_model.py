@@ -23,6 +23,7 @@ DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
 
 class EmbeddingModelComponent(LCEmbeddingsModel):
+    model_provider_policy_mode = "delegate"
     display_name = "Embedding Model"
     description = "Generate embeddings using a specified provider."
     documentation: str = "https://docs.langflow.org/components-embedding-models"

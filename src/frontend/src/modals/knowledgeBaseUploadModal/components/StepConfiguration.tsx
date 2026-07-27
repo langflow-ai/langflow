@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { DBProviderInput } from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
@@ -96,8 +97,16 @@ export function StepConfiguration({
   onMetadataPairsChange,
 }: StepConfigurationProps) {
   const { t } = useTranslation();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [menuContainer, setMenuContainer] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    setMenuContainer(
+      rootRef.current?.closest<HTMLElement>('[role="dialog"]') ?? null,
+    );
+  }, []);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={rootRef}>
       <div className="flex flex-col">
         {isAddSourcesMode && kbName && (
           <div className="pb-4">
@@ -131,7 +140,10 @@ export function StepConfiguration({
 
         {/* Model Selection */}
         <div className="flex flex-col gap-2 pt-4">
-          <Label className="text-sm font-medium">
+          <Label
+            htmlFor={isAddSourcesMode ? undefined : "kb-embedding-model"}
+            className="text-sm font-medium"
+          >
             {t("knowledge.embeddingModelLabel")}{" "}
             <span className="text-destructive">*</span>
           </Label>
@@ -165,11 +177,16 @@ export function StepConfiguration({
                 options={embeddingModelOptions}
                 placeholder={t("knowledge.embeddingModelPlaceholder")}
                 showEmptyState
+                aria-label={t("knowledge.embeddingModelLabel")}
               />
             </div>
           )}
           {validationErrors.embeddingModel && (
-            <span className="text-xs text-destructive">
+            <span
+              id="kb-embedding-model-error"
+              className="text-xs text-destructive"
+              role="alert"
+            >
               {validationErrors.embeddingModel}
             </span>
           )}
@@ -177,7 +194,7 @@ export function StepConfiguration({
 
         {/* Backend Selection */}
         <div className="flex flex-col gap-2 pt-4">
-          <Label className="text-sm font-medium">
+          <Label htmlFor="kb-db-provider" className="text-sm font-medium">
             {t("knowledge.dbProviderLabel")}{" "}
             <span className="text-destructive">*</span>
           </Label>
@@ -192,6 +209,7 @@ export function StepConfiguration({
               value={backendType}
               globalVariables={globalVariables}
               disabled={isAddSourcesMode}
+              aria-label={t("knowledge.dbProviderLabel")}
               onValueChange={(nextBackendType, nextBackendConfig) => {
                 onBackendChange(nextBackendType, nextBackendConfig);
                 onFieldChange?.();
@@ -202,7 +220,11 @@ export function StepConfiguration({
             {t("knowledge.dbProviderDescription")}
           </span>
           {validationErrors.backend && (
-            <span className="text-xs text-destructive">
+            <span
+              id="kb-backend-error"
+              className="text-xs text-destructive"
+              role="alert"
+            >
               {validationErrors.backend}
             </span>
           )}
@@ -266,7 +288,7 @@ export function StepConfiguration({
                         variant="outline"
                         data-testid="kb-browse-btn"
                         className={cn(
-                          "w-full justify-between focus-visible:ring-1 focus-visible:ring-input focus-visible:ring-offset-0 focus-visible:ring-offset-background",
+                          "w-full justify-between focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                           validationErrors.files && "border-destructive",
                         )}
                       >
@@ -283,7 +305,11 @@ export function StepConfiguration({
                         />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[220px]">
+                    <DropdownMenuContent
+                      align="start"
+                      className="w-[220px]"
+                      container={menuContainer}
+                    >
                       <DropdownMenuItem
                         onClick={() => {
                           document.getElementById("file-input")?.click();

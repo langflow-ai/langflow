@@ -1,7 +1,7 @@
 import io
 import json
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -233,6 +233,113 @@ class TestKnowledgeBaseAPI:
         assert record.model_selection == model_selection
         metadata = json.loads((tmp_path / active_user.username / kb_name / "embedding_metadata.json").read_text())
         assert metadata["model_selection"] == model_selection
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_create_legacy_request_without_model_selection(
+        self,
+        mock_root,
+        mock_fresh_client,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+        monkeypatch,
+    ):
+        from langflow.api.v1 import knowledge_bases as kb_api
+
+        mock_fresh_client.return_value = MagicMock()
+        mock_root.return_value = tmp_path
+        policy_check = MagicMock()
+        monkeypatch.setattr(kb_api, "require_model_provider", policy_check)
+        kb_name = "Legacy_KB_No_Selection"
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": kb_name,
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+            },
+        )
+
+        assert response.status_code == 201
+        record = await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name)
+        assert record is not None
+        assert record.model_selection == {
+            "name": "text-embedding-3-small",
+            "provider": "OpenAI",
+        }
+        policy_check.assert_called_once()
+
+    async def test_create_rejects_disagreeing_embedding_providers_before_storage_or_db(
+        self, client: AsyncClient, logged_in_headers, monkeypatch
+    ):
+        from langflow.api.v1 import knowledge_bases as kb_api
+
+        root_path = MagicMock()
+        guard = AsyncMock()
+        policy_check = MagicMock()
+        monkeypatch.setattr(kb_api.KBStorageHelper, "get_root_path", root_path)
+        monkeypatch.setattr(kb_api, "_guard_kb_action", guard)
+        monkeypatch.setattr(kb_api, "require_model_provider", policy_check)
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": "Spoofed Provider KB",
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+                "model_selection": {
+                    "name": "text-embedding-3-small",
+                    "provider": "Anthropic",
+                },
+            },
+        )
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Model provider not found"}
+        root_path.assert_not_called()
+        guard.assert_not_awaited()
+        policy_check.assert_not_called()
+
+    async def test_create_denied_embedding_provider_is_hidden_before_storage_or_db(
+        self, client: AsyncClient, logged_in_headers, monkeypatch
+    ):
+        from langflow.api.v1 import knowledge_bases as kb_api
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        root_path = MagicMock()
+        guard = AsyncMock()
+        policy_check = MagicMock(
+            side_effect=ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+        )
+        monkeypatch.setattr(kb_api.KBStorageHelper, "get_root_path", root_path)
+        monkeypatch.setattr(kb_api, "_guard_kb_action", guard)
+        monkeypatch.setattr(kb_api, "require_model_provider", policy_check)
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": "Denied Provider KB",
+                "embedding_provider": "Anthropic",
+                "embedding_model": "claude-embed",
+                "model_selection": {"name": "claude-embed", "provider": "Anthropic"},
+            },
+        )
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Model provider not found"}
+        root_path.assert_not_called()
+        guard.assert_not_awaited()
+        policy_check.assert_called_once_with(
+            user_id=ANY,
+            provider="Anthropic",
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
 
     async def test_create_knowledge_base_rejects_unknown_backend(self, client: AsyncClient, logged_in_headers):
         response = await client.post(
