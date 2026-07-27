@@ -395,10 +395,7 @@ def _otel_min_severity() -> int:
                 "completion content will reach that backend. Use INFO unless that is intended.",
                 stacklevel=2,
             )
-    if severity is None:
-        severity = _INFO_SEVERITY
-    _otel_min_severity_cache = severity
-    return severity
+    return _otel_min_severity_cache
 
 
 def emit_to_otel_logs(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
