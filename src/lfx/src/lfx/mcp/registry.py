@@ -57,8 +57,17 @@ def search_registry(
         cat = tmpl.get("category", "")
         if category and cat.lower() != category.lower():
             continue
-        if query and query.lower() not in name.lower() and query.lower() not in cat.lower():
-            continue
+        if query:
+            query_lower = query.lower()
+            display_name = tmpl.get("display_name", "")
+            description = tmpl.get("description", "")
+            if (
+                query_lower not in name.lower()
+                and query_lower not in cat.lower()
+                and query_lower not in display_name.lower()
+                and query_lower not in description.lower()
+            ):
+                continue
         if output_type:
             all_types = [t for o in tmpl.get("outputs", []) for t in o.get("types", [])]
             if output_type not in all_types:
