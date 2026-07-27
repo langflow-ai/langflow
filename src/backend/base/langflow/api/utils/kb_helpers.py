@@ -107,11 +107,28 @@ def _coerce_backend_config_value(value: Any) -> dict[str, Any]:
     return {}
 
 
+def resolve_default_kb_backend() -> str:
+    """Return the backend a *new* KB/MB should use when none is explicitly chosen.
+
+    pgVector is environment-driven: when ``PGVECTOR_CONNECTION_STRING`` is set the
+    whole deployment snap-configures to Postgres, so an omitted/auto backend
+    selection becomes ``postgres``. Otherwise it stays ``chroma``. Explicit
+    selections (opensearch, chroma, postgres) bypass this and always win.
+
+    Reachability is not probed here (it would make every create pay a DB round
+    trip); ``PostgresBackend.test_connection`` surfaces an unreachable database at
+    configure time and the first ingest raises clearly.
+    """
+    from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured
+
+    return BackendType.POSTGRES.value if postgres_env_configured() else BackendType.CHROMA.value
+
+
 async def resolve_backend_selection(
     *,
     user_id: uuid.UUID,
     kb_name: str,
-    kb_path: Path,
+    kb_path: Path | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Resolve ``(backend_type, backend_config)`` for a KB — DB row first, sidecar second.
 
@@ -121,6 +138,14 @@ async def resolve_backend_selection(
     storage. A replica that merely lacks the sidecar would otherwise write a
     remote-backed KB into a local Chroma directory while queries followed the row
     to the configured cluster and returned nothing, with no error anywhere.
+
+    ``kb_path`` is optional and should be omitted entirely by Memory Base
+    callers: Memory Bases always have a row (created at MB-create and
+    backfilled for pre-existing ones), so a disk fallback is never correct for
+    them — passing ``None`` skips the sidecar branch outright instead of
+    reading (or missing) a file that was never written for that KB in the
+    first place. Knowledge Bases pass a real path to keep the legacy sidecar
+    fallback for KBs that predate the row.
 
     Shared by Knowledge Bases and Memory Bases so the two cannot drift apart.
     """
@@ -134,20 +159,23 @@ async def resolve_backend_selection(
         )
 
     # A sidecar with no ``backend_type`` is an explicit legacy local KB; only the
-    # *absence* of both sources is ambiguous.
-    metadata_file = kb_path / "embedding_metadata.json"
-    if await asyncio.to_thread(metadata_file.exists):
-        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-        return (
-            str(metadata.get("backend_type") or BackendType.CHROMA.value),
-            _coerce_backend_config_value(metadata.get("backend_config")),
-        )
+    # *absence* of both sources is ambiguous. Skipped entirely when kb_path is
+    # None (Memory Base callers) — there is no sidecar to find.
+    if kb_path is not None:
+        metadata_file = kb_path / "embedding_metadata.json"
+        if await asyncio.to_thread(metadata_file.exists):
+            metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
+            return (
+                str(metadata.get("backend_type") or BackendType.CHROMA.value),
+                _coerce_backend_config_value(metadata.get("backend_config")),
+            )
 
     msg = (
         f"Cannot determine the vector-store backend for '{kb_name}': it has no "
-        f"knowledge_base record and no embedding metadata on disk. Refusing to fall "
-        f"back to local storage, which would write to a different store than queries "
-        f"read from."
+        f"knowledge_base record"
+        + (" and no embedding metadata on disk" if kb_path is not None else "")
+        + ". Refusing to fall back to local storage, which would write to a different store than queries "
+        "read from."
     )
     raise ValueError(msg)
 

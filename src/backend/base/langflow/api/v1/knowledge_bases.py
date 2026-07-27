@@ -33,7 +33,12 @@ from lfx.services.model_provider_policy import (
 from pydantic import BaseModel, Field
 
 from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
-from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper
+from langflow.api.utils.kb_helpers import (
+    KBAnalysisHelper,
+    KBIngestionHelper,
+    KBStorageHelper,
+    resolve_default_kb_backend,
+)
 from langflow.api.utils.kb_metadata import parse_per_file_metadata, parse_user_metadata
 from langflow.api.v1.schemas import TaskResponse
 from langflow.schema.knowledge_base import (
@@ -835,7 +840,11 @@ async def create_knowledge_base(
         # backend routing even if the DB write below fails.
         # ``backend_config`` holds only *variable names* (never raw
         # secrets) per the credential-indirection contract.
-        backend_type_value = request.backend_type or "chroma"
+        #
+        # ``backend_type`` may be ``None`` ("auto") — the deployment default is
+        # resolved server-side so an env-configured pgVector snap-configures as
+        # the default without the client specifying it. Explicit values win.
+        backend_type_value = request.backend_type or resolve_default_kb_backend()
         backend_config_value = request.backend_config or {}
         embedding_metadata = {
             "id": str(kb_id),

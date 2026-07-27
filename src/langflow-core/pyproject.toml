@@ -38,6 +38,12 @@ audio = [
 postgresql = [
     "langflow-base[postgresql]~=0.12.0",
 ]
+pgvector = [
+    "langflow-base[pgvector]~=0.12.0",
+]
+opensearch = [
+    "langflow-base[opensearch]~=0.12.0",
+]
 
 [project.scripts]
 langflow = "langflow.langflow_launcher:main"

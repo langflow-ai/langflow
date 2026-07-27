@@ -305,7 +305,15 @@ markup = ["MarkupSafe==3.0.2"]
 aws = ["boto3>=1.34.162,<2.0.0"]
 numexpr = ["numexpr>=2.10.2"]
 qianfan = ["qianfan==0.3.5"]
-pgvector = ["pgvector>=0.4.2"]
+pgvector = [
+    "pgvector>=0.4.2",
+    # Maintained Postgres vector store (replaces the sunset langchain-community
+    # PGVector). It declares pgvector<0.4; the workspace [tool.uv]
+    # override-dependencies forces the security-pinned pgvector>=0.4.2, which is
+    # runtime-compatible. langchain-postgres also pulls psycopg[binary]>=3 +
+    # sqlalchemy[asyncio], so this extra is self-sufficient for the KB backend.
+    "langchain-postgres>=0.0.14,<0.1.0",
+]
 litellm = [
     "litellm>=1.93.0,<2.0.0",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging

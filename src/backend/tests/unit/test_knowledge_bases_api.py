@@ -388,12 +388,12 @@ class TestKnowledgeBaseAPI:
     async def test_create_knowledge_base_rejects_stubbed_backend(self, client: AsyncClient, logged_in_headers):
         """Stubbed backends fail at the schema layer with a "not enabled" message.
 
-        The ``BackendType`` enum still includes ``mongodb``/``astra``/``postgres``
-        for DB row compatibility, but ``validate_backend_type`` rejects them so
-        a user posting one gets a clear 422 instead of a successful create
-        followed by ingest-time NotImplementedError.
+        The ``BackendType`` enum still includes ``mongodb``/``astra`` for DB row
+        compatibility, but ``validate_backend_type`` rejects them so a user
+        posting one gets a clear 422 instead of a successful create followed by
+        ingest-time NotImplementedError. (``postgres`` is now creation-enabled.)
         """
-        for stubbed in ("mongodb", "astra", "postgres"):
+        for stubbed in ("mongodb", "astra"):
             response = await client.post(
                 "api/v1/knowledge_bases",
                 headers=logged_in_headers,

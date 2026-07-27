@@ -87,6 +87,44 @@ export default function DBProvidersPage() {
       (provider) => provider.id === selectedProviderId,
     ) ?? DB_PROVIDER_OPTIONS[0];
 
+  // pgVector is environment-driven, so instead of reading config fields we just
+  // ping it (via the existing test-connection route) when its panel opens to
+  // show a passive "configured / not configured" state — no dedicated endpoint.
+  const [postgresStatus, setPostgresStatus] = useState<{
+    ok: boolean;
+    message: string;
+  } | null>(null);
+  const [isCheckingPostgres, setIsCheckingPostgres] = useState(false);
+
+  useEffect(() => {
+    if (selectedProviderId !== "postgres") {
+      setPostgresStatus(null);
+      return;
+    }
+    let cancelled = false;
+    setIsCheckingPostgres(true);
+    setPostgresStatus(null);
+    testProviderConnection({ backend_type: "postgres", backend_config: {} })
+      .then((response) => {
+        if (!cancelled) {
+          setPostgresStatus({ ok: response.ok, message: response.message });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setPostgresStatus({ ok: false, message: getErrorDetail(error) });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsCheckingPostgres(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // testProviderConnection is a stable react-query mutate fn; re-check only on selection change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProviderId]);
+
   const isPending = isCreating || isUpdating;
 
   const findVariable = (name: string) =>
@@ -382,6 +420,26 @@ export default function DBProvidersPage() {
     }
   };
 
+  // pgVector is configured from the server env, so there are no fields to save —
+  // "use" just activates it, exactly like Chroma Local.
+  const handleUsePostgres = async () => {
+    const postgresProvider = DB_PROVIDER_OPTIONS.find(
+      (provider) => provider.id === "postgres",
+    );
+    if (!postgresProvider) return;
+    try {
+      await activateProvider(postgresProvider);
+      setSelectedProviderId("postgres");
+      setHasManuallySelectedProvider(false);
+      setSuccessData({ title: t("settings.dbProviders.postgresSelected") });
+    } catch (error: unknown) {
+      setErrorData({
+        title: t("settings.dbProviders.errorSelectingPostgres"),
+        list: [getErrorDetail(error)],
+      });
+    }
+  };
+
   return (
     <div className="flex w-full flex-col gap-6">
       <div className="flex w-full items-start justify-between gap-6">
@@ -453,9 +511,11 @@ export default function DBProvidersPage() {
               onSave={
                 selectedProvider.id === "chroma"
                   ? handleUseChroma
-                  : () => {
-                      void handleSave();
-                    }
+                  : selectedProvider.id === "postgres"
+                    ? handleUsePostgres
+                    : () => {
+                        void handleSave();
+                      }
               }
               onTestConnection={
                 selectedProvider.id === "chroma"
@@ -463,6 +523,8 @@ export default function DBProvidersPage() {
                   : handleTestConnection
               }
               isTesting={isTesting}
+              postgresStatus={postgresStatus}
+              isCheckingPostgres={isCheckingPostgres}
             />
           </div>
         </div>
@@ -592,6 +654,8 @@ function ProviderConfigurationPanel({
   onSave,
   onTestConnection,
   isTesting,
+  postgresStatus,
+  isCheckingPostgres,
 }: {
   provider: DBProviderOption;
   activeProviderId: AvailableDBProviderId;
@@ -607,6 +671,8 @@ function ProviderConfigurationPanel({
   onSave: () => void;
   onTestConnection?: () => void;
   isTesting: boolean;
+  postgresStatus: { ok: boolean; message: string } | null;
+  isCheckingPostgres: boolean;
 }) {
   const { t } = useTranslation();
   const isComingSoon = provider.status === "coming_soon";
@@ -677,6 +743,57 @@ function ProviderConfigurationPanel({
               {isActive
                 ? t("settings.dbProviders.chromaSelected")
                 : t("settings.dbProviders.useChroma")}
+            </Button>
+          </div>
+        </div>
+      ) : provider.id === "postgres" ? (
+        <div className="flex flex-col gap-3">
+          <div className="rounded-md border border-border bg-muted/30 p-3 text-[13px] text-muted-foreground">
+            {t("settings.dbProviders.postgresDescription")}
+          </div>
+          <div className="flex items-center gap-1.5 text-[13px]">
+            {isCheckingPostgres ? (
+              <span className="text-muted-foreground">
+                {t("settings.dbProviders.postgresChecking")}
+              </span>
+            ) : postgresStatus?.ok ? (
+              <span className="flex items-center gap-1.5 text-status-green">
+                <ForwardedIconComponent name="Check" className="h-4 w-4" />
+                {t("settings.dbProviders.postgresConfigured")}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <ForwardedIconComponent
+                  name="CircleAlert"
+                  className="h-4 w-4"
+                />
+                {postgresStatus?.message ||
+                  t("settings.dbProviders.postgresNotConfigured")}
+              </span>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            {onTestConnection && (
+              <Button
+                onClick={onTestConnection}
+                size="sm"
+                variant="outline"
+                loading={isTesting}
+                disabled={isPending || isTesting}
+                data-testid="db-provider-test-connection"
+              >
+                {t("settings.dbProviders.testConnection")}
+              </Button>
+            )}
+            <Button
+              onClick={onSave}
+              size="sm"
+              loading={isPending}
+              disabled={isPending || isActive || !postgresStatus?.ok}
+            >
+              {isActive
+                ? t("settings.dbProviders.postgresSelected")
+                : t("settings.dbProviders.usePostgres")}
             </Button>
           </div>
         </div>

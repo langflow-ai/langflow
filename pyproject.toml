@@ -219,6 +219,14 @@ postgresql = [
     "langflow-core[postgresql]~=1.12.0",
 ]
 
+pgvector = [
+    "langflow-core[pgvector]~=1.12.0",
+]
+
+opensearch = [
+    "langflow-core[opensearch]~=1.12.0",
+]
+
 [tool.uv]
 override-dependencies = [
     # temporary force a newer python-pptx
@@ -241,6 +249,10 @@ override-dependencies = [
     "mako>=1.3.12,<2.0.0",  # CVE-2026-44307
     "urllib3>=2.7.0,<3.0.0",  # CVE-2026-44431, CVE-2026-44432
     "python-liquid>=2.2.0,<3.0.0",  # CVE-2026-45017
+    # langchain-postgres pins pgvector<0.4; force the security-required floor
+    # (#12371). pgvector 0.4/0.5 is runtime-compatible with langchain-postgres —
+    # verified against 0.0.17 — so overriding the ceiling is safe.
+    "pgvector>=0.4.2",
 ]
 
 [tool.codespell]
