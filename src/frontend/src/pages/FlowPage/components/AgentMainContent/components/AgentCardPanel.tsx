@@ -20,6 +20,7 @@ import {
   overridesToForm,
 } from "@/controllers/API/queries/a2a/utils";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
+import { customA2aPublishOrigin } from "@/customization/utils/custom-a2a-address";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -30,7 +31,6 @@ import {
   cardInputContract,
   cardRequiresApiKey,
 } from "../types";
-import { customA2aPublishOrigin } from "@/customization/utils/custom-a2a-address";
 
 const errorDetail = (e: unknown, fallback: string): string => {
   const err = e as {
@@ -74,7 +74,7 @@ export default function AgentCardPanel({
 
   const flowId = currentFlow?.id ?? "";
   const isPublished = !!currentFlow?.a2a_enabled;
-  
+
   const publishOrigin = customA2aPublishOrigin();
   const cardUrl = `${publishOrigin}/api/v1/a2a/${flowId}/.well-known/agent-card.json`;
   const rpcUrl = `${publishOrigin}/api/v1/a2a/${flowId}/jsonrpc`;
