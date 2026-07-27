@@ -183,6 +183,7 @@ def get_lifespan(*, fix_migration=False, version=None):
         # Same reason as ``temp_dirs`` below: the shutdown path stops this, so it must exist
         # even when startup fails before it is created.
         lag_monitor = None
+        warm_registry_task = None
         # Bind ``temp_dirs`` before the ``try`` so the shutdown cleanup in the
         # ``finally`` block (which iterates it) never raises ``UnboundLocalError``
         # when startup fails before bundle loading assigns it below. Otherwise an
@@ -273,6 +274,27 @@ def get_lifespan(*, fix_migration=False, version=None):
             )
 
             await model_provider_policy_refresh_worker.start()
+
+            # PROD execution plane: eagerly warm every deployed flow into the
+            # in-memory registry (hot before serving), then run the background
+            # reconcile loop that keeps this machine in sync with the shared
+            # ``flow`` table (add new / swap changed / evict deleted) with no Redis.
+            # Runs once per worker during startup (app "lifespan"). The settings service
+            # is safe to use here (unlike router.py) — services are initialized by now.
+            if get_settings_service().settings.prod:
+                try:
+                    from langflow.services.warm_registry.reconcile import reconcile_loop, warm_all
+
+                    # Block until every flow is built and cached, so the worker is HOT
+                    # before accepting requests (no cold first hit).
+                    await warm_all()
+                    # Launch the reconcile loop as a long-lived background coroutine
+                    # (sleep -> reconcile -> repeat); keep the handle so shutdown can cancel it.
+                    warm_registry_task = asyncio.create_task(reconcile_loop())
+                except Exception as exc:  # noqa: BLE001 — never block startup on warming
+                    # On warming failure, log and continue instead of crashing the app;
+                    # requests then lazy-warm on demand.
+                    await logger.aerror(f"Failed to start warm flow registry: {exc}")
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")
@@ -702,6 +724,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if models_dev_refresh_task and not models_dev_refresh_task.done():
                         models_dev_refresh_task.cancel()
                         tasks_to_cancel.append(models_dev_refresh_task)
+                    # Shutdown cleanup: cancel the reconcile loop if running and await it
+                    # below (cancel() raises CancelledError inside the loop) so shutdown
+                    # waits for it to actually finish.
+                    if warm_registry_task and not warm_registry_task.done():
+                        warm_registry_task.cancel()
+                        tasks_to_cancel.append(warm_registry_task)
                     if tasks_to_cancel:
                         # Wait for all tasks to complete, capturing exceptions
                         results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)

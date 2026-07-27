@@ -1,4 +1,6 @@
 # Router for base api
+import os
+
 from fastapi import APIRouter, Depends
 from lfx.schema.workflow import WORKFLOW_EXECUTION_RESPONSES
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
@@ -47,6 +49,7 @@ from langflow.api.v2 import mcp_router as mcp_router_v2
 from langflow.api.v2 import registration_router as registration_router_v2
 from langflow.api.v2 import workflow_background_router as workflow_background_router_v2
 from langflow.api.v2 import workflow_public_router as workflow_public_router_v2
+from langflow.api.v2.warm_workflow_host import WarmWorkflowHost
 from langflow.api.v2.workflow_host import LangflowWorkflowHost
 
 router_v1 = APIRouter(
@@ -151,7 +154,16 @@ router_v2.include_router(registration_router_v2)
 # them (one handler per method+path). ``developer_api_guard=False`` because the
 # authenticated langflow v2 router has never carried a developer-api gate; the
 # default-off setting would otherwise 403 every authenticated request.
-_workflow_host = LangflowWorkflowHost()
+# In PROD (``LANGFLOW_PROD``, execution-plane / ``--backend-only``) the warm host
+# serves deployed flows from the in-memory registry and skips per-flow RBAC. Read
+# the env directly rather than the settings service: this runs at import time,
+# before the settings service is guaranteed initialized. The value matches
+# ``settings.prod`` (env_prefix ``LANGFLOW_`` maps ``LANGFLOW_PROD`` -> ``prod``).
+_PROD = os.getenv("LANGFLOW_PROD", "").strip().lower() in ("1", "true", "yes", "on")
+# The one line that picks the runtime: warm host in PROD, DB-backed host otherwise.
+# Everything below is identical — only the host object swaps (the point of the seam).
+_workflow_host: WorkflowHost = WarmWorkflowHost() if _PROD else LangflowWorkflowHost()
+# Startup invariant: whichever host we picked satisfies the WorkflowHost protocol.
 assert isinstance(_workflow_host, WorkflowHost)  # noqa: S101
 router_v2.include_router(
     create_workflow_router(

@@ -16,6 +16,23 @@ class RuntimeSettings(BaseModel):
     dev: bool = False
     """If True, Langflow will run in development mode."""
 
+    prod: bool = False
+    """If True, run in production execution-plane mode (LANGFLOW_PROD).
+
+    Serves deployed flows from a warm in-memory registry instead of rebuilding the
+    graph from the DB on every request, and skips per-flow RBAC on the workflow run
+    path (single-tenant trust model: any authenticated caller may run any deployed
+    flow). Intended for ``--backend-only`` execution machines. The prod preflight
+    fail-fast gate (Postgres/S3/SECRET_KEY checks) is a separate feature."""
+
+    warm_reconcile_interval: float = Field(default=20.0, gt=0)
+    """Seconds between warm-registry reconcile passes (LANGFLOW_WARM_RECONCILE_INTERVAL).
+
+    Each execution machine independently diffs its in-memory registry against the
+    shared ``flow`` table every ``interval`` seconds, so a deploy or delete takes up
+    to this long to propagate across the fleet. Lower for faster convergence at the
+    cost of more manifest queries. Only used when ``prod`` is True. Must be > 0."""
+
     # Job Queue
     job_queue_type: Literal["asyncio", "redis"] = "asyncio"
     """The job queue backend. Use 'redis' for multi-worker deployments to solve cross-worker JobQueueNotFoundError."""
