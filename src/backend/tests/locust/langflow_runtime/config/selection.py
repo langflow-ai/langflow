@@ -242,11 +242,6 @@ def compose_axes_profile(axes: list[str]) -> MovementProfile:
         },
         "correctness_sampling": base.correctness_sampling.model_dump(),
         "safety_limits": safety,
-        "validity": {
-            "max_generator_cpu_pct": min(s.validity.max_generator_cpu_pct for s in solos),
-            "allowed_scheduling_lateness_s": max(s.validity.allowed_scheduling_lateness_s for s in solos),
-            "cold_warm": "either",
-        },
         "reset_rules": reset,
     }
     if think is None:

@@ -12,7 +12,6 @@ from tests.locust.langflow_runtime.flows.defaults import DEFAULT_QUEUE_INPUT
 from tests.locust.langflow_runtime.metrics.registry import TrackedWorkflowJob
 from tests.locust.langflow_runtime.users.base import (
     PerfBaseUser,
-    get_or_create_arrival_accountant,
     get_or_create_paced_arrival_scheduler,
 )
 
@@ -35,44 +34,28 @@ class QueueUser(PerfBaseUser):
             self._arrival_scheduler = get_or_create_paced_arrival_scheduler(
                 self.environment,
                 rate_per_s=float(rate),
-                allowed_lateness_s=float(self.run_context.profile.validity.allowed_scheduling_lateness_s),
+                allowed_lateness_s=float(workload.allowed_scheduling_lateness_s),
             )
-
-    def _paced(self) -> bool:
-        return self._arrival_scheduler is not None
 
     @task(3)
     def submit_background(self) -> None:
         if self.run_context is None:
             return
-        accountant = get_or_create_arrival_accountant(self.environment) if self._paced() else None
-        if accountant is not None:
+        if self._arrival_scheduler is not None:
             reservation = self._arrival_scheduler.reserve()
-            accountant.record_intended_slot(reservation.missed_slots + 1)
-            if reservation.missed_slots:
-                accountant.record_miss("scheduling_late", reservation.missed_slots)
             if reservation.delay_s:
                 gevent.sleep(reservation.delay_s)
         if self.stop_new_arrivals():
-            if accountant is not None:
-                accountant.record_miss("stop_new_arrivals")
             return
 
         flow = self.require_flow_or_fail("perf_queue_short")
         workflows = self.require_workflows_client()
 
-        if accountant is not None:
-            accountant.record_attempt()
-        try:
-            job_id = workflows.submit_background(
-                flow_id=str(flow["flow_id"]),
-                input_value=DEFAULT_QUEUE_INPUT,
-                session_id=f"{self.session_id}-{uuid.uuid4().hex[:8]}",
-            )
-        except Exception:
-            if accountant is not None:
-                accountant.record_miss("submit_failed")
-            raise
+        job_id = workflows.submit_background(
+            flow_id=str(flow["flow_id"]),
+            input_value=DEFAULT_QUEUE_INPUT,
+            session_id=f"{self.session_id}-{uuid.uuid4().hex[:8]}",
+        )
 
         self.registry.register_workflow(
             TrackedWorkflowJob(
@@ -82,8 +65,6 @@ class QueueUser(PerfBaseUser):
                 status="pending",
             )
         )
-        if accountant is not None:
-            accountant.record_accepted()
 
     @task(2)
     def observe_terminal(self) -> None:
@@ -106,6 +87,3 @@ class QueueUser(PerfBaseUser):
             success=status.success,
             terminal_at=datetime.now(UTC),
         )
-        if self._paced():
-            accountant = get_or_create_arrival_accountant(self.environment)
-            accountant.record_terminal(success=bool(status.success))

@@ -15,7 +15,7 @@ The maintained beta suite lives alongside the older flat harness. It drives load
 | `langflow_runtime/profiles/` | Per-axis solos, coupled ensembles, named suites, smoke/natural, and `schema.json` |
 | `langflow_runtime/flows/` + `components/` + `datasets/` | Flow fixtures, isolators, `fixture_index` |
 | `langflow_runtime/provision/` | Idempotent plan/apply/validate/teardown |
-| `langflow_runtime/clients/` / `users/` / `shapes/` / `metrics/` | Protocol clients, workloads, load shape, reports |
+| `langflow_runtime/clients/` / `users/` / `shapes/` / `metrics/` | Protocol clients, workloads, load shape, lifecycle checks, reports |
 | `langflow_runtime/preflight/` | Health + one-shot protocol checks |
 | `tests/` | Unit + opt-in live integration coverage |
 
@@ -77,12 +77,13 @@ PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run validate
 - **No MODE flag.** Coupled mega-graph journeys are selected explicitly with `--suite ensemble` or `--suite ensemble_hitl`; standalone HITL remains `--axes hitl`.
 - **Profiles / composition** are the source of truth (`langflow_runtime/profiles/schema.json`). Flow/dataset selectors must resolve to `fixture_index` / `DATASET_IDS`.
 - **Protocols vs stress axes:** MCP, Workflows v2 modes, and Webhooks are transport/lifecycle surfaces listed under `protocols`. Stress axes (`stress_categories`) are resource pressures such as chat/DB, queue, KB, CPU/graph, multiproc, disk I/O, RAM/storage, HITL, outbound, and `natural`.
-- **Workload models:** closed-loop for most axes (including protocol calibration); paced closed-loop for background/queue axes with intended/attempted/missed/accepted/terminal accounting.
-- **Candidate knee:** reports keep raw step curves and a *manual* candidate-knee bracket — never labeled certified or pass/fail.
+- **Workload models:** closed-loop for most axes (including protocol calibration); paced closed-loop for background/queue axes. The scheduler skips expired slots instead of replaying a catch-up burst.
+- **Reports:** the suite preserves Locust's raw CSV/HTML output and adds a compact redacted summary with selection, fixture hashes, Locust totals, and Coda drain state.
 - **Coda:** stop new arrivals, drain tracked jobs/webhooks/HITL, correctness checks, reset movement-scoped state. Shared env teardown is separate (`perf-teardown`).
 - **Safety:** profiles declare spend/backlog/storage/error/drain limits; a safety stop is not a performance failure.
 - **Secrets / artifacts:** provision state and reports live under `~/.cache/langflow-perf/` (or `$XDG_CACHE_HOME/langflow-perf`, override with `PERF_DATA_DIR`) — not inside the git checkout. State files are mode `0600`.
-- **Deferred:** mega-graph ensemble journeys, depth matrices, resilience edge cases, telemetry adapters, distributed generators, result DB, CI gates.
+- **Non-goals:** automated capacity curves, knee detection, generator-validity certification, and bespoke arrival/correctness summary layers. Use Locust's raw artifacts for analysis.
+- **Deferred:** depth matrices, resilience edge cases, telemetry adapters, distributed generators, result DB, and CI gates. Mega-graph journeys are available now as the explicit `ensemble` and `ensemble_hitl` suites.
 
 ### Unit tests
 

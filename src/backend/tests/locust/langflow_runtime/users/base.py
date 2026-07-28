@@ -12,14 +12,13 @@ from tests.locust.langflow_runtime.clients.mcp_streamable import McpStreamableCl
 from tests.locust.langflow_runtime.clients.webhooks import WebhookCopy, WebhookCopyPool, WebhooksClient
 from tests.locust.langflow_runtime.clients.workflows import WorkflowsClient
 from tests.locust.langflow_runtime.config.context import RunContext
-from tests.locust.langflow_runtime.metrics.arrivals import ArrivalAccountant, PacedArrivalScheduler
+from tests.locust.langflow_runtime.metrics.arrivals import PacedArrivalScheduler
 from tests.locust.langflow_runtime.metrics.registry import get_registry
 from tests.locust.langflow_runtime.users.helpers import extract_output_text, require_flow
 
 __all__ = [
     "PerfBaseUser",
     "extract_output_text",
-    "get_or_create_arrival_accountant",
     "get_or_create_paced_arrival_scheduler",
     "get_or_create_webhook_pool",
     "parse_kv_metrics",
@@ -66,14 +65,6 @@ def parse_multiproc_header(text: str) -> dict[str, Any] | None:
         }
     except ValueError:
         return None
-
-
-def get_or_create_arrival_accountant(environment: Any) -> ArrivalAccountant:
-    accountant = getattr(environment, "arrival_accountant", None)
-    if accountant is None:
-        accountant = ArrivalAccountant()
-        environment.arrival_accountant = accountant
-    return accountant
 
 
 def get_or_create_paced_arrival_scheduler(

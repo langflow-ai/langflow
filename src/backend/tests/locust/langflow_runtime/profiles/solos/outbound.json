@@ -59,10 +59,5 @@
     "drain_timeout_s": 60,
     "cleanup_timeout_s": 120
   },
-  "validity": {
-    "max_generator_cpu_pct": 85,
-    "allowed_scheduling_lateness_s": 5,
-    "cold_warm": "either"
-  },
   "reset_rules": {}
 }

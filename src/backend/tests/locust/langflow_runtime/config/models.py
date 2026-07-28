@@ -77,6 +77,7 @@ class WorkloadConfig(StrictModel):
     think_time: ThinkTime | None = None
     arrival_rate_per_s: Annotated[float, Field(gt=0)] | None = None
     axis_arrival_rates: dict[str, Annotated[float, Field(gt=0)]] = Field(default_factory=dict)
+    allowed_scheduling_lateness_s: Annotated[float, Field(ge=0)] = 5.0
 
     @model_validator(mode="after")
     def _validate_workload(self) -> WorkloadConfig:
@@ -138,12 +139,6 @@ class SafetyLimits(StrictModel):
     cleanup_timeout_s: Annotated[float, Field(gt=0)]
 
 
-class ValidityConfig(StrictModel):
-    max_generator_cpu_pct: Annotated[float, Field(gt=0, le=100)]
-    allowed_scheduling_lateness_s: Annotated[float, Field(ge=0)]
-    cold_warm: Literal["cold", "warm", "either"]
-
-
 class ResetRules(StrictModel):
     reset_message_store: bool = False
     reset_kb_corpus: bool = False
@@ -169,7 +164,6 @@ class MovementProfile(StrictModel):
     windows: WindowsConfig
     correctness_sampling: CorrectnessSampling = Field(default_factory=CorrectnessSampling)
     safety_limits: SafetyLimits
-    validity: ValidityConfig
     reset_rules: ResetRules = Field(default_factory=ResetRules)
     extends: str | None = None
 

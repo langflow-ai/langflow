@@ -14,10 +14,7 @@ _REDACT_KEY_FRAGMENTS = ("api_key", "password", "token", "secret", "authorizatio
 @dataclass
 class RedactedRunReport:
     profile: str
-    validity: dict[str, object]
-    arrivals: dict[str, object]
     drain: dict[str, object]
-    correctness_summary: dict[str, object]
     locust_stats_summary: dict[str, object]
     hashes: dict[str, object] = field(default_factory=dict)
     generated_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
@@ -55,10 +52,7 @@ def _locust_stats_summary(environment: Any) -> dict[str, object]:
 def write_report(
     report_dir: Path | str,
     profile: str,
-    validity: dict[str, object],
-    arrivals: dict[str, object],
     drain: dict[str, object],
-    correctness_summary: dict[str, object],
     locust_stats_summary: dict[str, object],
     hashes: dict[str, object],
     selection: dict[str, object] | None = None,
@@ -66,10 +60,7 @@ def write_report(
     """Write a redacted JSON summary beside Locust CSV/HTML artifacts."""
     report = RedactedRunReport(
         profile=profile,
-        validity=validity,
-        arrivals=arrivals,
         drain=drain,
-        correctness_summary=correctness_summary,
         locust_stats_summary=locust_stats_summary,
         hashes=hashes,
     )
@@ -77,10 +68,7 @@ def write_report(
         {
             "profile": report.profile,
             "generated_at": report.generated_at,
-            "validity": report.validity,
-            "arrivals": report.arrivals,
             "drain": report.drain,
-            "correctness_summary": report.correctness_summary,
             "locust_stats_summary": report.locust_stats_summary,
             "hashes": report.hashes,
             "selection": selection or {},
@@ -95,10 +83,7 @@ def write_report(
 
 _LISTENER_STATE: dict[str, Any] = {
     "profile": "default",
-    "validity": {},
-    "arrivals": {},
     "drain": {},
-    "correctness_summary": {},
     "hashes": {},
     "selection": {},
     "attached": False,
@@ -108,24 +93,15 @@ _LISTENER_STATE: dict[str, Any] = {
 def set_report_context(
     *,
     profile: str | None = None,
-    validity: dict[str, object] | None = None,
-    arrivals: dict[str, object] | None = None,
     drain: dict[str, object] | None = None,
-    correctness_summary: dict[str, object] | None = None,
     hashes: dict[str, object] | None = None,
     selection: dict[str, object] | None = None,
 ) -> None:
     """Update context used when listeners write the JSON summary."""
     if profile is not None:
         _LISTENER_STATE["profile"] = profile
-    if validity is not None:
-        _LISTENER_STATE["validity"] = validity
-    if arrivals is not None:
-        _LISTENER_STATE["arrivals"] = arrivals
     if drain is not None:
         _LISTENER_STATE["drain"] = drain
-    if correctness_summary is not None:
-        _LISTENER_STATE["correctness_summary"] = correctness_summary
     if hashes is not None:
         _LISTENER_STATE["hashes"] = hashes
     if selection is not None:
@@ -145,10 +121,7 @@ def finalize_reports(environment: Any) -> None:
     write_report(
         report_dir=report_dir,
         profile=str(_LISTENER_STATE["profile"]),
-        validity=dict(_LISTENER_STATE["validity"]),
-        arrivals=dict(_LISTENER_STATE["arrivals"]),
         drain=dict(_LISTENER_STATE["drain"]),
-        correctness_summary=dict(_LISTENER_STATE["correctness_summary"]),
         locust_stats_summary=_locust_stats_summary(environment),
         hashes=dict(_LISTENER_STATE["hashes"]),
         selection=dict(_LISTENER_STATE["selection"]),

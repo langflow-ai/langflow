@@ -12,7 +12,6 @@ from tests.locust.langflow_runtime.config.loader import FIXTURE_INDEX_PATH, load
 from tests.locust.langflow_runtime.config.selection import resolve_selection
 from tests.locust.langflow_runtime.paths import state_dir, state_path_for
 from tests.locust.langflow_runtime.preflight.dependencies import check_dependencies
-from tests.locust.langflow_runtime.preflight.generator import check_generator_headroom
 from tests.locust.langflow_runtime.preflight.health import check_auth, check_fixture_hashes, check_health
 from tests.locust.langflow_runtime.preflight.protocols import run_protocol_checks
 from tests.locust.langflow_runtime.provision import DEFAULT_ENV_ID
@@ -112,8 +111,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     if state:
         results.extend(run_protocol_checks(host, state, list(profile.protocols)))
-    results.append(check_generator_headroom(max_cpu_pct=float(profile.validity.max_generator_cpu_pct)))
-
     failed = False
     for result in results:
         status = "OK" if result.ok else "FAIL"

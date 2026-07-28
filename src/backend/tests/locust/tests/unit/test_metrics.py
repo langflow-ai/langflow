@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from tests.locust.langflow_runtime.metrics.arrivals import ArrivalAccountant, PacedArrivalScheduler
+from tests.locust.langflow_runtime.metrics.arrivals import PacedArrivalScheduler
 from tests.locust.langflow_runtime.metrics.correctness import (
     expect_text_size_at_most,
     expect_webhook_n_accept_n_complete,
@@ -18,11 +18,6 @@ from tests.locust.langflow_runtime.metrics.registry import (
     get_registry,
 )
 from tests.locust.langflow_runtime.metrics.reports import redact_secrets
-from tests.locust.langflow_runtime.metrics.validity import (
-    InvalidRunReason,
-    MeasurementValidity,
-    check_missed_arrival_ratio,
-)
 
 
 def test_registry_ops_do_not_embed_ids_in_metric_names() -> None:
@@ -80,35 +75,6 @@ def test_registry_ops_do_not_embed_ids_in_metric_names() -> None:
     assert registry.list_workflows() == []
     assert registry.outstanding_webhooks() == []
     assert registry.residual_hitl() == []
-
-
-def test_arrival_miss_accounting_without_catch_up_replay() -> None:
-    accountant = ArrivalAccountant()
-
-    for _ in range(5):
-        accountant.record_intended_slot()
-
-    accountant.record_attempt()
-    accountant.record_accepted()
-    accountant.record_started()
-    accountant.record_terminal(success=True)
-
-    for reason in ("backlog", "backlog", "timeout"):
-        accountant.record_miss(reason)
-
-    snapshot = accountant.snapshot()
-    assert snapshot["intended"] == 5
-    assert snapshot["attempted"] == 1
-    assert snapshot["missed"] == 3
-    assert snapshot["accepted"] == 1
-    assert snapshot["started"] == 1
-    assert snapshot["terminal"] == 1
-    assert snapshot["successful"] == 1
-    assert snapshot["miss_reasons"] == {"backlog": 2, "timeout": 1}
-
-    # Missed slots are recorded but not replayed as extra attempts.
-    assert snapshot["attempted"] < snapshot["intended"]
-    assert snapshot["missed"] + snapshot["attempted"] <= snapshot["intended"]
 
 
 def test_paced_scheduler_skips_expired_slots_without_catch_up() -> None:
@@ -171,24 +137,3 @@ def test_redact_secrets_recursive() -> None:
     assert redacted["nested"]["safe"] == "visible"
     assert redacted["items"][0]["token"] == "***REDACTED***"
     assert redacted["items"][0]["value"] == 1
-
-
-def test_validity_invalidate_accumulates_reasons() -> None:
-    validity = MeasurementValidity()
-    assert validity.is_valid is True
-    assert validity.to_dict() == {"valid": True, "reasons": []}
-
-    validity.invalidate(InvalidRunReason.GENERATOR_SATURATED)
-    validity.invalidate("custom_reason")
-    validity.invalidate(InvalidRunReason.GENERATOR_SATURATED)
-
-    assert validity.is_valid is False
-    result = validity.to_dict()
-    assert result["valid"] is False
-    assert result["reasons"] == [
-        InvalidRunReason.GENERATOR_SATURATED,
-        "custom_reason",
-    ]
-
-    ratio_reason = check_missed_arrival_ratio(missed=3, intended=10, max_ratio=0.1)
-    assert ratio_reason == InvalidRunReason.MISSED_ARRIVAL_RATIO

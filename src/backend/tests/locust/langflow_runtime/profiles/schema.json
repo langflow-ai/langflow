@@ -223,38 +223,6 @@
       "title": "UserMixEntry",
       "type": "object"
     },
-    "ValidityConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "allowed_scheduling_lateness_s": {
-          "minimum": 0,
-          "title": "Allowed Scheduling Lateness S",
-          "type": "number"
-        },
-        "cold_warm": {
-          "enum": [
-            "cold",
-            "warm",
-            "either"
-          ],
-          "title": "Cold Warm",
-          "type": "string"
-        },
-        "max_generator_cpu_pct": {
-          "exclusiveMinimum": 0,
-          "maximum": 100,
-          "title": "Max Generator Cpu Pct",
-          "type": "number"
-        }
-      },
-      "required": [
-        "max_generator_cpu_pct",
-        "allowed_scheduling_lateness_s",
-        "cold_warm"
-      ],
-      "title": "ValidityConfig",
-      "type": "object"
-    },
     "WarmUpWindow": {
       "additionalProperties": false,
       "properties": {
@@ -317,6 +285,12 @@
     "WorkloadConfig": {
       "additionalProperties": false,
       "properties": {
+        "allowed_scheduling_lateness_s": {
+          "default": 5.0,
+          "minimum": 0,
+          "title": "Allowed Scheduling Lateness S",
+          "type": "number"
+        },
         "arrival_rate_per_s": {
           "anyOf": [
             {
@@ -497,9 +471,6 @@
       "title": "Test Type",
       "type": "string"
     },
-    "validity": {
-      "$ref": "#/$defs/ValidityConfig"
-    },
     "windows": {
       "$ref": "#/$defs/WindowsConfig"
     },
@@ -519,8 +490,7 @@
     "flow_selectors",
     "workload",
     "windows",
-    "safety_limits",
-    "validity"
+    "safety_limits"
   ],
   "title": "MovementProfile",
   "type": "object"
