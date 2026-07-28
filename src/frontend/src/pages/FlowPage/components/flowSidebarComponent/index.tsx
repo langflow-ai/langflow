@@ -45,6 +45,7 @@ import { normalizeString } from "./helpers/normalize-string";
 import sensitiveSort from "./helpers/sensitive-sort";
 import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
 import { useDebouncedSearch } from "./hooks/useDebouncedSearch";
+import { useSegmentedSidebarPanel } from "./hooks/useSegmentedSidebarPanel";
 import { useSidebarFilters } from "./hooks/useSidebarFilters";
 import { useSidebarHotkeys } from "./hooks/useSidebarHotkeys";
 
@@ -483,64 +484,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const previousSidebarOpenRef = useRef(sidebarOpen);
   const isFullSidebarPanelHidden = ENABLE_NEW_SIDEBAR && !sidebarOpen;
 
-  const SIDEBAR_EXPAND_ANIMATION_MS = 300;
-  const [isFullSidebarPanelMounted, setIsFullSidebarPanelMounted] = useState(
-    !isFeatureSection,
-  );
-  const [isFullSidebarPanelShown, setIsFullSidebarPanelShown] = useState(
-    !isFeatureSection,
-  );
-  const prevIsFeatureSectionRef = useRef(isFeatureSection);
-  const expandedSidebarWidthRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    const wrapper = document.querySelector(
-      ".group\\/sidebar-wrapper",
-    ) as HTMLElement | null;
-
-    const wasInFeatureSection = prevIsFeatureSectionRef.current;
-    prevIsFeatureSectionRef.current = isFeatureSection;
-
-    if (!wrapper) {
-      setIsFullSidebarPanelMounted(!isFeatureSection);
-      setIsFullSidebarPanelShown(!isFeatureSection);
-      return;
-    }
-
-    if (isFeatureSection) {
-      const computed =
-        getComputedStyle(wrapper).getPropertyValue("--sidebar-width");
-      expandedSidebarWidthRef.current = computed?.trim() || null;
-
-      wrapper.style.setProperty("--sidebar-width", "40px");
-      setIsFullSidebarPanelShown(false);
-      // Unmount immediately so nothing can "pop" during the collapse.
-      setIsFullSidebarPanelMounted(false);
-      return;
-    }
-
-    wrapper.style.setProperty(
-      "--sidebar-width",
-      expandedSidebarWidthRef.current || "17.5rem",
-    );
-
-    if (wasInFeatureSection) {
-      const timeoutId = window.setTimeout(() => {
-        // Mount hidden first, then animate in next frame.
-        setIsFullSidebarPanelMounted(true);
-        setIsFullSidebarPanelShown(false);
-        requestAnimationFrame(() => {
-          setIsFullSidebarPanelShown(true);
-        });
-      }, SIDEBAR_EXPAND_ANIMATION_MS);
-
-      return () => window.clearTimeout(timeoutId);
-    }
-
-    // Non-traces transitions: show immediately.
-    setIsFullSidebarPanelMounted(true);
-    setIsFullSidebarPanelShown(true);
-  }, [isFeatureSection]);
+  const { isFullSidebarPanelMounted, isFullSidebarPanelShown } =
+    useSegmentedSidebarPanel(isFeatureSection);
 
   useEffect(() => {
     const wasSidebarOpen = previousSidebarOpenRef.current;
