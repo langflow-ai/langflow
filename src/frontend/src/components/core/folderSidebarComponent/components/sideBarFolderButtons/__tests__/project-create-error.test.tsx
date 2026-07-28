@@ -75,9 +75,6 @@ jest.mock("@/customization/hooks/use-custom-navigate", () => ({
   useCustomNavigate: () => jest.fn(),
 }));
 
-jest.mock("@/customization/components/custom-store-button", () => ({
-  CustomStoreButton: () => null,
-}));
 jest.mock("@/customization/utils/analytics", () => ({ track: jest.fn() }));
 jest.mock("@/hooks/flows/use-upload-flow", () => ({
   __esModule: true,
