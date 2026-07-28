@@ -20,7 +20,7 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from lfx.graph.checkpoint.resume import _unbuild_needed_dropped_producers
+from lfx.graph.checkpoint.resume import resume_graph_with_decision
 from lfx.graph.checkpoint.store import CheckpointStore, InMemoryCheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.schema import VertexBuildResult
@@ -91,7 +91,6 @@ async def run_graph_with_human_input(
     Returns the per-vertex results of the completed run (same shape ``async_start``
     yields) so the existing CLI output extractors work unchanged.
     """
-    from lfx.graph.graph.base import Graph as LfxGraph
     from lfx.schema.schema import INPUT_FIELD_NAME
 
     store = store or InMemoryCheckpointStore()
@@ -122,21 +121,8 @@ async def run_graph_with_human_input(
             if checkpoint is None:
                 msg = "Paused run has no recoverable checkpoint; cannot resume."
                 raise RuntimeError(msg) from exc
-            graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
-            graph.checkpointing_enabled = True
-            graph.checkpoint_store = store
-            request_id = request.get("request_id")
             decision = reroute_decision_on_timeout(request, decision)
-            graph.human_input_decisions = {
-                **(getattr(graph, "human_input_decisions", {}) or {}),
-                request_id: decision,
-            }
-            for vertex in graph.vertices:
-                if request_id_targets_vertex(str(request_id), vertex.id, str(graph.run_id)):
-                    vertex.built = False
-            # Re-run the fixpoint post-un-build: a dropped producer feeding only the paused
-            # vertex was still built at restore time, and its restored None would crash the re-run.
-            _unbuild_needed_dropped_producers(graph)
+            graph = resume_graph_with_decision(checkpoint, store, request.get("request_id"), decision)
             continue
         break
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ const KnowledgeBaseEmptyState = ({
 }) => {
   const { t } = useTranslation();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const createTriggerRef = useRef<HTMLElement | null>(null);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { captureSubmit, applyOptimisticUpdate } = useOptimisticKnowledgeBase();
 
@@ -29,7 +30,13 @@ const KnowledgeBaseEmptyState = ({
       <div className="flex items-center gap-2">
         <Button
           className="flex items-center gap-2 font-semibold"
-          onClick={() => setIsUploadModalOpen(true)}
+          onClick={() => {
+            createTriggerRef.current =
+              document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null;
+            setIsUploadModalOpen(true);
+          }}
         >
           <ForwardedIconComponent name="Plus" className="h-4 w-4" />
           {t("knowledge.addKnowledge")}
@@ -43,6 +50,11 @@ const KnowledgeBaseEmptyState = ({
           if (!open) {
             applyOptimisticUpdate();
           }
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          createTriggerRef.current?.focus();
+          createTriggerRef.current = null;
         }}
         onSubmit={(data) => {
           captureSubmit(data);

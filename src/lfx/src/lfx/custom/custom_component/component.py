@@ -56,6 +56,7 @@ if TYPE_CHECKING:
     from lfx.inputs.inputs import InputTypes
     from lfx.schema.dataframe import DataFrame
     from lfx.schema.log import LoggableType
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
 
 logger = logging.getLogger(__name__)
@@ -1244,19 +1245,28 @@ class Component(CustomComponent):
             setattr(self, output.name, output)
             self._outputs_map[output.name] = output
 
+    @staticmethod
+    def _get_trace_value(input_: Any) -> Any:
+        """Return an input value safe to send to tracing providers."""
+        if getattr(input_, "password", False):
+            return "**********"
+        return _mask_secret_value(input_.value)
+
     def get_trace_as_inputs(self):
         predefined_inputs = {
-            input_.name: input_.value
+            input_.name: self._get_trace_value(input_)
             for input_ in self.inputs
             if hasattr(input_, "trace_as_input") and input_.trace_as_input
         }
         # Runtime inputs
-        runtime_inputs = {name: input_.value for name, input_ in self._inputs.items() if hasattr(input_, "value")}
+        runtime_inputs = {
+            name: self._get_trace_value(input_) for name, input_ in self._inputs.items() if hasattr(input_, "value")
+        }
         return {**predefined_inputs, **runtime_inputs}
 
     def get_trace_as_metadata(self):
         return {
-            input_.name: input_.value
+            input_.name: self._get_trace_value(input_)
             for input_ in self.inputs
             if hasattr(input_, "trace_as_metadata") and input_.trace_as_metadata
         }
@@ -1273,8 +1283,35 @@ class Component(CustomComponent):
     async def _build_without_tracing(self):
         return await self._build_results()
 
+    def require_model_provider_policy(self, purpose: ModelProviderPolicyPurpose) -> None:
+        """Gate standalone model/embedding components before sensitive work."""
+        # Enforce provider policy before tracing, input setup, output methods,
+        # credential lookup, or provider imports. This closes the legacy saved
+        # standalone-node path that does not use unified_models.get_llm().
+        from lfx.base.embeddings.model import LCEmbeddingsModel
+        from lfx.base.models.model import LCModelComponent
+
+        if isinstance(self, LCModelComponent | LCEmbeddingsModel):
+            from lfx.base.models.provider_registry import (
+                model_component_provider_id,
+                uses_standalone_model_provider_policy,
+            )
+            from lfx.services.model_provider_policy import require_model_provider
+
+            if not uses_standalone_model_provider_policy(self):
+                return
+            require_model_provider(
+                user_id=self.user_id,
+                provider=model_component_provider_id(self),
+                purpose=purpose,
+            )
+
     async def build_results(self):
         """Build the results of the component."""
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        self.require_model_provider_policy(ModelProviderPolicyPurpose.USE)
+
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
         elif hasattr(self, "_session_id"):
@@ -1311,7 +1348,8 @@ class Component(CustomComponent):
         for output in self._get_outputs_to_process():
             self._current_output = output.name
             result = await self._get_output_result(output)
-            results[output.name] = result
+            # Output.value is the private graph-edge cache; results are display-facing copies.
+            results[output.name] = self._sanitize_secret_values(result)
             artifacts[output.name] = self._build_artifact(result)
             self._log_output(output)
 
@@ -1398,7 +1436,7 @@ class Component(CustomComponent):
         ):
             result.set_flow_id(self._vertex.graph.flow_id)
         result = output.apply_options(result)
-        result = self._sanitize_secret_values(result)
+        # Keep the edge value usable. Human-facing copies are sanitized in _build_results.
         output.value = result
 
         return result
@@ -1445,21 +1483,29 @@ class Component(CustomComponent):
         return value
 
     def _sanitize_secret_values(self, value):
+        """Return a sanitized value without mutating caller-owned Message or Data objects."""
         if not self._secret_values:
             return _mask_secret_value(value)
         value = _mask_secret_value(value)
         if isinstance(value, str):
             return self._sanitize_secret_string(value)
         if isinstance(value, Message):
+            sanitized = value.model_copy(
+                update={
+                    "data": self._sanitize_secret_values(value.data),
+                    "content_blocks": list(value.content_blocks),
+                }
+            )
             if isinstance(value.text, str):
-                value.text = self._sanitize_secret_string(value.text)
-            value.data = self._sanitize_secret_values(value.data)
-            return value
+                sanitized.text = self._sanitize_secret_string(value.text)
+            return sanitized
         if isinstance(value, Data):
-            value.data = self._sanitize_secret_values(value.data)
-            if isinstance(value.default_value, str):
-                value.default_value = self._sanitize_secret_string(value.default_value)
-            return value
+            default_value = value.default_value
+            if isinstance(default_value, str):
+                default_value = self._sanitize_secret_string(default_value)
+            return value.model_copy(
+                update={"data": self._sanitize_secret_values(value.data), "default_value": default_value}
+            )
         if isinstance(value, dict):
             return {key: self._sanitize_secret_values(item) for key, item in value.items()}
         if isinstance(value, list):

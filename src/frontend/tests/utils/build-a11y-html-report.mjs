@@ -56,19 +56,13 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
-function scanNameFromLabel(label) {
-  return String(label ?? "")
-    .replace(/^[^_]+__/, "")
-    .replace(/__\d+$/, "");
-}
-
 function routeFromLabel(label) {
-  const shortLabel = scanNameFromLabel(label);
+  const shortLabel = label.replace(/^.*__/, "");
   return routeLabelMap.get(shortLabel)?.path ?? shortLabel;
 }
 
 function surfaceFromLabel(label) {
-  const shortLabel = scanNameFromLabel(label);
+  const shortLabel = label.replace(/^.*__/, "");
   return routeLabelMap.get(shortLabel)?.surface ?? "";
 }
 

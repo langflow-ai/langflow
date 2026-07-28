@@ -4870,6 +4870,46 @@
       "legacy_slot": "ext:empiriolabs:EmpirioLabsImageGenerationComponent@official-pre-a",
       "target": "ext:empiriolabs:EmpirioLabsImageGenerationComponent@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "ValkeyVectorStoreComponent",
+      "target": "ext:valkey:ValkeyVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.valkey.valkey.ValkeyVectorStoreComponent",
+      "target": "ext:valkey:ValkeyVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.valkey.ValkeyVectorStoreComponent",
+      "target": "ext:valkey:ValkeyVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:valkey:ValkeyVectorStoreComponent@official-pre-a",
+      "target": "ext:valkey:ValkeyVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "ValkeyIndexChatMemory",
+      "target": "ext:valkey:ValkeyIndexChatMemory@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.valkey.valkey_chat.ValkeyIndexChatMemory",
+      "target": "ext:valkey:ValkeyIndexChatMemory@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.valkey.ValkeyIndexChatMemory",
+      "target": "ext:valkey:ValkeyIndexChatMemory@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:valkey:ValkeyIndexChatMemory@official-pre-a",
+      "target": "ext:valkey:ValkeyIndexChatMemory@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [

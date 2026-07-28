@@ -8,6 +8,7 @@ import orjson
 import pytest
 from lfx.interface.components import (
     _get_cache_path,
+    _load_components_dynamically,
     _parse_dev_mode,
     _read_component_index,
     _save_generated_index,
@@ -352,6 +353,38 @@ class TestImportLangflowComponents:
         assert "category1" in result["components"]
         # In dev mode, we don't save to cache
         assert not mock_save.called
+
+    async def test_dynamic_import_supports_serial_processing(self):
+        """Index generation can process modules serially to avoid import races."""
+        module_names = [
+            (None, "lfx.components.category1.first", False),
+            (None, "lfx.components.category1.second", False),
+        ]
+
+        with (
+            patch("lfx.interface.components.pkgutil.walk_packages", return_value=module_names),
+            patch(
+                "lfx.interface.components._process_single_module",
+                side_effect=[
+                    ("category1", {"first": {"template": {}}}),
+                    ("category1", {"second": {"template": {}}}),
+                ],
+            ) as mock_process,
+            patch("lfx.interface.components.asyncio.to_thread") as mock_to_thread,
+        ):
+            result = await _load_components_dynamically(parallel=False)
+
+        assert result == {
+            "category1": {
+                "first": {"template": {}},
+                "second": {"template": {}},
+            }
+        }
+        assert [call.args[0] for call in mock_process.call_args_list] == [
+            "lfx.components.category1.first",
+            "lfx.components.category1.second",
+        ]
+        mock_to_thread.assert_not_called()
 
     async def test_import_with_builtin_index(self, monkeypatch):
         """Test import with valid built-in index."""

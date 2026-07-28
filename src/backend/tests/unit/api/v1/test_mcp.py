@@ -1,11 +1,15 @@
 import asyncio
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import anyio
 import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
 from langflow.services.database.models.user import User
+from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser, authorization_context
+from mcp.server.sse import SseServerTransport
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
@@ -100,6 +104,28 @@ class _FailingRunContext:
         return False
 
 
+class _RecordingSSETransport:
+    def __init__(self):
+        self.user = None
+
+    @asynccontextmanager
+    async def connect_sse(self, scope, receive, send):  # noqa: ARG002
+        self.user = scope.get("user")
+        yield MagicMock(), MagicMock()
+
+
+def _seed_sse_session(transport: SseServerTransport, user_id):
+    session_id = uuid4()
+    writer, reader = anyio.create_memory_object_stream(1)
+    transport._read_stream_writers[session_id] = writer
+    transport._session_owners[session_id] = {
+        "client_id": str(user_id),
+        "issuer": None,
+        "subject": str(user_id),
+    }
+    return session_id, writer, reader
+
+
 # Fixture to mock the current user context variable needed for auth in /sse GET
 @pytest.fixture(autouse=True)
 def mock_current_user_ctx(mock_user):
@@ -131,12 +157,49 @@ async def test_mcp_sse_get_endpoint_invalid_auth(client: AsyncClient):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+async def test_mcp_sse_get_binds_authenticated_user_to_transport(mock_user, mock_mcp_server):
+    """The SSE transport must record the authenticated Langflow user as the session owner."""
+    from langflow.api.v1.mcp import handle_sse
+    from starlette.requests import Request
+
+    async def receive():
+        return {"type": "http.disconnect"}
+
+    async def send(message):  # noqa: ARG001
+        return None
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/v1/mcp/sse",
+            "root_path": "",
+            "query_string": b"",
+            "headers": [],
+        },
+        receive,
+        send,
+    )
+    transport = _RecordingSSETransport()
+
+    with patch("langflow.api.v1.mcp.sse", transport):
+        await handle_sse(request, mock_user)
+
+    mock_mcp_server.run.assert_awaited_once()
+    assert isinstance(transport.user, AuthenticatedUser)
+    assert authorization_context(transport.user) == {
+        "client_id": str(mock_user.id),
+        "issuer": None,
+        "subject": str(mock_user.id),
+    }
+
+
 async def test_mcp_sse_post_endpoint(client: AsyncClient, mock_sse_transport):
-    """Test POST / endpoint for SSE transport succeeds without auth."""
+    """Anonymous requests must be rejected before reaching the SSE transport."""
     response = await client.post("api/v1/mcp/", json={"type": "test"})
 
-    assert response.status_code == status.HTTP_200_OK
-    mock_sse_transport.handle_post_message.assert_called_once()
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    mock_sse_transport.handle_post_message.assert_not_called()
 
 
 async def test_mcp_post_endpoint_success(client: AsyncClient, logged_in_headers, mock_sse_transport):
@@ -149,9 +212,60 @@ async def test_mcp_post_endpoint_success(client: AsyncClient, logged_in_headers,
 
 
 async def test_mcp_post_endpoint_no_auth(client: AsyncClient):
-    """Test POST / endpoint without authentication returns 400 (current behavior)."""
+    """Test POST / endpoint without authentication returns 403."""
     response = await client.post("api/v1/mcp/", json={})
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_mcp_post_endpoint_rejects_cross_user_session(
+    client: AsyncClient,
+    active_user,
+    user_two_api_key,
+):
+    """A valid user cannot post messages into another user's live SSE session."""
+    transport = SseServerTransport("/api/v1/mcp/")
+    session_id, writer, reader = _seed_sse_session(transport, active_user.id)
+    message = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
+
+    try:
+        with patch("langflow.api.v1.mcp.sse", transport):
+            response = await client.post(
+                f"api/v1/mcp/?session_id={session_id.hex}",
+                headers={"x-api-key": user_two_api_key},
+                json=message,
+            )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert writer.statistics().current_buffer_used == 0
+    finally:
+        await writer.aclose()
+        await reader.aclose()
+
+
+async def test_mcp_post_endpoint_accepts_same_user_session(
+    client: AsyncClient,
+    active_user,
+    logged_in_headers,
+):
+    """The user who opened an SSE session can continue posting MCP messages."""
+    transport = SseServerTransport("/api/v1/mcp/")
+    session_id, writer, reader = _seed_sse_session(transport, active_user.id)
+    message = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
+
+    try:
+        with patch("langflow.api.v1.mcp.sse", transport):
+            response = await client.post(
+                f"api/v1/mcp/?session_id={session_id.hex}",
+                headers=logged_in_headers,
+                json=message,
+            )
+
+        assert response.status_code == status.HTTP_202_ACCEPTED
+        session_message = await reader.receive()
+        assert session_message.message.model_dump(mode="json", by_alias=True, exclude_none=True) == message
+    finally:
+        await writer.aclose()
+        await reader.aclose()
 
 
 async def test_mcp_post_endpoint_invalid_json(client: AsyncClient, logged_in_headers):
@@ -160,14 +274,14 @@ async def test_mcp_post_endpoint_invalid_json(client: AsyncClient, logged_in_hea
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-async def test_mcp_sse_post_endpoint_disconnect_error(client: AsyncClient, mock_sse_transport):
-    """Test POST / endpoint handles disconnection errors correctly for SSE."""
+async def test_mcp_sse_post_endpoint_rejects_no_auth_before_disconnect(client: AsyncClient, mock_sse_transport):
+    """Authentication rejects the request before transport disconnection handling."""
     mock_sse_transport.handle_post_message.side_effect = BrokenPipeError("Simulated disconnect")
 
     response = await client.post("api/v1/mcp/", json={"type": "test"})
 
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    mock_sse_transport.handle_post_message.assert_called_once()
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    mock_sse_transport.handle_post_message.assert_not_called()
 
 
 async def test_mcp_post_endpoint_disconnect_error(client: AsyncClient, logged_in_headers, mock_sse_transport):
@@ -181,13 +295,14 @@ async def test_mcp_post_endpoint_disconnect_error(client: AsyncClient, logged_in
     mock_sse_transport.handle_post_message.assert_called_once()
 
 
-async def test_mcp_sse_post_endpoint_server_error(client: AsyncClient, mock_sse_transport):
-    """Test POST / endpoint handles server errors correctly for SSE."""
+async def test_mcp_sse_post_endpoint_rejects_no_auth_before_server_error(client: AsyncClient, mock_sse_transport):
+    """Authentication rejects the request before transport server-error handling."""
     mock_sse_transport.handle_post_message.side_effect = Exception("Internal server error")
 
     response = await client.post("api/v1/mcp/", json={"type": "test"})
 
-    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    mock_sse_transport.handle_post_message.assert_not_called()
 
 
 async def test_mcp_post_endpoint_server_error(client: AsyncClient, logged_in_headers, mock_sse_transport):

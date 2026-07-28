@@ -11,13 +11,13 @@ ARGUMENT_NUMBER = 3
 
 
 def update_base_dep(pyproject_path: str, new_version: str) -> None:
-    """Update the langflow-base dependency in pyproject.toml."""
+    """Pin every ``langflow-base`` requirement in a core pyproject."""
     filepath = BASE_DIR / pyproject_path
     content = filepath.read_text(encoding="utf-8")
 
     # Updated pattern to handle PEP 440 version suffixes, extras (e.g., [complete]),
     # ~=, ==, and >= version specifiers, and both langflow-base and langflow-base-nightly names
-    # Captures extras in group 2 to preserve them in the replacement
+    # Captures extras in group 2 to preserve them in each replacement.
     pattern = re.compile(
         r'("langflow-base(?:-nightly)?((?:\[[^\]]+\])?)(?:~=|==|>=)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")'
     )
@@ -28,14 +28,12 @@ def update_base_dep(pyproject_path: str, new_version: str) -> None:
         msg = f'langflow-base dependency not found in "{filepath}"'
         raise ValueError(msg)
 
-    # Extract extras if present (e.g., "[complete]")
-    extras = match.group(2) if match.group(2) else ""
     # Keep the canonical `langflow-base` name; the exact `==<dev>` pin enables pre-release
     # resolution down the tree and keeps base in lockstep with the run.
-    replacement = f'"langflow-base{extras}=={new_version}"'
-
-    # Replace the matched pattern with the new one
-    content = pattern.sub(replacement, content)
+    content = pattern.sub(
+        lambda dependency: f'"langflow-base{dependency.group(2) or ""}=={new_version}"',
+        content,
+    )
     filepath.write_text(content, encoding="utf-8")
 
 
@@ -46,7 +44,7 @@ def update_lfx_dep_in_base(pyproject_path: str, lfx_version: str) -> None:
 
     # Updated pattern to handle PEP 440 version suffixes, both ~= and == version specifiers,
     # both lfx and lfx-nightly names, extras (e.g. lfx[cassandra], lfx[toolguard]), and
-    # trailing markers (e.g. `; python_version < '3.14'`).
+    # trailing markers (e.g. `; sys_platform != 'win32'`).
     # The extras group (1) MUST be preserved: base's `[complete]` extra pulls these
     # `lfx[extra]` references, and if they keep a `~=X.Y.0` floor while base's bare `lfx`
     # dep is pinned to `==X.Y.0.devN`, the floor (>=X.Y.0) excludes the dev release and
@@ -88,8 +86,8 @@ def main() -> None:
     verify_pep440(base_version)
     verify_pep440(lfx_version)
 
-    # Update langflow-base dependency in main project
-    update_base_dep("pyproject.toml", base_version)
+    # Core owns the base dependency; main delegates to core.
+    update_base_dep("src/langflow-core/pyproject.toml", base_version)
 
     # Update LFX dependency in langflow-base
     update_lfx_dep_in_base("src/backend/base/pyproject.toml", lfx_version)

@@ -3,6 +3,10 @@ import time
 from typing import Any
 from unittest.mock import MagicMock
 
+import pytest
+
+pytest.importorskip("lfx_bundles")
+
 # Import the module (not just the class) so the unit tests below can patch
 # MongoDBAtlasVectorSearch on the exact module object the component's methods
 # read their globals from. Since the bundle move, the same source file can be
@@ -11,7 +15,6 @@ from unittest.mock import MagicMock
 # tests in the worker imported first -- patching by dotted name can land on a
 # different copy than the one this class was loaded from.
 import lfx.components.mongodb.mongodb_atlas as mongodb_atlas_mod
-import pytest
 from langchain_community.embeddings.fake import DeterministicFakeEmbedding
 from lfx.schema.data import Data
 from pymongo.collection import Collection

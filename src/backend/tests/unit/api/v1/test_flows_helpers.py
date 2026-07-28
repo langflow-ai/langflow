@@ -6,8 +6,8 @@ from uuid import uuid4
 import anyio
 import pytest
 from fastapi import HTTPException
-from langflow.api.v1.flows_helpers import _new_flow, _save_flow_to_fs
-from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.api.v1.flows_helpers import _new_flow, _patch_flow, _save_flow_to_fs, _update_existing_flow
+from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.user.model import User
 from langflow.services.storage.service import StorageService
 
@@ -59,6 +59,95 @@ async def test_new_flow_with_validate_folder_rejects_unknown_folder(async_sessio
     assert exc_info.value.status_code == 400
     assert exc_info.value.detail == "Folder not found"
     mock_default_folder_id.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_patch_flow_non_owner_cannot_change_a2a(async_session, current_user, storage_service):
+    """A non-owner with WRITE (authz plugin) cannot publish or alter another user's agent card."""
+    # The flow is owned by ``current_user``; ``actor`` is a different user holding WRITE.
+    actor = User(username=f"flow-actor-{uuid4()}", password=f"password-{uuid4()}", is_active=True)
+    async_session.add(actor)
+    await async_session.commit()
+    await async_session.refresh(actor)
+
+    db_flow = Flow(
+        name=f"owned-flow-{uuid4()}",
+        data={},
+        user_id=current_user.id,
+        a2a_enabled=False,
+        a2a_card_overrides=None,
+    )
+    async_session.add(db_flow)
+    await async_session.commit()
+    await async_session.refresh(db_flow)
+
+    # Cannot publish the agent card.
+    with pytest.raises(HTTPException) as exc_info:
+        await _patch_flow(
+            session=async_session,
+            db_flow=db_flow,
+            flow=FlowUpdate(a2a_enabled=True),
+            user_id=actor.id,
+            storage_service=storage_service,
+        )
+    assert exc_info.value.status_code == 403
+    assert "a2a_enabled" in exc_info.value.detail
+
+    # Cannot alter the agent card overrides.
+    with pytest.raises(HTTPException) as exc_info:
+        await _patch_flow(
+            session=async_session,
+            db_flow=db_flow,
+            flow=FlowUpdate(a2a_card_overrides={"name": "evil"}),
+            user_id=actor.id,
+            storage_service=storage_service,
+        )
+    assert exc_info.value.status_code == 403
+    assert "a2a_card_overrides" in exc_info.value.detail
+
+
+@pytest.mark.asyncio
+async def test_update_existing_flow_non_owner_cannot_change_a2a(async_session, current_user, storage_service):
+    """A non-owner PUT (upsert path) cannot publish or alter another user's agent card."""
+    actor = User(username=f"flow-actor-{uuid4()}", password=f"password-{uuid4()}", is_active=True)
+    async_session.add(actor)
+    await async_session.commit()
+    await async_session.refresh(actor)
+
+    existing_flow = Flow(
+        name=f"owned-flow-{uuid4()}",
+        data={},
+        user_id=current_user.id,
+        a2a_enabled=False,
+        a2a_card_overrides=None,
+    )
+    async_session.add(existing_flow)
+    await async_session.commit()
+    await async_session.refresh(existing_flow)
+
+    # Cannot publish the agent card via PUT.
+    with pytest.raises(HTTPException) as exc_info:
+        await _update_existing_flow(
+            session=async_session,
+            existing_flow=existing_flow,
+            flow=FlowCreate(name=existing_flow.name, data={}, a2a_enabled=True),
+            current_user=actor,
+            storage_service=storage_service,
+        )
+    assert exc_info.value.status_code == 403
+    assert "a2a_enabled" in exc_info.value.detail
+
+    # Cannot alter the agent card overrides via PUT.
+    with pytest.raises(HTTPException) as exc_info:
+        await _update_existing_flow(
+            session=async_session,
+            existing_flow=existing_flow,
+            flow=FlowCreate(name=existing_flow.name, data={}, a2a_card_overrides={"name": "evil"}),
+            current_user=actor,
+            storage_service=storage_service,
+        )
+    assert exc_info.value.status_code == 403
+    assert "a2a_card_overrides" in exc_info.value.detail
 
 
 @pytest.mark.asyncio

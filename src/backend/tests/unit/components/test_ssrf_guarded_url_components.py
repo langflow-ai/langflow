@@ -1,6 +1,9 @@
 from unittest.mock import patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.components.deepseek.deepseek import DEEPSEEK_MODELS, DeepSeekModelComponent
 from lfx.components.glean.glean_search_api import GleanAPIWrapper
 from lfx.components.homeassistant.home_assistant_control import HomeAssistantControl

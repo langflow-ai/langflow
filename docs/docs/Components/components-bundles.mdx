@@ -52,13 +52,15 @@ If all else fails, you can always create your own [custom components](/component
 
 ## Install bundle components {#bundle-install}
 
-`uv pip install langflow` includes most provider bundles automatically.
+`uv pip install langflow` includes the curated graduated provider set, but not the `lfx-bundles` long tail.
+Install the supported torch-free full profile with `uv pip install "langflow[bundles]"`.
 
 If you install `lfx` directly or need to add bundles to an existing environment, see [Install LFX with bundle components](./lfx-install#install-with-bundle-components).
 
 ### Torch opt-in installs {#torch-opt-in}
 
-The default `uv pip install langflow` and `uv pip install lfx[bundles]` installations do not install components that require the PyTorch dependency.
+The default `uv pip install langflow` and full `uv pip install "langflow[bundles]"` profiles do not install dependencies for components that require PyTorch.
+The standalone `uv pip install "lfx[bundles]"` profile includes the torch-based long tail.
 
 As of Langflow 1.11.x, this list includes **CUGA**, **Code Agents**, and the **Docling** local parser.
 

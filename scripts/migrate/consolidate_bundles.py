@@ -81,7 +81,8 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     # --- tranche 2: model providers ---
     "groq": ["langchain-groq~=1.1.1"],
     "mistral": ["langchain-mistralai~=1.1.1"],
-    "ollama": ["langchain-ollama~=0.3.10"],
+    # "ollama" graduated to the standalone lfx-ollama bundle so it is
+    # available in every default Langflow install.
     "perplexity": ["langchain-perplexity>=1.0.0,<2.0.0"],
     "sambanova": ["langchain-sambanova~=1.0.0"],
     # --- tranche 2: tools / memory / data ---
@@ -103,7 +104,8 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     # All ride the langchain-openai wrapper; the openai SDK is declared only
     # where a component imports it directly (otherwise wrapper-transitive).
     "aiml": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"],
-    "azure": ["langchain-openai>=1.1.6"],
+    # "azure" graduated to the standalone lfx-azure bundle so Azure AI
+    # Foundry is available in every default Langflow install.
     "cometapi": ["langchain-openai>=1.1.6", "requests>=2.32.0"],
     "deepseek": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"],
     # NOTE: the component drives LiteLLM-served endpoints through the OpenAI
@@ -132,20 +134,11 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "olivya": [],  # httpx REST only (lfx core)
     "agentql": [],  # httpx REST only (lfx core)
     # --- tranche 7: google family + agent SDKs (markers preserved from base) ---
-    # google-auth-oauthlib: imported directly by the google_oauth_token component
-    # (from google_auth_oauthlib.flow import InstalledAppFlow). langchain-google-community
-    # only pulls it behind its [gmail,drive,calendar] extras, so declare it explicitly.
-    "google": [
-        "langchain-google-genai~=4.1.2",
-        "langchain-google-community~=3.0.2",
-        "google-api-python-client~=2.161",
-        "google-auth-oauthlib>=1.2.0,<2.0.0",
-    ],
+    # "google" graduated to the standalone lfx-google bundle so Gemini is
+    # available in every default Langflow install.
     "vertexai": ["langchain-google-vertexai>=3.2.0"],
-    # ALTK depends on litellm, whose current Rust extension does not build on Python 3.14.
     "altk": [
-        "agent-lifecycle-toolkit>=0.10.1,<1.0; "
-        "(sys_platform != 'darwin' or platform_machine != 'x86_64') and python_version < '3.14'",
+        "agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     ],
     "codeagents": [
         "smolagents>=1.8.0",
@@ -193,6 +186,15 @@ _OPTIONAL_DEPS_HEADER = (
 # generated ``all-no-torch`` aggregate so it resolves torch-free. Keep in sync with
 # the per-provider extras above: cuga -> cuga, codeagents -> smolagents.
 TORCH_EXTRAS = frozenset({"cuga", "codeagents"})
+
+# Deprecated aliases for providers that graduated to standalone bundles. They
+# remain installable for compatibility but are intentionally excluded from the
+# generated aggregate extras because Langflow already installs them directly.
+COMPATIBILITY_EXTRAS = {
+    "azure": ["lfx-azure>=0.1.0,<1.0.0"],
+    "google": ["lfx-google>=0.1.0,<1.0.0"],
+    "ollama": ["lfx-ollama>=0.1.0,<1.0.0"],
+}
 
 
 def normalize_extra(name: str) -> str:
@@ -247,8 +249,7 @@ def _shim_source(provider: str, slug: str) -> str:
         '    if exc.name is not None and (exc.name == "lfx_bundles" or exc.name.startswith("lfx_bundles.")):\n'
         "        msg = (\n"
         f"            \"The '{provider}' components moved to the 'lfx-bundles' distribution. \"\n"
-        '            "Install it with:  pip install lfx-bundles   "\n'
-        "            \"(or 'pip install langflow', which bundles it).\"\n"
+        '            "Install it with: pip install lfx-bundles."\n'
         "        )\n"
         '        raise ModuleNotFoundError(msg, name="lfx_bundles") from exc\n'
         "    raise\n"
@@ -320,6 +321,7 @@ def move_provider(provider: str, *, apply: bool) -> list[tuple[str, str]]:
 
 def _render_optional_deps(extras: dict[str, list[str]]) -> str:
     keys = sorted(k for k in extras if k not in ("all", "all-no-torch"))
+    aggregate_keys = [key for key in keys if key not in COMPATIBILITY_EXTRAS]
     lines = ["[project.optional-dependencies]", _OPTIONAL_DEPS_HEADER]
     for key in keys:
         deps = extras[key]
@@ -329,10 +331,10 @@ def _render_optional_deps(extras: dict[str, list[str]]) -> str:
         else:
             lines.append(f"{key} = []")
     lines.append("all = [")
-    lines.extend(f'    "lfx-bundles[{key}]",' for key in keys)
+    lines.extend(f'    "lfx-bundles[{key}]",' for key in aggregate_keys)
     lines.append("]")
     lines.append("all-no-torch = [")
-    lines.extend(f'    "lfx-bundles[{key}]",' for key in keys if key not in TORCH_EXTRAS)
+    lines.extend(f'    "lfx-bundles[{key}]",' for key in aggregate_keys if key not in TORCH_EXTRAS)
     lines.append("]")
     return "\n".join(lines) + "\n"
 
@@ -346,6 +348,7 @@ def update_bundles_pyproject(new_extras: dict[str, list[str]], *, apply: bool) -
     extras = {k: list(v) for k, v in parsed.get("project", {}).get("optional-dependencies", {}).items()}
     extras.pop("all", None)
     extras.pop("all-no-torch", None)
+    extras.update(COMPATIBILITY_EXTRAS)
     extras.update(new_extras)
 
     section = _render_optional_deps(extras)

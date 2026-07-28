@@ -6,12 +6,15 @@ from uuid import UUID
 
 from lfx.base.models.model_metadata import CONDITIONAL_LIVE_MODEL_PROVIDERS, LIVE_MODEL_PROVIDERS
 from lfx.base.models.model_utils import get_live_models_for_provider
+from lfx.base.models.provider_registry import is_api_key_optional
 from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
+    get_model_providers,
     get_provider_required_variable_keys,
     get_unified_models_detailed,
 )
 from lfx.log.logger import logger
+from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
 from lfx.utils.secrets import secret_value_to_str
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,15 +64,36 @@ async def get_enabled_providers_for_user(
     all_variable_names = {var.name for var in all_variables}
 
     provider_variable_map = get_model_provider_variable_mapping()
+    registered_providers = get_model_providers()
+    provider_candidates = [
+        *provider_variable_map,
+        *(
+            provider
+            for provider in registered_providers
+            if provider not in provider_variable_map and is_api_key_optional(provider)
+        ),
+    ]
+    provider_policy = resolve_model_provider_policy(
+        user_id=user_id,
+        providers=[*registered_providers, *provider_candidates],
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
 
     enabled_providers = []
     provider_status = {}
 
-    for provider in provider_variable_map:
+    for provider in provider_candidates:
+        if not provider_policy.allows(provider):
+            continue
         # Check if ALL required variables for this provider are present
         # in either database variables or environment variables
         required_keys = get_provider_required_variable_keys(provider)
-        is_enabled = all(key in all_variable_names or os.getenv(key) for key in required_keys)
+        provider_has_variables = provider in provider_variable_map
+        is_enabled = (
+            is_api_key_optional(provider)
+            if not provider_has_variables
+            else all(key in all_variable_names or os.getenv(key) for key in required_keys)
+        )
 
         provider_status[provider] = is_enabled
         if is_enabled:

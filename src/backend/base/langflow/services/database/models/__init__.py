@@ -1,3 +1,4 @@
+from .a2a import A2ACheckpoint, A2ATask
 from .api_key import ApiKey
 from .auth import (
     AuthzAuditLog,
@@ -30,6 +31,8 @@ from .user import User
 from .variable import Variable
 
 __all__ = [
+    "A2ACheckpoint",
+    "A2ATask",
     "ApiKey",
     "AuthzAuditLog",
     "AuthzEditLock",

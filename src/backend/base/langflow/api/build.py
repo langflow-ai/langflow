@@ -58,6 +58,16 @@ from langflow.services.telemetry.schema import (
 STREAMING_ACTIVITY_REFRESH_S = 10.0
 
 
+def _hitl_gate_label(action_id: str, options: list[dict] | None = None) -> str:
+    """Gate span suffix reflecting the chosen action; actions are user-defined, not a fixed approve/reject binary."""
+    for option in options or []:
+        if isinstance(option, dict) and str(option.get("action_id")) == action_id:
+            label = str(option.get("label") or "").strip()
+            if label:
+                return label
+    return action_id.replace("_", " ").strip().title() or "Resolved"
+
+
 def _project_event_to_v1(raw: str) -> str:
     """Render an ``add_message`` event's content_blocks/text to the v1 shape.
 
@@ -469,6 +479,8 @@ async def generate_flow_events(
             # or expired checkpoint is unrecoverable, so surface a clean 404 instead.
             raise HTTPException(status_code=404, detail="Checkpoint expired or not found; cannot resume this run.")
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+        if not graph.user_id:
+            graph.user_id = str(current_user.id)
         # Resume skips the initial run's trace setup (trace_context_var stays unset → post-pause
         # vertices like Chat Output never trace); re-init so the resumed vertices trace.
         graph.flow_name = graph.flow_name or flow_name
@@ -481,7 +493,7 @@ async def generate_flow_events(
             resume["request_id"]: decision,
         }
         action_id = str((decision or {}).get("action_id", ""))
-        gate_label = "Rejected" if "reject" in action_id.lower() else "Approved"
+        gate_label = _hitl_gate_label(action_id, (pending or {}).get("options"))
         if graph.tracing_service:
             graph.tracing_service.record_event_span(
                 span_id=f"hitl-{resume['request_id']}",

@@ -9,7 +9,7 @@ import shutil
 import unicodedata
 from collections.abc import AsyncIterator, Awaitable, Callable
 from types import UnionType
-from typing import Any, TypedDict, Union, get_args, get_origin
+from typing import Annotated, Any, TypedDict, Union, get_args, get_origin
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -17,10 +17,10 @@ import httpx
 from anyio import ClosedResourceError
 from httpx import codes as httpx_codes
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import StructuredTool
+from langchain_core.tools import ArgsSchema, StructuredTool
 from mcp import ClientSession
 from mcp.shared.exceptions import McpError
-from pydantic import BaseModel
+from pydantic import BaseModel, SkipValidation
 
 from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.base.mcp import security as mcp_security
@@ -52,8 +52,9 @@ HTTP_FORBIDDEN = 403
 DANGEROUS_MCP_ENV_VARS = mcp_security.DANGEROUS_MCP_ENV_VARS
 is_dangerous_mcp_env_var = mcp_security.is_dangerous_mcp_env_var
 
-# MCP Session Manager constants - lazy loaded
-_mcp_settings_cache: dict[str, Any] = {}
+# Minimum cleanup interval to prevent tight-loop CPU spin if settings return 0 or fail.
+_MCP_CLEANUP_INTERVAL_MIN = 30  # seconds
+_SESSION_VALIDATION_TIMEOUT_FLOOR = 10.0
 
 
 def _validate_mcp_stdio_env(env: dict[str, str] | None) -> dict[str, str]:
@@ -63,11 +64,9 @@ def _validate_mcp_stdio_env(env: dict[str, str] | None) -> dict[str, str]:
 
 
 def _get_mcp_setting(key: str, default: Any = None) -> Any:
-    """Lazy load MCP settings from settings service."""
-    if key not in _mcp_settings_cache:
-        settings = get_settings_service().settings
-        _mcp_settings_cache[key] = getattr(settings, key, default)
-    return _mcp_settings_cache[key]
+    """Read MCP settings from settings service (no cache — settings may change)."""
+    settings = get_settings_service().settings
+    return getattr(settings, key, default)
 
 
 def _resolve_mcp_tool_execution_timeout(tool_execution_timeout: float | None) -> float:
@@ -92,6 +91,14 @@ def _resolve_mcp_tool_execution_timeout(tool_execution_timeout: float | None) ->
     return max(configured_timeouts) if configured_timeouts else 180.0
 
 
+def get_session_validation_timeout() -> float:
+    """Derive a fast session health-check timeout from the configured connection budget."""
+    connect_timeout = _get_mcp_setting("mcp_server_timeout", None)
+    if connect_timeout is None:
+        return _SESSION_VALIDATION_TIMEOUT_FLOOR
+    return max(_SESSION_VALIDATION_TIMEOUT_FLOOR, float(connect_timeout) / 3.0)
+
+
 def get_max_sessions_per_server() -> int:
     """Get maximum number of sessions per server to prevent resource exhaustion."""
     return _get_mcp_setting("mcp_max_sessions_per_server")
@@ -103,8 +110,15 @@ def get_session_idle_timeout() -> int:
 
 
 def get_session_cleanup_interval() -> int:
-    """Get cleanup interval in seconds."""
-    return _get_mcp_setting("mcp_session_cleanup_interval")
+    """Get cleanup interval in seconds, clamped to a safe minimum.
+
+    Guard: if settings return 0, None, or a negative value the _periodic_cleanup
+    loop would call asyncio.sleep(0) on every iteration, spinning at 100% CPU.
+    """
+    interval = _get_mcp_setting("mcp_session_cleanup_interval")
+    if not interval or interval < _MCP_CLEANUP_INTERVAL_MIN:
+        return _MCP_CLEANUP_INTERVAL_MIN
+    return interval
 
 
 # RFC 7230 compliant header name pattern: token = 1*tchar
@@ -952,7 +966,7 @@ class MCPSessionManager:
     def __init__(self):
         # Structure: server_key -> {"sessions": {session_id: session_info}, "last_cleanup": timestamp}
         self.sessions_by_server = {}
-        self._background_tasks = set()  # Keep references to background tasks
+        self._background_tasks: set[asyncio.Task[Any]] = set()  # Keep references to background tasks
         # Backwards-compatibility maps: which context_id uses which (server_key, session_id)
         self._context_to_session: dict[str, tuple[str, str]] = {}
         # Reference count for each active (server_key, session_id)
@@ -1058,7 +1072,18 @@ class MCPSessionManager:
         return server_data  # legacy flat structure
 
     def _start_cleanup_task(self):
-        """Start the periodic cleanup task."""
+        """Start the periodic cleanup task.
+
+        Safe to call from __init__ (synchronous context): if no event loop is
+        running yet we silently skip task creation.  get_session() calls this
+        again on every invocation, so the task is always started once a loop
+        is available.
+        """
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # No running event loop — defer until get_session() is awaited.
+            return
         if self._cleanup_task is None or self._cleanup_task.done():
             self._cleanup_task = asyncio.create_task(self._periodic_cleanup())
             self._background_tasks.add(self._cleanup_task)
@@ -1072,8 +1097,9 @@ class MCPSessionManager:
                 await self._cleanup_idle_sessions()
             except asyncio.CancelledError:
                 break
-            except (RuntimeError, KeyError, ClosedResourceError, ValueError, asyncio.TimeoutError) as e:
-                # Handle common recoverable errors without stopping the cleanup loop
+            except Exception as e:  # noqa: BLE001
+                # Catch all recoverable errors so the cleanup loop never silently dies.
+                # asyncio.CancelledError is excluded by the clause above and re-raised.
                 await logger.awarning(f"Error in periodic cleanup: {e}")
 
     async def _cleanup_idle_sessions(self):
@@ -1150,8 +1176,8 @@ class MCPSessionManager:
         """Validate that the session is actually usable by testing a simple operation."""
         try:
             # Try to list tools as a connectivity test (this is a lightweight operation)
-            # Use a shorter timeout for the connectivity test to fail fast
-            response = await asyncio.wait_for(session.list_tools(), timeout=3.0)
+            # Keep the health check shorter than connection setup while honoring its configured budget.
+            response = await asyncio.wait_for(session.list_tools(), timeout=get_session_validation_timeout())
         except Exception as e:  # noqa: BLE001
             # Any failure means the session is not safe to reuse (SDK errors, terminated session, etc.)
             await logger.adebug(f"Session connectivity test failed: {type(e).__name__}: {e}")
@@ -1188,6 +1214,11 @@ class MCPSessionManager:
         """
         server_key = self._get_server_key(connection_params, transport_type)
 
+        # Ensure cleanup task is running. _start_cleanup_task() is a no-op if
+        # called from __init__ before the event loop was started, so we retry
+        # here where we are guaranteed to be inside an async context.
+        self._start_cleanup_task()
+
         async with self._server_lock(server_key):
             # Ensure server entry exists
             if server_key not in self.sessions_by_server:
@@ -1199,31 +1230,27 @@ class MCPSessionManager:
             server_data = self.sessions_by_server[server_key]
             sessions = server_data["sessions"]
 
-            # Try to find a healthy existing session
+            # Try to find a healthy existing session.
+            # Only sessions whose background task is still running are considered alive.
+            # We do NOT call list_tools() here because that would add up to
+            # (max_sessions x 3 s timeout) = ~30 s of blocking on every run_tool invocation.
             for session_id, session_info in list(sessions.items()):
                 session = session_info["session"]
                 task = session_info["task"]
 
-                # Check if session is still alive
                 if not task.done():
-                    # Update last used time
+                    # Background task is still alive — treat the session as healthy.
                     session_info["last_used"] = asyncio.get_event_loop().time()
-
-                    # Quick health check
-                    if await self._validate_session_connectivity(session):
-                        await logger.adebug(f"Reusing existing session {session_id} for server {server_key}")
-                        # record mapping & bump ref-count for backwards compatibility
-                        self._context_to_session[context_id] = (server_key, session_id)
-                        self._session_refcount[(server_key, session_id)] = (
-                            self._session_refcount.get((server_key, session_id), 0) + 1
-                        )
-                        return session
-                    await logger.ainfo(f"Session {session_id} for server {server_key} failed health check, cleaning up")
-                    await self._cleanup_session_by_id(server_key, session_id)
-                else:
-                    # Task is done, clean up
-                    await logger.ainfo(f"Session {session_id} for server {server_key} task is done, cleaning up")
-                    await self._cleanup_session_by_id(server_key, session_id)
+                    await logger.adebug(f"Reusing existing session {session_id} for server {server_key}")
+                    # record mapping & bump ref-count for backwards compatibility
+                    self._context_to_session[context_id] = (server_key, session_id)
+                    self._session_refcount[(server_key, session_id)] = (
+                        self._session_refcount.get((server_key, session_id), 0) + 1
+                    )
+                    return session
+                # Background task finished — session is dead, clean it up.
+                await logger.ainfo(f"Session {session_id} for server {server_key} task is done, cleaning up")
+                await self._cleanup_session_by_id(server_key, session_id)
 
             # Check if we've reached the maximum number of sessions for this server
             if len(sessions) >= get_max_sessions_per_server():
@@ -1270,6 +1297,24 @@ class MCPSessionManager:
 
             return session
 
+    def _abort_session_task(self, task: asyncio.Task[Any]) -> None:
+        """Cancel and reap a transport task when session creation is interrupted."""
+        if task.done():
+            self._background_tasks.discard(task)
+            return
+
+        task.cancel()
+
+        async def reap_task() -> None:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await task
+            self._background_tasks.discard(task)
+
+        # Reap outside the cancelled caller so transport shutdown can finish.
+        reaper = asyncio.create_task(reap_task())
+        self._background_tasks.add(reaper)
+        reaper.add_done_callback(self._background_tasks.discard)
+
     async def _create_stdio_session(self, session_id: str, connection_params):
         """Create a new stdio session as a background task to avoid context issues."""
         import asyncio
@@ -1309,6 +1354,9 @@ class MCPSessionManager:
         # Wait for session to be ready (use longer timeout for remote connections)
         try:
             session = await asyncio.wait_for(session_future, timeout=30.0)
+        except asyncio.CancelledError:
+            self._abort_session_task(task)
+            raise
         except asyncio.TimeoutError as timeout_err:
             # Clean up the failed task
             if not task.done():
@@ -1479,6 +1527,9 @@ class MCPSessionManager:
                 return session, task, transport_used, sse_preference_locked[0]
             msg = f"Session {session_id} established but transport not recorded"
             raise ValueError(msg)
+        except asyncio.CancelledError:
+            self._abort_session_task(task)
+            raise
         except asyncio.TimeoutError as timeout_err:
             if not task.done():
                 task.cancel()
@@ -2388,6 +2439,15 @@ async def update_tools(
                         if key not in schema_fields and key not in normalized:
                             normalized[key] = value
                     return normalized
+
+            if not MCPStructuredTool.__pydantic_complete__:
+                MCPStructuredTool.model_rebuild(
+                    _types_namespace={
+                        "Annotated": Annotated,
+                        "ArgsSchema": ArgsSchema,
+                        "SkipValidation": SkipValidation,
+                    }
+                )
 
             tool_obj = MCPStructuredTool(
                 name=tool.name,

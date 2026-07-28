@@ -99,6 +99,7 @@ export type InputFieldType = {
   // biome-ignore lint/suspicious/noExplicitAny: legacy
   value?: any;
   dynamic?: boolean;
+  api_editable?: boolean;
   proxy?: { id: string; field: string };
   input_types?: Array<string>;
   display_name?: string;

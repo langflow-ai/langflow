@@ -495,6 +495,8 @@ export const lazyIconsMapping = {
     })),
   Upstash: () =>
     import("@/icons/Upstash").then((mod) => ({ default: mod.UpstashSvgIcon })),
+  Valkey: () =>
+    import("@/icons/Valkey").then((mod) => ({ default: mod.ValkeyIcon })),
   Vectara: () =>
     import("@/icons/VectaraIcon").then((mod) => ({ default: mod.VectaraIcon })),
   vLLM: () => import("@/icons/vLLM").then((mod) => ({ default: mod.VllmIcon })),

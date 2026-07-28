@@ -32,6 +32,8 @@ type TriggerProps = {
   asChild?: boolean;
   disable?: boolean;
   className?: string;
+  ariaLabel?: string;
+  ariaPressed?: boolean;
 };
 
 const Content: React.FC<ContentProps> = ({
@@ -56,6 +58,8 @@ const Trigger: React.FC<TriggerProps> = ({
   asChild,
   disable,
   className,
+  ariaLabel,
+  ariaPressed,
 }) => {
   const childCount = React.Children.count(children);
   const isEmptyFragment =
@@ -85,6 +89,8 @@ const Trigger: React.FC<TriggerProps> = ({
       hidden={!hasUsableChild}
       disabled={disable}
       asChild={asChild}
+      aria-label={ariaLabel}
+      aria-pressed={ariaPressed}
     >
       {triggerChild}
     </DialogTrigger>

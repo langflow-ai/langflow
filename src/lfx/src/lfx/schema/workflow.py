@@ -413,6 +413,14 @@ class WorkflowExecutionResponse(BaseModel):
     inputs: dict[str, Any] = {}
     globals: dict[GlobalVarKey, GlobalVarValue] = Field(default_factory=dict)
     outputs: dict[str, ComponentOutput] = {}
+    human_request: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Set when ``status`` is ``suspended``: the human-input request the run paused on "
+            "(``prompt``, ``options``, ``allowed_decisions``, ``request_id``). Resume by running "
+            "the same session/task again with the chosen decision."
+        ),
+    )
 
     @computed_field
     @property

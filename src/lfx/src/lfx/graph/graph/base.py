@@ -278,7 +278,8 @@ class Graph:
             graph_dict["description"] = description
         elif description is None and self.description:
             graph_dict["description"] = self.description
-        graph_dict["endpoint_name"] = str(endpoint_name)
+        if endpoint_name is not None:
+            graph_dict["endpoint_name"] = str(endpoint_name)
         return graph_dict
 
     def add_nodes_and_edges(self, nodes: list[NodeData], edges: list[EdgeData]) -> None:
@@ -2584,8 +2585,14 @@ class Graph:
         # Check if vertex is conditionally excluded (for conditional routing)
         if vertex_id in self.conditionally_excluded_vertices:
             return False
-        is_active = self.get_vertex(vertex_id).is_active()
-        is_loop = self.get_vertex(vertex_id).is_loop
+        vertex = self.get_vertex(vertex_id)
+        is_active = vertex.is_active()
+        is_loop = vertex.is_loop
+        # A resume keeps the checkpoint's vertices_to_run, so a restored-built vertex stays eligible
+        # and the backward predecessor walk can re-execute it (Chat Input then persists a duplicate
+        # User message). Vertices the resume un-builds have built=False and stay eligible.
+        if not is_loop and vertex.built and vertex_id in self.checkpoint_restored_built_ids:
+            return False
         return self.run_manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
 
     def build_run_map(self) -> None:

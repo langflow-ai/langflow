@@ -1,6 +1,6 @@
 [project]
 name = "lfx-oracle"
-version = "0.1.0"
+version = "0.1.1"
 description = "Oracle Database components (Doc Loader, Autonomous Database Loader, Embeddings, Vector Store) as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -25,7 +25,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "oracle", "oracledb", "vec
 #   ``langflow-base[oracledb]`` extra this bundle replaces.
 # * ``langchain-community`` provides DistanceStrategy for the vector store.
 dependencies = [
-    "lfx>=1.11.0.dev0,<2.0.0",
+    "lfx>=1.12.0.dev0,<2.0.0",
     "oracledb>=2.2.0,<4.0.0",
     "langchain-oracledb>=1.0.1,<2.0.0",
     "langchain-community>=0.4.1,<1.0.0",

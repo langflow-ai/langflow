@@ -1570,6 +1570,26 @@ With WatsonX configured (9 live models visible in the model-providers modal), th
 
 ---
 
+### ADR-033: Flow-Proposal "Add to Canvas" Withheld on Entry-Point Conflict
+
+**Status**: Accepted
+
+#### Context
+A flow may hold exactly one entry point — a single `ChatInput` **or** a single `Webhook`, never both. The sidebar and the canvas `paste` path already enforce this through the shared rule engine in `utils/componentConstraints.ts`, but the assistant's flow-proposal card offered **Add to canvas** unconditionally, and its handler merged the proposal via `mergeFlowIntoCanvas` → `store.setNodes` — writing the store directly and bypassing `paste`. Accepting a proposal that carried its own `ChatInput` onto a canvas that already had one therefore produced exactly the duplicate the constraint forbids, and the same proposal could be added repeatedly.
+
+#### Decision
+1. `AssistantFlowPreview` reads the current canvas nodes and evaluates every proposal node with `evaluatePlacement` against the types already present. On any violation the **Add to canvas** button is not rendered; **Replace canvas** takes the primary styling and an explanatory notice (`assistant.flowProposalReplaceOnly`, translated in all seven locales) states why.
+2. `handleApplyFlowProposal`'s `add` branch re-applies `filterPlaceableSelection` before merging, so the policy holds even if the button is reached through another path. Dropped nodes take their dangling edges with them.
+
+Non-conflicting proposals (no `ChatInput`/`Webhook`, or a canvas without one) are unaffected — both actions remain available.
+
+#### Key Files
+- `src/frontend/.../assistantPanel/components/assistant-flow-preview.tsx` — conflict evaluation + conditional actions
+- `src/frontend/.../assistantPanel/hooks/use-assistant-chat.ts` — `filterPlaceableSelection` guard on the merge path
+- `src/frontend/src/utils/componentConstraints.ts` — unchanged; the canonical policy both paths consume
+
+---
+
 ## 6. Technical Specification
 
 ### 6.1 Dependencies
