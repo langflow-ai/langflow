@@ -23,6 +23,7 @@ import type { BaseInputProps } from "../../types";
 import { focusCommandListOnOpen } from "../../utils/focus-command-list-on-open";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
+import { buildGroupedOptions } from "./helpers/build-grouped-options";
 import { matchesModelIdentity } from "./helpers/model-option-identity";
 import { recoverModelOption } from "./helpers/recover-model-option";
 import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
@@ -127,18 +128,6 @@ export default function ModelInputComponent({
     return Object.fromEntries(entries) as Record<string, unknown>;
   }, [nodeClass]);
 
-  const passesModelFilters = useCallback(
-    (metadata: Record<string, unknown> | undefined | null): boolean => {
-      if (!modelFilters) return true;
-      if (!metadata) return false;
-      for (const [key, expected] of Object.entries(modelFilters)) {
-        if (metadata[key] !== expected) return false;
-      }
-      return true;
-    },
-    [modelFilters],
-  );
-
   const {
     data: providersData = [],
     isLoading: isLoadingProviders,
@@ -169,126 +158,18 @@ export default function ModelInputComponent({
     );
   }, [providersData]);
 
-  const groupedOptions = useMemo(() => {
-    const grouped: Record<string, ModelOption[]> = {};
-    const seen = new Set<string>();
-
-    for (const option of options) {
-      if (option.metadata?.is_disabled_provider) continue;
-      const provider = option.provider || "Unknown";
-
-      const isStickyNotEnabled = option.metadata?.not_enabled_locally === true;
-      if (isStickyNotEnabled) {
-        const providerConfigured = providersData?.some(
-          (p) => p.provider === provider && p.is_configured,
-        );
-        if (providerConfigured) continue;
-      }
-
-      if (!isStickyNotEnabled && enabledModelsData?.enabled_models) {
-        const providerModels = enabledModelsData.enabled_models[provider];
-        if (providerModels && providerModels[option.name] !== true) {
-          continue;
-        }
-      }
-
-      if (
-        !passesModelFilters(
-          option.metadata as Record<string, unknown> | undefined,
-        )
-      ) {
-        continue;
-      }
-
-      if (!grouped[provider]) {
-        grouped[provider] = [];
-      }
-      grouped[provider].push(option);
-      seen.add(`${provider}::${option.name}`);
-    }
-
-    if (enabledModelsData?.enabled_models && providersData) {
-      for (const providerInfo of providersData) {
-        const providerName = providerInfo.provider;
-        const providerModels = enabledModelsData.enabled_models[providerName];
-        if (!providerModels) continue;
-
-        for (const model of providerInfo.models ?? []) {
-          const modelName = model.model_name;
-          if (providerModels[modelName] !== true) continue;
-
-          const modelMetadata = (model.metadata ?? {}) as Record<
-            string,
-            unknown
-          >;
-          const modelMetadataType = modelMetadata.model_type;
-          if (
-            typeof modelMetadataType === "string" &&
-            modelMetadataType !== modelType
-          ) {
-            continue;
-          }
-
-          if (!passesModelFilters(modelMetadata)) continue;
-
-          const key = `${providerName}::${modelName}`;
-          if (seen.has(key)) continue;
-          seen.add(key);
-
-          if (!grouped[providerName]) {
-            grouped[providerName] = [];
-          }
-          grouped[providerName].push({
-            name: modelName,
-            icon: providerInfo.icon || "Bot",
-            provider: providerName,
-            metadata: modelMetadata,
-          });
-        }
-      }
-    }
-
-    const savedValue = value?.[0];
-    const savedKey = savedValue?.name
-      ? `${savedValue.provider || "Unknown"}::${savedValue.name}`
-      : null;
-    const savedInRegistry =
-      !!savedValue?.name &&
-      (providersData?.some(
-        (p) =>
-          p.provider === savedValue.provider &&
-          (p.models ?? []).some((m) => m.model_name === savedValue.name),
-      ) ??
-        false);
-    const shouldInjectSaved =
-      !!savedValue?.name &&
-      !!savedKey &&
-      !seen.has(savedKey) &&
-      (Object.keys(grouped).length === 0 || savedInRegistry);
-    if (shouldInjectSaved && savedValue) {
-      const providerName = savedValue.provider || "Unknown";
-      grouped[providerName] = grouped[providerName] ?? [];
-      grouped[providerName].push({
-        ...(savedValue.id && { id: savedValue.id }),
-        name: savedValue.name,
-        icon: savedValue.icon || "Bot",
-        provider: providerName,
-        metadata: {
-          ...(savedValue.metadata ?? {}),
-          not_enabled_locally: true,
-        },
-      } as ModelOption);
-    }
-
-    return grouped;
-  }, [
-    options,
-    enabledModelsData,
-    providersData,
-    modelType,
-    value,
-    passesModelFilters,
-  ]);
+  const groupedOptions = useMemo(
+    () =>
+      buildGroupedOptions({
+        options,
+        enabledModels: enabledModelsData?.enabled_models,
+        providers: providersData,
+        modelType,
+        savedValue: value?.[0],
+        modelFilters,
+      }),
+    [options, enabledModelsData, providersData, modelType, value, modelFilters],
+  );
 
   const flatOptions = useMemo(
     () => Object.values(groupedOptions).flat(),
