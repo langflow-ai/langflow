@@ -130,7 +130,7 @@ class AuthzRoleAssignment(SQLModel, table=True):  # type: ignore[call-arg]
     role_id: UUIDstr = Field(
         sa_column=Column(sa.Uuid(), ForeignKey("authz_role.id", ondelete="CASCADE"), nullable=False, index=True),
     )
-    domain_type: str = Field(default="global", description="global, org, workspace")
+    domain_type: str = Field(default="global", description="global, workspace, project")
     # Explicit ``sa_column`` so SQLModel emits ``sa.Uuid()`` matching the
     # migration's column type. Without this, SQLModel can fall back to
     # ``AutoString``/``CHAR(32)`` on SQLite, which drifts from the migration
