@@ -41,10 +41,6 @@ import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
 import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
 import { useSearchContext } from "./context/SearchContext";
-import { applyBetaFilter } from "./helpers/apply-beta-filter";
-import { applyComponentFilter } from "./helpers/apply-component-filter";
-import { applyEdgeFilter } from "./helpers/apply-edge-filter";
-import { applyLegacyFilter } from "./helpers/apply-legacy-filter";
 import { combinedResultsFn } from "./helpers/combined-results";
 import { computeSectionVisibility } from "./helpers/compute-section-visibility";
 import { filteredDataFn } from "./helpers/filtered-data";
@@ -52,6 +48,7 @@ import { normalizeString } from "./helpers/normalize-string";
 import sensitiveSort from "./helpers/sensitive-sort";
 import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
 import { useDebouncedSearch } from "./hooks/useDebouncedSearch";
+import { useSidebarFilters } from "./hooks/useSidebarFilters";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
@@ -282,33 +279,13 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     );
   }, [searchResults, searchFilteredData, CATEGORIES, BUNDLES]);
 
-  const finalFilteredData = useMemo(() => {
-    let filteredData = searchFilteredData;
-
-    if (getFilterEdge?.length > 0) {
-      filteredData = applyEdgeFilter(filteredData, getFilterEdge);
-    }
-
-    if (getFilterComponent !== "") {
-      filteredData = applyComponentFilter(filteredData, getFilterComponent);
-    }
-
-    if (!showBeta) {
-      filteredData = applyBetaFilter(filteredData);
-    }
-
-    if (!showLegacy) {
-      filteredData = applyLegacyFilter(filteredData);
-    }
-
-    return filteredData;
-  }, [
+  const finalFilteredData = useSidebarFilters({
     searchFilteredData,
     getFilterEdge,
     getFilterComponent,
     showBeta,
     showLegacy,
-  ]);
+  });
 
   const hasResults = useMemo(() => {
     return Object.entries(dataFilter).some(
