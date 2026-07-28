@@ -7,6 +7,7 @@ from typing import Any, cast
 from uuid import UUID
 
 from fastapi import HTTPException
+from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
 
@@ -117,6 +118,7 @@ async def register_mcp_servers_for_project(
             unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
             command = "uvx"
             args = [
+                *mcp_sdk_constraint_args(),
                 "mcp-proxy",
                 "--transport",
                 "streamablehttp",
@@ -132,6 +134,7 @@ async def register_mcp_servers_for_project(
         else:
             command = "uvx"
             args = [
+                *mcp_sdk_constraint_args(),
                 "mcp-proxy",
                 "--transport",
                 "streamablehttp",
