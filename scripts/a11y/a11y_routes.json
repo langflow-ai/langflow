@@ -109,12 +109,6 @@
       "path": "/settings/store",
       "surface": "Store API key settings page",
       "ready": [{ "testId": "settings_menu_header" }]
-    },
-    {
-      "id": "account-delete",
-      "path": "/account/delete",
-      "surface": "Delete account page",
-      "ready": [{ "role": "button", "name": "delete", "first": true }]
     }
   ],
   "dynamic": [
