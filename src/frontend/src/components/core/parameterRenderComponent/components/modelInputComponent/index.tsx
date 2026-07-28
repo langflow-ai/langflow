@@ -24,14 +24,10 @@ import { focusCommandListOnOpen } from "../../utils/focus-command-list-on-open";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
 import { buildGroupedOptions } from "./helpers/build-grouped-options";
+import { deriveSelectedModel } from "./helpers/derive-selected-model";
 import { matchesModelIdentity } from "./helpers/model-option-identity";
-import { recoverModelOption } from "./helpers/recover-model-option";
 import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
-import type {
-  ModelInputComponentType,
-  ModelOption,
-  SelectedModel,
-} from "./types";
+import type { ModelInputComponentType, ModelOption } from "./types";
 
 export default function ModelInputComponent({
   id,
@@ -176,49 +172,19 @@ export default function ModelInputComponent({
     [groupedOptions],
   );
 
-  const selectedModel = useMemo(() => {
-    if (isConnectionMode) {
-      return {
-        name: t("modelInput.connectOtherModels"),
-        icon: externalOptions?.fields?.data?.node?.icon || "CornerDownLeft",
-        provider: "",
-      } as SelectedModel;
-    }
-
-    const saved = recoverModelOption(value?.[0]);
-    const currentName = saved?.name;
-    if (!currentName) {
-      if (flatOptions.length > 0 && !hasProcessedEmptyRef.current) {
-        return flatOptions[0];
-      }
-      return null;
-    }
-
-    const match = flatOptions.find((option) =>
-      matchesModelIdentity(option, saved),
-    );
-    if (match) return match;
-
-    if (saved) {
-      const savedProviderConfigured = providersData?.some(
-        (p) => p.provider === saved.provider && p.is_configured,
-      );
-      if (!savedProviderConfigured) {
-        return {
-          ...(saved.id && { id: saved.id }),
-          name: saved.name,
-          icon: saved.icon || "Bot",
-          provider: saved.provider || "Unknown",
-          metadata: {
-            ...(saved.metadata ?? {}),
-            not_enabled_locally: true,
-          },
-        } as SelectedModel;
-      }
-    }
-
-    return flatOptions.length > 0 ? flatOptions[0] : null;
-  }, [value, flatOptions, isConnectionMode, externalOptions, providersData]);
+  const selectedModel = useMemo(
+    () =>
+      deriveSelectedModel({
+        isConnectionMode,
+        connectLabel: t("modelInput.connectOtherModels"),
+        connectIcon: externalOptions?.fields?.data?.node?.icon,
+        savedValue: value?.[0],
+        flatOptions,
+        providers: providersData,
+        hasProcessedEmpty: hasProcessedEmptyRef.current,
+      }),
+    [value, flatOptions, isConnectionMode, externalOptions, providersData],
+  );
 
   useEffect(() => {
     if (flatOptions.length === 0 || isConnectionMode) return;
