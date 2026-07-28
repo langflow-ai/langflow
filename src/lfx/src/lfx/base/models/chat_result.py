@@ -2,10 +2,23 @@ import warnings
 from collections.abc import Callable
 from typing import Any
 
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
 from lfx.field_typing.constants import LanguageModel
 from lfx.schema.message import Message
+
+
+def _as_user_turn(message: BaseMessage) -> BaseMessage:
+    """Send the component's input as a user turn even when it came from an upstream model.
+
+    A Language Model chained after an Agent receives that agent's response
+    (sender=Machine → AIMessage) as its input. Sending it unchanged makes the request
+    end on a model turn, which Gemini rejects with 400 "Requests ending with a model
+    turn are not supported".
+    """
+    if isinstance(message, AIMessage):
+        return HumanMessage(content=message.content)
+    return message
 
 
 def build_messages_and_runnable(
@@ -29,7 +42,7 @@ def build_messages_and_runnable(
                         system_message_added = True
                     runnable = prompt | runnable
                 else:
-                    messages.append(input_value.to_lc_message())
+                    messages.append(_as_user_turn(input_value.to_lc_message()))
         else:
             messages.append(HumanMessage(content=input_value))
 

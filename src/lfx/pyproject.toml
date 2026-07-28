@@ -17,7 +17,7 @@ dependencies = [
     "openpyxl>=3.1.5,<4.0.0",
     "pydantic>=2.0.0,<2.14",
     "pillow>=11.1.0,<13.0.0",
-    "fastapi>=0.135.0,<1.0.0",
+    "fastapi>=0.135.0,<0.140.0",
     # [standard] adds uvloop + httptools (fast loop + HTTP parser) for the `lfx serve` worker path.
     "uvicorn[standard]>=0.34.3,<1.0.0",
     # gunicorn powers `lfx serve --workers N` on Unix; Windows falls back to uvicorn and rejects gunicorn-only flags.
