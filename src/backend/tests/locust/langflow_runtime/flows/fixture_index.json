@@ -1,7 +1,7 @@
 {
   "component_source_sha256": {
     "perf_cpu_burn": "7e941b067228adf3143106179f5b2b55eb37faaf55bf3d95c6bf759a47c179e2",
-    "perf_deterministic_embeddings": "d9babb2272f020b24bf6258af997fa41d5c24d4b4a9e53c03dcab935219aad89",
+    "perf_deterministic_embeddings": "fbee404a3be26728425e1702f222d1d4f5c2fcdf8e6f24eefbf619c9ed1cc70d",
     "perf_disk_io": "203e15af92c59dfa7624971974f7dcc106b6a8fa28b2149a7a42f02118ad2fed",
     "perf_mock_agent": "cb95a1777dcab7c144786c0151a0c034a9b0bca757a817527d51e42981c0ab94",
     "perf_mock_language_model": "09ee1217b8bbf0cb6863cec5e915bf3b9dd41974a26684fd488508bdcd507b3f",
@@ -93,31 +93,32 @@
     {
       "dataset_selector": null,
       "embedded_component_sha256": {},
-      "endpoint_name": "perf-memory-chatbot-no-llm",
+      "endpoint_name": "perf-chat-db-agent",
       "expected_component_sha256": {},
       "expected_output_rule": {
-        "chat_message_persisted": true
+        "chat_message_persisted": true,
+        "contains": "perf-chat-turn",
+        "max_output_bytes": 65536
       },
-      "fixture": "MemoryChatbotNoLLM.json",
-      "fixture_path": "fixtures/MemoryChatbotNoLLM.json",
-      "fixture_sha256": "fa1f4d518a7b7375f81afa0e8d7972d2b035878bfa8434923a80bb464ee34512",
+      "fixture": "perf_chat_db_agent.json",
+      "fixture_path": "fixtures/perf_chat_db_agent.json",
+      "fixture_sha256": "c6fb1f4e29d437348a4a130f68b94472939e1e43db570ae2103c136a540b1452",
       "hitl": false,
-      "id": "MemoryChatbotNoLLM",
+      "id": "perf_chat_db_agent",
       "input_fields": {
         "input_value": "perf-chat-turn"
       },
-      "mcp_action_name": "MemoryChatbotNoLLM",
+      "mcp_action_name": "perf_chat_db_agent",
       "node_types": [
+        "Agent",
         "ChatInput",
         "ChatOutput",
-        "Memory",
-        "Prompt",
-        "TypeConverterComponent"
+        "MemoryBase"
       ],
       "required_environment_features": [
         "message_store"
       ],
-      "source_provenance": "pinned:src/backend/tests/data/MemoryChatbotNoLLM.json",
+      "source_provenance": "generated:Memory Chatbot starter with Agent model edge stubbed",
       "stores_chat_history": true,
       "stress_category": "chat_db",
       "supported_modes": [
@@ -227,7 +228,7 @@
       },
       "fixture": "perf_kb_ingest.json",
       "fixture_path": "fixtures/perf_kb_ingest.json",
-      "fixture_sha256": "b9bdc325a983863c8b45e298202cc4bc30ee8c4b78846389653d3d3022450cf1",
+      "fixture_sha256": "fedc8a831fa403418e9dfbd6e139e7976ee73ec92ddef3081427c422ad401585",
       "hitl": false,
       "id": "perf_kb_ingest",
       "input_fields": {
@@ -235,15 +236,15 @@
       },
       "mcp_action_name": "perf_kb_ingest",
       "node_types": [
-        "KnowledgeIngestion",
-        "SplitText",
-        "TextInput"
+        "ChatInput",
+        "Knowledge",
+        "SplitText"
       ],
       "required_environment_features": [
         "knowledge_base",
         "embeddings"
       ],
-      "source_provenance": "generated-equivalent:src/lfx/tests/data/starter_projects_1_6_0/Knowledge Ingestion.json (URL->TextInput deterministic document)",
+      "source_provenance": "generated-equivalent:src/lfx/tests/data/starter_projects_1_6_0/Knowledge Ingestion.json (ChatInput->SplitText->Knowledge; deterministic embedding edge)",
       "stores_chat_history": false,
       "stress_category": "kb_ingest",
       "supported_modes": [
@@ -273,7 +274,7 @@
       },
       "fixture": "perf_kb_retrieve.json",
       "fixture_path": "fixtures/perf_kb_retrieve.json",
-      "fixture_sha256": "dafda1a3f5683b65075c16aec228853c1890a08d2114ec0b57ba4a4e340abf94",
+      "fixture_sha256": "9726690bc3da8a6812cb2ef5ed3a08b14b5d23e33874a6f2364d78e967156135",
       "hitl": false,
       "id": "perf_kb_retrieve",
       "input_fields": {
@@ -281,15 +282,15 @@
       },
       "mcp_action_name": "perf_kb_retrieve",
       "node_types": [
+        "ChatInput",
         "ChatOutput",
-        "KnowledgeBase",
-        "TextInput"
+        "Knowledge"
       ],
       "required_environment_features": [
         "knowledge_base",
         "embeddings"
       ],
-      "source_provenance": "generated-equivalent:src/lfx/tests/data/starter_projects_1_6_0/Knowledge Retrieval.json",
+      "source_provenance": "generated-equivalent:src/lfx/tests/data/starter_projects_1_6_0/Knowledge Retrieval.json (Knowledge->Chroma; deterministic embedding edge)",
       "stores_chat_history": false,
       "stress_category": "kb_retrieve",
       "supported_modes": [
@@ -560,7 +561,7 @@
       "external_apis": "stubbed",
       "fixture": "natural_basic_prompting__external_stubbed.json",
       "fixture_path": "fixtures/natural_basic_prompting__external_stubbed.json",
-      "fixture_sha256": "2a35871fd7ac283c9d3d2d8f4db16d28a98f909cd201036d8249f51dd8522959",
+      "fixture_sha256": "c6df628a47d3d4af94ce4c30eb2f42d3636942cc38e69c73db6edceb67c547af",
       "hitl": false,
       "id": "natural_basic_prompting__external_stubbed",
       "input_fields": {
@@ -605,7 +606,7 @@
       "external_apis": "live",
       "fixture": "natural_basic_prompting__external_live.json",
       "fixture_path": "fixtures/natural_basic_prompting__external_live.json",
-      "fixture_sha256": "eeac57617e817fb27fff081b5f18943ee28f300eba2373dc21fdda8132fc476d",
+      "fixture_sha256": "a2f250d21b1d0f286b38909cb7b6a3a9c032f855b7d87385f3e8b443959bba77",
       "hitl": false,
       "id": "natural_basic_prompting__external_live",
       "input_fields": {
@@ -757,7 +758,7 @@
       "external_apis": "stubbed",
       "fixture": "natural_memory_chatbot__external_stubbed.json",
       "fixture_path": "fixtures/natural_memory_chatbot__external_stubbed.json",
-      "fixture_sha256": "3daa4d2beb639cf128946772ec3accd3f1b0c44be532ec7a554249ae109f64dd",
+      "fixture_sha256": "f7d25c49f2c1951440797a217184384a1f8da7f8237d83f66a7bc45e2bc30f57",
       "hitl": false,
       "id": "natural_memory_chatbot__external_stubbed",
       "input_fields": {
@@ -775,7 +776,7 @@
         "message_store",
         "memory_base"
       ],
-      "source_provenance": "starter:Memory Chatbot.json (Agent+MemoryBase; LLM/embed edges stubbed|live)",
+      "source_provenance": "starter:Memory Chatbot.json (Agent+MemoryBase; LLM stubbed|live; deterministic embeddings)",
       "stores_chat_history": true,
       "stress_category": "natural",
       "supported_modes": [
@@ -806,7 +807,7 @@
       "external_apis": "live",
       "fixture": "natural_memory_chatbot__external_live.json",
       "fixture_path": "fixtures/natural_memory_chatbot__external_live.json",
-      "fixture_sha256": "8f91763ec23d4ae095c73b37cfaa31319aed64f350a8534cc908adf295bcb2c0",
+      "fixture_sha256": "7ca0c764c871679d22e521cc200d7a042748e3ecb1d05ab541b64f87de9078a2",
       "hitl": false,
       "id": "natural_memory_chatbot__external_live",
       "input_fields": {
@@ -823,10 +824,9 @@
       "required_environment_features": [
         "llm_provider",
         "message_store",
-        "memory_base",
-        "embeddings"
+        "memory_base"
       ],
-      "source_provenance": "starter:Memory Chatbot.json (Agent+MemoryBase; LLM/embed edges stubbed|live)",
+      "source_provenance": "starter:Memory Chatbot.json (Agent+MemoryBase; LLM stubbed|live; deterministic embeddings)",
       "stores_chat_history": true,
       "stress_category": "natural",
       "supported_modes": [
@@ -859,7 +859,7 @@
       "external_apis": "stubbed",
       "fixture": "natural_vector_store_rag__external_stubbed.json",
       "fixture_path": "fixtures/natural_vector_store_rag__external_stubbed.json",
-      "fixture_sha256": "fda8632adc41a0745af5398d3817b4f8e8b4b71b820df6cd3ad43bd0370ac2ff",
+      "fixture_sha256": "d0610161a2d7a45e5becfe2d8079f20cddc321e070ec86c23f5a653f8dd10363",
       "hitl": false,
       "id": "natural_vector_store_rag__external_stubbed",
       "input_fields": {
@@ -878,7 +878,7 @@
       "required_environment_features": [
         "knowledge_base"
       ],
-      "source_provenance": "starter:Vector Store RAG.json (Agent+Knowledge+Prompt; embed/LLM stubbed|live)",
+      "source_provenance": "starter:Vector Store RAG.json (Agent+Knowledge+Prompt; LLM stubbed|live; deterministic embeddings)",
       "stores_chat_history": false,
       "stress_category": "natural",
       "supported_modes": [
@@ -911,7 +911,7 @@
       "external_apis": "live",
       "fixture": "natural_vector_store_rag__external_live.json",
       "fixture_path": "fixtures/natural_vector_store_rag__external_live.json",
-      "fixture_sha256": "65ff0ddb4740992ff144d755b70e925bdabb5a1524961a4182b9130bc790d2fd",
+      "fixture_sha256": "521de07bae2e0234abeaa40034f593e379b4e59195c82248d01790fe4d24875f",
       "hitl": false,
       "id": "natural_vector_store_rag__external_live",
       "input_fields": {
@@ -929,10 +929,9 @@
       ],
       "required_environment_features": [
         "llm_provider",
-        "knowledge_base",
-        "embeddings"
+        "knowledge_base"
       ],
-      "source_provenance": "starter:Vector Store RAG.json (Agent+Knowledge+Prompt; embed/LLM stubbed|live)",
+      "source_provenance": "starter:Vector Store RAG.json (Agent+Knowledge+Prompt; LLM stubbed|live; deterministic embeddings)",
       "stores_chat_history": false,
       "stress_category": "natural",
       "supported_modes": [
@@ -1070,7 +1069,7 @@
       },
       "fixture": "perf_ensemble_journey.json",
       "fixture_path": "fixtures/perf_ensemble_journey.json",
-      "fixture_sha256": "22ba00159ec9e312a164483a124930f35704a946246d66c594a3c232b331aa7c",
+      "fixture_sha256": "b47d4b76fc9d7427ac87b032974f3f1b8d0c384cabbc4068c4864560939532d4",
       "hitl": false,
       "id": "perf_ensemble_journey",
       "input_fields": {
@@ -1080,8 +1079,7 @@
       "node_types": [
         "ChatInput",
         "ChatOutput",
-        "KnowledgeBase",
-        "KnowledgeIngestion",
+        "Knowledge",
         "LanguageModelComponent",
         "Memory",
         "Pass",
@@ -1098,7 +1096,7 @@
         "storage",
         "llm_provider"
       ],
-      "source_provenance": "deferred:generated:multiproc->disk->cpu->kb_ingest->save->kb_retrieve->memory->outbound->ChatOutput",
+      "source_provenance": "ensemble:generated:multiproc->disk->cpu->kb_ingest->save->kb_retrieve->memory->outbound->ChatOutput",
       "stores_chat_history": true,
       "stress_category": "ensemble_flow",
       "supported_modes": [
@@ -1145,7 +1143,7 @@
       },
       "fixture": "perf_ensemble_journey_hitl.json",
       "fixture_path": "fixtures/perf_ensemble_journey_hitl.json",
-      "fixture_sha256": "6ef8a114f8d13ce6f3a3995fed34b62804752d570a9f34cfa275cfcc3d745148",
+      "fixture_sha256": "f8d7f308d43145e897187bb6466756c426866693fe50e7daa82c942cd5b2db28",
       "hitl": true,
       "id": "perf_ensemble_journey_hitl",
       "input_fields": {
@@ -1156,8 +1154,7 @@
         "ChatInput",
         "ChatOutput",
         "HumanInput",
-        "KnowledgeBase",
-        "KnowledgeIngestion",
+        "Knowledge",
         "LanguageModelComponent",
         "Memory",
         "Pass",
@@ -1176,7 +1173,7 @@
         "storage",
         "llm_provider"
       ],
-      "source_provenance": "deferred:generated:perf_ensemble_journey+HumanInput(Approve)",
+      "source_provenance": "ensemble:generated:perf_ensemble_journey+HumanInput(Approve)",
       "stores_chat_history": true,
       "stress_category": "ensemble_flow_hitl",
       "supported_modes": [

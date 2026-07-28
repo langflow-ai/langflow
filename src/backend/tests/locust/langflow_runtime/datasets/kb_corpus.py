@@ -26,6 +26,11 @@ def known_token(index: int) -> str:
     return f"PERF_KB_TOKEN_{index}"
 
 
+def kb_ingest_document(session_id: str, turn: int) -> str:
+    """Build unique bounded content so each ingest task exercises a vector-store write."""
+    return f"{DEFAULT_KB_DOC_PREFIX} session={session_id} turn={turn}"
+
+
 def render_kb_document(index: int, *, size_bytes: int = KB_DOC_BYTES) -> bytes:
     """Return a deterministic document body of exactly ``size_bytes`` bytes."""
     if index < 0:
@@ -39,9 +44,12 @@ def render_kb_document(index: int, *, size_bytes: int = KB_DOC_BYTES) -> bytes:
     if pad_len < 0:
         msg = f"size_bytes={size_bytes} too small for KB document headers"
         raise ValueError(msg)
-    unit = b"lorem "
-    pad = (unit * ((pad_len // len(unit)) + 1))[:pad_len]
-    body = header + pad + footer
+    pad = bytearray()
+    word_index = 0
+    while len(pad) < pad_len:
+        pad.extend(f"doc{index:02d}word{word_index:06d} ".encode("ascii"))
+        word_index += 1
+    body = header + bytes(pad[:pad_len]) + footer
     if len(body) != size_bytes:
         msg = f"rendered KB doc length {len(body)} != {size_bytes}"
         raise RuntimeError(msg)

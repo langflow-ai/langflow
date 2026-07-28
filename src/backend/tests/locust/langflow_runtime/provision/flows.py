@@ -28,27 +28,19 @@ def index_by_id(index: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def resolve_flow_ids(requested: list[str] | None, index: dict[str, Any]) -> list[str]:
-    """Resolve ``--flows`` selection: None/empty → smoke set; ``all`` → every index id; ``v1`` → non-deferred."""
-    from tests.locust.langflow_runtime.provision import DEFERRED_FLOW_IDS, SMOKE_FLOW_IDS
+    """Resolve ``--flows`` selection by fixture id or named scope."""
+    from tests.locust.langflow_runtime.provision import SMOKE_FLOW_IDS
 
     available = index_by_id(index)
-    if not requested:
+    if not requested or (len(requested) == 1 and requested[0].lower() in {"default", "full", "all"}):
+        return [str(entry["id"]) for entry in index.get("flows", [])]
+
+    if len(requested) == 1 and requested[0].lower() == "smoke":
         missing = [fid for fid in SMOKE_FLOW_IDS if fid not in available]
         if missing:
             msg = f"smoke flow ids missing from fixture_index: {missing}"
             raise RuntimeError(msg)
         return list(SMOKE_FLOW_IDS)
-
-    if len(requested) == 1 and requested[0].lower() == "all":
-        return [str(entry["id"]) for entry in index.get("flows", [])]
-
-    if len(requested) == 1 and requested[0].lower() == "v1":
-        return [
-            str(entry["id"])
-            for entry in index.get("flows", [])
-            if str(entry["id"]) not in DEFERRED_FLOW_IDS
-            and entry.get("stress_category") not in {"ensemble_flow", "ensemble_flow_hitl", "ensemble_suite"}
-        ]
 
     unknown = [fid for fid in requested if fid not in available]
     if unknown:

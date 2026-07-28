@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-# V1 stress axes (also --suite tutti). Mega-graph ensemble_* categories are deferred.
+# Supported stress axes (also --suite tutti).
 STRESS_CATEGORIES = frozenset(
     {
         "protocol_calibration",
@@ -26,16 +26,9 @@ STRESS_CATEGORIES = frozenset(
 # Named non-axis suites (not expanded by --suite tutti / --axes).
 SUITE_CATEGORIES = frozenset(
     {
-        "natural",
-    }
-)
-
-# Kept for deferred fixture_index / profiles under profiles/deferred/ only.
-DEFERRED_STRESS_CATEGORIES = frozenset(
-    {
         "ensemble_flow",
         "ensemble_flow_hitl",
-        "ensemble_suite",
+        "natural",
     }
 )
 
@@ -183,7 +176,7 @@ class MovementProfile(StrictModel):
     @field_validator("stress_categories")
     @classmethod
     def _validate_stress_categories(cls, value: list[str]) -> list[str]:
-        allowed = STRESS_CATEGORIES | DEFERRED_STRESS_CATEGORIES | SUITE_CATEGORIES
+        allowed = STRESS_CATEGORIES | SUITE_CATEGORIES
         unknown = sorted(set(value) - allowed)
         if unknown:
             msg = f"unknown stress_categories: {', '.join(unknown)}"

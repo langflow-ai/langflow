@@ -2,11 +2,12 @@
 
 These tests prove the fixtures trigger the subsystems they claim to isolate.
 Everything goes through the live app (workflows / webhook HTTP / MCP) except
-two provider factories that would otherwise require network credentials or
-model downloads:
+provider edges that would otherwise require network credentials or model
+downloads:
 
 * ``get_llm`` → ``FakeListChatModel`` (outbound / ensemble)
-* ``get_embeddings`` → deterministic local stub (KB ingest / retrieve / ensemble)
+* KB fixtures embed a deterministic ``get_embeddings`` override in the saved
+  Knowledge component source (KB ingest / retrieve / ensemble)
 
 KB storage uses the real settings ``knowledge_bases_dir`` (not a private-module
 patch). Components, Chroma, workflows, HITL, webhooks, and MCP stay live.
@@ -22,11 +23,13 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
+from langchain_chroma import Chroma
 from lfx.memory import aget_messages
 
+from tests.locust.langflow_runtime.components.perf_deterministic_embeddings import DeterministicEmbeddings
 from tests.locust.langflow_runtime.components.perf_disk_io import parse_diskio_result
 from tests.locust.langflow_runtime.components.perf_subprocess_churn import parse_multiproc_result
-from tests.locust.langflow_runtime.datasets.kb_corpus import KB_DOC_BYTES, kb_corpus
+from tests.locust.langflow_runtime.datasets.kb_corpus import KB_DOC_BYTES, kb_corpus, kb_ingest_document
 from tests.locust.langflow_runtime.datasets.storage_payload import bounded_payload_text
 from tests.locust.langflow_runtime.flows.defaults import (
     DEFAULT_CHAT_INPUT,
@@ -43,7 +46,9 @@ from tests.locust.langflow_runtime.flows.defaults import (
     DEFAULT_QUEUE_INPUT,
     DEFAULT_QUEUE_SLEEP_MS,
     FLOWS_DIR,
+    MAX_CHAT_RESPONSE_BYTES,
 )
+from tests.locust.langflow_runtime.users.helpers import extract_output_text
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -58,7 +63,6 @@ from tests.locust.tests.integration import (
     load_fixture_payload,
     local_save_workdir,
     mcp_initialize_list_call,
-    mock_embedding_model,
     mock_language_model_responses,
     post_workflow,
     provision_local_kb,
@@ -365,35 +369,43 @@ async def test_mcp_initialize_list_call_passthrough(client: AsyncClient, created
 
 
 async def test_chat_db_session_persists_messages(client: AsyncClient, created_api_key):
-    """Chat/DB axis: MemoryChatbotNoLLM writes messages for a fixed session_id."""
-    payload = load_fixture_payload("MemoryChatbotNoLLM")
+    """Chat/DB axis: repeated turns persist bounded messages for one session."""
+    payload = load_fixture_payload("perf_chat_db_agent")
     flow_id = await insert_flow(user_id=created_api_key.user_id, payload=payload)
     session_id = f"perf-chat-{uuid4().hex[:8]}"
     try:
-        result = await post_workflow(
-            client,
-            api_key=created_api_key.api_key,
-            flow_id=flow_id,
-            mode="sync",
-            input_value=DEFAULT_CHAT_INPUT,
-            session_id=session_id,
-        )
-        assert result.get("status") in {None, "completed"} or "outputs" in result or result.get("object")
+        turns = 5
+        for turn in range(1, turns + 1):
+            input_value = f"{DEFAULT_CHAT_INPUT}-{turn}"
+            result = await post_workflow(
+                client,
+                api_key=created_api_key.api_key,
+                flow_id=flow_id,
+                mode="sync",
+                input_value=input_value,
+                session_id=session_id,
+            )
+            text = extract_output_text(result)
+            assert input_value in text
+            assert len(text.encode("utf-8")) <= MAX_CHAT_RESPONSE_BYTES
+
         messages = await aget_messages(session_id=session_id)
-        assert len(messages) >= 1
+        assert len(messages) >= turns * 2
+        stored_text = "\n".join(str(message.text or "") for message in messages)
+        assert all(f"{DEFAULT_CHAT_INPUT}-{turn}" in stored_text for turn in range(1, turns + 1))
     finally:
         await delete_flow(flow_id)
 
 
 async def test_kb_fixture_ingest_then_retrieve(client: AsyncClient, created_api_key, active_user, tmp_path):
-    """KB axes: live workflows ingest then retrieve; only embedding factory is stubbed."""
+    """KB axes: live workflows and Chroma; fixture source stubs only embeddings."""
     ingest_flow = flow_entry("perf_kb_ingest")
     retrieve_flow = flow_entry("perf_kb_retrieve")
     assert ingest_flow.get("binding", {}).get("knowledge_base") == DEFAULT_KB_NAME
     assert retrieve_flow.get("binding", {}).get("knowledge_base") == DEFAULT_KB_NAME
 
     docs_root = tmp_path / "kb_docs"
-    with kb_corpus(docs_root) as docs, knowledge_bases_dir(tmp_path / "kb_store"), mock_embedding_model():
+    with kb_corpus(docs_root) as docs, knowledge_bases_dir(tmp_path / "kb_store"):
         assert all(doc.stat().st_size == KB_DOC_BYTES for doc in docs)
         kb_path = await provision_local_kb(
             username=active_user.username,
@@ -420,6 +432,35 @@ async def test_kb_fixture_ingest_then_retrieve(client: AsyncClient, created_api_
                 )
             assert (kb_path / "chroma.sqlite3").exists(), f"ingest did not create chroma store under {kb_path}"
             assert any(kb_path.rglob("*.bin")), f"ingest did not write vector index files under {kb_path}"
+            unique_documents = [kb_ingest_document("perf-integration", turn) for turn in (1, 2)]
+            for input_value in unique_documents:
+                await post_workflow(
+                    client,
+                    api_key=created_api_key.api_key,
+                    flow_id=ingest_id,
+                    mode="sync",
+                    input_value=input_value,
+                    session_id="perf-kb-ingest-unique",
+                )
+            direct_store = Chroma(
+                persist_directory=str(kb_path),
+                collection_name=DEFAULT_KB_NAME,
+                embedding_function=DeterministicEmbeddings(),
+            )
+            stored = direct_store.get(include=["documents", "embeddings"])
+            documents = stored.get("documents") or []
+            assert all(document in documents for document in unique_documents)
+            marker_index = next(
+                (index for index, document in enumerate(documents) if DEFAULT_KB_DOC_PREFIX in (document or "")),
+                None,
+            )
+            assert marker_index is not None, "ingest did not persist the corpus marker chunk"
+            stored_embeddings = stored.get("embeddings")
+            assert stored_embeddings is not None
+            expected_embedding = DeterministicEmbeddings().embed_query(documents[marker_index])
+            assert stored_embeddings[marker_index] == pytest.approx(expected_embedding)
+            direct_results = direct_store.similarity_search(DEFAULT_KB_QUERY, k=5)
+            assert any(DEFAULT_KB_DOC_PREFIX in doc.page_content for doc in direct_results)
 
             retrieve = await post_workflow(
                 client,
@@ -458,7 +499,7 @@ async def test_outbound_language_model_via_workflows(client: AsyncClient, create
 
 
 async def test_ensemble_journey_via_workflows(client: AsyncClient, created_api_key, active_user, tmp_path):
-    """Ensemble axis: live workflows sync; only LLM + embedding factories are stubbed."""
+    """Ensemble axis: live workflows sync; only the provider edges are stubbed."""
     await provision_openai_api_key_variable(user_id=created_api_key.user_id)
     payload = load_fixture_payload("perf_ensemble_journey")
     flow_id = await insert_flow(user_id=created_api_key.user_id, payload=payload)
@@ -467,7 +508,6 @@ async def test_ensemble_journey_via_workflows(client: AsyncClient, created_api_k
         with (
             knowledge_bases_dir(tmp_path),
             local_save_workdir(tmp_path),
-            mock_embedding_model(),
             mock_language_model_responses("perf-outbound-ok"),
         ):
             await provision_local_kb(
@@ -492,7 +532,7 @@ async def test_ensemble_journey_via_workflows(client: AsyncClient, created_api_k
 
 
 async def test_ensemble_hitl_background_pending_resume(client: AsyncClient, created_api_key, active_user, tmp_path):
-    """Ensemble HITL: live background/pending/resume; only LLM + embedding factories stubbed."""
+    """Ensemble HITL: live background/pending/resume; only the provider edges are stubbed."""
     await provision_openai_api_key_variable(user_id=created_api_key.user_id)
     payload = load_fixture_payload("perf_ensemble_journey_hitl")
     flow_id = await insert_flow(user_id=created_api_key.user_id, payload=payload)
@@ -501,7 +541,6 @@ async def test_ensemble_hitl_background_pending_resume(client: AsyncClient, crea
         with (
             knowledge_bases_dir(tmp_path),
             local_save_workdir(tmp_path),
-            mock_embedding_model(),
             mock_language_model_responses("perf-outbound-ok"),
         ):
             await provision_local_kb(

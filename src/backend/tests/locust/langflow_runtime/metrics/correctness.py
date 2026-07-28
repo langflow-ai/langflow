@@ -29,6 +29,20 @@ def expect_contains(text: str, needle: str) -> CorrectnessResult:
     return CorrectnessResult(ok=False, reason=f"text missing needle: {needle!r}")
 
 
+def expect_text_size_at_most(text: str, max_bytes: int) -> CorrectnessResult:
+    """Check a UTF-8 response body against a byte-size limit."""
+    if max_bytes < 0:
+        msg = "max_bytes must be non-negative"
+        raise ValueError(msg)
+    actual_bytes = len(text.encode("utf-8"))
+    if actual_bytes <= max_bytes:
+        return CorrectnessResult(ok=True)
+    return CorrectnessResult(
+        ok=False,
+        reason=f"text size {actual_bytes} bytes exceeded limit {max_bytes} bytes",
+    )
+
+
 def expect_stream_terminal(body_or_events: str | list[str]) -> CorrectnessResult:
     if isinstance(body_or_events, list):
         combined = "\n".join(body_or_events)

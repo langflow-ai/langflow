@@ -4,8 +4,8 @@ Executes fixture graphs via ``run_graph_internal`` and checks expected-output
 rules plus subsystem side effects (message store, storage upload markers).
 
 Flows that require live HTTP protocols (webhook SSE), HITL suspend/resume,
-background job queue admission, provisioned KB directories, or real LLM keys are
-skipped here and covered by ``tests/locust/tests/integration/``.
+background job queue admission, provisioned KB directories, real Agent runtime,
+or real LLM keys are skipped here and covered by ``tests/locust/tests/integration/``.
 """
 
 from __future__ import annotations
@@ -34,8 +34,8 @@ IN_PROCESS_ONE_RUN_IDS = frozenset(
         "perf_multiproc_churn",
         "perf_disk_io",
         "perf_queue_short",  # proves sleep work; queue admission is integration-only
-        "MemoryChatbotNoLLM",
         # perf_payload_echo needs a real user_id for SaveToFile → covered in integration
+        # perf_chat_db_agent boots Agent executors → covered by the five-turn integration
     }
 )
 

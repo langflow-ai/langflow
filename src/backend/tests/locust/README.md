@@ -12,7 +12,7 @@ The maintained beta suite lives alongside the older flat harness. It drives load
 |------|------|
 | `langflow_runtime/` | Entire beta suite package (fixtures, runner, clients, profiles, provision) |
 | `langflow_runtime/run.py` / `perf_locustfile.py` | One-movement runner + thin Locust entry |
-| `langflow_runtime/profiles/` | Per-axis solos, `suites.json`, smoke/natural + `schema.json` (`deferred/` is out of V1 CLI) |
+| `langflow_runtime/profiles/` | Per-axis solos, coupled ensembles, named suites, smoke/natural, and `schema.json` |
 | `langflow_runtime/flows/` + `components/` + `datasets/` | Flow fixtures, isolators, `fixture_index` |
 | `langflow_runtime/provision/` | Idempotent plan/apply/validate/teardown |
 | `langflow_runtime/clients/` / `users/` / `shapes/` / `metrics/` | Protocol clients, workloads, load shape, reports |
@@ -30,12 +30,13 @@ Legacy files (`langflow_*.py`, `lfx_*.py`, root `locustfile.py`, `diagnose_remot
 ### Quick start
 
 ```bash
-# Provision every V1 fixture needed by the full-song examples below
-make perf-provision PERF_PROVISION_ARGS='--flows v1' perf_host=http://127.0.0.1:7860
+# Provision every supported fixture needed by the full-song examples below.
+# KB and Natural vector fixtures use deterministic embeddings against the server's real Chroma store.
+make perf-provision perf_host=http://127.0.0.1:7860
 
 # Optional preflight
 cd src/backend && PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.preflight.cli \
-  --host http://127.0.0.1:7860 --env-id perf-local --profile smoke/all_protocols
+  --host http://127.0.0.1:7860 --env-id perf-local --suite smoke
 
 # One smoke movement (MCP + workflows + webhook)
 make perf-run ARGS='--suite smoke'
@@ -46,6 +47,8 @@ make perf-run ARGS='--suite chat_db_cpu_graph'
 make perf-run ARGS='--suite kb_ingest_kb_retrieve'
 make perf-run ARGS='--suite disk_io_ram_storage'
 make perf-run ARGS='--suite tutti'
+make perf-run ARGS='--suite ensemble'
+make perf-run ARGS='--suite ensemble_hitl'
 make perf-run ARGS='--suite natural --external-apis stubbed --seed 42'
 make perf-run ARGS='--suite natural --external-apis live --seed 42'
 
@@ -61,16 +64,17 @@ Or via modules:
 ```bash
 cd src/backend
 PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.provision.cli apply --host http://127.0.0.1:7860 --env-id perf-local
-PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run run --suite smoke --host http://127.0.0.1:7860 --env-id perf-local
-PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run run --axes chat_db,cpu_graph --host http://127.0.0.1:7860 --env-id perf-local
+PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run --suite smoke --host http://127.0.0.1:7860 --env-id perf-local
+PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run --axes chat_db,cpu_graph --host http://127.0.0.1:7860 --env-id perf-local
 PYTHONPATH=. uv run python -m tests.locust.langflow_runtime.run validate
 ```
 
 ### Methodology notes
 
-- **Selection:** exactly one of `--axes` or `--suite` per run. Axis-expanding suites (`chat_db_cpu_graph`, `kb_ingest_kb_retrieve`, `disk_io_ram_storage`, `tutti`) compose solo user classes at invoke time. `smoke` and `natural` are non-axis suites (`natural` requires `--external-apis stubbed|live`).
+- **Selection:** exactly one of `--axes` or `--suite` per run. Axis-expanding suites (`chat_db_cpu_graph`, `kb_ingest_kb_retrieve`, `disk_io_ram_storage`, `tutti`) compose solo user classes at invoke time. `ensemble` and `ensemble_hitl` intentionally couple subsystems inside one graph. `smoke` and `natural` are other non-axis suites (`natural` requires `--external-apis stubbed|live`).
 - **Reproducible Natural mix:** use the same `--seed` and user population for the paired stubbed/live runs; the default seed is `0`.
-- **No MODE flag.** Coupled mega-graph ensemble journeys are deferred (fixtures may remain under `flows/`; profiles live under `profiles/deferred/` and are not on the V1 CLI path). HITL remains `--axes hitl`.
+- **Natural external APIs:** `stubbed|live` controls LLM, web-search, and URL provider edges. Embeddings stay deterministic in both modes so queries share the provisioned Chroma index's vector space.
+- **No MODE flag.** Coupled mega-graph journeys are selected explicitly with `--suite ensemble` or `--suite ensemble_hitl`; standalone HITL remains `--axes hitl`.
 - **Profiles / composition** are the source of truth (`langflow_runtime/profiles/schema.json`). Flow/dataset selectors must resolve to `fixture_index` / `DATASET_IDS`.
 - **Protocols vs stress axes:** MCP, Workflows v2 modes, and Webhooks are transport/lifecycle surfaces listed under `protocols`. Stress axes (`stress_categories`) are resource pressures such as chat/DB, queue, KB, CPU/graph, multiproc, disk I/O, RAM/storage, HITL, outbound, and `natural`.
 - **Workload models:** closed-loop for most axes (including protocol calibration); paced closed-loop for background/queue axes with intended/attempted/missed/accepted/terminal accounting.

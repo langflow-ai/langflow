@@ -148,17 +148,6 @@ def _add_selection_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _reject_deferred_profile(profile_ref: str) -> None:
-    """Fail closed when a deferred mega-graph profile is selected for execution."""
-    normalized = profile_ref.replace("\\", "/")
-    if "deferred/" in normalized or normalized.startswith("deferred"):
-        msg = (
-            "deferred profiles (mega-graph ensemble journeys) are out of V1 "
-            "and cannot be executed via run/dry-run; use validate if needed"
-        )
-        raise SystemExit(msg)
-
-
 def _resolve_context(args: argparse.Namespace):
     from tests.locust.langflow_runtime.config.context import build_run_context
 
@@ -166,15 +155,16 @@ def _resolve_context(args: argparse.Namespace):
     profile_ref = getattr(args, "profile_opt", None)
     axes = getattr(args, "axes", None)
     suite = getattr(args, "suite", None)
+    external_apis = getattr(args, "external_apis", None)
     selection_meta: dict = {}
     if profile_ref:
         if axes or suite:
             msg = "use either --profile or --axes/--suite, not both"
             raise SystemExit(msg)
-        _reject_deferred_profile(profile_ref)
+        if external_apis is not None:
+            raise SystemExit("--external-apis is only valid with --suite natural")
         profile = load_profile(profile_ref)
         profile_path = resolve_profile_path(profile_ref)
-        _reject_deferred_profile(str(profile_path))
         selection_meta = {"kind": "profile", "profile": profile_ref}
     else:
         if bool(axes) == bool(suite):
@@ -184,7 +174,7 @@ def _resolve_context(args: argparse.Namespace):
             profile, profile_path, selection_meta = resolve_selection(
                 axes=axes,
                 suite=suite,
-                external_apis=getattr(args, "external_apis", None),
+                external_apis=external_apis,
             )
         except ValueError as exc:
             raise SystemExit(str(exc)) from exc
@@ -308,14 +298,20 @@ def _cmd_emit_schema(_args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Langflow performance suite runner")
+    parser = argparse.ArgumentParser(
+        description="Langflow performance suite runner",
+        epilog=(
+            "Run directly with --axes/--suite, for example: "
+            "python -m tests.locust.langflow_runtime.run --axes chat_db --host HOST --env-id ENV_ID"
+        ),
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     list_parser = subparsers.add_parser("list", help="List axes, suites, and committed profiles")
     list_parser.set_defaults(func=_cmd_list)
 
     validate_parser = subparsers.add_parser("validate", help="Validate one or all committed profiles")
-    validate_parser.add_argument("profiles", nargs="*", help="Profile id/path (default: all V1)")
+    validate_parser.add_argument("profiles", nargs="*", help="Profile id/path (default: all supported profiles)")
     validate_parser.set_defaults(func=_cmd_validate)
 
     dry_run_parser = subparsers.add_parser("dry-run", help="Print resolved Locust command")
@@ -332,9 +328,22 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _normalize_argv(argv: list[str]) -> list[str]:
+    """Accept the documented direct selection form while retaining subcommands."""
+    commands = {"list", "validate", "dry-run", "run", "emit-schema"}
+    has_selection = any(
+        arg in {"--axes", "--suite", "--profile"} or arg.startswith(("--axes=", "--suite=", "--profile="))
+        for arg in argv
+    )
+    if argv and argv[0] not in commands and has_selection:
+        return ["run", *argv]
+    return argv
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args(argv)
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    args = parser.parse_args(_normalize_argv(raw_argv))
     return int(args.func(args))
 
 

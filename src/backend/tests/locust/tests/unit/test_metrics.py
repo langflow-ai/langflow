@@ -4,8 +4,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
+
 from tests.locust.langflow_runtime.metrics.arrivals import ArrivalAccountant, PacedArrivalScheduler
-from tests.locust.langflow_runtime.metrics.correctness import expect_webhook_n_accept_n_complete
+from tests.locust.langflow_runtime.metrics.correctness import (
+    expect_text_size_at_most,
+    expect_webhook_n_accept_n_complete,
+)
 from tests.locust.langflow_runtime.metrics.registry import (
     TrackedHitlRequest,
     TrackedWebhookCopy,
@@ -133,6 +138,19 @@ def test_webhook_n_accept_n_complete_correctness() -> None:
     bad = expect_webhook_n_accept_n_complete(4, 2)
     assert bad.ok is False
     assert bad.reason == "webhook accepted (4) != completed (2)"
+
+
+def test_text_size_limit_uses_utf8_bytes_and_includes_boundary() -> None:
+    assert expect_text_size_at_most("é", 2).ok is True
+
+    too_large = expect_text_size_at_most("é", 1)
+    assert too_large.ok is False
+    assert too_large.reason == "text size 2 bytes exceeded limit 1 bytes"
+
+
+def test_text_size_limit_rejects_negative_limit() -> None:
+    with pytest.raises(ValueError, match="max_bytes must be non-negative"):
+        expect_text_size_at_most("", -1)
 
 
 def test_redact_secrets_recursive() -> None:

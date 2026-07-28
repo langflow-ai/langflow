@@ -1,4 +1,4 @@
-"""Chat history seeding for MemoryChatbotNoLLM."""
+"""Chat history seeding for the deterministic Agent chat/DB fixture."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from tests.locust.langflow_runtime.clients.workflows import WorkflowsClient
 from tests.locust.langflow_runtime.flows.defaults import DEFAULT_CHAT_INPUT
 from tests.locust.langflow_runtime.provision.api import ProvisionHttp
 
-CHAT_FIXTURE_ID = "MemoryChatbotNoLLM"
+CHAT_FIXTURE_ID = "perf_chat_db_agent"
 DEFAULT_SEED_TURNS = 3
 
 
@@ -20,7 +20,7 @@ def seed_chat_history(
     turns: int = DEFAULT_SEED_TURNS,
     input_value: str = DEFAULT_CHAT_INPUT,
 ) -> dict[str, Any]:
-    """Run a few sync MemoryChatbotNoLLM turns with ``should_store`` history."""
+    """Run a few synchronous Agent turns with persisted chat history."""
     flows = state.get("flows") or {}
     record = flows.get(CHAT_FIXTURE_ID)
     api_key = state.get("api_key")

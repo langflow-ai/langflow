@@ -1,4 +1,4 @@
-"""Natural starter topology contract and deferred CLI guards."""
+"""Natural starter topology and ensemble profile contracts."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ import json
 
 import pytest
 
+from tests.locust.langflow_runtime.config.loader import load_profile
 from tests.locust.langflow_runtime.flows.defaults import FIXTURES_DIR
 from tests.locust.langflow_runtime.flows.natural_adapt import NATURAL_TOPOLOGY, node_types
-from tests.locust.langflow_runtime.run import _reject_deferred_profile, main
 
 
 @pytest.mark.parametrize("shape", sorted(NATURAL_TOPOLOGY))
@@ -28,19 +28,8 @@ def test_natural_modes_cover_five_shapes(mode: str) -> None:
         assert (FIXTURES_DIR / f"natural_{shape}__external_{mode}.json").exists()
 
 
-@pytest.mark.parametrize(
-    "profile_ref",
-    ["deferred/ensemble_flow", "deferred/ensemble_hitl", "profiles/deferred/ensemble_flow"],
-)
-def test_deferred_profile_rejected_for_execution(profile_ref: str) -> None:
-    with pytest.raises(SystemExit, match="deferred"):
-        _reject_deferred_profile(profile_ref)
-
-
-def test_non_deferred_profile_allowed() -> None:
-    _reject_deferred_profile("solos/chat_db")
-
-
-def test_deferred_profile_alias_rejected_after_resolution() -> None:
-    with pytest.raises(SystemExit, match="deferred"):
-        main(["dry-run", "--profile", "ensemble_flow"])
+@pytest.mark.parametrize("profile_ref", ["ensembles/ensemble_flow", "ensembles/ensemble_hitl"])
+def test_ensemble_profiles_are_supported(profile_ref: str) -> None:
+    profile = load_profile(profile_ref)
+    assert profile.movement_kind == "suite"
+    assert "ensemble" in profile.id

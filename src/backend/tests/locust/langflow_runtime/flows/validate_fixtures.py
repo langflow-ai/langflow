@@ -49,12 +49,6 @@ SUITE_CATEGORIES = {
     "natural",
 }
 
-# Built and indexed but not required for V1 CLI / full-song gates.
-DEFERRED_STRESS_CATEGORIES = {
-    "ensemble_flow",
-    "ensemble_flow_hitl",
-}
-
 HITL_FORBIDDEN_PROTOCOLS = {"mcp", "webhook"}
 
 REQUIRED_FLOW_KEYS = {
@@ -314,11 +308,12 @@ def validate_fixture_bindings(manifest: dict[str, Any] | None = None) -> list[st
         payload = _load_json(fixture_path)
         nodes = payload.get("data", {}).get("nodes", [])
         types = {n.get("data", {}).get("type") for n in nodes}
-        if "KnowledgeIngestion" in types or "KnowledgeBase" in types:
+        knowledge_types = {"Knowledge", "KnowledgeIngestion", "KnowledgeBase"}
+        if types & knowledge_types:
             kb_values = [
                 ((node.get("data") or {}).get("node") or {}).get("template", {}).get("knowledge_base", {}).get("value")
                 for node in nodes
-                if node.get("data", {}).get("type") in {"KnowledgeIngestion", "KnowledgeBase"}
+                if node.get("data", {}).get("type") in knowledge_types
             ]
             if not any(kb_values):
                 errors.append(f"{flow['id']}: knowledge_base binding is empty (subsystem cannot run)")

@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from tests.locust.langflow_runtime.config.loader import FIXTURE_INDEX_PATH, load_profile, resolve_profile_path
+from tests.locust.langflow_runtime.config.selection import resolve_selection
 from tests.locust.langflow_runtime.paths import state_dir, state_path_for
 from tests.locust.langflow_runtime.preflight.dependencies import check_dependencies
 from tests.locust.langflow_runtime.preflight.generator import check_generator_headroom
@@ -45,6 +46,19 @@ def _load_fixture_index() -> dict | None:
     return json.loads(FIXTURE_INDEX_PATH.read_text(encoding="utf-8"))
 
 
+def _resolve_profile(profile_ref: str | None, suite: str | None, external_apis: str | None):
+    if suite:
+        try:
+            profile, path, _meta = resolve_selection(suite=suite, external_apis=external_apis)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        return profile, path
+    if external_apis is not None:
+        raise SystemExit("--external-apis is only valid with --suite natural")
+    ref = profile_ref or "smoke/all_protocols"
+    return load_profile(ref), resolve_profile_path(ref)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Langflow performance-suite preflight")
     parser.add_argument("--host", required=True, help="Langflow base URL")
@@ -54,14 +68,25 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help=f"Resolve state from {{PERF_DATA_DIR|/cache}}/state/{{env_id}}.json (default dir {state_dir()})",
     )
-    parser.add_argument(
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument(
+        "--suite",
+        default=None,
+        help="Named suite to preflight, e.g. smoke",
+    )
+    selection.add_argument(
         "--profile",
-        default="smoke/all_protocols",
-        help="Profile id or path (default: smoke/all_protocols)",
+        default=None,
+        help="Committed profile id/path (advanced; default: smoke/all_protocols)",
+    )
+    parser.add_argument(
+        "--external-apis",
+        choices=("stubbed", "live"),
+        help="Required with --suite natural",
     )
     args = parser.parse_args(argv)
 
-    profile = load_profile(args.profile)
+    profile, profile_path = _resolve_profile(args.profile, args.suite, args.external_apis)
     state_path = _resolve_state_path(state=args.state, env_id=args.env_id)
     state = _load_state(state_path)
     host = args.host.rstrip("/")
@@ -96,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
             failed = True
         print(f"{status:4} {result.name}: {result.detail}")
 
-    print(f"profile={resolve_profile_path(args.profile)}")
+    print(f"profile={profile_path}")
     if state_path:
         print(f"state={state_path}")
     return 1 if failed else 0

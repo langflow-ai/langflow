@@ -224,17 +224,13 @@ class ProvisionHttp:
         self,
         name: str,
         *,
-        embedding_provider: str = "HuggingFace",
-        embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
+        embedding_provider: str,
+        embedding_model: str,
         model_selection: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         selection = model_selection or {
             "name": embedding_model,
             "provider": embedding_provider,
-            "metadata": {
-                "embedding_class": "HuggingFaceEmbeddings",
-                "param_mapping": {"model_name": "model"},
-            },
         }
         response = self.request(
             "POST",

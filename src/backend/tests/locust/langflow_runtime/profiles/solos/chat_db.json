@@ -2,7 +2,7 @@
   "schema_version": "1",
   "id": "chat_db",
   "test_type": "load",
-  "purpose": "Stress chat history persistence without LLM calls.",
+  "purpose": "Stress Agent execution and chat history persistence with a deterministic echo model.",
   "movement_kind": "axis_set",
   "stress_categories": [
     "chat_db"
@@ -18,7 +18,7 @@
     "background"
   ],
   "flow_selectors": [
-    "MemoryChatbotNoLLM"
+    "perf_chat_db_agent"
   ],
   "dataset_selectors": [],
   "workload": {

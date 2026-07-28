@@ -1,8 +1,10 @@
-"""Deterministic embedding stub and Natural stubbed offline contracts."""
+"""Deterministic embedding and Natural external-edge contracts."""
 
 from __future__ import annotations
 
 import json
+
+import pytest
 
 from tests.locust.langflow_runtime.components.perf_deterministic_embeddings import DeterministicEmbeddings
 from tests.locust.langflow_runtime.flows.defaults import FIXTURES_DIR
@@ -14,8 +16,20 @@ def test_deterministic_embeddings_are_stable() -> None:
     assert emb.embed_documents(["a", "b"])[0] == emb.embed_query("a")
 
 
-def test_stubbed_rag_fixture_patches_get_embeddings() -> None:
-    path = FIXTURES_DIR / "natural_vector_store_rag__external_stubbed.json"
+def test_deterministic_embeddings_rank_query_marker_above_repeated_filler() -> None:
+    emb = DeterministicEmbeddings(384)
+    query = emb.embed_query("PERF_KB_QUERY_KNOWN")
+    anchored = emb.embed_query("PERF_KB_QUERY_KNOWN " + "lorem " * 100)
+    filler = emb.embed_query("lorem " * 100)
+
+    anchored_score = sum(left * right for left, right in zip(query, anchored, strict=True))
+    filler_score = sum(left * right for left, right in zip(query, filler, strict=True))
+    assert anchored_score > filler_score
+
+
+@pytest.mark.parametrize("mode", ["stubbed", "live"])
+def test_natural_rag_fixture_patches_get_embeddings(mode: str) -> None:
+    path = FIXTURES_DIR / f"natural_vector_store_rag__external_{mode}.json"
     payload = json.loads(path.read_text(encoding="utf-8"))
     knowledge_codes = []
     for node in payload["data"]["nodes"]:

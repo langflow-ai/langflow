@@ -9,7 +9,7 @@ from tests.locust.langflow_runtime.provision.flows import index_by_id, load_fixt
 
 # Protocol family → fixture ids that satisfy it when present in state.
 _PROTOCOL_FLOW_REQUIREMENTS: dict[str, tuple[str, ...]] = {
-    "mcp": ("perf_passthrough", "MemoryChatbotNoLLM"),
+    "mcp": ("perf_passthrough", "perf_chat_db_agent"),
     "workflows_sync": (),  # any provisioned workflow fixture is fine
     "workflows_stream": (),
     "workflows_background": (),

@@ -1,4 +1,4 @@
-"""Fast offline contracts for Natural stubbed fixtures.
+"""Fast offline contracts for Natural fixtures.
 
 Whole-graph execution belongs to the integration layer: importing these large
 starter graphs starts shared runtime executors, and Python 3.14's
@@ -11,7 +11,9 @@ import json
 from typing import Any
 
 import pytest
+from langchain_core.messages import HumanMessage
 
+from tests.locust.langflow_runtime.components.perf_echo_agent import _PerfEchoChatModel
 from tests.locust.langflow_runtime.components.perf_mock_llm import PERF_MOCK_LLM_MARKER
 from tests.locust.langflow_runtime.flows.defaults import FLOWS_DIR
 
@@ -22,6 +24,19 @@ STUBBED_OFFLINE_SHAPES = (
     "natural_vector_store_rag__external_stubbed",
     "natural_file_parser_agent__external_stubbed",
 )
+
+EMBEDDING_SHAPES = (
+    "natural_memory_chatbot__external_stubbed",
+    "natural_memory_chatbot__external_live",
+    "natural_vector_store_rag__external_stubbed",
+    "natural_vector_store_rag__external_live",
+)
+
+
+def test_echo_agent_model_echoes_latest_user_input() -> None:
+    result = _PerfEchoChatModel().invoke([HumanMessage(content="earlier"), HumanMessage(content="perf-chat-turn-7")])
+
+    assert result.content == "perf-chat-turn-7"
 
 
 def _flow_entry(flow_id: str) -> dict[str, Any]:
@@ -70,12 +85,9 @@ def test_stubbed_agent_keeps_real_agent_and_replaces_only_model_edge(flow_id: st
 
 @pytest.mark.parametrize(
     "flow_id",
-    [
-        "natural_memory_chatbot__external_stubbed",
-        "natural_vector_store_rag__external_stubbed",
-    ],
+    EMBEDDING_SHAPES,
 )
-def test_stubbed_embeddings_are_local_stable_and_non_global(flow_id: str) -> None:
+def test_natural_embeddings_are_local_stable_and_non_global(flow_id: str) -> None:
     payload = _fixture(flow_id)
     node_type = "MemoryBase" if "memory_chatbot" in flow_id else "Knowledge"
     node = next(node for node in payload["data"]["nodes"] if node.get("data", {}).get("type") == node_type)

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from locust import task
 
-from tests.locust.langflow_runtime.flows.defaults import DEFAULT_KB_DOC_PREFIX, DEFAULT_KB_QUERY
+from tests.locust.langflow_runtime.datasets.kb_corpus import kb_ingest_document
+from tests.locust.langflow_runtime.flows.defaults import DEFAULT_KB_QUERY
 from tests.locust.langflow_runtime.metrics.correctness import expect_kb_retrieval
 from tests.locust.langflow_runtime.users.base import PerfBaseUser, extract_output_text
 
@@ -14,6 +15,10 @@ class KbIngestUser(PerfBaseUser):
     workload_name = "kb_ingest"
     flow_class = "kb_ingest"
 
+    def on_start(self) -> None:
+        super().on_start()
+        self._document_turn = 0
+
     @task
     def ingest(self) -> None:
         if self.run_context is None or self.stop_new_arrivals():
@@ -22,9 +27,10 @@ class KbIngestUser(PerfBaseUser):
         workflows = self.workflows_client()
         if flow is None or workflows is None:
             return
+        self._document_turn += 1
         workflows.run_sync(
             flow_id=str(flow["flow_id"]),
-            input_value=DEFAULT_KB_DOC_PREFIX,
+            input_value=kb_ingest_document(self.session_id, self._document_turn),
             session_id=self.session_id,
         )
 

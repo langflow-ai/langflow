@@ -13,6 +13,7 @@ from tests.locust.langflow_runtime.config.selection import (
     resolve_suite_axes,
     solo_population,
 )
+from tests.locust.langflow_runtime.run import _normalize_argv
 from tests.locust.langflow_runtime.users.registry import USER_REGISTRY
 
 
@@ -110,5 +111,30 @@ def test_suites_catalog_has_expected_names() -> None:
         "disk_io_ram_storage",
         "tutti",
         "smoke",
+        "ensemble",
+        "ensemble_hitl",
         "natural",
     }
+
+
+@pytest.mark.parametrize(
+    ("suite", "profile_id"),
+    [("ensemble", "ensemble_flow"), ("ensemble_hitl", "ensemble_hitl")],
+)
+def test_resolve_selection_ensemble_suites(suite: str, profile_id: str) -> None:
+    profile, path, meta = resolve_selection(suite=suite)
+    assert profile.id == profile_id
+    assert path.parent.name == "ensembles"
+    assert meta["selection"]["suite"] == suite
+
+
+def test_runner_accepts_documented_direct_selection_form() -> None:
+    direct = ["--axes", "chat_db", "--host", "http://127.0.0.1:7860"]
+    assert _normalize_argv(direct) == ["run", *direct]
+    explicit = ["run", "--suite", "smoke"]
+    assert _normalize_argv(explicit) == explicit
+
+
+def test_runner_accepts_direct_profile_escape_hatch() -> None:
+    direct = ["--profile", "solos/chat_db", "--host", "http://127.0.0.1:7860"]
+    assert _normalize_argv(direct) == ["run", *direct]

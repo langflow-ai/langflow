@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import pytest
+
 from tests.locust.langflow_runtime.config.loader import load_profile, validate_all_profiles, validate_profile
+from tests.locust.langflow_runtime.preflight.cli import _resolve_profile
 from tests.locust.langflow_runtime.preflight.dependencies import check_dependencies
 from tests.locust.langflow_runtime.provision.flows import index_by_id, load_fixture_index
 from tests.locust.langflow_runtime.users.registry import USER_REGISTRY
@@ -64,7 +67,7 @@ def test_preflight_dependencies_fail_when_selector_missing() -> None:
     results = check_dependencies(
         state,
         ["workflows_sync"],
-        flow_selectors=["MemoryChatbotNoLLM"],
+        flow_selectors=["perf_chat_db_agent"],
     )
     assert any(not r.ok and r.name == "profile_flows" for r in results)
 
@@ -84,3 +87,9 @@ def test_smoke_profile_ok() -> None:
     profile = load_profile("smoke/all_protocols")
     fixed_users = sum(entry.count or 0 for entry in profile.workload.user_mix)
     assert min(step.users for step in profile.windows.measured_steps) >= fixed_users
+
+
+@pytest.mark.parametrize("profile_ref", [None, "solos/chat_db"])
+def test_preflight_rejects_external_apis_without_suite(profile_ref: str | None) -> None:
+    with pytest.raises(SystemExit, match="only valid with --suite natural"):
+        _resolve_profile(profile_ref, None, "live")

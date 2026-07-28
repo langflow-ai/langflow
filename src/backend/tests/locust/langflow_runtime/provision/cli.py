@@ -30,7 +30,14 @@ from tests.locust.langflow_runtime.provision.flows import (
     tagged_endpoint_name,
 )
 from tests.locust.langflow_runtime.provision.hitl import validate_hitl_lifecycle
-from tests.locust.langflow_runtime.provision.kbs import needs_kb, provision_kb
+from tests.locust.langflow_runtime.provision.kbs import (
+    KB_METADATA_MODEL,
+    KB_METADATA_PROVIDER,
+    needs_kb,
+    provision_kb,
+    seed_kb_via_flow,
+    with_kb_seed_dependency,
+)
 from tests.locust.langflow_runtime.provision.mcp import configure_mcp_for_state, validate_mcp_tools_listable
 from tests.locust.langflow_runtime.provision.projects import project_name
 from tests.locust.langflow_runtime.provision.state import (
@@ -68,10 +75,18 @@ def _add_common_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--host", default=None, help="Langflow base URL (LANGFLOW_HOST / PERF_HOST)")
     parser.add_argument("--env-id", default=None, help="Suite environment id (PERF_ENV_ID / perf-local)")
     parser.add_argument(
-        "--mode",
+        "--auth-mode",
+        dest="mode",
         choices=("superuser-pool", "existing-user"),
         default="superuser-pool",
-        help="Auth mode",
+        help="Provisioning authentication strategy",
+    )
+    parser.add_argument(
+        "--mode",
+        dest="mode",
+        choices=("superuser-pool", "existing-user"),
+        default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,
     )
     parser.add_argument("--username", default=None, help="Username for existing-user / override")
     parser.add_argument("--password", default=None, help="Password for existing-user / override")
@@ -79,8 +94,8 @@ def _add_common_flags(parser: argparse.ArgumentParser) -> None:
         "--flows",
         default=None,
         help=(
-            "Comma-separated fixture ids, or 'smoke' default, 'v1' (all non-deferred), "
-            f"or 'all'. Default: smoke set ({', '.join(SMOKE_FLOW_IDS)})"
+            "Comma-separated fixture ids; omitted/'default'/'full'/'all' provisions every fixture, "
+            f"or use 'smoke' for the smoke set ({', '.join(SMOKE_FLOW_IDS)})"
         ),
     )
     parser.add_argument("--dry-run", action="store_true", help="Plan only (no mutations)")
@@ -145,7 +160,7 @@ def plan_resources(*, env_id: str, host: str, flow_ids: list[str], mode: str) ->
         "flows": planned_flows,
         "webhook_fixtures": planned_webhooks,
         "kb": needs_kb(flow_ids, by_id),
-        "chat_seed": any(fid == "MemoryChatbotNoLLM" or fid.startswith("natural_memory_chatbot__") for fid in flow_ids),
+        "chat_seed": any(fid == "perf_chat_db_agent" or fid.startswith("natural_memory_chatbot__") for fid in flow_ids),
         "hitl_validate": "human_input_flow" in flow_ids,
         "user_pool": mode == "superuser-pool",
     }
@@ -155,8 +170,16 @@ def cmd_plan(args: argparse.Namespace) -> int:
     env_id = args.env_id or _default_env_id()
     host = (args.host or _default_host()).rstrip("/")
     index = load_fixture_index()
-    flow_ids = resolve_flow_ids(_split_flows(args.flows), index)
+    by_id = index_by_id(index)
+    flow_ids = with_kb_seed_dependency(resolve_flow_ids(_split_flows(args.flows), index), by_id)
     plan = plan_resources(env_id=env_id, host=host, flow_ids=flow_ids, mode=args.mode)
+    if plan["kb"]:
+        plan["kb_embedding"] = {
+            "mode": "deterministic",
+            "metadata_provider": KB_METADATA_PROVIDER,
+            "metadata_model": KB_METADATA_MODEL,
+            "vector_store": "chroma",
+        }
     print(json.dumps(plan, indent=2))
     if args.dry_run:
         print("(dry-run: no changes)", file=sys.stderr)
@@ -241,12 +264,14 @@ def cmd_apply(args: argparse.Namespace) -> int:
     env_id = args.env_id or _default_env_id()
     host = (args.host or _default_host()).rstrip("/")
     index = load_fixture_index()
-    flow_ids = resolve_flow_ids(_split_flows(args.flows), index)
     by_id = index_by_id(index)
+    flow_ids = with_kb_seed_dependency(resolve_flow_ids(_split_flows(args.flows), index), by_id)
     regular, webhook = _partition_flows(flow_ids, by_id)
 
     if args.dry_run:
         return cmd_plan(args)
+
+    provision_knowledge_base = needs_kb(flow_ids, by_id)
 
     state = new_state(
         env_id=env_id,
@@ -277,7 +302,7 @@ def cmd_apply(args: argparse.Namespace) -> int:
             state["username"] = state.get("username") or (args.username or "unknown")
 
             create_suite_api_key(http, state)
-            if needs_kb(flow_ids, by_id):
+            if provision_knowledge_base:
                 provision_kb(http, state)
             if any(fid.startswith("natural_file_parser_agent__") for fid in flow_ids):
                 uploaded = http.upload_user_file(
@@ -294,6 +319,8 @@ def cmd_apply(args: argparse.Namespace) -> int:
                 )
 
             provision_flows(http, state, flow_ids=regular, index=index)
+            if provision_knowledge_base:
+                seed_kb_via_flow(http, state)
             provision_webhook_copies(
                 http,
                 state,
@@ -313,7 +340,7 @@ def cmd_apply(args: argparse.Namespace) -> int:
                     if not validate_mcp_tools_listable(http, state):
                         validation_errors.append("mcp tools/list validation failed")
                 if (
-                    "MemoryChatbotNoLLM" in flow_ids
+                    "perf_chat_db_agent" in flow_ids
                     or any(fid.startswith("natural_memory_chatbot__") for fid in flow_ids)
                 ) and not validation_errors:
                     seed_chat_history(http, state)

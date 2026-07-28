@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 
 from tests.locust.langflow_runtime.flows import validate_fixtures
 from tests.locust.langflow_runtime.flows.builders import (
+    build_chat_db_agent,
     build_cpu_graph,
     build_disk_io,
     build_ensemble_journey,
@@ -38,7 +39,6 @@ from tests.locust.langflow_runtime.flows.builders import (
     build_queue_short,
     build_webhook_passthrough,
     copy_human_input_flow,
-    copy_memory_chatbot,
 )
 from tests.locust.langflow_runtime.flows.defaults import (
     COMPONENTS_DIR,
@@ -72,7 +72,7 @@ def build_all() -> dict[str, Path]:
     paths = {
         "perf_passthrough.json": build_passthrough(),
         "perf_webhook_passthrough.json": build_webhook_passthrough(),
-        "MemoryChatbotNoLLM.json": copy_memory_chatbot(),
+        "perf_chat_db_agent.json": build_chat_db_agent(),
         "human_input_flow.json": copy_human_input_flow(),
         "perf_queue_short.json": build_queue_short(),
         "perf_kb_ingest.json": build_kb_ingest(),
@@ -82,7 +82,7 @@ def build_all() -> dict[str, Path]:
         "perf_disk_io.json": build_disk_io(),
         "perf_payload_echo.json": build_payload_echo(),
         "perf_outbound_basic_prompting.json": build_outbound_basic_prompting(),
-        # Deferred mega-graph journeys (kept built; out of V1 CLI).
+        # Deferred mega-graph journeys (kept built; excluded from the full selector).
         "perf_ensemble_journey.json": build_ensemble_journey(),
         "perf_ensemble_journey_hitl.json": build_ensemble_journey_hitl(),
     }
@@ -99,6 +99,41 @@ def build_all() -> dict[str, Path]:
     return paths
 
 
+def build_chat_db_only() -> dict[str, Path]:
+    """Rebuild the chat/DB fixture and index without rewriting unrelated generated fixtures."""
+    FIXTURES_DIR.mkdir(parents=True, exist_ok=True)
+    chat_path = build_chat_db_agent()
+    legacy_path = FIXTURES_DIR / "MemoryChatbotNoLLM.json"
+    legacy_path.unlink(missing_ok=True)
+    paths = {path.name: path for path in FIXTURES_DIR.glob("*.json")}
+    paths[chat_path.name] = chat_path
+    build_fixture_index(paths)
+    errors = validate_fixtures.validate_fixture_index()
+    if errors:
+        msg = "chat/DB rebuild produced an invalid fixture_index:\n" + "\n".join(f"  - {e}" for e in errors)
+        raise RuntimeError(msg)
+    return paths
+
+
+def build_kb_only() -> dict[str, Path]:
+    """Rebuild KB and ensemble fixtures plus the index without refreshing unrelated node IDs."""
+    FIXTURES_DIR.mkdir(parents=True, exist_ok=True)
+    rebuilt = {
+        "perf_kb_ingest.json": build_kb_ingest(),
+        "perf_kb_retrieve.json": build_kb_retrieve(),
+        "perf_ensemble_journey.json": build_ensemble_journey(),
+        "perf_ensemble_journey_hitl.json": build_ensemble_journey_hitl(),
+    }
+    paths = {path.name: path for path in FIXTURES_DIR.glob("*.json")}
+    paths.update(rebuilt)
+    build_fixture_index(paths)
+    errors = validate_fixtures.validate_fixture_index()
+    if errors:
+        msg = "KB rebuild produced an invalid fixture_index:\n" + "\n".join(f"  - {e}" for e in errors)
+        raise RuntimeError(msg)
+    return paths
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -111,7 +146,20 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="With --check, also round-trip fixtures through Graph.from_payload.",
     )
+    parser.add_argument(
+        "--only-chat-db",
+        action="store_true",
+        help="Rebuild only the chat/DB Agent fixture and refresh fixture_index.json.",
+    )
+    parser.add_argument(
+        "--only-kb",
+        action="store_true",
+        help="Rebuild only KB/ensemble fixtures and refresh fixture_index.json.",
+    )
     args = parser.parse_args(argv)
+
+    if args.only_chat_db and args.only_kb:
+        parser.error("--only-chat-db and --only-kb are mutually exclusive")
 
     if args.check:
         errors = validate_fixtures.validate_fixture_index()
@@ -127,9 +175,19 @@ def main(argv: list[str] | None = None) -> int:
             print("OK: Graph.from_payload import check passed")
         return 0
 
-    paths = build_all()
+    if args.only_chat_db:
+        paths = build_chat_db_only()
+    elif args.only_kb:
+        paths = build_kb_only()
+    else:
+        paths = build_all()
     index = FLOWS_DIR / "fixture_index.json"
-    print(f"Wrote {len(paths)} fixtures under {FIXTURES_DIR}")
+    if args.only_chat_db:
+        print(f"Wrote chat/DB fixture {paths['perf_chat_db_agent.json']}")
+    elif args.only_kb:
+        print("Wrote 4 KB/ensemble fixtures")
+    else:
+        print(f"Wrote {len(paths)} fixtures under {FIXTURES_DIR}")
     print(f"Wrote fixture_index {index} ({sha256_file(index)[:12]}…)")
     return 0
 

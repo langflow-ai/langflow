@@ -41,7 +41,7 @@ def test_flows_fixture_index_lists_all_suite_fixtures() -> None:
     expected = {
         "perf_passthrough",
         "perf_webhook_passthrough",
-        "MemoryChatbotNoLLM",
+        "perf_chat_db_agent",
         "human_input_flow",
         "perf_queue_short",
         "perf_kb_ingest",
@@ -83,7 +83,7 @@ def test_provenance_is_repo_relative_and_honest() -> None:
         assert "adapted:" not in provenance, flow["id"]
         if flow["id"] in {"perf_kb_ingest", "perf_kb_retrieve", "perf_outbound_basic_prompting"}:
             assert provenance.startswith("generated-equivalent:"), flow["id"]
-        if flow["id"] in {"MemoryChatbotNoLLM", "human_input_flow"}:
+        if flow["id"] == "human_input_flow":
             assert provenance.startswith("pinned:src/"), flow["id"]
 
 
@@ -155,7 +155,7 @@ def test_chat_input_constant() -> None:
 
     assert DEFAULT_CHAT_INPUT == "perf-chat-turn"
     manifest = json.loads((FLOWS_DIR / "fixture_index.json").read_text(encoding="utf-8"))
-    flow = next(f for f in manifest["flows"] if f["id"] == "MemoryChatbotNoLLM")
+    flow = next(f for f in manifest["flows"] if f["id"] == "perf_chat_db_agent")
     assert flow["input_fields"]["input_value"] == DEFAULT_CHAT_INPUT
     assert flow["dataset_selector"] is None
 
@@ -389,7 +389,7 @@ def test_chat_history_store_policy_matches_fixtures() -> None:
     manifest = json.loads((FLOWS_DIR / "fixture_index.json").read_text(encoding="utf-8"))
     by_id = {flow["id"]: flow for flow in manifest["flows"]}
     history_on = {
-        "MemoryChatbotNoLLM",
+        "perf_chat_db_agent",
         "perf_ensemble_journey",
         "perf_ensemble_journey_hitl",
         "natural_memory_chatbot__external_stubbed",
@@ -412,6 +412,24 @@ def test_chat_history_store_policy_matches_fixtures() -> None:
             assert all(value is True for _, value in settings), (flow["id"], settings)
         else:
             assert all(value is False for _, value in settings), (flow["id"], settings)
+
+
+def test_chat_db_fixture_keeps_agent_and_stubs_only_its_model_edge() -> None:
+    payload = json.loads((FIXTURES_DIR / "perf_chat_db_agent.json").read_text(encoding="utf-8"))
+    nodes = {node["data"]["type"]: node for node in payload["data"]["nodes"]}
+
+    assert {"Agent", "ChatInput", "ChatOutput", "MemoryBase"} <= nodes.keys()
+    agent_source = nodes["Agent"]["data"]["node"]["template"]["code"]["value"]
+    assert "class AgentComponent" in agent_source
+    assert "create_agent(" in agent_source
+    assert "def _resolve_selected_model(self):\n        return _perf_model()" in agent_source
+    assert "def _latest_user_input(messages)" in agent_source
+    assert "class _PerfEchoChatModel" in agent_source
+
+    edges = {(edge["source"], edge["target"]) for edge in payload["data"]["edges"]}
+    assert (nodes["ChatInput"]["id"], nodes["Agent"]["id"]) in edges
+    assert (nodes["MemoryBase"]["id"], nodes["Agent"]["id"]) in edges
+    assert (nodes["Agent"]["id"], nodes["ChatOutput"]["id"]) in edges
 
 
 def test_validate_fixture_index_detects_accidental_chat_history_store() -> None:

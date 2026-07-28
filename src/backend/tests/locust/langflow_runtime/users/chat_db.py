@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from locust import task
 
-from tests.locust.langflow_runtime.flows.defaults import DEFAULT_CHAT_INPUT
-from tests.locust.langflow_runtime.metrics.correctness import expect_chat_ordering, expect_contains
+from tests.locust.langflow_runtime.flows.defaults import DEFAULT_CHAT_INPUT, MAX_CHAT_RESPONSE_BYTES
+from tests.locust.langflow_runtime.metrics.correctness import (
+    expect_chat_ordering,
+    expect_contains,
+    expect_text_size_at_most,
+)
 from tests.locust.langflow_runtime.users.base import PerfBaseUser, extract_output_text
 
 
@@ -17,13 +21,13 @@ class ChatDbUser(PerfBaseUser):
     def on_start(self) -> None:
         super().on_start()
         self._turn = 0
-        self._messages: list[dict[str, object]] = []
+        self._messages: list[dict[str, int]] = []
 
     @task
     def chat_turn(self) -> None:
         if self.run_context is None or self.stop_new_arrivals():
             return
-        flow = self.require_flow_or_fail("MemoryChatbotNoLLM")
+        flow = self.require_flow_or_fail("perf_chat_db_agent")
         workflows = self.require_workflows_client()
 
         self._turn += 1
@@ -36,6 +40,9 @@ class ChatDbUser(PerfBaseUser):
         text = extract_output_text(result)
         if not text.strip():
             raise AssertionError("chat response was empty")
+        bounded = expect_text_size_at_most(text, MAX_CHAT_RESPONSE_BYTES)
+        if not bounded.ok:
+            raise AssertionError(bounded.reason or "chat response exceeded size limit")
         # Server-visible contract: response must echo/include this turn's input marker.
         contains = expect_contains(text, input_value)
         if not contains.ok:
@@ -44,7 +51,7 @@ class ChatDbUser(PerfBaseUser):
             if turn_marker not in text and input_value not in text:
                 raise AssertionError(contains.reason or "chat response missing turn input")
 
-        self._messages.append({"index": self._turn, "sequence": self._turn, "text": text, "input": input_value})
+        self._messages.append({"index": self._turn, "sequence": self._turn})
         ordering = expect_chat_ordering(self._messages)
         if not ordering.ok:
             raise AssertionError(ordering.reason or "chat ordering failed")

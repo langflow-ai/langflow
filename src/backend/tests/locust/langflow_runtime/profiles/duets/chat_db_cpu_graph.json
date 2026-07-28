@@ -15,7 +15,7 @@
     "sync"
   ],
   "flow_selectors": [
-    "MemoryChatbotNoLLM",
+    "perf_chat_db_agent",
     "perf_cpu_graph"
   ],
   "dataset_selectors": [],

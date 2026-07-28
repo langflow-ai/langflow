@@ -25,6 +25,16 @@
       "profile": "smoke/all_protocols",
       "description": "Three-protocol smoke (MCP + Workflows + Webhooks)."
     },
+    "ensemble": {
+      "kind": "profile",
+      "profile": "ensembles/ensemble_flow",
+      "description": "Intentionally coupled full-system journey across compute, storage, KB, memory, LLM, and protocols."
+    },
+    "ensemble_hitl": {
+      "kind": "profile",
+      "profile": "ensembles/ensemble_hitl",
+      "description": "Intentionally coupled full-system journey with background HITL approval."
+    },
     "natural": {
       "kind": "natural",
       "description": "Unweighted starter-derived flow mix; requires --external-apis stubbed|live."

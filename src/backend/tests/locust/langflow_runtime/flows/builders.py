@@ -10,8 +10,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from lfx.components.files_and_knowledge.ingestion import KnowledgeIngestionComponent
-from lfx.components.files_and_knowledge.retrieval import KnowledgeBaseComponent
+from lfx.components.files_and_knowledge.knowledge import MODE_INGEST, MODE_RETRIEVE, KnowledgeComponent
 from lfx.components.files_and_knowledge.save_file import SaveToFileComponent
 from lfx.components.flow_controls.human_input import HumanInput
 from lfx.components.flow_controls.pass_message import PassMessageComponent
@@ -24,6 +23,7 @@ from lfx.components.processing.split_text import SplitTextComponent
 from lfx.graph import Graph
 
 from tests.locust.langflow_runtime.components import PerfCpuBurn, PerfDiskIo, PerfSleep, PerfSubprocessChurn
+from tests.locust.langflow_runtime.datasets.kb_corpus import KB_CHUNK_SIZE
 from tests.locust.langflow_runtime.flows.defaults import (
     DATA_DIR,
     DEFAULT_CPU_DURATION_MS,
@@ -255,43 +255,56 @@ def build_payload_echo() -> Path:
 
 
 def build_kb_ingest() -> Path:
-    text_input = TextInputComponent()
-    text_input.set(input_value=f"{DEFAULT_KB_DOC_PREFIX}\n\nDeterministic knowledge document for ingest.")
+    from tests.locust.langflow_runtime.flows.natural_adapt import inject_deterministic_embeddings_hook
+
+    chat_input = ChatInput()
+    chat_input.set(
+        should_store_message=False,
+        input_value=f"{DEFAULT_KB_DOC_PREFIX}\n\nDeterministic knowledge document for ingest.",
+    )
     split = SplitTextComponent()
-    split.set(data_inputs=text_input.text_response, chunk_size=200, chunk_overlap=20)
-    ingest = KnowledgeIngestionComponent()
-    ingest.set(input_df=split.split_text, knowledge_base=DEFAULT_KB_NAME)
+    split.set(
+        data_inputs=chat_input.message_response,
+        separator=" ",
+        chunk_size=KB_CHUNK_SIZE,
+        chunk_overlap=20,
+    )
+    ingest = KnowledgeComponent()
+    ingest.set(mode=MODE_INGEST, input_df=split.split_text, knowledge_base=DEFAULT_KB_NAME)
+    payload = dump_graph(
+        chat_input,
+        ingest,
+        name="perf_kb_ingest",
+        description="Real Knowledge ingestion into Chroma with only the embedding model made deterministic.",
+        endpoint_name="perf-kb-ingest",
+    )
+    inject_deterministic_embeddings_hook(payload)
     return write_fixture(
         "perf_kb_ingest.json",
-        dump_graph(
-            text_input,
-            ingest,
-            name="perf_kb_ingest",
-            description=(
-                "Deterministic bounded document ingest "
-                "(generated equivalent of LFX 1.6.0 Knowledge Ingestion; TextInput replaces URL)."
-            ),
-            endpoint_name="perf-kb-ingest",
-        ),
+        payload,
     )
 
 
 def build_kb_retrieve() -> Path:
-    text_input = TextInputComponent()
-    text_input.set(input_value=DEFAULT_KB_QUERY)
-    retrieve = KnowledgeBaseComponent()
-    retrieve.set(search_query=text_input.text_response, knowledge_base=DEFAULT_KB_NAME)
+    from tests.locust.langflow_runtime.flows.natural_adapt import inject_deterministic_embeddings_hook
+
+    chat_input = ChatInput()
+    chat_input.set(should_store_message=False, input_value=DEFAULT_KB_QUERY)
+    retrieve = KnowledgeComponent()
+    retrieve.set(mode=MODE_RETRIEVE, search_query=chat_input.message_response, knowledge_base=DEFAULT_KB_NAME)
     chat_output = ChatOutput()
     chat_output.set(should_store_message=False, input_value=retrieve.retrieve_data)
+    payload = dump_graph(
+        chat_input,
+        chat_output,
+        name="perf_kb_retrieve",
+        description="Real Chroma similarity search with only the query embedding made deterministic.",
+        endpoint_name="perf-kb-retrieve",
+    )
+    inject_deterministic_embeddings_hook(payload)
     return write_fixture(
         "perf_kb_retrieve.json",
-        dump_graph(
-            text_input,
-            chat_output,
-            name="perf_kb_retrieve",
-            description="Deterministic known-query retrieval from the provisioned KB.",
-            endpoint_name="perf-kb-retrieve",
-        ),
+        payload,
     )
 
 
@@ -393,8 +406,8 @@ def build_ensemble_graph(*, hitl: bool) -> dict[str, Any]:
     split = SplitTextComponent()
     split.set(data_inputs=cpu.run, chunk_size=200, chunk_overlap=20)
 
-    ingest = KnowledgeIngestionComponent()
-    ingest.set(input_df=split.split_text, knowledge_base=DEFAULT_KB_NAME)
+    ingest = KnowledgeComponent()
+    ingest.set(mode=MODE_INGEST, input_df=split.split_text, knowledge_base=DEFAULT_KB_NAME)
 
     save = SaveToFileComponent()
     save.set(input=ingest.build_kb_info, file_name="perf_ensemble_storage")
@@ -402,8 +415,8 @@ def build_ensemble_graph(*, hitl: bool) -> dict[str, Any]:
     gate = PassMessageComponent()
     gate.set(input_message=chat_input.message_response, ignored_message=save.save_to_file)
 
-    retrieve = KnowledgeBaseComponent()
-    retrieve.set(search_query=gate.pass_message, knowledge_base=DEFAULT_KB_NAME)
+    retrieve = KnowledgeComponent()
+    retrieve.set(mode=MODE_RETRIEVE, search_query=gate.pass_message, knowledge_base=DEFAULT_KB_NAME)
 
     convert = TypeConverterComponent()
     convert.set(input_data=retrieve.retrieve_data)
@@ -425,6 +438,8 @@ def build_ensemble_graph(*, hitl: bool) -> dict[str, Any]:
     chat_output.set(should_store_message=True)
 
     if hitl:
+        from tests.locust.langflow_runtime.flows.natural_adapt import inject_deterministic_embeddings_hook
+
         human = HumanInput()
         human.set(prompt=language_model.text_response, decisions=["Approve", "Reject"])
         chat_output.set(input_value=human.route_branch)
@@ -435,7 +450,9 @@ def build_ensemble_graph(*, hitl: bool) -> dict[str, Any]:
             description="Ensemble journey plus HumanInput for Workflows background/pending/resume only.",
             endpoint_name="perf-ensemble-journey-hitl",
         )
-        return _ensure_outbound_api_key_load_from_db(_rewire_human_input_approve_edge(payload))
+        payload = _ensure_outbound_api_key_load_from_db(_rewire_human_input_approve_edge(payload))
+        inject_deterministic_embeddings_hook(payload)
+        return payload
 
     chat_output.set(input_value=language_model.text_response)
     payload = dump_graph(
@@ -448,7 +465,11 @@ def build_ensemble_graph(*, hitl: bool) -> dict[str, Any]:
         ),
         endpoint_name="perf-ensemble-journey",
     )
-    return _ensure_outbound_api_key_load_from_db(payload)
+    payload = _ensure_outbound_api_key_load_from_db(payload)
+    from tests.locust.langflow_runtime.flows.natural_adapt import inject_deterministic_embeddings_hook
+
+    inject_deterministic_embeddings_hook(payload)
+    return payload
 
 
 def build_ensemble_journey() -> Path:
@@ -459,14 +480,18 @@ def build_ensemble_journey_hitl() -> Path:
     return write_fixture("perf_ensemble_journey_hitl.json", build_ensemble_graph(hitl=True))
 
 
-def copy_memory_chatbot() -> Path:
-    return copy_pinned(
-        DATA_DIR / "MemoryChatbotNoLLM.json",
-        "MemoryChatbotNoLLM.json",
-        name="MemoryChatbotNoLLM",
-        description="Pinned chat/history persistence flow for chat/database stress.",
-        endpoint_name="perf-memory-chatbot-no-llm",
+def build_chat_db_agent() -> Path:
+    """Build a realistic chat/DB flow with the real Agent and a deterministic model edge."""
+    from tests.locust.langflow_runtime.flows.natural_adapt import adapt_chat_db_starter
+
+    payload = adapt_chat_db_starter()
+    payload["name"] = "perf_chat_db_agent"
+    payload["description"] = (
+        "Memory Chatbot starter topology with the real Agent loop and a deterministic echo model for chat/database stress."
     )
+    payload["endpoint_name"] = "perf-chat-db-agent"
+    payload["tags"] = ["performance-suite"]
+    return write_fixture("perf_chat_db_agent.json", payload)
 
 
 def copy_human_input_flow() -> Path:
@@ -483,8 +508,9 @@ def build_natural_fixtures() -> dict[str, Path]:
     """Build Natural suite fixtures (5 shapes x stubbed|live) from pinned starters.
 
     Stubbed variants keep starter topology (Agent, MemoryBase, Knowledge, File,
-    Parser, URL, WebSearch, Prompt) and replace only vendor edges (LLM, web/URL
-    HTTP, embedding provider). Live variants bind the configured provider.
+    Parser, URL, WebSearch, Prompt) and replace vendor LLM/web/URL edges. Live
+    variants bind those configured providers. Both modes use deterministic
+    embeddings against the same real Chroma store.
     """
     from tests.locust.langflow_runtime.flows.natural_adapt import adapt_natural_starter
 

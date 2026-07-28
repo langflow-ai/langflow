@@ -8,20 +8,11 @@ SMOKE_FLOW_IDS = (
     "perf_passthrough",
     "perf_webhook_passthrough",
     "human_input_flow",
-    "MemoryChatbotNoLLM",
-)
-
-# Full-song V1 set: every axis + Natural dual-mode fixture; excludes deferred mega-graphs.
-DEFERRED_FLOW_IDS = frozenset(
-    {
-        "perf_ensemble_journey",
-        "perf_ensemble_journey_hitl",
-    }
+    "perf_chat_db_agent",
 )
 
 __all__ = [
     "DEFAULT_ENV_ID",
-    "DEFERRED_FLOW_IDS",
     "SMOKE_FLOW_IDS",
     "STATE_SCHEMA_VERSION",
 ]

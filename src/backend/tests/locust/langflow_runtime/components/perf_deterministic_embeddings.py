@@ -9,6 +9,8 @@ Langflow server cannot import the Locust package.
 from __future__ import annotations
 
 import hashlib
+import math
+import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -21,19 +23,22 @@ DEFAULT_EMBEDDING_DIM = 384
 
 
 class DeterministicEmbeddings:
-    """Stable hash-derived vectors for stubbed ingest/query embedding."""
+    """Stable token-hashed vectors for stubbed ingest/query embedding."""
 
     def __init__(self, dimension: int = DEFAULT_EMBEDDING_DIM) -> None:
         self.dimension = dimension
 
     def _embed(self, text: str) -> list[float]:
-        values: list[float] = []
-        block = 0
-        while len(values) < self.dimension:
-            digest = hashlib.sha256(f"{block}:{text}".encode()).digest()
-            values.extend(byte / 255.0 for byte in digest)
-            block += 1
-        return values[: self.dimension]
+        values = [0.0] * self.dimension
+        # Binary term presence keeps repeated filler from overwhelming a rare
+        # query marker while retaining deterministic token-overlap ranking.
+        for token in set(re.findall(r"[A-Za-z0-9]+", text.lower())):
+            digest = hashlib.sha256(token.encode()).digest()
+            index = int.from_bytes(digest[:4], "big") % self.dimension
+            sign = 1.0 if digest[4] & 1 else -1.0
+            values[index] += sign
+        norm = math.sqrt(sum(value * value for value in values))
+        return [value / norm for value in values] if norm else values
 
     def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
         return [self._embed(t) for t in texts]

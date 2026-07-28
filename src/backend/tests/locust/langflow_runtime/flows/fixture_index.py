@@ -35,6 +35,7 @@ from tests.locust.langflow_runtime.flows.defaults import (
     FIXTURE_INDEX_VERSION,
     FLOWS_DIR,
     HITL_LIFECYCLE_RULE,
+    MAX_CHAT_RESPONSE_BYTES,
     STARTERS_1_6_0_REL,
 )
 from tests.locust.langflow_runtime.hashing import component_source_hashes, embedded_isolator_hashes, sha256_file
@@ -82,15 +83,19 @@ def flow_specs() -> list[dict[str, Any]]:
             "stores_chat_history": False,
         },
         {
-            "id": "MemoryChatbotNoLLM",
-            "fixture": "MemoryChatbotNoLLM.json",
+            "id": "perf_chat_db_agent",
+            "fixture": "perf_chat_db_agent.json",
             "stress_category": "chat_db",
-            "source_provenance": f"pinned:{DATA_REL}/MemoryChatbotNoLLM.json",
+            "source_provenance": "generated:Memory Chatbot starter with Agent model edge stubbed",
             "supported_protocols": ["mcp", "workflows_sync", "workflows_stream", "workflows_background"],
             "supported_modes": ["sync", "stream", "background"],
             "input_fields": {"input_value": DEFAULT_CHAT_INPUT},
-            "expected_output_rule": {"chat_message_persisted": True},
-            "mcp_action_name": "MemoryChatbotNoLLM",
+            "expected_output_rule": {
+                "chat_message_persisted": True,
+                "contains": DEFAULT_CHAT_INPUT,
+                "max_output_bytes": MAX_CHAT_RESPONSE_BYTES,
+            },
+            "mcp_action_name": "perf_chat_db_agent",
             "required_environment_features": ["message_store"],
             "dataset_selector": None,
             "webhook_copy_count": 0,
@@ -136,7 +141,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "stress_category": "kb_ingest",
             "source_provenance": (
                 f"generated-equivalent:{STARTERS_1_6_0_REL}/Knowledge Ingestion.json "
-                "(URL->TextInput deterministic document)"
+                "(ChatInput->SplitText->Knowledge; deterministic embedding edge)"
             ),
             "supported_protocols": ["mcp", "workflows_sync", "workflows_stream", "workflows_background"],
             "supported_modes": ["sync", "stream", "background"],
@@ -154,7 +159,10 @@ def flow_specs() -> list[dict[str, Any]]:
             "id": "perf_kb_retrieve",
             "fixture": "perf_kb_retrieve.json",
             "stress_category": "kb_retrieve",
-            "source_provenance": f"generated-equivalent:{STARTERS_1_6_0_REL}/Knowledge Retrieval.json",
+            "source_provenance": (
+                f"generated-equivalent:{STARTERS_1_6_0_REL}/Knowledge Retrieval.json "
+                "(Knowledge->Chroma; deterministic embedding edge)"
+            ),
             "supported_protocols": ["mcp", "workflows_sync", "workflows_stream", "workflows_background"],
             "supported_modes": ["sync", "stream", "background"],
             "input_fields": {"input_value": DEFAULT_KB_QUERY},
@@ -330,7 +338,7 @@ def flow_specs() -> list[dict[str, Any]]:
                 ),
                 (
                     "memory_chatbot",
-                    "starter:Memory Chatbot.json (Agent+MemoryBase; LLM/embed edges stubbed|live)",
+                    "starter:Memory Chatbot.json (Agent+MemoryBase; LLM stubbed|live; deterministic embeddings)",
                     {"chat_message_persisted": True, "contains_any": ["PERF_MOCK_LLM", "perf-outbound-ok"]},
                     ["message_store", "memory_base"],
                     None,
@@ -340,7 +348,7 @@ def flow_specs() -> list[dict[str, Any]]:
                 ),
                 (
                     "vector_store_rag",
-                    "starter:Vector Store RAG.json (Agent+Knowledge+Prompt; embed/LLM stubbed|live)",
+                    "starter:Vector Store RAG.json (Agent+Knowledge+Prompt; LLM stubbed|live; deterministic embeddings)",
                     {"retrieval": True, "contains_any": ["PERF_MOCK_LLM", "PERF_KB"]},
                     ["knowledge_base"],
                     "kb/bounded_corpus",
@@ -361,17 +369,7 @@ def flow_specs() -> list[dict[str, Any]]:
             )
             for mode in ("stubbed", "live")
             for fid in [f"natural_{shape}__external_{mode}"]
-            for features in [
-                (
-                    [
-                        "llm_provider",
-                        *base_features,
-                        *(["embeddings"] if shape in {"vector_store_rag", "memory_chatbot"} else []),
-                    ]
-                    if mode == "live"
-                    else list(base_features)
-                )
-            ]
+            for features in [(["llm_provider", *base_features] if mode == "live" else list(base_features))]
             for embedded in [stub_embedded if mode == "stubbed" else []]
         ],
         {
@@ -379,7 +377,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "fixture": "perf_ensemble_journey.json",
             "stress_category": "ensemble_flow",
             "source_provenance": (
-                "deferred:generated:multiproc->disk->cpu->kb_ingest->save->kb_retrieve->memory->outbound->ChatOutput"
+                "ensemble:generated:multiproc->disk->cpu->kb_ingest->save->kb_retrieve->memory->outbound->ChatOutput"
             ),
             "supported_protocols": [
                 "mcp",
@@ -408,7 +406,7 @@ def flow_specs() -> list[dict[str, Any]]:
             "id": "perf_ensemble_journey_hitl",
             "fixture": "perf_ensemble_journey_hitl.json",
             "stress_category": "ensemble_flow_hitl",
-            "source_provenance": "deferred:generated:perf_ensemble_journey+HumanInput(Approve)",
+            "source_provenance": "ensemble:generated:perf_ensemble_journey+HumanInput(Approve)",
             "supported_protocols": ["workflows_background"],
             "supported_modes": ["background"],
             "input_fields": {"input_value": "perf-ensemble-journey"},

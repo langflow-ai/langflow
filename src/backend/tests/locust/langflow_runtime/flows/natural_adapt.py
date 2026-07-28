@@ -126,11 +126,13 @@ def _bind_knowledge_base(payload: dict[str, Any], kb_name: str) -> None:
                 field["value"] = kb_name
 
 
-def _inject_deterministic_embeddings_hook(payload: dict[str, Any]) -> None:
+def inject_deterministic_embeddings_hook(payload: dict[str, Any]) -> None:
     """Append component-local embedding overrides without mutating shared modules."""
     hook = """
 # --- perf suite stub: deterministic embeddings (no vendor HTTP) ---
 import hashlib as _perf_hashlib
+import math as _perf_math
+import re as _perf_re
 
 PERF_MOCK_EMBEDDING_MARKER = "PERF_MOCK_EMBEDDING"
 
@@ -139,13 +141,15 @@ class _PerfDeterministicEmbeddings:
         self.dimension = dimension
 
     def _embed(self, text: str):
-        values = []
-        block = 0
-        while len(values) < self.dimension:
-            digest = _perf_hashlib.sha256(f"{block}:{text}".encode()).digest()
-            values.extend(byte / 255.0 for byte in digest)
-            block += 1
-        return values[:self.dimension]
+        values = [0.0] * self.dimension
+        tokens = set(_perf_re.findall(r"[A-Za-z0-9]+", text.lower()))
+        for token in tokens:
+            digest = _perf_hashlib.sha256(token.encode()).digest()
+            index = int.from_bytes(digest[:4], "big") % self.dimension
+            sign = 1.0 if digest[4] & 1 else -1.0
+            values[index] += sign
+        norm = _perf_math.sqrt(sum(value * value for value in values))
+        return [value / norm for value in values] if norm else values
 
     def embed_documents(self, texts):
         return [self._embed(text) for text in texts]
@@ -185,8 +189,13 @@ if "MemoryBaseComponent" in globals():
         code["value"] = src.rstrip() + "\n\n" + hook.lstrip()
 
 
-def _inject_deterministic_agent_llm(payload: dict[str, Any], *, force_first_tool_call: bool) -> None:
-    support = _read_component_source("perf_mock_agent.py").replace(
+def _inject_deterministic_agent_llm(
+    payload: dict[str, Any],
+    *,
+    force_first_tool_call: bool,
+    support_filename: str = "perf_mock_agent.py",
+) -> None:
+    support = _read_component_source(support_filename).replace(
         "False  # __PERF_FORCE_FIRST_TOOL_CALL__",
         str(force_first_tool_call),
     )
@@ -227,8 +236,23 @@ def load_starter(shape: str) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def adapt_chat_db_starter() -> dict[str, Any]:
+    """Adapt the Memory Chatbot starter with a deterministic echo model edge."""
+    payload = load_starter("memory_chatbot")
+    _drop_note_nodes(payload)
+    _set_chat_store_flags(payload, store=True)
+    _inject_deterministic_agent_llm(
+        payload,
+        force_first_tool_call=True,
+        support_filename="perf_echo_agent.py",
+    )
+    inject_deterministic_embeddings_hook(payload)
+    assert_topology("memory_chatbot", payload)
+    return payload
+
+
 def adapt_natural_starter(shape: str, *, stubbed: bool, kb_name: str = DEFAULT_KB_NAME) -> dict[str, Any]:
-    """Pin starter topology; stub only vendor LLM / web / URL / embedding edges when stubbed."""
+    """Pin starter topology and keep embeddings deterministic in both external-API modes."""
     payload = load_starter(shape)
     mode = "stubbed" if stubbed else "live"
     fid = f"natural_{shape}__external_{mode}"
@@ -240,6 +264,10 @@ def adapt_natural_starter(shape: str, *, stubbed: bool, kb_name: str = DEFAULT_K
     payload.pop("id", None)
     _drop_note_nodes(payload)
     _set_chat_store_flags(payload, store=(shape == "memory_chatbot"))
+    # Provisioning seeds the real Chroma store with this embedding space. Keep
+    # query and memory vectors compatible while external_apis controls only
+    # provider-backed LLM, web-search, and URL edges.
+    inject_deterministic_embeddings_hook(payload)
 
     if stubbed:
         _replace_code_for_types(
@@ -254,7 +282,6 @@ def adapt_natural_starter(shape: str, *, stubbed: bool, kb_name: str = DEFAULT_K
             {"UnifiedWebSearch"},
             _read_component_source("perf_mock_web_search.py"),
         )
-        _inject_deterministic_embeddings_hook(payload)
     else:
         _bind_live_llm(payload)
 

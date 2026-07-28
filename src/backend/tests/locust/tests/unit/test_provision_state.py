@@ -227,13 +227,58 @@ def test_project_names_remain_unique_after_mcp_name_truncation() -> None:
         "perf_webhook_passthrough-copy-0",
         "perf_webhook_passthrough-copy-1",
         "human_input_flow",
-        "MemoryChatbotNoLLM",
+        "perf_chat_db_agent",
     ]
     names = [project_name(env_id, fixture_id) for fixture_id in fixture_ids]
     server_names = {f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}" for name in names}
 
     assert len(server_names) == len(fixture_ids)
     assert all(env_id in name for name in names)
+
+
+def test_resolve_flow_ids_default_and_omitted_select_every_fixture() -> None:
+    from tests.locust.langflow_runtime.provision.flows import load_fixture_index, resolve_flow_ids
+
+    index = load_fixture_index()
+    expected = [str(flow["id"]) for flow in index["flows"]]
+
+    assert resolve_flow_ids(None, index) == expected
+    assert resolve_flow_ids(["default"], index) == expected
+
+
+def test_resolve_flow_ids_smoke_selects_only_smoke_set() -> None:
+    from tests.locust.langflow_runtime.provision import SMOKE_FLOW_IDS
+    from tests.locust.langflow_runtime.provision.flows import load_fixture_index, resolve_flow_ids
+
+    assert resolve_flow_ids(["smoke"], load_fixture_index()) == list(SMOKE_FLOW_IDS)
+
+
+def test_resolve_flow_ids_full_includes_ensemble_fixtures() -> None:
+    from tests.locust.langflow_runtime.provision.flows import load_fixture_index, resolve_flow_ids
+
+    index = load_fixture_index()
+    full = resolve_flow_ids(["full"], index)
+
+    assert full
+    assert set(full) == {str(flow["id"]) for flow in index["flows"]}
+    assert {"perf_ensemble_journey", "perf_ensemble_journey_hitl"} <= set(full)
+    assert resolve_flow_ids(["all"], index) == full
+
+
+def test_resolve_flow_ids_rejects_removed_v1_alias() -> None:
+    from tests.locust.langflow_runtime.provision.flows import load_fixture_index, resolve_flow_ids
+
+    with pytest.raises(RuntimeError, match="unknown fixture ids"):
+        resolve_flow_ids(["v1"], load_fixture_index())
+
+
+def test_provision_cli_uses_auth_mode_name_with_legacy_alias() -> None:
+    from tests.locust.langflow_runtime.provision.cli import build_parser
+
+    parser = build_parser()
+    assert parser.parse_args(["apply"]).mode == "superuser-pool"
+    assert parser.parse_args(["apply", "--auth-mode", "existing-user"]).mode == "existing-user"
+    assert parser.parse_args(["apply", "--mode", "existing-user"]).mode == "existing-user"
 
 
 def test_cli_validate_authenticates_as_suite_resource_owner(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -311,16 +356,16 @@ def test_mcp_validation_normalizes_configured_action_name(monkeypatch: pytest.Mo
             pass
 
         def list_tools(self) -> list[dict[str, str]]:
-            return [{"name": "memorychatbotnollm"}]
+            return [{"name": "perf_chat_db_agent"}]
 
     monkeypatch.setattr(mcp, "McpStreamableClient", FakeMcpClient)
     http = SimpleNamespace(api_client=lambda **_kwargs: object())
     state = {
         "api_key": "perf-unit-key",  # pragma: allowlist secret
         "flows": {
-            "MemoryChatbotNoLLM": {
+            "perf_chat_db_agent": {
                 "project_id": "project-1",
-                "mcp_action_name": "MemoryChatbotNoLLM",
+                "mcp_action_name": "perf_chat_db_agent",
             }
         },
         "mcp": {},
@@ -328,4 +373,4 @@ def test_mcp_validation_normalizes_configured_action_name(monkeypatch: pytest.Mo
     }
 
     assert mcp.validate_mcp_tools_listable(http, state) is True
-    assert state["mcp"]["discovered"] == ["memorychatbotnollm"]
+    assert state["mcp"]["discovered"] == ["perf_chat_db_agent"]

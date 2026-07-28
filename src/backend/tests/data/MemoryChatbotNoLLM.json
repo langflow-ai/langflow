@@ -229,7 +229,7 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "type": "prompt",
-                "value": "{context}\n\nUser: {user_message}\nAI: "
+                "value": "{user_message}"
               },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",

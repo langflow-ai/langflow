@@ -21,7 +21,7 @@
   ],
   "flow_selectors": [
     "perf_passthrough",
-    "MemoryChatbotNoLLM",
+    "perf_chat_db_agent",
     "perf_queue_short",
     "perf_kb_retrieve"
   ],

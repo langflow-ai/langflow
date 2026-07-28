@@ -14,7 +14,7 @@ from tests.locust.langflow_runtime.clients.workflows import WorkflowsClient
 from tests.locust.langflow_runtime.contracts import DEFAULT_WEBHOOK_PAYLOAD
 from tests.locust.langflow_runtime.flows.defaults import DEFAULT_PASSTHROUGH_INPUT
 from tests.locust.langflow_runtime.preflight.health import CheckResult
-from tests.locust.langflow_runtime.users.base import require_flow
+from tests.locust.langflow_runtime.users.helpers import require_flow
 
 
 def _http(host: str) -> httpx.Client:

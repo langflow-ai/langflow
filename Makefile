@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build build_langflow_core publish_core publish_core_testpypi run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help perf-provision perf-provision-validate perf-teardown perf-solo perf-duet perf-tutti perf-smoke perf-profile perf-help docs docs_build docs_install api_examples_local api_examples_local_syntax
+.PHONY: all init format_backend format lint build build_langflow_core publish_core publish_core_testpypi run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help perf-provision perf-provision-validate perf-teardown perf-run perf-help docs docs_build docs_install api_examples_local api_examples_local_syntax
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -925,9 +925,9 @@ perf_env_id ?= perf-local
 perf_backend := src/backend
 perf_uv_env := $(if $(wildcard $(env)),--env-file $(abspath $(env)),)
 
-perf-provision: ## Provision perf suite resources (PERF_HOST / perf_env_id)
+perf-provision: ## Provision all perf suite resources (ARGS='--flows smoke' for smoke only)
 	@cd $(perf_backend) && PYTHONPATH=. uv run $(perf_uv_env) python -m tests.locust.langflow_runtime.provision.cli apply \
-		--host $(perf_host) --env-id $(perf_env_id) $(PERF_PROVISION_ARGS)
+		--host $(perf_host) --env-id $(perf_env_id) $(ARGS)
 
 perf-provision-validate: ## Validate provisioned perf suite state
 	@cd $(perf_backend) && PYTHONPATH=. uv run $(perf_uv_env) python -m tests.locust.langflow_runtime.provision.cli validate \
@@ -942,7 +942,7 @@ perf-run: ## Run one movement (ARGS='--axes chat_db' or ARGS='--suite smoke')
 	@cd $(perf_backend) && \
 	export PERF_HOST=$(perf_host) && \
 	export PERF_ENV_ID=$(perf_env_id) && \
-	PYTHONPATH=. uv run $(perf_uv_env) python -m tests.locust.langflow_runtime.run run $(ARGS) --host $(perf_host) --env-id $(perf_env_id)
+	PYTHONPATH=. uv run $(perf_uv_env) python -m tests.locust.langflow_runtime.run $(ARGS) --host $(perf_host) --env-id $(perf_env_id)
 
 perf-help: ## Show performance suite help
 	@echo "$(GREEN)Langflow performance suite$(NC)"
@@ -951,25 +951,28 @@ perf-help: ## Show performance suite help
 	@echo "Legacy load_test_* targets remain available for the older harness."
 	@echo ""
 	@echo "$(YELLOW)Typical sequence:$(NC)"
-	@echo "  1. make perf-provision PERF_PROVISION_ARGS='--flows v1' perf_host=http://127.0.0.1:7860"
+	@echo "  1. make perf-provision perf_host=http://127.0.0.1:7860"
 	@echo "  2. make perf-run ARGS='--suite smoke'"
 	@echo "  3. make perf-run ARGS='--axes protocol_calibration'"
 	@echo "  4. make perf-run ARGS='--suite chat_db_cpu_graph'"
 	@echo "  5. make perf-run ARGS='--suite tutti'"
-	@echo "  6. make perf-run ARGS='--suite natural --external-apis stubbed'"
-	@echo "  7. make perf-run ARGS='--suite natural --external-apis live'"
-	@echo "  8. make perf-teardown"
+	@echo "  6. make perf-run ARGS='--suite ensemble'"
+	@echo "  7. make perf-run ARGS='--suite ensemble_hitl'"
+	@echo "  8. make perf-run ARGS='--suite natural --external-apis stubbed'"
+	@echo "  9. make perf-run ARGS='--suite natural --external-apis live'"
+	@echo " 10. make perf-teardown"
 	@echo ""
 	@echo "$(YELLOW)Commands:$(NC)"
-	@echo "  perf-provision[-validate]  - Create / validate suite-tagged resources"
+	@echo "  perf-provision ARGS='...'  - Create suite resources (default/full/all = everything; smoke = smoke only)"
+	@echo "  perf-provision-validate    - Validate provisioned suite state"
 	@echo "  perf-teardown              - Idempotent teardown for perf_env_id"
 	@echo "  perf-run ARGS='...'        - One movement (--axes or --suite)"
 	@echo ""
 	@echo "$(YELLOW)Notes:$(NC)"
 	@echo "  - Exactly one of --axes or --suite; natural requires --external-apis"
-	@echo "  - Full-song provisioning uses PERF_PROVISION_ARGS='--flows v1' (excludes deferred mega-graphs)"
-	@echo "  - Default perf-provision without ARGS provisions the smoke set only"
-	@echo "  - No MODE flag; mega-graph ensemble journeys are out of V1"
+	@echo "  - Plain perf-provision provisions every fixture, including coupled ensemble journeys"
+	@echo "  - Use ARGS='--flows smoke' for the smaller smoke-only environment"
+	@echo "  - No MODE flag; coupled journeys are explicit ensemble suites"
 	@echo "  - CI / certification are out of scope for this suite"
 	@echo "  - Artifacts default to \$$XDG_CACHE_HOME/langflow-perf or ~/.cache/langflow-perf"
 	@echo "    (override with PERF_DATA_DIR); state files are mode 0600"
