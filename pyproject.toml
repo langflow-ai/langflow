@@ -176,7 +176,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.5,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.6,<2.0",
 ]
 
 docling = [
