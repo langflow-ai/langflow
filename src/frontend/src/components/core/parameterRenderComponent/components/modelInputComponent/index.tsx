@@ -28,6 +28,7 @@ import { deriveSelectedModel } from "./helpers/derive-selected-model";
 import { matchesModelIdentity } from "./helpers/model-option-identity";
 import { useAutoSelectModel } from "./hooks/useAutoSelectModel";
 import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
+import { useRefreshAfterProviderClose } from "./hooks/useRefreshAfterProviderClose";
 import type { ModelInputComponentType, ModelOption } from "./types";
 
 export default function ModelInputComponent({
@@ -55,7 +56,6 @@ export default function ModelInputComponent({
   const [open, setOpen] = useState(false);
   const [openManageProvidersDialog, setOpenManageProvidersDialog] =
     useState(false);
-  const [isRefreshingAfterClose, setIsRefreshingAfterClose] = useState(false);
   const [refreshOptions, setRefreshOptions] = useState(false);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const buildInfo = useFlowStore((state) => state.buildInfo);
@@ -262,34 +262,12 @@ export default function ModelInputComponent({
     }
   }, [refreshAllModelInputs]);
 
-  const handleManageProvidersDialogClose = useCallback(
-    (opts?: { hasChanges?: boolean }) => {
-      setOpenManageProvidersDialog(false);
-      if (opts?.hasChanges) {
-        setIsRefreshingAfterClose(true);
-      }
-    },
-    [],
-  );
-
-  const hasSeenFetchStartRef = useRef(false);
-  useEffect(() => {
-    if (!isRefreshingAfterClose) {
-      hasSeenFetchStartRef.current = false;
-      return;
-    }
-    if (isFetchingProviders || isFetchingEnabledModels) {
-      hasSeenFetchStartRef.current = true;
-    } else if (hasSeenFetchStartRef.current) {
-      setIsRefreshingAfterClose(false);
-    }
-  }, [isRefreshingAfterClose, isFetchingProviders, isFetchingEnabledModels]);
-
-  useEffect(() => {
-    if (!isRefreshingAfterClose) return;
-    const timeout = setTimeout(() => setIsRefreshingAfterClose(false), 5000);
-    return () => clearTimeout(timeout);
-  }, [isRefreshingAfterClose]);
+  const { isRefreshingAfterClose, handleManageProvidersDialogClose } =
+    useRefreshAfterProviderClose({
+      isFetchingProviders,
+      isFetchingEnabledModels,
+      setOpenManageProvidersDialog,
+    });
 
   const renderLoadingButton = () => (
     <Button
