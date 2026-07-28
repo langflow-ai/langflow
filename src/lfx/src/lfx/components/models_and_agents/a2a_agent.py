@@ -30,6 +30,7 @@ from lfx.utils.ssrf_protection import (
     is_host_allowed,
     is_ip_blocked,
     resolve_hostname,
+    validate_and_resolve_connector_url,
     validate_and_resolve_url,
 )
 from lfx.utils.ssrf_transport import SSRFProtectedTransport
@@ -409,8 +410,10 @@ class A2AAgentComponent(Component):
         """
         base = _agent_base_url(url)
         try:
-            # to_thread: validate_and_resolve_url does blocking DNS; keep it off the event loop.
-            _validated_url, validated_ips = await asyncio.to_thread(validate_and_resolve_url, base)
+            # Connector policy (the URL is flow-author-configured, like the Ollama / LM Studio
+            # base URLs): literal loopback allowed by default, internal ranges still blocked.
+            # to_thread: the validator does blocking DNS; keep it off the event loop.
+            _validated_url, validated_ips = await asyncio.to_thread(validate_and_resolve_connector_url, base)
         except SSRFProtectionError:
             return None
         try:
@@ -503,11 +506,58 @@ class A2AAgentComponent(Component):
             return await self._run_internal_agent()
         return await self._call_external_agent()
 
+    async def _run_target_isolated(self, graph, flow_id: str):
+        """Run the target flow with the caller's LangChain run-config context reset.
+
+        When the caller Agent is under tool-approval (HITL), it runs inside a LangGraph
+        whose RunnableConfig — carrying ``configurable.thread_id`` + the durable checkpointer —
+        is propagated to child runnables through ``var_child_runnable_config``. ``graph.arun``
+        does ``copy_context()``, so the target flow's own Agent would inherit that thread id and
+        checkpoint against the CALLER's HITL thread, corrupting its tool loop ("tool_use without
+        tool_result"). Resetting the contextvar to a clean config before the nested run makes the
+        target execute as a fresh, independent graph.
+        """
+        from lfx.helpers import run_flow
+
+        try:
+            from langchain_core.runnables.config import var_child_runnable_config
+        except ImportError:
+            var_child_runnable_config = None
+
+        async def _do_run():
+            return await run_flow(
+                inputs={"input_value": self.input_value, "type": "chat"},
+                graph=graph,
+                user_id=str(self.user_id),
+                session_id=self._isolated_sub_session(flow_id),
+                output_type="chat",
+            )
+
+        if var_child_runnable_config is None:
+            return await _do_run()
+        token = var_child_runnable_config.set(None)
+        try:
+            return await _do_run()
+        finally:
+            var_child_runnable_config.reset(token)
+
+    def _isolated_sub_session(self, flow_id: str) -> str:
+        """Session for the internal sub-run, isolated from the caller's LangGraph thread.
+
+        Running the target on the caller's raw session_id makes the target's Agent inherit the
+        caller's in-flight thread — which mid-tool-execution holds this ``send_to_agent`` call as
+        an orphan ``tool_use`` with no ``tool_result`` yet — so the target's LLM call is rejected
+        ("tool_use without tool_result"). Namespacing by (caller session, target flow) gives the
+        sub-agent its own thread while staying stable across calls within one caller session.
+        """
+        base = getattr(getattr(self, "graph", None), "session_id", None)
+        return f"{base}:a2a:{flow_id}" if base else uuid.uuid4().hex
+
     async def _run_internal_agent(self) -> Message:
         # An in-project A2A agent is just a flow with chat I/O, so run it in-process (no HTTP, no
         # SSRF, no api key) and read its chat reply. Same three primitives Run Flow uses.
         from lfx.graph.graph.base import Graph
-        from lfx.helpers import get_flow_by_id_or_name, run_flow
+        from lfx.helpers import get_flow_by_id_or_name
 
         agent_name = self.agent_name_selected or None
         if not agent_name:
@@ -538,14 +588,7 @@ class A2AAgentComponent(Component):
             flow_id=str(flow.data.get("id", "")),
             flow_name=flow.data.get("name"),
         )
-        session_id = getattr(getattr(self, "graph", None), "session_id", None)
-        run_outputs = await run_flow(
-            inputs={"input_value": self.input_value, "type": "chat"},
-            graph=graph,
-            user_id=str(self.user_id),
-            session_id=session_id,
-            output_type="chat",
-        )
+        run_outputs = await self._run_target_isolated(graph, flow_id)
         answer = self._reply_from_run(run_outputs)
         message = Message(text=answer or "No response received from the agent.")
         self.status = message
@@ -582,11 +625,15 @@ class A2AAgentComponent(Component):
         # from <base>/.well-known/agent-card.json, so normalize first to avoid double-appending.
         agent_url = _agent_base_url(self.agent_url)
 
-        # Validate + DNS-pin the agent URL before any outbound call (blocks loopback, RFC1918,
-        # link-local / cloud metadata, etc.); mirrors the API Request component.
+        # Validate + DNS-pin the agent URL before any outbound call. The agent URL is configured
+        # by the flow author (like the Ollama / LM Studio base URLs), so it follows the connector
+        # policy: a literal loopback host is allowed by default (connector_ssrf_allow_loopback)
+        # while RFC1918 / link-local / cloud-metadata targets stay blocked. Card-declared
+        # off-origin hops are remote-controlled and keep the strict validator plus the
+        # toggle-independent floor (see build_a2a_client).
         try:
-            # to_thread: validate_and_resolve_url does blocking DNS; keep it off the event loop.
-            _validated_url, validated_ips = await asyncio.to_thread(validate_and_resolve_url, agent_url)
+            # to_thread: the validator does blocking DNS; keep it off the event loop.
+            _validated_url, validated_ips = await asyncio.to_thread(validate_and_resolve_connector_url, agent_url)
         except SSRFProtectionError as e:
             msg = f"SSRF Protection: {e}"
             raise ValueError(msg) from e

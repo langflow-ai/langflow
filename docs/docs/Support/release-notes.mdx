@@ -66,22 +66,39 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     Langflow no longer creates or accepts the legacy `langflow`/`langflow` default superuser credentials.
     If `LANGFLOW_AUTO_LOGIN=False`, set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password before startup.
-
-- Docker images enable component hardening by default
-
-    Official Langflow Docker images now include stricter defaults and include the following environment variables:
+    The legacy value `langflow` is not allowed, even if `LANGFLOW_AUTO_LOGIN=True`.
 
     ```bash
-    LANGFLOW_AUTO_LOGIN=false
-    LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false
-    LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true
-    LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true
-    LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true
+    export LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD
     ```
 
-    Existing Langflow containers that rely on custom components, code interpreters, or absolute local file paths must override these variables.
-    Keep the image defaults when users who can build flows on the server are not fully trusted.
-    For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
+    Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
+
+    If `LANGFLOW_AUTO_LOGIN=true`, setting `LANGFLOW_SUPERUSER_PASSWORD` is optional. If you omit it, Langflow generates a random bootstrap password for the auto-login account.
+
+    If you're running Langflow with Docker and `LANGFLOW_AUTO_LOGIN=false`, pass the password at startup:
+
+    ```bash
+    docker run -d \
+      --name ${CONTAINER_NAME} \
+      --restart unless-stopped \
+      -p 7860:7860 \
+      -e LANGFLOW_HOST=0.0.0.0 \
+      -e LANGFLOW_PORT=7860 \
+      -e LANGFLOW_AUTO_LOGIN=false \
+      -e LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD \
+      -v langflow-data:/app/langflow \
+      ${IMAGE}
+    ```
+
+    Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
+
+- Docker images disable auto-login by default
+
+    Official Langflow Docker images set `LANGFLOW_AUTO_LOGIN=false`.
+    You must set `LANGFLOW_SUPERUSER_PASSWORD` (and optionally `LANGFLOW_SUPERUSER`) before the container can start, unless you explicitly set `LANGFLOW_AUTO_LOGIN=true`.
+
+    For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
 
 - Long-tail component bundles are now opt-in
 
@@ -140,13 +157,15 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For more information, see [Workflow API (Beta)](/workflow-api).
 
+- Input Schema pane replaced by in-component Parameters
+
+    The **Input Schema** pane under **Share** > **API access** is removed, but the fields can still be exposed to requests.
+    The `tweaks` object in API requests is unchanged.
+    **Endpoint Name** remains available from the **API access** pane.
+
+    For details, see [Tweaks (API inputs)](/concepts-publish#input-schema).
+
 ### New features and enhancements
-
-- Agent2Agent (A2A) protocol support
-
-    Publish a flow as an A2A agent so other agents can discover and call it, and call remote A2A agents from inside a flow with the **A2A Agent** component.
-
-    For more information, see [Use Langflow as an A2A server](./a2a-server) and the [**A2A Agent** component](./a2a-agent-component).
 
 - Human-in-the-Loop (HITL)
 
@@ -154,6 +173,18 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     After a human responds by approving, rejecting, or editing the request, the agent resumes from the checkpoint.
 
     For more information, see [Human-in-the-Loop](./human-in-the-loop).
+
+- Agent2Agent (A2A) protocol support
+
+    Publish a flow as an A2A agent so other agents can discover and call it, and call remote A2A agents from inside a flow with the **A2A Agent** component.
+
+    For more information, see [Use Langflow as an A2A server](./a2a-server) and the [**A2A Agent** component](./a2a-agent-component).
+
+- AG-UI compatible streaming for the Workflow API
+
+    The v2 [Workflow API](/workflow-api) now supports streaming with the [AG-UI (Agent–User Interaction) protocol](https://docs.ag-ui.com/introduction) streaming format.
+
+    For more information, see [Workflow API (Beta)](/workflow-api#stream-with-ag-ui).
 
 - OpenAI Compatible model provider
 
@@ -167,12 +198,6 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     **Text Operations**, **JSON Operations**, and **Table Operations** are consolidated into a single [**Data Operations** component](./operations).
     Saved flows that use the separate components continue to work.
     For more information, see the [**Data Operations** component](./operations).
-
-- AG-UI compatible streaming for the Workflow API
-
-    The v2 [Workflow API](/workflow-api) now supports streaming with the [AG-UI (Agent–User Interaction) protocol](https://docs.ag-ui.com/introduction) streaming format.
-
-    For more information, see [Workflow API (Beta)](/workflow-api#stream-with-ag-ui).
 
 - IBM watsonx Orchestrate: Python 3.14 compatibility
 

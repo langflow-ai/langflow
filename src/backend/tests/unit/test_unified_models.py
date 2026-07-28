@@ -14,6 +14,7 @@ from lfx.base.models.unified_models import (
 )
 from lfx.base.models.unified_models.build_config import _resolve_dropdown_provider_values
 from lfx.base.models.unified_models.provider_queries import get_models_detailed
+from lfx.services.variable.request_scope import activate_no_env_fallback, reset_no_env_fallback
 
 
 @pytest.fixture(autouse=True)
@@ -698,6 +699,26 @@ def test_get_embeddings_openai_api_base_env_fallback(
 
     kwargs = mock_embedding_class.call_args.kwargs
     assert kwargs["base_url"] == expected_base_url
+
+
+@pytest.mark.parametrize("variable_name", ["OPENAI_EMBEDDINGS_API_BASE", "OPENAI_API_BASE"])
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_openai_api_base_env_fallback_can_be_disabled(
+    mock_get_class, mock_get_api_key, monkeypatch, variable_name
+):
+    mock_get_api_key.return_value = "sk-test"
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+    monkeypatch.setenv(variable_name, "http://openai-compatible.example/v1")
+    token = activate_no_env_fallback(disabled=True)
+
+    try:
+        get_embeddings([_make_openai_embedding_model()], api_key="sk-test")
+    finally:
+        reset_no_env_fallback(token)
+
+    assert "base_url" not in mock_embedding_class.call_args.kwargs
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")

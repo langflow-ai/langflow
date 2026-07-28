@@ -1,0 +1,106 @@
+---
+title: Paddle
+slug: /bundles-paddle
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Paddle** bundle.
+
+The **PaddleOCR** component calls the [PaddleOCR AI Studio](https://github.com/PaddlePaddle/PaddleOCR) async Job HTTP API to process images and PDFs. It supports two task types:
+
+* **Document parsing**: Layout-aware extraction into Markdown (`PP-StructureV3`, `PaddleOCR-VL-1.6`). Use this for PDFs, scanned documents, and content where reading order and structure matter.
+* **OCR**: Plain text recognition in scan order (`PP-OCRv5`, `PP-OCRv6`). Use this for images with simple text content.
+
+The component talks to the API over HTTP and does not require the `paddleocr` Python SDK.
+
+## Install the Paddle bundle
+
+The **Paddle** bundle is included in the `lfx-paddle` Extension bundle, which is installed automatically as part of `uv pip install langflow`.
+
+If you need to install it separately, run:
+
+```bash
+uv pip install lfx-paddle
+uv run langflow run
+```
+
+To verify the bundle is loaded in your environment:
+
+```bash
+lfx extension list
+```
+
+## Prerequisites
+
+* A [Baidu AI Studio](https://aistudio.baidu.com/account/accessToken) access token.
+
+## PaddleOCR
+
+The **PaddleOCR** component uploads one or more image or PDF files to the PaddleOCR AI Studio Job API, polls until each job completes, and returns the extracted text.
+
+Supported file types: `png`, `jpg`, `jpeg`, `bmp`, `tiff`, `webp`, and `pdf`.
+
+It outputs a [`Table`](/data-types#table) with one row per processed file. Each row includes fields such as `text`, `file_path`, `task_type`, `output_format`, `model`, `job_id`, and `pages`.
+
+* For **document parsing**, `text` is Markdown and `output_format` is `markdown`.
+* For **OCR**, `text` is plain text and `output_format` is `plain_text`.
+
+### Use the PaddleOCR component in a flow
+
+1. Get an access token from [Baidu AI Studio](https://aistudio.baidu.com/account/accessToken).
+2. In Langflow, add the **PaddleOCR** component from the **Paddle** bundle.
+3. Enter your token in the **AI Studio Access Token** field, or add it as a [global variable](/configuration-global-variables).
+4. Upload one or more supported files, or connect a server file path.
+5. Select a **Task Type**:
+
+    * **document_parsing** for layout-aware Markdown using models `PP-StructureV3` or `PaddleOCR-VL-1.6`.
+    * **ocr** for plain text recognition using models `PP-OCRv6` or `PP-OCRv5`.
+
+6. Select a **Model**. The available models change based on the selected task type.
+7. Connect a **Chat Output** or other downstream component to the **Files** output to inspect the extracted text.
+8. Click <Icon name="Play" aria-hidden="true" /> **Playground** to run the flow.
+
+### PaddleOCR parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Files** (`path`) | File | Input parameter. One or more image or PDF files to process. Supported types: `png`, `jpg`, `jpeg`, `bmp`, `tiff`, `webp`, `pdf`. |
+| **AI Studio Access Token** (`access_token`) | SecretString | Input parameter. Baidu AI Studio access token used to authenticate Job API requests. Required. |
+| **Task Type** (`task_type`) | Dropdown | Input parameter. `document_parsing` for layout-aware Markdown, or `ocr` for plain text recognition. Default: `document_parsing`. |
+| **Model** (`model`) | Dropdown | Input parameter. PaddleOCR model for the selected task type. For document parsing: `PP-StructureV3` (default), `PaddleOCR-VL-1.6`. For OCR: `PP-OCRv6` (default), `PP-OCRv5`. |
+| **Base URL** (`base_url`) | String | Input parameter. Optional PaddleOCR service root URL. Leave empty to use the official default (`https://paddleocr.aistudio-app.com`). Advanced. |
+| **Timeout (s)** (`poll_timeout`) | Integer | Input parameter. Maximum time in seconds to wait for each PaddleOCR job to complete. Default: `600`. Advanced. |
+| **Document Orientation Classification** (`use_doc_orientation_classify`) | Boolean | Input parameter. Enable document orientation classification. Default: `false`. Advanced. |
+| **Document Unwarping** (`use_doc_unwarping`) | Boolean | Input parameter. Enable document unwarping. Default: `false`. Advanced. |
+| **Text Line Orientation** (`use_textline_orientation`) | Boolean | Input parameter. OCR option. Enable text line orientation detection. Default: `false`. Advanced. |
+| **Text Detection Threshold** (`text_det_thresh`) | Float | Input parameter. OCR option. Text detection threshold. Advanced. |
+| **Text Detection Box Threshold** (`text_det_box_thresh`) | Float | Input parameter. OCR option. Text detection box threshold. Advanced. |
+| **Text Detection Unclip Ratio** (`text_det_unclip_ratio`) | Float | Input parameter. OCR option. Text detection unclip ratio. Advanced. |
+| **Text Recognition Score Threshold** (`text_rec_score_thresh`) | Float | Input parameter. OCR option. Text recognition score threshold. Advanced. |
+| **Table Recognition** (`use_table_recognition`) | Boolean | Input parameter. Document parsing option. Enable table recognition. Default: `true`. Advanced. |
+| **Formula Recognition** (`use_formula_recognition`) | Boolean | Input parameter. Document parsing option. Enable formula recognition. Default: `false`. Advanced. |
+| **Chart Recognition** (`use_chart_recognition`) | Boolean | Input parameter. Document parsing option. Enable chart recognition. Default: `false`. Advanced. |
+| **Seal Recognition** (`use_seal_recognition`) | Boolean | Input parameter. Document parsing option. Enable seal recognition. Default: `false`. Advanced. |
+| **Prettify Markdown** (`prettify_markdown`) | Boolean | Input parameter. Document parsing option. Return prettier Markdown when supported. Default: `true`. Advanced. |
+| **Temperature** (`temperature`) | Float | Input parameter. PaddleOCR-VL option. Sampling temperature. Advanced. |
+| **Top P** (`top_p`) | Float | Input parameter. PaddleOCR-VL option. Nucleus sampling `top_p`. Advanced. |
+| **Visualize** (`visualize`) | Boolean | Input parameter. Document parsing option. Generate visualization outputs when supported. Default: `false`. Advanced. |
+| **Server File Path** (`file_path`) | Data, JSON, or Message | Input parameter. Alternative to **Files**. A Data object with a server file path, or a Message with a path. Advanced. |
+| **Separator** (`separator`) | String | Input parameter. Separator used between multiple outputs in Message format. Default: `\n\n`. Advanced. |
+| **Silent Errors** (`silent_errors`) | Boolean | Input parameter. If `true`, errors do not raise an exception. Advanced. |
+| **Delete Server File After Processing** (`delete_server_file_after_processing`) | Boolean | Input parameter. If `true`, deletes the server file path after processing. Default: `true`. Advanced. |
+| **Ignore Unsupported Extensions** (`ignore_unsupported_extensions`) | Boolean | Input parameter. If `true`, files with unsupported extensions are skipped. Default: `true`. Advanced. |
+| **Ignore Unspecified Files** (`ignore_unspecified_files`) | Boolean | Input parameter. If `true`, Data objects without a server file path are ignored. Default: `false`. Advanced. |
+| **Files** (`dataframe`) | Table | Output parameter. One row per processed file, including extracted `text` and job metadata. |
+
+## See also
+
+* [PaddleOCR documentation](https://paddlepaddle.github.io/PaddleOCR/latest/en/version3.x/paddleocr_and_ppstructure.html)
+* [Baidu AI Studio access token](https://aistudio.baidu.com/account/accessToken)
+* [Langflow Extensions overview](/extensions-overview)
