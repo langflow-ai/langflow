@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
@@ -21,6 +20,10 @@ import {
 } from "../../../../ui/popover";
 import type { BaseInputProps } from "../../types";
 import { focusCommandListOnOpen } from "../../utils/focus-command-list-on-open";
+import {
+  ModelInputErrorButton,
+  ModelInputLoadingButton,
+} from "./components/ModelInputStates";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
 import { buildGroupedOptions } from "./helpers/build-grouped-options";
@@ -269,40 +272,10 @@ export default function ModelInputComponent({
       setOpenManageProvidersDialog,
     });
 
-  const renderLoadingButton = () => (
-    <Button
-      className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
-      variant="primary"
-      size="xs"
-      disabled
-    >
-      <LoadingTextComponent text={t("modelInput.loadingModels")} />
-    </Button>
-  );
-
   const handleRetryLoad = useCallback(() => {
     void refetchProviders();
     void refetchEnabledModels();
   }, [refetchProviders, refetchEnabledModels]);
-
-  const renderErrorButton = () => (
-    <Button
-      className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
-      variant="primary"
-      size="xs"
-      data-testid="model-input-load-failed"
-      onClick={handleRetryLoad}
-    >
-      <span className="flex items-center gap-2 truncate text-left">
-        <ForwardedIconComponent
-          name="AlertTriangle"
-          className="h-3.5 w-3.5 shrink-0 text-status-yellow"
-        />
-        <span className="truncate">{t("modelInput.loadFailed")}</span>
-      </span>
-      <ForwardedIconComponent name="RotateCw" className="h-3.5 w-3.5" />
-    </Button>
-  );
 
   const renderFooterButton = (
     label: string,
@@ -393,11 +366,19 @@ export default function ModelInputComponent({
   }
 
   if (hasInitialLoadError) {
-    return <div className="w-full">{renderErrorButton()}</div>;
+    return (
+      <div className="w-full">
+        <ModelInputErrorButton onRetry={handleRetryLoad} />
+      </div>
+    );
   }
 
   if (isLoading || isRefreshingAfterClose || refreshOptions) {
-    return <div className="w-full">{renderLoadingButton()}</div>;
+    return (
+      <div className="w-full">
+        <ModelInputLoadingButton />
+      </div>
+    );
   }
 
   const showConfigureAffordance =
