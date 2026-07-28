@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log import logger
 from lfx.services.deps import get_settings_service
 from sqlmodel import select
@@ -413,6 +414,7 @@ async def auto_configure_starter_projects_mcp(session):
                 if default_auth.get("auth_type", "none") == "apikey":
                     command = "uvx"
                     args = [
+                        *mcp_sdk_constraint_args(),
                         "mcp-proxy",
                         "--transport",
                         "streamablehttp",
@@ -429,6 +431,7 @@ async def auto_configure_starter_projects_mcp(session):
                     # No authentication - direct connection
                     command = "uvx"
                     args = [
+                        *mcp_sdk_constraint_args(),
                         "mcp-proxy",
                         "--transport",
                         "streamablehttp",

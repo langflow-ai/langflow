@@ -369,6 +369,13 @@ def _uvx_package_selection(args: list[str]) -> tuple[list[str], list[str], str |
     return from_packages, with_packages, command
 
 
+def _is_uvx_with_option(arg: str) -> bool:
+    """Match every spelling uvx accepts for ``--with``: split, inline, and clustered short."""
+    if arg in {"--with", "-w"}:
+        return True
+    return arg.startswith("--with=") or (arg.startswith("-w") and not arg.startswith("--"))
+
+
 def _package_runner_target(base_command: str, args: list[str]) -> tuple[str | None, str | None]:
     """Extract the installed package and an explicit uvx entrypoint."""
     index = 0
@@ -394,6 +401,12 @@ def _package_runner_target(base_command: str, args: list[str]) -> tuple[str | No
         if base_command == "npx" and (arg == "--package" or arg.startswith("--package=")):
             package, _ = _option_value(args, index, base_command)
             return package, None
+        if base_command == "uvx" and _is_uvx_with_option(arg):
+            # ``--with`` adds a requirement to the ephemeral environment; it never selects the
+            # executable. Skipping its value keeps the operand after it as the runner target
+            # instead of misreading the extra requirement as the package being launched.
+            index += 2 if arg in {"--with", "-w"} else 1
+            continue
         if arg.startswith("-"):
             index += 2 if arg in UVX_VALUE_OPTIONS | NPX_VALUE_OPTIONS and "=" not in arg else 1
             continue
@@ -469,12 +482,30 @@ def _validate_npx_package_selection(args: list[str], allowed_packages: frozenset
     return True
 
 
+def _sdk_constraint_exemption() -> str | None:
+    """Return the requirement Langflow itself injects as ``uvx --with``, if enabled.
+
+    Langflow prepends ``--with <mcp_sdk_constraint>`` to every MCP server it launches
+    through uvx. Exempting that exact specifier keeps operator package allowlists
+    working without every deployment adding ``mcp``; any other ``--with`` requirement
+    is still validated against the allowlist.
+    """
+    from lfx.base.mcp.uvx import DEFAULT_MCP_SDK_CONSTRAINT
+
+    value = _setting("mcp_sdk_constraint", default=DEFAULT_MCP_SDK_CONSTRAINT)
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
 def _validate_allowed_package(base_command: str, args: list[str], allowed_packages: frozenset[str] | None) -> None:
     if allowed_packages is None or base_command not in {"npx", "uvx"}:
         return
 
     if base_command == "uvx":
         from_packages, with_packages, command = _uvx_package_selection(args)
+        exemption = _sdk_constraint_exemption()
+        with_packages = [package for package in with_packages if package != exemption]
         selected_packages = [*from_packages, *with_packages]
         if not from_packages:
             selected_packages.append(command or "<missing>")
