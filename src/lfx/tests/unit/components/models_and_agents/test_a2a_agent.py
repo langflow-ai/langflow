@@ -9,7 +9,10 @@ SDK, so these tests drive that client directly against real localhost servers:
 - it strips the configured ``x-api-key`` on any off-origin hop (a card declaring an RPC url
   on a different host/port), so the key can never leak there, while still SSRF-validating that
   off-origin target (an internal/metadata target is blocked),
-- an internal/loopback ``agent_url`` is rejected by SSRF protection before any call.
+- an internal/metadata ``agent_url`` is rejected by SSRF protection before any call, while a
+  literal-loopback ``agent_url`` follows the connector policy (allowed by default for local
+  agents, blocked when ``connector_ssrf_allow_loopback`` is off) without weakening the strict
+  validation of card-declared off-origin targets.
 """
 
 import contextlib
@@ -208,8 +211,12 @@ async def test_off_origin_idn_host_pinned_under_punycode_key(monkeypatch):
     assert "exämple.com" not in client._transport.pinned_ips
 
 
-async def test_loopback_agent_url_rejected_by_ssrf(monkeypatch):
-    """A loopback / metadata agent_url is rejected before any outbound call."""
+async def test_metadata_agent_url_rejected_by_ssrf(monkeypatch):
+    """An internal/metadata agent_url is rejected before any outbound call.
+
+    The connector loopback exemption only covers literal loopback hosts; cloud-metadata and
+    RFC1918 targets stay blocked regardless.
+    """
     monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
     monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
 
@@ -219,6 +226,54 @@ async def test_loopback_agent_url_rejected_by_ssrf(monkeypatch):
     )
     with pytest.raises(ValueError, match="SSRF"):
         await component.send_to_agent()
+
+
+async def test_loopback_agent_url_allowed_by_default_connector_policy(monkeypatch):
+    """A literal-loopback agent_url follows the connector policy: allowed by default.
+
+    The agent URL is flow-author-configured (like the Ollama / LM Studio base URLs), so a local
+    A2A server is reachable out of the box — no allowlist entry required. Regression guard for
+    the #14264 family (local services blocked at loopback by the raw validator).
+    """
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+    monkeypatch.delenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", raising=False)
+
+    with _CardServer() as server:
+        component = A2AAgentComponent(mode="External", agent_url=f"http://127.0.0.1:{server.port}", input_value="hi")
+        card = await component._fetch_card(f"http://127.0.0.1:{server.port}")
+
+    assert card is not None
+    assert card["name"] == "Echo"
+
+
+async def test_loopback_agent_url_blocked_when_connector_loopback_disabled(monkeypatch):
+    """Multi-tenant posture: connector_ssrf_allow_loopback=false blocks a loopback agent_url."""
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", "false")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+
+    component = A2AAgentComponent(agent_url="http://127.0.0.1:9", input_value="hi")
+    with pytest.raises(ValueError, match="SSRF"):
+        await component.send_to_agent()
+
+
+async def test_off_origin_loopback_still_blocked_despite_connector_exemption(monkeypatch):
+    """The connector loopback exemption applies only to the flow-author's agent_url.
+
+    A card-declared off-origin hop to loopback stays on the strict validator: without an
+    allowlist entry it is blocked, so a remote card cannot ride the exemption to reach the
+    server's loopback.
+    """
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+    monkeypatch.delenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", raising=False)
+
+    agent_url = "http://public-agent.example"  # off-origin hop below differs by host
+    client = build_a2a_client(agent_url, ["93.184.216.34"], api_key="super-secret", timeout=2)
+    async with client:
+        with pytest.raises(SSRFProtectionError):
+            await client.post("http://127.0.0.1:9/rpc", json={"hello": "world"})
 
 
 # --- External mode: agent card preview -------------------------------------
@@ -525,3 +580,79 @@ def test_card_payload_clips_untrusted_strings():
 
     assert len(payload["title"]) <= 500
     assert len(payload["sections"][0]["text"]) <= 500
+
+
+class TestInternalSubSessionIsolation:
+    """The internal sub-run must not share the caller's LangGraph thread.
+
+    Running the target on the caller's raw session_id makes the target's Agent inherit the
+    caller's in-flight thread — which, mid tool-approval, holds the send_to_agent call as an
+    orphan tool_use with no tool_result — so the target's LLM call is rejected with
+    'tool_use ids were found without tool_result blocks'. The sub-run must get an isolated
+    session namespaced off the caller's.
+    """
+
+    def test_sub_session_is_namespaced_off_caller_session(self):
+        from types import SimpleNamespace
+
+        component = A2AAgentComponent(mode="Internal", input_value="hi")
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(session_id="caller-session-abc"))
+
+        sub = component._isolated_sub_session("flow-123")
+
+        assert sub == "caller-session-abc:a2a:flow-123"
+        assert sub != "caller-session-abc"  # never the caller's own thread
+
+    def test_sub_session_is_unique_when_caller_has_no_session(self):
+        from types import SimpleNamespace
+
+        component = A2AAgentComponent(mode="Internal", input_value="hi")
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(session_id=None))
+
+        sub = component._isolated_sub_session("flow-123")
+
+        assert sub  # non-empty
+        assert sub != "flow-123"
+        assert ":a2a:" not in sub  # falls back to a fresh uuid, not a namespaced base
+
+
+class TestNestedRunConfigIsolation:
+    """The nested target run must not inherit the caller's LangChain RunnableConfig.
+
+    Under tool-approval (HITL), the caller Agent runs inside a LangGraph whose config carries
+    ``configurable.thread_id`` + the durable checkpointer. LangChain propagates that config to
+    child runnables via ``var_child_runnable_config``, and ``graph.arun`` copies the context, so
+    the target flow's Agent would checkpoint against the CALLER's HITL thread and corrupt its own
+    tool loop ("tool_use ids were found without tool_result blocks"). ``_run_target_isolated``
+    must reset the contextvar for the duration of the nested run and restore it after.
+    """
+
+    async def test_nested_run_sees_reset_config_and_restores_after(self, monkeypatch):
+        from types import SimpleNamespace
+
+        from langchain_core.runnables.config import var_child_runnable_config
+
+        from lfx import helpers
+
+        seen: dict = {}
+
+        async def fake_run_flow(**kwargs):
+            seen["config_during_run"] = var_child_runnable_config.get()
+            seen["session_id"] = kwargs.get("session_id")
+            return []
+
+        monkeypatch.setattr(helpers, "run_flow", fake_run_flow)
+
+        component = A2AAgentComponent(mode="Internal", input_value="hi")
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(session_id="caller-1"))
+        component._user_id = "user-1"
+
+        sentinel = {"configurable": {"thread_id": "caller-hitl-thread"}}
+        token = var_child_runnable_config.set(sentinel)
+        try:
+            await component._run_target_isolated(graph=object(), flow_id="target-flow")
+            assert seen["config_during_run"] is None  # caller's HITL thread never leaks in
+            assert seen["session_id"] == "caller-1:a2a:target-flow"
+            assert var_child_runnable_config.get() == sentinel  # restored for the caller loop
+        finally:
+            var_child_runnable_config.reset(token)

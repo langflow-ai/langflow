@@ -368,11 +368,11 @@ def get_llm(
         # Get all provider variables from database
         provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
 
-        # Priority: component value > database value > env var
+        # Priority: component value > database value > env var > default fallback (localhost)
         ollama_base_url_value = (
             ollama_base_url
             if ollama_base_url
-            else provider_vars.get("OLLAMA_BASE_URL") or _env_if_allowed("OLLAMA_BASE_URL")
+            else provider_vars.get("OLLAMA_BASE_URL") or _env_if_allowed("OLLAMA_BASE_URL") or "http://localhost:11434"
         )
         if ollama_base_url_value:
             kwargs[base_url_param] = ollama_base_url_value
@@ -627,9 +627,16 @@ def _compose_embedding_kwargs(
     if isinstance(api_base_value, str) and not api_base_value.strip():
         api_base_value = None
     if provider == "OpenAI" and not api_base_value:
-        api_base_value = _to_str(os.environ.get("OPENAI_EMBEDDINGS_API_BASE")) or _to_str(
-            os.environ.get("OPENAI_API_BASE")
-        )
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        openai_base_url = _to_str(provider_vars.get("OPENAI_BASE_URL")) or _to_str(_env_if_allowed("OPENAI_BASE_URL"))
+        if openai_base_url:
+            from lfx.utils.util import transform_localhost_url
+
+            api_base_value = transform_localhost_url(openai_base_url)
+        else:
+            api_base_value = _to_str(_env_if_allowed("OPENAI_EMBEDDINGS_API_BASE")) or _to_str(
+                _env_if_allowed("OPENAI_API_BASE")
+            )
 
     kwargs: dict[str, Any] = {}
     if "model" in param_mapping:

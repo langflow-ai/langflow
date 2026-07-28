@@ -26,14 +26,22 @@ async def authorized_or_owner_scoped(
     resource_id: UUID,
     owner_column: InstrumentedAttribute,
     owner_id: UUID,
+    for_update: bool = False,
 ) -> T | None:
-    """Load by id when cross-user fetch is supported; otherwise scope by owner."""
+    """Load by id when cross-user fetch is supported; otherwise scope by owner.
+
+    ``for_update`` refreshes any identity-map instance from the database and
+    locks the selected row through the caller's transaction. Write paths use
+    this to keep authorization of the current scope atomic with the mutation.
+    """
     authz = get_authorization_service()
     # Require both plugin capability and AUTHZ_ENABLED before widening the query.
     if await authz.supports_cross_user_fetch() and await authz.is_enabled():
         stmt = select(model).where(id_column == resource_id)
     else:
         stmt = select(model).where(id_column == resource_id).where(owner_column == owner_id)
+    if for_update:
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
     return (await session.exec(stmt)).first()
 
 

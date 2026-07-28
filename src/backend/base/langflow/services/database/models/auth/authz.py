@@ -130,7 +130,7 @@ class AuthzRoleAssignment(SQLModel, table=True):  # type: ignore[call-arg]
     role_id: UUIDstr = Field(
         sa_column=Column(sa.Uuid(), ForeignKey("authz_role.id", ondelete="CASCADE"), nullable=False, index=True),
     )
-    domain_type: str = Field(default="global", description="global, org, workspace")
+    domain_type: str = Field(default="global", description="global, workspace, project")
     # Explicit ``sa_column`` so SQLModel emits ``sa.Uuid()`` matching the
     # migration's column type. Without this, SQLModel can fall back to
     # ``AutoString``/``CHAR(32)`` on SQLite, which drifts from the migration
@@ -279,6 +279,8 @@ class AuthzAuditLog(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "authz_audit_log"
     __table_args__ = (
         Index("ix_authz_audit_log_user_timestamp", "user_id", "timestamp"),
+        Index("ix_authz_audit_log_actor_timestamp", "actor_id", "timestamp"),
+        Index("ix_authz_audit_log_actor_type_timestamp", "actor_type", "timestamp"),
         Index("ix_authz_audit_log_resource", "resource_type", "resource_id"),
         # ``owner_override`` is the third value the framework writes (see
         # ``_AUDIT_OWNER_OVERRIDE`` in services/authorization/utils.py); it
@@ -295,6 +297,9 @@ class AuthzAuditLog(SQLModel, table=True):  # type: ignore[call-arg]
         default=None,
         sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True, index=True),
     )
+    actor_type: str | None = Field(default=None)
+    # Deliberately no FK: API-key actor attribution must survive key deletion.
+    actor_id: UUIDstr | None = Field(default=None, sa_column=Column(sa.Uuid(), nullable=True))
     action: str = Field(index=True)
     resource_type: str | None = Field(default=None)
     resource_id: UUIDstr | None = Field(default=None)

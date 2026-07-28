@@ -399,6 +399,10 @@ export default function Page({
     (e as unknown as Event).stopImmediatePropagation();
     const selectedNode = nodes.filter((obj) => obj.selected);
     if (selectedNode.length > 0) {
+      // Snapshot before pasting so the duplication is its own history entry.
+      // Without this, undo falls back to the previous snapshot (e.g. a drag's
+      // pre-move state) and reverts both the duplication and the prior action.
+      takeSnapshot();
       paste(
         { nodes: selectedNode, edges: [] },
         {

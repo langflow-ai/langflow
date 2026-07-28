@@ -61,6 +61,8 @@ async def test_create_variable(client: AsyncClient, generic_variable, logged_in_
     assert generic_variable["type"] == result["type"]
     assert generic_variable["default_fields"] == result["default_fields"]
     assert "id" in result
+    assert result["is_owner"] is True
+    assert result["can_manage_shares"] is True
     # GENERIC_TYPE variables should NOT be encrypted (stored as plaintext)
     assert generic_variable["value"] == result["value"]
 
@@ -860,6 +862,27 @@ async def test_update_variable_cross_user_allowed_with_plugin(
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["name"] == "shared_update"
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_update_shared_variable_metadata_never_returns_owner_value(
+    client: AsyncClient, generic_variable, logged_in_headers, patch_variable_authz
+):
+    generic_variable["value"] = "owner-plaintext"
+    saved = (await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)).json()
+    delegate_headers = await _create_user_and_headers(client, f"var_metadata_{uuid4().hex[:8]}")
+    patch_variable_authz(cross_user=True, enabled=True, allow=True)
+
+    response = await client.patch(
+        f"api/v1/variables/{saved['id']}",
+        json={"id": saved["id"], "name": "metadata_only"},
+        headers=delegate_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["value"] is None
+    assert response.json()["is_owner"] is False
+    assert response.json()["can_manage_shares"] is False
 
 
 @pytest.mark.usefixtures("active_user")

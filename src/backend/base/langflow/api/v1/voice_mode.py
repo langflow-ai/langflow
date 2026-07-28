@@ -20,6 +20,11 @@ from elevenlabs import ElevenLabs
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from lfx.log import logger
 from lfx.schema.schema import InputValueRequest
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyError,
+    ModelProviderPolicyPurpose,
+    require_model_provider,
+)
 from lfx.utils.secrets import secret_value_to_str
 from sqlmodel import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
@@ -31,7 +36,7 @@ from langflow.api.v1.flows_helpers import _read_flow
 from langflow.memory import aadd_messagetables
 from langflow.schema.properties import Properties
 from langflow.services.auth.utils import get_current_user_for_websocket
-from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.authorization import FlowAction, VoiceAction, ensure_flow_permission, ensure_voice_permission
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.message.model import MessageTable
@@ -105,6 +110,24 @@ async def authenticate_and_get_openai_key(session: DbSession, user: User, websoc
             }
         )
         return None, None
+
+    try:
+        require_model_provider(
+            user_id=user.id,
+            provider="OpenAI",
+            purpose=ModelProviderPolicyPurpose.USE,
+            attributes={"is_superuser": bool(getattr(user, "is_superuser", False))},
+        )
+    except ModelProviderPolicyError as exc:
+        await websocket.send_json(
+            {
+                "type": "error",
+                "code": exc.code,
+                "message": str(exc),
+            }
+        )
+        return None, None
+
     variable_service = get_variable_service()
     try:
         openai_key_value = await variable_service.get_variable(
@@ -761,9 +784,6 @@ async def flow_as_tool_websocket(
 
         vad_task: asyncio.Task | None = None
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
-        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
-        if current_user is None or openai_key is None:
-            return
         try:
             flow = await _get_authorized_voice_flow(flow_id, current_user, session)
             flow_description = flow.description
@@ -781,6 +801,10 @@ async def flow_as_tool_websocket(
             err_msg = {"error": f"Failed to load flow: {e!s}"}
             await client_websocket.send_json(err_msg)
             await logger.aerror(f"Failed to load flow: {e}")
+            return
+
+        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
+        if current_user is None or openai_key is None:
             return
 
         # Resolve voice config only after authentication and flow authorization,
@@ -1235,7 +1259,15 @@ async def flow_tts_websocket(
             await openai_ws.close()
 
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
-        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_send)
+        try:
+            await _get_authorized_voice_flow(flow_id, current_user, session)
+        except Exception as e:  # noqa: BLE001
+            err_msg = {"error": f"Failed to load flow: {e!s}"}
+            await client_websocket.send_json(err_msg)
+            await logger.aerror(f"Failed to load flow: {e}")
+            return
+
+        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
         if current_user is None or openai_key is None:
             return
         url = "wss://api.openai.com/v1/realtime?intent=transcription"
@@ -1385,6 +1417,11 @@ async def get_elevenlabs_voice_ids(
 ):
     """Get available voice IDs from ElevenLabs API."""
     try:
+        await ensure_voice_permission(
+            current_user,
+            VoiceAction.READ,
+            voice_user_id=current_user.id,
+        )
         # Get or create the ElevenLabs client
         elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id, session)
         if elevenlabs_client is None:

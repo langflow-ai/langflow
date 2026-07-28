@@ -758,13 +758,13 @@ jobs:
         with:
           enable-cache: false
           python-version: "3.13"
-      - name: Wait for PyPI propagation
-        run: sleep 120
-      - name: Check direct core and bundle dependencies on PyPI
+      - name: Wait for direct core and bundle dependencies on PyPI
+        timeout-minutes: 20
         run: |
           uv run --with packaging --no-project python - <<'PY'
           import json
           import sys
+          import time
           import tomllib
           import urllib.error
           import urllib.request
@@ -786,41 +786,77 @@ jobs:
             print("No direct langflow-core or lfx-* dependencies found.")
             sys.exit(0)
 
-          missing = []
-          unsatisfied = []
-          for requirement in requirements:
-            name = canonicalize_name(requirement.name)
-            url = f"https://pypi.org/pypi/{name}/json"
-            try:
-              with urllib.request.urlopen(url, timeout=30) as response:
-                project = json.load(response)
-            except urllib.error.HTTPError as exc:
-              if exc.code == 404:
-                missing.append(name)
-                continue
-              raise
+          max_attempts = 60
+          retry_delay_seconds = 15
+          pending = requirements
 
-            matching_versions = []
-            for version_text in project.get("releases", {}):
+          for attempt in range(1, max_attempts + 1):
+            missing = []
+            unsatisfied = []
+            transient_errors = []
+            next_pending = []
+
+            for requirement in pending:
+              name = canonicalize_name(requirement.name)
+              cache_buster = f"{time.time_ns()}-{attempt}"
+              request = urllib.request.Request(
+                f"https://pypi.org/pypi/{name}/json?cache_buster={cache_buster}",
+                headers={"Cache-Control": "no-cache", "Pragma": "no-cache"},
+              )
               try:
-                version = Version(version_text)
-              except InvalidVersion:
+                with urllib.request.urlopen(request, timeout=30) as response:
+                  project = json.load(response)
+              except urllib.error.HTTPError as exc:
+                if exc.code == 404:
+                  missing.append(name)
+                  next_pending.append(requirement)
+                  continue
+                if exc.code == 429 or 500 <= exc.code < 600:
+                  transient_errors.append(f"{name}: HTTP {exc.code}")
+                  next_pending.append(requirement)
+                  continue
+                raise
+              except (TimeoutError, urllib.error.URLError) as exc:
+                transient_errors.append(f"{name}: {exc}")
+                next_pending.append(requirement)
                 continue
-              if version in requirement.specifier:
-                matching_versions.append(version)
 
-            if not matching_versions:
-              unsatisfied.append(f"{name}{requirement.specifier}")
-            else:
-              latest = max(matching_versions)
-              print(f"{name}{requirement.specifier}: available, latest matching {latest}")
+              matching_versions = []
+              for version_text, files in project.get("releases", {}).items():
+                if not files:
+                  continue
+                try:
+                  version = Version(version_text)
+                except InvalidVersion:
+                  continue
+                if version in requirement.specifier:
+                  matching_versions.append(version)
 
-          if missing or unsatisfied:
+              if not matching_versions:
+                unsatisfied.append(f"{name}{requirement.specifier}")
+                next_pending.append(requirement)
+              else:
+                latest = max(matching_versions)
+                print(f"{name}{requirement.specifier}: available, latest matching {latest}")
+
+            pending = next_pending
+            if not pending:
+              print("All direct core and bundle dependencies are available on PyPI.")
+              break
+
+            print(f"PyPI propagation incomplete (attempt {attempt}/{max_attempts}).", file=sys.stderr)
             if missing:
-              print("Missing PyPI projects: " + ", ".join(missing), file=sys.stderr)
+              print("Missing PyPI projects: " + ", ".join(sorted(missing)), file=sys.stderr)
             if unsatisfied:
-              print("No published version satisfies: " + ", ".join(unsatisfied), file=sys.stderr)
-            sys.exit(1)
+              print("No published version satisfies: " + ", ".join(sorted(unsatisfied)), file=sys.stderr)
+            if transient_errors:
+              print("Transient PyPI errors: " + ", ".join(sorted(transient_errors)), file=sys.stderr)
+
+            if attempt == max_attempts:
+              print("Timed out waiting for PyPI propagation.", file=sys.stderr)
+              sys.exit(1)
+
+            time.sleep(retry_delay_seconds)
           PY
 
   publish-nightly-main:

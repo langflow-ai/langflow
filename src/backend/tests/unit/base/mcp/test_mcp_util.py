@@ -286,6 +286,86 @@ class TestMCPSessionManager:
         # Clean up after test
         await manager.cleanup_all()
 
+    async def test_stdio_session_creation_cancellation_stops_background_task(self, session_manager):
+        """Cancelling session creation must also stop the task that owns the subprocess."""
+        initialize_started = asyncio.Event()
+
+        class BlockingClientSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+            async def initialize(self):
+                initialize_started.set()
+                await asyncio.Event().wait()
+
+        stdio_client = MagicMock()
+        stdio_client.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+        stdio_client.return_value.__aexit__ = AsyncMock(return_value=None)
+        existing_tasks = set(session_manager._background_tasks)
+
+        with (
+            patch("lfx.base.mcp.util.ClientSession", return_value=BlockingClientSession()),
+            patch("mcp.client.stdio.stdio_client", stdio_client),
+        ):
+            creation_task = asyncio.create_task(session_manager._create_stdio_session("test_session", MagicMock()))
+            await asyncio.wait_for(initialize_started.wait(), timeout=1)
+            session_tasks = set(session_manager._background_tasks) - existing_tasks
+            assert len(session_tasks) == 1
+
+            with pytest.raises(asyncio.TimeoutError):
+                await asyncio.wait_for(creation_task, timeout=0.01)
+
+            await asyncio.wait_for(asyncio.gather(*session_tasks, return_exceptions=True), timeout=1)
+
+        assert session_tasks.isdisjoint(session_manager._background_tasks)
+
+    async def test_http_session_creation_cancellation_stops_background_task(self, session_manager):
+        """Cancelling HTTP session creation must also stop the task that owns the transport."""
+        initialize_started = asyncio.Event()
+
+        class BlockingClientSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+            async def initialize(self):
+                initialize_started.set()
+                await asyncio.Event().wait()
+
+        streamable_client = MagicMock()
+        streamable_client.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock(), MagicMock()))
+        streamable_client.return_value.__aexit__ = AsyncMock(return_value=None)
+        connection_params = {
+            "url": "http://test-mcp.example/mcp",
+            "headers": {},
+            "timeout_seconds": 30,
+            "verify_ssl": True,
+        }
+        existing_tasks = set(session_manager._background_tasks)
+
+        with (
+            patch("lfx.base.mcp.util.ClientSession", return_value=BlockingClientSession()),
+            patch("mcp.client.streamable_http.streamablehttp_client", streamable_client),
+        ):
+            creation_task = asyncio.create_task(
+                session_manager._create_streamable_http_session("test_session", connection_params)
+            )
+            await asyncio.wait_for(initialize_started.wait(), timeout=1)
+            session_tasks = set(session_manager._background_tasks) - existing_tasks
+            assert len(session_tasks) == 1
+
+            with pytest.raises(asyncio.TimeoutError):
+                await asyncio.wait_for(creation_task, timeout=0.01)
+
+            await asyncio.wait_for(asyncio.gather(*session_tasks, return_exceptions=True), timeout=1)
+
+        assert session_tasks.isdisjoint(session_manager._background_tasks)
+
     async def test_session_caching(self, session_manager):
         """Test that sessions are properly cached and reused."""
         context_id = "test_context"
@@ -301,10 +381,7 @@ class TestMCPSessionManager:
         mock_task = AsyncMock()
         mock_task.done = MagicMock(return_value=False)
 
-        with (
-            patch.object(session_manager, "_create_stdio_session") as mock_create,
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
-        ):
+        with patch.object(session_manager, "_create_stdio_session") as mock_create:
             mock_create.return_value = (mock_session, mock_task)
 
             # First call should create session
@@ -356,10 +433,7 @@ class TestMCPSessionManager:
         server2_params = MagicMock()
         server2_params.command = "server2"
 
-        with (
-            patch.object(session_manager, "_create_stdio_session") as mock_create,
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
-        ):
+        with patch.object(session_manager, "_create_stdio_session") as mock_create:
             mock_session1 = AsyncMock()
             mock_session2 = AsyncMock()
             mock_task1 = AsyncMock()
@@ -408,10 +482,7 @@ class TestMCPSessionManager:
             await release.wait()
             return mock_session, mock_task, "streamable_http", False
 
-        with (
-            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
-        ):
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
             getters = [
                 asyncio.create_task(session_manager.get_session(f"ctx_{i}", connection_params, "streamable_http"))
                 for i in range(10)
@@ -466,28 +537,34 @@ class TestMCPSessionManager:
 
         With `len(sessions)` as the id source, removing and re-adding sessions
         can produce colliding ids and silently overwrite a live session entry.
+
+        Sessions are forced to be dead (task.done() == True) so each
+        get_session() call cleans up the stale session and creates a new one,
+        advancing the monotonic counter.
         """
         connection_params = {"url": "http://example.test/sse", "headers": {}}
-
-        async def fake_create(_session_id, _params, _preferred_transport=None):
-            # Return a fresh session/task for each creation.
-            s = AsyncMock()
-            t = AsyncMock()
-            t.done = MagicMock(return_value=False)
-            t.cancel = MagicMock()
-            return s, t, "streamable_http", False
-
         server_key = session_manager._get_server_key(connection_params, "streamable_http")
 
-        with (
-            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
-            # Force health check to fail so each call creates a fresh session.
-            patch.object(session_manager, "_validate_session_connectivity", return_value=False),
-        ):
-            ids_seen: list[str] = []
+        # Keep track of every task we hand out so we can mark them done before
+        # the next get_session() iteration.
+        created_tasks: list[MagicMock] = []
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            s = AsyncMock()
+            t = AsyncMock()
+            # Session starts alive; caller will flip to done between iterations.
+            t.done = MagicMock(return_value=False)
+            t.cancel = MagicMock()
+            created_tasks.append(t)
+            return s, t, "streamable_http", False
+
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
             for i in range(3):
+                # Mark all previously created tasks as dead so get_session()
+                # sees a stale session, cleans it up, and creates a fresh one.
+                for t in created_tasks:
+                    t.done = MagicMock(return_value=True)
                 await session_manager.get_session(f"ctx_{i}", connection_params, "streamable_http")
-                ids_seen.extend(session_manager.sessions_by_server[server_key]["sessions"].keys())
 
         # Counter keeps advancing even as old sessions are cleaned up.
         assert session_manager._session_id_counters[server_key] == 3
@@ -498,8 +575,12 @@ class TestMCPSessionManager:
         """Idle cleanup must not race a concurrent get_session().
 
         Without holding the per-server lock, the idle-cleanup task could pop
-        and cancel a session mid-validation; `get_session()` would then hand
+        and cancel a session mid-creation; `get_session()` would then hand
         the caller a dead session plus a dangling refcount entry.
+
+        The blocking point is inside ``_create_streamable_http_session`` (the
+        new session is being created while the getter holds the lock), which
+        means the idle-cleaner can only start after the getter releases it.
         """
         connection_params = {"url": "http://example.test/sse", "headers": {}}
         server_key = session_manager._get_server_key(connection_params, "streamable_http")
@@ -509,29 +590,24 @@ class TestMCPSessionManager:
         mock_task.done = MagicMock(return_value=False)
         mock_task.cancel = MagicMock()
 
-        # Seed one idle session (last_used in the distant past).
+        # Start with NO sessions so get_session() immediately enters
+        # _create_streamable_http_session (where we can block it).
         session_manager.sessions_by_server[server_key] = {
-            "sessions": {
-                f"{server_key}_0": {
-                    "session": mock_session,
-                    "task": mock_task,
-                    "type": "streamable_http",
-                    "last_used": 0,  # definitely past the idle timeout
-                }
-            },
+            "sessions": {},
             "last_cleanup": 0,
         }
 
         started = asyncio.Event()
         release = asyncio.Event()
 
-        async def slow_validate(_session):
+        async def slow_create(_session_id, _params, _preferred_transport=None):
+            # Signal that getter is inside the lock, then pause.
             started.set()
             await release.wait()
-            return True
+            return mock_session, mock_task, "streamable_http", False
 
-        with patch.object(session_manager, "_validate_session_connectivity", side_effect=slow_validate):
-            # Start a get_session() that will block inside the health check
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=slow_create):
+            # Start a get_session() that will block inside fake_create
             # while holding the per-server lock.
             getter = asyncio.create_task(
                 session_manager.get_session("ctx_reader", connection_params, "streamable_http")
@@ -541,32 +617,24 @@ class TestMCPSessionManager:
             # Fire the idle cleanup concurrently. It must wait for the lock.
             cleaner = asyncio.create_task(session_manager._cleanup_idle_sessions())
             # Deterministic rendezvous: wait until the cleaner has pinned the
-            # per-server lock (but is still blocked on the getter releasing
-            # it). Polling ``pins`` with scheduler-only yields replaces a
-            # timing-based ``asyncio.sleep(0.02)`` so the test does not rely
-            # on CI speed to expose a race. ``asyncio.Lock`` does not expose
-            # a waiters count, so internal-state polling is the deterministic
-            # primitive we have.
+            # per-server lock (but is still blocked on the getter releasing it).
             while session_manager._server_locks.get(server_key, {}).get("pins", 0) < 2:  # noqa: ASYNC110
                 await asyncio.sleep(0)
 
-            # While the getter still holds the lock, the session must not have
-            # been cleaned up.
-            assert f"{server_key}_0" in session_manager.sessions_by_server[server_key]["sessions"]
+            # While the getter still holds the lock, the session must not yet
+            # exist (it's being created), and cleanup must not have run.
             assert not mock_task.cancel.called
 
-            # Let the getter finish.
+            # Let the getter finish creating the session.
             release.set()
             result = await getter
             await cleaner
 
-        # Getter returned the healthy cached session. Because `get_session`
-        # bumps `last_used` on reuse, the idle-cleanup pass — which ran only
-        # after the getter released the lock — correctly left the session
-        # alone. Without the lock, the cleaner could have torn it down
-        # mid-validation and the getter would have returned a dead session.
+        # Getter returned the newly-created session.
         assert result is mock_session
         assert not mock_task.cancel.called
+        # Session is live (cleanup ran after getter and saw a just-created session
+        # with a fresh last_used, so it left it alone).
         assert f"{server_key}_0" in session_manager.sessions_by_server[server_key]["sessions"]
 
     async def test_concurrent_cleanup_session_and_get_session_safe(self, session_manager):
@@ -587,10 +655,7 @@ class TestMCPSessionManager:
         async def fake_create(_session_id, _params, _preferred_transport=None):
             return mock_session, mock_task, "streamable_http", False
 
-        with (
-            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
-        ):
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
             # Establish the session with one context.
             s1 = await session_manager.get_session("ctx_a", connection_params, "streamable_http")
             assert s1 is mock_session
@@ -639,10 +704,7 @@ class TestMCPSessionManager:
                 return mock_session_a, mock_task_a, "streamable_http", False
             return mock_session_b, mock_task_b, "streamable_http", False
 
-        with (
-            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
-        ):
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
             # Establish context on server A.
             s_a = await session_manager.get_session("ctx_move", server_a_params, "streamable_http")
             assert s_a is mock_session_a
@@ -698,10 +760,7 @@ class TestMCPSessionManager:
         async def fake_create(_session_id, _params, _preferred_transport=None):
             return mock_session, mock_task, "streamable_http", False
 
-        with (
-            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
-        ):
+        with patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create):
             await session_manager.get_session("ctx_gc", connection_params, "streamable_http")
 
         # While the session is live, the lock entry exists (pin count back to 0
@@ -4099,3 +4158,243 @@ class TestStreamableHttpTransportPolicy:
         e = httpx.HTTPStatusError("x", request=req, response=resp_404)
         assert _should_attempt_sse_after_streamable_failure(e) is True
         assert _should_attempt_sse_after_streamable_failure(ConnectionError("x")) is False
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for the CPU-spin / workflow-hang fix
+# ---------------------------------------------------------------------------
+
+
+class TestCleanupIntervalFloorGuard:
+    """get_session_cleanup_interval() must never return a value below the minimum.
+
+    If the cleanup loop sleeps(0) it spins at 100% CPU and locks the machine.
+    """
+
+    def _get_interval(self):
+        from lfx.base.mcp.util import get_session_cleanup_interval
+
+        return get_session_cleanup_interval
+
+    def test_returns_configured_value_when_above_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=120):
+            assert get_session_cleanup_interval() == 120
+
+    def test_clamps_zero_to_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=0):
+            result = get_session_cleanup_interval()
+            assert result >= 30
+
+    def test_clamps_none_to_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=None):
+            result = get_session_cleanup_interval()
+            assert result >= 30
+
+    def test_clamps_negative_to_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=-1):
+            result = get_session_cleanup_interval()
+            assert result >= 30
+
+    def test_clamps_value_below_minimum_to_minimum(self):
+        get_session_cleanup_interval = self._get_interval()
+        with patch.object(util, "_get_mcp_setting", return_value=5):
+            result = get_session_cleanup_interval()
+            assert result >= 30
+
+
+class TestCleanupTaskStartup:
+    """The cleanup task must tolerate sync construction and start on first async use."""
+
+    def test_constructor_without_running_loop_defers_cleanup_task(self):
+        manager = MCPSessionManager()
+
+        assert manager._cleanup_task is None
+
+    async def test_get_session_starts_deferred_cleanup_task(self):
+        manager = MCPSessionManager()
+        await manager.cleanup_all()
+        manager._cleanup_task = None
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        mock_session = AsyncMock()
+        mock_task = MagicMock()
+        mock_task.done.return_value = False
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            return mock_session, mock_task, "streamable_http", False
+
+        try:
+            with patch.object(manager, "_create_streamable_http_session", side_effect=fake_create):
+                await manager.get_session("ctx_1", connection_params, "streamable_http")
+
+            assert manager._cleanup_task is not None
+            assert not manager._cleanup_task.done()
+        finally:
+            await manager.cleanup_all()
+
+
+class TestGetSessionNoBlockingHealthCheck:
+    """get_session() must NOT call list_tools() on the hot path.
+
+    Before the fix, every get_session() called _validate_session_connectivity()
+    which did a list_tools() RPC (~3 s timeout). With 10 sessions that added
+    ~30 s of blocking to every single tool invocation.
+    """
+
+    @pytest.fixture
+    def manager(self):
+        return MCPSessionManager()
+
+    async def test_reuses_live_session_without_calling_list_tools(self, manager):
+        """A session whose background task is running must be reused immediately.
+
+        Without any list_tools() call.
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        mock_session = AsyncMock()
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+        mock_task.cancel = MagicMock()
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            return mock_session, mock_task, "streamable_http", False
+
+        try:
+            with patch.object(manager, "_create_streamable_http_session", side_effect=fake_create):
+                # First call creates the session.
+                s1 = await manager.get_session("ctx_1", connection_params, "streamable_http")
+                # Second call must reuse it — list_tools must never be called.
+                with patch.object(manager, "_validate_session_connectivity") as mock_validate:
+                    s2 = await manager.get_session("ctx_2", connection_params, "streamable_http")
+                    mock_validate.assert_not_called()
+            assert s1 is mock_session
+            assert s2 is mock_session
+            mock_session.list_tools.assert_not_awaited()
+        finally:
+            await manager.cleanup_all()
+
+    async def test_dead_task_triggers_new_session_without_list_tools(self, manager):
+        """A session whose background task is done must be cleaned up and replaced.
+
+        Again without any list_tools() call.
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        mock_session_1 = AsyncMock()
+        mock_task_1 = AsyncMock()
+        mock_task_1.done = MagicMock(return_value=True)  # already dead
+        mock_task_1.cancel = MagicMock()
+
+        mock_session_2 = AsyncMock()
+        mock_task_2 = AsyncMock()
+        mock_task_2.done = MagicMock(return_value=False)
+        mock_task_2.cancel = MagicMock()
+
+        # The dead session is seeded directly, so fake_create is only called
+        # once — to produce the replacement session (mock_session_2).
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            return mock_session_2, mock_task_2, "streamable_http", False
+
+        try:
+            with patch.object(manager, "_create_streamable_http_session", side_effect=fake_create):
+                # Seed the dead session directly.
+                server_key = manager._get_server_key(connection_params, "streamable_http")
+                manager.sessions_by_server[server_key] = {
+                    "sessions": {
+                        f"{server_key}_0": {
+                            "session": mock_session_1,
+                            "task": mock_task_1,
+                            "type": "streamable_http",
+                            "last_used": 0,
+                        }
+                    },
+                    "last_cleanup": 0,
+                }
+                manager._session_id_counters[server_key] = 1
+
+                with patch.object(manager, "_validate_session_connectivity") as mock_validate:
+                    result = await manager.get_session("ctx_new", connection_params, "streamable_http")
+                    mock_validate.assert_not_called()
+
+            assert result is mock_session_2
+        finally:
+            await manager.cleanup_all()
+
+
+class TestSettingsCacheNotStale:
+    """_get_mcp_setting() must read live from the settings service, not a cache.
+
+    The old code used a module-level _mcp_settings_cache dict.  If settings
+    changed after startup (hot-reload, test fixture tear-down) the cached value
+    would be used forever, masking bugs and causing hard-to-reproduce failures.
+    """
+
+    def test_reads_live_value_on_each_call(self):
+        """Two consecutive calls must reflect the current settings value.
+
+        Not a value cached from a previous call.
+        """
+        call_count = 0
+        values = [10, 20]
+
+        class FakeSettings:
+            @property
+            def mcp_session_cleanup_interval(self):
+                nonlocal call_count
+                v = values[min(call_count, len(values) - 1)]
+                call_count += 1
+                return v
+
+        fake_service = MagicMock()
+        fake_service.settings = FakeSettings()
+
+        with patch.object(util, "get_settings_service", return_value=fake_service):
+            first = util._get_mcp_setting("mcp_session_cleanup_interval")
+            second = util._get_mcp_setting("mcp_session_cleanup_interval")
+
+        assert first == 10
+        assert second == 20
+
+
+class TestPeriodicCleanupSurvivesUnexpectedError:
+    """_periodic_cleanup() must keep running even if an unexpected exception fires.
+
+    The old narrow ``except (RuntimeError, KeyError, ...)`` clause would let
+    other exceptions propagate, silently killing the cleanup task forever.
+    Sessions would then never be reaped until the process was restarted.
+    """
+
+    async def test_cleanup_loop_continues_after_unexpected_exception(self):
+        """An unexpected exception inside cleanup must be swallowed.
+
+        The loop must keep sleeping and retrying.
+        """
+        manager = MCPSessionManager()
+        iterations: list[int] = []
+        stop = asyncio.Event()
+
+        async def fake_cleanup_idle():
+            iterations.append(1)
+            if len(iterations) == 1:
+                msg = "unexpected error from cleanup"
+                raise TypeError(msg)
+            if len(iterations) >= 2:
+                stop.set()
+
+        try:
+            with (
+                patch.object(manager, "_cleanup_idle_sessions", side_effect=fake_cleanup_idle),
+                patch.object(util, "get_session_cleanup_interval", return_value=0.01),
+            ):
+                task = asyncio.create_task(manager._periodic_cleanup())
+                await asyncio.wait_for(stop.wait(), timeout=2.0)
+                task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
+
+            # Both iterations ran — the loop survived the first exception.
+            assert len(iterations) >= 2
+        finally:
+            await manager.cleanup_all()
