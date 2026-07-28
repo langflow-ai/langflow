@@ -47,7 +47,7 @@
         {
           "distribution": "lfx-ibm",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.4,<1.0.0",
           "providers": [
             "lfx-ibm"
           ]
@@ -82,6 +82,22 @@
           "version": ">=0.1.0,<1.0.0",
           "providers": [
             "lfx-anthropic"
+          ]
+        },
+        {
+          "distribution": "lfx-azure",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-azure"
+          ]
+        },
+        {
+          "distribution": "lfx-ollama",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-ollama"
           ]
         },
         {
@@ -162,6 +178,14 @@
           "version": ">=0.1.0,<1.0.0",
           "providers": [
             "lfx-exa"
+          ]
+        },
+        {
+          "distribution": "lfx-google",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-google"
           ]
         },
         {

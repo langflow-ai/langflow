@@ -343,3 +343,53 @@ def test_docker_hardening_preserves_isolated_run():
         ["run", "--rm", "--network", "bridge", "--security-opt", "no-new-privileges", "mcp-image"],
         docker_hardening=True,
     )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--with", "mcp~=1.28", "mcp-proxy"],
+        ["--with=mcp~=1.28", "mcp-proxy"],
+        ["-w", "mcp~=1.28", "mcp-proxy"],
+        ["-wmcp~=1.28", "mcp-proxy"],
+    ],
+)
+def test_uvx_allowlist_exempts_injected_sdk_constraint(args):
+    validate_mcp_stdio_config("uvx", args, {}, allowed_packages={"mcp-proxy"})
+
+
+def test_uvx_allowlist_rejects_with_specifiers_other_than_the_configured_constraint():
+    with pytest.raises(ValueError, match=r"Package 'mcp~=1.27' is not allowed for MCP uvx"):
+        validate_mcp_stdio_config(
+            "uvx",
+            ["--with", "mcp~=1.27", "mcp-proxy"],
+            {},
+            allowed_packages={"mcp-proxy"},
+        )
+
+
+def test_uvx_sdk_constraint_cannot_mask_unapproved_runner_target():
+    with pytest.raises(ValueError, match=r"Package 'attacker-package' is not allowed for MCP uvx"):
+        validate_mcp_stdio_config(
+            "uvx",
+            ["--with", "mcp~=1.28", "attacker-package"],
+            {},
+            allowed_packages={"mcp-proxy"},
+        )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--with", "mcp~=1.28", "mcp-proxy", "--transport", "streamablehttp", "http://localhost:7860/x"],
+        ["--with=mcp~=1.28", "mcp-proxy"],
+        ["-w", "mcp~=1.28", "mcp-proxy"],
+        ["-wmcp~=1.28", "mcp-proxy"],
+    ],
+)
+def test_uvx_sdk_constraint_spellings_preserve_runner_target(args):
+    from lfx.base.mcp.source_policy import _package_runner_target
+
+    package, entrypoint = _package_runner_target("uvx", args)
+    assert package == "mcp-proxy"
+    assert entrypoint is None

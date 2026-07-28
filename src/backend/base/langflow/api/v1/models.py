@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, HTTPException, Query
 from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS
 from lfx.base.models.model_utils import inject_custom_enabled_models, replace_with_live_models
-from lfx.base.models.provider_registry import is_api_key_optional, provider_id_for
+from lfx.base.models.provider_registry import get_provider_descriptor, is_api_key_optional, provider_id_for
 from lfx.base.models.unified_models import (
     get_live_only_providers,
     get_model_provider_metadata,
@@ -20,6 +20,7 @@ from lfx.base.models.unified_models.credentials import (
     model_status_key,
     parse_model_status_key,
 )
+from lfx.interface.components import get_and_cache_all_types_dict
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
     ModelProviderPolicyPurpose,
@@ -30,7 +31,7 @@ from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.authorization import VariableAction, ensure_variable_permission
-from langflow.services.deps import get_variable_service
+from langflow.services.deps import get_settings_service, get_variable_service
 from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 
@@ -52,6 +53,7 @@ def _resolve_policy(current_user: CurrentActiveUser, purpose: ModelProviderPolic
         user_id=current_user.id,
         providers=get_model_providers(),
         purpose=purpose,
+        attributes={"is_superuser": bool(getattr(current_user, "is_superuser", False))},
     )
 
 
@@ -132,11 +134,75 @@ class ValidateProviderResponse(BaseModel):
     error: str | None = None
 
 
+class ModelProviderDescriptorRead(BaseModel):
+    """Stable provider identity for authorization and administrative pickers."""
+
+    provider_id: str
+    display_name: str
+    provider: str
+
+
 @router.get("/providers", status_code=200)
 async def list_model_providers(current_user: CurrentActiveUser) -> list[str]:
     """Return available model providers."""
     policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.DISCOVER)
     return policy.filter(get_model_providers())
+
+
+@router.get("/provider-descriptors", status_code=200, response_model=list[ModelProviderDescriptorRead])
+async def list_model_provider_descriptors(current_user: CurrentActiveUser) -> list[ModelProviderDescriptorRead]:
+    """Return discovery-authorized providers with stable IDs and display names.
+
+    ``/providers`` intentionally retains its historical ``list[str]`` wire
+    contract; administrative clients can opt into this additive descriptor
+    route when compiling provider-specific component permissions.
+    """
+    # Build/cache extension templates first: extension loading can register new
+    # unified providers and stamps legacy standalone model/embedding components
+    # with provider identities not represented by ``get_model_providers()``.
+    all_types = await get_and_cache_all_types_dict(settings_service=get_settings_service())
+    descriptors_by_id: dict[str, ModelProviderDescriptorRead] = {}
+
+    for provider in get_model_providers():
+        provider_id = provider_id_for(provider)
+        if provider_id is None:
+            continue
+        descriptor = get_provider_descriptor(provider)
+        descriptors_by_id[provider_id] = ModelProviderDescriptorRead(
+            provider_id=provider_id,
+            display_name=(descriptor.display_name if descriptor and descriptor.display_name else provider),
+            provider=provider,
+        )
+
+    for components in all_types.values():
+        for component in components.values():
+            if not isinstance(component, dict) or not isinstance(component.get("metadata"), dict):
+                continue
+            metadata = component["metadata"]
+            provider_id = metadata.get("model_provider_id")
+            if not isinstance(provider_id, str) or not provider_id or provider_id in descriptors_by_id:
+                continue
+            display_name = metadata.get("model_provider_display_name")
+            descriptors_by_id[provider_id] = ModelProviderDescriptorRead(
+                provider_id=provider_id,
+                display_name=(
+                    display_name
+                    if isinstance(display_name, str) and display_name
+                    else provider_id.replace("_", " ").replace("-", " ").title()
+                ),
+                provider=provider_id,
+            )
+
+    policy = resolve_model_provider_policy(
+        user_id=current_user.id,
+        providers=descriptors_by_id,
+        purpose=ModelProviderPolicyPurpose.DISCOVER,
+        attributes={"is_superuser": bool(getattr(current_user, "is_superuser", False))},
+    )
+    return sorted(
+        (descriptor for provider_id, descriptor in descriptors_by_id.items() if policy.allows(provider_id)),
+        key=lambda descriptor: (descriptor.display_name.casefold(), descriptor.provider_id),
+    )
 
 
 @router.get("", status_code=200)
