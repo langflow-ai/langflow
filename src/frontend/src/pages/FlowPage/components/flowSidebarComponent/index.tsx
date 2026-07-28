@@ -1,5 +1,5 @@
 import Fuse from "fuse.js";
-import { cloneDeep, debounce } from "lodash";
+import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
@@ -51,6 +51,7 @@ import { filteredDataFn } from "./helpers/filtered-data";
 import { normalizeString } from "./helpers/normalize-string";
 import sensitiveSort from "./helpers/sensitive-sort";
 import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
+import { useDebouncedSearch } from "./hooks/useDebouncedSearch";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
@@ -167,17 +168,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const showLegacyStorage = getBooleanFromStorage("showLegacy", false);
 
   // Debounced search value for filtering
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
-
-  const debouncedSetSearch = useMemo(
-    () => debounce((value: string) => setDebouncedSearch(value), 300),
-    [],
-  );
-
-  useEffect(() => {
-    debouncedSetSearch(search);
-    return () => debouncedSetSearch.cancel();
-  }, [search, debouncedSetSearch]);
+  const debouncedSearch = useDebouncedSearch(search);
 
   // State
   const [fuse, setFuse] = useState<Fuse<SidebarSearchItem> | null>(null);
