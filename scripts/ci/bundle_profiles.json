@@ -85,6 +85,22 @@
           ]
         },
         {
+          "distribution": "lfx-azure",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-azure"
+          ]
+        },
+        {
+          "distribution": "lfx-ollama",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-ollama"
+          ]
+        },
+        {
           "distribution": "lfx-amazon",
           "extras": [],
           "version": ">=0.1.0,<1.0.0",

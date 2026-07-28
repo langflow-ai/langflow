@@ -1,3 +1,5 @@
+"""Ollama embeddings component."""
+
 import asyncio
 from typing import Any
 from urllib.parse import urljoin
