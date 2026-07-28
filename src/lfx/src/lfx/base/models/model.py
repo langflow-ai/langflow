@@ -1,5 +1,6 @@
 import importlib
 import json
+import re
 import warnings
 from abc import abstractmethod
 from typing import Any
@@ -24,6 +25,65 @@ from lfx.utils.constants import MESSAGE_SENDER_AI
 #
 # Models are trained with this exact string. Do not update.
 DETAILED_THINKING_PREFIX = "detailed thinking on\n\n"
+
+_HTTP_BAD_REQUEST = 400
+
+
+def _is_temperature_rejection(exc: Exception) -> bool:
+    """Return whether ``exc`` is a provider error about an unsupported ``temperature``.
+
+    Deliberately narrow: only an HTTP 400 whose message mentions both
+    ``temperature`` and ``deprecated`` qualifies. That is the wording Anthropic
+    uses for its Sonnet-5 generation
+    (``invalid_request_error: `temperature` is deprecated for this model.``).
+    Every other failure — including unrelated 400s — must keep its current
+    behavior.
+    """
+    text = str(exc).lower()
+    if "temperature" not in text or "deprecated" not in text:
+        return False
+    status_code = getattr(exc, "status_code", None)
+    if status_code is None:
+        # Wrapped or re-raised errors keep the status only in the message text.
+        return re.search(rf"\b{_HTTP_BAD_REQUEST}\b", text) is not None
+    return status_code == _HTTP_BAD_REQUEST
+
+
+def _without_temperature(runnable: Any) -> Any:
+    """Return a copy of ``runnable`` with the chat model's ``temperature`` cleared.
+
+    ``runnable`` may be the chat model itself or a wrapper produced by
+    ``with_config`` / ``prompt | model`` / ``model | parser``, so walk the
+    ``RunnableBinding`` and ``RunnableSequence`` links to reach it.
+
+    Returns:
+        An equivalent runnable with the temperature stripped, or ``None`` when no
+        chat model carrying a temperature could be found (nothing to retry with).
+    """
+    if isinstance(runnable, BaseChatModel):
+        if getattr(runnable, "temperature", None) is None:
+            return None
+        return runnable.model_copy(update={"temperature": None})
+
+    # Not a pydantic runnable (or not a runnable at all): nothing to rebuild.
+    model_copy = getattr(runnable, "model_copy", None)
+    if model_copy is None:
+        return None
+
+    # RunnableBinding (.bound) and RunnableSequence (.first/.middle/.last).
+    for attr in ("bound", "first", "last"):
+        stripped = _without_temperature(getattr(runnable, attr, None))
+        if stripped is not None:
+            return model_copy(update={attr: stripped})
+
+    middle = getattr(runnable, "middle", None) or []
+    for index, step in enumerate(middle):
+        stripped = _without_temperature(step)
+        if stripped is not None:
+            new_middle = [*middle[:index], stripped, *middle[index + 1 :]]
+            return model_copy(update={"middle": new_middle})
+
+    return None
 
 
 def _normalize_message_content(content: Any) -> Any:
@@ -297,7 +357,7 @@ class LCModelComponent(Component):
             if stream:
                 lf_message, result, message = await self._handle_stream(runnable, inputs)
             else:
-                message = await runnable.ainvoke(inputs)
+                message = await self._ainvoke_retrying_without_temperature(runnable, inputs)
                 result = message.content if hasattr(message, "content") else message
                 result = _normalize_message_content(result)
             if isinstance(message, AIMessage):
@@ -328,6 +388,30 @@ class LCModelComponent(Component):
             msg.properties.usage = usage_data
         return msg
 
+    async def _ainvoke_retrying_without_temperature(self, runnable, inputs):
+        """Invoke ``runnable``, retrying once without ``temperature`` if the model rejects it.
+
+        Some models (e.g. Anthropic's Sonnet-5 generation, OpenAI's reasoning
+        models) answer an explicit ``temperature`` with a 400 instead of
+        clamping it. This is a safety net for any such model, known or not —
+        it costs nothing on the common path and self-heals on the rare one.
+        Anything else — including a second failure of the same call — is
+        raised unchanged.
+        """
+        try:
+            return await runnable.ainvoke(inputs)
+        except Exception as e:
+            if not _is_temperature_rejection(e):
+                raise
+            retry_runnable = _without_temperature(runnable)
+            if retry_runnable is None:
+                raise
+            logger.warning(
+                f"Model used by component '{self.display_name}' rejected the configured temperature "
+                f"({e}); retrying once without it. Remove the temperature setting to avoid the extra call."
+            )
+            return await retry_runnable.ainvoke(inputs)
+
     async def _handle_stream(self, runnable, inputs):
         """Handle streaming responses from the language model.
 
@@ -357,6 +441,15 @@ class LCModelComponent(Component):
             # If either is missing, fall back to a non-streaming ainvoke.
             event_manager = getattr(self, "_event_manager", None)
             if session_id and event_manager:
+                # Known gap: the temperature-rejection retry in
+                # ``_ainvoke_retrying_without_temperature`` guards the two ainvoke
+                # calls below but cannot guard this one. ``astream`` is lazy — the
+                # request is issued while the event manager drains the generator,
+                # long after this method (and _get_chat_result) has returned, so a
+                # 400 raised by the provider surfaces in the consumer, not here.
+                # Retrying at that point would mean either re-emitting chunks the
+                # UI already rendered or buffering the whole stream first, which
+                # defeats streaming.
                 model_message = Message(
                     text=runnable.astream(inputs),
                     sender=MESSAGE_SENDER_AI,
@@ -379,11 +472,11 @@ class LCModelComponent(Component):
                     f"(id={getattr(self, '_id', '<unknown>')}): missing {', '.join(missing)}. "
                     "UI will not see token-by-token streaming for this run."
                 )
-                ai_message = await runnable.ainvoke(inputs)
+                ai_message = await self._ainvoke_retrying_without_temperature(runnable, inputs)
                 result = ai_message.content if hasattr(ai_message, "content") else ai_message
                 result = _normalize_message_content(result)
         else:
-            ai_message = await runnable.ainvoke(inputs)
+            ai_message = await self._ainvoke_retrying_without_temperature(runnable, inputs)
             result = ai_message.content if hasattr(ai_message, "content") else ai_message
             result = _normalize_message_content(result)
         return lf_message, result, ai_message
