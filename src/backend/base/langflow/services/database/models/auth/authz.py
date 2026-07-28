@@ -177,6 +177,67 @@ class AuthzTeamMember(SQLModel, table=True):  # type: ignore[call-arg]
     created_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
 
 
+class AuthzTeamRoleAssignment(SQLModel, table=True):  # type: ignore[call-arg]
+    """Binds a team to a role within an optional domain (global, workspace, project).
+
+    The team-scoped sibling of :class:`AuthzRoleAssignment`: every active
+    member of the team holds the role at the given domain. Enforcement-side
+    compilers expand these rows to per-member grants, so membership changes
+    take effect through the same policy-sync paths as direct assignments.
+
+    Mirrors the user table's partial-unique strategy: a plain
+    UNIQUE(team_id, role_id, domain_type, domain_id) treats NULL ``domain_id``
+    values as never-equal, so duplicates with NULL would slip through.
+    """
+
+    __tablename__ = "authz_team_role_assignment"
+    __table_args__ = (
+        Index(
+            "uq_authz_team_role_assignment_scoped",
+            "team_id",
+            "role_id",
+            "domain_type",
+            "domain_id",
+            unique=True,
+            postgresql_where=text("domain_id IS NOT NULL"),
+            sqlite_where=text("domain_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_authz_team_role_assignment_unscoped",
+            "team_id",
+            "role_id",
+            "domain_type",
+            unique=True,
+            postgresql_where=text("domain_id IS NULL"),
+            sqlite_where=text("domain_id IS NULL"),
+        ),
+        Index(
+            "ix_authz_team_role_assignment_team_domain",
+            "team_id",
+            "domain_type",
+            "domain_id",
+        ),
+    )
+
+    id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
+    team_id: UUIDstr = Field(
+        sa_column=Column(sa.Uuid(), ForeignKey("authz_team.id", ondelete="CASCADE"), nullable=False, index=True),
+    )
+    role_id: UUIDstr = Field(
+        sa_column=Column(sa.Uuid(), ForeignKey("authz_role.id", ondelete="CASCADE"), nullable=False, index=True),
+    )
+    domain_type: str = Field(default="global", description="global, workspace, project")
+    domain_id: UUIDstr | None = Field(
+        default=None,
+        sa_column=Column(sa.Uuid(), nullable=True, index=True),
+    )
+    assigned_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
+    assigned_by: UUIDstr | None = Field(
+        default=None,
+        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
+    )
+
+
 class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
     """Resource share record granting access at a specific scope/permission level.
 
