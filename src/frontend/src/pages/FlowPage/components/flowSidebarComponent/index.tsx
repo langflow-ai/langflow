@@ -1,15 +1,6 @@
 import Fuse from "fuse.js";
 import { cloneDeep, debounce } from "lodash";
-import {
-  createContext,
-  memo,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
@@ -49,6 +40,7 @@ import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
 import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
+import { useSearchContext } from "./context/SearchContext";
 import { applyBetaFilter } from "./helpers/apply-beta-filter";
 import { applyComponentFilter } from "./helpers/apply-component-filter";
 import { applyEdgeFilter } from "./helpers/apply-edge-filter";
@@ -70,88 +62,15 @@ type SidebarSearchItem = APIClassType & {
   mcpServerName?: string;
 };
 
-// Search context for the sidebar
-export type SearchContextType = {
-  focusSearch: () => void;
-  isSearchFocused: boolean;
-  // Additional properties for the sidebar to use
-  search?: string;
-  setSearch?: (value: string) => void;
-  searchInputRef?: React.RefObject<HTMLInputElement>;
-  handleInputFocus?: () => void;
-  handleInputBlur?: () => void;
-  handleInputChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-};
-
-export const SearchContext = createContext<SearchContextType | null>(null);
-
-export function useSearchContext() {
-  const context = useContext(SearchContext);
-  if (!context) {
-    throw new Error("useSearchContext must be used within SearchProvider");
-  }
-  return context;
-}
-
-// Create a provider that can be used at the FlowPage level
-export function FlowSearchProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [search, setSearch] = useState("");
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null!);
-
-  const focusSearchInput = useCallback(() => {
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, []);
-
-  const handleInputFocus = useCallback(() => {
-    setIsInputFocused(true);
-  }, []);
-
-  const handleInputBlur = useCallback(() => {
-    setIsInputFocused(false);
-  }, []);
-
-  const handleInputChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setSearch(event.target.value);
-    },
-    [],
-  );
-
-  const searchContextValue = useMemo(
-    () => ({
-      focusSearch: focusSearchInput,
-      isSearchFocused: isInputFocused,
-      // Also expose the search state and handlers for the sidebar to use
-      search,
-      setSearch,
-      searchInputRef,
-      handleInputFocus,
-      handleInputBlur,
-      handleInputChange,
-    }),
-    [
-      focusSearchInput,
-      isInputFocused,
-      search,
-      handleInputFocus,
-      handleInputBlur,
-      handleInputChange,
-    ],
-  );
-
-  return (
-    <SearchContext.Provider value={searchContextValue}>
-      {children}
-    </SearchContext.Provider>
-  );
-}
+// SearchContext / FlowSearchProvider / useSearchContext moved to
+// ./context/SearchContext (LE-1736 W32); re-exported here so existing consumers
+// (FlowPage, sidebarSegmentedNav) keep importing from this entry point.
+export {
+  FlowSearchProvider,
+  SearchContext,
+  type SearchContextType,
+  useSearchContext,
+} from "./context/SearchContext";
 
 interface FlowSidebarComponentProps {
   isLoading?: boolean;
