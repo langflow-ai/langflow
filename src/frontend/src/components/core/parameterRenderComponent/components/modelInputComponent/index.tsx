@@ -26,6 +26,7 @@ import ModelTrigger from "./components/ModelTrigger";
 import { buildGroupedOptions } from "./helpers/build-grouped-options";
 import { deriveSelectedModel } from "./helpers/derive-selected-model";
 import { matchesModelIdentity } from "./helpers/model-option-identity";
+import { useAutoSelectModel } from "./hooks/useAutoSelectModel";
 import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import type { ModelInputComponentType, ModelOption } from "./types";
 
@@ -186,41 +187,14 @@ export default function ModelInputComponent({
     [value, flatOptions, isConnectionMode, externalOptions, providersData],
   );
 
-  useEffect(() => {
-    if (flatOptions.length === 0 || isConnectionMode) return;
-    if (hasProcessedEmptyRef.current) return;
-
-    const isEmpty = !value || value.length === 0;
-
-    let isSavedValueStale = false;
-    if (!isEmpty) {
-      const saved = value[0];
-      const inOptions = flatOptions.some((option) =>
-        matchesModelIdentity(option, saved),
-      );
-      if (!inOptions && saved.provider) {
-        isSavedValueStale =
-          providersData?.some(
-            (p) => p.provider === saved.provider && p.is_configured,
-          ) ?? false;
-      }
-    }
-
-    if (!isEmpty && !isSavedValueStale) return;
-
-    const firstOption = flatOptions[0];
-    const newValue = [
-      {
-        ...(firstOption.id && { id: firstOption.id }),
-        name: firstOption.name,
-        icon: firstOption.icon || "Bot",
-        provider: firstOption.provider || "Unknown",
-        metadata: firstOption.metadata ?? {},
-      },
-    ];
-    handleOnNewValue({ value: newValue });
-    hasProcessedEmptyRef.current = true;
-  }, [flatOptions, value, handleOnNewValue, isConnectionMode, providersData]);
+  useAutoSelectModel({
+    flatOptions,
+    value,
+    handleOnNewValue,
+    isConnectionMode,
+    providers: providersData,
+    hasProcessedEmptyRef,
+  });
 
   /**
    * Handles model selection from the dropdown.
