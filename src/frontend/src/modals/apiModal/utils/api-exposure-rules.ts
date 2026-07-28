@@ -20,6 +20,9 @@
  * fails if either side gains or loses an entry.
  */
 
+import { LANGFLOW_SUPPORTED_TYPES } from "@/constants/constants";
+import type { InputFieldType } from "@/types/api";
+
 /**
  * Component types whose nodes can execute code. Mirrors
  * `CODE_EXECUTION_COMPONENT_TYPES`.
@@ -69,6 +72,29 @@ export const PROTECTED_TWEAK_FIELDS_BY_COMPONENT: Readonly<
   Record<string, ReadonlySet<string>>
 > = {
   SQLComponent: new Set(["database_url", "query"]),
+};
+
+/**
+ * Types whose value is an editable literal a tweak can carry. Handle-only
+ * inputs are driven by an edge and have no literal to send, so they are not
+ * tweakable no matter what the panel shows.
+ */
+export const isTweakableType = (type: string | undefined): boolean =>
+  LANGFLOW_SUPPORTED_TYPES.has(type ?? "");
+
+/**
+ * Whether a field can EVER be exposed as an API input, from the field's own
+ * nature — independent of runtime state (connected, off-node, tool mode),
+ * which is the job of `isFieldExposable`.
+ */
+export const isFieldTweakable = (
+  componentType: string | undefined,
+  fieldName: string,
+  template: InputFieldType | undefined,
+): boolean => {
+  if (!template) return false;
+  if (fieldName.charAt(0) === "_" || fieldName === "code") return false;
+  return isTweakableType(template.type);
 };
 
 /**
