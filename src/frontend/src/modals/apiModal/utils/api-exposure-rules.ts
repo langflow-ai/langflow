@@ -78,9 +78,15 @@ export const PROTECTED_TWEAK_FIELDS_BY_COMPONENT: Readonly<
  * Types whose value is an editable literal a tweak can carry. Handle-only
  * inputs are driven by an edge and have no literal to send, so they are not
  * tweakable no matter what the panel shows.
+ *
+ * `LANGFLOW_SUPPORTED_TYPES` answers a different question — "does this render
+ * an inline widget on the node" — and is reused here only for the types it
+ * happens to agree on. `model` is listed apart because the node renders it
+ * through its own handle path (see computeDisplayHandle) yet its value is a
+ * plain literal the tweaks API accepts.
  */
 export const isTweakableType = (type: string | undefined): boolean =>
-  LANGFLOW_SUPPORTED_TYPES.has(type ?? "");
+  LANGFLOW_SUPPORTED_TYPES.has(type ?? "") || type === "model";
 
 /**
  * Whether a field can EVER be exposed as an API input, from the field's own
