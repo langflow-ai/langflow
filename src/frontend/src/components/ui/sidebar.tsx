@@ -106,6 +106,13 @@ const SidebarProvider = React.forwardRef<
     defaultSection?: SidebarSection;
     activeSection?: SidebarSection;
     onSectionChange?: (section: SidebarSection) => void;
+    /** Whether this provider reads/writes the shared `sidebar:*` cookies.
+     *  The cookies are global (``path=/``), so a nested provider — e.g. the
+     *  one the TemplatesModal mounts for its own category nav — would
+     *  otherwise overwrite the flow page's persisted sidebar state just by
+     *  mounting (``Sidebar``'s mount effects call ``setOpen``). Opt those
+     *  out with ``persist={false}`` so they stay self-contained. */
+    persist?: boolean;
   }
 >(
   (
@@ -121,6 +128,7 @@ const SidebarProvider = React.forwardRef<
       children,
       width = SIDEBAR_WIDTH,
       segmentedSidebar = false,
+      persist = true,
       ...props
     },
     ref,
@@ -128,7 +136,7 @@ const SidebarProvider = React.forwardRef<
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
     const [_open, _setOpen] = React.useState(() =>
-      getInitialSidebarState(defaultOpen),
+      persist ? getInitialSidebarState(defaultOpen) : defaultOpen,
     );
     const open = openProp ?? _open;
     const setOpen = React.useCallback(
@@ -141,16 +149,19 @@ const SidebarProvider = React.forwardRef<
 
         _setOpen(value);
 
+        if (!persist) return;
+
         // This sets the cookie to keep the sidebar state. Use the incoming value (or computed) instead of the stale `open` variable.
         const nextOpen = typeof value === "function" ? value(open) : value;
         document.cookie = `${SIDEBAR_COOKIE_NAME}=${nextOpen}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
       },
-      [setOpenProp, open],
+      [setOpenProp, open, persist],
     );
 
     // Section state management
     const [_activeSection, _setActiveSection] = React.useState<SidebarSection>(
-      () => getInitialSidebarSection(defaultSection),
+      () =>
+        persist ? getInitialSidebarSection(defaultSection) : defaultSection,
     );
     const activeSection = activeSectionProp ?? _activeSection;
     const setActiveSection = React.useCallback(
@@ -161,10 +172,12 @@ const SidebarProvider = React.forwardRef<
 
         _setActiveSection(section);
 
+        if (!persist) return;
+
         // This sets the cookie to keep the sidebar section state.
         document.cookie = `${SIDEBAR_SECTION_COOKIE_NAME}=${section}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
       },
-      [setActiveSectionProp],
+      [setActiveSectionProp, persist],
     );
 
     // Helper to toggle the sidebar.

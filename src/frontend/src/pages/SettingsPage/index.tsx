@@ -125,7 +125,9 @@ export default function SettingsPage(): JSX.Element {
       title={t("settings.title")}
       description={t("settings.description")}
     >
-      <SidebarProvider width="15rem" defaultOpen={false}>
+      {/* Local to the settings nav — see the `persist` note on
+          SidebarProvider. */}
+      <SidebarProvider width="15rem" defaultOpen={false} persist={false}>
         <SideBarButtonsComponent items={sidebarNavItems} />
         <main className="flex flex-1 overflow-hidden">
           <div className="flex flex-1 flex-col overflow-x-hidden pt-1">

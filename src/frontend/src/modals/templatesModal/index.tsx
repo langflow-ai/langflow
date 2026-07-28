@@ -123,7 +123,12 @@ export default function TemplatesModal({
     <BaseModal size="templates" open={open} setOpen={setOpen} className="p-0">
       <BaseModal.Content className="flex flex-col p-0">
         <div className="flex h-full">
-          <SidebarProvider width="15rem" defaultOpen={false}>
+          {/* ``persist={false}``: this provider drives only the modal's own
+              category nav. The ``sidebar:*`` cookies are global, so without
+              it merely opening this modal would overwrite the flow page's
+              persisted sidebar state (and its own ``defaultOpen`` would be
+              ignored in favour of whatever the flow page last wrote). */}
+          <SidebarProvider width="15rem" defaultOpen={false} persist={false}>
             <Nav
               categories={categories}
               currentTab={effectiveTab}

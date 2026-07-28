@@ -187,4 +187,48 @@ describe("Sidebar", () => {
 
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
   });
+
+  describe("persist={false}", () => {
+    it("should not write the shared cookie when toggled", () => {
+      cookieStore["sidebar:state"] = "true";
+
+      const { getByTestId } = render(
+        <SidebarProvider defaultOpen={false} persist={false}>
+          <TestComponent />
+        </SidebarProvider>,
+      );
+
+      fireEvent.click(getByTestId("set-closed-btn"));
+
+      // The page-level sidebar state must survive a local provider's writes.
+      expect(cookieStore["sidebar:state"]).toBe("true");
+      expect(getByTestId("sidebar-state")).toHaveTextContent("closed");
+    });
+
+    it("should honour its own defaultOpen instead of the shared cookie", () => {
+      cookieStore["sidebar:state"] = "true";
+
+      const { getByTestId } = render(
+        <SidebarProvider defaultOpen={false} persist={false}>
+          <TestComponent />
+        </SidebarProvider>,
+      );
+
+      expect(getByTestId("sidebar-state")).toHaveTextContent("closed");
+    });
+
+    it("should not let a mounted Sidebar clobber the shared cookie", () => {
+      cookieStore["sidebar:state"] = "true";
+
+      // `Sidebar`'s mount effects call `setOpen` — the exact path that let the
+      // TemplatesModal overwrite the flow page's sidebar state.
+      render(
+        <SidebarProvider defaultOpen={false} persist={false}>
+          <Sidebar>Template filters</Sidebar>
+        </SidebarProvider>,
+      );
+
+      expect(cookieStore["sidebar:state"]).toBe("true");
+    });
+  });
 });

@@ -75,7 +75,13 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
         <BaseModal.Content overflowHidden className="flex flex-col p-0">
           <div className="flex flex-col w-full h-full">
             <div className="flex h-full">
-              <SidebarProvider width="20rem" defaultOpen={false}>
+              {/* Local to this modal's detail pane — see the `persist` note
+                  on SidebarProvider. */}
+              <SidebarProvider
+                width="20rem"
+                defaultOpen={false}
+                persist={false}
+              >
                 <ToolsTable
                   rows={rows}
                   isAction={isAction}
