@@ -38,14 +38,19 @@ if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-# Actions granted by each AuthzShare.permission_level. ``write`` and ``execute``
-# are independent (each grants ``read`` plus itself); ``admin`` grants the lot.
-# Mirrors SharePermissionLevel without baking a questionable write<execute order.
+# Actions granted by each AuthzShare.permission_level, ordered weakest to
+# strongest. This is the canonical share contract enforced by the enterprise
+# Casbin plugin (share_sync.PERMISSION_ACTIONS) and described by the share UI
+# (Viewer/Runner/Editor/Admin): ``execute`` grants ``read`` so a runner can
+# fetch the flow it invokes; ``write`` grants ``read`` + ``execute`` (an editor
+# can also view and run); ``admin`` additionally grants ``delete``. The
+# enterprise repo's check-authz-share-contract.py compares this dict against
+# the plugin's mapping — keep the two in lockstep.
 _SHARE_LEVEL_ACTIONS: dict[str, frozenset[str]] = {
     "read": frozenset({"read"}),
-    "write": frozenset({"read", "write"}),
     "execute": frozenset({"read", "execute"}),
-    "admin": frozenset({"read", "write", "execute", "create", "delete", "deploy", "update", "share"}),
+    "write": frozenset({"read", "write", "execute"}),
+    "admin": frozenset({"read", "write", "execute", "delete"}),
 }
 
 # Built-in role permission sets — mirrors migration 7c8d9e0f1a2b_authz_foundations
