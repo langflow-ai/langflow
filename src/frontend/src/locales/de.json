@@ -1834,7 +1834,7 @@
   "shortcuts.combinationExists": "Diese Kombination gibt es bereits!",
   "shortcuts.defaultNotFound": "Standard-Tastenkombination nicht gefunden.",
   "shortcuts.description": "Verwalten Sie Verknüpfungen für den schnellen Zugriff auf häufig verwendete Aktionen.",
-  "shortcuts.name.advancedSettings": "Kontrollmechanismen",
+  "shortcuts.name.advancedSettings": "Parameter",
   "shortcuts.name.aiAssistant": "KI-Assistent",
   "shortcuts.name.api": "-API",
   "shortcuts.name.changesSave": "Änderungen speichern",
