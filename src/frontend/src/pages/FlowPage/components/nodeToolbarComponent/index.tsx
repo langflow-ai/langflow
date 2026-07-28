@@ -39,6 +39,10 @@ import {
 import { cn } from "../../../../utils/utils";
 import { ToolbarButton } from "./components/toolbar-button";
 import ToolbarModals from "./components/toolbar-modals";
+import {
+  buildToolbarActionMap,
+  type ToolbarActionEvent,
+} from "./helpers/build-toolbar-action-map";
 import useShortcuts from "./hooks/use-shortcuts";
 import { useToolbarNodeState } from "./hooks/use-toolbar-node-state";
 import ShortcutDisplay from "./shortcutDisplay";
@@ -302,72 +306,36 @@ const NodeToolbarComponent = memo(
       showconfirmShare,
     ]);
 
-    const [selectedValue, setSelectedValue] = useState(null);
+    const [selectedValue, setSelectedValue] = useState<string | null>(null);
 
-    const handleSelectChange = useCallback(
-      (event) => {
-        let nodes;
-        setSelectedValue(event);
-
-        // Clear right-clicked state when user selects an option
-        if (openDropdownOnRightClick) {
-          const setRightClickedNodeId =
-            useFlowStore.getState().setRightClickedNodeId;
-          setRightClickedNodeId(null);
-        }
-
-        switch (event) {
-          case "save":
-            saveComponent();
-            break;
-          case "freezeAll":
+    const toolbarActionMap = useMemo(
+      () =>
+        buildToolbarActionMap({
+          save: saveComponent,
+          freezeAll: () => {
             takeSnapshot();
             FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
-            break;
-          case "code":
-            handleCodeModal();
-            break;
-          case "show":
+          },
+          code: handleCodeModal,
+          show: () => {
             takeSnapshot();
             handleMinimize();
-            break;
-          case "Share":
-            shareComponent();
-            break;
-          case "Download":
-            handleDownloadNode();
-            break;
-          case "SaveAll":
-            addFlow({
-              flow: flowComponent,
-              override: false,
-            });
-            break;
-          case "documentation":
-            openDocs();
-            break;
-          case "disabled":
-            break;
-          case "ungroup":
-            handleungroup();
-            break;
-          case "override":
-            setShowOverrideModal(true);
-            break;
-          case "delete":
-            deleteNode(data.id);
-            break;
-          case "update":
-            updateNode();
-            break;
-          case "copy": {
-            nodes = useFlowStore.getState().nodes;
+          },
+          share: shareComponent,
+          download: handleDownloadNode,
+          saveAll: () => addFlow({ flow: flowComponent, override: false }),
+          documentation: openDocs,
+          ungroup: handleungroup,
+          override: () => setShowOverrideModal(true),
+          delete: () => deleteNode(data.id),
+          update: updateNode,
+          copy: () => {
+            const nodes = useFlowStore.getState().nodes;
             const node = nodes.filter((node) => node.id === data.id);
             setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
-            break;
-          }
-          case "duplicate":
-            nodes = useFlowStore.getState().nodes;
+          },
+          duplicate: () => {
+            const nodes = useFlowStore.getState().nodes;
             paste(
               {
                 nodes: [nodes.find((node) => node.id === data.id)!],
@@ -380,22 +348,21 @@ const NodeToolbarComponent = memo(
                 paneY: nodes.find((node) => node.id === data.id)?.position.y,
               },
             );
-            break;
-          case "toolMode":
-            handleActivateToolMode();
-            break;
-        }
-
-        setSelectedValue(null);
-      },
+          },
+          toolMode: handleActivateToolMode,
+        }),
       [
         saveComponent,
+        takeSnapshot,
         FreezeAllVertices,
-        setOpenModal,
+        currentFlowId,
+        data.id,
+        handleCodeModal,
         handleMinimize,
         shareComponent,
-        downloadNode,
+        handleDownloadNode,
         addFlow,
+        flowComponent,
         openDocs,
         handleungroup,
         setShowOverrideModal,
@@ -404,8 +371,25 @@ const NodeToolbarComponent = memo(
         setLastCopiedSelection,
         paste,
         handleActivateToolMode,
-        toolMode,
       ],
+    );
+
+    const handleSelectChange = useCallback(
+      (event: string) => {
+        setSelectedValue(event);
+
+        // Clear right-clicked state when user selects an option
+        if (openDropdownOnRightClick) {
+          const setRightClickedNodeId =
+            useFlowStore.getState().setRightClickedNodeId;
+          setRightClickedNodeId(null);
+        }
+
+        toolbarActionMap[event as ToolbarActionEvent]?.();
+
+        setSelectedValue(null);
+      },
+      [toolbarActionMap, openDropdownOnRightClick],
     );
 
     const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
