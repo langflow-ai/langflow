@@ -1,3 +1,5 @@
+"""Azure OpenAI chat model component."""
+
 from langchain_openai import AzureChatOpenAI
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel

@@ -1,3 +1,5 @@
+"""Ollama chat model component."""
+
 import asyncio
 import json
 from contextlib import suppress
