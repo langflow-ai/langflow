@@ -806,7 +806,6 @@
   "flows.openFlow": "Open flow",
   "flows.selectFlow": "Select {{name}}",
   "flows.moreOptions": "More options for {{name}}",
-  "sidebar.addComponentToCanvas": "Add {{name}} to canvas",
   "folder.options": "Options",
   "folder.optionsFor": "Options for {{name}}",
   "folder.rename": "Rename",

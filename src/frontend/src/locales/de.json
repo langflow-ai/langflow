@@ -2185,7 +2185,6 @@
   "canvasControls.minimizeAll": "Alles minimieren",
   "canvasControls.expandAll": "Alles erweitern",
   "input.expandTextEditor": "Texteditor erweitern",
-  "sidebar.addComponentToCanvas": "„ {{name}} “ zur Leinwand hinzufügen",
   "sidebar.showBetaComponents": "Beta-Komponenten anzeigen",
   "sidebar.showLegacyComponents": "Legacy-Komponenten anzeigen"
 }

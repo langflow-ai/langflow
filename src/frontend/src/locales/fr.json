@@ -2185,7 +2185,6 @@
   "canvasControls.minimizeAll": "Tout réduire",
   "canvasControls.expandAll": "Tout développer",
   "input.expandTextEditor": "Déplier l'éditeur de texte",
-  "sidebar.addComponentToCanvas": "Ajouter « {{name}} » à la toile",
   "sidebar.showBetaComponents": "Afficher les composants bêta",
   "sidebar.showLegacyComponents": "Afficher les composants hérités"
 }
