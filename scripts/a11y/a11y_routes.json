@@ -118,11 +118,6 @@
       "requiredData": "Flow ID"
     },
     {
-      "template": "/flow/:id/view",
-      "surface": "Flow view page",
-      "requiredData": "Flow ID"
-    },
-    {
       "template": "/playground/:id/",
       "surface": "Shared playground page",
       "requiredData": "Shared flow/playground ID"
