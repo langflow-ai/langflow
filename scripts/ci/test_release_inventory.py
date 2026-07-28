@@ -72,7 +72,7 @@ def test_contract_required_files_exist_in_sources() -> None:
 
 def test_full_python_profile_uses_the_reviewed_root_extra() -> None:
     root_project = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
-    assert root_project["optional-dependencies"]["bundles"] == ["lfx-bundles[all-no-torch]>=1.1.5,<2.0"]
+    assert root_project["optional-dependencies"]["bundles"] == ["lfx-bundles[all-no-torch]>=1.1.6,<2.0"]
 
     gate_path = REPO_ROOT / ".github" / "workflows" / "release-inventory-gate.yml"
     gate = gate_path.read_text(encoding="utf-8")

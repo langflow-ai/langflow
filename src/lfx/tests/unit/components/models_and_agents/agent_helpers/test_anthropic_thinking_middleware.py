@@ -2,7 +2,6 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from langchain.agents.middleware import ExtendedModelResponse, ModelResponse
 from langchain_core.messages import AIMessage
 from lfx.components.models_and_agents.agent_helpers.anthropic_thinking_middleware import (
@@ -56,7 +55,6 @@ def test_normalizes_extended_model_response() -> None:
     assert result.model_response.result[0].content[0]["thinking"] == ""
 
 
-@pytest.mark.asyncio
 async def test_normalizes_async_response() -> None:
     result = await AnthropicThinkingMiddleware().awrap_model_call(
         MagicMock(), AsyncMock(return_value=_signature_only_message())

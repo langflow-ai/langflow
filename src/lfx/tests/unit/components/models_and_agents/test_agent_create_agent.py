@@ -1553,6 +1553,45 @@ def test_should_attach_omitted_thinking_middleware_for_anthropic_models(model_na
     assert any(isinstance(item, AnthropicThinkingMiddleware) for item in middleware)
 
 
+def test_should_attach_omitted_thinking_middleware_for_anthropic_subclass() -> None:
+    from lfx.components.models_and_agents.agent_helpers.anthropic_thinking_middleware import (
+        AnthropicThinkingMiddleware,
+    )
+
+    chat_anthropic_type = type("ChatAnthropic", (), {"__module__": "langchain_anthropic.chat_models"})
+    custom_anthropic_type = type("CustomChatAnthropic", (chat_anthropic_type,), {"__module__": "custom_models"})
+    component = _build_component()
+    component.set_attributes({"tools": [SimpleNamespace(name="search", metadata={})]})
+    middleware = component._build_middleware(custom_anthropic_type())
+
+    assert any(isinstance(item, AnthropicThinkingMiddleware) for item in middleware)
+
+
+def test_should_attach_omitted_thinking_middleware_for_wrapped_anthropic_model() -> None:
+    from langchain_core.runnables import Runnable, RunnableBinding
+    from lfx.components.models_and_agents.agent_helpers.anthropic_thinking_middleware import (
+        AnthropicThinkingMiddleware,
+    )
+
+    def _invoke(_self, value, _config=None, **_kwargs):
+        return value
+
+    chat_anthropic_type = type(
+        "ChatAnthropic",
+        (Runnable,),
+        {
+            "__module__": "langchain_anthropic.chat_models",
+            "invoke": _invoke,
+        },
+    )
+    wrapped_model = RunnableBinding(bound=chat_anthropic_type())
+    component = _build_component()
+    component.set_attributes({"tools": [SimpleNamespace(name="search", metadata={})]})
+    middleware = component._build_middleware(wrapped_model)
+
+    assert any(isinstance(item, AnthropicThinkingMiddleware) for item in middleware)
+
+
 def test_should_not_attach_omitted_thinking_middleware_for_non_anthropic_models() -> None:
     from lfx.components.models_and_agents.agent_helpers.anthropic_thinking_middleware import (
         AnthropicThinkingMiddleware,

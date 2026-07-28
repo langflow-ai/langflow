@@ -11,6 +11,8 @@ from langchain.agents.middleware import (
     ModelCallLimitMiddleware,
     ToolRetryMiddleware,
 )
+from langchain_core.runnables.base import RunnableBindingBase
+from langchain_core.runnables.fallbacks import RunnableWithFallbacks
 from langgraph.types import Command
 
 from lfx.components.models_and_agents.agent_helpers.anthropic_thinking_middleware import (
@@ -73,9 +75,28 @@ def set_advanced_true(component_input):
 
 
 def _is_anthropic_chat_model(llm: Any) -> bool:
-    """Return whether ``llm`` is backed by ``langchain-anthropic``."""
-    model_type = type(llm)
-    return model_type.__name__ == "ChatAnthropic" or model_type.__module__.startswith("langchain_anthropic")
+    """Return whether ``llm`` or one of its supported wrappers uses ``langchain-anthropic``."""
+
+    def _contains_anthropic_model(model: Any, seen: set[int]) -> bool:
+        if model is None or id(model) in seen:
+            return False
+        seen.add(id(model))
+
+        if any(
+            model_type.__name__ == "ChatAnthropic" or model_type.__module__.startswith("langchain_anthropic")
+            for model_type in type(model).__mro__
+        ):
+            return True
+
+        if isinstance(model, RunnableBindingBase):
+            return _contains_anthropic_model(model.bound, seen)
+        if isinstance(model, RunnableWithFallbacks):
+            return _contains_anthropic_model(model.runnable, seen) or any(
+                _contains_anthropic_model(fallback, seen) for fallback in model.fallbacks
+            )
+        return False
+
+    return _contains_anthropic_model(llm, set())
 
 
 def _agent_base_inputs():
