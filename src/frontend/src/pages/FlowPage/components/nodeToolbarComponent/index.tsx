@@ -31,16 +31,16 @@ import { useUtilityStore } from "../../../../stores/utilityStore";
 import type { nodeToolbarPropsType } from "../../../../types/components";
 import type { FlowType } from "../../../../types/flow";
 import {
-  checkHasToolMode,
   createFlowComponent,
   downloadNode,
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { cn, getNodeLength } from "../../../../utils/utils";
+import { cn } from "../../../../utils/utils";
 import { ToolbarButton } from "./components/toolbar-button";
 import ToolbarModals from "./components/toolbar-modals";
 import useShortcuts from "./hooks/use-shortcuts";
+import { useToolbarNodeState } from "./hooks/use-toolbar-node-state";
 import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
 
@@ -112,49 +112,20 @@ const NodeToolbarComponent = memo(
       (state) => state.allowCustomComponents,
     );
 
-    const nodeLength = useMemo(() => getNodeLength(data), [data]);
-    const hasCode = useMemo(
-      () => Object.keys(data.node!.template).includes("code"),
-      [data.node],
-    );
-    const canEditCode = hasCode && allowCustomComponents;
-    const isGroup = useMemo(
-      () => (data.node?.flow ? true : false),
-      [data.node],
-    );
-
-    const hasToolMode = useMemo(
-      () => checkHasToolMode(data.node?.template ?? {}) && !isGroup,
-      [data.node?.template, isGroup],
-    );
+    const {
+      nodeLength,
+      hasCode,
+      canEditCode,
+      isGroup,
+      hasToolMode,
+      toolMode,
+      setToolMode,
+    } = useToolbarNodeState({
+      data,
+      allowCustomComponents,
+      isPostToolModePending: postToolModeValue.isPending,
+    });
     const addFlow = useAddFlow();
-
-    const [toolMode, setToolMode] = useState(
-      () =>
-        data.node?.tool_mode ||
-        data.node?.outputs?.some(
-          (output) => output.name === "component_as_tool",
-        ) ||
-        false,
-    );
-
-    useEffect(() => {
-      // Keep the optimistic toggle state while the server rebuilds the node.
-      // Other in-flight field refreshes can update the same node first with
-      // its previous tool_mode value; syncing that transient value makes the
-      // toggle appear to turn itself off.
-      if (postToolModeValue.isPending) return;
-
-      if (data.node?.tool_mode !== undefined) {
-        setToolMode(
-          data.node?.tool_mode ||
-            data.node?.outputs?.some(
-              (output) => output.name === "component_as_tool",
-            ) ||
-            false,
-        );
-      }
-    }, [data.node?.tool_mode, data.node?.outputs, postToolModeValue.isPending]);
 
     const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
       data.id,
