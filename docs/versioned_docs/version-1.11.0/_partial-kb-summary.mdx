@@ -1,0 +1,19 @@
+A Langflow knowledge base is a vector database that stores embeddings for use in your flows.
+By default, knowledge bases use Chroma as a local vector store, but you can configure an external vector database provider such as OpenSearch.
+For more information, see [Configure vector database providers](/knowledge#configure-vector-database-providers).
+
+Because knowledge bases don't re-ingest data with every flow run, they can be more efficient than using a remote vector database.
+They are a good choice for flows that use custom, domain-specific datasets, like slices of customer and product data.
+
+You can use knowledge base components in much the same way that you use vector store components.
+However, there are several key differences:
+
+* **Local storage by default**: Langflow knowledge bases use Chroma local storage by default.
+In contrast, only some vector store components support local databases.
+* **Built-in embedding models**: Langflow knowledge bases include built-in support for several embedding models.
+Other models aren't supported for use with knowledge bases.
+To use a different provider or model, you must use a vector store component along with your preferred embedding model component.
+* **Basic similarity search**: When querying Langflow knowledge bases, only standard similarity search is supported.
+For more advanced searches, you must use a vector store component for a vector database provider that supports your desired functionality.
+* **Structured data**: Langflow knowledge bases only support structured data.
+For unstructured data, you must use a compatible vector store component.

@@ -102,6 +102,16 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         CORE_VERSION="$CORE_VERSION" /app/.venv/bin/python -c 'import importlib.metadata as m, os; assert m.version("langflow-core") == os.environ["CORE_VERSION"]'; \
     fi
 
+# Use the release workflow's exact wheels when present, while retaining the
+# frontend compiled specifically for this image. Nightly and local builds leave
+# the artifact directory empty and no-op.
+COPY ./.release-artifacts /tmp/release-artifacts
+COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
+RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
+    --python /app/.venv/bin/python \
+    --mode main \
+    --frontend-source /app/src/backend/langflow/frontend
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only

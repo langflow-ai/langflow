@@ -21,9 +21,7 @@ interface BaseConfig {
   voice_mode_available: boolean;
   allow_custom_components: boolean;
   mcp_base_url: string;
-  // Mode A only: backend's ``LANGFLOW_ENABLE_EXTENSION_RELOAD`` mirrored
-  // through to the frontend so a packaged build can light up the palette
-  // Reload button without a rebuild.  See utilityStore.enableExtensionReload.
+  // Runtime mirror of LANGFLOW_ENABLE_EXTENSION_RELOAD — see utilityStore.enableExtensionReload.
   enable_extension_reload: boolean;
 }
 
@@ -49,6 +47,7 @@ export interface ConfigResponse extends BaseConfig {
   mcp_servers_locked: boolean;
   custom_component_admin_only: boolean;
   a2a_enabled: boolean;
+  agentic_experience: boolean;
 }
 
 // Union type for the response (can be either public or full config)
@@ -119,13 +118,15 @@ export const useGetConfig: useQueryFunctionType<
     (state) => state.setCustomComponentAdminOnly,
   );
   const setA2aEnabled = useUtilityStore((state) => state.setA2aEnabled);
+  const setAgenticExperienceEnabled = useUtilityStore(
+    (state) => state.setAgenticExperienceEnabled,
+  );
 
   const { query } = UseRequestProcessor();
 
   const getConfigFn = async () => {
-    // The /config endpoint returns different responses based on authentication:
-    // - Authenticated: Full ConfigResponse with all settings
-    // - Unauthenticated: PublicConfigResponse with limited settings
+    // Authenticated requests get the full ConfigResponse; unauthenticated ones
+    // get the limited PublicConfigResponse.
     const response = await api.get<ConfigResponseType>(`${getURL("CONFIG")}`);
     const data = response["data"];
     if (data) {
@@ -169,6 +170,7 @@ export const useGetConfig: useQueryFunctionType<
         setMcpServersLocked(data.mcp_servers_locked ?? false);
         setCustomComponentAdminOnly(data.custom_component_admin_only ?? false);
         setA2aEnabled(data.a2a_enabled ?? false);
+        setAgenticExperienceEnabled(data.agentic_experience ?? true);
       }
     }
     return data;

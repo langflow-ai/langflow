@@ -3,10 +3,10 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
-pytest.importorskip("lfx_bundles")
+pytest.importorskip("lfx_google")
 
 from lfx.schema import DataFrame
-from lfx_bundles.google.google_search_api_core import GoogleSearchAPICore
+from lfx_google.components.google.google_search_api_core import GoogleSearchAPICore
 
 from tests.base import ComponentTestBaseWithoutClient
 

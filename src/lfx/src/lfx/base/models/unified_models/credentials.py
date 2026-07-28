@@ -537,7 +537,6 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
         "OpenAI",
         "Anthropic",
         "Google Generative AI",
-        "IBM WatsonX",
     ]:
         return
 
@@ -580,14 +579,27 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             llm.invoke("test")
 
         elif provider == "IBM WatsonX":
-            from langchain_ibm import ChatWatsonx
-
             api_key = variables.get("WATSONX_APIKEY")
             project_id = variables.get("WATSONX_PROJECT_ID")
-            url = variables.get("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
+            url = variables.get("WATSONX_URL") or "https://us-south.ml.cloud.ibm.com"
             if not api_key or not project_id:
                 return
             validate_connector_url_for_ssrf(url)
+
+            if not validation_model:
+                from lfx.base.models.model_utils import get_watsonx_llm_models
+
+                # Static WatsonX seeds may all be deprecated and filtered out.
+                # Use a current regional chat model instead of skipping validation.
+                live_models = get_watsonx_llm_models(url, default_models=[])
+                if not live_models:
+                    msg = "No IBM WatsonX chat model is available to validate credentials"
+                    logger.warning(msg)
+                    raise ValueError(msg)
+                validation_model = live_models[0]
+
+            from langchain_ibm import ChatWatsonx
+
             llm = ChatWatsonx(
                 apikey=api_key,
                 url=url,
@@ -701,6 +713,11 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
     except ValueError:
         raise
     except Exception as e:
+        if provider == "IBM WatsonX":
+            msg = f"Could not validate IBM WatsonX credentials: {e}"
+            logger.warning(msg)
+            raise ValueError(msg) from e
+
         error_msg = str(e).lower()
         if any(word in error_msg for word in ["401", "authentication", "api key"]):
             msg = f"Invalid API key for {provider}"
