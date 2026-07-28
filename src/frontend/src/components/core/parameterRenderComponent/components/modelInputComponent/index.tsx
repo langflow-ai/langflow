@@ -11,7 +11,6 @@ import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
-import { Button } from "../../../../ui/button";
 import { Command } from "../../../../ui/command";
 import {
   Popover,
@@ -20,6 +19,7 @@ import {
 } from "../../../../ui/popover";
 import type { BaseInputProps } from "../../types";
 import { focusCommandListOnOpen } from "../../utils/focus-command-list-on-open";
+import { ModelDropdownFooter } from "./components/ModelDropdownFooter";
 import {
   ModelInputErrorButton,
   ModelInputLoadingButton,
@@ -277,39 +277,6 @@ export default function ModelInputComponent({
     void refetchEnabledModels();
   }, [refetchProviders, refetchEnabledModels]);
 
-  const renderFooterButton = (
-    label: string,
-    icon: string,
-    onClick: () => void,
-    testId?: string,
-  ) => (
-    <Button
-      className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
-      unstyled
-      data-testid={testId}
-      onClick={onClick}
-    >
-      <div className="flex items-center gap-2 pl-1 group-hover:text-primary">
-        {label}
-        <ForwardedIconComponent
-          name={icon}
-          className="w-4 h-4 text-muted-foreground group-hover:text-primary"
-        />
-      </div>
-    </Button>
-  );
-
-  const renderManageProvidersButton = () => (
-    <div className="bottom-0 bg-background">
-      {renderFooterButton(
-        t("modelInput.manageProviders"),
-        "Settings",
-        () => setOpenManageProvidersDialog(true),
-        "manage-model-providers",
-      )}
-    </div>
-  );
-
   const renderPopoverContent = () => {
     const PopoverContentInput =
       editNode || inspectionPanel || inspectionPanelVisible
@@ -326,9 +293,8 @@ export default function ModelInputComponent({
         className="noflow nowheel nopan nodelete nodrag z-[70] p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >
-        {/* Section 1 — the option list (a self-contained listbox). Keeping the
-            footer actions out of <Command> stops them from being swept into the
-            listbox's composite keyboard/focus model. */}
+        {/* The footer actions live outside <Command> so they are not swept into
+            the listbox's composite keyboard/focus model. */}
         <Command label={t("model.selectModel")} className="flex flex-col">
           <ModelList
             groupedOptions={groupedOptions}
@@ -336,27 +302,14 @@ export default function ModelInputComponent({
             onSelect={handleModelSelect}
           />
         </Command>
-        {/* Section 2 — footer actions, a plain group of buttons reachable by Tab
-            after the list. */}
-        <div className="flex flex-col border-t border-border bg-background">
-          {renderFooterButton(
-            t("modelInput.refreshList"),
-            "RotateCw",
-            handleRefreshButtonPress,
-            "refresh-model-list",
-          )}
-          {renderManageProvidersButton()}
-          {externalOptions?.fields?.data?.node && (
-            <div className="border-t bg-background">
-              {renderFooterButton(
-                t("modelInput.connectOtherModels"),
-                externalOptions.fields.data.node.icon || "CornerDownLeft",
-                () => handleExternalOptions("connect_other_models"),
-                "connect-other-models",
-              )}
-            </div>
-          )}
-        </div>
+        <ModelDropdownFooter
+          onRefresh={handleRefreshButtonPress}
+          onManageProviders={() => setOpenManageProvidersDialog(true)}
+          externalNode={externalOptions?.fields?.data?.node}
+          onConnectOtherModels={() =>
+            handleExternalOptions("connect_other_models")
+          }
+        />
       </PopoverContentInput>
     );
   };
