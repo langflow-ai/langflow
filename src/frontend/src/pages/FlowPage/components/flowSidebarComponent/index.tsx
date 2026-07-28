@@ -1,7 +1,6 @@
 import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -20,7 +19,6 @@ import {
   ENABLE_NEW_SIDEBAR,
 } from "@/customization/feature-flags";
 import { useAddComponent } from "@/hooks/use-add-component";
-import { useShortcutsStore } from "@/stores/shortcuts";
 import { setLocalStorage } from "@/utils/local-storage-util";
 import {
   nodeColors,
@@ -31,7 +29,6 @@ import { cn, getBooleanFromStorage } from "@/utils/utils";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import type { APIClassType } from "../../../../types/api";
-import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
 import FlowVersionSidebarContent from "./components/FlowVersionSidebarContent";
@@ -49,6 +46,7 @@ import sensitiveSort from "./helpers/sensitive-sort";
 import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
 import { useDebouncedSearch } from "./hooks/useDebouncedSearch";
 import { useSidebarFilters } from "./hooks/useSidebarFilters";
+import { useSidebarHotkeys } from "./hooks/useSidebarHotkeys";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
@@ -414,34 +412,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     }
   }, [debouncedSearch, getFilterEdge, getFilterComponent]);
 
-  const searchComponentsSidebar = useShortcutsStore(
-    (state) => state.searchComponentsSidebar,
-  );
-
-  useHotkeys(
-    searchComponentsSidebar,
-    (e: KeyboardEvent) => {
-      if (isWrappedWithClass(e, "noflow")) return;
-      e.preventDefault();
-      searchInputRef.current?.focus();
-      setOpen(true);
-    },
-    {
-      preventDefault: true,
-    },
-  );
-
-  useHotkeys(
-    "esc",
-    (event) => {
-      event.preventDefault();
-      searchInputRef.current?.blur();
-    },
-    {
-      enableOnFormTags: true,
-      enabled: isSearchFocused,
-    },
-  );
+  useSidebarHotkeys({ searchInputRef, setOpen, isSearchFocused });
 
   const onDragStart = useCallback(
     (
