@@ -117,6 +117,24 @@ export default function ChatView({
     setChatHistory(finalChatHistory);
   }, [messages, visibleSession]);
 
+  // Assistant text streams in by mutating the last message, so a live region
+  // over the list would re-announce on every token. The list only announces
+  // additions (and is aria-busy while building); the finished response is
+  // pushed once into this separate status region when the build settles.
+  const [completedAnnouncement, setCompletedAnnouncement] = useState("");
+  const wasBuildingRef = useRef(isBuilding);
+  useEffect(() => {
+    if (wasBuildingRef.current && !isBuilding) {
+      const lastMessage = chatHistory?.[chatHistory.length - 1];
+      if (lastMessage && !lastMessage.isSend) {
+        setCompletedAnnouncement(
+          typeof lastMessage.message === "string" ? lastMessage.message : "",
+        );
+      }
+    }
+    wasBuildingRef.current = isBuilding;
+  }, [isBuilding, chatHistory]);
+
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -179,7 +197,14 @@ export default function ChatView({
       initial="instant"
     >
       <StickToBottom.Content className="flex flex-col min-h-full ">
-        <div className="flex flex-col flex-grow place-self-center w-5/6 max-w-[768px]">
+        <div
+          className="flex flex-col flex-grow place-self-center w-5/6 max-w-[768px]"
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+          aria-busy={isBuilding}
+          aria-label={t("chat.messagesRegionLabel")}
+        >
           {chatHistory &&
             (isBuilding || chatHistory?.length > 0 ? (
               chatHistory?.map((chat, index) => (
@@ -229,6 +254,9 @@ export default function ChatView({
             flowRunningSkeletonMemo}
         </div>
       </StickToBottom.Content>
+      <div role="status" aria-live="polite" className="sr-only">
+        {completedAnnouncement}
+      </div>
       <SafariScrollFix />
 
       <div className="m-auto w-full max-w-[768px] md:w-5/6">

@@ -488,6 +488,16 @@ describe("SidebarFilterComponent", () => {
       const resetButton = screen.getByTestId("sidebar-filter-reset");
       expect(resetButton.tagName).toBe("BUTTON");
     });
+
+    it("should give the reset button an accessible name", () => {
+      // The icon is aria-hidden and a tooltip only supplies aria-describedby,
+      // so the button needs its own label to have a name at all.
+      render(<SidebarFilterComponent {...defaultProps} />);
+
+      expect(
+        screen.getByRole("button", { name: "Remove filter" }),
+      ).toBeInTheDocument();
+    });
   });
 
   describe("Callback Functions", () => {

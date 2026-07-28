@@ -1,5 +1,6 @@
 import { Transition } from "@headlessui/react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { CustomLink } from "@/customization/components/custom-link";
@@ -13,6 +14,7 @@ export default function NoticeAlert({
   link,
   removeAlert,
 }: NoticeAlertType): JSX.Element {
+  const { t } = useTranslation();
   const [show, setShow] = useState(true);
   useEffect(() => {
     if (show) {
@@ -69,6 +71,17 @@ export default function NoticeAlert({
               )}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClick();
+            }}
+            aria-label={t("alerts.dismissAlert")}
+            className="ml-3 flex-shrink-0 self-start"
+          >
+            <IconComponent name="X" className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
       </div>
     </Transition>

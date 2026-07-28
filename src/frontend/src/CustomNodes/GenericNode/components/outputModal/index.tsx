@@ -76,6 +76,7 @@ export default function OutputModal({
           size="icon"
           className="absolute right-12 top-2 p-2"
           onClick={handleCopy}
+          aria-label={t("output.copyOutput")}
           data-testid="copy-output-button"
         >
           <ForwardedIconComponent

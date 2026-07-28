@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
@@ -75,6 +76,7 @@ export default function TextAreaComponent({
   nodeInformationMetadata,
   showParameter = true,
 }: InputProps<string, TextAreaComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -234,7 +236,11 @@ export default function TextAreaComponent({
         </div>
       </ComponentTextModal>
       {password && !isFocused && (
-        <div
+        <button
+          type="button"
+          aria-label={
+            passwordVisible ? t("input.hidePassword") : t("input.showPassword")
+          }
           onClick={() => {
             setPasswordVisible(!passwordVisible);
           }}
@@ -250,7 +256,7 @@ export default function TextAreaComponent({
               "right-10",
             )}
           />
-        </div>
+        </button>
       )}
     </div>
   );

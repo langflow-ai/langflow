@@ -1,6 +1,11 @@
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import type { ModelTypeFilter } from "@/types/models";
 import ModelProvidersContent from "./components/ModelProvidersContent";
@@ -44,9 +49,9 @@ const ModelProviderModal = ({
       <DialogContent className="flex flex-col overflow-hidden rounded-xl p-0 max-w-[768px] h-[560px] gap-0">
         <DialogHeader className="flex w-full border-b px-4 py-3">
           <div className="flex justify-start items-center gap-3">
-            <div className="text-[13px] font-semibold">
+            <DialogTitle className="text-[13px] font-semibold">
               {t("modelProviders.title")}
-            </div>
+            </DialogTitle>
           </div>
         </DialogHeader>
 

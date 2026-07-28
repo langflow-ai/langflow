@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import useFlowStore from "@/stores/flowStore";
@@ -183,12 +184,31 @@ export const Messages = ({
   updateChat,
   closeChat,
 }: MessagesProps) => {
+  const { t } = useTranslation();
   const { chatHistory, loadMore, hasMore, isLoadingMore } =
     useChatHistory(visibleSession);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const isPlaygroundOpen = usePlaygroundStore((state) => state.isOpen);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Assistant text streams in by mutating the last message, so a live region
+  // over the list would re-announce on every token. The list only announces
+  // additions (and is aria-busy while building); the finished response is
+  // pushed once into this separate status region when the build settles.
+  const [completedAnnouncement, setCompletedAnnouncement] = useState("");
+  const wasBuildingRef = useRef(isBuilding);
+  useEffect(() => {
+    if (wasBuildingRef.current && !isBuilding) {
+      const lastMessage = chatHistory[chatHistory.length - 1];
+      if (lastMessage && !lastMessage.isSend) {
+        setCompletedAnnouncement(
+          typeof lastMessage.message === "string" ? lastMessage.message : "",
+        );
+      }
+    }
+    wasBuildingRef.current = isBuilding;
+  }, [isBuilding, chatHistory]);
 
   // Show thinking placeholder when building and last message is from user (no bot response yet)
   // Only show if the flow has a ChatOutput, otherwise there's nothing to produce a response
@@ -215,7 +235,14 @@ export const Messages = ({
   );
 
   const messagesContent = (
-    <div className="flex flex-col flex-grow place-self-center w-full relative overflow-x-hidden">
+    <div
+      className="flex flex-col flex-grow place-self-center w-full relative overflow-x-hidden"
+      role="log"
+      aria-live="polite"
+      aria-relevant="additions"
+      aria-busy={isBuilding}
+      aria-label={t("chat.messagesRegionLabel")}
+    >
       {chatHistory && (isBuilding || chatHistory.length > 0) && (
         <>
           <LoadMoreTrigger
@@ -270,6 +297,9 @@ export const Messages = ({
       <StickToBottom.Content className="flex flex-col min-h-full ">
         {messagesContent}
       </StickToBottom.Content>
+      <div role="status" aria-live="polite" className="sr-only">
+        {completedAnnouncement}
+      </div>
       <SafariScrollFix />
     </StickToBottom>
   );
