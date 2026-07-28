@@ -6,11 +6,9 @@ import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import ToggleShadComponent from "@/components/core/parameterRenderComponent/components/toggleShadComponent";
 import { Button } from "@/components/ui/button";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
-import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import type { APIClassType } from "@/types/api";
@@ -36,8 +34,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { cn } from "../../../../utils/utils";
-import { ToolbarButton } from "./components/toolbar-button";
+import { ToolbarButtonRow } from "./components/ToolbarButtonRow";
 import ToolbarModals from "./components/toolbar-modals";
 import {
   buildToolbarActionMap,
@@ -45,7 +42,6 @@ import {
 } from "./helpers/build-toolbar-action-map";
 import useShortcuts from "./hooks/use-shortcuts";
 import { useToolbarNodeState } from "./hooks/use-toolbar-node-state";
-import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
 
 const NodeToolbarComponent = memo(
@@ -117,7 +113,6 @@ const NodeToolbarComponent = memo(
     );
 
     const {
-      nodeLength,
       hasCode,
       canEditCode,
       isGroup,
@@ -428,139 +423,31 @@ const NodeToolbarComponent = memo(
       return isCustom;
     }, [data.type, data.node]);
 
-    const renderToolbarButtons = useMemo(
-      () => (
-        <>
-          {canEditCode && (
-            <ToolbarButton
-              className={isCustomComponent ? "animate-pulse-pink" : ""}
-              icon="Code"
-              label={t("nodeToolbar.code")}
-              onClick={handleCodeModal}
-              shortcut={shortcuts.find((s) =>
-                s.name.toLowerCase().startsWith("code"),
-              )}
-              dataTestId="code-button-modal"
-            />
-          )}
-          {/* Gated on the same flag the panel itself honors — without it the
-              button would render and do nothing (setInspectionPanelVisible
-              early-returns when the flag is off). */}
-          {ENABLE_INSPECTION_PANEL && (
-            <ToolbarButton
-              icon="SlidersHorizontal"
-              label={t("nodeToolbar.parameters")}
-              onClick={handleToggleInspectionPanel}
-              shortcut={shortcuts.find((s) =>
-                s.name.toLowerCase().startsWith("advanced"),
-              )}
-              isActive={inspectionPanelVisible}
-              dataTestId="parameters-button"
-            />
-          )}
-          {!hasToolMode && (
-            <ToolbarButton
-              icon="FreezeAll"
-              label={t("nodeToolbar.freeze")}
-              dataTestId="freeze-all-button-modal"
-              onClick={() => {
+    return (
+      <>
+        <div className="noflow nopan nodelete nodrag">
+          <div className="toolbar-wrapper">
+            <ToolbarButtonRow
+              canEditCode={canEditCode}
+              isCustomComponent={isCustomComponent}
+              onCode={handleCodeModal}
+              onToggleInspectionPanel={handleToggleInspectionPanel}
+              inspectionPanelVisible={inspectionPanelVisible}
+              hasToolMode={hasToolMode}
+              frozen={frozen}
+              onFreeze={() => {
                 takeSnapshot();
                 FreezeAllVertices({
                   flowId: currentFlowId,
                   stopNodeId: data.id,
                 });
               }}
-              shortcut={shortcuts.find((s) =>
-                s.name.toLowerCase().startsWith("freeze"),
-              )}
-              className={cn(
-                "node-toolbar-buttons",
-                frozen && "text-accent-indigo-foreground",
-              )}
+              toolMode={toolMode}
+              onToolMode={() => {
+                takeSnapshot();
+                handleSelectChange("toolMode");
+              }}
             />
-          )}
-          {hasToolMode && (
-            <ShadTooltip
-              content={
-                <ShortcutDisplay
-                  {...shortcuts.find(
-                    ({ name }) => name.toLowerCase() === "tool mode",
-                  )!}
-                />
-              }
-              side="top"
-            >
-              <Button
-                asChild
-                className={cn(
-                  "node-toolbar-buttons h-[2rem]",
-                  toolMode && "text-primary",
-                )}
-                variant="ghost"
-                size="node-toolbar"
-                data-testid="tool-mode-button"
-              >
-                <div
-                  className="flex items-center gap-2"
-                  role="button"
-                  tabIndex={0}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    takeSnapshot();
-                    handleSelectChange("toolMode");
-                  }}
-                >
-                  <IconComponent
-                    name="Hammer"
-                    className={cn(
-                      "h-4 w-4 transition-all",
-                      toolMode ? "text-primary" : "",
-                    )}
-                  />
-                  <span className="text-mmd font-medium">
-                    {t("nodeToolbar.toolMode")}
-                  </span>
-                  <ToggleShadComponent
-                    value={toolMode}
-                    editNode={false}
-                    handleOnNewValue={() => {
-                      takeSnapshot();
-                      handleSelectChange("toolMode");
-                    }}
-                    disabled={false}
-                    size="medium"
-                    showToogle={false}
-                    id="tool-mode-toggle"
-                  />
-                </div>
-              </Button>
-            </ShadTooltip>
-          )}
-        </>
-      ),
-      [
-        canEditCode,
-        isCustomComponent,
-        nodeLength,
-        inspectionPanelVisible,
-        hasToolMode,
-        toolMode,
-        data.id,
-        takeSnapshot,
-        FreezeAllVertices,
-        currentFlowId,
-        shortcuts,
-        frozen,
-        handleSelectChange,
-        handleCodeModal,
-      ],
-    );
-
-    return (
-      <>
-        <div className="noflow nopan nodelete nodrag">
-          <div className="toolbar-wrapper">
-            {renderToolbarButtons}
             <Select
               onValueChange={handleSelectChange}
               value={selectedValue!}
