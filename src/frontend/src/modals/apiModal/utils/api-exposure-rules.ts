@@ -75,6 +75,30 @@ export const PROTECTED_TWEAK_FIELDS_BY_COMPONENT: Readonly<
 };
 
 /**
+ * True when the backend would refuse a tweak on this field, so the UI must
+ * not advertise it as an API input.
+ */
+export const isBackendRefusedField = (
+  componentType: string | undefined,
+  fieldName: string,
+  fieldType: string | undefined,
+): boolean => {
+  if (fieldType === "code" || fieldName === "code") return true;
+  if (
+    componentType !== undefined &&
+    CODE_EXECUTION_COMPONENT_TYPES.has(componentType) &&
+    CODE_EXECUTION_FIELD_NAMES.has(fieldName)
+  ) {
+    return true;
+  }
+  return (
+    componentType !== undefined &&
+    (PROTECTED_TWEAK_FIELDS_BY_COMPONENT[componentType]?.has(fieldName) ??
+      false)
+  );
+};
+
+/**
  * Types whose value is an editable literal a tweak can carry. Handle-only
  * inputs are driven by an edge and have no literal to send, so they are not
  * tweakable no matter what the panel shows.
@@ -99,30 +123,9 @@ export const isFieldTweakable = (
   template: InputFieldType | undefined,
 ): boolean => {
   if (!template) return false;
-  if (fieldName.charAt(0) === "_" || fieldName === "code") return false;
-  return isTweakableType(template.type);
-};
-
-/**
- * True when the backend would refuse a tweak on this field, so the UI must
- * not advertise it as an API input.
- */
-export const isBackendRefusedField = (
-  componentType: string | undefined,
-  fieldName: string,
-  fieldType: string | undefined,
-): boolean => {
-  if (fieldType === "code" || fieldName === "code") return true;
-  if (
-    componentType !== undefined &&
-    CODE_EXECUTION_COMPONENT_TYPES.has(componentType) &&
-    CODE_EXECUTION_FIELD_NAMES.has(fieldName)
-  ) {
-    return true;
+  if (fieldName.charAt(0) === "_") return false;
+  if (isBackendRefusedField(componentType, fieldName, template.type)) {
+    return false;
   }
-  return (
-    componentType !== undefined &&
-    (PROTECTED_TWEAK_FIELDS_BY_COMPONENT[componentType]?.has(fieldName) ??
-      false)
-  );
+  return isTweakableType(template.type);
 };
