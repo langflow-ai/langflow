@@ -58,11 +58,12 @@ export default function DeploymentPhaseContent({
       </DialogHeader>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-8">
+        <div className="flex items-center justify-center py-8" role="status">
           <ForwardedIconComponent
             name="Loader2"
             className="h-5 w-5 animate-spin text-muted-foreground"
           />
+          <span className="sr-only">{t("deployments.loadingDeployments")}</span>
         </div>
       ) : (
         <RadioGroup
@@ -86,7 +87,9 @@ export default function DeploymentPhaseContent({
                 >
                   <span className="text-sm font-medium">{displayName}</span>
                   <span className="text-xs text-muted-foreground">
-                    {deployment.type} deployment
+                    {t("deployments.deploymentTypeLabel", {
+                      type: deployment.type,
+                    })}
                   </span>
                 </Label>
               </div>

@@ -390,7 +390,7 @@ describe("Connection panel toggle", () => {
     const user = userEvent.setup();
     render(<StepAttachFlows />);
 
-    await user.click(screen.getByTestId("version-item-ver-1"));
+    await user.click(screen.getByTestId("version-item-ver-1-select"));
 
     await waitFor(() => {
       expect(
@@ -403,7 +403,7 @@ describe("Connection panel toggle", () => {
     const user = userEvent.setup();
     render(<StepAttachFlows />);
 
-    await user.click(screen.getByTestId("version-item-ver-1"));
+    await user.click(screen.getByTestId("version-item-ver-1-select"));
 
     await waitFor(() => {
       expect(mockDetectEnvVars).toHaveBeenCalledWith({
@@ -417,7 +417,7 @@ describe("Connection panel toggle", () => {
     mockConnections = [];
     render(<StepAttachFlows />);
 
-    await user.click(screen.getByTestId("version-item-ver-1"));
+    await user.click(screen.getByTestId("version-item-ver-1-select"));
 
     await waitFor(() => {
       expect(
@@ -527,7 +527,7 @@ describe("Detected env vars auto-population", () => {
     });
     render(<StepAttachFlows />);
 
-    await user.click(screen.getByTestId("version-item-ver-1"));
+    await user.click(screen.getByTestId("version-item-ver-1-select"));
 
     await waitFor(() => {
       const keyInputs = screen.getAllByPlaceholderText("Key");
@@ -545,7 +545,7 @@ describe("Detected env vars auto-population", () => {
     mockDetectEnvVars.mockResolvedValueOnce({ variables: [] });
     render(<StepAttachFlows />);
 
-    await user.click(screen.getByTestId("version-item-ver-1"));
+    await user.click(screen.getByTestId("version-item-ver-1-select"));
 
     await waitFor(() => {
       const keyInputs = screen.getAllByPlaceholderText("Key");
@@ -559,7 +559,7 @@ describe("Detected env vars auto-population", () => {
     mockDetectEnvVars.mockRejectedValueOnce(new Error("network error"));
     render(<StepAttachFlows />);
 
-    await user.click(screen.getByTestId("version-item-ver-1"));
+    await user.click(screen.getByTestId("version-item-ver-1-select"));
 
     await waitFor(() => {
       expect(

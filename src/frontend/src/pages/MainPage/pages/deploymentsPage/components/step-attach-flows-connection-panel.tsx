@@ -1,3 +1,4 @@
+import type React from "react";
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
@@ -8,6 +9,8 @@ import type { ConnectionItem, EnvVarEntry } from "../types";
 import { ConnectionSearchList } from "./connection-search-list";
 
 export type ConnectionTab = "available" | "create";
+
+const CONNECTION_TABS: ConnectionTab[] = ["available", "create"];
 
 export const ConnectionPanel = memo(function ConnectionPanel({
   connectionTab,
@@ -49,20 +52,45 @@ export const ConnectionPanel = memo(function ConnectionPanel({
   isDuplicateName?: boolean;
 }) {
   const { t } = useTranslation();
+
+  const handleTabKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    const nextIndex =
+      event.key === "ArrowRight"
+        ? (index + 1) % CONNECTION_TABS.length
+        : (index - 1 + CONNECTION_TABS.length) % CONNECTION_TABS.length;
+    const nextTab = CONNECTION_TABS[nextIndex];
+    onTabChange(nextTab);
+    document.getElementById(`connection-tab-${nextTab}`)?.focus();
+  };
+
   return (
     <>
       <div className="border-b border-border p-4 text-sm text-muted-foreground">
         {t("deployments.selectOrCreateConnection")}
       </div>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden px-4 py-4">
-        {/* Tab toggle */}
         <div className="shrink-0 rounded-xl border border-border bg-muted p-1">
-          <div className="grid grid-cols-2">
-            {(["available", "create"] as const).map((tab) => (
+          <div
+            role="tablist"
+            aria-label={t("deployments.connectionTabsAriaLabel")}
+            className="grid grid-cols-2"
+          >
+            {CONNECTION_TABS.map((tab, index) => (
               <button
                 key={tab}
+                id={`connection-tab-${tab}`}
                 type="button"
+                role="tab"
+                aria-selected={connectionTab === tab}
+                aria-controls={`connection-panel-${tab}`}
+                tabIndex={connectionTab === tab ? 0 : -1}
                 onClick={() => onTabChange(tab)}
+                onKeyDown={(event) => handleTabKeyDown(event, index)}
                 className={cn(
                   "min-w-0 rounded-lg px-3 py-2 text-sm transition-colors",
                   connectionTab === tab
@@ -80,6 +108,9 @@ export const ConnectionPanel = memo(function ConnectionPanel({
 
         {/* Tab content */}
         <div
+          id={`connection-panel-${connectionTab}`}
+          role="tabpanel"
+          aria-labelledby={`connection-tab-${connectionTab}`}
           className="mt-4 flex-1 overflow-x-hidden overflow-y-auto"
           key={connectionTab}
         >
@@ -95,14 +126,22 @@ export const ConnectionPanel = memo(function ConnectionPanel({
           ) : (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col">
-                <span className="pb-2 text-sm font-medium">
+                <label
+                  htmlFor="new-connection-name"
+                  className="pb-2 text-sm font-medium"
+                >
                   {t("deployments.connectionNameLabel")}
-                  <span className="text-destructive">*</span>
-                </span>
+                  <span className="text-destructive" aria-hidden="true">
+                    *
+                  </span>
+                </label>
                 <Input
+                  id="new-connection-name"
                   placeholder={t("deployments.placeholderConnectionName")}
                   className="bg-muted"
                   value={newConnectionName}
+                  aria-required="true"
+                  aria-invalid={isDuplicateName}
                   onChange={(e) =>
                     onNameChange(e.target.value.replace(/[^a-zA-Z0-9_ ]/g, ""))
                   }
@@ -116,7 +155,9 @@ export const ConnectionPanel = memo(function ConnectionPanel({
               <div className="flex flex-col">
                 <span className="pb-2 text-sm font-medium">
                   {t("deployments.environmentVariables")}
-                  <span className="text-destructive">*</span>
+                  <span className="text-destructive" aria-hidden="true">
+                    *
+                  </span>
                 </span>
                 {detectedVarCount > 0 && (
                   <p className="mb-2 text-xs text-muted-foreground">

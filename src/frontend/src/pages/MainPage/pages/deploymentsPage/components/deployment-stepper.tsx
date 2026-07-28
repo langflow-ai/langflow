@@ -55,9 +55,17 @@ export default function DeploymentStepper({
           style={{ width: `${progressPercent}%` }}
         />
       </div>
-      <div className="relative flex h-full items-start justify-between">
+      <div
+        className="relative flex h-full items-start justify-between"
+        role="list"
+      >
         {steps.map((step) => (
-          <div key={step.number} className="flex flex-col items-center gap-1">
+          <div
+            key={step.number}
+            className="flex flex-col items-center gap-1"
+            role="listitem"
+            aria-current={activeStep === step.number ? "step" : undefined}
+          >
             <div
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors",
@@ -65,6 +73,7 @@ export default function DeploymentStepper({
                   ? "bg-foreground text-background"
                   : "bg-muted text-muted-foreground",
               )}
+              aria-hidden="true"
             >
               {step.number}
             </div>

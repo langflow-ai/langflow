@@ -1,3 +1,4 @@
+import type React from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -21,6 +22,8 @@ const PROVIDERS: DeploymentProvider[] = [
 
 type EnvironmentTab = "existing" | "new";
 
+const ENVIRONMENT_TABS: EnvironmentTab[] = ["existing", "new"];
+
 function EnvironmentTabToggle({
   activeTab,
   onTabChange,
@@ -29,14 +32,40 @@ function EnvironmentTabToggle({
   onTabChange: (tab: EnvironmentTab) => void;
 }) {
   const { t } = useTranslation();
+
+  const handleKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    const nextIndex =
+      event.key === "ArrowRight"
+        ? (index + 1) % ENVIRONMENT_TABS.length
+        : (index - 1 + ENVIRONMENT_TABS.length) % ENVIRONMENT_TABS.length;
+    const nextTab = ENVIRONMENT_TABS[nextIndex];
+    onTabChange(nextTab);
+    document.getElementById(`environment-tab-${nextTab}`)?.focus();
+  };
+
   return (
     <div className="rounded-xl border border-border bg-muted p-1">
-      <div className="grid grid-cols-2 gap-4">
-        {(["existing", "new"] as const).map((tab) => (
+      <div
+        role="tablist"
+        aria-label={t("deployments.environmentTabsAriaLabel")}
+        className="grid grid-cols-2 gap-4"
+      >
+        {ENVIRONMENT_TABS.map((tab, index) => (
           <button
             key={tab}
+            id={`environment-tab-${tab}`}
             type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
+            aria-controls={`environment-panel-${tab}`}
+            tabIndex={activeTab === tab ? 0 : -1}
             onClick={() => onTabChange(tab)}
+            onKeyDown={(event) => handleKeyDown(event, index)}
             className={cn(
               "rounded-lg py-2 text-sm transition-colors",
               activeTab === tab
@@ -181,17 +210,29 @@ export default function StepProvider() {
             onTabChange={setEnvironmentTab}
           />
           {environmentTab === "existing" ? (
-            <EnvironmentList
-              environments={environments}
-              selectedEnvironment={selectedInstance}
-              onSelectEnvironment={setSelectedInstance}
-            />
+            <div
+              id="environment-panel-existing"
+              role="tabpanel"
+              aria-labelledby="environment-tab-existing"
+            >
+              <EnvironmentList
+                environments={environments}
+                selectedEnvironment={selectedInstance}
+                onSelectEnvironment={setSelectedInstance}
+              />
+            </div>
           ) : (
-            <ProviderCredentialsForm
-              credentials={credentials}
-              onCredentialsChange={setCredentials}
-              layout="two-column"
-            />
+            <div
+              id="environment-panel-new"
+              role="tabpanel"
+              aria-labelledby="environment-tab-new"
+            >
+              <ProviderCredentialsForm
+                credentials={credentials}
+                onCredentialsChange={setCredentials}
+                layout="two-column"
+              />
+            </div>
           )}
         </div>
       ) : (

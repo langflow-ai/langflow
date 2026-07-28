@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { axe } from "@/utils/a11y-test";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -249,5 +250,46 @@ describe("Description textarea", () => {
     );
     await user.type(textarea, "A");
     expect(mockSetDeploymentDescription).toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Accessibility
+// ---------------------------------------------------------------------------
+
+describe("Accessibility", () => {
+  it("should_have_no_axe_violations", async () => {
+    const { container } = render(<StepType />);
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("programmatically associates the Name, Model, and Description labels with their fields", () => {
+    render(<StepType />);
+
+    expect(screen.getByRole("textbox", { name: /Name/ })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /Model/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: /Description/ }),
+    ).toBeInTheDocument();
+  });
+
+  // Regression guard: a bare "*" reads as "asterisk"/"star" to a screen
+  // reader, not "required" — it must be aria-hidden, with the real
+  // requiredness communicated via aria-required instead.
+  it("hides the visual required asterisks from assistive tech and exposes aria-required instead", () => {
+    render(<StepType />);
+
+    expect(screen.getByRole("textbox", { name: /Name/ })).toHaveAttribute(
+      "aria-required",
+      "true",
+    );
+    expect(screen.getByRole("combobox", { name: /Model/ })).toHaveAttribute(
+      "aria-required",
+      "true",
+    );
+    expect(
+      screen.getByRole("radiogroup", { name: "Deployment type" }),
+    ).toHaveAttribute("aria-required", "true");
   });
 });

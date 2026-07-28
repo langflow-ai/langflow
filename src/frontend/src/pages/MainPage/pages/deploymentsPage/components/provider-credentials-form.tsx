@@ -29,17 +29,26 @@ export default function ProviderCredentialsForm({
   const urlAndApiKeyFields = (
     <>
       <div className="flex flex-col">
-        <span className="pb-2 text-sm font-medium">
+        <label
+          htmlFor="provider-credentials-url"
+          className="pb-2 text-sm font-medium"
+        >
           {t("deployments.fieldServiceInstanceUrl")}{" "}
-          {urlRequired ? <span className="text-destructive">*</span> : null}
-        </span>
+          {urlRequired ? (
+            <span className="text-destructive" aria-hidden="true">
+              *
+            </span>
+          ) : null}
+        </label>
         <Input
+          id="provider-credentials-url"
           type="url"
           placeholder={t("deployments.placeholderApiUrl")}
           className="bg-muted"
           value={credentials.url}
           disabled={urlReadOnly}
           readOnly={urlReadOnly}
+          aria-required={urlRequired}
           onChange={(e) =>
             onCredentialsChange({
               ...credentials,
@@ -49,24 +58,29 @@ export default function ProviderCredentialsForm({
         />
       </div>
       <div className="flex flex-col">
-        <span className="pb-2 text-sm font-medium">
+        <label
+          htmlFor="provider-credentials-api-key"
+          className="pb-2 text-sm font-medium"
+        >
           {t("deployments.fieldApiKey")}{" "}
           {apiKeyRequired ? (
-            <span className="text-destructive">*</span>
+            <span className="text-destructive" aria-hidden="true">
+              *
+            </span>
           ) : (
             <span className="text-muted-foreground">
               ({t("deployments.optional")})
             </span>
           )}
-        </span>
+        </label>
         <div className="relative">
           <Input
+            id="provider-credentials-api-key"
             type={showApiKey ? "text" : "password"}
-            placeholder={
-              apiKeyPlaceholder ?? t("deployments.placeholderApiKey")
-            }
+            placeholder={apiKeyPlaceholder}
             className="bg-muted pr-10"
             value={credentials.api_key}
+            aria-required={apiKeyRequired}
             onChange={(e) =>
               onCredentialsChange({
                 ...credentials,
@@ -102,15 +116,22 @@ export default function ProviderCredentialsForm({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col">
-        <span className="pb-2 text-sm font-medium">
+        <label
+          htmlFor="provider-credentials-name"
+          className="pb-2 text-sm font-medium"
+        >
           {t("deployments.fieldName")}{" "}
-          <span className="text-destructive">*</span>
-        </span>
+          <span className="text-destructive" aria-hidden="true">
+            *
+          </span>
+        </label>
         <Input
+          id="provider-credentials-name"
           type="text"
           placeholder={t("deployments.placeholderEnvironmentName")}
           className="bg-muted"
           value={credentials.name}
+          aria-required="true"
           onChange={(e) =>
             onCredentialsChange({
               ...credentials,

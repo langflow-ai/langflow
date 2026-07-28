@@ -136,11 +136,6 @@ export default function AddProviderModal({
             credentials={credentials}
             onCredentialsChange={setCredentials}
             apiKeyRequired={!provider}
-            apiKeyPlaceholder={
-              provider
-                ? t("deployments.enterNewApiKey")
-                : t("deployments.enterApiKey")
-            }
             urlRequired={!provider}
             urlReadOnly={!!provider}
           />
