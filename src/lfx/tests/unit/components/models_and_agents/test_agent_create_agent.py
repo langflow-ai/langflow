@@ -1535,6 +1535,36 @@ def test_should_omit_hitl_middleware_when_no_tools_gated() -> None:
     assert not any(isinstance(m, HumanInTheLoopMiddleware) for m in middleware)
 
 
+@pytest.mark.parametrize("model_name", ["claude-sonnet-5", "claude-opus-5"])
+def test_should_attach_omitted_thinking_middleware_for_anthropic_models(model_name: str) -> None:
+    from lfx.components.models_and_agents.agent_helpers.anthropic_thinking_middleware import (
+        AnthropicThinkingMiddleware,
+    )
+
+    chat_anthropic_type = type(
+        "ChatAnthropic",
+        (),
+        {"__module__": "langchain_anthropic.chat_models", "model": model_name},
+    )
+    component = _build_component()
+    component.set_attributes({"tools": [SimpleNamespace(name="search", metadata={})]})
+    middleware = component._build_middleware(chat_anthropic_type())
+
+    assert any(isinstance(item, AnthropicThinkingMiddleware) for item in middleware)
+
+
+def test_should_not_attach_omitted_thinking_middleware_for_non_anthropic_models() -> None:
+    from lfx.components.models_and_agents.agent_helpers.anthropic_thinking_middleware import (
+        AnthropicThinkingMiddleware,
+    )
+
+    component = _build_component()
+    component.set_attributes({"tools": [SimpleNamespace(name="search", metadata={})]})
+    middleware = component._build_middleware(SimpleNamespace(model="claude-opus-4-7"))
+
+    assert not any(isinstance(item, AnthropicThinkingMiddleware) for item in middleware)
+
+
 def test_gates_only_tools_marked_for_approval() -> None:
     """Only tools whose metadata lists approval_actions are gated; others run freely."""
     component = _build_component()

@@ -13,6 +13,9 @@ from langchain.agents.middleware import (
 )
 from langgraph.types import Command
 
+from lfx.components.models_and_agents.agent_helpers.anthropic_thinking_middleware import (
+    AnthropicThinkingMiddleware,
+)
 from lfx.components.models_and_agents.agent_helpers.graph_event_adapter import (
     adapt_graph_events_to_executor_shape,
 )
@@ -67,6 +70,12 @@ from lfx.utils.constants import MESSAGE_SENDER_AI
 def set_advanced_true(component_input):
     component_input.advanced = True
     return component_input
+
+
+def _is_anthropic_chat_model(llm: Any) -> bool:
+    """Return whether ``llm`` is backed by ``langchain-anthropic``."""
+    model_type = type(llm)
+    return model_type.__name__ == "ChatAnthropic" or model_type.__module__.startswith("langchain_anthropic")
 
 
 def _agent_base_inputs():
@@ -578,6 +587,12 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         # crashing the flow.
         if self.tools:
             middleware.append(ToolCallIDMiddleware())
+            # Recent Claude models can emit omitted-thinking blocks containing
+            # an empty `thinking` field plus a signature. langchain-anthropic
+            # can lose that required empty field while aggregating the stream;
+            # restore it before LangGraph replays the block after a tool result.
+            if _is_anthropic_chat_model(llm):
+                middleware.append(AnthropicThinkingMiddleware())
         max_iterations = getattr(self, "max_iterations", None)
         if max_iterations is not None:
             # `max_iterations` is a safety cap, not an "unlimited" toggle. A saved
