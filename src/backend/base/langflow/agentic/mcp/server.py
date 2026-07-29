@@ -64,6 +64,14 @@ async def _ensure_services() -> None:
         from langflow.services.utils import initialize_services
 
         await initialize_services()
+        from langflow.services.task.model_provider_policy_refresh import (
+            model_provider_policy_refresh_worker,
+        )
+
+        # Standalone stdio servers do not enter the FastAPI lifespan, but they
+        # are long-lived model consumers and must converge after an admin
+        # changes the install-wide provider ceiling.
+        await model_provider_policy_refresh_worker.start()
         _services_initialized = True
 
 

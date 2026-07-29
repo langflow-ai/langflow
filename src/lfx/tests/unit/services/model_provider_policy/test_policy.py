@@ -67,6 +67,73 @@ def test_default_service_allows_every_registered_provider():
     assert snapshot.allowed_provider_ids == provider_ids
 
 
+def test_default_service_applies_install_wide_approved_provider_ceiling():
+    service = ModelProviderPolicyService()
+    service.set_approved_provider_ids({"openai"}, version=7)
+
+    snapshot = service.resolve(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        candidate_provider_ids=frozenset({"openai", "anthropic"}),
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+
+    assert snapshot.allowed_provider_ids == frozenset({"openai"})
+    assert service.approved_provider_ids == frozenset({"openai"})
+    assert service.policy_version == 7
+
+
+def test_empty_approved_provider_ceiling_preserves_allow_all_default():
+    service = ModelProviderPolicyService()
+    service.set_approved_provider_ids({"openai"})
+    service.set_approved_provider_ids(set())
+
+    snapshot = service.resolve(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        candidate_provider_ids=frozenset({"openai", "anthropic"}),
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+    )
+
+    assert snapshot.allowed_provider_ids == frozenset({"openai", "anthropic"})
+    assert not service.approved_provider_ids
+
+
+def test_default_service_rejects_a_stale_persisted_policy_version():
+    service = ModelProviderPolicyService()
+    service.set_approved_provider_ids({"openai"}, version=5)
+
+    changed = service.set_approved_provider_ids({"anthropic"}, version=4)
+
+    assert changed is False
+    assert service.approved_provider_ids == frozenset({"openai"})
+    assert service.policy_version == 5
+
+
+def test_default_service_fails_closed_until_policy_source_recovers():
+    service = ModelProviderPolicyService()
+    service.set_approved_provider_ids({"openai", "anthropic"}, version=5)
+
+    assert service.fail_closed() is True
+    denied = service.resolve(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        candidate_provider_ids=frozenset({"openai", "anthropic"}),
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+
+    assert denied.allowed_provider_ids == frozenset()
+    assert service.policy_source_available is False
+
+    # A same-version refresh is enough to recover because the persisted state
+    # may not have changed while the store was temporarily unavailable.
+    assert service.set_approved_provider_ids({"openai", "anthropic"}, version=5) is True
+    recovered = service.resolve(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        candidate_provider_ids=frozenset({"openai", "anthropic"}),
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+    assert recovered.allowed_provider_ids == frozenset({"openai", "anthropic"})
+    assert service.policy_source_available is True
+
+
 async def test_async_resolver_caches_until_invalidation():
     service = ModelProviderPolicyService()
     kwargs = {

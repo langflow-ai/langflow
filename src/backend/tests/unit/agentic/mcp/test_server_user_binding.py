@@ -7,6 +7,7 @@ server spawned without a bound identity cannot read or write any user's flows.
 """
 
 import inspect
+from unittest.mock import AsyncMock
 
 import pytest
 from langflow.agentic.mcp import server as mcp_server
@@ -28,6 +29,33 @@ def test_bound_user_id_fails_closed_when_empty(monkeypatch):
     monkeypatch.setenv(AGENTIC_USER_ID_ENV_VAR, "")
     with pytest.raises(ValueError, match="not bound to an authenticated user"):
         mcp_server._bound_user_id()
+
+
+async def test_standalone_service_boot_starts_provider_policy_refresh(monkeypatch):
+    from langflow.services import utils as service_utils
+    from langflow.services.task import model_provider_policy_refresh as refresh_module
+
+    events = []
+
+    async def initialize_services():
+        events.append("initialize")
+
+    async def start_refresh():
+        events.append("start_refresh")
+
+    monkeypatch.setattr(mcp_server, "_services_initialized", False)
+    monkeypatch.setattr(mcp_server, "get_db_service", lambda: object())
+    monkeypatch.setattr(service_utils, "initialize_services", initialize_services)
+    monkeypatch.setattr(
+        refresh_module.model_provider_policy_refresh_worker,
+        "start",
+        AsyncMock(side_effect=start_refresh),
+    )
+
+    await mcp_server._ensure_services()
+
+    assert events == ["initialize", "start_refresh"]
+    assert mcp_server._services_initialized is True
 
 
 @pytest.mark.parametrize(
