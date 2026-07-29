@@ -241,6 +241,42 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         assert not (Path.cwd() / "test_s3_output.txt").exists()
 
     @pytest.mark.asyncio
+    async def test_save_aws_mode_namespaces_key_by_user_id(self, component_class):
+        """AWS mode namespaces the S3 key by user_id so multi-user runs don't collide.
+
+        Layout must be {s3_prefix}/{user_id}/{file_name}.{ext} — otherwise every
+        user writing the same file_name overwrites the same key.
+        """
+        user_id = str(uuid4())
+        component = component_class(_user_id=user_id)
+        component.set_attributes(
+            {
+                "input": Message(text="hello aws"),
+                "file_name": "report",
+                "aws_format": "txt",
+                "storage_location": [{"name": "AWS"}],
+                "aws_access_key_id": "test-access-key",  # pragma: allowlist secret
+                "aws_secret_access_key": "test-secret-key",  # pragma: allowlist secret
+                "bucket_name": "my-bucket",
+                "aws_region": "us-east-1",
+                "s3_prefix": "files",
+            }
+        )
+
+        mock_s3 = MagicMock()
+        with (
+            patch("boto3.client", return_value=mock_s3),
+            patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials"),
+        ):
+            result = await component.save_to_file()
+
+        # upload_file(temp_path, bucket, key) — third positional arg is the S3 key
+        mock_s3.upload_file.assert_called_once()
+        key = mock_s3.upload_file.call_args[0][2]
+        assert key == f"files/{user_id}/report.txt"
+        assert "my-bucket" in result.text
+
+    @pytest.mark.asyncio
     async def test_save_message_to_html(self, component_class):
         """Test saving Message to html format."""
         component = component_class(_user_id=str(uuid4()))

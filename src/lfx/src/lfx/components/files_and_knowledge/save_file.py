@@ -783,10 +783,18 @@ class SaveToFileComponent(Component):
         content = self._extract_content_for_upload()
         file_format = self._get_file_format_for_location("AWS")
 
-        # Generate file path
-        file_path = f"{self.file_name}.{file_format}"
+        # Generate file path. Namespace by user_id so concurrent multi-user runs
+        # writing the same file_name don't overwrite each other — mirrors how the
+        # platform storage service isolates files under "{user_id}/". Layout:
+        #   {s3_prefix}/{user_id}/{file_name}.{ext}
+        file_name = f"{self.file_name}.{file_format}"
+        path_segments = []
         if hasattr(self, "s3_prefix") and self.s3_prefix:
-            file_path = f"{self.s3_prefix.rstrip('/')}/{file_path}"
+            path_segments.append(self.s3_prefix.rstrip("/"))
+        if self.user_id:
+            path_segments.append(str(self.user_id))
+        path_segments.append(file_name)
+        file_path = "/".join(path_segments)
 
         # Create temporary file
         import tempfile
