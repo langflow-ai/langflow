@@ -559,6 +559,16 @@ def handle_model_input_update(
             field_config["show"] = False
             field_config["required"] = False
 
+    # Capture any credential that was already present before the static
+    # provider refresh. With Provider Override, an existing value is an
+    # explicit component choice; only a key inferred during this refresh is
+    # unsafe to carry into runtime.
+    provider_override = build_config.get("provider", {})
+    has_provider_override = bool(provider_override.get("value"))
+    api_key_config = build_config.get("api_key", {})
+    api_key_value_before_provider_refresh = api_key_config.get("value")
+    api_key_load_from_db_before_provider_refresh = api_key_config.get("load_from_db", False)
+
     # Step 3: Show/configure the right fields for the selected provider
     # Use field_value when the user actively changed the model selection;
     # otherwise (initial load with empty field_value, or other field changes)
@@ -568,9 +578,18 @@ def handle_model_input_update(
         if field_name == model_field_name and field_value
         else build_config.get(model_field_name, {}).get("value")
     )
+    static_provider_api_key = None
     if isinstance(current_model_value, list) and len(current_model_value) > 0:
         provider = current_model_value[0].get("provider", "")
         if provider:
+            static_provider_api_key = next(
+                (
+                    variable.get("variable_key")
+                    for variable in unified_models_module.get_provider_all_variables(provider)
+                    if variable.get("component_metadata", {}).get("mapping_field") == "api_key"
+                ),
+                None,
+            )
             build_config = unified_models_module.apply_provider_variable_config_to_build_config(build_config, provider)
 
             # Resolve DropdownInput field values from the provider's configured
@@ -589,14 +608,20 @@ def handle_model_input_update(
 
     # Provider Override can resolve to a different provider at runtime, so a
     # global API key inferred from the statically selected model is unsafe.
-    # Keep deliberately entered component credentials, but let global-variable
-    # backed keys fall through to the overridden provider's configured key.
-    provider_override = build_config.get("provider", {})
-    api_key_config = build_config.get("api_key", {})
-    has_provider_override = bool(provider_override.get("value"))
-    if has_provider_override and api_key_config.get("load_from_db"):
-        api_key_config["value"] = ""
-        api_key_config["load_from_db"] = False
+    # Preserve credentials that were already present (including deliberately
+    # selected global variables), but clear a key Step 3 inferred from an empty
+    # incoming field so runtime can resolve the effective provider's key.
+    if has_provider_override:
+        key_was_static_provider_default = (
+            api_key_load_from_db_before_provider_refresh
+            and api_key_value_before_provider_refresh == static_provider_api_key
+        )
+        if api_key_value_before_provider_refresh and not key_was_static_provider_default:
+            api_key_config["value"] = api_key_value_before_provider_refresh
+            api_key_config["load_from_db"] = api_key_load_from_db_before_provider_refresh
+        elif api_key_config.get("load_from_db"):
+            api_key_config["value"] = ""
+            api_key_config["load_from_db"] = False
 
     # Hide and clear the API key field when the selected provider doesn't use one
     # (e.g. Ollama). ``apply_provider_variable_config_to_build_config`` already
@@ -606,9 +631,7 @@ def handle_model_input_update(
     # the switch. A raw component key with Provider Override is different: it
     # belongs to the effective runtime provider and must survive even if the
     # statically selected provider (such as Ollama) hides this field.
-    preserve_explicit_override_key = (
-        has_provider_override and bool(api_key_config.get("value")) and not api_key_config.get("load_from_db")
-    )
+    preserve_explicit_override_key = has_provider_override and bool(api_key_config.get("value"))
     if "api_key" in build_config and not api_key_config.get("show", False) and not preserve_explicit_override_key:
         build_config["api_key"]["value"] = ""
         build_config["api_key"]["load_from_db"] = False

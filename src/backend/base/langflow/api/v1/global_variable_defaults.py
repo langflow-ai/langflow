@@ -80,6 +80,21 @@ def _is_eligible_field(field: dict[str, Any]) -> bool:
     return existing in (None, "")
 
 
+def _is_unified_model_api_key(template: dict[str, Any], field_name: str) -> bool:
+    """Return whether a field should defer credential lookup to the effective model provider."""
+    if field_name != "api_key":
+        return False
+
+    api_key_field = template.get(field_name)
+    model_field = template.get("model")
+    return (
+        isinstance(api_key_field, dict)
+        and api_key_field.get("display_name") == "API Key"
+        and isinstance(model_field, dict)
+        and (model_field.get("_input_type") == "ModelInput" or model_field.get("type") == "model")
+    )
+
+
 def apply_unavailable_fields_to_graph(
     graph_data: dict[str, Any],
     unavailable_fields: dict[str, str],
@@ -116,7 +131,11 @@ def apply_unavailable_fields_to_graph(
         if not isinstance(template, dict):
             continue
         for field_name, field in template.items():
-            if field_name == "_type" or not _is_eligible_field(field):
+            if (
+                field_name == "_type"
+                or _is_unified_model_api_key(template, field_name)
+                or not _is_eligible_field(field)
+            ):
                 continue
             display_name = field.get("display_name")
             if not isinstance(display_name, str):

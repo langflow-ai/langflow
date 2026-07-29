@@ -1,4 +1,6 @@
-import { render, waitFor } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
+import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
+import type { APIClassType, InputFieldType } from "@/types/api";
 import InputGlobalComponent from "..";
 
 const mockUseGetGlobalVariables = jest.fn();
@@ -42,6 +44,28 @@ jest.mock(
 
 describe("InputGlobalComponent", () => {
   const handleOnNewValue = jest.fn();
+  const templateField = (
+    overrides: Partial<InputFieldType> = {},
+  ): InputFieldType => ({
+    type: "str",
+    required: false,
+    list: false,
+    show: true,
+    readonly: false,
+    ...overrides,
+  });
+  const unifiedModelNodeClass: APIClassType = {
+    description: "",
+    display_name: "Embedding Model",
+    documentation: "",
+    template: {
+      model: templateField({
+        _input_type: "ModelInput",
+        type: "model",
+      }),
+      api_key: templateField({ display_name: "API Key" }),
+    },
+  };
 
   const renderComponent = () =>
     render(
@@ -59,6 +83,7 @@ describe("InputGlobalComponent", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    useGlobalVariablesStore.setState({ unavailableFields: {} });
   });
 
   it("clears missing saved variables only after a successful settled fetch", async () => {
@@ -107,6 +132,126 @@ describe("InputGlobalComponent", () => {
     await waitFor(() => {
       expect(handleOnNewValue).not.toHaveBeenCalled();
     });
+  });
+
+  it("does not apply a generic API key default to an empty unified model field", () => {
+    useGlobalVariablesStore.setState({
+      unavailableFields: { "API Key": "WATSONX_APIKEY" },
+    });
+    mockUseGetGlobalVariables.mockReturnValue({
+      data: [{ name: "WATSONX_APIKEY" }, { name: "OPENAI_API_KEY" }],
+      isFetchedAfterMount: true,
+      isFetching: false,
+      isSuccess: true,
+    });
+
+    render(
+      <InputGlobalComponent
+        id="input-api_key"
+        value=""
+        display_name="API Key"
+        handleOnNewValue={handleOnNewValue}
+        load_from_db={false}
+        password
+        editNode={false}
+        disabled={false}
+        nodeClass={unifiedModelNodeClass}
+      />,
+    );
+
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+  });
+
+  it("keeps an explicitly cleared unified model field empty and allows a new explicit selection", () => {
+    useGlobalVariablesStore.setState({
+      unavailableFields: { "API Key": "WATSONX_APIKEY" },
+    });
+    mockUseGetGlobalVariables.mockReturnValue({
+      data: [{ name: "WATSONX_APIKEY" }, { name: "OPENAI_API_KEY" }],
+      isFetchedAfterMount: true,
+      isFetching: false,
+      isSuccess: true,
+    });
+
+    const renderInput = (value: string, loadFromDb: boolean) => (
+      <InputGlobalComponent
+        id="input-api_key"
+        value={value}
+        display_name="API Key"
+        handleOnNewValue={handleOnNewValue}
+        load_from_db={loadFromDb}
+        password
+        editNode={false}
+        disabled={false}
+        nodeClass={unifiedModelNodeClass}
+      />
+    );
+    const { rerender } = render(renderInput("OPENAI_API_KEY", true));
+    const getInputProps = () =>
+      mockInputComponent.mock.calls[
+        mockInputComponent.mock.calls.length - 1
+      ][0];
+
+    act(() => {
+      getInputProps().setSelectedOption("");
+    });
+    rerender(renderInput("", false));
+
+    expect(handleOnNewValue).toHaveBeenCalledTimes(1);
+    expect(handleOnNewValue).toHaveBeenLastCalledWith({
+      value: "",
+      load_from_db: false,
+    });
+    expect(getInputProps().value).toBe("");
+
+    act(() => {
+      getInputProps().setSelectedOption("OPENAI_API_KEY");
+    });
+    rerender(renderInput("OPENAI_API_KEY", true));
+
+    expect(handleOnNewValue).toHaveBeenLastCalledWith({
+      value: "OPENAI_API_KEY",
+      load_from_db: true,
+    });
+    expect(getInputProps().selectedOption).toBe("OPENAI_API_KEY");
+  });
+
+  it("continues to apply unavailable-field defaults to ordinary component fields", () => {
+    useGlobalVariablesStore.setState({
+      unavailableFields: { "API Key": "WATSONX_APIKEY" },
+    });
+    mockUseGetGlobalVariables.mockReturnValue({
+      data: [{ name: "WATSONX_APIKEY" }],
+      isFetchedAfterMount: true,
+      isFetching: false,
+      isSuccess: true,
+    });
+
+    render(
+      <InputGlobalComponent
+        id="input-api_key"
+        value=""
+        display_name="API Key"
+        handleOnNewValue={handleOnNewValue}
+        load_from_db={false}
+        password
+        editNode={false}
+        disabled={false}
+        nodeClass={
+          {
+            description: "",
+            display_name: "Ordinary Component",
+            documentation: "",
+            template: { api_key: templateField() },
+          } satisfies APIClassType
+        }
+      />,
+    );
+
+    expect(handleOnNewValue).toHaveBeenCalledWith(
+      { value: "WATSONX_APIKEY", load_from_db: true },
+      { skipSnapshot: true },
+    );
   });
 
   describe("options passed to InputComponent", () => {

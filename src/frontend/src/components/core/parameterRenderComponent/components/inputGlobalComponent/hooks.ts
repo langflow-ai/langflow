@@ -18,6 +18,7 @@ export const useGlobalVariableValue = (
 export const useUnavailableField = (
   displayName: string | undefined,
   value: string,
+  enabled = true,
 ) => {
   const unavailableFields = useGlobalVariablesStore(
     (state) => state.unavailableFields,
@@ -25,6 +26,7 @@ export const useUnavailableField = (
 
   return useMemo(() => {
     if (
+      enabled &&
       displayName &&
       unavailableFields &&
       Object.keys(unavailableFields).includes(displayName) &&
@@ -33,7 +35,7 @@ export const useUnavailableField = (
       return unavailableFields[displayName];
     }
     return null;
-  }, [unavailableFields, displayName, value]);
+  }, [unavailableFields, displayName, value, enabled]);
 };
 
 // Custom hook for handling initial load logic

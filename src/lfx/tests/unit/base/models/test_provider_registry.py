@@ -127,6 +127,17 @@ def test_core_provider_name_is_not_overwritten():
     assert not provider_registry.is_registered("OpenAI")
 
 
+def test_watsonx_api_key_uses_provider_qualified_display_name():
+    """Provider defaults must not claim every component field named API Key."""
+    watsonx_api_key = next(
+        variable
+        for variable in MODEL_PROVIDER_METADATA["IBM WatsonX"]["variables"]
+        if variable["variable_key"] == "WATSONX_APIKEY"
+    )
+
+    assert watsonx_api_key["variable_name"] == "WatsonX API Key"
+
+
 def test_duplicate_bundle_registration_is_ignored():
     assert register_provider(_fakeco_spec()) is True
     assert register_provider(_fakeco_spec(metadata={**_fakeco_metadata(), "icon": "Other"})) is False

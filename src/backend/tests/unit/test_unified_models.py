@@ -1041,6 +1041,48 @@ def test_handle_model_input_update_provider_override_keeps_api_key_empty(provide
     assert result["api_key"]["load_from_db"] is False
 
 
+@pytest.mark.parametrize("cache_key_prefix", ["language_model_options", "embedding_model_options"])
+def test_handle_model_input_update_provider_override_clears_key_from_prior_static_refresh(cache_key_prefix):
+    """Setting Provider Override after model selection must drop the static provider's inferred key."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=selected_model),
+        "provider": {"value": "", "load_from_db": False},
+        "api_key": {
+            "show": False,
+            "required": False,
+            "value": "",
+            "load_from_db": False,
+            "_input_type": "SecretStrInput",
+        },
+    }
+
+    after_model_selection = handle_model_input_update(
+        component,
+        build_config,
+        field_value=selected_model,
+        field_name="model",
+        cache_key_prefix=cache_key_prefix,
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+    assert after_model_selection["api_key"]["value"] == "OPENAI_API_KEY"
+    assert after_model_selection["api_key"]["load_from_db"] is True
+
+    after_model_selection["provider"] = {"value": "Anthropic", "load_from_db": False}
+    result = handle_model_input_update(
+        component,
+        after_model_selection,
+        field_value="Anthropic",
+        field_name="provider",
+        cache_key_prefix=cache_key_prefix,
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+
+    assert result["api_key"]["value"] == ""
+    assert result["api_key"]["load_from_db"] is False
+
+
 def test_handle_model_input_update_provider_override_preserves_raw_api_key():
     """A deliberate component API key remains an override when Provider Override is set."""
     component = _make_mock_component()
@@ -1067,6 +1109,35 @@ def test_handle_model_input_update_provider_override_preserves_raw_api_key():
 
     assert result["api_key"]["value"] == "explicit-api-key"
     assert result["api_key"]["load_from_db"] is False
+
+
+def test_handle_model_input_update_provider_override_preserves_explicit_global_api_key():
+    """A deliberately selected global key must survive static-provider refreshes."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=selected_model),
+        "provider": {"value": "RUNTIME_PROVIDER", "load_from_db": True},
+        "api_key": {
+            "show": False,
+            "required": False,
+            "value": "WATSONX_APIKEY",
+            "load_from_db": True,
+            "_input_type": "SecretStrInput",
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value=selected_model,
+        field_name="model",
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+
+    assert result["api_key"]["show"] is True
+    assert result["api_key"]["value"] == "WATSONX_APIKEY"
+    assert result["api_key"]["load_from_db"] is True
 
 
 def test_handle_model_input_update_uses_language_model_options_by_default():

@@ -109,6 +109,52 @@ class TestBuildUnavailableFieldsMap:
 class TestApplyUnavailableFieldsToGraph:
     """Tests for apply_unavailable_fields_to_graph (pure transformer)."""
 
+    @pytest.mark.parametrize(
+        "component_type",
+        ["Agent", "LanguageModelComponent", "EmbeddingModel"],
+    )
+    def test_unified_model_api_key_is_not_bound_by_generic_default(self, component_type: str) -> None:
+        """Unified models must resolve a blank API key from the effective runtime provider."""
+        node = _make_node(
+            "unified-model-1",
+            {
+                "model": _make_field(
+                    display_name="Model",
+                    field_type="model",
+                    value=[],
+                    _input_type="ModelInput",
+                ),
+                "api_key": _make_field(display_name="API Key"),
+            },
+        )
+        node["data"]["type"] = component_type
+        graph_data = {"nodes": [node], "edges": []}
+
+        result = apply_unavailable_fields_to_graph(graph_data, {"API Key": "WATSONX_APIKEY"})
+
+        field = result["nodes"][0]["data"]["node"]["template"]["api_key"]
+        assert field["value"] == ""
+        assert field["load_from_db"] is False
+
+    def test_non_model_api_key_keeps_generic_default_binding(self) -> None:
+        """A regular field named model must not disable issue #11781 defaults."""
+        node = _make_node(
+            "ordinary-component-1",
+            {
+                "model": _make_field(display_name="Model"),
+                "api_key": _make_field(display_name="API Key"),
+            },
+        )
+
+        result = apply_unavailable_fields_to_graph(
+            {"nodes": [node], "edges": []},
+            {"API Key": "WATSONX_APIKEY"},
+        )
+
+        field = result["nodes"][0]["data"]["node"]["template"]["api_key"]
+        assert field["value"] == "WATSONX_APIKEY"
+        assert field["load_from_db"] is True
+
     def test_empty_field_with_matching_display_name_is_bound(self) -> None:
         graph_data = {
             "nodes": [

@@ -66,6 +66,7 @@ import {
   cleanMcpConfig,
   type MCPServerValue,
 } from "./helpers/clean-mcp-config";
+import { isUnifiedModelApiKeyField } from "./is-unified-model-api-key";
 import { getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 
@@ -2506,6 +2507,7 @@ export function updateGlobalVariables(
         node!.template[field].load_from_db = false;
       }
       if (
+        !isUnifiedModelApiKeyField(node, field) &&
         !node!.template[field].load_from_db &&
         node!.template[field].value === "" &&
         unavailableFields &&

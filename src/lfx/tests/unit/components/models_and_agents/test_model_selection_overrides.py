@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 
 def _openai_language_selection() -> list[dict]:
@@ -117,6 +117,48 @@ def test_language_model_provider_override_drops_stale_metadata_when_option_looku
             "category": "Anthropic",
         }
     ]
+
+
+def test_language_model_blank_api_key_uses_effective_override_provider(monkeypatch) -> None:
+    from lfx.components.models_and_agents import language_model as language_model_module
+    from lfx.components.models_and_agents.language_model import LanguageModelComponent
+
+    component = LanguageModelComponent()
+    component.set_attributes(
+        {
+            "model": _openai_language_selection(),
+            "model_name": "claude-test",
+            "provider": "Anthropic",
+            "api_key": "",
+            "temperature": 0.1,
+            "stream": False,
+            "max_tokens": None,
+            "base_url_ibm_watsonx": None,
+            "project_id": None,
+            "ollama_base_url": None,
+        }
+    )
+    override_option = {
+        "name": "claude-test",
+        "provider": "Anthropic",
+        "metadata": {
+            "model_class": "ChatAnthropic",
+            "model_name_param": "model",
+            "api_key_param": "api_key",  # pragma: allowlist secret
+        },
+    }
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-sentinel")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-sentinel")
+    model_constructor = MagicMock(return_value=object())
+
+    with (
+        patch.object(language_model_module, "get_language_model_options", return_value=[override_option]),
+        patch("lfx.base.models.unified_models.get_model_class", return_value=model_constructor),
+    ):
+        component.build_model()
+
+    assert model_constructor.call_args.kwargs["api_key"] == "anthropic-sentinel"  # pragma: allowlist secret
+    assert model_constructor.call_args.kwargs["api_key"] != "openai-sentinel"  # pragma: allowlist secret
 
 
 def test_embedding_model_override_fields_accept_literals_by_default() -> None:
