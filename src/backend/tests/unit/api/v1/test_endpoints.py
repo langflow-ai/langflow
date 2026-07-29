@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+from types import SimpleNamespace
 from typing import Any
 
 from anyio import Path
@@ -416,6 +417,49 @@ async def test_get_config_without_authentication_returns_public_config(client: A
     """Test that /config returns public config when accessed without authentication."""
     response = await client.get("api/v1/config")
     assert response.status_code == status.HTTP_200_OK
+
+
+async def test_get_config_reports_catalog_governance_without_exposing_policy_contents(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """Both config variants expose only the derived governance indicator."""
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        lambda: SimpleNamespace(enabled=True),
+    )
+
+    public_response = await client.get("api/v1/config")
+    authenticated_response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert public_response.status_code == status.HTTP_200_OK
+    assert authenticated_response.status_code == status.HTTP_200_OK
+    for result in (public_response.json(), authenticated_response.json()):
+        assert result["catalog_governance_enabled"] is True
+        assert "blocked_component_keys" not in result
+        assert "blocked_template_keys" not in result
+
+
+async def test_get_config_fails_open_without_exposing_catalog_policy_errors(client: AsyncClient, monkeypatch):
+    """A broken custom policy accessor does not leak through public config."""
+
+    class BrokenCatalogPolicy:
+        @property
+        def enabled(self) -> bool:
+            msg = "sensitive catalog backend detail"
+            raise RuntimeError(msg)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        BrokenCatalogPolicy,
+    )
+
+    response = await client.get("api/v1/config")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["catalog_governance_enabled"] is False
+    assert "sensitive catalog backend detail" not in response.text
 
 
 async def test_get_config_unauthenticated_returns_expected_fields(client: AsyncClient):

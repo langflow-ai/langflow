@@ -80,6 +80,7 @@ from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
     get_auth_service,
+    get_catalog_policy_service,
     get_job_service,
     get_memory_base_service,
     get_session_service,
@@ -1670,14 +1671,27 @@ async def get_config(
     """
     try:
         settings_service: SettingsService = get_settings_service()
+        try:
+            catalog_governance_enabled = get_catalog_policy_service().enabled
+        except Exception as exc:  # noqa: BLE001
+            # Catalog governance is explicitly fail-open. A broken custom
+            # policy implementation must not break the public config endpoint
+            # or expose its internal exception text.
+            await logger.aexception("Catalog policy status unavailable; reporting governance disabled", exception=exc)
+            catalog_governance_enabled = False
 
         if user is None:
             return PublicConfigResponse.from_settings(
                 settings_service.settings,
                 settings_service.auth_settings,
+                catalog_governance_enabled=catalog_governance_enabled,
             )
 
-        return ConfigResponse.from_settings(settings_service.settings, settings_service.auth_settings)
+        return ConfigResponse.from_settings(
+            settings_service.settings,
+            settings_service.auth_settings,
+            catalog_governance_enabled=catalog_governance_enabled,
+        )
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
