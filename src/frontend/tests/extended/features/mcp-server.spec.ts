@@ -2,6 +2,10 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
+import {
+  FETCH_SERVER_ARGS,
+  fillFetchServerCommand,
+} from "../../utils/fill-fetch-server-command";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { openFlowCard } from "../../utils/flow/open-flow-card";
 import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
@@ -56,8 +60,7 @@ test(
     const testName = `test_server_${randomSuffix}`;
     await page.getByTestId("stdio-name-input").fill(testName);
 
-    await page.getByTestId("stdio-command-input").fill("uvx");
-    await page.getByTestId("stdio-args_0").fill("mcp-server-fetch");
+    await fillFetchServerCommand(page);
 
     await page.getByTestId("add-mcp-server-button").click();
 
@@ -157,9 +160,11 @@ test(
     expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
       "uvx",
     );
-    expect(await page.getByTestId("stdio-args_0").inputValue()).toBe(
-      "mcp-server-fetch",
-    );
+    for (const [index, arg] of FETCH_SERVER_ARGS.entries()) {
+      expect(await page.getByTestId(`stdio-args_${index}`).inputValue()).toBe(
+        arg,
+      );
+    }
 
     await page.waitForTimeout(500);
 
@@ -234,8 +239,7 @@ test(
 
     await page.waitForTimeout(500);
 
-    await page.getByTestId("stdio-command-input").fill("uvx");
-    await page.getByTestId("stdio-args_0").fill("mcp-server-fetch");
+    await fillFetchServerCommand(page);
 
     await page.getByTestId("add-mcp-server-button").click();
 
@@ -707,8 +711,7 @@ test(
     const testName = `test_server_${randomSuffix}`;
     await page.getByTestId("stdio-name-input").fill(testName);
 
-    await page.getByTestId("stdio-command-input").fill("uvx");
-    await page.getByTestId("stdio-args_0").fill("mcp-server-fetch");
+    await fillFetchServerCommand(page);
 
     await page.getByTestId("add-mcp-server-button").click();
 
@@ -821,11 +824,16 @@ test(
     expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
       "uvx",
     );
-    expect(await page.getByTestId("stdio-args_0").inputValue()).toBe(
-      "mcp-server-fetch",
-    );
+    for (const [index, arg] of FETCH_SERVER_ARGS.entries()) {
+      expect(await page.getByTestId(`stdio-args_${index}`).inputValue()).toBe(
+        arg,
+      );
+    }
 
-    await page.getByTestId("stdio-args_0").fill("mcp-server-time");
+    // Swap only the package operand; the leading `--with mcp~=1.28` still applies.
+    await page
+      .getByTestId(`stdio-args_${FETCH_SERVER_ARGS.length - 1}`)
+      .fill("mcp-server-time");
 
     await page.getByTestId("add-mcp-server-button").click();
 
@@ -937,8 +945,7 @@ test(
 
     await page.getByTestId("stdio-name-input").fill(testName);
 
-    await page.getByTestId("stdio-command-input").fill("uvx");
-    await page.getByTestId("stdio-args_0").fill("mcp-server-fetch");
+    await fillFetchServerCommand(page);
 
     await page.getByTestId("add-mcp-server-button").click();
 
