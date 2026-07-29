@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import abc
 import threading
+import time
 from collections import OrderedDict
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -42,14 +43,12 @@ def _context_cache_value(value: Any) -> Any:
     identity.
     """
     if isinstance(value, Mapping):
-        items = [(_context_cache_value(key), _context_cache_value(item)) for key, item in value.items()]
-        return ("mapping", tuple(sorted(items, key=repr)))
+        return (
+            "mapping",
+            frozenset((_context_cache_value(key), _context_cache_value(item)) for key, item in value.items()),
+        )
     if isinstance(value, tuple):
         return ("tuple", tuple(_context_cache_value(item) for item in value))
-    if isinstance(value, list):
-        return ("list", tuple(_context_cache_value(item) for item in value))
-    if isinstance(value, set):
-        return ("set", frozenset(_context_cache_value(item) for item in value))
     if isinstance(value, frozenset):
         return ("frozenset", frozenset(_context_cache_value(item) for item in value))
     try:
@@ -133,12 +132,27 @@ class BaseModelProviderPolicyService(Service, abc.ABC):
     """Policy plugin point; implementations evaluate stable provider IDs."""
 
     name = ServiceType.MODEL_PROVIDER_POLICY_SERVICE.value
+    SNAPSHOT_CACHE_MAX_SIZE = _MAX_SNAPSHOT_CACHE_SIZE
+    SNAPSHOT_CACHE_TTL_SECONDS = 300.0
+    _snapshot_cache_initialization_lock = threading.Lock()
 
     def __init__(self) -> None:
         super().__init__()
-        self._snapshot_cache: OrderedDict[tuple[Any, ...], ModelProviderPolicySnapshot] = OrderedDict()
-        self._snapshot_cache_generation = 0
-        self._snapshot_cache_lock = threading.RLock()
+        self._ensure_snapshot_cache_state()
+
+    def _ensure_snapshot_cache_state(self) -> None:
+        """Initialize cache state, including for legacy subclasses that skipped ``super()``."""
+        if "_snapshot_cache_lock" in self.__dict__:
+            return
+        with self._snapshot_cache_initialization_lock:
+            if "_snapshot_cache_lock" not in self.__dict__:
+                self._snapshot_cache: OrderedDict[tuple[Any, ...], tuple[float, ModelProviderPolicySnapshot]] = (
+                    OrderedDict()
+                )
+                self._snapshot_cache_generation = 0
+                # Publish the lock last so the fast-path above only observes a
+                # fully initialized cache state.
+                self._snapshot_cache_lock = threading.RLock()
 
     @abc.abstractmethod
     def get_allowed_provider_ids(
@@ -149,6 +163,95 @@ class BaseModelProviderPolicyService(Service, abc.ABC):
         purpose: ModelProviderPolicyPurpose,
     ) -> Collection[str]:
         """Return the candidate IDs allowed for this context and purpose."""
+
+    async def aget_allowed_provider_ids(
+        self,
+        *,
+        context: ModelProviderPolicyContext,
+        candidate_provider_ids: frozenset[str],
+        purpose: ModelProviderPolicyPurpose,
+    ) -> Collection[str]:
+        """Evaluate asynchronously, defaulting to the synchronous policy hook."""
+        return self.get_allowed_provider_ids(
+            context=context,
+            candidate_provider_ids=candidate_provider_ids,
+            purpose=purpose,
+        )
+
+    @staticmethod
+    def _cache_key(
+        *,
+        context: ModelProviderPolicyContext,
+        candidate_provider_ids: frozenset[str],
+        purpose: ModelProviderPolicyPurpose,
+    ) -> tuple[Any, ...] | None:
+        try:
+            attributes = _context_cache_value(context.attributes)
+        except TypeError:
+            # Arbitrary request attributes may contain mutable application
+            # objects. They remain available to the policy evaluator, but a
+            # value without a safe structural identity must bypass the cache.
+            return None
+        return (
+            str(context.user_id) if context.user_id is not None else None,
+            attributes,
+            purpose,
+            candidate_provider_ids,
+        )
+
+    def _cache_lookup(
+        self,
+        cache_key: tuple[Any, ...] | None,
+    ) -> tuple[ModelProviderPolicySnapshot | None, int]:
+        self._ensure_snapshot_cache_state()
+        with self._snapshot_cache_lock:
+            generation = self._snapshot_cache_generation
+            if cache_key is None:
+                return None, generation
+            entry = self._snapshot_cache.get(cache_key)
+            if entry is None:
+                return None, generation
+            cached_at, snapshot = entry
+            if time.monotonic() - cached_at >= self.SNAPSHOT_CACHE_TTL_SECONDS:
+                del self._snapshot_cache[cache_key]
+                return None, generation
+            self._snapshot_cache.move_to_end(cache_key)
+            return snapshot, generation
+
+    def _cache_store(
+        self,
+        cache_key: tuple[Any, ...] | None,
+        *,
+        generation: int,
+        snapshot: ModelProviderPolicySnapshot,
+    ) -> None:
+        if cache_key is None:
+            return
+        self._ensure_snapshot_cache_state()
+        with self._snapshot_cache_lock:
+            # An invalidation may race with policy evaluation. Never repopulate
+            # a cache generation that a writer has explicitly dropped.
+            if generation != self._snapshot_cache_generation:
+                return
+            self._snapshot_cache[cache_key] = (time.monotonic(), snapshot)
+            self._snapshot_cache.move_to_end(cache_key)
+            if len(self._snapshot_cache) > self.SNAPSHOT_CACHE_MAX_SIZE:
+                self._snapshot_cache.popitem(last=False)
+
+    @staticmethod
+    def _snapshot(
+        *,
+        context: ModelProviderPolicyContext,
+        candidate_provider_ids: frozenset[str],
+        purpose: ModelProviderPolicyPurpose,
+        allowed_provider_ids: Collection[str],
+    ) -> ModelProviderPolicySnapshot:
+        return ModelProviderPolicySnapshot(
+            context=context,
+            purpose=purpose,
+            candidate_provider_ids=candidate_provider_ids,
+            allowed_provider_ids=frozenset(allowed_provider_ids),
+        )
 
     def resolve(
         self,
@@ -165,40 +268,26 @@ class BaseModelProviderPolicyService(Service, abc.ABC):
         caches the immutable snapshot until :meth:`invalidate` is called.
         """
         candidates = frozenset(candidate_provider_ids)
-        cache_key = (
-            str(context.user_id) if context.user_id is not None else None,
-            _context_cache_value(context.attributes),
-            purpose,
-            candidates,
+        cache_key = self._cache_key(
+            context=context,
+            candidate_provider_ids=candidates,
+            purpose=purpose,
         )
-        with self._snapshot_cache_lock:
-            cached = self._snapshot_cache.get(cache_key)
-            if cached is not None:
-                self._snapshot_cache.move_to_end(cache_key)
-                return cached
-            generation = self._snapshot_cache_generation
+        cached, generation = self._cache_lookup(cache_key)
+        if cached is not None:
+            return cached
 
-        allowed = frozenset(
-            self.get_allowed_provider_ids(
+        snapshot = self._snapshot(
+            context=context,
+            candidate_provider_ids=candidates,
+            purpose=purpose,
+            allowed_provider_ids=self.get_allowed_provider_ids(
                 context=context,
                 candidate_provider_ids=candidates,
                 purpose=purpose,
-            )
+            ),
         )
-        snapshot = ModelProviderPolicySnapshot(
-            context=context,
-            purpose=purpose,
-            candidate_provider_ids=candidates,
-            allowed_provider_ids=allowed,
-        )
-        with self._snapshot_cache_lock:
-            # An invalidation may race with policy evaluation. Never repopulate
-            # a cache generation that a writer has explicitly dropped.
-            if generation == self._snapshot_cache_generation:
-                self._snapshot_cache[cache_key] = snapshot
-                self._snapshot_cache.move_to_end(cache_key)
-                if len(self._snapshot_cache) > _MAX_SNAPSHOT_CACHE_SIZE:
-                    self._snapshot_cache.popitem(last=False)
+        self._cache_store(cache_key, generation=generation, snapshot=snapshot)
         return snapshot
 
     async def aresolve(
@@ -208,18 +297,29 @@ class BaseModelProviderPolicyService(Service, abc.ABC):
         candidate_provider_ids: frozenset[str],
         purpose: ModelProviderPolicyPurpose,
     ) -> ModelProviderPolicySnapshot:
-        """Resolve policy asynchronously and return a synchronous snapshot.
-
-        The OSS implementation delegates to the cached synchronous resolver.
-        Enterprise policy sources may override this method when their policy
-        load is I/O-bound while preserving the immutable snapshot contract for
-        downstream catalog and runtime code.
-        """
-        return self.resolve(
+        """Resolve one cached snapshot through the asynchronous evaluation hook."""
+        candidates = frozenset(candidate_provider_ids)
+        cache_key = self._cache_key(
             context=context,
-            candidate_provider_ids=candidate_provider_ids,
+            candidate_provider_ids=candidates,
             purpose=purpose,
         )
+        cached, generation = self._cache_lookup(cache_key)
+        if cached is not None:
+            return cached
+
+        snapshot = self._snapshot(
+            context=context,
+            candidate_provider_ids=candidates,
+            purpose=purpose,
+            allowed_provider_ids=await self.aget_allowed_provider_ids(
+                context=context,
+                candidate_provider_ids=candidates,
+                purpose=purpose,
+            ),
+        )
+        self._cache_store(cache_key, generation=generation, snapshot=snapshot)
+        return snapshot
 
     def is_allowed(
         self,
@@ -229,19 +329,27 @@ class BaseModelProviderPolicyService(Service, abc.ABC):
         context: ModelProviderPolicyContext | None = None,
     ) -> bool:
         """Return one provider decision using the stable provider identity."""
+        from lfx.base.models.provider_registry import resolve_provider_id
+        from lfx.services.model_provider_policy.context import current_model_provider_policy_context
+
+        canonical_provider_id = resolve_provider_id(provider_id)
+        effective_context = context
+        if effective_context is None:
+            effective_context = current_model_provider_policy_context() or ModelProviderPolicyContext()
         snapshot = self.resolve(
-            context=context or ModelProviderPolicyContext(),
-            candidate_provider_ids=frozenset({provider_id}),
+            context=effective_context,
+            candidate_provider_ids=frozenset({canonical_provider_id}),
             purpose=purpose,
         )
-        return snapshot.allows(provider_id)
+        return canonical_provider_id in snapshot.allowed_provider_ids
 
     def invalidate(self) -> None:
         """Drop all cached snapshots after policy-source changes."""
+        self._ensure_snapshot_cache_state()
         with self._snapshot_cache_lock:
             self._snapshot_cache.clear()
             self._snapshot_cache_generation += 1
 
     async def teardown(self) -> None:
-        """No resources are owned by the base policy service."""
+        """Invalidate cached decisions; no other resources are owned by the base service."""
         self.invalidate()

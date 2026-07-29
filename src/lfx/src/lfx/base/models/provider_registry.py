@@ -35,11 +35,13 @@ test seam.
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import re
 import threading
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
+from functools import lru_cache
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
@@ -207,6 +209,7 @@ _undo = _Undo()
 # ---------------------------------------------------------------------------
 
 
+@lru_cache(maxsize=1)
 def _core_provider_ids() -> dict[str, str]:
     """Return stable-id -> legacy-name mappings for providers shipped in core."""
     return {
@@ -216,7 +219,9 @@ def _core_provider_ids() -> dict[str, str]:
     }
 
 
+@lru_cache(maxsize=1)
 def _core_aliases() -> dict[str, str]:
+    """Return normalized aliases for the process-static core provider catalog."""
     aliases: dict[str, str] = {}
     for provider_id, name in _core_provider_ids().items():
         metadata = MODEL_PROVIDER_METADATA[name]
@@ -609,14 +614,21 @@ def resolve_provider_id(name_or_id_or_alias: str) -> str:
 
     Registered names, display names, aliases, and IDs resolve through the
     authoritative registry. Unknown legacy selectors receive the same
-    deterministic derived ID used by manifests that predate ``provider_id``;
-    this keeps old saved flows runnable under the OSS allow-all policy while
-    ensuring restrictive policy implementations never key on display text.
+    deterministic derived ID used by manifests that predate ``provider_id``.
+    A selector with no ASCII slug receives an opaque deterministic fallback;
+    this keeps old saved flows runnable under the OSS allow-all policy without
+    reflecting malformed input in policy errors or logs.
     """
     if not isinstance(name_or_id_or_alias, str) or not name_or_id_or_alias.strip():
         msg = "Provider identity must be a non-empty string"
         raise ValueError(msg)
-    return provider_id_for(name_or_id_or_alias) or _derive_provider_id(name_or_id_or_alias)
+    if provider_id := provider_id_for(name_or_id_or_alias):
+        return provider_id
+    try:
+        return _derive_provider_id(name_or_id_or_alias)
+    except ValueError:
+        normalized = name_or_id_or_alias.strip().casefold().encode()
+        return f"legacy-{hashlib.sha256(normalized).hexdigest()}"
 
 
 def model_component_provider_id(component: object, *, module_name: str | None = None) -> str:

@@ -189,11 +189,12 @@ def get_model_providers() -> list[str]:
     # Metadata is authoritative for the public provider name, so seed it
     # before catalog aliases and retain the first spelling for each stable ID.
     for provider in model_provider_metadata:
-        providers_by_id.setdefault(resolve_provider_id(provider), provider)
+        if isinstance(provider, str) and provider.strip():
+            providers_by_id.setdefault(resolve_provider_id(provider), provider)
     for group in get_models_detailed():
         for metadata in group:
             provider = metadata.get("provider", "Unknown")
-            if isinstance(provider, str) and provider:
+            if isinstance(provider, str) and provider.strip():
                 providers_by_id.setdefault(resolve_provider_id(provider), provider)
     return sorted(providers_by_id.values())
 

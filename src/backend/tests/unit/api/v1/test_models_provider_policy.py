@@ -164,6 +164,43 @@ async def test_denied_provider_mutations_return_non_enumerating_not_found(
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_non_sluggable_provider_mutations_return_generic_not_found(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    provider = "秘密"
+    provider_validation_called = False
+
+    def _provider_validation(*_args, **_kwargs):
+        nonlocal provider_validation_called
+        provider_validation_called = True
+
+    monkeypatch.setattr("langflow.api.v1.variable.validate_model_provider_key", _provider_validation)
+    responses = [
+        await client.post(
+            "api/v1/models/validate-provider",
+            headers=logged_in_headers,
+            json={"provider": provider, "variables": {}},
+        ),
+        await client.post(
+            "api/v1/models/default_model",
+            headers=logged_in_headers,
+            json={"provider": provider, "model_name": "unknown-model", "model_type": "language"},
+        ),
+        await client.post(
+            "api/v1/models/enabled_models",
+            headers=logged_in_headers,
+            json=[{"provider": provider, "model_id": "unknown-model", "enabled": True}],
+        ),
+    ]
+
+    for response in responses:
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json() == {"detail": "Model provider not found"}
+        assert provider not in response.text
+    assert provider_validation_called is False
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_dynamic_model_sources_cannot_reintroduce_denied_provider(
     client: AsyncClient, logged_in_headers, monkeypatch
 ):

@@ -511,7 +511,10 @@ the deserialize half is covered by
   Model-provider policy services now expose cached synchronous `resolve()`,
   async `aresolve()`, single-provider `is_allowed()`, and `invalidate()`
   hooks while preserving the existing immutable snapshot and allow-all OSS
-  behavior. Existing synchronous policy subclasses remain source-compatible.
+  behavior. The process-local snapshot cache has a bounded TTL, and async
+  implementations can override `aget_allowed_provider_ids()` without
+  bypassing it. Existing synchronous policy subclasses, including subclasses
+  that did not call `super().__init__()`, remain source-compatible.
 - **New typed error codes (additive): `provider-invalid`, `provider-skipped`.**
   A malformed provider spec surfaces `provider-invalid`; a provider whose name
   collides with a built-in or already-loaded provider surfaces

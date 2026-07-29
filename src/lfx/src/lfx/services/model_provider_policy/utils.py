@@ -13,15 +13,14 @@ if TYPE_CHECKING:
     from lfx.services.model_provider_policy.base import ModelProviderPolicySnapshot
 
 
-def resolve_model_provider_policy(
+def _policy_call_arguments(
     *,
     user_id,
     providers: Iterable[str],
     purpose: ModelProviderPolicyPurpose,
-    attributes: Mapping[str, Any] | None = None,
-) -> ModelProviderPolicySnapshot:
-    """Resolve a policy snapshot for provider names from any catalog surface."""
-    from lfx.services.deps import get_model_provider_policy_service
+    attributes: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Prepare the canonical candidates and effective request context."""
     from lfx.services.model_provider_policy.context import current_model_provider_policy_context
 
     effective_attributes = attributes
@@ -34,12 +33,31 @@ def resolve_model_provider_policy(
     # saved selections: registered names resolve to stable IDs, while unknown
     # names remain candidates that the allow-all default can pass through to
     # the existing validation path. Restrictive policies can still omit them.
-    candidate_ids = frozenset(resolve_provider_id(provider) for provider in providers)
+    return {
+        "context": ModelProviderPolicyContext(user_id=user_id, attributes=effective_attributes or {}),
+        "candidate_provider_ids": frozenset(resolve_provider_id(provider) for provider in providers),
+        "purpose": purpose,
+    }
+
+
+def resolve_model_provider_policy(
+    *,
+    user_id,
+    providers: Iterable[str],
+    purpose: ModelProviderPolicyPurpose,
+    attributes: Mapping[str, Any] | None = None,
+) -> ModelProviderPolicySnapshot:
+    """Resolve a policy snapshot for provider names from any catalog surface."""
+    from lfx.services.deps import get_model_provider_policy_service
+
     service = get_model_provider_policy_service()
     return service.resolve(
-        context=ModelProviderPolicyContext(user_id=user_id, attributes=effective_attributes or {}),
-        candidate_provider_ids=candidate_ids,
-        purpose=purpose,
+        **_policy_call_arguments(
+            user_id=user_id,
+            providers=providers,
+            purpose=purpose,
+            attributes=attributes,
+        )
     )
 
 
@@ -52,19 +70,15 @@ async def aresolve_model_provider_policy(
 ) -> ModelProviderPolicySnapshot:
     """Resolve an immutable snapshot through an async-capable policy source."""
     from lfx.services.deps import get_model_provider_policy_service
-    from lfx.services.model_provider_policy.context import current_model_provider_policy_context
-
-    effective_attributes = attributes
-    if effective_attributes is None:
-        principal = current_model_provider_policy_context()
-        if principal is not None and str(principal.user_id) == str(user_id):
-            effective_attributes = principal.attributes
 
     service = get_model_provider_policy_service()
     return await service.aresolve(
-        context=ModelProviderPolicyContext(user_id=user_id, attributes=effective_attributes or {}),
-        candidate_provider_ids=frozenset(resolve_provider_id(provider) for provider in providers),
-        purpose=purpose,
+        **_policy_call_arguments(
+            user_id=user_id,
+            providers=providers,
+            purpose=purpose,
+            attributes=attributes,
+        )
     )
 
 

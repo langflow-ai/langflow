@@ -122,7 +122,7 @@ def get_llm(
     provider = model.get("provider")
     metadata = model.get("metadata", {})
 
-    if not isinstance(provider, str) or not provider:
+    if not isinstance(provider, str) or not provider.strip():
         msg = (
             "The selected model is missing a provider. Please reselect a model from the dropdown "
             "so the component knows which provider to use."
@@ -892,7 +892,7 @@ def get_embeddings(
     provider = model_dict.get("provider")
     metadata = model_dict.get("metadata", {})
 
-    if not isinstance(provider, str) or not provider:
+    if not isinstance(provider, str) or not provider.strip():
         msg = "The selected embedding model is missing a provider"
         raise ValueError(msg)
     if provider_policy is None:

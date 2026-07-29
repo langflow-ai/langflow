@@ -314,7 +314,9 @@ class AcmeModelProviderPolicyService(BaseModelProviderPolicyService):
 
 The method receives stable provider IDs for both core and extension-contributed providers and returns the allowed subset. The base service rejects results that widen the candidate set and returns an immutable decision snapshot. `resolve()` is the compatibility bridge used by synchronous model-construction paths; `await aresolve()` is the async boundary for request handlers or implementations that preload policy from an I/O-backed source. Both return the same synchronously consumable snapshot type.
 
-Resolved snapshots are cached by principal attributes, purpose, and candidate provider IDs. Call `invalidate()` after the policy source changes so subsequent resolutions cannot reuse a stale decision. Implementations can override `aresolve()` when loading policy requires I/O, but should preserve the immutable snapshot contract and keep synchronous runtime state ready before model construction begins.
+Resolved snapshots are cached in each service process by principal attributes, purpose, and candidate provider IDs. The cache has a five-minute backstop (`SNAPSHOT_CACHE_TTL_SECONDS`); set that class attribute to a shorter interval for stricter revocation requirements, or to `0` to disable caching. Call `invalidate()` after the policy source changes in every worker that may have cached a decision. Multi-worker and multi-pod deployments must broadcast that invalidation (or rely on the bounded TTL); calling it in one process does not clear another process's cache.
+
+`aresolve()` remains the cache-owning async wrapper. Implement `aget_allowed_provider_ids()` when policy evaluation requires I/O instead of overriding `aresolve()`. Its default implementation calls the synchronous `get_allowed_provider_ids()` hook on the event loop, so synchronous implementations should keep that hook non-blocking and preload any remote policy state before model construction begins.
 
 `purpose` identifies the protected operation:
 

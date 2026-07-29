@@ -174,6 +174,21 @@ def test_resolve_provider_id_accepts_names_ids_aliases_and_legacy_unknowns():
     assert resolve_provider_id("Legacy Custom Provider") == "legacy-custom-provider"
 
 
+def test_resolve_provider_id_uses_opaque_fallback_for_non_sluggable_legacy_selectors():
+    provider_id = resolve_provider_id(" Δ ")
+
+    assert provider_id == resolve_provider_id("δ")
+    assert provider_id.startswith("legacy-")
+    assert provider_registry._PROVIDER_ID_RE.fullmatch(provider_id)
+    assert "Δ" not in provider_id
+    assert provider_id != resolve_provider_id("!!!")
+
+
+def test_provider_registration_remains_strict_for_non_sluggable_names():
+    with pytest.raises(ValueError, match="Could not derive a provider_id"):
+        register_provider(_fakeco_spec(name="!!!"))
+
+
 def test_provider_queries_accept_stable_id_and_legacy_alias():
     canonical_variables = get_provider_all_variables("IBM WatsonX")
 
