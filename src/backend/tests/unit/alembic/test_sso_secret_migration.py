@@ -132,3 +132,65 @@ def test_sso_secret_upgrade_and_downgrade_preserve_seeded_ciphertext(db_url):  #
             )
     finally:
         engine.dispose()
+
+
+def test_sso_upgrade_clears_pre_encryption_plaintext_secret(db_url):  # noqa: F811
+    """A legacy plaintext secret is removed and its connection disabled.
+
+    Before this revision ``client_secret_encrypted`` held the raw secret. The
+    model now rejects non-envelope values, so leaving one in place would make the
+    row unwritable through the ORM and undecryptable at login. The migration
+    fails safe instead: clear the plaintext, disable the connection, and require
+    an administrator to re-enter it.
+    """
+    alembic_cfg = _make_alembic_cfg(db_url)
+    command.upgrade(alembic_cfg, _PRIOR_REVISION)
+
+    timestamp = datetime.now(timezone.utc)
+    config_id = str(uuid4())
+
+    engine = sa.create_engine(_engine_url(db_url))
+    try:
+        metadata = sa.MetaData()
+        with engine.begin() as connection:
+            sso_config = sa.Table("sso_config", metadata, autoload_with=connection)
+            connection.execute(
+                sso_config.insert(),
+                {
+                    "id": config_id,
+                    "provider": "oidc",
+                    "provider_name": "Legacy Plaintext OIDC",
+                    "enabled": True,
+                    "enforce_sso": False,
+                    "client_secret_encrypted": _PLAINTEXT_SECRET,
+                    "email_claim": "email",
+                    "username_claim": "preferred_username",
+                    "user_id_claim": "sub",
+                    "created_at": timestamp,
+                    "updated_at": timestamp,
+                },
+            )
+    finally:
+        engine.dispose()
+
+    command.upgrade(alembic_cfg, _REVISION)
+
+    engine = sa.create_engine(_engine_url(db_url))
+    try:
+        metadata = sa.MetaData()
+        with engine.connect() as connection:
+            sso_config = sa.Table("sso_config", metadata, autoload_with=connection)
+            row = (
+                connection.execute(
+                    sa.select(sso_config.c.client_secret_encrypted, sso_config.c.enabled).where(
+                        sso_config.c.id == config_id
+                    )
+                )
+                .mappings()
+                .one()
+            )
+
+            assert row["client_secret_encrypted"] is None
+            assert not row["enabled"]
+    finally:
+        engine.dispose()

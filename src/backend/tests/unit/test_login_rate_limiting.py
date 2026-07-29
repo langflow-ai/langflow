@@ -11,6 +11,15 @@ import pytest
 def enable_rate_limiting(monkeypatch):
     """Enable rate limiting for tests that need to verify rate limit behavior."""
     monkeypatch.setenv("LANGFLOW_RATE_LIMIT_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_RATE_LIMIT_PER_MINUTE", "5")
+
+    # The settings singleton may have been initialized during test collection or
+    # by an earlier test, before the environment overrides above were applied.
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "rate_limit_enabled", True)
+    monkeypatch.setattr(settings, "rate_limit_per_minute", 5)
 
 
 @pytest.fixture

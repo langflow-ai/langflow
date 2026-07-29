@@ -7,6 +7,7 @@ Create Date: 2026-07-29
 Phase: EXPAND
 """
 
+import os
 from collections.abc import Sequence
 from uuid import UUID
 
@@ -39,6 +40,31 @@ _PROVIDER_SETTING_COLUMNS = (
     "issuer",
     "client_id",
 )
+# Structural prefix of the current client-secret envelope. Duplicated from
+# ``models/auth/sso_secret.py`` on purpose: a migration must not import
+# application models, whose shape changes independently of this revision.
+_ENVELOPE_HEADER = "lf-sso:v1:hkdf-sha256-v1:aes-256-gcm:"
+_ENVELOPE_PART_COUNT = 6
+
+
+def _external_auth_provider() -> str | None:
+    """Return the provider key owned by OSS EXTERNAL_AUTH, if configured.
+
+    ``sso_user_profile.sso_provider`` has two independent writers: the SSO plugin
+    (which this revision re-keys onto ``sso_config.slug``) and the OSS
+    EXTERNAL_AUTH flow in ``services/auth/service.py``, which writes
+    ``EXTERNAL_AUTH_PROVIDER`` verbatim. Those rows belong to a different feature
+    and must never be re-keyed here — rewriting one silently breaks that user's
+    login and JIT-provisions a duplicate account on their next sign-in.
+    """
+    return os.environ.get("LANGFLOW_EXTERNAL_AUTH_PROVIDER", "").strip() or None
+
+
+def _is_secret_envelope(value: object) -> bool:
+    """Return whether a stored secret is already a versioned ciphertext envelope."""
+    return (
+        isinstance(value, str) and value.startswith(_ENVELOPE_HEADER) and len(value.split(":")) == _ENVELOPE_PART_COUNT
+    )
 
 
 def _indexes(conn: sa.Connection, table_name: str) -> dict[str, dict]:
@@ -92,15 +118,23 @@ def _backfill_profile_connection_slugs(conn: sa.Connection) -> None:
         sa.column("provider_name"),
     )
     profile = sa.table(_PROFILE_TABLE, sa.column("sso_provider"))
+    external_provider = _external_auth_provider()
     rows = conn.execute(sa.select(config.c.slug, config.c.provider_name).order_by(config.c.id)).all()
     for row in rows:
-        if row.slug and row.provider_name:
-            conn.execute(
-                profile.update().where(profile.c.sso_provider == row.provider_name).values(sso_provider=row.slug)
-            )
+        if not (row.slug and row.provider_name):
+            continue
+        # Leave EXTERNAL_AUTH-owned identities alone; see _external_auth_provider.
+        if external_provider is not None and row.provider_name == external_provider:
+            continue
+        conn.execute(profile.update().where(profile.c.sso_provider == row.provider_name).values(sso_provider=row.slug))
 
 
 def _restore_profile_connection_names(conn: sa.Connection) -> None:
+    """Reverse of :func:`_backfill_profile_connection_slugs`.
+
+    No EXTERNAL_AUTH guard is needed here: that flow never writes a slug, so a
+    config skipped on upgrade simply matches no rows on the way back down.
+    """
     if not migration.table_exists(_PROFILE_TABLE, conn):
         return
     config_columns = _column_names(conn, _CONFIG_TABLE)
@@ -121,6 +155,44 @@ def _restore_profile_connection_names(conn: sa.Connection) -> None:
             conn.execute(
                 profile.update().where(profile.c.sso_provider == row.slug).values(sso_provider=row.provider_name)
             )
+
+
+def _sanitize_legacy_client_secrets(conn: sa.Connection) -> None:
+    """Clear pre-encryption plaintext client secrets and disable those connections.
+
+    Before this revision ``client_secret_encrypted`` held the raw secret despite
+    its name. From this revision on the model rejects any value that is not a
+    versioned envelope, so a legacy row would be unwritable through the ORM and
+    undecryptable at login — a failure that would surface long after upgrade.
+
+    Re-encrypting in place is not possible here: the key is derived from the
+    application's ``SECRET_KEY``, which alembic has no reliable access to, and a
+    migration that fails on a missing key would block the deploy. Removing the
+    plaintext and disabling the connection fails safe instead, and it also clears
+    a secret that was stored unencrypted. An administrator re-enters it through
+    the admin UI and re-enables the connection.
+
+    This is deliberately one-way; ``downgrade`` cannot restore a secret that has
+    been deleted.
+    """
+    columns = _column_names(conn, _CONFIG_TABLE)
+    if not {"id", "client_secret_encrypted"} <= columns:
+        return
+
+    has_enabled = "enabled" in columns
+    selected = [sa.column("id"), sa.column("client_secret_encrypted")]
+    if has_enabled:
+        selected.append(sa.column("enabled"))
+    table = sa.table(_CONFIG_TABLE, *selected)
+
+    for row in conn.execute(sa.select(table.c.id, table.c.client_secret_encrypted)).mappings():
+        secret = row["client_secret_encrypted"]
+        if secret is None or _is_secret_envelope(secret):
+            continue
+        values: dict[str, object] = {"client_secret_encrypted": None}
+        if has_enabled:
+            values["enabled"] = False
+        conn.execute(table.update().where(table.c.id == row["id"]).values(**values))
 
 
 def _backfill_provider_settings(conn: sa.Connection) -> None:
@@ -302,6 +374,7 @@ def _upgrade_sso_config(conn: sa.Connection) -> None:
     _backfill_connection_identity(conn)
     _backfill_profile_connection_slugs(conn)
     _backfill_provider_settings(conn)
+    _sanitize_legacy_client_secrets(conn)
     columns = _column_names(conn, _CONFIG_TABLE)
     indexes = _indexes(conn, _CONFIG_TABLE)
     with op.batch_alter_table(_CONFIG_TABLE, schema=None) as batch_op:
