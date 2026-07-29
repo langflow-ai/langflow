@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import status
-from lfx.base.models.provider_registry import provider_id_for
+from lfx.base.models.provider_registry import resolve_provider_id
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyContext,
     ModelProviderPolicySnapshot,
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 def _openai_only_policy(*, user_id, providers, purpose, attributes=None):
     _ = attributes
-    candidate_ids = frozenset(filter(None, (provider_id_for(provider) for provider in providers)))
+    candidate_ids = frozenset(resolve_provider_id(provider) for provider in providers)
     return ModelProviderPolicySnapshot(
         context=ModelProviderPolicyContext(user_id=user_id),
         purpose=purpose,
@@ -31,7 +31,7 @@ def _openai_only_policy(*, user_id, providers, purpose, attributes=None):
 
 def _allow_all_policy(*, user_id, providers, purpose, attributes=None):
     _ = attributes
-    candidate_ids = frozenset(provider_id_for(provider) or provider for provider in providers)
+    candidate_ids = frozenset(resolve_provider_id(provider) for provider in providers)
     return ModelProviderPolicySnapshot(
         context=ModelProviderPolicyContext(user_id=user_id),
         purpose=purpose,
@@ -82,7 +82,7 @@ async def test_provider_descriptors_union_stamped_palette_ids_without_duplicates
         nonlocal captured_candidates
         _ = attributes
         captured_candidates = set(providers)
-        candidate_ids = frozenset(provider_id_for(provider) or provider for provider in providers)
+        candidate_ids = frozenset(resolve_provider_id(provider) for provider in providers)
         return ModelProviderPolicySnapshot(
             context=ModelProviderPolicyContext(user_id=user_id),
             purpose=purpose,
