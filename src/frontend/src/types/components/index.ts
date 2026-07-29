@@ -661,6 +661,9 @@ export type modalHeaderType = {
   children: ReactNode;
   description?: string | JSX.Element | null;
   clampDescription?: number;
+  className?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
 };
 
 export type codeAreaModalPropsType = {
