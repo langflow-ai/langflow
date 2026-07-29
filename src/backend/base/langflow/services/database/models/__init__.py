@@ -12,6 +12,7 @@ from .auth import (
     SSOConfig,
     SSOUserProfile,
 )
+from .catalog_policy import CatalogPolicyMode, CatalogPolicyRule, CatalogPolicyScope, CatalogResourceKind
 from .deployment import Deployment
 from .deployment_provider_account import DeploymentProviderAccount
 from .file import File
@@ -42,6 +43,10 @@ __all__ = [
     "AuthzTeam",
     "AuthzTeamMember",
     "CasbinRule",
+    "CatalogPolicyMode",
+    "CatalogPolicyRule",
+    "CatalogPolicyScope",
+    "CatalogResourceKind",
     "Deployment",
     "DeploymentProviderAccount",
     "ExecutionSignal",
