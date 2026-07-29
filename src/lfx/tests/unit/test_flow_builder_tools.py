@@ -18,6 +18,13 @@ from lfx.mcp.flow_builder_tools import (
     reset_working_flow,
 )
 
+_DENIED_CONFIGURE_CATALOG_CALLS: list[None] = []
+
+
+def _denied_configure_catalog_loader():
+    _DENIED_CONFIGURE_CATALOG_CALLS.append(None)
+    return [{"name": "blocked-model", "model_type": "llm"}]
+
 
 class TestSearchComponentTypes:
     def test_search_returns_results(self):
@@ -809,6 +816,407 @@ class TestConfigureComponentModelProviderPolicy:
             mutate_tools._resolve_default_model_name("Anthropic")
 
         assert str(exc_info.value) == "The requested model provider is not available"
+
+    def test_policy_gate_does_not_execute_denied_extension_catalog(self, monkeypatch):
+        from lfx.base.models.provider_registry import ProviderSpec, register_provider, unregister_provider
+        from lfx.mcp.flow_builder_tools import ConfigureComponent, mutate_tools
+
+        provider = "Denied Configure Extension"
+        register_provider(
+            ProviderSpec(
+                name=provider,
+                provider_id="denied-configure-extension",
+                metadata={
+                    "icon": "Bot",
+                    "variables": [],
+                    "mapping": {"model_class": "ChatOpenAI", "model_param": "model"},
+                },
+                catalog_loader=f"{__name__}:_denied_configure_catalog_loader",
+            )
+        )
+        _DENIED_CONFIGURE_CATALOG_CALLS.clear()
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+        agent_id = _make_agent_node_for_model_test()
+
+        try:
+            cfg = ConfigureComponent()
+            cfg.set(component_id=agent_id, params=f'{{"model": [{{"provider": "{provider}"}}]}}')
+            result = cfg.configure_component()
+        finally:
+            unregister_provider(provider)
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        assert _DENIED_CONFIGURE_CATALOG_CALLS == []
+
+    def test_add_standalone_model_component_is_policy_gated(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import AddComponent, _ensure_working_flow, mutate_tools
+
+        registry = {
+            "OpenAIModel": {
+                "base_classes": ["LanguageModel"],
+                "display_name": "OpenAI",
+                "metadata": {"module": "lfx_openai.chat_models.OpenAIModel"},
+                "template": {},
+            }
+        }
+        monkeypatch.setattr(mutate_tools, "_load_registry_user_aware", lambda: registry)
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+        reset_working_flow()
+
+        component = AddComponent()
+        component.set(component_type="OpenAIModel")
+        result = component.add_component()
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        assert _ensure_working_flow()["data"]["nodes"] == []
+
+    def test_build_flow_spec_model_selection_is_policy_gated(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import BuildFlowFromSpec, _ensure_working_flow, mutate_tools, run_tools
+
+        registry = {
+            "Agent": {
+                "base_classes": ["Message"],
+                "display_name": "Agent",
+                "module": "lfx.components.agents.agent.AgentComponent",
+                "template": {"model": {"type": "model", "value": ""}},
+            }
+        }
+        monkeypatch.setattr(run_tools, "_load_registry_user_aware", lambda: registry)
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+        reset_working_flow()
+
+        builder = BuildFlowFromSpec()
+        builder.set(
+            spec=(
+                "name: Blocked\n"
+                "nodes:\n"
+                "  A: Agent\n"
+                "config:\n"
+                '  A.model: [{"provider":"Anthropic","name":"claude-test"}]\n'
+            )
+        )
+        result = builder.build_flow()
+
+        assert result.data == {
+            "error": "The requested model provider is not available",
+            "text": "The requested model provider is not available",
+        }
+        assert _ensure_working_flow()["data"]["nodes"] == []
+
+    def test_configure_component_scalar_provider_override_is_policy_gated(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import ConfigureComponent, mutate_tools
+
+        flow = {
+            "name": "Wrapper",
+            "data": {
+                "nodes": [
+                    _node(
+                        "LanguageModel-1",
+                        "LanguageModel",
+                        {
+                            "model": {
+                                "type": "model",
+                                "value": [{"provider": "OpenAI", "name": "gpt-test"}],
+                            },
+                            "model_name": {"type": "str", "value": ""},
+                            "provider": {"type": "str", "value": ""},
+                        },
+                    )
+                ],
+                "edges": [],
+            },
+        }
+        init_working_flow(flow, "wrapper-flow")
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+
+        cfg = ConfigureComponent()
+        cfg.set(
+            component_id="LanguageModel-1",
+            params='{"provider": "Anthropic", "model_name": "claude-test"}',
+        )
+        result = cfg.configure_component()
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        template = get_working_flow()["data"]["nodes"][0]["data"]["node"]["template"]
+        assert template["provider"]["value"] == ""
+        assert template["model_name"]["value"] == ""
+
+    def test_configure_component_uses_existing_scalar_provider_for_policy(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import ConfigureComponent, mutate_tools
+
+        flow = {
+            "name": "Wrapper",
+            "data": {
+                "nodes": [
+                    _node(
+                        "EmbeddingModel-1",
+                        "EmbeddingModel",
+                        {
+                            "model": {
+                                "type": "model",
+                                "value": [{"provider": "OpenAI", "name": "text-embedding-test"}],
+                            },
+                            "model_name": {"type": "str", "value": "blocked-embedding"},
+                            "provider": {"type": "str", "value": "Anthropic"},
+                        },
+                    )
+                ],
+                "edges": [],
+            },
+        }
+        init_working_flow(flow, "wrapper-flow")
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+
+        cfg = ConfigureComponent()
+        cfg.set(component_id="EmbeddingModel-1", params='{"model_name": "still-blocked"}')
+        result = cfg.configure_component()
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        template = get_working_flow()["data"]["nodes"][0]["data"]["node"]["template"]
+        assert template["model_name"]["value"] == "blocked-embedding"
+
+    def test_configure_existing_standalone_provider_is_policy_gated(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import ConfigureComponent, mutate_tools
+
+        flow = {
+            "name": "Standalone",
+            "data": {
+                "nodes": [
+                    {
+                        "data": {
+                            "id": "OpenAIModel-1",
+                            "type": "OpenAIModel",
+                            "node": {
+                                "base_classes": ["LanguageModel"],
+                                "display_name": "OpenAI",
+                                "metadata": {"module": "lfx_openai.chat_models.OpenAIModel"},
+                                "template": {"temperature": {"type": "float", "value": 0.1}},
+                            },
+                        }
+                    }
+                ],
+                "edges": [],
+            },
+        }
+        init_working_flow(flow, "standalone-flow")
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+
+        cfg = ConfigureComponent()
+        cfg.set(component_id="OpenAIModel-1", params='{"temperature": 0.9}')
+        result = cfg.configure_component()
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        template = get_working_flow()["data"]["nodes"][0]["data"]["node"]["template"]
+        assert template["temperature"]["value"] == 0.1
+
+    def test_propose_field_edit_scalar_provider_override_is_policy_gated(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import (
+            ProposeFieldEdit,
+            drain_flow_events,
+            mutate_tools,
+            set_apply_edits_live,
+        )
+
+        flow = {
+            "name": "Wrapper",
+            "data": {
+                "nodes": [
+                    _node(
+                        "LanguageModel-1",
+                        "LanguageModel",
+                        {
+                            "model": {
+                                "type": "model",
+                                "value": [{"provider": "OpenAI", "name": "gpt-test"}],
+                            },
+                            "provider": {"type": "str", "value": ""},
+                        },
+                    )
+                ],
+                "edges": [],
+            },
+        }
+        init_working_flow(flow, "wrapper-flow")
+        set_apply_edits_live(enabled=True)
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+
+        edit = ProposeFieldEdit()
+        edit.set(component_id="LanguageModel-1", field_name="provider", new_value="Anthropic")
+        result = edit.propose_field_edit()
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        template = get_working_flow()["data"]["nodes"][0]["data"]["node"]["template"]
+        assert template["provider"]["value"] == ""
+        assert drain_flow_events() == []
+
+    def test_propose_field_edit_existing_standalone_provider_is_policy_gated(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import ProposeFieldEdit, drain_flow_events, mutate_tools
+
+        flow = {
+            "name": "Standalone",
+            "data": {
+                "nodes": [
+                    {
+                        "data": {
+                            "id": "OpenAIModel-1",
+                            "type": "OpenAIModel",
+                            "node": {
+                                "base_classes": ["LanguageModel"],
+                                "display_name": "OpenAI",
+                                "metadata": {"module": "lfx_openai.chat_models.OpenAIModel"},
+                                "template": {"temperature": {"type": "float", "value": 0.1}},
+                            },
+                        }
+                    }
+                ],
+                "edges": [],
+            },
+        }
+        init_working_flow(flow, "standalone-flow")
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+
+        edit = ProposeFieldEdit()
+        edit.set(component_id="OpenAIModel-1", field_name="temperature", new_value="0.9")
+        result = edit.propose_field_edit()
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        template = get_working_flow()["data"]["nodes"][0]["data"]["node"]["template"]
+        assert template["temperature"]["value"] == 0.1
+        assert drain_flow_events() == []
+
+    def test_build_flow_spec_scalar_provider_override_is_policy_gated(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import BuildFlowFromSpec, _ensure_working_flow, mutate_tools, run_tools
+
+        registry = {
+            "LanguageModel": {
+                "base_classes": ["LanguageModel"],
+                "display_name": "Language Model",
+                "model_provider_policy_mode": "delegate",
+                "module": "lfx.components.models_and_agents.language_model.LanguageModelComponent",
+                "template": {
+                    "model": {
+                        "type": "model",
+                        "value": [{"provider": "OpenAI", "name": "gpt-test"}],
+                    },
+                    "model_name": {"type": "str", "value": ""},
+                    "provider": {"type": "str", "value": ""},
+                },
+            }
+        }
+        monkeypatch.setattr(run_tools, "_load_registry_user_aware", lambda: registry)
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+        reset_working_flow()
+
+        builder = BuildFlowFromSpec()
+        builder.set(
+            spec=(
+                "name: Blocked Override\n"
+                "nodes:\n"
+                "  A: LanguageModel\n"
+                "config:\n"
+                "  A.provider: Anthropic\n"
+                "  A.model_name: claude-test\n"
+            )
+        )
+        result = builder.build_flow()
+
+        assert result.data == {
+            "error": "The requested model provider is not available",
+            "text": "The requested model provider is not available",
+        }
+        assert _ensure_working_flow()["data"]["nodes"] == []
+
+    def test_component_discovery_hides_denied_standalone_provider(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import (
+            DescribeComponentType,
+            SearchComponentTypes,
+            mutate_tools,
+            read_tools,
+        )
+        from lfx.mcp.tool_cache import reset_tool_cache
+
+        registry = {
+            "ChatInput": {
+                "base_classes": ["Message"],
+                "category": "inputs",
+                "display_name": "Chat Input",
+                "module": "lfx.components.inputs.chat.ChatInput",
+                "template": {},
+            },
+            "FakeEmbeddings": {
+                "base_classes": ["Embeddings"],
+                "category": "models",
+                "display_name": "Fake Embeddings",
+                "metadata": {"module": "lfx.components.langchain_utilities.fake_embeddings.FakeEmbeddingsComponent"},
+                "template": {
+                    "code": {
+                        "type": "code",
+                        "value": 'class FakeEmbeddings:\n    model_provider_policy_mode = "none"\n',
+                    }
+                },
+            },
+            "OpenAIModel": {
+                "base_classes": ["LanguageModel"],
+                "category": "models",
+                "display_name": "OpenAI",
+                "metadata": {"module": "lfx_openai.chat_models.OpenAIModel"},
+                "template": {},
+            },
+        }
+        monkeypatch.setattr(read_tools, "_load_registry_user_aware", lambda: registry)
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+        reset_tool_cache()
+
+        search = SearchComponentTypes()
+        search.set(query="")
+        results = search.search_components()
+        describe = DescribeComponentType()
+        describe.set(component_type="OpenAIModel")
+        description = describe.describe_component()
+
+        assert {result["type"] for result in results.data["results"]} == {"ChatInput", "FakeEmbeddings"}
+        assert description.data["error"].startswith("Unknown component: OpenAIModel")
+        reset_tool_cache()
 
 
 class TestConfigureComponentModelFieldSerializedSpec:
