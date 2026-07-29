@@ -113,7 +113,8 @@ To pin FastAPI in an environment where Langflow is already installed:
 uv pip install "fastapi<0.140"
 ```
 
-Langflow version 1.11.1 constrains FastAPI to `<0.140.0`, so a new install of Langflow version `>=1.11.1` does not require this pin.
+Langflow version 1.11.1 resolves a compatible FastAPI 0.140.x and `fastapi-pagination` 0.15.16 pair on a new install, so it does not require this pin.
+If you constrain these dependencies yourself, use `fastapi-pagination>=0.15.16` with `fastapi>=0.140.5`.
 
 ## Langflow Desktop installation issues
 
