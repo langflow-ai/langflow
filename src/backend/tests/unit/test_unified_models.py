@@ -1005,6 +1005,70 @@ def test_handle_model_input_update_openai_keeps_api_key_visible():
     assert result["api_key"]["show"] is True, "api_key must stay visible for OpenAI"
 
 
+@pytest.mark.parametrize(
+    "provider_override",
+    [
+        {"value": "RUNTIME_PROVIDER", "load_from_db": True},
+        {"value": "IBM WatsonX", "load_from_db": False},
+    ],
+)
+def test_handle_model_input_update_provider_override_keeps_api_key_empty(provider_override):
+    """Provider Override must not inherit the selected model's global API key."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=selected_model),
+        "provider": provider_override,
+        "api_key": {
+            "show": False,
+            "required": False,
+            "value": "",
+            "load_from_db": False,
+            "_input_type": "SecretStrInput",
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value=selected_model,
+        field_name="model",
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+
+    assert result["api_key"]["show"] is True
+    assert result["api_key"]["value"] == ""
+    assert result["api_key"]["load_from_db"] is False
+
+
+def test_handle_model_input_update_provider_override_preserves_raw_api_key():
+    """A deliberate component API key remains an override when Provider Override is set."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=selected_model),
+        "provider": {"value": "IBM WatsonX", "load_from_db": False},
+        "api_key": {
+            "show": False,
+            "required": False,
+            "value": "explicit-api-key",
+            "load_from_db": False,
+            "_input_type": "SecretStrInput",
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value=selected_model,
+        field_name="model",
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+
+    assert result["api_key"]["value"] == "explicit-api-key"
+    assert result["api_key"]["load_from_db"] is False
+
+
 def test_handle_model_input_update_uses_language_model_options_by_default():
     """When no get_options_func is provided, get_language_model_options is used."""
     component = _make_mock_component()

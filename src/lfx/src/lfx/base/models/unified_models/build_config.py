@@ -587,6 +587,16 @@ def handle_model_input_update(
             if "input_text" in build_config:
                 build_config["input_text"]["show"] = is_watsonx
 
+    # Provider Override can resolve to a different provider at runtime, so a
+    # global API key inferred from the statically selected model is unsafe.
+    # Keep deliberately entered component credentials, but let global-variable
+    # backed keys fall through to the overridden provider's configured key.
+    provider_override = build_config.get("provider", {})
+    api_key_config = build_config.get("api_key", {})
+    if provider_override.get("value") and api_key_config.get("load_from_db"):
+        api_key_config["value"] = ""
+        api_key_config["load_from_db"] = False
+
     # Hide and clear the API key field when the selected provider doesn't use one
     # (e.g. Ollama). ``apply_provider_variable_config_to_build_config`` already
     # sets ``show=True`` for providers whose metadata maps a variable to the
