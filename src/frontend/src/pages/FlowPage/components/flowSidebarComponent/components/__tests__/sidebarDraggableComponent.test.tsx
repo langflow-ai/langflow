@@ -474,13 +474,15 @@ describe("SidebarDraggableComponent", () => {
       );
     });
 
-    it("should call addComponent when Enter key is pressed", () => {
+    it("should call addComponent when Enter key is pressed on the add button", async () => {
+      const user = userEvent.setup();
       render(<SidebarDraggableComponent {...defaultProps} />);
 
-      const container = screen.getByTestId(
-        "testsection_test component_draggable",
+      const addButton = screen.getByTestId(
+        "add-component-button-test-component",
       );
-      fireEvent.keyDown(container, { key: "Enter" });
+      addButton.focus();
+      await user.keyboard("{Enter}");
 
       expect(mockAddComponentFn).toHaveBeenCalledWith(
         mockAPIClass,
@@ -488,13 +490,15 @@ describe("SidebarDraggableComponent", () => {
       );
     });
 
-    it("should call addComponent when Space key is pressed", () => {
+    it("should call addComponent when Space key is pressed on the add button", async () => {
+      const user = userEvent.setup();
       render(<SidebarDraggableComponent {...defaultProps} />);
 
-      const container = screen.getByTestId(
-        "testsection_test component_draggable",
+      const addButton = screen.getByTestId(
+        "add-component-button-test-component",
       );
-      fireEvent.keyDown(container, { key: " " });
+      addButton.focus();
+      await user.keyboard(" ");
 
       expect(mockAddComponentFn).toHaveBeenCalledWith(
         mockAPIClass,
@@ -502,13 +506,15 @@ describe("SidebarDraggableComponent", () => {
       );
     });
 
-    it("should not call addComponent for other keys", () => {
+    it("should not call addComponent for other keys", async () => {
+      const user = userEvent.setup();
       render(<SidebarDraggableComponent {...defaultProps} />);
 
-      const container = screen.getByTestId(
-        "testsection_test component_draggable",
+      const addButton = screen.getByTestId(
+        "add-component-button-test-component",
       );
-      fireEvent.keyDown(container, { key: "Escape" });
+      addButton.focus();
+      await user.keyboard("{Escape}");
 
       expect(mockAddComponentFn).not.toHaveBeenCalled();
     });
@@ -562,22 +568,39 @@ describe("SidebarDraggableComponent", () => {
       expect(draggableDiv).toHaveStyle({ borderLeftColor: "#FF0000" });
     });
 
-    it("should have correct tabIndex", () => {
+    it("should not expose widget semantics on the draggable container", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
       const container = screen.getByTestId(
         "testsection_test component_draggable",
       );
-      expect(container).toHaveAttribute("tabIndex", "0");
+      expect(container).not.toHaveAttribute("role");
+      expect(container).not.toHaveAttribute("tabIndex");
+      expect(container).not.toHaveAttribute("aria-label");
     });
 
-    it("should have add button with tabIndex -1", () => {
+    it("should expose the accessible name on the add button only", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
       const addButton = screen.getByTestId(
         "add-component-button-test-component",
       );
-      expect(addButton).toHaveAttribute("tabIndex", "-1");
+      expect(addButton).toHaveAttribute(
+        "aria-label",
+        "Add Test Component to canvas",
+      );
+      expect(
+        screen.getAllByLabelText("Add Test Component to canvas"),
+      ).toHaveLength(1);
+    });
+
+    it("should keep the add button keyboard-focusable", () => {
+      render(<SidebarDraggableComponent {...defaultProps} />);
+
+      const addButton = screen.getByTestId(
+        "add-component-button-test-component",
+      );
+      expect(addButton).not.toHaveAttribute("tabIndex");
     });
 
     it("should have select trigger with tabIndex -1", () => {
