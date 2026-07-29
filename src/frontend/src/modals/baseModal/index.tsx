@@ -242,6 +242,7 @@ interface BaseModalProps {
   onSubmit?: () => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
   onOpenAutoFocus?: (e: Event) => void;
+  onCloseAutoFocus?: (e: Event) => void;
   closeButtonClassName?: string;
   dialogContentWithouFixed?: boolean;
   height?: string;
@@ -260,6 +261,7 @@ function BaseModal({
   onSubmit,
   onEscapeKeyDown,
   onOpenAutoFocus,
+  onCloseAutoFocus,
   closeButtonClassName,
   dialogContentWithouFixed = false,
   height: customHeight,
@@ -348,6 +350,7 @@ function BaseModal({
               onClick={(e) => e.stopPropagation()}
               onEscapeKeyDown={onEscapeKeyDown}
               onOpenAutoFocus={onOpenAutoFocus}
+              onCloseAutoFocus={onCloseAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
               style={customHeight || customWidth ? customStyle : undefined}
@@ -373,6 +376,7 @@ function BaseModal({
               onClick={(e) => e.stopPropagation()}
               onEscapeKeyDown={onEscapeKeyDown}
               onOpenAutoFocus={onOpenAutoFocus}
+              onCloseAutoFocus={onCloseAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
               style={customHeight || customWidth ? customStyle : undefined}
