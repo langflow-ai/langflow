@@ -6,7 +6,7 @@ import contextlib
 import json
 import os
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from lfx.log.logger import logger
@@ -23,6 +23,9 @@ from .provider_queries import (
     get_provider_all_variables,
     get_provider_secret_variable_key,
 )
+
+if TYPE_CHECKING:
+    from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
 
 MODEL_STATUS_KEY_SEPARATOR = "::"
 MODEL_STATUS_TYPES = ("llm", "embeddings")
@@ -410,8 +413,12 @@ async def _get_model_status(user_id: UUID | str) -> tuple[set[str], set[str]]:
         return disabled, enabled
 
 
-async def _fetch_enabled_providers_for_user(user_id: UUID | str) -> set[str]:
-    """Shared helper for get_language_model_options and get_embedding_model_options."""
+async def _fetch_enabled_providers_for_user(
+    user_id: UUID | str,
+    *,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
+) -> set[str]:
+    """Return credential-enabled providers within one resolved policy snapshot."""
     async with session_scope() as session:
         variable_service = get_variable_service()
         if variable_service is None:
@@ -430,14 +437,15 @@ async def _fetch_enabled_providers_for_user(user_id: UUID | str) -> set[str]:
         all_var_names = {var.name for var in all_vars}
 
         provider_variable_map = get_model_provider_variable_mapping()
-        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
-
         providers = get_model_providers()
-        provider_policy = resolve_model_provider_policy(
-            user_id=user_id,
-            providers=providers,
-            purpose=ModelProviderPolicyPurpose.USE,
-        )
+        if provider_policy is None:
+            from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+            provider_policy = resolve_model_provider_policy(
+                user_id=user_id,
+                providers=providers,
+                purpose=ModelProviderPolicyPurpose.USE,
+            )
         from lfx.base.models.provider_registry import is_api_key_optional
 
         provider_candidates = {
