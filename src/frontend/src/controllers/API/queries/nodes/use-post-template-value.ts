@@ -54,6 +54,9 @@ export const usePostTemplateValue: useMutationFunctionType<
 
     if (!template) return;
 
+    // LE-2045: a grouped node proxies its fields and has no code to recompile.
+    if (!template.code) return undefined;
+
     const allowCustomComponents =
       useUtilityStore.getState().allowCustomComponents;
 
