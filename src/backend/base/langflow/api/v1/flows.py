@@ -4,6 +4,7 @@ import asyncio
 import io
 import threading
 import zipfile
+from collections.abc import Collection
 from typing import Annotated
 from uuid import UUID
 
@@ -49,7 +50,7 @@ from langflow.api.v1.flows_helpers import (
 from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
-from langflow.services.auth.utils import get_current_active_user
+from langflow.services.auth.utils import get_current_active_user, get_optional_user
 from langflow.services.authorization import (
     FlowAction,
     ensure_flow_permission,
@@ -78,7 +79,8 @@ from langflow.services.database.models.flow.model import (
 # and FlowVersionError from the flow_version modules.
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_catalog_policy_service, get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.utils.compression import compress_response
 from langflow.utils.i18n import translate_flow_notes, translate_starter_flows
@@ -906,26 +908,60 @@ _starter_flows_translated_cache: ThreadingInMemoryCache[threading.RLock] = Threa
 _starter_flows_lock = asyncio.Lock()
 
 
+def _filter_basic_examples_by_catalog_policy(
+    flows: list[FlowRead],
+    *,
+    blocked_template_keys: Collection[str],
+) -> list[FlowRead]:
+    """Return a request-local view without exact blocked template keys."""
+    return [flow for flow in flows if flow.name_key not in blocked_template_keys]
+
+
 @router.get("/basic_examples/", response_model=list[FlowRead], status_code=200)
 async def read_basic_examples(
     *,
     session: DbSession,
     request: Request,
+    user: Annotated[User | None, Depends(get_optional_user)],
+    include_blocked: bool = False,
 ):
     """Retrieve a list of basic example flows."""
+    if include_blocked and (user is None or not user.is_superuser):
+        raise HTTPException(
+            status_code=403,
+            detail="Only superusers can include blocked catalog templates.",
+        )
+
+    catalog_policy_snapshot = get_catalog_policy_service().snapshot
     locale = getattr(request.state, "locale", "en")
     translated_cache_key = f"starter_flows_{locale}"
 
     # Fast path: translated result already cached for this locale
     cached_translated = _starter_flows_translated_cache.get(translated_cache_key)
     if cached_translated is not CACHE_MISS:
-        return compress_response(cached_translated)
+        visible_flows = (
+            cached_translated
+            if include_blocked
+            else _filter_basic_examples_by_catalog_policy(
+                cached_translated,
+                blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
+            )
+        )
+        return compress_response(visible_flows)
 
     async with _starter_flows_lock:
         # Double-check inside lock to prevent thundering herd
         cached_translated = _starter_flows_translated_cache.get(translated_cache_key)
         if cached_translated is not CACHE_MISS:
-            return compress_response(cached_translated)
+            visible_flows = (
+                cached_translated
+                if include_blocked
+                else _filter_basic_examples_by_catalog_policy(
+                    cached_translated,
+                    blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
+                )
+            )
+            return compress_response(visible_flows)
 
         # Ensure raw DB data is cached
         cached_flow_reads = _starter_flows_cache.get("starter_flows")
@@ -967,7 +1003,15 @@ async def read_basic_examples(
 
         _starter_flows_translated_cache.set(translated_cache_key, result)
 
-    return compress_response(result)
+    visible_flows = (
+        result
+        if include_blocked
+        else _filter_basic_examples_by_catalog_policy(
+            result,
+            blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
+        )
+    )
+    return compress_response(visible_flows)
 
 
 @router.post("/expand/", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)
