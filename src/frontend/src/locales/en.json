@@ -2261,6 +2261,7 @@
   "shortcuts.key.shift": "Shift",
   "shortcuts.key.option": "Option",
   "chat.messagesRegionLabel": "Chat messages",
+  "chat.responseComplete": "Response complete",
   "listSelection.dialogTitle": "Select an option",
   "listSelection.searchAriaLabel": "Search list",
   "imageViewer.zoomIn": "Zoom in",

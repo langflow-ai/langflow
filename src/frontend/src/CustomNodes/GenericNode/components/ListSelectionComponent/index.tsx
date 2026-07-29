@@ -11,17 +11,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog-with-no-close";
 import { Input } from "@/components/ui/input";
-import { cn, testIdCase } from "@/utils/utils";
+import { testIdCase } from "@/utils/utils";
 import ListItem from "./ListItem";
 
 // Update interface with better types
 interface ListSelectionComponentProps {
   open: boolean;
   onClose: () => void;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped external options
   options: any[];
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped external options
   setSelectedList: (action: any[]) => void;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped external options
   selectedList: any[];
   searchCategories?: string[];
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped external options
   onSelection?: (action: any) => void;
   limit?: number;
   headerSearchPlaceholder?: string;
@@ -42,10 +46,12 @@ const ListSelectionComponent = ({
   addButtonText,
   onAddButtonClick,
   ...baseInputProps
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped input value
 }: InputProps<any, ListSelectionComponentProps>) => {
   const { t } = useTranslation();
   const { nodeClass } = baseInputProps;
   const [search, setSearch] = useState("");
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped external options
   const [hoveredItem, setHoveredItem] = useState<any | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [isKeyboardNavActive, setIsKeyboardNavActive] = useState(false);
@@ -62,6 +68,7 @@ const ListSelectionComponent = ({
   }, [options, search]);
 
   const handleSelectAction = useCallback(
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped external options
     (action: any) => {
       if (limit !== 1) {
         // Multiple selection mode

@@ -2262,6 +2262,7 @@
   "shortcuts.key.shift": "Shift 键",
   "shortcuts.key.option": "Option 键",
   "chat.messagesRegionLabel": "聊天消息",
+  "chat.responseComplete": "回复已完成",
   "listSelection.dialogTitle": "选择一个选项",
   "listSelection.searchAriaLabel": "搜索列表",
   "imageViewer.zoomIn": "放大",

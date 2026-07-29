@@ -2262,6 +2262,7 @@
   "shortcuts.key.shift": "シフト",
   "shortcuts.key.option": "オプション",
   "chat.messagesRegionLabel": "チャットメッセージ",
+  "chat.responseComplete": "応答が完了しました",
   "listSelection.dialogTitle": "オプションを選択",
   "listSelection.searchAriaLabel": "リストを検索",
   "imageViewer.zoomIn": "拡大",

@@ -2262,6 +2262,7 @@
   "shortcuts.key.shift": "Umschalt",
   "shortcuts.key.option": "Wahltaste",
   "chat.messagesRegionLabel": "Chat-Nachrichten",
+  "chat.responseComplete": "Antwort abgeschlossen",
   "listSelection.dialogTitle": "Option auswählen",
   "listSelection.searchAriaLabel": "Liste durchsuchen",
   "imageViewer.zoomIn": "Vergrößern",

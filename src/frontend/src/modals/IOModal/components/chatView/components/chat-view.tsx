@@ -119,17 +119,16 @@ export default function ChatView({
 
   // Assistant text streams in by mutating the last message, so a live region
   // over the list would re-announce on every token. The list only announces
-  // additions (and is aria-busy while building); the finished response is
-  // pushed once into this separate status region when the build settles.
-  const [completedAnnouncement, setCompletedAnnouncement] = useState("");
+  // additions (and is aria-busy while building); this separate status region
+  // announces a short "done" cue when the build settles, so the response body
+  // is never duplicated into the DOM.
+  const [completedCount, setCompletedCount] = useState(0);
   const wasBuildingRef = useRef(isBuilding);
   useEffect(() => {
     if (wasBuildingRef.current && !isBuilding) {
       const lastMessage = chatHistory?.[chatHistory.length - 1];
       if (lastMessage && !lastMessage.isSend) {
-        setCompletedAnnouncement(
-          typeof lastMessage.message === "string" ? lastMessage.message : "",
-        );
+        setCompletedCount((count) => count + 1);
       }
     }
     wasBuildingRef.current = isBuilding;
@@ -255,7 +254,11 @@ export default function ChatView({
         </div>
       </StickToBottom.Content>
       <div role="status" aria-live="polite" className="sr-only">
-        {completedAnnouncement}
+        {completedCount > 0 && (
+          // Keyed so an identical announcement still replaces the region's
+          // content and gets re-announced on every completed response.
+          <span key={completedCount}>{t("chat.responseComplete")}</span>
+        )}
       </div>
       <SafariScrollFix />
 
