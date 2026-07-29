@@ -7,6 +7,8 @@
   "account.github": "GitHub",
   "account.latest": "(última versión)",
   "account.logout": "Fin de sesión",
+  "sidebar.componentsPanel": "Barra lateral de componentes",
+  "sidebar.addComponentToCanvas": "Agregar {{name}} al lienzo",
   "account.settings": "Valores",
   "account.theme": "Tema",
   "account.twitter": "X",
@@ -915,6 +917,8 @@
   "flow.restoreVersion": "Restaurar esta versión de tu flujo",
   "flow.runTimestampPrefix": "Última carrera: ",
   "flow.saveAndExit": "Guardar y salir",
+  "flow.canvasLabel": "Lienzo del flujo",
+  "flow.nodeAriaLabel": "Nodo {{name}}",
   "flow.saveChanges": "Guardar cambios",
   "flow.saveVersion": "Guarda una versión de tu flujo",
   "flow.savedHover": "Última vez guardado: ",
@@ -2258,7 +2262,6 @@
   "knowledge.chunksMetadataKeyLabel": "Clave de filtro de metadatos",
   "knowledge.chunksMetadataValueLabel": "Valor de filtro de metadatos",
   "input.expandTextEditor": "Ampliar el editor de texto",
-  "sidebar.addComponentToCanvas": "Añadir « {{name}} » al lienzo",
   "sidebar.showBetaComponents": "Mostrar componentes beta",
   "sidebar.showLegacyComponents": "Mostrar componentes heredados"
 }

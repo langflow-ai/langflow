@@ -7,6 +7,8 @@
   "account.github": "GitHub",
   "account.latest": "(aktuell)",
   "account.logout": "Abmelden",
+  "sidebar.componentsPanel": "Komponenten-Seitenleiste",
+  "sidebar.addComponentToCanvas": "{{name}} zur Arbeitsfläche hinzufügen",
   "account.settings": "Einstellungen",
   "account.theme": "Motiv",
   "account.twitter": "X",
@@ -915,6 +917,8 @@
   "flow.restoreVersion": "Diese Version Ihres Ablaufs wiederherstellen",
   "flow.runTimestampPrefix": "Letzter Lauf: ",
   "flow.saveAndExit": "Speichern und beenden",
+  "flow.canvasLabel": "Flow-Arbeitsfläche",
+  "flow.nodeAriaLabel": "Knoten {{name}}",
   "flow.saveChanges": "Änderungen speichern",
   "flow.saveVersion": "Speichere eine Version deines Ablaufs",
   "flow.savedHover": "Zuletzt gespeichert: ",
@@ -2258,7 +2262,6 @@
   "knowledge.chunksMetadataKeyLabel": "Metadaten-Filterschlüssel",
   "knowledge.chunksMetadataValueLabel": "Metadaten-Filterwert",
   "input.expandTextEditor": "Texteditor erweitern",
-  "sidebar.addComponentToCanvas": "„ {{name}} “ zur Leinwand hinzufügen",
   "sidebar.showBetaComponents": "Beta-Komponenten anzeigen",
   "sidebar.showLegacyComponents": "Legacy-Komponenten anzeigen"
 }
