@@ -98,9 +98,11 @@ def import_all_services_into_a_dict():
     # Import settings and auth bases from lfx (used in type hints but not langflow Service subclasses)
     from lfx.services.auth.base import BaseAuthService
     from lfx.services.authorization.base import BaseAuthorizationService
+    from lfx.services.catalog_policy.base import BaseCatalogPolicyService
     from lfx.services.settings.service import SettingsService
 
     services["BaseAuthService"] = BaseAuthService
     services["BaseAuthorizationService"] = BaseAuthorizationService
+    services["BaseCatalogPolicyService"] = BaseCatalogPolicyService
     services["SettingsService"] = SettingsService
     return services

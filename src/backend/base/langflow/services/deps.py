@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 # dependency functions that FastAPI evaluates at module load time.
 from lfx.services.auth.base import BaseAuthService  # noqa: TC002
 from lfx.services.authorization.base import BaseAuthorizationService  # noqa: TC002
+from lfx.services.catalog_policy.base import BaseCatalogPolicyService  # noqa: TC002
 from lfx.services.settings.service import SettingsService  # noqa: TC002
 
 from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
@@ -260,6 +261,13 @@ def get_authorization_service() -> BaseAuthorizationService:
     from langflow.services.authorization.factory import AuthorizationServiceFactory
 
     return get_service(ServiceType.AUTHORIZATION_SERVICE, AuthorizationServiceFactory())
+
+
+def get_catalog_policy_service() -> BaseCatalogPolicyService:
+    """Retrieve catalog policy through LFX's validated fail-open dependency."""
+    from lfx.services.deps import get_catalog_policy_service as get_lfx_catalog_policy_service
+
+    return get_lfx_catalog_policy_service()
 
 
 def get_job_service():
