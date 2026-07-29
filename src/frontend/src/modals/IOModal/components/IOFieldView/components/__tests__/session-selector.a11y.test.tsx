@@ -74,6 +74,37 @@ describe("SessionSelector accessibility", () => {
     expect(results).toHaveNoViolations();
   });
 
+  // Regression guard: the row used to be a plain <div onClick> with no
+  // tabIndex/role/keyboard handler, so Tab skipped it entirely and there
+  // was no way to select a session without a mouse (WCAG 2.1.1).
+  it("is reachable via Tab and selects the session on Enter", async () => {
+    const user = userEvent.setup();
+    const toggleVisibility = jest.fn();
+    render(
+      <TooltipProvider>
+        <SessionSelector
+          session="session-1"
+          toggleVisibility={toggleVisibility}
+          isVisible={false}
+          inspectSession={jest.fn()}
+          updateVisibleSession={jest.fn()}
+          setSelectedView={jest.fn()}
+          playgroundPage={false}
+          setActiveSession={jest.fn()}
+          deleteSession={jest.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    const row = screen.getByTestId("session-selector");
+    await user.tab();
+
+    expect(row.querySelector('[role="button"][tabindex="0"]')).toHaveFocus();
+
+    await user.keyboard("{Enter}");
+    expect(toggleVisibility).toHaveBeenCalledTimes(1);
+  });
+
   it("names the row's options trigger as a combobox", () => {
     renderSessionSelector();
 

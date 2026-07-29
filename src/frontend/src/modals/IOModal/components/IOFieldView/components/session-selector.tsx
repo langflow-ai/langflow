@@ -142,7 +142,20 @@ export default function SessionSelector({
       )}
     >
       <div className="flex w-full items-center justify-between overflow-hidden px-2 py-1 align-middle">
-        <div className="flex w-full min-w-0 items-center">
+        <div
+          className="flex w-full min-w-0 items-center"
+          role={isEditing ? undefined : "button"}
+          tabIndex={isEditing ? undefined : 0}
+          aria-pressed={isEditing ? undefined : isVisible}
+          onKeyDown={(e) => {
+            if (isEditing || e.target !== e.currentTarget) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setNewSessionCloseVoiceAssistant(true);
+              toggleVisibility();
+            }
+          }}
+        >
           {isEditing ? (
             <div className="flex items-center">
               <Input
@@ -217,7 +230,9 @@ export default function SessionSelector({
               aria-label={t("chat.options")}
               className={cn(
                 "h-8 w-fit border-none bg-transparent p-2 focus:ring-0",
-                isVisible ? "visible" : "invisible group-hover:visible",
+                isVisible
+                  ? "opacity-100"
+                  : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
               )}
             >
               <IconComponent
