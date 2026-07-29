@@ -112,14 +112,10 @@
       "requiredData": "Flow ID"
     },
     {
-      "template": "/flow/:id/view",
-      "surface": "Flow view page",
-      "requiredData": "Flow ID"
-    },
-    {
       "template": "/playground/:id/",
       "surface": "Shared playground page",
-      "requiredData": "Shared flow/playground ID"
+      "requiredData": "Shared flow/playground ID (flow must have access_type PUBLIC)",
+      "coveredBy": "src/frontend/tests/a11y/shared-playground.a11y.spec.ts"
     },
     {
       "template": "/assets/knowledge-bases/:sourceId/chunks",

@@ -42,18 +42,21 @@ import HandleRenderComponent from "../handleRenderComponent";
 import OutputComponent from "../OutputComponent";
 import OutputModal from "../outputModal";
 
-const _EyeIcon = memo(
-  ({ hidden, className }: { hidden: boolean; className: string }) => (
-    <IconComponent
-      className={className}
-      strokeWidth={ICON_STROKE_WIDTH}
-      name={hidden ? "EyeOff" : "Eye"}
-    />
-  ),
-);
 const SnowflakeIcon = memo(() => (
   <IconComponent className="!w-3 !h-3 text-ice" name="Snowflake" />
 ));
+
+type InspectButtonProps = {
+  disabled: boolean | undefined;
+  displayOutputPreview: boolean;
+  unknownOutput: boolean | undefined;
+  errorOutput: boolean;
+  isToolMode: boolean;
+  title: string;
+  onClick: () => void;
+  id: string;
+  ariaLabel: string;
+};
 
 const InspectButton = memo(
   forwardRef(
@@ -67,22 +70,15 @@ const InspectButton = memo(
         title,
         onClick,
         id,
-      }: {
-        disabled: boolean | undefined;
-        displayOutputPreview: boolean;
-        unknownOutput: boolean | undefined;
-        errorOutput: boolean;
-        isToolMode: boolean;
-        title: string;
-        onClick: () => void;
-        id: string;
-      },
+        ariaLabel,
+      }: InspectButtonProps,
       ref: React.ForwardedRef<HTMLButtonElement>,
     ) => (
       <Button
         ref={ref}
         disabled={disabled}
         data-testid={`output-inspection-${title.toLowerCase()}-${classNameFromType(id).toLowerCase()}`}
+        aria-label={ariaLabel}
         unstyled
         onClick={onClick}
       >
@@ -106,6 +102,8 @@ const InspectButton = memo(
   ),
 );
 InspectButton.displayName = "InspectButton";
+
+export { InspectButton };
 
 const MemoizedOutputComponent = memo(OutputComponent);
 
@@ -467,6 +465,13 @@ function NodeOutputField({
                   title={title}
                   onClick={() => {}}
                   id={data?.type}
+                  ariaLabel={
+                    displayOutputPreview
+                      ? unknownOutput || emptyOutput
+                        ? t("node.outputCantBeDisplayed")
+                        : t("node.inspectOutput")
+                      : t("node.buildComponentFirst")
+                  }
                 />
               </OutputModal>
               {looping && (
