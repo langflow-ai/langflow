@@ -1044,7 +1044,7 @@ def test_handle_model_input_update_provider_override_keeps_api_key_empty(provide
 def test_handle_model_input_update_provider_override_preserves_raw_api_key():
     """A deliberate component API key remains an override when Provider Override is set."""
     component = _make_mock_component()
-    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+    selected_model = [{"name": "llama3", "provider": "Ollama", "metadata": {}}]
     build_config = {
         "model": _make_model_field(value=selected_model),
         "provider": {"value": "IBM WatsonX", "load_from_db": False},

@@ -593,7 +593,8 @@ def handle_model_input_update(
     # backed keys fall through to the overridden provider's configured key.
     provider_override = build_config.get("provider", {})
     api_key_config = build_config.get("api_key", {})
-    if provider_override.get("value") and api_key_config.get("load_from_db"):
+    has_provider_override = bool(provider_override.get("value"))
+    if has_provider_override and api_key_config.get("load_from_db"):
         api_key_config["value"] = ""
         api_key_config["load_from_db"] = False
 
@@ -602,8 +603,13 @@ def handle_model_input_update(
     # sets ``show=True`` for providers whose metadata maps a variable to the
     # ``api_key`` field; if it wasn't shown, the provider has no api_key
     # variable and the previous provider's credential must not leak across
-    # the switch.
-    if "api_key" in build_config and not build_config["api_key"].get("show", False):
+    # the switch. A raw component key with Provider Override is different: it
+    # belongs to the effective runtime provider and must survive even if the
+    # statically selected provider (such as Ollama) hides this field.
+    preserve_explicit_override_key = (
+        has_provider_override and bool(api_key_config.get("value")) and not api_key_config.get("load_from_db")
+    )
+    if "api_key" in build_config and not api_key_config.get("show", False) and not preserve_explicit_override_key:
         build_config["api_key"]["value"] = ""
         build_config["api_key"]["load_from_db"] = False
 
