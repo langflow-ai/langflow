@@ -7800,7 +7800,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.12.0"
+version = "1.12.0.dev9"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-core" },
@@ -7991,7 +7991,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.12.0"
+version = "1.12.0.dev9"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "a2a-sdk" },
@@ -8781,7 +8781,7 @@ dev = [
 
 [[package]]
 name = "langflow-core"
-version = "1.12.0"
+version = "1.12.0.dev9"
 source = { editable = "src/langflow-core" }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
@@ -8805,7 +8805,7 @@ provides-extras = ["audio", "postgresql"]
 
 [[package]]
 name = "langflow-sdk"
-version = "0.4.0"
+version = "0.4.0.dev9"
 source = { editable = "src/sdk" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
@@ -9079,7 +9079,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "1.12.0"
+version = "1.12.0.dev9"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "a2wsgi", marker = "sys_platform != 'win32'" },
