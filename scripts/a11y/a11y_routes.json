@@ -103,12 +103,6 @@
       "path": "/settings/messages",
       "surface": "Messages settings page",
       "ready": [{ "testId": "settings_menu_header" }]
-    },
-    {
-      "id": "settings-store",
-      "path": "/settings/store",
-      "surface": "Store API key settings page",
-      "ready": [{ "testId": "settings_menu_header" }]
     }
   ],
   "dynamic": [
@@ -153,16 +147,6 @@
       "path": "/login/admin",
       "surface": "Admin login page",
       "currentBehavior": "Redirects to /flows while authenticated. Scan in logged-out/no-auto-login mode."
-    },
-    {
-      "path": "/store",
-      "surface": "Store page",
-      "currentBehavior": "Redirects to /all when store guard blocks access. Scan only when store is available."
-    },
-    {
-      "path": "/store/:id/",
-      "surface": "Store detail page",
-      "currentBehavior": "Requires store access and store item ID."
     }
   ],
   "excluded": [
