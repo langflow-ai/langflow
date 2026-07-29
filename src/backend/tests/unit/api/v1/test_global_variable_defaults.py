@@ -109,28 +109,6 @@ class TestBuildUnavailableFieldsMap:
 class TestApplyUnavailableFieldsToGraph:
     """Tests for apply_unavailable_fields_to_graph (pure transformer)."""
 
-    def test_unified_model_api_key_honors_custom_default_binding(self) -> None:
-        """Custom Apply-to-Fields mappings remain predictable for unified-model API key inputs."""
-        node = _make_node(
-            "unified-model-1",
-            {
-                "model": _make_field(
-                    display_name="Model",
-                    field_type="model",
-                    value=[],
-                    _input_type="ModelInput",
-                ),
-                "api_key": _make_field(display_name="API Key"),
-            },
-        )
-        graph_data = {"nodes": [node], "edges": []}
-
-        result = apply_unavailable_fields_to_graph(graph_data, {"API Key": "MY_RUNTIME_KEY"})
-
-        field = result["nodes"][0]["data"]["node"]["template"]["api_key"]
-        assert field["value"] == "MY_RUNTIME_KEY"
-        assert field["load_from_db"] is True
-
     def test_empty_field_with_matching_display_name_is_bound(self) -> None:
         graph_data = {
             "nodes": [

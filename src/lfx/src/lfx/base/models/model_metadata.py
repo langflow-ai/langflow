@@ -305,7 +305,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         "max_tokens_field_name": "max_tokens",
         "variables": [
             {
-                "variable_name": "IBM WatsonX API Key",
+                "variable_name": "API Key",
                 "variable_key": "WATSONX_APIKEY",
                 "required": True,
                 "is_secret": True,

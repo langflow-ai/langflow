@@ -980,7 +980,7 @@ def test_handle_model_input_update_ollama_hides_and_clears_api_key():
 
 
 def test_handle_model_input_update_openai_keeps_api_key_visible():
-    """Providers that map api_key keep it visible without pre-selecting a credential."""
+    """Providers that map a variable to api_key keep an empty field empty."""
     component = _make_mock_component()
     selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
     build_config = {
@@ -1005,212 +1005,6 @@ def test_handle_model_input_update_openai_keeps_api_key_visible():
     assert result["api_key"]["show"] is True, "api_key must stay visible for OpenAI"
     assert result["api_key"]["value"] == ""
     assert result["api_key"]["load_from_db"] is False
-
-
-@pytest.mark.parametrize(
-    "provider_override",
-    [
-        {"value": "RUNTIME_PROVIDER", "load_from_db": True},
-        {"value": "IBM WatsonX", "load_from_db": False},
-    ],
-)
-def test_handle_model_input_update_provider_override_keeps_api_key_empty(provider_override):
-    """Provider Override must not inherit the selected model's global API key."""
-    component = _make_mock_component()
-    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
-    build_config = {
-        "model": _make_model_field(value=selected_model),
-        "provider": provider_override,
-        "api_key": {
-            "show": False,
-            "required": False,
-            "value": "",
-            "load_from_db": False,
-            "_input_type": "SecretStrInput",
-        },
-    }
-
-    result = handle_model_input_update(
-        component,
-        build_config,
-        field_value=selected_model,
-        field_name="model",
-        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
-    )
-
-    assert result["api_key"]["show"] is True
-    assert result["api_key"]["value"] == ""
-    assert result["api_key"]["load_from_db"] is False
-
-
-def test_handle_model_input_update_provider_override_preserves_raw_api_key():
-    """A deliberate component API key remains an override when Provider Override is set."""
-    component = _make_mock_component()
-    selected_model = [{"name": "llama3", "provider": "Ollama", "metadata": {}}]
-    build_config = {
-        "model": _make_model_field(value=selected_model),
-        "provider": {"value": "IBM WatsonX", "load_from_db": False},
-        "api_key": {
-            "show": False,
-            "required": False,
-            "value": "explicit-api-key",
-            "load_from_db": False,
-            "_input_type": "SecretStrInput",
-        },
-    }
-
-    result = handle_model_input_update(
-        component,
-        build_config,
-        field_value=selected_model,
-        field_name="model",
-        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
-    )
-
-    assert result["api_key"]["value"] == "explicit-api-key"
-    assert result["api_key"]["load_from_db"] is False
-    assert result["api_key"]["show"] is True
-
-
-@pytest.mark.parametrize("api_key", ["ANTHROPIC_API_KEY", "MY_RUNTIME_KEY"])
-def test_handle_model_input_update_provider_override_preserves_explicit_global_api_key(api_key):
-    """A matching canonical or custom global key survives static-provider refreshes."""
-    component = _make_mock_component()
-    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
-    build_config = {
-        "model": _make_model_field(value=selected_model),
-        "provider": {"value": "Anthropic", "load_from_db": False},
-        "api_key": {
-            "show": False,
-            "required": False,
-            "value": api_key,
-            "load_from_db": True,
-            "_input_type": "SecretStrInput",
-        },
-    }
-
-    result = handle_model_input_update(
-        component,
-        build_config,
-        field_value=selected_model,
-        field_name="model",
-        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
-    )
-
-    assert result["api_key"]["show"] is True
-    assert result["api_key"]["value"] == api_key
-    assert result["api_key"]["load_from_db"] is True
-
-
-def test_handle_model_input_update_ignores_whitespace_provider_override():
-    """Whitespace is not an override and must not preserve a hidden Ollama API key."""
-    component = _make_mock_component()
-    selected_model = [{"name": "llama3", "provider": "Ollama", "metadata": {}}]
-    build_config = {
-        "model": _make_model_field(value=selected_model),
-        "provider": {"value": "   ", "load_from_db": False},
-        "api_key": {
-            "show": False,
-            "required": False,
-            "value": "explicit-api-key",
-            "load_from_db": False,
-            "_input_type": "SecretStrInput",
-        },
-    }
-
-    result = handle_model_input_update(
-        component,
-        build_config,
-        field_value="   ",
-        field_name="provider",
-        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
-    )
-
-    assert result["api_key"]["value"] == ""
-    assert result["api_key"]["load_from_db"] is False
-
-
-@pytest.mark.parametrize(
-    ("provider_override", "provider_load_from_db", "api_key", "cache_key_prefix"),
-    [
-        ("Anthropic", False, "WATSONX_APIKEY", "embedding_model_options"),
-        ("RUNTIME_PROVIDER", True, "WATSONX_APIKEY", "language_model_options"),
-        ("Anthropic", True, "ANTHROPIC_API_KEY", "language_model_options"),
-    ],
-)
-def test_handle_model_input_update_provider_override_clears_unsafe_canonical_global(
-    provider_override,
-    provider_load_from_db,
-    api_key,
-    cache_key_prefix,
-):
-    """A canonical key that cannot match the effective provider must defer to runtime."""
-    component = _make_mock_component()
-    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
-    build_config = {
-        "model": _make_model_field(value=selected_model),
-        "provider": {"value": provider_override, "load_from_db": provider_load_from_db},
-        "api_key": {
-            "show": False,
-            "required": False,
-            "value": api_key,
-            "load_from_db": True,
-            "_input_type": "SecretStrInput",
-        },
-    }
-
-    result = handle_model_input_update(
-        component,
-        build_config,
-        field_value=provider_override,
-        field_name="provider",
-        cache_key_prefix=cache_key_prefix,
-        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
-    )
-
-    assert result["api_key"]["show"] is True
-    assert result["api_key"]["value"] == ""
-    assert result["api_key"]["load_from_db"] is False
-
-
-@pytest.mark.parametrize(
-    ("api_key", "expected_value", "expected_load_from_db"),
-    [
-        ("ANTHROPIC_API_KEY", "", False),
-        ("MY_RUNTIME_KEY", "MY_RUNTIME_KEY", True),
-    ],
-)
-def test_handle_model_input_update_without_override_only_clears_stale_provider_defaults(
-    api_key,
-    expected_value,
-    expected_load_from_db,
-):
-    """Static refreshes clear known stale defaults without erasing custom globals."""
-    component = _make_mock_component()
-    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
-    build_config = {
-        "model": _make_model_field(value=selected_model),
-        "provider": {"value": "", "load_from_db": False},
-        "api_key": {
-            "show": False,
-            "required": False,
-            "value": api_key,
-            "load_from_db": True,
-            "_input_type": "SecretStrInput",
-        },
-    }
-
-    result = handle_model_input_update(
-        component,
-        build_config,
-        field_value=selected_model,
-        field_name="model",
-        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
-    )
-
-    assert result["api_key"]["show"] is True
-    assert result["api_key"]["value"] == expected_value
-    assert result["api_key"]["load_from_db"] is expected_load_from_db
 
 
 def test_handle_model_input_update_uses_language_model_options_by_default():
@@ -1448,8 +1242,8 @@ def test_handle_model_input_update_custom_field_name_reads_default_from_correct_
 # ---------------------------------------------------------------------------
 
 
-def test_apply_provider_config_defers_api_key_but_binds_non_key_fields():
-    """API keys stay blank for runtime; non-key provider fields keep eager binding."""
+def test_apply_provider_config_does_not_populate_empty_fields():
+    """Provider metadata controls visibility without assigning global variables."""
     build_config = {
         "api_key": {
             "_input_type": "SecretStrInput",
@@ -1486,10 +1280,8 @@ def test_apply_provider_config_defers_api_key_but_binds_non_key_fields():
     assert result["api_key"]["load_from_db"] is False
     assert result["api_key"]["value"] == ""
 
-    # Non-key provider fields retain eager binding for consumers that still
-    # require those values in the component build config.
-    assert result["project_id"]["load_from_db"] is True
-    assert result["project_id"]["value"] == "WATSONX_PROJECT_ID"
+    assert result["project_id"]["load_from_db"] is False
+    assert result["project_id"]["value"] == ""
 
     # DropdownInput should NOT have load_from_db set
     assert result["base_url_ibm_watsonx"]["load_from_db"] is False
@@ -1499,8 +1291,8 @@ def test_apply_provider_config_defers_api_key_but_binds_non_key_fields():
     assert result["base_url_ibm_watsonx"]["show"] is True
 
 
-def test_apply_provider_config_clears_stale_cross_provider_default():
-    """Switching providers clears a canonical key inherited from the old provider."""
+def test_apply_provider_config_preserves_explicit_global_variable():
+    """Provider refreshes must honor an explicitly assigned global variable."""
     build_config = {
         "api_key": {
             "_input_type": "SecretStrInput",
@@ -1514,8 +1306,8 @@ def test_apply_provider_config_clears_stale_cross_provider_default():
 
     result = apply_provider_variable_config_to_build_config(build_config, "OpenAI")
 
-    assert result["api_key"]["value"] == ""
-    assert result["api_key"]["load_from_db"] is False
+    assert result["api_key"]["value"] == "ANTHROPIC_API_KEY"
+    assert result["api_key"]["load_from_db"] is True
     assert result["api_key"]["show"] is True
 
 
@@ -1539,48 +1331,7 @@ def test_apply_provider_config_preserves_user_typed_credential():
     assert result["api_key"]["show"] is True
 
 
-def test_apply_provider_config_preserves_custom_global_credential():
-    """A deliberately selected noncanonical global credential survives refreshes."""
-    build_config = {
-        "api_key": {
-            "_input_type": "SecretStrInput",
-            "value": "MY_OPENAI_KEY",
-            "show": False,
-            "required": False,
-            "advanced": False,
-            "load_from_db": True,
-        },
-    }
-
-    result = apply_provider_variable_config_to_build_config(build_config, "OpenAI")
-
-    assert result["api_key"]["value"] == "MY_OPENAI_KEY"
-    assert result["api_key"]["load_from_db"] is True
-    assert result["api_key"]["show"] is True
-
-
-def test_apply_provider_config_preserves_custom_non_key_global():
-    """Non-key provider fields eagerly bind only when they are empty."""
-    build_config = {
-        "project_id": {
-            "_input_type": "StrInput",
-            "value": "MY_WATSONX_PROJECT",
-            "show": False,
-            "required": False,
-            "advanced": False,
-            "load_from_db": True,
-        },
-    }
-
-    result = apply_provider_variable_config_to_build_config(build_config, "IBM WatsonX")
-
-    assert result["project_id"]["value"] == "MY_WATSONX_PROJECT"
-    assert result["project_id"]["load_from_db"] is True
-    assert result["project_id"]["show"] is True
-
-
-@patch("lfx.base.models.unified_models.build_config.logger.debug")
-def test_apply_provider_config_keeps_current_provider_variable_on_refresh(mock_debug):
+def test_apply_provider_config_keeps_current_provider_variable_on_refresh():
     """Refreshing the same provider should not rewrite an already-correct variable key."""
     build_config = {
         "api_key": {
@@ -1598,10 +1349,6 @@ def test_apply_provider_config_keeps_current_provider_variable_on_refresh(mock_d
     assert result["api_key"]["value"] == "OPENAI_API_KEY"
     assert result["api_key"]["load_from_db"] is True
     assert result["api_key"]["show"] is True
-    mock_debug.assert_called_once_with(
-        "Preserved existing provider field %s",
-        "api_key",
-    )
 
 
 @patch("lfx.base.models.unified_models.get_all_variables_for_provider")
@@ -1738,10 +1485,11 @@ def test_handle_model_input_update_resolves_watsonx_dropdown():
     assert result["base_url_ibm_watsonx"]["load_from_db"] is False
     assert result["base_url_ibm_watsonx"]["show"] is True
 
-    # API keys defer to runtime provider resolution, while non-key provider
-    # fields still use load_from_db as usual.
+    # Non-dropdown fields stay empty and resolve from Model Providers at runtime.
     assert result["api_key"]["value"] == ""
     assert result["api_key"]["load_from_db"] is False
+    assert result["project_id"]["value"] == ""
+    assert result["project_id"]["load_from_db"] is False
 
 
 def test_get_provider_for_model_name_backwards_compat():

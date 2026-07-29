@@ -58,90 +58,40 @@ async def test_initialize_user_variables__create_and_update(service, session: As
     assert all(i not in variables for i in bad_vars)
 
 
-async def test_initialize_user_variables__provider_api_key_has_no_automatic_default_fields(
-    service, session: AsyncSession, monkeypatch
+@pytest.mark.parametrize("var_name", ["WATSONX_APIKEY", "WATSONX_PROJECT_ID"])
+async def test_initialize_user_variables__provider_variables_have_no_automatic_default_fields(
+    service, session: AsyncSession, monkeypatch, var_name
 ):
     user_id = uuid4()
-    monkeypatch.setattr(
-        service.settings_service.settings,
-        "variables_to_get_from_environment",
-        ["WATSONX_APIKEY"],
-    )
-    monkeypatch.setenv("WATSONX_APIKEY", "valid-key")
-
-    with patch("lfx.base.models.unified_models.validate_model_provider_key") as mock_validate:
-        await service.initialize_user_variables(user_id=user_id, session=session)
-
-    variable = await service.get_variable_object(user_id, "WATSONX_APIKEY", session)
-    assert variable.default_fields == []
-    mock_validate.assert_not_called()
-
-
-async def test_initialize_user_variables__provider_non_key_field_keeps_automatic_defaults(
-    service, session: AsyncSession, monkeypatch
-):
-    user_id = uuid4()
-    monkeypatch.setattr(
-        service.settings_service.settings,
-        "variables_to_get_from_environment",
-        ["WATSONX_PROJECT_ID"],
-    )
-    monkeypatch.setenv("WATSONX_PROJECT_ID", "project-id")
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", [var_name])
+    monkeypatch.setenv(var_name, "provider-value")
 
     await service.initialize_user_variables(user_id=user_id, session=session)
 
-    variable = await service.get_variable_object(user_id, "WATSONX_PROJECT_ID", session)
-    assert variable.default_fields == ["IBM WatsonX", "Project ID"]
-
-
-async def test_initialize_user_variables__cleared_provider_api_key_defaults_stay_empty(
-    service, session: AsyncSession, monkeypatch
-):
-    user_id = uuid4()
-    monkeypatch.setattr(
-        service.settings_service.settings,
-        "variables_to_get_from_environment",
-        ["WATSONX_APIKEY"],
-    )
-    monkeypatch.setenv("WATSONX_APIKEY", "environment-key")
-    await service.create_variable(
-        user_id,
-        "WATSONX_APIKEY",
-        "stored-key",
-        default_fields=[],
-        session=session,
-    )
-
-    with patch("lfx.base.models.unified_models.validate_model_provider_key"):
-        await service.initialize_user_variables(user_id=user_id, session=session)
-
-    variable = await service.get_variable_object(user_id, "WATSONX_APIKEY", session)
+    variable = await service.get_variable_object(user_id, var_name, session)
     assert variable.default_fields == []
 
 
-async def test_initialize_user_variables__existing_provider_api_key_defaults_are_not_rewritten(
-    service, session: AsyncSession, monkeypatch
+@pytest.mark.parametrize("default_fields", [[], ["API Key"]])
+async def test_initialize_user_variables__preserves_existing_default_fields(
+    service, session: AsyncSession, monkeypatch, default_fields
 ):
     user_id = uuid4()
-    monkeypatch.setattr(
-        service.settings_service.settings,
-        "variables_to_get_from_environment",
-        ["WATSONX_APIKEY"],
-    )
-    monkeypatch.setenv("WATSONX_APIKEY", "environment-key")
+    var_name = "WATSONX_APIKEY"
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", [var_name])
+    monkeypatch.setenv(var_name, "environment-key")
     await service.create_variable(
         user_id,
-        "WATSONX_APIKEY",
+        var_name,
         "stored-key",
-        default_fields=["API Key"],
+        default_fields=default_fields,
         session=session,
     )
 
-    with patch("lfx.base.models.unified_models.validate_model_provider_key"):
-        await service.initialize_user_variables(user_id=user_id, session=session)
+    await service.initialize_user_variables(user_id=user_id, session=session)
 
-    variable = await service.get_variable_object(user_id, "WATSONX_APIKEY", session)
-    assert variable.default_fields == ["API Key"]
+    variable = await service.get_variable_object(user_id, var_name, session)
+    assert variable.default_fields == default_fields
 
 
 async def test_initialize_user_variables__not_found_variable(service, session: AsyncSession):
