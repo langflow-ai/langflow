@@ -691,10 +691,16 @@ class SaveToFileComponent(Component):
         # unreachable by other pods, so leaving it behind leaks a file and makes
         # the returned path point somewhere that does not durably exist. For local
         # storage the staged file IS the durable artifact, so it is kept as-is.
+        #
+        # Exception: append_mode accumulates content by reading the persisted local
+        # file across calls (should_append hinges on path.exists()). Deleting it
+        # would make the next append silently fall back to overwrite and lose the
+        # accumulated content — so the staging file is preserved when appending.
         settings = get_settings_service().settings
         if settings.storage_type != "local":
-            with contextlib.suppress(OSError):
-                file_path.unlink()
+            if not getattr(self, "append_mode", False):
+                with contextlib.suppress(OSError):
+                    file_path.unlink()
             destination = upload_result.path if upload_result is not None else file_path.name
             provider = (
                 upload_result.provider

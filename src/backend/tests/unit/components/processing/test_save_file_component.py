@@ -241,6 +241,71 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         assert not (Path.cwd() / "test_s3_output.txt").exists()
 
     @pytest.mark.asyncio
+    async def test_append_mode_remote_backend_accumulates_across_calls(self, component_class, tmp_path):
+        """append_mode + remote (S3) backend keeps accumulating, not resetting to overwrite.
+
+        Guards against the staging cleanup deleting the local accumulator that append
+        relies on (should_append hinges on the file persisting across calls). Without
+        the append exception, the second call would silently overwrite.
+        """
+        file_name = "test_append_remote"
+        staging = Path.cwd() / f"{file_name}.txt"
+        if staging.exists():
+            staging.unlink()
+
+        settings_mock = MagicMock()
+        settings_mock.storage_type = "s3"
+        settings_mock.restrict_local_file_access = False
+        settings_mock.config_dir = str(tmp_path)
+        settings_service_mock = MagicMock()
+        settings_service_mock.settings = settings_mock
+
+        upload_response = MagicMock()
+        upload_response.path = f"files/uid/{file_name}.txt"
+        upload_response.provider = "s3"
+
+        def make_component(text):
+            component = component_class(_user_id=str(uuid4()))
+            component.set_attributes(
+                {
+                    "input": Message(text=text),
+                    "file_name": file_name,
+                    "local_format": "txt",
+                    "append_mode": True,
+                    "storage_location": [{"name": "Local"}],
+                }
+            )
+            return component
+
+        try:
+            with (
+                patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
+                patch("lfx.services.deps.session_scope") as mock_session,
+                patch(
+                    "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+                ) as mock_get_user,
+                patch(
+                    "lfx.components.files_and_knowledge.save_file.get_settings_service",
+                    return_value=settings_service_mock,
+                ),
+            ):
+                mock_db = AsyncMock()
+                mock_session.return_value.__aenter__.return_value = mock_db
+                mock_get_user.return_value = MagicMock()
+                mock_upload.return_value = upload_response
+
+                await make_component("line one").save_to_file()
+                # Staging file must survive so the next call can append to it
+                assert staging.exists()
+                await make_component("line two").save_to_file()
+
+            # Content accumulated across both calls — not overwritten
+            assert staging.read_text(encoding="utf-8") == "line one\nline two"
+        finally:
+            if staging.exists():
+                staging.unlink()
+
+    @pytest.mark.asyncio
     async def test_save_aws_mode_namespaces_key_by_user_id(self, component_class):
         """AWS mode namespaces the S3 key by user_id so multi-user runs don't collide.
 
