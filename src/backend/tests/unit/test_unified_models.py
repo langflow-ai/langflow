@@ -980,7 +980,7 @@ def test_handle_model_input_update_ollama_hides_and_clears_api_key():
 
 
 def test_handle_model_input_update_openai_keeps_api_key_visible():
-    """Providers that map a variable to api_key must keep it visible."""
+    """Providers that map a variable to api_key keep an empty field empty."""
     component = _make_mock_component()
     selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
     build_config = {
@@ -1003,6 +1003,8 @@ def test_handle_model_input_update_openai_keeps_api_key_visible():
     )
 
     assert result["api_key"]["show"] is True, "api_key must stay visible for OpenAI"
+    assert result["api_key"]["value"] == ""
+    assert result["api_key"]["load_from_db"] is False
 
 
 def test_handle_model_input_update_uses_language_model_options_by_default():
@@ -1240,8 +1242,8 @@ def test_handle_model_input_update_custom_field_name_reads_default_from_correct_
 # ---------------------------------------------------------------------------
 
 
-def test_apply_provider_config_skips_load_from_db_for_dropdown_input():
-    """DropdownInput fields should NOT get load_from_db=True or the variable key as value."""
+def test_apply_provider_config_does_not_populate_empty_fields():
+    """Provider metadata controls visibility without assigning global variables."""
     build_config = {
         "api_key": {
             "_input_type": "SecretStrInput",
@@ -1275,12 +1277,11 @@ def test_apply_provider_config_skips_load_from_db_for_dropdown_input():
 
     result = apply_provider_variable_config_to_build_config(build_config, "IBM WatsonX")
 
-    # api_key and project_id should use load_from_db
-    assert result["api_key"]["load_from_db"] is True
-    assert result["api_key"]["value"] == "WATSONX_APIKEY"
+    assert result["api_key"]["load_from_db"] is False
+    assert result["api_key"]["value"] == ""
 
-    assert result["project_id"]["load_from_db"] is True
-    assert result["project_id"]["value"] == "WATSONX_PROJECT_ID"
+    assert result["project_id"]["load_from_db"] is False
+    assert result["project_id"]["value"] == ""
 
     # DropdownInput should NOT have load_from_db set
     assert result["base_url_ibm_watsonx"]["load_from_db"] is False
@@ -1290,8 +1291,8 @@ def test_apply_provider_config_skips_load_from_db_for_dropdown_input():
     assert result["base_url_ibm_watsonx"]["show"] is True
 
 
-def test_apply_provider_config_replaces_stale_cross_provider_variable():
-    """Switching providers should replace stale load_from_db variable names."""
+def test_apply_provider_config_preserves_explicit_global_variable():
+    """Provider refreshes must honor an explicitly assigned global variable."""
     build_config = {
         "api_key": {
             "_input_type": "SecretStrInput",
@@ -1305,7 +1306,7 @@ def test_apply_provider_config_replaces_stale_cross_provider_variable():
 
     result = apply_provider_variable_config_to_build_config(build_config, "OpenAI")
 
-    assert result["api_key"]["value"] == "OPENAI_API_KEY"
+    assert result["api_key"]["value"] == "ANTHROPIC_API_KEY"
     assert result["api_key"]["load_from_db"] is True
     assert result["api_key"]["show"] is True
 
@@ -1330,8 +1331,7 @@ def test_apply_provider_config_preserves_user_typed_credential():
     assert result["api_key"]["show"] is True
 
 
-@patch("lfx.base.models.unified_models.build_config.logger.debug")
-def test_apply_provider_config_keeps_current_provider_variable_on_refresh(mock_debug):
+def test_apply_provider_config_keeps_current_provider_variable_on_refresh():
     """Refreshing the same provider should not rewrite an already-correct variable key."""
     build_config = {
         "api_key": {
@@ -1349,10 +1349,6 @@ def test_apply_provider_config_keeps_current_provider_variable_on_refresh(mock_d
     assert result["api_key"]["value"] == "OPENAI_API_KEY"
     assert result["api_key"]["load_from_db"] is True
     assert result["api_key"]["show"] is True
-    mock_debug.assert_called_once_with(
-        "Skipping auto-set for field %s - user has already supplied a value",
-        "api_key",
-    )
 
 
 @patch("lfx.base.models.unified_models.get_all_variables_for_provider")
@@ -1489,9 +1485,11 @@ def test_handle_model_input_update_resolves_watsonx_dropdown():
     assert result["base_url_ibm_watsonx"]["load_from_db"] is False
     assert result["base_url_ibm_watsonx"]["show"] is True
 
-    # Non-dropdown fields should use load_from_db as usual
-    assert result["api_key"]["value"] == "WATSONX_APIKEY"
-    assert result["api_key"]["load_from_db"] is True
+    # Non-dropdown fields stay empty and resolve from Model Providers at runtime.
+    assert result["api_key"]["value"] == ""
+    assert result["api_key"]["load_from_db"] is False
+    assert result["project_id"]["value"] == ""
+    assert result["project_id"]["load_from_db"] is False
 
 
 def test_get_provider_for_model_name_backwards_compat():
