@@ -37,9 +37,7 @@ const baseProps = {
   handleRename: jest.fn().mockResolvedValue(undefined),
 };
 
-const renderSelector = (
-  overrides: Partial<{ isVisible: boolean }> = {},
-) =>
+const renderSelector = (overrides: Partial<{ isVisible: boolean }> = {}) =>
   render(
     <TooltipProvider>
       <SessionSelector

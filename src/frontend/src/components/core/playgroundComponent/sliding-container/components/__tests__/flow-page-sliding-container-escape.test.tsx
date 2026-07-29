@@ -41,9 +41,12 @@ jest.mock(
   }),
 );
 
-jest.mock("@/components/core/playgroundComponent/hooks/use-get-flow-id", () => ({
-  useGetFlowId: () => "flow-1",
-}));
+jest.mock(
+  "@/components/core/playgroundComponent/hooks/use-get-flow-id",
+  () => ({
+    useGetFlowId: () => "flow-1",
+  }),
+);
 
 jest.mock("@/components/ui/animated-close", () => ({
   AnimatedConditional: ({ children }: { children?: React.ReactNode }) => (
