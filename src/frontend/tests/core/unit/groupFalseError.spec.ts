@@ -31,7 +31,10 @@ test(
         if (def?.display_name === "Language Model") languageModel = def;
       }
     }
-    expect(languageModel, "Language Model not found in /api/v1/all").toBeTruthy();
+    expect(
+      languageModel,
+      "Language Model not found in /api/v1/all",
+    ).toBeTruthy();
 
     const modelField = Object.entries(languageModel.template).find(
       ([, field]: [string, any]) => field?.type === "model",
@@ -46,7 +49,11 @@ test(
       id: innerId,
       type: "genericNode",
       position: { x: 0, y: 0 },
-      data: { id: innerId, type: "LanguageModelComponent", node: languageModel },
+      data: {
+        id: innerId,
+        type: "LanguageModelComponent",
+        node: languageModel,
+      },
     };
 
     // The grouped template proxies the inner field and carries no `code` of its
@@ -75,7 +82,11 @@ test(
             name: "Group",
             description: "",
             id: groupId,
-            data: { nodes: [innerNode], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+            data: {
+              nodes: [innerNode],
+              edges: [],
+              viewport: { x: 0, y: 0, zoom: 1 },
+            },
           },
         },
       },
