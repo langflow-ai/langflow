@@ -90,32 +90,31 @@ def get_llm(
     overrides: dict[str, Any] | None = None,
     provider_policy: ModelProviderPolicySnapshot | None = None,
 ) -> Any:
-    # Resolve helpers via package namespace so tests patching
-    # lfx.base.models.unified_models.<name> keep working.
-    from lfx.base.models import unified_models as unified_models_module
-
     # Coerce provider-specific string params (Message/Data may leak through StrInput)
     ollama_base_url = _to_str(ollama_base_url)
     watsonx_url = _to_str(watsonx_url)
     watsonx_project_id = _to_str(watsonx_project_id)
 
-    # Check if model is already a BaseLanguageModel instance (from a connection)
-    try:
-        from langchain_core.language_models import BaseLanguageModel
+    # List-shaped selections carry the provider identity needed for policy
+    # enforcement. Gate that common runtime path before importing even the
+    # LangChain base class, provider SDKs, or credential-resolution helpers.
+    if isinstance(model, list):
+        if not model:
+            msg = "A model selection is required"
+            raise ValueError(msg)
+        model = model[0]
+    else:
+        # Preserve the existing connection-object passthrough. Only this
+        # identity-free path needs the LangChain base-class import up front.
+        try:
+            from langchain_core.language_models import BaseLanguageModel
 
-        if isinstance(model, BaseLanguageModel):
-            # Model is already instantiated, return it directly
-            return model
-    except ImportError:
-        pass
-
-    # Safely extract model configuration
-    if not model or not isinstance(model, list) or len(model) == 0:
+            if isinstance(model, BaseLanguageModel):
+                return model
+        except ImportError:
+            pass
         msg = "A model selection is required"
         raise ValueError(msg)
-
-    # Extract the first model (only one expected)
-    model = model[0]
 
     # Extract model configuration from metadata
     model_name = model.get("name")
@@ -129,16 +128,20 @@ def get_llm(
         )
         raise ValueError(msg)
     if provider_policy is None:
+        from lfx.base.models.provider_registry import get_registry_snapshot
         from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
-
-        from .provider_queries import get_model_providers
 
         provider_policy = resolve_model_provider_policy(
             user_id=user_id,
-            providers=(*get_model_providers(), provider),
+            providers=(*get_registry_snapshot().provider_ids, provider),
             purpose=ModelProviderPolicyPurpose.USE,
         )
     provider_policy.require(provider)
+
+    # Resolve helpers through the package namespace only after policy passes so
+    # tests can patch lfx.base.models.unified_models.<name> and denied requests
+    # cannot trigger runtime integration imports.
+    from lfx.base.models import unified_models as unified_models_module
 
     # Policy is evaluated against the submitted identity, then all runtime
     # wiring for a known provider is resolved from its canonical registry
@@ -864,30 +867,30 @@ def get_embeddings(
     wrapper containing the primary instance for the selected model and an
     ``available_models`` map of enabled embedding models from every configured provider.
     """
-    # Resolve helpers via package namespace so tests patching
-    # lfx.base.models.unified_models.<name> keep working.
-    from lfx.base.models import unified_models as unified_models_module
-
     # Coerce provider-specific string params
     ollama_base_url = _to_str(ollama_base_url)
     watsonx_url = _to_str(watsonx_url)
     watsonx_project_id = _to_str(watsonx_project_id)
 
-    # Passthrough: already-instantiated Embeddings object from a connection
-    try:
-        from langchain_core.embeddings import Embeddings as BaseEmbeddings
+    # Gate list-shaped selections before importing a LangChain base class,
+    # provider SDK, or credential-resolution helper.
+    if isinstance(model, list):
+        if not model:
+            msg = "An embedding model selection is required"
+            raise ValueError(msg)
+        model_dict = model[0]
+    else:
+        # Preserve passthrough for already-instantiated connection objects.
+        try:
+            from langchain_core.embeddings import Embeddings as BaseEmbeddings
 
-        if isinstance(model, BaseEmbeddings):
-            return model
-    except ImportError:
-        pass
-
-    # Validate input
-    if not model or not isinstance(model, list) or len(model) == 0:
+            if isinstance(model, BaseEmbeddings):
+                return model
+        except ImportError:
+            pass
         msg = "An embedding model selection is required"
         raise ValueError(msg)
 
-    model_dict = model[0]
     model_name = model_dict.get("name")
     provider = model_dict.get("provider")
     metadata = model_dict.get("metadata", {})
@@ -896,17 +899,19 @@ def get_embeddings(
         msg = "The selected embedding model is missing a provider"
         raise ValueError(msg)
     if provider_policy is None:
+        from lfx.base.models.provider_registry import get_registry_snapshot
         from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
-
-        from .provider_queries import get_model_providers
 
         provider_policy = resolve_model_provider_policy(
             user_id=user_id,
-            providers=(*get_model_providers(), provider),
+            providers=(*get_registry_snapshot().provider_ids, provider),
             purpose=ModelProviderPolicyPurpose.USE,
         )
     provider_policy.require(provider)
 
+    # Resolve helpers through the patchable package namespace only after the
+    # provider has been authorized for runtime use.
+    from lfx.base.models import unified_models as unified_models_module
     from lfx.base.models.provider_registry import provider_name_for_id, resolve_provider_id
 
     provider_id = resolve_provider_id(provider)
