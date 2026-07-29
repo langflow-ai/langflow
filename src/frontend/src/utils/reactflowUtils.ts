@@ -66,7 +66,7 @@ import {
   cleanMcpConfig,
   type MCPServerValue,
 } from "./helpers/clean-mcp-config";
-import { getLayoutedNodes } from "./layoutUtils";
+import { getFallbackGridPositions, getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 
 const uid = new ShortUniqueId();
@@ -609,7 +609,14 @@ export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
 };
 
 export const needsLayout = (nodes: AllNodeType[]) => {
-  return nodes.some((node) => !node.position);
+  // Number.isFinite does not coerce, so this also rejects non-numeric
+  // coordinates as well as NaN and ±Infinity.
+  return nodes.some(
+    (node) =>
+      !node.position ||
+      !Number.isFinite(node.position.x) ||
+      !Number.isFinite(node.position.y),
+  );
 };
 
 export async function processDataFromFlow(
@@ -627,6 +634,11 @@ export async function processDataFromFlow(
     if (refreshIds) updateIds(data); // Assuming updateIds is defined elsewhere
     // add layout to nodes if not present
     if (needsLayout(data.nodes)) {
+      // Seed deterministic positions synchronously first. processFlows invokes
+      // this function without awaiting it, so anything that depends on the
+      // `await` below would still hand position-less nodes to React Flow (whose
+      // getNodePositionWithOrigin dereferences node.position.x unguarded).
+      data.nodes = getFallbackGridPositions(data.nodes);
       const layoutedNodes = await getLayoutedNodes(data.nodes, data.edges);
       data.nodes = layoutedNodes;
     }
