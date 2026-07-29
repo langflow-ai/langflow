@@ -1339,12 +1339,12 @@ def test_apply_provider_config_skips_load_from_db_for_dropdown_input():
 
     result = apply_provider_variable_config_to_build_config(build_config, "IBM WatsonX")
 
-    # api_key and project_id should use load_from_db
-    assert result["api_key"]["load_from_db"] is True
-    assert result["api_key"]["value"] == "WATSONX_APIKEY"
+    # api_key and project_id should remain empty and not auto-populate default variable names
+    assert result["api_key"]["load_from_db"] is False
+    assert result["api_key"]["value"] == ""
 
-    assert result["project_id"]["load_from_db"] is True
-    assert result["project_id"]["value"] == "WATSONX_PROJECT_ID"
+    assert result["project_id"]["load_from_db"] is False
+    assert result["project_id"]["value"] == ""
 
     # DropdownInput should NOT have load_from_db set
     assert result["base_url_ibm_watsonx"]["load_from_db"] is False
@@ -1354,8 +1354,8 @@ def test_apply_provider_config_skips_load_from_db_for_dropdown_input():
     assert result["base_url_ibm_watsonx"]["show"] is True
 
 
-def test_apply_provider_config_replaces_stale_cross_provider_variable():
-    """Switching providers should replace stale load_from_db variable names."""
+def test_apply_provider_config_clears_stale_cross_provider_variable():
+    """Switching providers should clear stale load_from_db variable names."""
     build_config = {
         "api_key": {
             "_input_type": "SecretStrInput",
@@ -1369,8 +1369,8 @@ def test_apply_provider_config_replaces_stale_cross_provider_variable():
 
     result = apply_provider_variable_config_to_build_config(build_config, "OpenAI")
 
-    assert result["api_key"]["value"] == "OPENAI_API_KEY"
-    assert result["api_key"]["load_from_db"] is True
+    assert result["api_key"]["value"] == ""
+    assert result["api_key"]["load_from_db"] is False
     assert result["api_key"]["show"] is True
 
 
@@ -1553,9 +1553,9 @@ def test_handle_model_input_update_resolves_watsonx_dropdown():
     assert result["base_url_ibm_watsonx"]["load_from_db"] is False
     assert result["base_url_ibm_watsonx"]["show"] is True
 
-    # Non-dropdown fields should use load_from_db as usual
-    assert result["api_key"]["value"] == "WATSONX_APIKEY"
-    assert result["api_key"]["load_from_db"] is True
+    # Non-dropdown fields should remain empty when not set
+    assert result["api_key"]["value"] == ""
+    assert result["api_key"]["load_from_db"] is False
 
 
 def test_get_provider_for_model_name_backwards_compat():

@@ -73,37 +73,8 @@ class DatabaseVariableService(VariableService, Service):
                         "to preserve user configuration"
                     )
                     continue
-
                 query = select(Variable).where(Variable.user_id == user_id, Variable.name == var_name)
-                # Set default_fields if this is a known provider variable
-                default_fields = []
                 try:
-                    if is_provider_variable:
-                        provider_name = var_to_provider[var_name]
-                        # Get the variable type from metadata
-                        var_display_name = var_info.get("variable_name", "api_key")
-
-                        # Validate secret variables (API keys) before setting default_fields
-                        # This prevents invalid keys from enabling providers during migration
-                        if is_secret_variable:
-                            try:
-                                from lfx.base.models.unified_models import validate_model_provider_key
-
-                                validate_model_provider_key(provider_name, {var_name: value})
-                                # Only set default_fields if validation passes
-                                default_fields = [provider_name, var_display_name]
-                                await logger.adebug(f"Validated {var_name} - provider will be enabled")
-                            except (ValueError, Exception) as validation_error:  # noqa: BLE001
-                                # Validation failed - don't set default_fields
-                                # This prevents the provider from appearing as "Enabled"
-                                default_fields = []
-                                await logger.adebug(
-                                    f"Skipping default_fields for {var_name} - validation failed: {validation_error!s}"
-                                )
-                        else:
-                            # Non-secret variables (like project_id, url) don't need validation
-                            default_fields = [provider_name, var_display_name]
-                            await logger.adebug(f"Set default_fields for non-secret variable {var_name}")
                     existing = (await session.exec(query)).first()
                 except Exception as e:  # noqa: BLE001
                     await logger.aexception(f"Error querying {var_name} variable: {e!s}")
@@ -126,35 +97,8 @@ class DatabaseVariableService(VariableService, Service):
                         )
 
                         if is_user_modified:
-                            # Variable was modified by user, don't overwrite with environment variable
-                            # Only update default_fields if they're not set
-                            if not existing.default_fields and default_fields:
-                                variable_update = VariableUpdate(
-                                    id=existing.id,
-                                    default_fields=default_fields,
-                                )
-                                await self.update_variable_fields(
-                                    user_id=user_id,
-                                    variable_id=existing.id,
-                                    variable=variable_update,
-                                    session=session,
-                                )
                             await logger.adebug(
                                 f"Skipping update of user-modified variable {var_name} with environment value"
-                            )
-                        # Variable was not user-modified, safe to update from environment
-                        elif not existing.default_fields and default_fields:
-                            # Update both value and default_fields
-                            variable_update = VariableUpdate(
-                                id=existing.id,
-                                value=value,
-                                default_fields=default_fields,
-                            )
-                            await self.update_variable_fields(
-                                user_id=user_id,
-                                variable_id=existing.id,
-                                variable=variable_update,
-                                session=session,
                             )
                         else:
                             await self.update_variable(user_id, var_name, value, session=session)
@@ -163,7 +107,7 @@ class DatabaseVariableService(VariableService, Service):
                             user_id=user_id,
                             name=var_name,
                             value=value,
-                            default_fields=default_fields,
+                            default_fields=[],
                             type_=CREDENTIAL_TYPE,
                             session=session,
                         )

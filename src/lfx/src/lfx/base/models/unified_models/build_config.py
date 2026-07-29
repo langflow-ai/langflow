@@ -210,15 +210,13 @@ def apply_provider_variable_config_to_build_config(
                 #    of preservation; the user can overwrite it manually.
                 current_value = field_config.get("value")
                 current_load_from_db = field_config.get("load_from_db", False)
-                is_empty = not current_value
                 is_stale_cross_provider_var = current_load_from_db and current_value != var_key
-                if is_empty or is_stale_cross_provider_var:
-                    field_config["value"] = var_key
-                    field_config["load_from_db"] = True
+                if is_stale_cross_provider_var:
+                    field_config["value"] = ""
+                    field_config["load_from_db"] = False
                     logger.debug(
-                        "Set field %s to var name %s (value resolved at runtime)",
+                        "Cleared stale cross-provider variable on field %s",
                         field_name,
-                        var_key,
                     )
                 else:
                     logger.debug(
