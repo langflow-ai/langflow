@@ -241,6 +241,9 @@ async def _execute_output_methods_for_validation(cc_instance) -> str | None:
         return None
 
     try:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        cc_instance.require_model_provider_policy(ModelProviderPolicyPurpose.USE)
         await cc_instance._build_results()  # noqa: SLF001 — sandbox bypass of send_error/tracing
     except ValidationError as exc:
         return _format_validation_error(exc)

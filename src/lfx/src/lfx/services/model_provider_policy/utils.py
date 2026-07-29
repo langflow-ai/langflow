@@ -22,6 +22,13 @@ def resolve_model_provider_policy(
 ) -> ModelProviderPolicySnapshot:
     """Resolve a policy snapshot for provider names from any catalog surface."""
     from lfx.services.deps import get_model_provider_policy_service
+    from lfx.services.model_provider_policy.context import current_model_provider_policy_context
+
+    effective_attributes = attributes
+    if effective_attributes is None:
+        principal = current_model_provider_policy_context()
+        if principal is not None and str(principal.user_id) == str(user_id):
+            effective_attributes = principal.attributes
 
     # Preserve the OSS runtime's historical behavior for legacy or malformed
     # saved selections: registered names resolve to stable IDs, while unknown
@@ -30,7 +37,7 @@ def resolve_model_provider_policy(
     candidate_ids = frozenset(provider_id_for(provider) or provider for provider in providers)
     service = get_model_provider_policy_service()
     return service.resolve(
-        context=ModelProviderPolicyContext(user_id=user_id, attributes=attributes or {}),
+        context=ModelProviderPolicyContext(user_id=user_id, attributes=effective_attributes or {}),
         candidate_provider_ids=candidate_ids,
         purpose=purpose,
     )
