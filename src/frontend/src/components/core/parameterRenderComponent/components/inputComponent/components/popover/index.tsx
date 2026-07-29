@@ -201,7 +201,7 @@ const CustomInputPopover = ({
   hasRefreshButton,
   inspectionPanel,
   ariaLabelledBy,
-  nodeId,
+  nodeId = undefined,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);

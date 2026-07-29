@@ -27,11 +27,11 @@ export function StrRenderComponent({
   if (noOptions) {
     if (isMultiline) {
       if (isWebhook) {
-        return <WebhookFieldComponent {...baseInputProps} />;
+        return <WebhookFieldComponent {...baseInputProps} nodeId={nodeId} />;
       }
 
       if (copyField) {
-        return <CopyFieldAreaComponent {...baseInputProps} />;
+        return <CopyFieldAreaComponent {...baseInputProps} nodeId={nodeId} />;
       }
 
       return (

@@ -12,6 +12,7 @@ import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-
 import MustachePromptModal from "@/modals/mustachePromptModal";
 import PromptModal from "@/modals/promptModal";
 import { cn } from "@/utils/utils";
+import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputProps, PromptAreaComponentType } from "../../types";
 
@@ -55,6 +56,7 @@ export default function AccordionPromptComponent({
   value,
   disabled,
   id = "",
+  nodeId,
   readonly = false,
   showParameter = false,
   isDoubleBrackets = false,
@@ -598,7 +600,7 @@ export default function AccordionPromptComponent({
               onInput={handleInput}
               onKeyDown={handleKeyDown}
               suppressContentEditableWarning
-              id={id}
+              id={getNodeScopedDomId(id, nodeId)}
               data-testid={id}
               className={cn(
                 "relative min-h-10 overflow-y-auto rounded-md border bg-background px-3 py-2 pr-8 text-sm outline-none break-words whitespace-pre-wrap",

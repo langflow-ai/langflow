@@ -218,6 +218,7 @@ export default function InputComponent({
               showOptions={showOptions}
               onChange={onChange}
               id={`object-${id}`}
+              nodeId={nodeId}
               onInputLostFocus={onInputLostFocus}
               selectedOption={selectedOption}
               setSelectedOption={setSelectedOption}
