@@ -164,6 +164,8 @@
   "assistant.noModels": "Es sind keine Modelle konfiguriert",
   "assistant.noModelsConfigured": "Es ist kein Modellanbieter konfiguriert",
   "assistant.noModelsDescription": "Um den Assistenten nutzen zu können, konfigurieren Sie bitte mindestens einen Modellanbieter in Ihren Einstellungen.",
+  "assistant.disabledTitle": "Assistent Deaktiviert",
+  "assistant.disabledDescription": "Der Langflow Assistant ist auf diesem Server deaktiviert. Bitten Sie Ihren Administrator, ihn zu aktivieren, indem er die untenstehende Umgebungsvariable setzt und Langflow neu startet.",
   "assistant.noPreviousSessions": "Keine früheren Sitzungen",
   "assistant.placeholder.0": "Eine Agentenkomponente erstellen...",
   "assistant.placeholder.1": "Eine RAG-Pipeline aufbauen...",
