@@ -55,4 +55,14 @@ describe("TemplateGetStartedCardComponent focus order", () => {
     expect(card).toHaveAttribute("tabindex", "0");
     expect(container.querySelectorAll("[tabindex='1']")).toHaveLength(0);
   });
+
+  it("should_expose_the_card_as_a_button_named_after_the_flow", () => {
+    const { getByRole } = render(
+      <TemplateGetStartedCardComponent {...baseProps} />,
+    );
+
+    expect(
+      getByRole("button", { name: "Basic Prompting" }),
+    ).toBeInTheDocument();
+  });
 });

@@ -8,6 +8,8 @@ import CustomChatInput from "@/customization/components/custom-chat-input";
 import useCustomUseFileHandler from "@/customization/hooks/use-custom-use-file-handler";
 import { track } from "@/customization/utils/analytics";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
+import { ResponseCompleteStatus } from "@/shared/components/response-complete-status";
+import { useResponseCompleteCue } from "@/shared/hooks/use-response-complete-cue";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -117,22 +119,7 @@ export default function ChatView({
     setChatHistory(finalChatHistory);
   }, [messages, visibleSession]);
 
-  // Assistant text streams in by mutating the last message, so a live region
-  // over the list would re-announce on every token. The list only announces
-  // additions (and is aria-busy while building); this separate status region
-  // announces a short "done" cue when the build settles, so the response body
-  // is never duplicated into the DOM.
-  const [completedCount, setCompletedCount] = useState(0);
-  const wasBuildingRef = useRef(isBuilding);
-  useEffect(() => {
-    if (wasBuildingRef.current && !isBuilding) {
-      const lastMessage = chatHistory?.[chatHistory.length - 1];
-      if (lastMessage && !lastMessage.isSend) {
-        setCompletedCount((count) => count + 1);
-      }
-    }
-    wasBuildingRef.current = isBuilding;
-  }, [isBuilding, chatHistory]);
+  const completedCount = useResponseCompleteCue(isBuilding, chatHistory);
 
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -253,13 +240,7 @@ export default function ChatView({
             flowRunningSkeletonMemo}
         </div>
       </StickToBottom.Content>
-      <div role="status" aria-live="polite" className="sr-only">
-        {completedCount > 0 && (
-          // Keyed so an identical announcement still replaces the region's
-          // content and gets re-announced on every completed response.
-          <span key={completedCount}>{t("chat.responseComplete")}</span>
-        )}
-      </div>
+      <ResponseCompleteStatus completedCount={completedCount} />
       <SafariScrollFix />
 
       <div className="m-auto w-full max-w-[768px] md:w-5/6">

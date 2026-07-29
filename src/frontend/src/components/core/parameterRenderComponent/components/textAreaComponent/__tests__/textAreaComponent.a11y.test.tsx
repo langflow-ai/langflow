@@ -55,16 +55,21 @@ describe("TextAreaComponent accessibility", () => {
     ).toBeInTheDocument();
   });
 
-  it("should_toggle_password_visibility_from_the_keyboard", async () => {
+  it("should_keep_the_toggle_in_forward_tab_order_while_the_input_is_focused", async () => {
     render(<TextAreaComponent {...baseProps} password={true} />);
 
-    // Note: the toggle unmounts while the text input itself is focused
-    // (`password && !isFocused`), so it is skipped in forward tab order from
-    // the input. Focus it directly here; the tab-order gap is a known issue.
-    const toggle = screen.getByRole("button", { name: "Show password" });
-    toggle.focus();
-    await userEvent.keyboard("{Enter}");
+    // type="password" inputs have no "textbox" role; query by test id.
+    await userEvent.click(screen.getByTestId("field-1"));
 
+    // Visually hidden while editing, but still mounted and tabbable.
+    const toggle = screen.getByRole("button", { name: "Show password" });
+    expect(toggle).toBeInTheDocument();
+
+    await userEvent.tab(); // expand-editor trigger
+    await userEvent.tab(); // password toggle
+    expect(toggle).toHaveFocus();
+
+    await userEvent.keyboard("{Enter}");
     expect(
       screen.getByRole("button", { name: "Hide password" }),
     ).toBeInTheDocument();

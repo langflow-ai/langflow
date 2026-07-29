@@ -1,8 +1,10 @@
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
+import { ResponseCompleteStatus } from "@/shared/components/response-complete-status";
+import { useResponseCompleteCue } from "@/shared/hooks/use-response-complete-cue";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import type { ChatMessageType } from "@/types/chat";
@@ -192,22 +194,7 @@ export const Messages = ({
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  // Assistant text streams in by mutating the last message, so a live region
-  // over the list would re-announce on every token. The list only announces
-  // additions (and is aria-busy while building); this separate status region
-  // announces a short "done" cue when the build settles, so the response body
-  // is never duplicated into the DOM.
-  const [completedCount, setCompletedCount] = useState(0);
-  const wasBuildingRef = useRef(isBuilding);
-  useEffect(() => {
-    if (wasBuildingRef.current && !isBuilding) {
-      const lastMessage = chatHistory[chatHistory.length - 1];
-      if (lastMessage && !lastMessage.isSend) {
-        setCompletedCount((count) => count + 1);
-      }
-    }
-    wasBuildingRef.current = isBuilding;
-  }, [isBuilding, chatHistory]);
+  const completedCount = useResponseCompleteCue(isBuilding, chatHistory);
 
   // Show thinking placeholder when building and last message is from user (no bot response yet)
   // Only show if the flow has a ChatOutput, otherwise there's nothing to produce a response
@@ -296,13 +283,7 @@ export const Messages = ({
       <StickToBottom.Content className="flex flex-col min-h-full ">
         {messagesContent}
       </StickToBottom.Content>
-      <div role="status" aria-live="polite" className="sr-only">
-        {completedCount > 0 && (
-          // Keyed so an identical announcement still replaces the region's
-          // content and gets re-announced on every completed response.
-          <span key={completedCount}>{t("chat.responseComplete")}</span>
-        )}
-      </div>
+      <ResponseCompleteStatus completedCount={completedCount} />
       <SafariScrollFix />
     </StickToBottom>
   );

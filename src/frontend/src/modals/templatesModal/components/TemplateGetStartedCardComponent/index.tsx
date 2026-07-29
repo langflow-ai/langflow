@@ -63,6 +63,8 @@ export default function TemplateGetStartedCardComponent({
         "group relative flex h-full min-h-[200px] w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring md:min-h-[250px]",
         loading ? "cursor-default opacity-80" : "cursor-pointer",
       )}
+      role="button"
+      aria-label={flow.name}
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onClick={handleClick}
