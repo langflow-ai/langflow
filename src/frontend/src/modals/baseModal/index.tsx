@@ -247,7 +247,10 @@ interface BaseModalProps {
   dialogContentWithouFixed?: boolean;
   height?: string;
   width?: string;
-  /** Accessible name for type="full-screen", which has no DialogTitle. */
+  /**
+   * Accessible name for modals that render no BaseModal.Header, and therefore
+   * no DialogTitle — required for type="full-screen", optional elsewhere.
+   */
   ariaLabel?: string;
 }
 function BaseModal({
@@ -286,8 +289,9 @@ function BaseModal({
   // BaseModal.Header renders DialogTitle/Description inside its own component
   // body, so DialogContent's child-tree scan cannot see them and would inject a
   // VisuallyHidden "Dialog" title that steals aria-labelledby. Skip that
-  // fallback whenever a Header is present.
-  const hideTitleFallback = !!headerChild;
+  // fallback whenever a Header is present — or when the caller named the modal
+  // through `ariaLabel`, which the fallback title would otherwise outrank.
+  const hideTitleFallback = !!headerChild || !!ariaLabel;
   const hideDescriptionFallback =
     React.isValidElement(headerChild) &&
     !!(headerChild.props as { description?: unknown }).description;
@@ -327,6 +331,7 @@ function BaseModal({
         <Modal open={open} onOpenChange={setOpen}>
           {triggerChild}
           <ModalContent
+            aria-label={ariaLabel}
             className={contentClasses}
             style={customHeight || customWidth ? customStyle : undefined}
           >
@@ -347,6 +352,7 @@ function BaseModal({
           {triggerChild}
           {dialogContentWithouFixed ? (
             <DialogContentWithouFixed
+              aria-label={ariaLabel}
               onClick={(e) => e.stopPropagation()}
               onEscapeKeyDown={onEscapeKeyDown}
               onOpenAutoFocus={onOpenAutoFocus}
@@ -373,6 +379,7 @@ function BaseModal({
             </DialogContentWithouFixed>
           ) : (
             <DialogContent
+              aria-label={ariaLabel}
               onClick={(e) => e.stopPropagation()}
               onEscapeKeyDown={onEscapeKeyDown}
               onOpenAutoFocus={onOpenAutoFocus}
