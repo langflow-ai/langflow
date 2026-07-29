@@ -6,6 +6,7 @@ import { axe } from "@/utils/a11y-test";
 import LoginPage from "../index";
 
 const mockLoginMutate = jest.fn();
+const mockCustomLoginSsoOptions = jest.fn((): React.ReactNode => null);
 
 jest.mock("@/assets/LangflowLogo.svg?react", () => ({
   __esModule: true,
@@ -38,6 +39,11 @@ jest.mock("@/customization/components/custom-link", () => ({
   ),
 }));
 
+jest.mock("@/customization/components/custom-login-sso-options", () => ({
+  __esModule: true,
+  default: () => mockCustomLoginSsoOptions(),
+}));
+
 jest.mock("@/hooks/use-sanitize-redirect-url", () => ({
   useSanitizeRedirectUrl: jest.fn(),
 }));
@@ -54,6 +60,7 @@ function renderLoginPage() {
 describe("LoginPage accessibility", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCustomLoginSsoOptions.mockReturnValue(null);
     useAlertStore.setState({
       notificationList: [],
       tempNotificationList: [],
@@ -82,6 +89,16 @@ describe("LoginPage accessibility", () => {
       "login-password-error",
     );
     expect(mockLoginMutate).not.toHaveBeenCalled();
+  });
+
+  it("renders the downstream login options customization slot", () => {
+    mockCustomLoginSsoOptions.mockReturnValue(
+      <div data-testid="custom-login-sso-options" />,
+    );
+
+    renderLoginPage();
+
+    expect(screen.getByTestId("custom-login-sso-options")).toBeInTheDocument();
   });
 
   it("should_have_no_axe_violations", async () => {

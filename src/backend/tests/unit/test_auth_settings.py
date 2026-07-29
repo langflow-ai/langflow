@@ -139,3 +139,38 @@ class TestApiKeySourceEnvironmentVariables:
         monkeypatch.setenv("LANGFLOW_API_KEY_SOURCE", "invalid")
         with pytest.raises(ValidationError):
             AuthSettings(CONFIG_DIR=cfg_dir)
+
+
+class TestSsoUrlSettings:
+    def test_sso_url_settings_are_declared_with_descriptions(self, tmp_path: Path):
+        settings = AuthSettings(CONFIG_DIR=tmp_path.as_posix())
+
+        assert settings.SSO_LOGIN_URL is None
+        assert settings.SSO_REDIRECT_URL is None
+        assert AuthSettings.model_fields["SSO_LOGIN_URL"].description
+        assert AuthSettings.model_fields["SSO_REDIRECT_URL"].description
+
+    @pytest.mark.parametrize("setting_name", ["SSO_LOGIN_URL", "SSO_REDIRECT_URL"])
+    def test_sso_url_setting_loads_relative_path_from_environment(self, setting_name: str, tmp_path: Path, monkeypatch):
+        env_name = f"LANGFLOW_{setting_name}"
+        monkeypatch.setenv(env_name, "/api/v1/sso/callback")
+
+        settings = AuthSettings(CONFIG_DIR=tmp_path.as_posix())
+
+        assert getattr(settings, setting_name) == "/api/v1/sso/callback"
+
+    @pytest.mark.parametrize("setting_name", ["SSO_LOGIN_URL", "SSO_REDIRECT_URL"])
+    @pytest.mark.parametrize(
+        "off_origin_url",
+        [
+            "https://attacker.example/sso",
+            "//attacker.example/sso",
+            "///attacker.example/sso",
+            "\\\\attacker.example\\sso",
+        ],
+    )
+    def test_sso_url_setting_rejects_absolute_off_origin_url(
+        self, setting_name: str, off_origin_url: str, tmp_path: Path
+    ):
+        with pytest.raises(ValidationError, match=setting_name):
+            AuthSettings(CONFIG_DIR=tmp_path.as_posix(), **{setting_name: off_origin_url})

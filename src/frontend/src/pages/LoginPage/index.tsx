@@ -7,6 +7,7 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { extractApiErrorMessage } from "@/controllers/API/helpers/extract-api-error-message";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
+import CustomLoginSsoOptions from "@/customization/components/custom-login-sso-options";
 import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
 import {
   appendErrorSuggestion,
@@ -113,6 +114,7 @@ export default function LoginPage(): JSX.Element {
           <span className="mb-6 text-2xl font-semibold text-primary text-center">
             {t("auth.loginTitle")}
           </span>
+          <CustomLoginSsoOptions />
           <div className="mb-3 w-full">
             <Form.Field name="username">
               <label
