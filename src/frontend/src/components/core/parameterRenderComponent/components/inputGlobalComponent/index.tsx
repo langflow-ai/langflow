@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
-import { isUnifiedModelApiKeyField } from "@/utils/is-unified-model-api-key";
 import { cn } from "../../../../../utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { CommandItem } from "../../../../ui/command";
@@ -38,7 +37,6 @@ export default function InputGlobalComponent({
   isToolMode = false,
   hasRefreshButton = false,
   showParameter = true,
-  nodeClass,
 }: InputProps<string, InputGlobalComponentType> & {
   _input_type?: string;
 }): JSX.Element | null {
@@ -55,21 +53,13 @@ export default function InputGlobalComponent({
   const currentValue = value ?? "";
   const isDisabled = disabled ?? false;
   const loadFromDb = load_from_db ?? false;
-  const isUnifiedModelApiKey = isUnifiedModelApiKeyField(
-    nodeClass,
-    id === "input-api_key" ? "api_key" : undefined,
-  );
 
   // // Extract complex logic into custom hooks
   const valueExists = useGlobalVariableValue(
     currentValue,
     typedGlobalVariables,
   );
-  const unavailableField = useUnavailableField(
-    display_name,
-    currentValue,
-    !isUnifiedModelApiKey,
-  );
+  const unavailableField = useUnavailableField(display_name, currentValue);
   const canValidateMissingVariable =
     isGlobalVariablesFetchSuccessful &&
     !isGlobalVariablesFetching &&

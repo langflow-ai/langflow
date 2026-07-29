@@ -54,7 +54,6 @@ export function StrRenderComponent({
     return (
       <InputGlobalComponent
         {...baseInputProps}
-        nodeClass={nodeClass}
         password={templateData.password}
         load_from_db={templateData.load_from_db}
         _input_type={templateData._input_type}

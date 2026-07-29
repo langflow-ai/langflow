@@ -66,7 +66,6 @@ import {
   cleanMcpConfig,
   type MCPServerValue,
 } from "./helpers/clean-mcp-config";
-import { isUnifiedModelApiKeyField } from "./is-unified-model-api-key";
 import { getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 
@@ -2498,38 +2497,25 @@ export function updateGlobalVariables(
 ) {
   if (node && node.template) {
     Object.keys(node.template).forEach((field) => {
-      const templateField = node.template[field];
-      const isUnifiedModelApiKey = isUnifiedModelApiKeyField(node, field);
-      const genericDefault =
-        unavailableFields?.[templateField.display_name ?? ""];
       if (
         globalVariablesEntries &&
-        templateField.load_from_db &&
-        !globalVariablesEntries.includes(templateField.value)
+        node!.template[field].load_from_db &&
+        !globalVariablesEntries.includes(node!.template[field].value)
       ) {
-        templateField.value = "";
-        templateField.load_from_db = false;
+        node!.template[field].value = "";
+        node!.template[field].load_from_db = false;
       }
       if (
-        isUnifiedModelApiKey &&
-        templateField.load_from_db &&
-        templateField.value === genericDefault
-      ) {
-        templateField.value = "";
-        templateField.load_from_db = false;
-      }
-      if (
-        !isUnifiedModelApiKey &&
-        !templateField.load_from_db &&
-        templateField.value === "" &&
+        !node!.template[field].load_from_db &&
+        node!.template[field].value === "" &&
         unavailableFields &&
         Object.keys(unavailableFields).includes(
-          templateField.display_name ?? "",
+          node!.template[field].display_name ?? "",
         )
       ) {
-        templateField.value =
-          unavailableFields[templateField.display_name ?? ""];
-        templateField.load_from_db = true;
+        node!.template[field].value =
+          unavailableFields[node!.template[field].display_name ?? ""];
+        node!.template[field].load_from_db = true;
       }
     });
   }

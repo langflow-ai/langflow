@@ -66,6 +66,8 @@ class DatabaseVariableService(VariableService, Service):
                 is_provider_variable = var_name in var_to_provider
                 var_info = var_to_info.get(var_name, {})
                 is_secret_variable = var_info.get("is_secret", False)
+                mapping_field = var_info.get("component_metadata", {}).get("mapping_field")
+                should_set_default_fields = mapping_field != "api_key"
 
                 if is_provider_variable and is_secret_variable and value.lower() == "dummy":
                     await logger.adebug(
@@ -83,27 +85,26 @@ class DatabaseVariableService(VariableService, Service):
                         # Get the variable type from metadata
                         var_display_name = var_info.get("variable_name", "api_key")
 
-                        # Validate secret variables (API keys) before setting default_fields
-                        # This prevents invalid keys from enabling providers during migration
-                        if is_secret_variable:
-                            try:
-                                from lfx.base.models.unified_models import validate_model_provider_key
+                        # API-key mappings stay empty so the effective provider resolves its
+                        # credential at runtime. Existing explicit default_fields are preserved below.
+                        if should_set_default_fields:
+                            if is_secret_variable:
+                                try:
+                                    from lfx.base.models.unified_models import validate_model_provider_key
 
-                                validate_model_provider_key(provider_name, {var_name: value})
-                                # Only set default_fields if validation passes
+                                    validate_model_provider_key(provider_name, {var_name: value})
+                                    default_fields = [provider_name, var_display_name]
+                                    await logger.adebug(f"Validated provider credential {var_name}")
+                                except (ValueError, Exception) as validation_error:  # noqa: BLE001
+                                    default_fields = []
+                                    await logger.adebug(
+                                        f"Skipping default_fields for {var_name} "
+                                        f"- validation failed: {validation_error!s}"
+                                    )
+                            else:
+                                # Non-secret variables (like project_id, url) don't need validation
                                 default_fields = [provider_name, var_display_name]
-                                await logger.adebug(f"Validated {var_name} - provider will be enabled")
-                            except (ValueError, Exception) as validation_error:  # noqa: BLE001
-                                # Validation failed - don't set default_fields
-                                # This prevents the provider from appearing as "Enabled"
-                                default_fields = []
-                                await logger.adebug(
-                                    f"Skipping default_fields for {var_name} - validation failed: {validation_error!s}"
-                                )
-                        else:
-                            # Non-secret variables (like project_id, url) don't need validation
-                            default_fields = [provider_name, var_display_name]
-                            await logger.adebug(f"Set default_fields for non-secret variable {var_name}")
+                                await logger.adebug(f"Set default_fields for non-secret variable {var_name}")
                     existing = (await session.exec(query)).first()
                 except Exception as e:  # noqa: BLE001
                     await logger.aexception(f"Error querying {var_name} variable: {e!s}")
