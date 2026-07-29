@@ -1,4 +1,3 @@
-import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -38,26 +37,20 @@ import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
 import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
 import { useSearchContext } from "./context/SearchContext";
-import { combinedResultsFn } from "./helpers/combined-results";
 import { computeSectionVisibility } from "./helpers/compute-section-visibility";
-import { filteredDataFn } from "./helpers/filtered-data";
-import { normalizeString } from "./helpers/normalize-string";
 import sensitiveSort from "./helpers/sensitive-sort";
-import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
 import { useDebouncedSearch } from "./hooks/useDebouncedSearch";
 import { useSegmentedSidebarPanel } from "./hooks/useSegmentedSidebarPanel";
 import { useSidebarFilters } from "./hooks/useSidebarFilters";
 import { useSidebarHotkeys } from "./hooks/useSidebarHotkeys";
+import {
+  MCP_COMPONENT_CATEGORY,
+  type SidebarSearchItem,
+  useSidebarSearch,
+} from "./hooks/useSidebarSearch";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
-const MCP_COMPONENT_CATEGORY = "models_and_agents";
-
-type SidebarSearchItem = APIClassType & {
-  category: string;
-  key: string;
-  mcpServerName?: string;
-};
 
 // SearchContext / FlowSearchProvider / useSearchContext moved to
 // ./context/SearchContext (LE-1736 W32); re-exported here so existing consumers
@@ -167,7 +160,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const debouncedSearch = useDebouncedSearch(search);
 
   // State
-  const [fuse, setFuse] = useState<Fuse<SidebarSearchItem> | null>(null);
   const [openCategories, setOpenCategories] = useState<string[]>([]);
   const [showConfig, setShowConfig] = useState(false);
   const [showBeta, setShowBeta] = useState(showBetaStorage);
@@ -183,7 +175,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     setShowLegacy(value);
     setLocalStorage("showLegacy", value.toString());
   }, []);
-  const [mcpSearchData, setMcpSearchData] = useState<SidebarSearchItem[]>([]);
 
   // Create base data that includes MCP category when available
   const baseData = useMemo(() => {
@@ -234,38 +225,15 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     return data?.["custom_component"]?.["CustomComponent"] ?? null;
   }, [data]);
 
-  const searchResults = useMemo(() => {
-    if (!debouncedSearch || !fuse) return null;
-
-    const searchTerm = normalizeString(debouncedSearch);
-    const fuseResults = fuse.search(debouncedSearch).map((result) => ({
-      ...result,
-      item: { ...result.item, score: result.score },
-    }));
-
-    const fuseCategories = fuseResults.map((result) => result.item.category);
-    const combinedResults = combinedResultsFn(fuseResults, baseData);
-    const traditionalResults = traditionalSearchMetadata(baseData, searchTerm);
-
-    return {
-      fuseResults,
-      fuseCategories,
-      combinedResults,
-      traditionalResults,
-    };
-  }, [debouncedSearch, fuse, baseData]);
-
-  const searchFilteredData = useMemo(() => {
-    if (!debouncedSearch || !searchResults) return cloneDeep(baseData);
-
-    const filteredData = filteredDataFn(
+  const { searchResults, searchFilteredData, mcpSearchData } = useSidebarSearch(
+    {
       baseData,
-      searchResults.combinedResults,
-      searchResults.traditionalResults,
-    );
-
-    return filteredData;
-  }, [baseData, debouncedSearch, searchResults]);
+      debouncedSearch,
+      data,
+      mcpServers,
+      mcpSuccess,
+    },
+  );
 
   const sortedCategories = useMemo(() => {
     if (!searchResults || !searchFilteredData) return [];
@@ -345,57 +313,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     setFilterComponent,
     getFilterComponent,
   ]);
-
-  useEffect(() => {
-    const options = {
-      keys: [
-        "display_name",
-        "description",
-        "type",
-        "category",
-        "mcpServerName",
-      ],
-      threshold: 0.2,
-      includeScore: true,
-    };
-
-    const fuseData: SidebarSearchItem[] = Object.entries(baseData).flatMap(
-      ([category, items]) =>
-        Object.entries(items).map(([key, value]) => ({
-          ...value,
-          category,
-          key,
-        })),
-    );
-
-    // MCP data is already included in baseData, but we still need mcpSearchData for non-search display
-    if (
-      mcpSuccess &&
-      mcpServers &&
-      data[MCP_COMPONENT_CATEGORY]?.["MCPTools"]
-    ) {
-      const mcpComponent = data[MCP_COMPONENT_CATEGORY]["MCPTools"];
-      const newMcpSearchData = mcpServers.map((mcpServer) => ({
-        ...mcpComponent,
-        mcpServerName: mcpServer.name, // adds this field and makes it searchable
-        category: "MCP",
-        key: `mcp_${mcpServer.name}`,
-        template: {
-          ...mcpComponent.template,
-          mcp_server: {
-            ...mcpComponent.template.mcp_server,
-            value: mcpServer,
-          },
-        },
-      }));
-
-      setMcpSearchData(newMcpSearchData);
-      // No need to push to fuseData since it's already in baseData
-    } else {
-      setMcpSearchData([]);
-    }
-    setFuse(new Fuse(fuseData, options));
-  }, [baseData, mcpSuccess, mcpServers]);
 
   useEffect(() => {
     if (getFilterEdge.length !== 0 || getFilterComponent !== "") {
