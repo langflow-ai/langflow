@@ -604,6 +604,21 @@ def provider_id_for(provider: str) -> str | None:
     return _registered[registered_name].canonical_id()
 
 
+def resolve_provider_id(name_or_id_or_alias: str) -> str:
+    """Return a stable policy identity for any non-empty provider selector.
+
+    Registered names, display names, aliases, and IDs resolve through the
+    authoritative registry. Unknown legacy selectors receive the same
+    deterministic derived ID used by manifests that predate ``provider_id``;
+    this keeps old saved flows runnable under the OSS allow-all policy while
+    ensuring restrictive policy implementations never key on display text.
+    """
+    if not isinstance(name_or_id_or_alias, str) or not name_or_id_or_alias.strip():
+        msg = "Provider identity must be a non-empty string"
+        raise ValueError(msg)
+    return provider_id_for(name_or_id_or_alias) or _derive_provider_id(name_or_id_or_alias)
+
+
 def model_component_provider_id(component: object, *, module_name: str | None = None) -> str:
     """Derive a stable policy identity for a standalone model component.
 
@@ -621,8 +636,7 @@ def model_component_provider_id(component: object, *, module_name: str | None = 
     """
     explicit_id = getattr(component, "model_provider_id", None)
     if isinstance(explicit_id, str) and explicit_id:
-        resolved = provider_id_for(explicit_id)
-        return resolved or _derive_provider_id(explicit_id)
+        return resolve_provider_id(explicit_id)
 
     display_name = getattr(component, "display_name", None)
     if isinstance(display_name, str) and (resolved := provider_id_for(display_name)):
@@ -646,10 +660,10 @@ def model_component_provider_id(component: object, *, module_name: str | None = 
             candidate = parts[2]
 
     if candidate:
-        return provider_id_for(candidate) or _derive_provider_id(candidate)
+        return resolve_provider_id(candidate)
     if isinstance(display_name, str) and display_name.strip():
-        return _derive_provider_id(display_name)
-    return _derive_provider_id(component.__class__.__name__)
+        return resolve_provider_id(display_name)
+    return resolve_provider_id(component.__class__.__name__)
 
 
 def uses_standalone_model_provider_policy(component: object) -> bool:

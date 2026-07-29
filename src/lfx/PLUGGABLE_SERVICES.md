@@ -312,7 +312,9 @@ class AcmeModelProviderPolicyService(BaseModelProviderPolicyService):
         return candidate_provider_ids & deployment_ceiling
 ```
 
-The method receives stable provider IDs for both core and extension-contributed providers and returns the allowed subset. The base service rejects results that widen the candidate set and returns an immutable decision snapshot. Calls are synchronous so configuration and runtime paths can share one batch decision without introducing async work into model construction.
+The method receives stable provider IDs for both core and extension-contributed providers and returns the allowed subset. The base service rejects results that widen the candidate set and returns an immutable decision snapshot. `resolve()` is the compatibility bridge used by synchronous model-construction paths; `await aresolve()` is the async boundary for request handlers or implementations that preload policy from an I/O-backed source. Both return the same synchronously consumable snapshot type.
+
+Resolved snapshots are cached by principal attributes, purpose, and candidate provider IDs. Call `invalidate()` after the policy source changes so subsequent resolutions cannot reuse a stale decision. Implementations can override `aresolve()` when loading policy requires I/O, but should preserve the immutable snapshot contract and keep synchronous runtime state ready before model construction begins.
 
 `purpose` identifies the protected operation:
 

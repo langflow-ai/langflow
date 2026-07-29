@@ -505,6 +505,13 @@ the deserialize half is covered by
   exposes an immutable generation-tagged snapshot plus an eager catalog
   validation hook for deployment readiness.  Existing provider manifests are
   unaffected and `BUNDLE_API_VERSION` remains `1`.
+- **Provider identity resolution and policy snapshots (additive).**
+  `resolve_provider_id()` is the canonical resolver for registered names,
+  display names, aliases, stable IDs, and deterministic legacy fallbacks.
+  Model-provider policy services now expose cached synchronous `resolve()`,
+  async `aresolve()`, single-provider `is_allowed()`, and `invalidate()`
+  hooks while preserving the existing immutable snapshot and allow-all OSS
+  behavior. Existing synchronous policy subclasses remain source-compatible.
 - **New typed error codes (additive): `provider-invalid`, `provider-skipped`.**
   A malformed provider spec surfaces `provider-invalid`; a provider whose name
   collides with a built-in or already-loaded provider surfaces

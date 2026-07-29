@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import abc
+import threading
+from collections import OrderedDict
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
@@ -16,6 +18,8 @@ if TYPE_CHECKING:
     from collections.abc import Collection
     from uuid import UUID
 
+_MAX_SNAPSHOT_CACHE_SIZE = 512
+
 
 def _freeze_context_value(value: Any) -> Any:
     """Recursively freeze request attributes captured by a policy snapshot."""
@@ -26,6 +30,35 @@ def _freeze_context_value(value: Any) -> Any:
     if isinstance(value, set | frozenset):
         return frozenset(_freeze_context_value(item) for item in value)
     return value
+
+
+def _context_cache_value(value: Any) -> Any:
+    """Convert frozen context attributes to a type-preserving cache key.
+
+    Python considers values such as ``True`` and ``1`` equal dictionary keys.
+    Policy attributes may legitimately distinguish them, so every scalar and
+    container carries an explicit type tag. Unsupported unhashable objects are
+    rejected instead of falling back to ``repr()``, which is not a safe policy
+    identity.
+    """
+    if isinstance(value, Mapping):
+        items = [(_context_cache_value(key), _context_cache_value(item)) for key, item in value.items()]
+        return ("mapping", tuple(sorted(items, key=repr)))
+    if isinstance(value, tuple):
+        return ("tuple", tuple(_context_cache_value(item) for item in value))
+    if isinstance(value, list):
+        return ("list", tuple(_context_cache_value(item) for item in value))
+    if isinstance(value, set):
+        return ("set", frozenset(_context_cache_value(item) for item in value))
+    if isinstance(value, frozenset):
+        return ("frozenset", frozenset(_context_cache_value(item) for item in value))
+    try:
+        hash(value)
+    except TypeError as exc:
+        msg = f"Unsupported unhashable model-provider policy attribute: {type(value).__qualname__}"
+        raise TypeError(msg) from exc
+    value_type = type(value)
+    return ("scalar", value_type.__module__, value_type.__qualname__, value)
 
 
 class ModelProviderPolicyPurpose(str, Enum):
@@ -78,9 +111,9 @@ class ModelProviderPolicySnapshot:
 
     @staticmethod
     def _stable_id(provider: str) -> str:
-        from lfx.base.models.provider_registry import provider_id_for
+        from lfx.base.models.provider_registry import resolve_provider_id
 
-        return provider_id_for(provider) or provider
+        return resolve_provider_id(provider)
 
     def allows(self, provider: str) -> bool:
         """Return whether a legacy name, alias, or stable ID is allowed."""
@@ -100,6 +133,12 @@ class BaseModelProviderPolicyService(Service, abc.ABC):
     """Policy plugin point; implementations evaluate stable provider IDs."""
 
     name = ServiceType.MODEL_PROVIDER_POLICY_SERVICE.value
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._snapshot_cache: OrderedDict[tuple[Any, ...], ModelProviderPolicySnapshot] = OrderedDict()
+        self._snapshot_cache_generation = 0
+        self._snapshot_cache_lock = threading.RLock()
 
     @abc.abstractmethod
     def get_allowed_provider_ids(
@@ -122,9 +161,23 @@ class BaseModelProviderPolicyService(Service, abc.ABC):
 
         Enterprise implementations can intersect a deployment ceiling with a
         single batch RBAC evaluation in ``get_allowed_provider_ids``. The base
-        method validates that a plugin can never widen the candidate set.
+        method validates that a plugin can never widen the candidate set and
+        caches the immutable snapshot until :meth:`invalidate` is called.
         """
         candidates = frozenset(candidate_provider_ids)
+        cache_key = (
+            str(context.user_id) if context.user_id is not None else None,
+            _context_cache_value(context.attributes),
+            purpose,
+            candidates,
+        )
+        with self._snapshot_cache_lock:
+            cached = self._snapshot_cache.get(cache_key)
+            if cached is not None:
+                self._snapshot_cache.move_to_end(cache_key)
+                return cached
+            generation = self._snapshot_cache_generation
+
         allowed = frozenset(
             self.get_allowed_provider_ids(
                 context=context,
@@ -132,12 +185,63 @@ class BaseModelProviderPolicyService(Service, abc.ABC):
                 purpose=purpose,
             )
         )
-        return ModelProviderPolicySnapshot(
+        snapshot = ModelProviderPolicySnapshot(
             context=context,
             purpose=purpose,
             candidate_provider_ids=candidates,
             allowed_provider_ids=allowed,
         )
+        with self._snapshot_cache_lock:
+            # An invalidation may race with policy evaluation. Never repopulate
+            # a cache generation that a writer has explicitly dropped.
+            if generation == self._snapshot_cache_generation:
+                self._snapshot_cache[cache_key] = snapshot
+                self._snapshot_cache.move_to_end(cache_key)
+                if len(self._snapshot_cache) > _MAX_SNAPSHOT_CACHE_SIZE:
+                    self._snapshot_cache.popitem(last=False)
+        return snapshot
+
+    async def aresolve(
+        self,
+        *,
+        context: ModelProviderPolicyContext,
+        candidate_provider_ids: frozenset[str],
+        purpose: ModelProviderPolicyPurpose,
+    ) -> ModelProviderPolicySnapshot:
+        """Resolve policy asynchronously and return a synchronous snapshot.
+
+        The OSS implementation delegates to the cached synchronous resolver.
+        Enterprise policy sources may override this method when their policy
+        load is I/O-bound while preserving the immutable snapshot contract for
+        downstream catalog and runtime code.
+        """
+        return self.resolve(
+            context=context,
+            candidate_provider_ids=candidate_provider_ids,
+            purpose=purpose,
+        )
+
+    def is_allowed(
+        self,
+        provider_id: str,
+        purpose: ModelProviderPolicyPurpose,
+        *,
+        context: ModelProviderPolicyContext | None = None,
+    ) -> bool:
+        """Return one provider decision using the stable provider identity."""
+        snapshot = self.resolve(
+            context=context or ModelProviderPolicyContext(),
+            candidate_provider_ids=frozenset({provider_id}),
+            purpose=purpose,
+        )
+        return snapshot.allows(provider_id)
+
+    def invalidate(self) -> None:
+        """Drop all cached snapshots after policy-source changes."""
+        with self._snapshot_cache_lock:
+            self._snapshot_cache.clear()
+            self._snapshot_cache_generation += 1
 
     async def teardown(self) -> None:
         """No resources are owned by the base policy service."""
+        self.invalidate()

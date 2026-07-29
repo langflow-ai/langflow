@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from lfx.base.models.unified_models import get_embeddings, get_llm
 from lfx.services.model_provider_policy import (
+    BaseModelProviderPolicyService,
     ModelProviderPolicyContext,
     ModelProviderPolicyError,
     ModelProviderPolicyPurpose,
@@ -37,6 +38,90 @@ def test_default_service_allows_every_candidate():
     assert snapshot.allowed_provider_ids == frozenset({"openai", "anthropic"})
     assert snapshot.allows("OpenAI")
     assert snapshot.allows("Anthropic")
+
+
+def test_default_service_allows_every_registered_provider():
+    from lfx.base.models.provider_registry import get_registry_snapshot
+
+    service = ModelProviderPolicyService()
+    provider_ids = get_registry_snapshot().provider_ids
+
+    snapshot = service.resolve(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        candidate_provider_ids=provider_ids,
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+
+    assert snapshot.allowed_provider_ids == provider_ids
+
+
+async def test_async_resolver_caches_until_invalidation():
+    service = ModelProviderPolicyService()
+    kwargs = {
+        "context": ModelProviderPolicyContext(user_id="user-1"),
+        "candidate_provider_ids": frozenset({"openai", "anthropic"}),
+        "purpose": ModelProviderPolicyPurpose.USE,
+    }
+
+    first = await service.aresolve(**kwargs)
+    cached = await service.aresolve(**kwargs)
+    service.invalidate()
+    refreshed = await service.aresolve(**kwargs)
+
+    assert cached is first
+    assert refreshed == first
+    assert refreshed is not first
+
+
+def test_snapshot_cache_preserves_policy_attribute_types():
+    class TypedAttributePolicy(BaseModelProviderPolicyService):
+        def __init__(self) -> None:
+            super().__init__()
+            self.evaluations = 0
+            self.set_ready()
+
+        def get_allowed_provider_ids(self, *, context, candidate_provider_ids, purpose):
+            _ = purpose
+            self.evaluations += 1
+            if context.attributes["flag"] is True:
+                return candidate_provider_ids
+            return frozenset()
+
+    service = TypedAttributePolicy()
+    candidates = frozenset({"openai"})
+
+    allowed = service.resolve(
+        context=ModelProviderPolicyContext(attributes={"flag": True}),
+        candidate_provider_ids=candidates,
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+    denied = service.resolve(
+        context=ModelProviderPolicyContext(attributes={"flag": 1}),
+        candidate_provider_ids=candidates,
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+
+    assert allowed.allows("openai")
+    assert not denied.allows("openai")
+    assert service.evaluations == 2
+
+
+def test_service_distinguishes_use_and_configure_purposes():
+    class PurposePolicy(BaseModelProviderPolicyService):
+        def __init__(self) -> None:
+            super().__init__()
+            self.set_ready()
+
+        def get_allowed_provider_ids(self, *, context, candidate_provider_ids, purpose):
+            _ = context
+            if purpose is ModelProviderPolicyPurpose.USE:
+                return candidate_provider_ids
+            return frozenset()
+
+    service = PurposePolicy()
+
+    assert service.is_allowed("openai", ModelProviderPolicyPurpose.USE)
+    assert not service.is_allowed("openai", ModelProviderPolicyPurpose.CONFIGURE)
 
 
 def test_default_resolution_preserves_unknown_legacy_provider_names(monkeypatch):

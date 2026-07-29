@@ -19,13 +19,15 @@ import pytest
 from lfx.base.models import provider_registry
 from lfx.base.models.model_metadata import LIVE_MODEL_PROVIDERS, MODEL_PROVIDER_METADATA
 from lfx.base.models.model_utils import get_live_models_for_provider
-from lfx.base.models.provider_registry import ProviderSpec, register_provider
+from lfx.base.models.provider_registry import ProviderSpec, register_provider, resolve_provider_id
 from lfx.base.models.unified_models import (
     get_live_only_providers,
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
     get_models_detailed,
+    get_provider_all_variables,
+    get_provider_secret_variable_key,
     validate_model_provider_key,
 )
 from lfx.base.models.unified_models.class_registry import (
@@ -154,6 +156,37 @@ def test_register_exposes_stable_identity_display_name_and_aliases():
     assert provider_registry.provider_name_for_id("fakeco.enterprise") == "FakeCo"
     assert MODEL_PROVIDER_METADATA["FakeCo"]["provider_id"] == "fakeco.enterprise"
     assert MODEL_PROVIDER_METADATA["FakeCo"]["display_name"] == "FakeCo Enterprise"
+
+
+def test_resolve_provider_id_accepts_names_ids_aliases_and_legacy_unknowns():
+    register_provider(
+        _fakeco_spec(
+            provider_id="fakeco.enterprise",
+            display_name="FakeCo Enterprise",
+            aliases=("FakeCo Legacy",),
+        )
+    )
+
+    assert resolve_provider_id("FakeCo") == "fakeco.enterprise"
+    assert resolve_provider_id("fakeco.enterprise") == "fakeco.enterprise"
+    assert resolve_provider_id("FakeCo Enterprise") == "fakeco.enterprise"
+    assert resolve_provider_id("FakeCo Legacy") == "fakeco.enterprise"
+    assert resolve_provider_id("Legacy Custom Provider") == "legacy-custom-provider"
+
+
+def test_provider_queries_accept_stable_id_and_legacy_alias():
+    canonical_variables = get_provider_all_variables("IBM WatsonX")
+
+    assert canonical_variables
+    assert get_provider_all_variables("IBM watsonx.ai") == canonical_variables
+    assert get_provider_all_variables("ibm-watsonx") == canonical_variables
+    assert get_provider_secret_variable_key("IBM watsonx.ai") == get_provider_secret_variable_key("IBM WatsonX")
+
+
+@pytest.mark.parametrize("provider", ["", "   "])
+def test_resolve_provider_id_rejects_empty_values(provider):
+    with pytest.raises(ValueError, match="non-empty"):
+        resolve_provider_id(provider)
 
 
 def test_model_component_explicit_identity_wins_over_ambiguous_module_name():
