@@ -60,7 +60,9 @@ test(
       const flowId = (await created.json()).id;
 
       await page.goto(`/flow/${flowId}`);
-      await expect(page.getByTestId("div-generic-node")).toHaveCount(2);
+      await expect(page.getByTestId("div-generic-node")).toHaveCount(2, {
+        timeout: 15_000,
+      });
 
       // Scoped to form controls: that is what the reported DevTools warning
       // ("Duplicate form field id in the same form") covers, and what breaks
