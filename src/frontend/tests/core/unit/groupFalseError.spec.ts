@@ -1,3 +1,4 @@
+import type { APIClassType, APIObjectType } from "../../../src/types/api";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -24,22 +25,25 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page, { skipModal: true });
 
-    const allTypes = await (await page.request.get("/api/v1/all")).json();
-    let languageModel: any;
-    for (const category of Object.values(allTypes) as Record<string, any>[]) {
+    const allTypes = (await (
+      await page.request.get("/api/v1/all")
+    ).json()) as APIObjectType;
+    let languageModel: APIClassType | undefined;
+    for (const category of Object.values(allTypes)) {
       for (const def of Object.values(category)) {
         if (def?.display_name === "Language Model") languageModel = def;
       }
     }
-    expect(
-      languageModel,
-      "Language Model not found in /api/v1/all",
-    ).toBeTruthy();
+    if (!languageModel) {
+      throw new Error("Language Model not found in /api/v1/all");
+    }
 
     const modelField = Object.entries(languageModel.template).find(
-      ([, field]: [string, any]) => field?.type === "model",
-    ) as [string, any];
-    expect(modelField, "Language Model has no model field").toBeTruthy();
+      ([, field]) => field.type === "model",
+    );
+    if (!modelField) {
+      throw new Error("Language Model has no model field");
+    }
 
     const innerId = "LanguageModelComponent-aaaaa";
     const groupId = "groupComponent-bbbbb";
