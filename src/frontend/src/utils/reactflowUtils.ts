@@ -2498,26 +2498,38 @@ export function updateGlobalVariables(
 ) {
   if (node && node.template) {
     Object.keys(node.template).forEach((field) => {
+      const templateField = node.template[field];
+      const isUnifiedModelApiKey = isUnifiedModelApiKeyField(node, field);
+      const genericDefault =
+        unavailableFields?.[templateField.display_name ?? ""];
       if (
         globalVariablesEntries &&
-        node!.template[field].load_from_db &&
-        !globalVariablesEntries.includes(node!.template[field].value)
+        templateField.load_from_db &&
+        !globalVariablesEntries.includes(templateField.value)
       ) {
-        node!.template[field].value = "";
-        node!.template[field].load_from_db = false;
+        templateField.value = "";
+        templateField.load_from_db = false;
       }
       if (
-        !isUnifiedModelApiKeyField(node, field) &&
-        !node!.template[field].load_from_db &&
-        node!.template[field].value === "" &&
+        isUnifiedModelApiKey &&
+        templateField.load_from_db &&
+        templateField.value === genericDefault
+      ) {
+        templateField.value = "";
+        templateField.load_from_db = false;
+      }
+      if (
+        !isUnifiedModelApiKey &&
+        !templateField.load_from_db &&
+        templateField.value === "" &&
         unavailableFields &&
         Object.keys(unavailableFields).includes(
-          node!.template[field].display_name ?? "",
+          templateField.display_name ?? "",
         )
       ) {
-        node!.template[field].value =
-          unavailableFields[node!.template[field].display_name ?? ""];
-        node!.template[field].load_from_db = true;
+        templateField.value =
+          unavailableFields[templateField.display_name ?? ""];
+        templateField.load_from_db = true;
       }
     });
   }

@@ -109,11 +109,7 @@ class TestBuildUnavailableFieldsMap:
 class TestApplyUnavailableFieldsToGraph:
     """Tests for apply_unavailable_fields_to_graph (pure transformer)."""
 
-    @pytest.mark.parametrize(
-        "component_type",
-        ["Agent", "LanguageModelComponent", "EmbeddingModel"],
-    )
-    def test_unified_model_api_key_is_not_bound_by_generic_default(self, component_type: str) -> None:
+    def test_unified_model_api_key_is_not_bound_by_generic_default(self) -> None:
         """Unified models must resolve a blank API key from the effective runtime provider."""
         node = _make_node(
             "unified-model-1",
@@ -127,7 +123,6 @@ class TestApplyUnavailableFieldsToGraph:
                 "api_key": _make_field(display_name="API Key"),
             },
         )
-        node["data"]["type"] = component_type
         graph_data = {"nodes": [node], "edges": []}
 
         result = apply_unavailable_fields_to_graph(graph_data, {"API Key": "WATSONX_APIKEY"})

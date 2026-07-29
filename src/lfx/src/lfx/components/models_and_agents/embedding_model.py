@@ -67,6 +67,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             ),
             advanced=True,
             load_from_db=False,
+            real_time_refresh=True,
         ),
         SecretStrInput(
             name="api_key",

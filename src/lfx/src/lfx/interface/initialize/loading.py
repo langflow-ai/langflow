@@ -285,6 +285,68 @@ async def update_table_params_with_load_from_db_fields(
         return params
 
 
+def _is_unified_model_component(custom_component: CustomComponent) -> bool:
+    """Return whether the component uses the unified model/API-key inputs."""
+    inputs = getattr(custom_component, "_inputs", {})
+    if not isinstance(inputs, dict):
+        return False
+
+    model_input = inputs.get("model")
+    api_key_input = inputs.get("api_key")
+    field_type = getattr(model_input, "field_type", None)
+    field_type_value = getattr(field_type, "value", field_type)
+    return field_type_value == "model" and getattr(api_key_input, "display_name", None) == "API Key"
+
+
+def _get_effective_provider_from_params(params: dict[str, Any]) -> str | None:
+    """Return the resolved provider override or the selected model's provider."""
+    from lfx.base.models.model_utils import _to_str
+
+    provider_override = _to_str(params.get("provider"))
+    if provider_override and provider_override.strip():
+        return provider_override.strip()
+
+    model = params.get("model")
+    if isinstance(model, list) and model and isinstance(model[0], dict):
+        provider = _to_str(model[0].get("provider"))
+        if provider and provider.strip():
+            return provider.strip()
+    return None
+
+
+def _align_unified_model_api_key_reference(
+    custom_component: CustomComponent,
+    params: dict[str, Any],
+    api_key_reference: Any,
+) -> dict[str, Any]:
+    """Replace a mismatched canonical key with the effective provider's key."""
+    if not isinstance(api_key_reference, str) or not _is_unified_model_component(custom_component):
+        return params
+
+    from lfx.base.models.unified_models import get_provider_api_key_variable_mapping
+
+    provider_api_keys = get_provider_api_key_variable_mapping()
+    if api_key_reference not in provider_api_keys.values():
+        return params
+
+    effective_provider = _get_effective_provider_from_params(params)
+    effective_api_key_reference = provider_api_keys.get(effective_provider)
+    if effective_api_key_reference != api_key_reference:
+        params["api_key"] = effective_api_key_reference
+        logger.debug("Rebound canonical API key to the configured key for the effective provider")
+    return params
+
+
+def _should_align_unified_model_api_key(custom_component: CustomComponent, api_key_reference: Any) -> bool:
+    """Return whether a persisted canonical key needs provider-aware resolution."""
+    if not isinstance(api_key_reference, str) or not _is_unified_model_component(custom_component):
+        return False
+
+    from lfx.base.models.unified_models import get_provider_api_key_variable_mapping
+
+    return api_key_reference in get_provider_api_key_variable_mapping().values()
+
+
 async def update_params_with_load_from_db_fields(
     custom_component: CustomComponent,
     params,
@@ -292,6 +354,14 @@ async def update_params_with_load_from_db_fields(
     *,
     fallback_to_env_vars=False,
 ):
+    has_api_key_field = "api_key" in load_from_db_fields  # pragma: allowlist secret
+    api_key_reference = params.get("api_key") if has_api_key_field else None
+    should_align_api_key = _should_align_unified_model_api_key(custom_component, api_key_reference)
+    fields_to_resolve = list(load_from_db_fields)
+    if should_align_api_key:
+        fields_to_resolve = [field for field in fields_to_resolve if field != "api_key"]
+        fields_to_resolve.append("api_key")
+
     async with session_scope() as session:
         settings_service = get_settings_service()
         is_noop_session = isinstance(session, NoopSession) or (
@@ -302,8 +372,15 @@ async def update_params_with_load_from_db_fields(
             context = None
             if hasattr(custom_component, "graph") and hasattr(custom_component.graph, "context"):
                 context = custom_component.graph.context
-            return load_from_env_vars(params, load_from_db_fields, context=context)
-        for field in load_from_db_fields:
+            if not should_align_api_key:
+                return load_from_env_vars(params, fields_to_resolve, context=context)
+            non_api_key_fields = [field for field in fields_to_resolve if field != "api_key"]
+            params = load_from_env_vars(params, non_api_key_fields, context=context)
+            params = _align_unified_model_api_key_reference(custom_component, params, api_key_reference)
+            return load_from_env_vars(params, ["api_key"], context=context)
+        for field in fields_to_resolve:
+            if should_align_api_key and field == "api_key":
+                params = _align_unified_model_api_key_reference(custom_component, params, api_key_reference)
             # Check if this is a table field (using our naming convention)
             if field.startswith("table:"):
                 table_field_name = field[6:]  # Remove "table:" prefix

@@ -25,6 +25,7 @@ from lfx.base.models.unified_models import (
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
+    get_provider_api_key_variable_mapping,
     validate_model_provider_key,
 )
 from lfx.base.models.unified_models.class_registry import (
@@ -69,6 +70,7 @@ def _fakeco_metadata() -> dict:
                 "is_list": False,
                 "options": [],
                 "langchain_param": "api_key",
+                "component_metadata": {"mapping_field": "api_key"},
             },
         ],
         "api_docs_url": "https://fakeco.example/docs",
@@ -110,12 +112,23 @@ def test_register_adds_metadata_and_appears_in_accessors():
 def test_variable_mapping_cache_refreshed_after_register():
     # Prime the lru_cache before registration.
     before = get_model_provider_variable_mapping()
+    api_key_before = get_provider_api_key_variable_mapping()
     assert "FakeCo" not in before
+    assert "FakeCo" not in api_key_before
 
     register_provider(_fakeco_spec())
 
     after = get_model_provider_variable_mapping()
+    api_key_after = get_provider_api_key_variable_mapping()
     assert after.get("FakeCo") == "FAKECO_API_KEY"
+    assert api_key_after.get("FakeCo") == "FAKECO_API_KEY"
+
+
+def test_api_key_mapping_excludes_non_key_provider_variables():
+    mapping = get_provider_api_key_variable_mapping()
+
+    assert mapping["IBM WatsonX"] == "WATSONX_APIKEY"
+    assert "Ollama" not in mapping
 
 
 def test_core_provider_name_is_not_overwritten():
@@ -135,7 +148,7 @@ def test_watsonx_api_key_uses_provider_qualified_display_name():
         if variable["variable_key"] == "WATSONX_APIKEY"
     )
 
-    assert watsonx_api_key["variable_name"] == "WatsonX API Key"
+    assert watsonx_api_key["variable_name"] == "IBM WatsonX API Key"
 
 
 def test_duplicate_bundle_registration_is_ignored():

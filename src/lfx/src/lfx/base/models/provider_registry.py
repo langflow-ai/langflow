@@ -271,6 +271,7 @@ def _clear_derived_caches() -> None:
     """
     from lfx.base.models.unified_models import provider_queries
 
+    provider_queries.get_provider_api_key_variable_mapping.cache_clear()
     provider_queries.get_model_provider_variable_mapping.cache_clear()
     provider_queries._get_all_provider_specific_field_names.cache_clear()  # noqa: SLF001 - known internal cache
     provider_queries.get_models_detailed.cache_clear()

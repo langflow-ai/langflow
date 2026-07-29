@@ -71,4 +71,15 @@ describe("updateGlobalVariables", () => {
     expect(node.template.api_key.value).toBe("OPENAI_API_KEY");
     expect(node.template.api_key.load_from_db).toBe(true);
   });
+
+  it("clears a persisted unified model key that matches the legacy generic default", () => {
+    const node = makeNode("input_type");
+    node.template.api_key.value = "WATSONX_APIKEY";
+    node.template.api_key.load_from_db = true;
+
+    updateGlobalVariables(node, unavailableFields, globalVariablesEntries);
+
+    expect(node.template.api_key.value).toBe("");
+    expect(node.template.api_key.load_from_db).toBe(false);
+  });
 });

@@ -111,6 +111,24 @@ def get_model_provider_variable_mapping() -> dict[str, str]:
     return result
 
 
+@lru_cache(maxsize=1)
+def get_provider_api_key_variable_mapping() -> dict[str, str]:
+    """Return the canonical API-key variable for providers that map one to components."""
+    result = {}
+    for provider, meta in model_provider_metadata.items():
+        variable_key = next(
+            (
+                variable.get("variable_key")
+                for variable in meta.get("variables", [])
+                if variable.get("component_metadata", {}).get("mapping_field") == "api_key"
+            ),
+            None,
+        )
+        if variable_key:
+            result[provider] = variable_key
+    return result
+
+
 def get_provider_all_variables(provider: str) -> list[dict]:
     """Get all variables for a provider."""
     meta = model_provider_metadata.get(provider, {})

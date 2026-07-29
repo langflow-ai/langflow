@@ -153,7 +153,7 @@ def apply_provider_variable_config_to_build_config(
         if mapping_field:
             vars_by_field[mapping_field] = v
 
-    # Apply the current provider's variable metadata to show/configure the right fields and pre-populate credentials.
+    # Apply the current provider's variable metadata to show/configure the right fields.
     for field_name, var_info in vars_by_field.items():
         if field_name not in build_config:
             continue
@@ -176,9 +176,11 @@ def apply_provider_variable_config_to_build_config(
 
         field_config["show"] = True
 
-        # Pre-populate with the variable name (never the raw secret) when a
-        # credential is available in the database or environment.  Setting
-        # load_from_db=True tells the runtime to resolve the actual value.
+        # Empty API-key fields stay empty until runtime so the effective provider
+        # (including Provider Override) selects its own configured key. Explicit
+        # raw or global-variable values are preserved. Non-key provider fields
+        # keep eager binding because some consumers still require those values
+        # in the component build config.
         var_key = var_info.get("variable_key")
         if var_key:
             # DropdownInput fields don't support load_from_db because the
@@ -192,27 +194,27 @@ def apply_provider_variable_config_to_build_config(
                     field_name,
                 )
             else:
-                # Decide whether to install this provider's variable key on
-                # the field.  Cases:
-                #
-                # 1. Empty field — auto-populate.
-                # 2. ``load_from_db=True`` with a value that doesn't match
-                #    this provider's ``var_key`` — stale cross-provider
-                #    credential (e.g. ``ANTHROPIC_API_KEY`` left over after
-                #    switching to OpenAI).  Replace with the current
-                #    provider's var_key.
-                # 3. ``load_from_db=True`` with a value that matches
-                #    ``var_key`` — already correct, preserve.
-                # 4. ``load_from_db=False`` with a value — user-typed raw
-                #    credential.  Preserve so it survives refresh cycles.
-                #    We cannot tell from the backend whether a raw value is
-                #    stale after a provider switch, so we err on the side
-                #    of preservation; the user can overwrite it manually.
                 current_value = field_config.get("value")
                 current_load_from_db = field_config.get("load_from_db", False)
-                is_empty = not current_value
-                is_stale_cross_provider_var = current_load_from_db and current_value != var_key
-                if is_empty or is_stale_cross_provider_var:
+                if field_name == "api_key":
+                    provider_variable_keys = set(unified_models_module.get_provider_api_key_variable_mapping().values())
+                    is_stale_provider_default = (
+                        current_load_from_db
+                        and isinstance(current_value, str)
+                        and current_value != var_key
+                        and current_value in provider_variable_keys
+                    )
+                    if not current_value:
+                        field_config["value"] = ""
+                        field_config["load_from_db"] = False
+                        logger.debug("Deferred provider resolution for empty field %s", field_name)
+                    elif is_stale_provider_default:
+                        field_config["value"] = ""
+                        field_config["load_from_db"] = False
+                        logger.debug("Cleared stale provider default on field %s", field_name)
+                    else:
+                        logger.debug("Preserved existing provider field %s", field_name)
+                elif not current_value:
                     field_config["value"] = var_key
                     field_config["load_from_db"] = True
                     logger.debug(
@@ -221,10 +223,7 @@ def apply_provider_variable_config_to_build_config(
                         var_key,
                     )
                 else:
-                    logger.debug(
-                        "Skipping auto-set for field %s - user has already supplied a value",
-                        field_name,
-                    )
+                    logger.debug("Preserved existing provider field %s", field_name)
 
     return build_config
 
@@ -544,15 +543,12 @@ def handle_model_input_update(
             build_config[model_field_name]["value"] = field_value if value_is_valid else [options[0]] if options else ""
             field_value = build_config[model_field_name]["value"]
 
-    # Step 2: Hide all provider-specific fields.  We do NOT clear values
+    # Step 2: Hide all provider-specific fields. We do not clear values
     # here — the frontend has already mutated ``template[model]["value"]``
     # to the new selection before POSTing, so the backend can't distinguish
     # a real provider switch from a same-provider refresh based on the
-    # incoming build_config alone.  Instead,
-    # ``apply_provider_variable_config_to_build_config`` (Step 3) handles
-    # the credential swap by detecting stale cross-provider variable keys
-    # in provider-mapped fields and replacing them with the current
-    # provider's var key.  Raw user-typed values are preserved in all cases.
+    # incoming build_config alone. Step 3 clears only known stale provider
+    # defaults while preserving raw credentials and custom global variables.
     for field in provider_mapped_fields:
         if field in build_config:
             field_config = build_config[field]
@@ -560,11 +556,14 @@ def handle_model_input_update(
             field_config["required"] = False
 
     # Capture any credential that was already present before the static
-    # provider refresh. With Provider Override, an existing value is an
-    # explicit component choice; only a key inferred during this refresh is
-    # unsafe to carry into runtime.
+    # provider refresh. Provider Override may make a pre-existing canonical
+    # provider key unsafe, while raw and custom-global values remain explicit.
     provider_override = build_config.get("provider", {})
-    has_provider_override = bool(provider_override.get("value"))
+    override_provider_value = provider_override.get("value")
+    normalized_override_provider = (
+        override_provider_value.strip() if isinstance(override_provider_value, str) else override_provider_value
+    )
+    has_provider_override = bool(normalized_override_provider)
     api_key_config = build_config.get("api_key", {})
     api_key_value_before_provider_refresh = api_key_config.get("value")
     api_key_load_from_db_before_provider_refresh = api_key_config.get("load_from_db", False)
@@ -578,18 +577,9 @@ def handle_model_input_update(
         if field_name == model_field_name and field_value
         else build_config.get(model_field_name, {}).get("value")
     )
-    static_provider_api_key = None
     if isinstance(current_model_value, list) and len(current_model_value) > 0:
         provider = current_model_value[0].get("provider", "")
         if provider:
-            static_provider_api_key = next(
-                (
-                    variable.get("variable_key")
-                    for variable in unified_models_module.get_provider_all_variables(provider)
-                    if variable.get("component_metadata", {}).get("mapping_field") == "api_key"
-                ),
-                None,
-            )
             build_config = unified_models_module.apply_provider_variable_config_to_build_config(build_config, provider)
 
             # Resolve DropdownInput field values from the provider's configured
@@ -608,31 +598,43 @@ def handle_model_input_update(
 
     # Provider Override can resolve to a different provider at runtime, so a
     # global API key inferred from the statically selected model is unsafe.
-    # Preserve credentials that were already present (including deliberately
-    # selected global variables), but clear a key Step 3 inferred from an empty
-    # incoming field so runtime can resolve the effective provider's key.
+    # Preserve raw credentials and custom global variables. A canonical provider
+    # key is safe only when it matches a literal effective override provider;
+    # otherwise it may be a legacy API Key default from a different provider.
+    # Clear ambiguous canonical keys so runtime resolves the effective provider.
     if has_provider_override:
-        key_was_static_provider_default = (
-            api_key_load_from_db_before_provider_refresh
-            and api_key_value_before_provider_refresh == static_provider_api_key
+        provider_api_keys = unified_models_module.get_provider_api_key_variable_mapping()
+        known_provider_api_keys = set(provider_api_keys.values())
+        override_provider_api_key = (
+            provider_api_keys.get(normalized_override_provider)
+            if isinstance(normalized_override_provider, str) and not provider_override.get("load_from_db")
+            else None
         )
-        if api_key_value_before_provider_refresh and not key_was_static_provider_default:
-            api_key_config["value"] = api_key_value_before_provider_refresh
-            api_key_config["load_from_db"] = api_key_load_from_db_before_provider_refresh
-        elif api_key_config.get("load_from_db"):
-            api_key_config["value"] = ""
-            api_key_config["load_from_db"] = False
+        key_is_canonical_provider_global = (
+            api_key_load_from_db_before_provider_refresh
+            and isinstance(api_key_value_before_provider_refresh, str)
+            and api_key_value_before_provider_refresh in known_provider_api_keys
+        )
+        key_matches_effective_provider = (
+            key_is_canonical_provider_global and api_key_value_before_provider_refresh == override_provider_api_key
+        )
+        if key_is_canonical_provider_global:
+            if key_matches_effective_provider:
+                api_key_config["value"] = api_key_value_before_provider_refresh
+                api_key_config["load_from_db"] = True
+            else:
+                api_key_config["value"] = ""
+                api_key_config["load_from_db"] = False
 
-    # Hide and clear the API key field when the selected provider doesn't use one
-    # (e.g. Ollama). ``apply_provider_variable_config_to_build_config`` already
-    # sets ``show=True`` for providers whose metadata maps a variable to the
-    # ``api_key`` field; if it wasn't shown, the provider has no api_key
-    # variable and the previous provider's credential must not leak across
-    # the switch. A raw component key with Provider Override is different: it
-    # belongs to the effective runtime provider and must survive even if the
-    # statically selected provider (such as Ollama) hides this field.
-    preserve_explicit_override_key = has_provider_override and bool(api_key_config.get("value"))
-    if "api_key" in build_config and not api_key_config.get("show", False) and not preserve_explicit_override_key:
+        # Provider Override can target a provider that differs from the static
+        # model (including one such as Ollama that hides this field), so keep
+        # the optional override input available.
+        api_key_config["show"] = True
+        api_key_config["required"] = False
+
+    # Hide and clear the API key field when the selected provider doesn't use
+    # one. Provider Override keeps this field visible above.
+    if "api_key" in build_config and not api_key_config.get("show", False):
         build_config["api_key"]["value"] = ""
         build_config["api_key"]["load_from_db"] = False
 
