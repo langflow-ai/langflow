@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  VisuallyHidden,
 } from "../../components/ui/dialog";
 import {
   Dialog as Modal,
@@ -286,12 +287,23 @@ function BaseModal({
 
   const { minWidth, height } = switchCaseModalSize(size);
 
+  // Modals with no BaseModal.Header render no DialogTitle, so Radix warns and
+  // DialogContent injects its "Dialog" fallback. Name those from `ariaLabel`
+  // with a real hidden title instead. type="full-screen" is a plain div rather
+  // than a Radix dialog, so it keeps naming itself with the aria-label
+  // attribute — a DialogTitle outside a Dialog root would throw.
+  const hiddenTitle =
+    ariaLabel && !headerChild && type !== "full-screen" ? (
+      <VisuallyHidden>
+        <DialogTitle>{ariaLabel}</DialogTitle>
+      </VisuallyHidden>
+    ) : null;
+
   // BaseModal.Header renders DialogTitle/Description inside its own component
   // body, so DialogContent's child-tree scan cannot see them and would inject a
   // VisuallyHidden "Dialog" title that steals aria-labelledby. Skip that
-  // fallback whenever a Header is present — or when the caller named the modal
-  // through `ariaLabel`, which the fallback title would otherwise outrank.
-  const hideTitleFallback = !!headerChild || !!ariaLabel;
+  // fallback whenever this component supplies a title of its own.
+  const hideTitleFallback = !!headerChild || !!hiddenTitle;
   const hideDescriptionFallback =
     React.isValidElement(headerChild) &&
     !!(headerChild.props as { description?: unknown }).description;
@@ -304,6 +316,7 @@ function BaseModal({
 
   const modalContent = (
     <>
+      {hiddenTitle}
       {headerChild && headerChild}
       {ContentChild}
       {ContentFooter && ContentFooter}
@@ -331,7 +344,6 @@ function BaseModal({
         <Modal open={open} onOpenChange={setOpen}>
           {triggerChild}
           <ModalContent
-            aria-label={ariaLabel}
             className={contentClasses}
             style={customHeight || customWidth ? customStyle : undefined}
           >
@@ -352,7 +364,6 @@ function BaseModal({
           {triggerChild}
           {dialogContentWithouFixed ? (
             <DialogContentWithouFixed
-              aria-label={ariaLabel}
               onClick={(e) => e.stopPropagation()}
               onEscapeKeyDown={onEscapeKeyDown}
               onOpenAutoFocus={onOpenAutoFocus}
@@ -379,7 +390,6 @@ function BaseModal({
             </DialogContentWithouFixed>
           ) : (
             <DialogContent
-              aria-label={ariaLabel}
               onClick={(e) => e.stopPropagation()}
               onEscapeKeyDown={onEscapeKeyDown}
               onOpenAutoFocus={onOpenAutoFocus}

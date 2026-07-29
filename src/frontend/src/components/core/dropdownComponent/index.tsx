@@ -449,6 +449,7 @@ export default function Dropdown({
         onChange={searchRoleByTerm}
         onKeyDown={handleInputKeyDown}
         placeholder={t("input.searchOptions")}
+        aria-label={t("input.searchOptions")}
         className="flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
         autoComplete="off"
         data-testid="dropdown_search_input"
