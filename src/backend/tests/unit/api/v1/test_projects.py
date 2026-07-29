@@ -182,6 +182,76 @@ async def test_delete_project_then_404(client: AsyncClient, logged_in_headers, b
     assert get_resp.status_code == status.HTTP_404_NOT_FOUND
 
 
+async def test_delete_project_recovers_from_concurrent_write_lock(
+    client: AsyncClient, logged_in_headers, basic_case, monkeypatch
+):
+    """LE-2020: a competing commit must not turn DELETE into a 500 that leaves the project behind.
+
+    ``delete_project`` runs inside ``begin_nested()`` — the SAVEPOINT opens a DEFERRED
+    SQLite transaction, and the reads it performs (flow enumeration, deployment check)
+    pin a read snapshot. When another connection commits before the row delete runs,
+    SQLite answers SQLITE_BUSY_SNAPSHOT *immediately*: the busy handler is never
+    invoked, so ``busy_timeout`` cannot help and only restarting the transaction can.
+
+    The contention is injected with a real second connection committing a real row —
+    the DB is never mocked, only the timing is made deterministic instead of load-dependent.
+    """
+    from langflow.api.v1 import projects as projects_module
+
+    create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    assert create_resp.status_code == status.HTTP_201_CREATED
+    project_id = create_resp.json()["id"]
+
+    original_check = projects_module.check_project_has_deployments
+    attempts = {"count": 0}
+
+    async def check_with_competing_commit(session, *, project_id):
+        # Only the first attempt races: a retry must find a quiet database and win.
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            async with session_scope() as competing_session:
+                competing_session.add(Folder(name=f"competing-write-{uuid4()}", user_id=None))
+        return await original_check(session, project_id=project_id)
+
+    monkeypatch.setattr(projects_module, "check_project_has_deployments", check_with_competing_commit)
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+
+    assert attempts["count"] >= 1, "the contention hook never ran — the test no longer exercises the race"
+    assert delete_resp.status_code == status.HTTP_204_NO_CONTENT, delete_resp.text
+
+    get_resp = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert get_resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_delete_project_does_not_leak_sql_on_database_error(
+    client: AsyncClient, logged_in_headers, basic_case, monkeypatch
+):
+    """LE-2020: the error payload must never echo the statement, table or bound parameters."""
+    import sqlite3
+
+    from langflow.api.v1 import projects as projects_module
+    from sqlalchemy.exc import OperationalError
+
+    create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    project_id = create_resp.json()["id"]
+
+    leaked_statement = "DELETE FROM folder WHERE folder.id = ?"
+
+    async def always_locked(session, *, project_id):  # noqa: ARG001
+        raise OperationalError(leaked_statement, {"id": project_id}, sqlite3.OperationalError("database is locked"))
+
+    monkeypatch.setattr(projects_module, "check_project_has_deployments", always_locked)
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+
+    assert delete_resp.status_code != status.HTTP_204_NO_CONTENT
+    detail = delete_resp.json()["detail"]
+    assert "DELETE FROM folder" not in detail
+    assert "sqlalche.me" not in detail
+    assert str(project_id) not in detail
+
+
 async def test_read_project_invalid_id_format(client: AsyncClient, logged_in_headers):
     bad_id = "not-a-uuid"
     response = await client.get(f"api/v1/projects/{bad_id}", headers=logged_in_headers)
