@@ -101,19 +101,33 @@ const Header: React.FC<{
   children: ReactNode;
   description?: string | JSX.Element | null;
   clampDescription?: number;
+  className?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
 }> = ({
   children,
   description,
   clampDescription,
+  className,
+  titleClassName,
+  descriptionClassName,
 }: modalHeaderType): JSX.Element => {
   return (
-    <DialogHeader>
-      <DialogTitle className="line-clamp-1 flex items-center pb-0.5 text-base">
+    <DialogHeader className={className}>
+      <DialogTitle
+        className={cn(
+          "line-clamp-1 flex items-center pb-0.5 text-base",
+          titleClassName,
+        )}
+      >
         {children}
       </DialogTitle>
       {description && (
         <DialogDescription
-          className={`line-clamp-${clampDescription ?? 2} text-sm`}
+          className={cn(
+            `line-clamp-${clampDescription ?? 2} text-sm`,
+            descriptionClassName,
+          )}
         >
           {description}
         </DialogDescription>
@@ -228,6 +242,7 @@ interface BaseModalProps {
   onSubmit?: () => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
   onOpenAutoFocus?: (e: Event) => void;
+  onCloseAutoFocus?: (e: Event) => void;
   closeButtonClassName?: string;
   dialogContentWithouFixed?: boolean;
   height?: string;
@@ -246,6 +261,7 @@ function BaseModal({
   onSubmit,
   onEscapeKeyDown,
   onOpenAutoFocus,
+  onCloseAutoFocus,
   closeButtonClassName,
   dialogContentWithouFixed = false,
   height: customHeight,
@@ -334,6 +350,7 @@ function BaseModal({
               onClick={(e) => e.stopPropagation()}
               onEscapeKeyDown={onEscapeKeyDown}
               onOpenAutoFocus={onOpenAutoFocus}
+              onCloseAutoFocus={onCloseAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
               style={customHeight || customWidth ? customStyle : undefined}
@@ -359,6 +376,7 @@ function BaseModal({
               onClick={(e) => e.stopPropagation()}
               onEscapeKeyDown={onEscapeKeyDown}
               onOpenAutoFocus={onOpenAutoFocus}
+              onCloseAutoFocus={onCloseAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
               style={customHeight || customWidth ? customStyle : undefined}

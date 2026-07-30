@@ -26,6 +26,7 @@ from lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware 
     SingleToolCallMiddleware,
 )
 from lfx.components.models_and_agents.agent_helpers.tool_approval import ToolApprovalMixin
+from lfx.components.models_and_agents.agent_helpers.tool_call_id_middleware import ToolCallIDMiddleware
 from lfx.components.models_and_agents.memory import MemoryComponent, _safe_graph_user_id, aget_agent_chat_history
 
 if TYPE_CHECKING:
@@ -570,6 +571,13 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         # lazily on each call. The caller — `create_agent_runnable` — already
         # resolved it once for `bind_tools`, so reuse that instance here.
         middleware: list = []
+        # LangChain accepts missing IDs on AIMessage.tool_calls, but LangGraph's
+        # invalid-call path and ToolRetryMiddleware both require a string when
+        # they construct an error ToolMessage. Normalize at the model boundary
+        # so either recovery path can return the error to the model instead of
+        # crashing the flow.
+        if self.tools:
+            middleware.append(ToolCallIDMiddleware())
         max_iterations = getattr(self, "max_iterations", None)
         if max_iterations is not None:
             # `max_iterations` is a safety cap, not an "unlimited" toggle. A saved

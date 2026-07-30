@@ -7,6 +7,7 @@ import pytest
 from cryptography.fernet import Fernet
 from langflow.services.auth.service import AuthService
 from langflow.services.auth.utils import ensure_fernet_key
+from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
@@ -134,6 +135,56 @@ async def test_initialize_user_variables_stops_when_policy_resolution_fails(
         await service.initialize_user_variables(user_id=user_id, session=session)
 
     assert await service.list_variables(user_id, session=session) == []
+
+
+async def test_initialize_user_variables_passes_trusted_superuser_context(
+    service,
+    session: AsyncSession,
+    monkeypatch,
+):
+    user = User(
+        username=f"provider_superuser_{uuid4().hex}",
+        password="test-password",  # noqa: S106 - inert test fixture credential  # pragma: allowlist secret
+        is_active=True,
+        is_superuser=True,
+    )
+    session.add(user)
+    await session.flush()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(
+        service.settings_service.settings,
+        "variables_to_get_from_environment",
+        ["OPENAI_API_KEY"],
+    )
+    seen_attributes = None
+
+    def allow_superuser(*, user_id, providers, purpose, attributes=None):
+        nonlocal seen_attributes
+        seen_attributes = attributes
+        assert user_id == user.id
+        assert purpose is ModelProviderPolicyPurpose.CONFIGURE
+        assert "OpenAI" in providers
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id, attributes=attributes or {}),
+            purpose=purpose,
+            candidate_provider_ids=frozenset({"openai"}),
+            allowed_provider_ids=frozenset({"openai"}),
+        )
+
+    with (
+        patch.dict(
+            "os.environ",
+            {"OPENAI_API_KEY": "superuser-env-key"},  # pragma: allowlist secret
+            clear=True,
+        ),
+        patch("lfx.services.model_provider_policy.resolve_model_provider_policy", side_effect=allow_superuser),
+        patch("lfx.base.models.unified_models.validate_model_provider_key"),
+    ):
+        await service.initialize_user_variables(user_id=user.id, session=session)
+
+    assert seen_attributes == {"is_superuser": True}
+    imported = await service.get_variable_object(user.id, "OPENAI_API_KEY", session)
+    assert imported.user_id == user.id
 
 
 async def test_get_variable(service, session: AsyncSession):
@@ -264,7 +315,11 @@ async def test_get_all_redacts_shared_generic_values(service, session: AsyncSess
     by_id = {row.id: row for row in rows}
 
     assert by_id[owned.id].value == "owned-plaintext"
+    assert by_id[owned.id].is_owner is True
+    assert by_id[owned.id].can_manage_shares is True
     assert by_id[shared.id].value is None
+    assert by_id[shared.id].is_owner is False
+    assert by_id[shared.id].can_manage_shares is False
 
 
 async def test_get_variable__typeerror(service, session: AsyncSession):

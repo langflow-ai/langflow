@@ -1,3 +1,4 @@
+// biome-ignore-all lint/suspicious/noExplicitAny: store mocks intentionally accept multiple selector shapes
 import { renderHook } from "@testing-library/react";
 import useSaveFlow from "../use-save-flow";
 
@@ -127,6 +128,153 @@ describe("useSaveFlow", () => {
     expect(mockSetSaveLoading).toHaveBeenCalledWith(true);
     expect(mockSetSaveLoading).toHaveBeenCalledWith(false);
     expect(mockSetCurrentFlow).toHaveBeenCalled();
+  });
+
+  it("does not autosave hydrated data while the persisted flow is locked", async () => {
+    const persistedFlow = {
+      ...flowsManagerState.currentFlow,
+      locked: true,
+    };
+    flowsManagerState.currentFlow = persistedFlow;
+    flowsManagerState.flows = [persistedFlow];
+    flowStoreState.currentFlow = {
+      ...persistedFlow,
+      data: {
+        ...persistedFlow.data,
+        nodes: [{ id: "old-node", data: { is_refresh: true } }],
+        viewport: { x: 10, y: 20, zoom: 0.75 },
+      },
+    };
+
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(result.current()).resolves.toBeUndefined();
+
+    expect(mockMutate).not.toHaveBeenCalled();
+    expect(mockSetSaveLoading).not.toHaveBeenCalled();
+  });
+
+  it("unlocks a persisted flow before saving other settings changes", async () => {
+    const persistedFlow = {
+      ...flowsManagerState.currentFlow,
+      locked: true,
+    };
+    const requestedFlow = {
+      ...persistedFlow,
+      name: "Renamed after unlock",
+      locked: false,
+      data: {
+        ...persistedFlow.data,
+        nodes: [{ id: "old-node", data: { is_refresh: true } }],
+      },
+    };
+    flowsManagerState.currentFlow = persistedFlow;
+    flowsManagerState.flows = [persistedFlow];
+    flowStoreState.currentFlow = persistedFlow;
+
+    mockMutate.mockImplementation((payload, options) => {
+      options.onSuccess({
+        ...requestedFlow,
+        ...payload,
+      });
+    });
+
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(result.current(requestedFlow)).resolves.toBeUndefined();
+
+    expect(mockMutate).toHaveBeenCalledTimes(2);
+    expect(mockMutate.mock.calls[0][0]).toEqual({
+      id: "flow-1",
+      locked: false,
+    });
+    expect(mockMutate.mock.calls[1][0]).toEqual(
+      expect.objectContaining({
+        id: "flow-1",
+        name: "Renamed after unlock",
+        locked: false,
+        data: requestedFlow.data,
+      }),
+    );
+    expect(mockSetSaveLoading).toHaveBeenCalledWith(true);
+    expect(mockSetSaveLoading).toHaveBeenCalledWith(false);
+    expect(mockSetCurrentFlow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Renamed after unlock",
+        locked: false,
+      }),
+    );
+  });
+
+  it("does not autosave a locked editor flow when the manager snapshot is stale", async () => {
+    const staleManagerFlow = {
+      ...flowsManagerState.currentFlow,
+      locked: false,
+    };
+    const lockedEditorFlow = {
+      ...staleManagerFlow,
+      locked: true,
+      data: {
+        ...staleManagerFlow.data,
+        nodes: [{ id: "old-node", data: { is_refresh: true } }],
+      },
+    };
+    flowsManagerState.currentFlow = staleManagerFlow;
+    flowsManagerState.flows = [staleManagerFlow];
+    flowStoreState.currentFlow = lockedEditorFlow;
+
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(result.current()).resolves.toBeUndefined();
+
+    expect(mockMutate).not.toHaveBeenCalled();
+    expect(mockSetSaveLoading).not.toHaveBeenCalled();
+  });
+
+  it("unlocks a locked editor flow when the manager snapshot is stale", async () => {
+    const staleManagerFlow = {
+      ...flowsManagerState.currentFlow,
+      locked: false,
+    };
+    const lockedEditorFlow = {
+      ...staleManagerFlow,
+      locked: true,
+    };
+    const requestedFlow = {
+      ...lockedEditorFlow,
+      locked: false,
+      data: {
+        ...lockedEditorFlow.data,
+        nodes: [{ id: "old-node", data: { is_refresh: true } }],
+      },
+    };
+    flowsManagerState.currentFlow = staleManagerFlow;
+    flowsManagerState.flows = [staleManagerFlow];
+    flowStoreState.currentFlow = lockedEditorFlow;
+
+    mockMutate.mockImplementation((payload, options) => {
+      options.onSuccess({
+        ...requestedFlow,
+        ...payload,
+      });
+    });
+
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(result.current(requestedFlow)).resolves.toBeUndefined();
+
+    expect(mockMutate).toHaveBeenCalledTimes(2);
+    expect(mockMutate.mock.calls[0][0]).toEqual({
+      id: "flow-1",
+      locked: false,
+    });
+    expect(mockMutate.mock.calls[1][0]).toEqual(
+      expect.objectContaining({
+        id: "flow-1",
+        locked: false,
+        data: requestedFlow.data,
+      }),
+    );
   });
 
   it("should_update_store_flow_folder_id_when_moved_via_drag_drop_from_dashboard", async () => {

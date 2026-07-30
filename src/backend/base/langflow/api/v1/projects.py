@@ -8,7 +8,7 @@ from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
 from lfx.utils.util_strings import escape_like_pattern
-from sqlalchemy import or_, update
+from sqlalchemy import literal, or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
@@ -140,6 +140,7 @@ async def create_project(
             await register_mcp_servers_for_project(new_project, mcp_auth, current_user, session)
 
         flow_ids_for_sync = list(dict.fromkeys((project.flows_list or []) + (project.components_list or [])))
+        authorized_flow_owner_ids: dict[UUID, UUID] = {}
 
         async def _move_flows_into_project() -> None:
             if project.components_list:
@@ -151,6 +152,7 @@ async def create_project(
                         )
                     )
                 ).all()
+                authorized_flow_owner_ids.update((flow_id, current_user.id) for flow_id, _folder_id in component_flows)
                 await ensure_flow_moves_allowed(
                     session,
                     flow_folder_pairs=list(component_flows),
@@ -159,7 +161,7 @@ async def create_project(
                 update_statement_components = (
                     update(Flow)
                     .where(Flow.id.in_(project.components_list), Flow.user_id == current_user.id)  # type: ignore[attr-defined]
-                    .values(folder_id=new_project.id)
+                    .values(folder_id=new_project.id, workspace_id=new_project.workspace_id)
                 )
                 await session.exec(update_statement_components)
 
@@ -172,6 +174,7 @@ async def create_project(
                         )
                     )
                 ).all()
+                authorized_flow_owner_ids.update((flow_id, current_user.id) for flow_id, _folder_id in project_flows)
                 await ensure_flow_moves_allowed(
                     session,
                     flow_folder_pairs=list(project_flows),
@@ -180,15 +183,14 @@ async def create_project(
                 update_statement_flows = (
                     update(Flow)
                     .where(Flow.id.in_(project.flows_list), Flow.user_id == current_user.id)  # type: ignore[attr-defined]
-                    .values(folder_id=new_project.id)
+                    .values(folder_id=new_project.id, workspace_id=new_project.workspace_id)
                 )
                 await session.exec(update_statement_flows)
 
         if flow_ids_for_sync:
             await retry_flow_operation_on_deployment_guard(
                 db=session,
-                user_id=current_user.id,
-                flow_ids=flow_ids_for_sync,
+                flow_owner_ids=authorized_flow_owner_ids,
                 operation=_move_flows_into_project,
             )
         else:
@@ -354,7 +356,7 @@ async def read_project(
                     stmt,
                     id_column=Flow.id,
                     owner_clause=Flow.user_id == current_user.id,
-                    workspace_column=Flow.workspace_id,
+                    workspace_expression=literal(project.workspace_id),
                     project_column=Flow.folder_id,
                     visibility=visibility_scope,
                 )
@@ -390,7 +392,7 @@ async def read_project(
                     current_user,
                     resource_type="flow",
                     candidates=list(paginated_flows.items),
-                    domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
+                    domain_extractor=lambda flow: _resolve_authz_domain(project.workspace_id, flow.folder_id),
                     owner_extractor=lambda flow: flow.user_id,
                     act=FlowAction.READ,
                 )
@@ -416,7 +418,7 @@ async def read_project(
                     if flow.user_id == current_user.id
                     or resource_visible_in_scope(
                         resource_id=flow.id,
-                        workspace_id=flow.workspace_id,
+                        workspace_id=project.workspace_id,
                         project_id=flow.folder_id,
                         visibility=visibility_scope,
                     )
@@ -426,16 +428,19 @@ async def read_project(
                     current_user,
                     resource_type="flow",
                     candidates=list(project.flows),
-                    domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
+                    domain_extractor=lambda flow: _resolve_authz_domain(project.workspace_id, flow.folder_id),
                     owner_extractor=lambda flow: flow.user_id,
                     act=FlowAction.READ,
                 )
         else:
             visible_flows = [flow for flow in project.flows if flow.user_id == current_user.id]
-        project.flows = visible_flows
-
-        # Convert to FolderReadWithFlows while session is still active to avoid detached instance errors
-        return FolderReadWithFlows.model_validate(project, from_attributes=True)
+        # Convert without assigning the filtered list back to the ORM
+        # relationship. ``Folder.flows`` owns delete-orphan cascade; mutating it
+        # in this GET handler would delete every hidden flow when the request
+        # session commits.
+        project_read = FolderReadWithFlows.model_validate(project, from_attributes=True)
+        project_read.flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in visible_flows]
+        return project_read  # noqa: TRY300 - conversion must happen while the ORM session is active
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -584,6 +589,7 @@ async def update_project(
 
         my_collection_project = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
         flow_ids_for_sync = list(dict.fromkeys(excluded_flows + concat_project_components))
+        authorized_flow_owner_ids: dict[UUID, UUID] = {}
 
         async def _move_flows_for_project_update() -> None:
             # Both SELECT and UPDATE must scope to the project owner — a
@@ -602,6 +608,9 @@ async def update_project(
                         )
                     )
                 ).all()
+                authorized_flow_owner_ids.update(
+                    (flow_id, project_owner_id) for flow_id, _folder_id in excluded_flow_rows
+                )
                 await ensure_flow_moves_allowed(
                     session,
                     flow_folder_pairs=list(excluded_flow_rows),
@@ -613,7 +622,7 @@ async def update_project(
                         Flow.id.in_(excluded_flows),  # type: ignore[attr-defined]
                         Flow.user_id == project_owner_id,
                     )
-                    .values(folder_id=my_collection_project.id)
+                    .values(folder_id=my_collection_project.id, workspace_id=my_collection_project.workspace_id)
                 )
                 await session.exec(update_statement_my_collection)
 
@@ -626,6 +635,9 @@ async def update_project(
                         )
                     )
                 ).all()
+                authorized_flow_owner_ids.update(
+                    (flow_id, project_owner_id) for flow_id, _folder_id in component_flow_rows
+                )
                 await ensure_flow_moves_allowed(
                     session,
                     flow_folder_pairs=list(component_flow_rows),
@@ -637,15 +649,14 @@ async def update_project(
                         Flow.id.in_(concat_project_components),  # type: ignore[attr-defined]
                         Flow.user_id == project_owner_id,
                     )
-                    .values(folder_id=existing_project.id)
+                    .values(folder_id=existing_project.id, workspace_id=existing_project.workspace_id)
                 )
                 await session.exec(update_statement_components)
 
         if flow_ids_for_sync:
             await retry_flow_operation_on_deployment_guard(
                 db=session,
-                user_id=current_user.id,
-                flow_ids=flow_ids_for_sync,
+                flow_owner_ids=authorized_flow_owner_ids,
                 operation=_move_flows_for_project_update,
             )
         else:

@@ -107,9 +107,7 @@ export default function AddMcpServerModal({
     initialData ? (initialData.command ? "STDIO" : "HTTP") : "JSON",
   );
   const [jsonValue, setJsonValue] = useState("");
-  const [error, setError] = useState<string | null>(
-    "Error downloading file: File _mcp_servers.json not found in flow 7e93e2c5-b979-49c0-b01b-4f4111d9230d",
-  );
+  const [error, setError] = useState<string | null>(null);
   const { mutateAsync: addMCPServer, isPending: isAddPending } =
     useAddMCPServer();
   const { mutateAsync: patchMCPServer, isPending: isPatchPending } =
@@ -345,37 +343,45 @@ export default function AddMcpServerModal({
       className="!p-0 min-h-[250px] max-h-[75vh] flex-grow"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      {/*
+        The title must render through BaseModal.Header so it becomes a real
+        DialogTitle. A plain div here leaves the dialog with no accessible
+        name, and DialogContent injects its VisuallyHidden "Dialog" fallback
+        instead (WCAG 4.1.2 / 2.4.6).
+      */}
+      <BaseModal.Header
+        // -mb-2 cancels the 24px gap BaseModal's form puts between header and
+        // content, keeping the original 16px spacing above the tabs.
+        className="-mb-2 gap-3 p-4 pb-0 tracking-normal"
+        titleClassName="gap-2 text-sm font-medium"
+        descriptionClassName="text-mmd font-normal text-muted-foreground"
+        description={
+          isOnMcpSettingsPage ? (
+            t("mcp.modal.descriptionSettings")
+          ) : (
+            <>
+              {t("mcp.modal.descriptionFlow")}{" "}
+              <CustomLink
+                className="underline"
+                to={MCP_SETTINGS_PAGE}
+                onClick={() => setOpen(false)}
+              >
+                {t("mcp.modal.descriptionFlowLink")}
+              </CustomLink>
+              .
+            </>
+          )
+        }
+      >
+        <ForwardedIconComponent
+          name="Mcp"
+          className="h-4 w-4 text-primary"
+          aria-hidden="true"
+        />
+        {initialData ? t("mcp.modal.updateTitle") : t("mcp.modal.addTitle")}
+      </BaseModal.Header>
       <BaseModal.Content className="flex flex-1 flex-col overflow-hidden min-h-0">
         <div className="flex flex-1 w-full flex-col overflow-hidden min-h-0">
-          <div className="flex flex-col gap-3 p-4 tracking-normal">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <ForwardedIconComponent
-                name="Mcp"
-                className="h-4 w-4 text-primary"
-                aria-hidden="true"
-              />
-              {initialData
-                ? t("mcp.modal.updateTitle")
-                : t("mcp.modal.addTitle")}
-            </div>
-            <span className="text-mmd font-normal text-muted-foreground">
-              {isOnMcpSettingsPage ? (
-                t("mcp.modal.descriptionSettings")
-              ) : (
-                <>
-                  {t("mcp.modal.descriptionFlow")}{" "}
-                  <CustomLink
-                    className="underline"
-                    to={MCP_SETTINGS_PAGE}
-                    onClick={() => setOpen(false)}
-                  >
-                    {t("mcp.modal.descriptionFlowLink")}
-                  </CustomLink>
-                  .
-                </>
-              )}
-            </span>
-          </div>
           <Tabs
             defaultValue={type}
             onValueChange={changeType}
@@ -414,15 +420,28 @@ export default function AddMcpServerModal({
               id="global-variable-modal-inputs"
             >
               {error && (
-                <div className="mb-4 rounded-md bg-destructive/10 px-4 py-2 text-xs font-medium text-destructive">
+                <div
+                  role="alert"
+                  className="mb-4 rounded-md bg-destructive/10 px-4 py-2 text-xs font-medium text-destructive"
+                >
                   {error}
                 </div>
               )}
-              <TabsContent value="JSON" className="flex flex-col p-0 m-0">
-                <Label className="!text-mmd mb-2">
+              {/*
+                Each panel holds its own focusable fields, so the panel itself
+                does not need to be a tab stop (ARIA APG). Matches the opt-out
+                in GlobalVariableModal.
+              */}
+              <TabsContent
+                value="JSON"
+                className="flex flex-col p-0 m-0"
+                tabIndex={-1}
+              >
+                <Label htmlFor="mcp-json-input" className="!text-mmd mb-2">
                   {t("mcp.modal.jsonTabLabel")}
                 </Label>
                 <Textarea
+                  id="mcp-json-input"
                   value={jsonValue}
                   data-testid="json-input"
                   onChange={(e) => setJsonValue(e.target.value)}
@@ -434,14 +453,19 @@ export default function AddMcpServerModal({
               <TabsContent
                 value="STDIO"
                 className="flex flex-1 flex-col h-full p-0 m-0"
+                tabIndex={-1}
               >
                 <div className="flex h-full flex-col gap-4">
                   <div className="flex flex-col gap-2">
-                    <Label className="flex items-start gap-1 !text-mmd">
+                    <Label
+                      htmlFor="mcp-stdio-name"
+                      className="flex items-start gap-1 !text-mmd"
+                    >
                       {t("mcp.modal.fieldName")}{" "}
                       <span className="text-destructive">*</span>
                     </Label>
                     <Input
+                      id="mcp-stdio-name"
                       value={stdioName}
                       onChange={(e) => setStdioName(e.target.value)}
                       placeholder={t("mcp.modal.placeholderServerName")}
@@ -450,11 +474,15 @@ export default function AddMcpServerModal({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label className="flex items-start gap-1 !text-mmd">
+                    <Label
+                      htmlFor="mcp-stdio-command"
+                      className="flex items-start gap-1 !text-mmd"
+                    >
                       {t("mcp.modal.fieldCommand")}
                       <span className="text-destructive">*</span>
                     </Label>
                     <Input
+                      id="mcp-stdio-command"
                       value={stdioCommand}
                       onChange={(e) => setStdioCommand(e.target.value)}
                       placeholder={t("mcp.modal.placeholderCommand")}
@@ -462,8 +490,17 @@ export default function AddMcpServerModal({
                       disabled={isPending}
                     />
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">
+                  {/*
+                    Args and env render a list of inputs, so a single htmlFor
+                    cannot name them. Expose the visible label as a group name
+                    instead (WCAG 1.3.1).
+                  */}
+                  <div
+                    role="group"
+                    aria-labelledby="mcp-stdio-args-label"
+                    className="flex flex-col gap-2"
+                  >
+                    <Label id="mcp-stdio-args-label" className="!text-mmd">
                       {t("mcp.modal.fieldArguments")}
                     </Label>
                     <InputListComponent
@@ -477,8 +514,12 @@ export default function AddMcpServerModal({
                       data-testid="stdio-args-input"
                     />
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">
+                  <div
+                    role="group"
+                    aria-labelledby="mcp-stdio-env-label"
+                    className="flex flex-col gap-2"
+                  >
+                    <Label id="mcp-stdio-env-label" className="!text-mmd">
                       {t("mcp.modal.fieldEnvironmentVariables")}
                     </Label>
                     <IOKeyPairInput
@@ -495,14 +536,19 @@ export default function AddMcpServerModal({
               <TabsContent
                 value="HTTP"
                 className="flex flex-1 flex-col h-full p-0 m-0"
+                tabIndex={-1}
               >
                 <div className="flex h-full flex-col gap-4">
                   <div className="flex flex-col gap-2">
-                    <Label className="flex items-start gap-1 !text-mmd">
+                    <Label
+                      htmlFor="mcp-http-name"
+                      className="flex items-start gap-1 !text-mmd"
+                    >
                       {t("mcp.modal.fieldName")}
                       <span className="text-destructive">*</span>
                     </Label>
                     <Input
+                      id="mcp-http-name"
                       value={httpName}
                       onChange={(e) => setHttpName(e.target.value)}
                       placeholder={t("mcp.modal.placeholderHttpName")}
@@ -511,11 +557,15 @@ export default function AddMcpServerModal({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label className="flex items-start gap-1 !text-mmd">
+                    <Label
+                      htmlFor="mcp-http-url"
+                      className="flex items-start gap-1 !text-mmd"
+                    >
                       {t("mcp.modal.fieldStreamableUrl")}
                       <span className="text-destructive">*</span>
                     </Label>
                     <Input
+                      id="mcp-http-url"
                       value={httpUrl}
                       onChange={(e) => setHttpUrl(e.target.value)}
                       placeholder={t("mcp.modal.placeholderHttpUrl")}
@@ -523,8 +573,12 @@ export default function AddMcpServerModal({
                       disabled={isPending}
                     />
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">
+                  <div
+                    role="group"
+                    aria-labelledby="mcp-http-headers-label"
+                    className="flex flex-col gap-2"
+                  >
+                    <Label id="mcp-http-headers-label" className="!text-mmd">
                       {t("mcp.modal.fieldHeaders")}
                     </Label>
                     <IOKeyPairInputWithVariables
@@ -537,8 +591,12 @@ export default function AddMcpServerModal({
                       enableGlobalVariables={true}
                     />
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">
+                  <div
+                    role="group"
+                    aria-labelledby="mcp-http-env-label"
+                    className="flex flex-col gap-2"
+                  >
+                    <Label id="mcp-http-env-label" className="!text-mmd">
                       {t("mcp.modal.fieldEnvironmentVariables")}
                     </Label>
                     <IOKeyPairInput

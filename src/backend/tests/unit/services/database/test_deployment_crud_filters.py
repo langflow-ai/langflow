@@ -122,6 +122,7 @@ async def test_local_deployment_queries_filter_project_and_flow_versions(async_s
         page = await list_deployments_page(
             async_session,
             user_id=user.id,
+            row_owner_id=user.id,
             deployment_provider_account_id=provider_account.id,
             offset=0,
             limit=10,
@@ -131,6 +132,7 @@ async def test_local_deployment_queries_filter_project_and_flow_versions(async_s
         count = await count_deployments_by_provider(
             async_session,
             user_id=user.id,
+            row_owner_id=user.id,
             deployment_provider_account_id=provider_account.id,
             project_id=project_id,
             flow_version_ids=flow_version_ids,
@@ -151,6 +153,7 @@ async def test_local_deployment_queries_filter_project_and_flow_versions(async_s
     page = await list_deployments_page(
         async_session,
         user_id=user.id,
+        row_owner_id=user.id,
         deployment_provider_account_id=provider_account.id,
         offset=0,
         limit=1,
@@ -159,6 +162,7 @@ async def test_local_deployment_queries_filter_project_and_flow_versions(async_s
     count = await count_deployments_by_provider(
         async_session,
         user_id=user.id,
+        row_owner_id=user.id,
         deployment_provider_account_id=provider_account.id,
     )
     assert count == 3

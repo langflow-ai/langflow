@@ -11,6 +11,8 @@ from lfx.services.model_provider_policy import (
     ModelProviderPolicyPurpose,
     ModelProviderPolicyService,
     ModelProviderPolicySnapshot,
+    reset_current_model_provider_policy_context,
+    set_current_model_provider_policy_context,
 )
 
 
@@ -50,6 +52,33 @@ def test_default_resolution_preserves_unknown_legacy_provider_names(monkeypatch)
     )
 
     assert snapshot.allows("Legacy Custom Provider")
+
+
+def test_request_principal_attributes_follow_only_the_matching_user(monkeypatch):
+    from lfx.services.model_provider_policy import utils
+
+    service = ModelProviderPolicyService()
+    monkeypatch.setattr("lfx.services.deps.get_model_provider_policy_service", lambda: service)
+    token = set_current_model_provider_policy_context(
+        user_id="user-1",
+        attributes={"is_superuser": True},
+    )
+    try:
+        matching = utils.resolve_model_provider_policy(
+            user_id="user-1",
+            providers=["OpenAI"],
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+        different = utils.resolve_model_provider_policy(
+            user_id="user-2",
+            providers=["OpenAI"],
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+    finally:
+        reset_current_model_provider_policy_context(token)
+
+    assert matching.context.attributes["is_superuser"] is True
+    assert dict(different.context.attributes) == {}
 
 
 def test_watsonx_legacy_alias_resolves_to_stable_provider_id():
@@ -123,6 +152,81 @@ def test_embedding_runtime_denies_provider_before_credential_resolution(monkeypa
         )
 
     assert credential_lookup_called is False
+
+
+async def test_standalone_model_component_denied_before_build_method(monkeypatch):
+    """Saved legacy model nodes cannot bypass policy by skipping the unified-model helpers."""
+    from lfx.base.models.model import LCModelComponent
+    from lfx.io import Output
+
+    build_called = False
+
+    class StandaloneOpenAIComponent(LCModelComponent):
+        display_name = "OpenAI"
+        outputs = [Output(name="model", display_name="Model", method="build_model")]
+
+        def build_model(self):
+            nonlocal build_called
+            build_called = True
+            return "should-not-run"
+
+    def _deny(*, user_id, providers, purpose, attributes=None):
+        candidate_ids = frozenset(providers)
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id, attributes=attributes or {}),
+            purpose=purpose,
+            candidate_provider_ids=candidate_ids,
+            allowed_provider_ids=frozenset(),
+        )
+
+    monkeypatch.setattr("lfx.services.model_provider_policy.utils.resolve_model_provider_policy", _deny)
+    component = StandaloneOpenAIComponent(_user_id="user-1")
+
+    with pytest.raises(ModelProviderPolicyError):
+        await component.build_results()
+
+    assert build_called is False
+
+
+def test_standalone_model_component_denied_before_dynamic_configuration(monkeypatch):
+    from lfx.base.models.model import LCModelComponent
+
+    class StandaloneAnthropicComponent(LCModelComponent):
+        display_name = "Anthropic"
+
+    purposes = []
+
+    def _deny(*, user_id, providers, purpose, attributes=None):
+        purposes.append(purpose)
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id, attributes=attributes or {}),
+            purpose=purpose,
+            candidate_provider_ids=frozenset(providers),
+            allowed_provider_ids=frozenset(),
+        )
+
+    monkeypatch.setattr("lfx.services.model_provider_policy.utils.resolve_model_provider_policy", _deny)
+    component = StandaloneAnthropicComponent(_user_id="user-1")
+
+    with pytest.raises(ModelProviderPolicyError):
+        component.require_model_provider_policy(ModelProviderPolicyPurpose.CONFIGURE)
+
+    assert purposes == [ModelProviderPolicyPurpose.CONFIGURE]
+
+
+def test_delegating_model_component_skips_outer_provider_gate(monkeypatch):
+    from lfx.base.models.model import LCModelComponent
+
+    class UnifiedSelectorComponent(LCModelComponent):
+        display_name = "Language Model"
+        model_provider_policy_mode = "delegate"
+
+    resolver = AsyncMock()
+    monkeypatch.setattr("lfx.services.model_provider_policy.utils.resolve_model_provider_policy", resolver)
+
+    UnifiedSelectorComponent(_user_id="user-1").require_model_provider_policy(ModelProviderPolicyPurpose.CONFIGURE)
+
+    resolver.assert_not_called()
 
 
 def test_known_llm_provider_ignores_spoofed_runtime_metadata(monkeypatch):
