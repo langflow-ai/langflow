@@ -53,18 +53,17 @@ import { formatFileSize } from "../utils";
  */
 function validateBackendConfig(
   backendType: AvailableDBProviderId,
-  config: Record<string, DBProviderConfigValue>,
+  _config: Record<string, DBProviderConfigValue>,
 ): string | null {
   if (backendType === "chroma_cloud") {
     // API key is validated by isDBProviderConfigured; no literal fields here.
     return null;
   }
-  if (backendType === "opensearch") {
-    const indexName = config.index_name;
-    if (typeof indexName !== "string" || !indexName.trim()) {
-      return "OpenSearch requires an index_name";
-    }
-  }
+  // OpenSearch no longer requires an ``index_name``: the backend derives a
+  // unique index per Knowledge Base from its name when one isn't supplied, so
+  // each KB is isolated in its own index instead of sharing a single global
+  // one. An explicitly-set ``index_name`` is still honored downstream as an
+  // external-index override.
   return null;
 }
 

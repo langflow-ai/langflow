@@ -43,6 +43,12 @@ jest.mock("@/controllers/API/queries/memories/use-create-memory", () => ({
   useCreateMemory: () => ({ mutate: mockMutate, isPending: false }),
 }));
 
+// No DB providers configured in the test env → default to local Chroma, which
+// `isDBProviderConfigured` always treats as configured.
+jest.mock("@/controllers/API/queries/variables", () => ({
+  useGetGlobalVariables: () => ({ data: [], isFetched: true }),
+}));
+
 describe("useCreateMemoryModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -151,5 +157,64 @@ describe("useCreateMemoryModal", () => {
         threshold: 5,
       }),
     );
+  });
+
+  it("defaults to local Chroma and includes backend fields in the payload", () => {
+    const { result } = renderHook(() =>
+      useCreateMemoryModal({ flowId: "flow-1", onClose: jest.fn() }),
+    );
+
+    expect(result.current.backendType).toBe("chroma");
+    expect(result.current.backendConfigured).toBe(true);
+
+    act(() => {
+      result.current.setName("My Memory");
+      result.current.setSelectedEmbeddingModel([
+        {
+          id: "text-embedding-3-small",
+          name: "text-embedding-3-small",
+          provider: "OpenAI",
+        } as ModelOption,
+      ]);
+    });
+
+    act(() => {
+      result.current.handleSubmit();
+    });
+
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        backend_type: "chroma",
+        backend_config: {},
+      }),
+    );
+  });
+
+  it("blocks submit when the selected backend is not configured", () => {
+    const { result } = renderHook(() =>
+      useCreateMemoryModal({ flowId: "flow-1", onClose: jest.fn() }),
+    );
+
+    act(() => {
+      result.current.setName("My Memory");
+      result.current.setSelectedEmbeddingModel([
+        {
+          id: "text-embedding-3-small",
+          name: "text-embedding-3-small",
+          provider: "OpenAI",
+        } as ModelOption,
+      ]);
+      // Switch to a remote provider with no global variables set → unconfigured.
+      result.current.handleBackendProviderChange("opensearch", {});
+    });
+
+    expect(result.current.backendConfigured).toBe(false);
+
+    act(() => {
+      result.current.handleSubmit();
+    });
+
+    expect(mockMutate).not.toHaveBeenCalled();
+    expect(mockSetErrorData).toHaveBeenCalled();
   });
 });
