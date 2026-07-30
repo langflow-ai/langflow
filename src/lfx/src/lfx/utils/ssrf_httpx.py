@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import urlparse
 
 import httpx
 
@@ -36,9 +35,14 @@ def _raise_if_following_redirects(request_kwargs: dict[str, Any]) -> None:
         raise SSRFProtectionError(msg)
 
 
+def _transport_host(url: str) -> str:
+    """Return the IDNA-normalized host httpx/httpcore uses for connections."""
+    return httpx.URL(url).raw_host.decode("ascii")
+
+
 def _async_client_for_url(url: str, validated_ips: list[str]) -> httpx.AsyncClient:
     if is_ssrf_protection_enabled() and validated_ips:
-        hostname = urlparse(url).hostname
+        hostname = _transport_host(url)
         if hostname:
             return create_ssrf_protected_client(hostname=hostname, validated_ips=validated_ips)
     return httpx.AsyncClient()
@@ -46,7 +50,7 @@ def _async_client_for_url(url: str, validated_ips: list[str]) -> httpx.AsyncClie
 
 def _sync_client_for_url(url: str, validated_ips: list[str]) -> httpx.Client:
     if is_ssrf_protection_enabled() and validated_ips:
-        hostname = urlparse(url).hostname
+        hostname = _transport_host(url)
         if hostname:
             return create_ssrf_protected_sync_client(hostname=hostname, validated_ips=validated_ips)
     return httpx.Client()
@@ -66,7 +70,7 @@ def ssrf_protected_httpx_client_kwargs_for_url(url: str) -> tuple[dict[str, Any]
     sync_kwargs: dict[str, Any] = {"follow_redirects": False}
     async_kwargs: dict[str, Any] = {"follow_redirects": False}
 
-    hostname = urlparse(validated_url).hostname
+    hostname = _transport_host(validated_url)
     if hostname and validated_ips:
         ip_list = list(validated_ips)
         sync_kwargs["transport"] = SSRFProtectedSyncTransport(pinned_ips={hostname: ip_list})
