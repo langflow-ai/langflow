@@ -21,6 +21,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "datastax"]
 dependencies = [
     "lfx>=1.12.0.dev0,<2.0.0",
     "langchain-astradb~=1.0.0",
+    "langchain-community>=0.4.1,<1.0.0",
     # Imported directly (astrapy.DataAPIClient/Database) by the astra components,
     # not just transitively via langchain-astradb; pin matches langflow-base's
     # astrapy extra.

@@ -59,6 +59,17 @@ def _make_fake_tg(**overrides):
     return fake
 
 
+@pytest.fixture
+def custom_component_execution_enabled(monkeypatch):
+    """Enable ToolGuard code execution for tests that exercise cache behavior."""
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True)),
+    )
+
+
 @pytest.mark.asyncio
 async def test_guard_tools_blocked_when_custom_components_disabled(mock_component, monkeypatch):
     """ToolGuard guard execution must be refused under allow_custom_components=False.
@@ -114,6 +125,7 @@ async def test_guard_tools_allowed_when_custom_components_enabled(mock_component
     mock_import.assert_called()
 
 
+@pytest.mark.usefixtures("custom_component_execution_enabled")
 async def test_cache_mode_success(mock_component, mock_tool):
     """Test PoliciesComponent in cache mode with valid cached guards."""
     code_dir = mock_component.work_dir / STEP2
@@ -154,6 +166,7 @@ async def test_cache_mode_success(mock_component, mock_tool):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("custom_component_execution_enabled")
 async def test_cache_mode_directory_not_found(mock_component):
     """Test PoliciesComponent in cache mode when cache directory doesn't exist."""
     fake_tg = _make_fake_tg()
@@ -167,6 +180,7 @@ async def test_cache_mode_directory_not_found(mock_component):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("custom_component_execution_enabled")
 async def test_cache_mode_file_not_found(mock_component):
     """Test PoliciesComponent in cache mode when required files are missing."""
     fake_tg = _make_fake_tg()
@@ -181,6 +195,7 @@ async def test_cache_mode_file_not_found(mock_component):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("custom_component_execution_enabled")
 async def test_cache_mode_corrupted_cache(mock_component):
     """Test PoliciesComponent in cache mode when cached code is corrupted."""
     fake_tg = _make_fake_tg()
