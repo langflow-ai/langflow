@@ -86,12 +86,12 @@ export function useGlobalVariableUpsert() {
         );
       }
       try {
-        const res = await patchMutation.mutateAsync(updateData);
-        return {
-          action: "updated",
-          name: res?.name ?? params.name,
-          id: existing.id,
-        };
+        // Name and id are already known locally: `existing` was matched by
+        // name and PATCH does not change it, so there is no need to read them
+        // back from the (loosely typed) patch response. The create branch below
+        // reads its response only because the id is server-generated.
+        await patchMutation.mutateAsync(updateData);
+        return { action: "updated", name: params.name, id: existing.id };
       } catch (error) {
         throw withAction(error, "updated");
       }
