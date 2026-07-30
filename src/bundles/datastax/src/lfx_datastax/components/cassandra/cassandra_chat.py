@@ -1,3 +1,5 @@
+"""Cassandra chat-memory component."""
+
 from lfx.base.memory.model import LCChatMemoryComponent
 from lfx.field_typing.constants import Memory
 from lfx.inputs.inputs import DictInput, MessageTextInput, SecretStrInput

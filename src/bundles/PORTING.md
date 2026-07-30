@@ -185,7 +185,7 @@ Three edits — all mechanical:
 # 1. Add to [project] dependencies (regular dep so `pip install langflow`
 #    still pulls the component in -- no user-visible change at install time).
 dependencies = [
-    "langflow-core~=1.11.0",
+    "langflow-base~=1.12.0",
     "lfx-duckduckgo>=0.1.0",
     "lfx-<bundle>>=0.1.0",                 # <-- add this line
 ]
@@ -198,7 +198,6 @@ members = [
     "src/backend/base",
     ".",
     "src/lfx",
-    "src/langflow-core",
     "src/sdk",
     "src/bundles/duckduckgo",
     "src/bundles/<bundle>",                # <-- add this line
@@ -399,20 +398,17 @@ wheel content matches the wheel built by the current run.
 
 ## 8. Docker images (only if shipping a new bundle to the runtime image)
 
-The four `docker/build_and_push*.Dockerfile` images already `COPY
-./src/bundles` into the build context, so a new bundle directory is
-picked up automatically by the workspace `uv sync`. The two **non**-uv-sync
-Dockerfiles need an extra line:
+The shared [`docker/build_and_push.Dockerfile`](../../docker/build_and_push.Dockerfile)
+copies `src/bundles` into the build context. A curated bundle added to the root
+dependencies is picked up by the `full` target's workspace sync. The `base`
+target intentionally does not install provider extensions.
 
 - [`docker/build_and_push_backend.Dockerfile`](../../docker/build_and_push_backend.Dockerfile):
   add `./src/bundles/<bundle>` to the explicit `uv pip install` line.
-- [`docker/build_and_push_base.Dockerfile`](../../docker/build_and_push_base.Dockerfile):
-  add a `uv pip install --no-deps /app/src/bundles/<bundle>` step after
-  the workspace sync, alongside the bundle's runtime deps if they aren't
-  already in the base lock.
 
-If your bundle has no extras and its deps are already in
-`langflow-base[complete]`, the `--no-deps` install is enough.
+Do not add provider extensions to the base target. Validate that the full image
+discovers the bundle and that the base image's distribution inventory remains
+unchanged.
 
 ---
 

@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build build_langflow_core publish_core publish_core_testpypi run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -332,15 +332,7 @@ ifdef main
 	make install_frontendci
 	make build_frontend
 	make build_langflow_base args="$(args)"
-	make build_langflow_core args="$(args)"
 	make build_langflow args="$(args)"
-endif
-
-ifdef core
-	make install_frontendci
-	make build_frontend
-	make build_langflow_base args="$(args)"
-	make build_langflow_core args="$(args)"
 endif
 
 ifdef pre
@@ -351,9 +343,6 @@ endif
 
 build_langflow_base:
 	cd src/backend/base && uv build $(args)
-
-build_langflow_core:
-	cd src/langflow-core && uv build $(args) --out-dir dist
 
 build_langflow_backup:
 	uv lock && uv build
@@ -436,9 +425,6 @@ publish_base:
 publish_langflow:
 	uv publish
 
-publish_core:
-	cd src/langflow-core && uv publish
-
 publish_base_testpypi:
 	# TODO: update this to use the test-pypi repository
 	cd src/backend/base && uv publish -r test-pypi
@@ -446,9 +432,6 @@ publish_base_testpypi:
 publish_langflow_testpypi:
 	# TODO: update this to use the test-pypi repository
 	uv publish -r test-pypi
-
-publish_core_testpypi:
-	cd src/langflow-core && uv publish -r test-pypi
 
 publish: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
@@ -458,10 +441,6 @@ endif
 
 ifdef main
 	make publish_langflow
-endif
-
-ifdef core
-	make publish_core
 endif
 
 publish_testpypi: ## build the frontend static files and package the project and publish it to PyPI
@@ -592,27 +571,21 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0 [sdk_v=0
 	echo "$(GREEN)Updating version to $(v)$(NC)"; \
 	\
 	LANGFLOW_VERSION="$(v)"; \
-	LANGFLOW_BASE_VERSION=$$(echo "$$LANGFLOW_VERSION" | sed -E 's/^[0-9]+\.(.*)$$/0.\1/'); \
 	LANGFLOW_COMPAT_VERSION=$$(echo "$$LANGFLOW_VERSION" | sed -E 's/^([0-9]+\.[0-9]+)\..*$$/\1.0/'); \
-	LANGFLOW_BASE_COMPAT_VERSION=$$(echo "$$LANGFLOW_BASE_VERSION" | sed -E 's/^([0-9]+\.[0-9]+)\..*$$/\1.0/'); \
 	SDK_VERSION="$(sdk_v)"; \
 	if [ -z "$$SDK_VERSION" ]; then SDK_VERSION=$$(grep "^version" src/sdk/pyproject.toml | sed 's/.*"\(.*\)"$$/\1/'); fi; \
 	\
 	echo "$(GREEN)Langflow version: $$LANGFLOW_VERSION$(NC)"; \
-	echo "$(GREEN)Langflow-core version: $$LANGFLOW_VERSION$(NC)"; \
-	echo "$(GREEN)Langflow-base version: $$LANGFLOW_BASE_VERSION$(NC)"; \
-	echo "$(GREEN)Compatibility floors: core $$LANGFLOW_COMPAT_VERSION, base $$LANGFLOW_BASE_COMPAT_VERSION$(NC)"; \
+	echo "$(GREEN)Langflow-base version: $$LANGFLOW_VERSION$(NC)"; \
+	echo "$(GREEN)Compatibility floor: $$LANGFLOW_COMPAT_VERSION$(NC)"; \
 	echo "$(GREEN)LFX (synced): $$LANGFLOW_VERSION$(NC)"; \
 	echo "$(GREEN)Langflow SDK version: $$SDK_VERSION$(NC)"; \
 	\
 	echo "$(GREEN)Updating main pyproject.toml...$(NC)"; \
-	python -c "import re; fname='pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-core(\[[^\]]*\])?(?:==|>=|~=)[^\"]*\"', lambda m: '\"langflow-core' + (m.group(1) or '') + '~=$$LANGFLOW_COMPAT_VERSION\"', txt); open(fname, 'w').write(txt)"; \
-	\
-	echo "$(GREEN)Updating langflow-core pyproject.toml...$(NC)"; \
-	python -c "import re; fname='src/langflow-core/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-base(\[[^\]]*\])?(?:==|>=|~=)[^\"]*\"', r'\"langflow-base\1~=$$LANGFLOW_BASE_COMPAT_VERSION\"', txt); open(fname, 'w').write(txt)"; \
+	python -c "import re; fname='pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-base(\[[^\]]*\])?(?:==|>=|~=)[^\"]*\"', lambda m: '\"langflow-base' + (m.group(1) or '') + '~=$$LANGFLOW_COMPAT_VERSION\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating langflow-base pyproject.toml...$(NC)"; \
-	python -c "import re; fname='src/backend/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_BASE_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"lfx(?P<extra>\[[^\]]+\])?(?:~=|>=)[^\"]*\"', lambda m: f'\"lfx{m.group(\"extra\") or \"\"}~=$$LANGFLOW_VERSION\"', txt); open(fname, 'w').write(txt)"; \
+	python -c "import re; fname='src/backend/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"lfx(?P<extra>\[[^\]]+\])?(?:~=|>=)[^\"]*\"', lambda m: f'\"lfx{m.group(\"extra\") or \"\"}~=$$LANGFLOW_VERSION\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating lfx pyproject.toml...$(NC)"; \
 	python -c "import re; fname='src/lfx/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); open(fname, 'w').write(txt)"; \
@@ -630,14 +603,10 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0 [sdk_v=0
 	\
 	echo "$(GREEN)Validating version changes...$(NC)"; \
 	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml version validation failed$(NC)"; exit 1; fi; \
-	if ! grep -qF "\"langflow-core~=$$LANGFLOW_COMPAT_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-core dependency validation failed$(NC)"; exit 1; fi; \
-	if ! grep -qF "\"langflow-core[audio]~=$$LANGFLOW_COMPAT_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-core audio dependency validation failed$(NC)"; exit 1; fi; \
-	if ! grep -qF "\"langflow-core[postgresql]~=$$LANGFLOW_COMPAT_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-core PostgreSQL dependency validation failed$(NC)"; exit 1; fi; \
-	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core pyproject.toml version validation failed$(NC)"; exit 1; fi; \
-	if ! grep -qF "\"langflow-base[complete]~=$$LANGFLOW_BASE_COMPAT_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core complete dependency validation failed$(NC)"; exit 1; fi; \
-	if ! grep -qF "\"langflow-base[audio]~=$$LANGFLOW_BASE_COMPAT_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core audio dependency validation failed$(NC)"; exit 1; fi; \
-	if ! grep -qF "\"langflow-base[postgresql]~=$$LANGFLOW_BASE_COMPAT_VERSION\"" src/langflow-core/pyproject.toml; then echo "$(RED)✗ Langflow-core PostgreSQL dependency validation failed$(NC)"; exit 1; fi; \
-	if ! grep -q "^version = \"$$LANGFLOW_BASE_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml version validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-base~=$$LANGFLOW_COMPAT_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-base[audio]~=$$LANGFLOW_COMPAT_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base audio dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-base[postgresql]~=$$LANGFLOW_COMPAT_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base PostgreSQL dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "\"lfx~=$$LANGFLOW_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml lfx pin validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" src/lfx/pyproject.toml; then echo "$(RED)✗ LFX pyproject.toml version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "^version = \"$$SDK_VERSION\"" src/sdk/pyproject.toml; then echo "$(RED)✗ SDK pyproject.toml version validation failed$(NC)"; exit 1; fi; \
@@ -659,7 +628,7 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0 [sdk_v=0
 		git status --porcelain; \
 		exit 1; \
 	fi; \
-	EXPECTED_FILES="pyproject.toml uv.lock src/langflow-core/pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml src/lfx/src/lfx/_assets/component_index.json src/frontend/package.json src/frontend/package-lock.json"; \
+	EXPECTED_FILES="pyproject.toml uv.lock src/backend/base/pyproject.toml src/lfx/pyproject.toml src/lfx/src/lfx/_assets/component_index.json src/frontend/package.json src/frontend/package-lock.json"; \
 	if [ -n "$(sdk_v)" ]; then EXPECTED_FILES="$$EXPECTED_FILES src/sdk/pyproject.toml"; fi; \
 	for file in $$EXPECTED_FILES; do \
 		if ! git status --porcelain | grep -q "$$file"; then \
@@ -671,9 +640,8 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0 [sdk_v=0
 	\
 	echo "$(GREEN)Version update complete!$(NC)"; \
 	echo "$(GREEN)Updated files:$(NC)"; \
-	echo "  - pyproject.toml: $$LANGFLOW_VERSION (langflow-core floor → $$LANGFLOW_COMPAT_VERSION)"; \
-	echo "  - src/langflow-core/pyproject.toml: $$LANGFLOW_VERSION (langflow-base floor → $$LANGFLOW_BASE_COMPAT_VERSION)"; \
-	echo "  - src/backend/base/pyproject.toml: $$LANGFLOW_BASE_VERSION (lfx pin → $$LANGFLOW_VERSION)"; \
+	echo "  - pyproject.toml: $$LANGFLOW_VERSION (langflow-base floor → $$LANGFLOW_COMPAT_VERSION)"; \
+	echo "  - src/backend/base/pyproject.toml: $$LANGFLOW_VERSION (lfx pin → $$LANGFLOW_VERSION)"; \
 	echo "  - src/lfx/pyproject.toml: $$LANGFLOW_VERSION"; \
 	echo "  - src/lfx/src/lfx/_assets/component_index.json: $$LANGFLOW_VERSION"; \
 	echo "  - src/sdk/pyproject.toml: $$SDK_VERSION"; \
@@ -958,7 +926,6 @@ help_backend: ## show backend-specific commands
 	@echo "  $(GREEN)make build_and_run$(NC)       - Build and run the project"
 	@echo "  $(GREEN)make build_and_install$(NC)   - Build and install the project"
 	@echo "  $(GREEN)make build_langflow_base$(NC) - Build langflow-base package"
-	@echo "  $(GREEN)make build_langflow_core$(NC) - Build langflow-core package"
 	@echo "  $(GREEN)make build_langflow$(NC)      - Build langflow package"
 	@echo "  $(GREEN)make lock$(NC)                - Lock dependencies"
 	@echo "  $(GREEN)make update$(NC)              - Update dependencies"
@@ -1080,13 +1047,12 @@ help_advanced: ## show advanced and miscellaneous commands
 	@echo "$(GREEN)Version Management:$(NC)"
 	@echo "  $(GREEN)make patch v=X.Y.Z$(NC)       - Update version across all projects"
 	@echo "    Example: make patch v=1.5.0"
-	@echo "    This updates: pyproject.toml, langflow-core, langflow-base, frontend package.json"
+	@echo "    This updates: pyproject.toml, langflow-base, lfx, frontend package.json"
 	@echo ''
 	@echo "$(GREEN)Publishing:$(NC)"
 	@echo "  $(GREEN)make publish$(NC)             - Publish to PyPI (use: make publish base=1 or main=1)"
 	@echo "  $(GREEN)make publish_testpypi$(NC)    - Publish to test PyPI"
 	@echo "  $(GREEN)make publish_base$(NC)        - Publish langflow-base to PyPI"
-	@echo "  $(GREEN)make publish_core$(NC)        - Publish langflow-core to PyPI"
 	@echo "  $(GREEN)make publish_langflow$(NC)    - Publish langflow to PyPI"
 	@echo "  $(GREEN)make lfx_publish$(NC)         - Publish LFX package to PyPI"
 	@echo "  $(GREEN)make lfx_publish_testpypi$(NC) - Publish LFX to test PyPI"
