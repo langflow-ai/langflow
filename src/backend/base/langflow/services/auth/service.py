@@ -54,6 +54,9 @@ from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import session_scope
 from langflow.services.schema import ServiceType
 
+_MAX_EXTERNAL_AUTHORIZATION_GROUPS = 500
+_MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH = 256
+
 if TYPE_CHECKING:
     from cryptography.fernet import Fernet, MultiFernet
     from lfx.services.settings.service import SettingsService
@@ -292,7 +295,72 @@ class AuthService(BaseAuthService):
             AuthCredentialContext(method=AUTH_METHOD_EXTERNAL, external_provider=identity.provider)
         )
         set_current_external_access_context(access_context_from_identity(identity, self.settings.auth_settings))
-        return await self._materialize_external_user(identity, db)
+        user = await self._materialize_external_user(identity, db)
+        await self._reconcile_verified_external_groups(identity=identity, user=user, db=db)
+        return user
+
+    async def _reconcile_verified_external_groups(
+        self,
+        *,
+        identity: ExternalIdentity,
+        user: User,
+        db: AsyncSession,
+    ) -> None:
+        """Send only normalized verified groups through the authorization seam."""
+        from lfx.services.authorization import DirectoryMembershipSnapshot
+
+        from langflow.services.deps import get_authorization_service
+
+        authorization_service = get_authorization_service()
+        issuer_value = identity.claims.get("iss")
+        issuer = issuer_value.strip() if isinstance(issuer_value, str) and issuer_value.strip() else None
+        claim_name = await authorization_service.external_groups_claim(
+            provider_id=identity.provider,
+            issuer=issuer,
+        )
+        if not claim_name:
+            return
+
+        raw_groups = identity.claims.get(claim_name)
+        if isinstance(raw_groups, str):
+            candidates = (raw_groups,)
+        elif isinstance(raw_groups, (list, tuple, set, frozenset)):
+            candidates = raw_groups
+        else:
+            candidates = ()
+        groups = tuple(
+            sorted(
+                {
+                    group.strip()
+                    for group in candidates
+                    if isinstance(group, str)
+                    and group.strip()
+                    and len(group.strip()) <= _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH
+                }
+            )
+        )
+        if len(groups) > _MAX_EXTERNAL_AUTHORIZATION_GROUPS:
+            msg = "External credential exceeds the 500-group authorization limit"
+            raise AuthInvalidTokenError(msg)
+
+        result = await authorization_service.ingest_directory_membership_snapshot(
+            session=db,
+            snapshot=DirectoryMembershipSnapshot(
+                provider_id=identity.provider,
+                source="external_bearer",
+                observed_at=datetime.now(timezone.utc),
+                user_id=user.id,
+                provider_user_id=identity.subject,
+                memberships=groups,
+                authoritative=True,
+                complete=True,
+            ),
+        )
+        await db.commit()
+        await authorization_service.directory_membership_committed(
+            user_id=user.id,
+            changed=bool(getattr(result, "changed", False)),
+        )
 
     async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
         """Internal method to authenticate with API key (raises generic exceptions).

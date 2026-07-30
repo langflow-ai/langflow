@@ -449,5 +449,26 @@ class BaseAuthorizationService(Service, abc.ABC):
         """
         _ = (session, snapshot)
 
+    async def external_groups_claim(
+        self,
+        *,
+        provider_id: str,
+        issuer: str | None,
+    ) -> str | None:
+        """Return the configured claim to normalize after external verification.
+
+        The authentication service calls this only after it has verified the
+        external credential. It normalizes that one claim to string group
+        identifiers before invoking ``ingest_directory_membership_snapshot``;
+        raw tokens and raw claim dictionaries never cross this plugin seam.
+        """
+        _ = (provider_id, issuer)
+        return None
+
+    async def directory_membership_committed(self, *, user_id: UUID, changed: bool = True) -> None:
+        """Publish a committed membership change to authorization replicas."""
+        if changed:
+            await self.invalidate_user(user_id)
+
     async def teardown(self) -> None:
         """No resources to release in the base implementation."""

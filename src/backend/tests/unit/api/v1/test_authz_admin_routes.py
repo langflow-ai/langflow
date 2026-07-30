@@ -816,7 +816,9 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz):
         current_user=actor,
         session=session,
     )
-    assert len(session.added) == 1
+    assert len(session.added) == 2
+    assert session.added[1].source_kind == "manual"
+    assert session.added[1].assignment_id == session.added[0].id
     assert session.committed == 1
     assert authz.staged_mutations == authz.committed_mutations
     assert authz.staged_mutations[0].affected_user_ids == (target_user.id,)
