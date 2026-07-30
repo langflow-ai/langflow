@@ -609,13 +609,16 @@ def test_get_embeddings_populates_available_models_from_all_configured_providers
 )
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
+@patch("lfx.base.models.unified_models.instantiation.ssrf_protected_openai_clients_for_url")
 def test_get_embeddings_openai_api_base_env_fallback(
+    mock_ssrf_protection,
     mock_get_class,
     mock_get_api_key,
     monkeypatch,
     env_values,
     expected_base_url,
 ):
+    mock_ssrf_protection.return_value = {}
     mock_get_api_key.return_value = "sk-test"
     mock_embedding_class = MagicMock()
     mock_get_class.return_value = mock_embedding_class
@@ -628,6 +631,7 @@ def test_get_embeddings_openai_api_base_env_fallback(
 
     kwargs = mock_embedding_class.call_args.kwargs
     assert kwargs["base_url"] == expected_base_url
+    mock_ssrf_protection.assert_called_once_with(expected_base_url)
 
 
 @pytest.mark.parametrize("variable_name", ["OPENAI_EMBEDDINGS_API_BASE", "OPENAI_API_BASE"])
@@ -652,7 +656,11 @@ def test_get_embeddings_openai_api_base_env_fallback_can_be_disabled(
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
-def test_get_embeddings_openai_explicit_api_base_overrides_env(mock_get_class, mock_get_api_key, monkeypatch):
+@patch("lfx.base.models.unified_models.instantiation.ssrf_protected_openai_clients_for_url")
+def test_get_embeddings_openai_explicit_api_base_overrides_env(
+    mock_ssrf_protection, mock_get_class, mock_get_api_key, monkeypatch
+):
+    mock_ssrf_protection.return_value = {}
     mock_get_api_key.return_value = "sk-test"
     mock_embedding_class = MagicMock()
     mock_get_class.return_value = mock_embedding_class
@@ -667,6 +675,7 @@ def test_get_embeddings_openai_explicit_api_base_overrides_env(mock_get_class, m
 
     kwargs = mock_embedding_class.call_args.kwargs
     assert kwargs["base_url"] == "http://component.example/v1"
+    mock_ssrf_protection.assert_called_once_with("http://component.example/v1")
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
@@ -752,7 +761,9 @@ def test_get_embeddings_ollama_defaults_to_localhost(mock_get_vars, mock_get_cla
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
 @patch("lfx.base.models.unified_models.get_all_variables_for_provider")
-def test_get_embeddings_ollama_custom_base_url(mock_get_vars, mock_get_class, mock_get_api_key):
+@patch("lfx.base.models.unified_models.instantiation.ssrf_protected_httpx_client_kwargs_for_url")
+def test_get_embeddings_ollama_custom_base_url(mock_ssrf_protection, mock_get_vars, mock_get_class, mock_get_api_key):
+    mock_ssrf_protection.return_value = ({}, {})
     mock_get_api_key.return_value = None
     mock_get_vars.return_value = {}
     mock_embedding_class = MagicMock()
@@ -771,12 +782,16 @@ def test_get_embeddings_ollama_custom_base_url(mock_get_vars, mock_get_class, mo
 
     kwargs = mock_embedding_class.call_args.kwargs
     assert kwargs.get("base_url") == "http://custom-host:11434"
+    mock_ssrf_protection.assert_called_once_with("http://custom-host:11434")
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
 @patch("lfx.base.models.unified_models.get_all_variables_for_provider")
-def test_get_embeddings_watsonx_url_and_project_id(mock_get_vars, mock_get_class, mock_get_api_key):
+@patch("lfx.base.models.unified_models.instantiation.validate_url_for_ssrf_or_raise")
+def test_get_embeddings_watsonx_url_and_project_id(
+    mock_ssrf_validation, mock_get_vars, mock_get_class, mock_get_api_key
+):
     mock_get_api_key.return_value = "ibm-key"
     mock_get_vars.return_value = {}
     mock_embedding_class = MagicMock()
@@ -806,12 +821,16 @@ def test_get_embeddings_watsonx_url_and_project_id(mock_get_vars, mock_get_class
     kwargs = mock_embedding_class.call_args.kwargs
     assert kwargs.get("url") == "https://us-south.ml.cloud.ibm.com"
     assert kwargs.get("project_id") == "proj-123"
+    mock_ssrf_validation.assert_called_once_with("https://us-south.ml.cloud.ibm.com")
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
 @patch("lfx.base.models.unified_models.get_all_variables_for_provider")
-def test_get_embeddings_watsonx_truncate_and_input_text(mock_get_vars, mock_get_class, mock_get_api_key):
+@patch("lfx.base.models.unified_models.instantiation.validate_url_for_ssrf_or_raise")
+def test_get_embeddings_watsonx_truncate_and_input_text(
+    mock_ssrf_validation, mock_get_vars, mock_get_class, mock_get_api_key
+):
     """truncate_input_tokens and input_text should be passed as WatsonX params dict."""
     mock_get_api_key.return_value = "ibm-key"
     mock_get_vars.return_value = {}
@@ -851,12 +870,16 @@ def test_get_embeddings_watsonx_truncate_and_input_text(mock_get_vars, mock_get_
     return_opts = [v for v in params.values() if isinstance(v, dict) and "input_text" in v]
     assert return_opts, "Expected return_options with input_text in params"
     assert return_opts[0]["input_text"] is True
+    mock_ssrf_validation.assert_called_once_with("https://us-south.ml.cloud.ibm.com")
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
 @patch("lfx.base.models.unified_models.get_all_variables_for_provider")
-def test_get_embeddings_watsonx_no_params_when_not_provided(mock_get_vars, mock_get_class, mock_get_api_key):
+@patch("lfx.base.models.unified_models.instantiation.validate_url_for_ssrf_or_raise")
+def test_get_embeddings_watsonx_no_params_when_not_provided(
+    mock_ssrf_validation, mock_get_vars, mock_get_class, mock_get_api_key
+):
     """When truncate_input_tokens and input_text are not provided, params should not be set."""
     mock_get_api_key.return_value = "ibm-key"
     mock_get_vars.return_value = {}
@@ -886,6 +909,7 @@ def test_get_embeddings_watsonx_no_params_when_not_provided(mock_get_vars, mock_
 
     kwargs = mock_embedding_class.call_args.kwargs
     assert "params" not in kwargs
+    mock_ssrf_validation.assert_called_once_with("https://us-south.ml.cloud.ibm.com")
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
