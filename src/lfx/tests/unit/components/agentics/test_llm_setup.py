@@ -111,3 +111,22 @@ class TestPrepareLlmFromComponent:
             prepare_llm_from_component(component)
 
         mock_create_llm.assert_not_called()
+
+    @patch("lfx.components.agentics.helpers.llm_setup.create_llm")
+    @patch("lfx.components.agentics.helpers.llm_setup.get_api_key_for_provider")
+    @patch("lfx.components.agentics.helpers.llm_setup.require_model_provider")
+    def test_policy_denial_happens_before_credential_lookup(
+        self,
+        mock_require_provider: MagicMock,
+        mock_get_api_key: MagicMock,
+        mock_create_llm: MagicMock,
+    ):
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        mock_require_provider.side_effect = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.USE)
+
+        with pytest.raises(ModelProviderPolicyError):
+            prepare_llm_from_component(_create_mock_component())
+
+        mock_get_api_key.assert_not_called()
+        mock_create_llm.assert_not_called()

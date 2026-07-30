@@ -171,6 +171,28 @@ def is_host_allowed(hostname: str, ip: str | None = None) -> bool:
     return False
 
 
+# Transition prefixes that embed an IPv4 target. Their embedded IPv4 is re-checked against the
+# blocklist (below) rather than blocking the whole prefix, which would cut off legitimate public
+# egress on IPv6-only / DNS64 networks (where public IPv4 services are reached via 64:ff9b::/96).
+_SIXTO4_PREFIX = ipaddress.ip_network("2002::/16")
+_NAT64_WELL_KNOWN_PREFIX = ipaddress.ip_network("64:ff9b::/96")
+
+
+def _embedded_ipv4(ip_obj: ipaddress.IPv6Address) -> ipaddress.IPv4Address | None:
+    """Return the IPv4 embedded in a 6to4 or well-known NAT64 address, else None.
+
+    6to4 (RFC 3056) carries the IPv4 in bytes 2-5 (``2002:AABB:CCDD::/48`` -> ``AA.BB.CC.DD``); the
+    NAT64 well-known ``64:ff9b::/96`` (RFC 6052) carries it in the low 32 bits. Local-use NAT64
+    (``64:ff9b:1::/48``, RFC 8215) uses a deployment-chosen prefix length, so its embedded IPv4
+    can't be located reliably and isn't decoded here.
+    """
+    if ip_obj in _SIXTO4_PREFIX:
+        return ipaddress.IPv4Address(ip_obj.packed[2:6])
+    if ip_obj in _NAT64_WELL_KNOWN_PREFIX:
+        return ipaddress.IPv4Address(ip_obj.packed[12:16])
+    return None
+
+
 def is_ip_blocked(ip: str | ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     """Check if an IP address is in a blocked range.
 
@@ -182,12 +204,23 @@ def is_ip_blocked(ip: str | ipaddress.IPv4Address | ipaddress.IPv6Address) -> bo
     """
     try:
         ip_obj = ipaddress.ip_address(ip) if isinstance(ip, str) else ip
-
-        # Check against all blocked ranges
-        return any(ip_obj in blocked_range for blocked_range in get_blocked_ip_ranges())
     except (ValueError, ipaddress.AddressValueError):
         # If we can't parse the IP, treat it as blocked for safety
         return True
+
+    # Check against all blocked ranges
+    if any(ip_obj in blocked_range for blocked_range in get_blocked_ip_ranges()):
+        return True
+
+    # A 6to4 / NAT64 address is only as safe as the IPv4 it encodes: re-check the embedded IPv4
+    # so a transition prefix can't reach a blocked target, while a public IPv4 target (the
+    # legitimate NAT64/6to4 case) still passes.
+    if isinstance(ip_obj, ipaddress.IPv6Address):
+        embedded = _embedded_ipv4(ip_obj)
+        if embedded is not None:
+            return is_ip_blocked(embedded)
+
+    return False
 
 
 def resolve_hostname(hostname: str) -> list[str]:
@@ -453,6 +486,23 @@ def _is_loopback_host(hostname: str) -> bool:
         return False
 
 
+def _connector_url_has_loopback_exemption(url: str) -> bool:
+    """Validate connector URL shape and return whether its literal host is exempt."""
+    if not is_ssrf_protection_enabled():
+        return False
+
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        msg = (
+            f"Connector URL must be an http(s) URL with a host for SSRF validation; got {url!r}. "
+            "Use an explicit scheme (e.g. 'http://host:port'); to reach an internal host, also add "
+            "it to LANGFLOW_SSRF_ALLOWED_HOSTS (allowlisting alone does not permit a scheme-less host)."
+        )
+        raise SSRFProtectionError(msg)
+
+    return is_connector_loopback_allowed() and _is_loopback_host(parsed.hostname)
+
+
 def validate_connector_url_for_ssrf(url: str) -> None:
     """SSRF-validate a tenant-controlled connector URL unless connector validation is disabled.
 
@@ -476,28 +526,38 @@ def validate_connector_url_for_ssrf(url: str) -> None:
     """
     if not is_connector_ssrf_validation_enabled():
         return
-    # The shared validator only understands http/https URLs that carry a host. Connector fields
-    # are sometimes a bare "host:port" (e.g. Milvus) or a non-HTTP scheme, which urlparse maps to
-    # a missing/garbage scheme -- without this, that would surface as a confusing
-    # "Invalid URL scheme ''". Only raise when host validation would actually run (global SSRF
-    # protection on); otherwise stay a no-op exactly as before.
-    if is_ssrf_protection_enabled():
-        parsed = urlparse(url)
-        if parsed.scheme not in ("http", "https") or not parsed.hostname:
-            msg = (
-                f"Connector URL must be an http(s) URL with a host for SSRF validation; got {url!r}. "
-                "Use an explicit scheme (e.g. 'http://host:port'); to reach an internal host, also add "
-                "it to LANGFLOW_SSRF_ALLOWED_HOSTS (allowlisting alone does not permit a scheme-less host)."
-            )
-            raise SSRFProtectionError(msg)
-        # Connectors commonly target a local service (Ollama / LM Studio default to localhost,
-        # local vector stores bind to loopback). Allow a literal loopback host by default; a
-        # multi-tenant deployer sets connector_ssrf_allow_loopback=false to block it too. Only a
-        # literal loopback reference is exempted — a hostname that resolves to loopback still goes
-        # through the full check below, so DNS-rebinding cannot abuse this.
-        if is_connector_loopback_allowed() and _is_loopback_host(parsed.hostname):
-            return
+    # Connectors commonly target a local service (Ollama / LM Studio default to localhost,
+    # local vector stores bind to loopback). Allow a literal loopback host by default; a
+    # multi-tenant deployer sets connector_ssrf_allow_loopback=false to block it too. Only a
+    # literal loopback reference is exempted — a hostname that resolves to loopback still goes
+    # through the full check below, so DNS-rebinding cannot abuse this.
+    if _connector_url_has_loopback_exemption(url):
+        return
     validate_url_for_ssrf(url)
+
+
+def validate_and_resolve_connector_url(url: str) -> tuple[str, list[str]]:
+    """Validate a connector URL and return IPs for DNS-pinned HTTP clients.
+
+    This applies the same connector policy as :func:`validate_connector_url_for_ssrf`, including
+    the literal-loopback exemption, while retaining DNS pinning for non-exempt hosts used by HTTP
+    connector clients.
+
+    Args:
+        url: Connector URL to validate.
+
+    Returns:
+        The original URL and validated IP addresses. The IP list is empty when connector
+        validation is disabled, global SSRF protection is disabled, the host is allowlisted, or
+        the literal-loopback exemption applies.
+
+    Raises:
+        SSRFProtectionError: If connector validation is enabled and the URL is blocked or malformed.
+        ValueError: If the URL format is invalid.
+    """
+    if not is_connector_ssrf_validation_enabled() or _connector_url_has_loopback_exemption(url):
+        return url, []
+    return validate_and_resolve_url(url)
 
 
 # SQLAlchemy dialects that read/write the local filesystem instead of connecting over the

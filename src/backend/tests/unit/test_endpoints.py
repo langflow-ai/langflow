@@ -165,6 +165,42 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
     assert "ChatOutput" in json_response["input_output"]
 
 
+def test_component_palette_policy_filters_models_without_mutating_shared_cache(monkeypatch):
+    from langflow.api.v1 import endpoints
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    cached = {
+        "mixed": {
+            "AllowedModel": {"metadata": {"model_provider_id": "openai"}},
+            "DeniedModel": {"metadata": {"model_provider_id": "anthropic"}},
+            "Utility": {"metadata": {}},
+        }
+    }
+
+    def _openai_only(*, user_id, providers, purpose, attributes=None):
+        assert purpose is ModelProviderPolicyPurpose.DISCOVER
+        candidates = frozenset(providers)
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id, attributes=attributes or {}),
+            purpose=purpose,
+            candidate_provider_ids=candidates,
+            allowed_provider_ids=frozenset({"openai"}),
+        )
+
+    monkeypatch.setattr(endpoints, "resolve_model_provider_policy", _openai_only)
+
+    filtered = endpoints._filter_component_palette_by_provider_policy(cached, user_id="user-1")
+
+    assert set(filtered["mixed"]) == {"AllowedModel", "Utility"}
+    assert "DeniedModel" in cached["mixed"]
+    assert filtered is not cached
+    assert filtered["mixed"] is not cached["mixed"]
+
+
 @pytest.mark.usefixtures("active_user")
 async def test_post_validate_code(client: AsyncClient, logged_in_headers):
     # Test case with a valid import and function

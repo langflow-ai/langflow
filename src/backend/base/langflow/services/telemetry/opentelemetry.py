@@ -4,15 +4,50 @@ from enum import Enum
 from typing import Any
 from weakref import WeakValueDictionary
 
+from lfx.observability import (
+    APPLICATION_INSTRUMENTATION_SCOPES,
+    APPLICATION_METER_NAME,
+    APPLICATION_METRIC_SCOPES,
+    APPLICATION_TRACER_NAME,
+    DEFAULT_SERVICE_NAME,
+    PROCESS_METRICS_CONFIG,
+    SUPPORTED_OTLP_PROTOCOLS,
+    ApplicationOnlyMetricExporter,
+    ApplicationOnlySpanProcessor,
+    ApplicationTelemetry,
+    bootstrap_application_telemetry,
+)
 from opentelemetry import metrics
-from opentelemetry.exporter.prometheus import PrometheusMetricReader
 from opentelemetry.metrics import CallbackOptions, Observation
 from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDownCounter
+from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+
+# The provider bootstrap, the export filters and the runtime metrics now live in
+# lfx.observability, so that lfx serve and lfx run get the same application observability as
+# the full langflow app. They are re-exported above only so existing importers of this module
+# keep working. What stays here is the langflow-specific metric registry (the custom counters
+# and gauges below) and the singleton that installs them on the bootstrapped meter provider.
 
 # a default OpenTelemetry meter name
-langflow_meter_name = "langflow"
+langflow_meter_name = APPLICATION_METER_NAME
+
+# Re-exported for backwards compatibility; the definitions live in lfx.observability.
+__all__ = [
+    "APPLICATION_INSTRUMENTATION_SCOPES",
+    "APPLICATION_METRIC_SCOPES",
+    "APPLICATION_TRACER_NAME",
+    "DEFAULT_SERVICE_NAME",
+    "PROCESS_METRICS_CONFIG",
+    "SUPPORTED_OTLP_PROTOCOLS",
+    "ApplicationOnlyMetricExporter",
+    "ApplicationOnlySpanProcessor",
+    "MetricType",
+    "OpenTelemetry",
+    "langflow_meter_name",
+]
+
 
 """
 If the measurement values are non-additive, use an Asynchronous Gauge.
@@ -109,6 +144,8 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
     _metrics_registry: dict[str, Metric] = {}
     _metrics: dict[str, Counter | ObservableGaugeWrapper | Histogram | UpDownCounter] = {}
     _meter_provider: MeterProvider | None = None
+    _tracer_provider: TracerProvider | None = None
+    _logger_provider: LoggerProvider | None = None
     _initialized: bool = False  # Add initialization flag
     prometheus_enabled: bool = True
 
@@ -140,6 +177,25 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             metric_type=MetricType.COUNTER,
             labels={"flow_id": mandatory_label},
         )
+        self._add_metric(
+            name="langflow_job_queue_cancel_events_total",
+            description=(
+                "Job queue cancel-channel and watchdog events. event_type is one of: "
+                "published, marker_hit, dispatched_owned, dispatched_foreign, publish_errors, "
+                "dispatcher_reconnects, dispatcher_internal_errors, polling_watchdog_kills, "
+                "activity_touch_errors, activity_get_errors, activity_parse_errors."
+            ),
+            unit="",
+            metric_type=MetricType.COUNTER,
+            labels={"event_type": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_job_queue_active_jobs",
+            description="Active jobs tracked by the job queue on this worker.",
+            unit="",
+            metric_type=MetricType.UP_DOWN_COUNTER,
+            labels={"backend": mandatory_label},
+        )
 
     def __init__(self, *, prometheus_enabled: bool = True):
         # Only initialize once
@@ -150,23 +206,20 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         if not self._metrics_registry:
             self._register_metric()
 
-        if self._meter_provider is None:
-            # Get existing meter provider if any
-            existing_provider = metrics.get_meter_provider()
+        # The whole provider bootstrap (meter, tracer and logger providers, the OTLP
+        # exporters, the export filters and the runtime metrics) lives in lfx now, so that
+        # lfx serve and lfx run get identical application observability. This installs it and
+        # hands back the meter provider our custom metrics register on.
+        telemetry: ApplicationTelemetry = bootstrap_application_telemetry(prometheus_enabled=prometheus_enabled)
+        self._meter_provider = telemetry.meter_provider
+        self._owns_meter_provider = telemetry.owns_meter_provider
+        self._tracer_provider = telemetry.tracer_provider
+        self._logger_provider = telemetry.logger_provider
 
-            # Check if FastAPI instrumentation is already set up
-            if hasattr(existing_provider, "get_meter") and existing_provider.get_meter("http.server"):
-                self._meter_provider = existing_provider
-            else:
-                resource = Resource.create({"service.name": "langflow"})
-                metric_readers = []
-                if self.prometheus_enabled:
-                    metric_readers.append(PrometheusMetricReader())
-
-                self._meter_provider = MeterProvider(resource=resource, metric_readers=metric_readers)
-                metrics.set_meter_provider(self._meter_provider)
-
-        self.meter = self._meter_provider.get_meter(langflow_meter_name)
+        # meter_provider is None when nothing is exported and Prometheus is off (the default):
+        # the bootstrap declines to install a reader-less provider. Fall back to the global API
+        # proxy so the custom metrics still register on a no-op meter rather than crashing here.
+        self.meter = (self._meter_provider or metrics.get_meter_provider()).get_meter(langflow_meter_name)
 
         for name, metric in self._metrics_registry.items():
             if name != metric.name:
@@ -256,10 +309,15 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         # Only shut down if initialized
         if not self._initialized:
             return
-        if self._meter_provider:
-            readers = getattr(self._meter_provider, "_metric_readers", [])
-            for reader in readers:
-                if hasattr(reader, "shutdown"):
-                    reader.shutdown()
+        if self._meter_provider and self._owns_meter_provider:
+            # Not the readers directly: only MeterProvider.shutdown unregisters the atexit
+            # handler, and without that the interpreter shuts the readers down a second time
+            # and Prometheus raises on the double unregister. Only when we own it: a provider
+            # adopted from another integration is theirs to shut down, not ours.
+            self._meter_provider.shutdown()
+        if self._tracer_provider:
+            self._tracer_provider.shutdown()
+        if self._logger_provider:
+            self._logger_provider.shutdown()
         self._metrics.clear()
         OpenTelemetry._initialized = False

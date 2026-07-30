@@ -10,7 +10,7 @@ from lfx.base.data.storage_utils import read_file_bytes
 from lfx.inputs.inputs import FileInput, HandleInput
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
-from lfx.utils.file_path_security import enforce_local_file_access
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 
 
 class JsonAgentComponent(LCAgentComponent):
@@ -61,7 +61,7 @@ class JsonAgentComponent(LCAgentComponent):
 
         # Local storage - confine tenant-controlled path to the storage dir when
         # LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS is enabled (blocks /etc/passwd etc.).
-        return enforce_local_file_access(Path(file_path))
+        return enforce_local_file_access(Path(file_path), scope_ids=component_file_access_scopes(self))
 
     def _cleanup_temp_file(self) -> None:
         """Clean up temporary file if one was created."""

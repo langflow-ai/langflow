@@ -157,6 +157,10 @@ const ModelRow = ({
       {isEnabledModel && (
         <Switch
           checked={enabled}
+          disabled={
+            model.metadata?.deprecated === true ||
+            model.metadata?.not_supported === true
+          }
           onCheckedChange={(checked) =>
             onToggle(model.model_name, checked, modelType)
           }
@@ -308,9 +312,7 @@ const ModelSelection = ({
   );
 
   const addableDeploymentTypes =
-    supportsCustomDeployments &&
-    !!isEnabledModel &&
-    trimmedModelQuery.length > 0
+    supportsCustomDeployments && isEnabledModel && trimmedModelQuery.length > 0
       ? visibleDeploymentTypes.filter(
           (deploymentType) =>
             !modelsWithCustomDeployments.some(

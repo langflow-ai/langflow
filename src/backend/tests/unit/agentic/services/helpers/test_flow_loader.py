@@ -374,6 +374,7 @@ class TestLoadGraphForExecution:
                 "OpenAI",
                 "gpt-4",
                 None,
+                None,
             )
             assert result == mock_graph
 
@@ -427,6 +428,35 @@ class TestLoadGraphForExecution:
                 "Anthropic",
                 "claude-3",
                 "ANTHROPIC_API_KEY",
+                None,
+            )
+
+    @pytest.mark.asyncio
+    async def test_should_forward_provider_vars_to_python_loader(self):
+        """The step budget rides in provider_vars — it must reach the Python loader intact."""
+        mock_graph = MagicMock()
+        provider_vars = {"ITERATIONS_LIMIT": "2", "WATSONX_URL": "https://example.com"}
+
+        with patch(
+            "langflow.agentic.services.helpers.flow_loader._load_graph_from_python",
+            new_callable=AsyncMock,
+            return_value=mock_graph,
+        ) as mock_load:
+            await load_graph_for_execution(
+                Path("/test/flow.py"),
+                "python",
+                provider="OpenAI",
+                model_name="gpt-4",
+                api_key_var="OPENAI_API_KEY",
+                provider_vars=provider_vars,
+            )
+
+            mock_load.assert_called_once_with(
+                Path("/test/flow.py"),
+                "OpenAI",
+                "gpt-4",
+                "OPENAI_API_KEY",
+                provider_vars,
             )
 
 

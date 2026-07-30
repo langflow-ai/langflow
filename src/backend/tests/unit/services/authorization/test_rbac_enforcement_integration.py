@@ -19,8 +19,10 @@ Everything runs against the OSS package only — no EE Casbin enforcer required.
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
+from langflow.api.v1.knowledge_bases import KBStorageHelper
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_auth_service, get_settings_service, session_scope
@@ -270,3 +272,103 @@ async def test_domain_scoped_role_applies_only_in_matching_domain(client):
         # (If domain resolution regressed to '*', the workspace-A grant would stop
         # matching flow A and the assertion above would fail instead.)
         assert (await client.get(f"api/v1/flows/{flow_b}", headers=headers)).status_code == 404
+
+
+# --------------------------------------------------------------------------- #
+# File / Knowledge Base create guards (QA BUG-2).
+# Create has no existing resource owner, so the prospective owner must not
+# trigger the existing-resource owner override before the policy service runs.
+# --------------------------------------------------------------------------- #
+
+
+def _knowledge_base_payload(name: str) -> dict[str, object]:
+    return {
+        "name": name,
+        "embedding_provider": "OpenAI",
+        "embedding_model": "text-embedding-3-small",
+        "backend_type": "chroma",
+        "backend_config": {},
+    }
+
+
+async def test_roleless_user_cannot_create_files_or_knowledge_bases(client, monkeypatch, tmp_path):
+    username = f"roleless_{uuid4().hex}"
+    await _make_user(username)
+    headers = await _login(client, username)
+
+    monkeypatch.setattr(KBStorageHelper, "get_root_path", lambda: tmp_path)
+    monkeypatch.setattr(KBStorageHelper, "get_fresh_chroma_client", lambda _path: MagicMock())
+    monkeypatch.setattr(KBStorageHelper, "release_chroma_resources", lambda _path: None)
+
+    with install_policy_authz(get_settings_service()):
+        upload = await client.post(
+            "api/v2/files",
+            headers=headers,
+            files={"file": ("roleless.txt", b"not allowed", "text/plain")},
+        )
+        test_connection = await client.post(
+            "api/v1/knowledge_bases/test-connection",
+            headers=headers,
+            json={"backend_type": "chroma", "backend_config": {}},
+        )
+        create = await client.post(
+            "api/v1/knowledge_bases",
+            headers=headers,
+            json=_knowledge_base_payload(f"Roleless_{uuid4().hex}"),
+        )
+        preview = await client.post(
+            "api/v1/knowledge_bases/preview-chunks",
+            headers=headers,
+            files={"files": ("roleless.txt", b"not allowed", "text/plain")},
+        )
+
+        assert {
+            "file upload": upload.status_code,
+            "knowledge-base test connection": test_connection.status_code,
+            "knowledge-base create": create.status_code,
+            "knowledge-base preview chunks": preview.status_code,
+        } == {
+            "file upload": 403,
+            "knowledge-base test connection": 403,
+            "knowledge-base create": 403,
+            "knowledge-base preview chunks": 403,
+        }
+
+
+async def test_developer_can_create_files_and_knowledge_bases(client, monkeypatch, tmp_path):
+    role_ids = await _seed_roles()
+    _developer_id, headers = await _role_user(client, "developer", role_ids)
+
+    monkeypatch.setattr(KBStorageHelper, "get_root_path", lambda: tmp_path)
+    chroma_client = MagicMock()
+    monkeypatch.setattr(KBStorageHelper, "get_fresh_chroma_client", lambda _path: chroma_client)
+    monkeypatch.setattr(KBStorageHelper, "release_chroma_resources", lambda _path: None)
+
+    with install_policy_authz(get_settings_service()):
+        upload = await client.post(
+            "api/v2/files",
+            headers=headers,
+            files={"file": ("developer.txt", b"allowed", "text/plain")},
+        )
+        assert upload.status_code == 201, upload.text
+
+        test_connection = await client.post(
+            "api/v1/knowledge_bases/test-connection",
+            headers=headers,
+            json={"backend_type": "chroma", "backend_config": {}},
+        )
+        assert test_connection.status_code == 200, test_connection.text
+
+        create = await client.post(
+            "api/v1/knowledge_bases",
+            headers=headers,
+            json=_knowledge_base_payload(f"Developer_{uuid4().hex}"),
+        )
+        assert create.status_code == 201, create.text
+
+        preview = await client.post(
+            "api/v1/knowledge_bases/preview-chunks",
+            headers=headers,
+            files={"files": ("developer.txt", b"allowed", "text/plain")},
+        )
+        assert preview.status_code == 200, preview.text

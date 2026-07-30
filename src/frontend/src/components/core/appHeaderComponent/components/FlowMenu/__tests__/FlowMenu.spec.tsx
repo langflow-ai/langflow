@@ -51,6 +51,11 @@ jest.mock("@/customization/hooks/use-custom-navigate", () => ({
   __esModule: true,
   useCustomNavigate: () => jest.fn(),
 }));
+let mockIsReadOnly = false;
+jest.mock("@/contexts/permissionsContext", () => ({
+  __esModule: true,
+  useIsFlowReadOnly: () => mockIsReadOnly,
+}));
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
   default: (sel: (s: object) => unknown) =>
@@ -121,6 +126,10 @@ import React from "react";
 jest.mock("lucide-react/dynamicIconImports", () => ({}), { virtual: true });
 
 describe("FlowMenu MenuBar", () => {
+  beforeEach(() => {
+    mockIsReadOnly = false;
+  });
+
   it("renders current folder and flow name, enables save", async () => {
     render(<MenuBar />);
     expect(screen.getByTestId("menu_bar_wrapper")).toBeInTheDocument();
@@ -156,6 +165,18 @@ describe("FlowMenu MenuBar", () => {
     render(<MenuBar />);
     fireEvent.click(screen.getByTestId("save-flow-button"));
     expect(mockSave).toHaveBeenCalled();
+  });
+
+  it("disables settings and save for a read-only flow", () => {
+    mockIsReadOnly = true;
+    mockSave.mockClear();
+
+    render(<MenuBar />);
+
+    expect(screen.getByTestId("menu_bar_display")).toBeDisabled();
+    expect(screen.getByTestId("save-flow-button")).toBeDisabled();
+    fireEvent.click(screen.getByTestId("save-flow-button"));
+    expect(mockSave).not.toHaveBeenCalled();
   });
 
   describe("Accessibility — aria labels", () => {

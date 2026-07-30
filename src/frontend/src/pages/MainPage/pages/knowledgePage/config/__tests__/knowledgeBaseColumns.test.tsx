@@ -75,6 +75,7 @@ describe("createKnowledgeBaseColumns", () => {
         "Chunks",
         "Avg Chunk Size",
         "Status",
+        "Actions",
       ]),
     );
   });
@@ -150,7 +151,7 @@ describe("createKnowledgeBaseColumns", () => {
   describe("Actions cell renderer callbacks", () => {
     const getActionsRenderer = (callbacks = {}) => {
       const cols = createKnowledgeBaseColumns(callbacks);
-      return cols.find((c) => c.headerName === "")!
+      return cols.find((c) => c.field === "actions")!
         .cellRenderer as React.ComponentType<StatusCellRendererProps>;
     };
 
@@ -232,7 +233,7 @@ describe("createKnowledgeBaseColumns", () => {
   describe("Row ingest files icon shortcut", () => {
     const getActionsRenderer = (callbacks = {}) => {
       const cols = createKnowledgeBaseColumns(callbacks);
-      return cols.find((c) => c.headerName === "")!
+      return cols.find((c) => c.field === "actions")!
         .cellRenderer as React.ComponentType<StatusCellRendererProps>;
     };
 

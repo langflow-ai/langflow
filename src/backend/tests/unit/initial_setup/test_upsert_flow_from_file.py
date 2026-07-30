@@ -36,6 +36,46 @@ def _overwrite_on_name_match(*, enabled: bool):
         settings.load_flows_overwrite_on_name_match = original
 
 
+@contextmanager
+def _preserve_variable_bindings(*, enabled: bool):
+    """Temporarily override the load_flows_preserve_variable_bindings setting."""
+    settings = get_settings_service().settings
+    original = settings.load_flows_preserve_variable_bindings
+    settings.load_flows_preserve_variable_bindings = enabled
+    try:
+        yield
+    finally:
+        settings.load_flows_preserve_variable_bindings = original
+
+
+def _node_with_field(node_id: str, *, value: str, load_from_db: bool) -> dict:
+    return {
+        "id": node_id,
+        "data": {
+            "node": {
+                "template": {
+                    "api_key": {
+                        "value": value,
+                        "load_from_db": load_from_db,
+                    }
+                }
+            }
+        },
+    }
+
+
+def _group_node(node_id: str, *nodes: dict) -> dict:
+    return {
+        "id": node_id,
+        "data": {
+            "node": {
+                "template": {},
+                "flow": {"data": {"nodes": list(nodes), "edges": []}},
+            }
+        },
+    }
+
+
 async def _create_flow(
     *,
     name: str,
@@ -308,6 +348,162 @@ async def test_upsert_flow_from_file_id_match_still_overwrites_id_field() -> Non
         assert len(rows) == 1
         assert rows[0].id == original.id
         assert rows[0].description == "updated"
+
+
+@pytest.mark.usefixtures("client")
+@pytest.mark.parametrize("incoming_load_from_db", [False, True])
+async def test_upsert_flow_from_file_preserves_existing_variable_binding(incoming_load_from_db) -> None:
+    """A UI-configured global-variable binding survives a same-id startup re-import."""
+    user_id = uuid4()
+    existing_node = _node_with_field("n1", value="OPENAI_API_KEY", load_from_db=True)
+    existing_node["data"]["node"]["template"]["api_key"]["display_name"] = "Old label"
+    original = await _create_flow(
+        name="BoundFlow",
+        user_id=user_id,
+        data={"nodes": [existing_node], "edges": []},
+    )
+    incoming_data = {
+        "nodes": [_node_with_field("n1", value="", load_from_db=incoming_load_from_db)],
+        "edges": [{"id": "updated-edge"}],
+    }
+    incoming_data["nodes"][0]["data"]["node"]["template"]["api_key"]["display_name"] = "New label"
+    file_content = orjson.dumps({"id": str(original.id), "name": original.name, "data": incoming_data})
+
+    with _preserve_variable_bindings(enabled=True):
+        async with session_scope() as session:
+            await upsert_flow_from_file(file_content, original.name, session, user_id)
+            await session.commit()
+
+    async with session_scope() as session:
+        updated = (await session.exec(select(Flow).where(Flow.id == original.id))).one()
+        field = updated.data["nodes"][0]["data"]["node"]["template"]["api_key"]
+        assert field == {"value": "OPENAI_API_KEY", "load_from_db": True, "display_name": "New label"}
+        assert updated.data["edges"] == incoming_data["edges"]
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_explicit_file_variable_binding_wins() -> None:
+    """An explicit binding in the file remains the source of truth."""
+    user_id = uuid4()
+    original = await _create_flow(
+        name="ReboundFlow",
+        user_id=user_id,
+        data={"nodes": [_node_with_field("n1", value="OLD_API_KEY", load_from_db=True)], "edges": []},
+    )
+    incoming_data = {
+        "nodes": [_node_with_field("n1", value="NEW_API_KEY", load_from_db=True)],
+        "edges": [],
+    }
+    file_content = orjson.dumps({"id": str(original.id), "name": original.name, "data": incoming_data})
+
+    with _preserve_variable_bindings(enabled=True):
+        async with session_scope() as session:
+            await upsert_flow_from_file(file_content, original.name, session, user_id)
+            await session.commit()
+
+    async with session_scope() as session:
+        updated = (await session.exec(select(Flow).where(Flow.id == original.id))).one()
+        field = updated.data["nodes"][0]["data"]["node"]["template"]["api_key"]
+        assert field == {"value": "NEW_API_KEY", "load_from_db": True}
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_preserves_nested_variable_binding() -> None:
+    """Bindings inside grouped flows survive the same recursive startup merge."""
+    user_id = uuid4()
+    existing_group = _group_node("group", _node_with_field("nested", value="NESTED_API_KEY", load_from_db=True))
+    original = await _create_flow(
+        name="GroupedFlow",
+        user_id=user_id,
+        data={"nodes": [existing_group], "edges": []},
+    )
+    incoming_group = _group_node("group", _node_with_field("nested", value="", load_from_db=False))
+    incoming_data = {"nodes": [incoming_group], "edges": []}
+    file_content = orjson.dumps({"id": str(original.id), "name": original.name, "data": incoming_data})
+
+    with _preserve_variable_bindings(enabled=True):
+        async with session_scope() as session:
+            await upsert_flow_from_file(file_content, original.name, session, user_id)
+            await session.commit()
+
+    async with session_scope() as session:
+        updated = (await session.exec(select(Flow).where(Flow.id == original.id))).one()
+        nested_node = updated.data["nodes"][0]["data"]["node"]["flow"]["data"]["nodes"][0]
+        field = nested_node["data"]["node"]["template"]["api_key"]
+        assert field == {"value": "NESTED_API_KEY", "load_from_db": True}
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_keeps_new_file_nodes_unchanged() -> None:
+    """Nodes without a DB counterpart pass through the merge unchanged."""
+    user_id = uuid4()
+    original = await _create_flow(
+        name="ExpandedFlow",
+        user_id=user_id,
+        data={"nodes": [_node_with_field("existing", value="API_KEY", load_from_db=True)], "edges": []},
+    )
+    new_node = _node_with_field("new", value="literal-from-file", load_from_db=False)
+    incoming_data = {"nodes": [new_node], "edges": []}
+    file_content = orjson.dumps({"id": str(original.id), "name": original.name, "data": incoming_data})
+
+    with _preserve_variable_bindings(enabled=True):
+        async with session_scope() as session:
+            await upsert_flow_from_file(file_content, original.name, session, user_id)
+            await session.commit()
+
+    async with session_scope() as session:
+        updated = (await session.exec(select(Flow).where(Flow.id == original.id))).one()
+        assert updated.data == incoming_data
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_can_disable_variable_binding_preservation() -> None:
+    """The opt-out restores the previous blind-overwrite behavior."""
+    user_id = uuid4()
+    original = await _create_flow(
+        name="GitOpsFlow",
+        user_id=user_id,
+        data={"nodes": [_node_with_field("n1", value="API_KEY", load_from_db=True)], "edges": []},
+    )
+    incoming_data = {
+        "nodes": [_node_with_field("n1", value="literal-from-file", load_from_db=False)],
+        "edges": [],
+    }
+    file_content = orjson.dumps({"id": str(original.id), "name": original.name, "data": incoming_data})
+
+    with _preserve_variable_bindings(enabled=False):
+        async with session_scope() as session:
+            await upsert_flow_from_file(file_content, original.name, session, user_id)
+            await session.commit()
+
+    async with session_scope() as session:
+        updated = (await session.exec(select(Flow).where(Flow.id == original.id))).one()
+        assert updated.data == incoming_data
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_does_not_preserve_empty_default_binding() -> None:
+    """An empty load-from-DB default must not override a literal value from the file."""
+    user_id = uuid4()
+    original = await _create_flow(
+        name="DefaultSecretFlow",
+        user_id=user_id,
+        data={"nodes": [_node_with_field("n1", value="", load_from_db=True)], "edges": []},
+    )
+    incoming_data = {
+        "nodes": [_node_with_field("n1", value="literal-from-file", load_from_db=False)],
+        "edges": [],
+    }
+    file_content = orjson.dumps({"id": str(original.id), "name": original.name, "data": incoming_data})
+
+    with _preserve_variable_bindings(enabled=True):
+        async with session_scope() as session:
+            await upsert_flow_from_file(file_content, original.name, session, user_id)
+            await session.commit()
+
+    async with session_scope() as session:
+        updated = (await session.exec(select(Flow).where(Flow.id == original.id))).one()
+        assert updated.data == incoming_data
 
 
 @pytest.mark.usefixtures("client")

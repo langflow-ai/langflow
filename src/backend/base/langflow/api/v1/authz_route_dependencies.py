@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, status
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.api.v1.flows_helpers import _read_flow
+from langflow.api.v1.flows_helpers import _canonicalize_flow_destination, _read_flow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -86,17 +86,20 @@ async def get_authorized_flow_for_delete(
 async def require_flow_create_permission(
     current_user: CurrentActiveUser,
     flow: FlowCreate,
-) -> None:
+    session: DbSession,
+) -> tuple[UUID | None, UUID]:
     """Authorize CREATE at the destination workspace/folder before inserting a flow."""
+    destination = await _canonicalize_flow_destination(session, flow, current_user.id)
     await ensure_flow_permission(
         current_user,
         FlowAction.CREATE,
         workspace_id=flow.workspace_id,
         folder_id=flow.folder_id,
     )
+    return destination
 
 
 AuthorizedReadFlow = Annotated[Flow, Depends(get_authorized_flow_for_read)]
 AuthorizedWriteFlow = Annotated[Flow, Depends(get_authorized_flow_for_write)]
 AuthorizedDeleteFlow = Annotated[Flow, Depends(get_authorized_flow_for_delete)]
-RequireFlowCreate = Annotated[None, Depends(require_flow_create_permission)]
+RequireFlowCreate = Annotated[tuple[UUID | None, UUID], Depends(require_flow_create_permission)]

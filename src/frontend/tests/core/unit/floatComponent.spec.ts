@@ -2,11 +2,10 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
+  addParameterToNode,
+  closeParametersPanel,
 } from "../../utils/open-advanced-options";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 test(
   "FloatComponent",
@@ -15,6 +14,10 @@ test(
     await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("nvidia");
+    await skipIfComponentUnavailable(
+      page.getByTestId("nvidiaNVIDIA"),
+      "NVIDIA",
+    );
 
     await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
       timeout: 30000,
@@ -36,15 +39,13 @@ test(
 
     //add
 
-    await disableInspectPanel(page);
-
     await page.getByTestId("title-NVIDIA").click();
 
-    await openAdvancedOptions(page);
+    // LE-1810: the parameters panel adds the hidden field to the node; the
+    // value is edited on the node itself.
+    await addParameterToNode(page, "seed");
 
-    await page.getByTestId("showseed").click();
-
-    await closeAdvancedOptions(page);
+    await closeParametersPanel(page);
 
     await adjustScreenView(page);
 
@@ -63,31 +64,5 @@ test(
     value = await page.locator('//*[@id="int_int_seed"]').inputValue();
 
     expect(value).toBe("-3");
-
-    const plusButtonLocator = page.locator('//*[@id="int_int_edit_seed"]');
-    const elementCount = await plusButtonLocator?.count();
-    if (elementCount === 0) {
-      expect(true).toBeTruthy();
-
-      await page.locator('//*[@id="int_int_seed"]').click();
-      await page.getByTestId("int_int_seed").fill("");
-
-      await page.locator('//*[@id="int_int_seed"]').fill("3");
-
-      let value = await page.locator('//*[@id="int_int_seed"]').inputValue();
-
-      expect(value).toBe("3");
-
-      await page.locator('//*[@id="int_int_seed"]').click();
-      await page.getByTestId("int_int_seed").fill("");
-
-      await page.locator('//*[@id="int_int_seed"]').fill("-3");
-
-      value = await page.locator('//*[@id="int_int_seed"]').inputValue();
-
-      expect(value).toBe("-3");
-    }
-
-    await enableInspectPanel(page);
   },
 );

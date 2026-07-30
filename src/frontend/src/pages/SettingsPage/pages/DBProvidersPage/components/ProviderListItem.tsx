@@ -28,7 +28,7 @@ export function ProviderListItem({
       className={cn(
         "flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-3 text-left transition-colors hover:bg-muted/50",
         isSelected && "bg-muted/50",
-        isComingSoon && "cursor-default opacity-70",
+        isComingSoon && "cursor-default",
       )}
       onClick={onSelect}
     >
@@ -50,7 +50,7 @@ export function ProviderListItem({
             {provider.label}
           </span>
           {isComingSoon && (
-            <Badge variant="secondaryStatic" size="sq" className="text-xs">
+            <Badge variant="secondary" size="sq" className="text-xs">
               {t("settings.dbProviders.comingSoon")}
             </Badge>
           )}

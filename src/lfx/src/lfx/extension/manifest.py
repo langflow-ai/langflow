@@ -86,6 +86,8 @@ BUNDLE_NAME_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
 """Bundle names use snake_case so they can be addressed in the registry as
 ``ext:<bundle>:<Class>@<slot>`` without quoting."""
 
+_PROVIDER_ID_RE: re.Pattern[str] = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+
 _SEMVER_RE: re.Pattern[str] = re.compile(
     r"^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)"
     r"(?:-(?:[0-9A-Za-z-]+)(?:\.[0-9A-Za-z-]+)*)?"
@@ -299,6 +301,26 @@ class ProviderManifestEntry(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, protected_namespaces=())
 
     name: StrictStr = Field(..., min_length=1, max_length=120, description="Canonical provider name, e.g. 'vLLM'.")
+    provider_id: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=120,
+        pattern=_PROVIDER_ID_RE.pattern,
+        description=(
+            "Stable machine identity used by policy, e.g. 'openai' or 'acme.watsonx'. "
+            "Omit only for legacy manifests; Langflow then derives an ID from name."
+        ),
+    )
+    display_name: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=120,
+        description="Optional user-facing label; changing it does not change provider_id or saved-flow identity.",
+    )
+    aliases: tuple[StrictStr, ...] = Field(
+        default=(),
+        description="Legacy provider names accepted when resolving stable provider identity.",
+    )
     metadata: dict[str, Any] = Field(
         ...,
         description="MODEL_PROVIDER_METADATA value: icon, variables, mapping (with model_class), api_docs_url, etc.",
@@ -327,6 +349,29 @@ class ProviderManifestEntry(BaseModel):
         min_length=1,
         description="Dotted-path callable 'module:attr' validating credentials: (provider, variables, model) -> None.",
     )
+    catalog_loader: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        description=(
+            "Dotted-path callable 'module:attr' returning a flat list of static model metadata rows. "
+            "Langflow stamps provider ownership and validates model identities."
+        ),
+    )
+
+    @field_validator("aliases")
+    @classmethod
+    def _aliases_are_unique_and_non_empty(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        normalized: set[str] = set()
+        for alias in value:
+            if not alias.strip():
+                msg = "provider.aliases must contain non-empty strings"
+                raise ValueError(msg)
+            folded = alias.casefold()
+            if folded in normalized:
+                msg = f"provider.aliases contains duplicate alias {alias!r}"
+                raise ValueError(msg)
+            normalized.add(folded)
+        return value
 
     @field_validator("metadata")
     @classmethod

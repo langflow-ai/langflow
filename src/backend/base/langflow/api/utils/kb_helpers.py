@@ -100,6 +100,115 @@ def chunk_text_for_ingestion(
     return splitter.split_text(text)
 
 
+def _coerce_backend_config_value(value: Any) -> dict[str, Any]:
+    """Normalize a stored ``backend_config`` into a plain dict."""
+    if isinstance(value, dict):
+        return dict(value)
+    return {}
+
+
+async def resolve_backend_selection(
+    *,
+    user_id: uuid.UUID,
+    kb_name: str,
+    kb_path: Path,
+) -> tuple[str, dict[str, Any]]:
+    """Resolve ``(backend_type, backend_config)`` for a KB — DB row first, sidecar second.
+
+    The ``knowledge_base`` row is authoritative. The on-disk sidecar is a legacy
+    fallback for KBs predating the row (or dropped in from an export), not a
+    default: when neither source resolves this raises rather than assuming local
+    storage. A replica that merely lacks the sidecar would otherwise write a
+    remote-backed KB into a local Chroma directory while queries followed the row
+    to the configured cluster and returned nothing, with no error anywhere.
+
+    Shared by Knowledge Bases and Memory Bases so the two cannot drift apart.
+    """
+    from langflow.api.utils import knowledge_base_service
+
+    record = await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
+    if record is not None:
+        return (
+            record.backend_type or BackendType.CHROMA.value,
+            _coerce_backend_config_value(record.backend_config),
+        )
+
+    # A sidecar with no ``backend_type`` is an explicit legacy local KB; only the
+    # *absence* of both sources is ambiguous.
+    metadata_file = kb_path / "embedding_metadata.json"
+    if await asyncio.to_thread(metadata_file.exists):
+        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
+        return (
+            str(metadata.get("backend_type") or BackendType.CHROMA.value),
+            _coerce_backend_config_value(metadata.get("backend_config")),
+        )
+
+    msg = (
+        f"Cannot determine the vector-store backend for '{kb_name}': it has no "
+        f"knowledge_base record and no embedding metadata on disk. Refusing to fall "
+        f"back to local storage, which would write to a different store than queries "
+        f"read from."
+    )
+    raise ValueError(msg)
+
+
+# Default embedding used when neither the DB row nor the sidecar records one.
+# Matches the historical fallback in ``resolve_embedding`` so behavior is
+# unchanged for callers that relied on it.
+_DEFAULT_EMBEDDING_PROVIDER = "OpenAI"
+_DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
+
+
+async def resolve_embedding_selection(
+    *,
+    user_id: uuid.UUID,
+    kb_name: str,
+    kb_path: Path | None = None,
+) -> tuple[str, str]:
+    """Resolve ``(embedding_provider, embedding_model)`` for a KB — DB row first, sidecar second.
+
+    Counterpart to :func:`resolve_backend_selection`: the ``knowledge_base`` row's
+    ``model_selection`` is authoritative, the on-disk ``embedding_metadata.json``
+    sidecar is a legacy fallback (KBs predating the row / shared with file-based
+    KBs), and a hardcoded default is the last resort.
+
+    Memory Bases always have a row (created at MB-create and backfilled for
+    pre-existing ones), so they resolve entirely from the DB and never touch the
+    sidecar — which is what lets a Memory Base work on a replica whose local disk
+    never held the KB directory. ``kb_path`` is therefore optional: pass ``None``
+    from a fully DB-driven path and the sidecar branch is skipped entirely (no
+    dependency on ``knowledge_bases_dir`` or the local filesystem). The sidecar
+    branch stays for Knowledge Bases, which still write it.
+
+    Shared by Knowledge Bases and Memory Bases so the two cannot drift apart.
+    """
+    from langflow.api.utils import knowledge_base_service
+    from langflow.api.utils.knowledge_base_service import get_embedding_model, get_embedding_provider
+
+    record = await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
+    if record is not None:
+        model = get_embedding_model(record.model_selection)
+        if model:
+            return get_embedding_provider(record.model_selection), model
+
+    # Legacy fallback: read the sidecar. Only attempted when a ``kb_path`` is
+    # supplied and there is no row (or a row with no model recorded) — i.e. never
+    # for a properly provisioned Memory Base.
+    if kb_path is not None:
+        metadata_file = kb_path / "embedding_metadata.json"
+        if await asyncio.to_thread(metadata_file.exists):
+            metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
+            provider = str(metadata.get("embedding_provider") or "").strip()
+            model = str(metadata.get("embedding_model") or "").strip()
+            if model and model.lower() != "unknown":
+                return (
+                    provider if provider and provider.lower() != "unknown" else _DEFAULT_EMBEDDING_PROVIDER,
+                    model,
+                )
+
+    return _DEFAULT_EMBEDDING_PROVIDER, _DEFAULT_EMBEDDING_MODEL
+
+
 class KBStorageHelper:
     """Helper class for Knowledge Base storage and path management."""
 
@@ -982,62 +1091,6 @@ class KBIngestionHelper:
             await backend.teardown()
 
     @staticmethod
-    async def write_documents_to_chroma(
-        *,
-        documents: list[Document],
-        chroma: Chroma,
-        task_job_id: uuid.UUID,
-        job_service: JobService,
-    ) -> int:
-        """Write pre-built Documents into an open Chroma collection.
-
-        This is the shared primitive used by both file-based KB ingestion
-        (``perform_ingestion``) and message-based Memory Base ingestion.
-
-        Documents must already be chunked and have their metadata populated
-        by the caller — this method only handles the batched write, cancellation
-        checking, and retry logic.
-
-        Args:
-            documents: LangChain Document objects ready for embedding.
-            chroma: An already-constructed ``Chroma`` instance pointing at the
-                target collection.
-            task_job_id: Job ID used to poll for cancellation.
-            job_service: Service for checking job status.
-
-        Returns:
-            Number of documents successfully written.  If the job is cancelled
-            mid-batch this will be less than ``len(documents)``.
-
-        Raises:
-            Exception: Re-raises any non-cancellation write failure after the
-                retry budget is exhausted.
-        """
-        written = 0
-        for i in range(0, len(documents), INGESTION_BATCH_SIZE):
-            if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
-                return written
-
-            batch = documents[i : i + INGESTION_BATCH_SIZE]
-            for attempt in range(MAX_RETRY_ATTEMPTS):
-                if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
-                    return written
-                try:
-                    await chroma.aadd_documents(batch)
-                    break
-                except Exception as e:
-                    if attempt == MAX_RETRY_ATTEMPTS - 1:
-                        raise
-                    wait = (attempt + 1) * EXPONENTIAL_BACKOFF_MULTIPLIER
-                    await logger.awarning("Write failed, retrying in %ds: %s", wait, e)
-                    await asyncio.sleep(wait)
-
-            written += len(batch)
-            await asyncio.sleep(0.01)
-
-        return written
-
-    @staticmethod
     async def write_documents_to_backend(
         *,
         documents: list[Document],
@@ -1047,12 +1100,12 @@ class KBIngestionHelper:
     ) -> int:
         """Write pre-built Documents through a ``BaseVectorStoreBackend``.
 
-        Backend-agnostic counterpart to :meth:`write_documents_to_chroma`.
-        Used by the multi-backend KB ingestion path so Mongo/Astra/
-        Postgres/OpenSearch ingestions share the same batching,
-        cancellation-checking, and exponential-backoff retry logic that
-        Memory Base's Chroma path gets from
-        :meth:`write_documents_to_chroma`.
+        The single write primitive for every ingestion path — file-based
+        Knowledge Bases and message-based Memory Bases alike — so batching,
+        cancellation checking, and exponential-backoff retry behave identically
+        whatever backend the KB is on. A Chroma-only counterpart used to exist
+        for Memory Bases; it was removed so the local-only path cannot be
+        reintroduced by accident.
 
         Documents must already be chunked with metadata populated.
 

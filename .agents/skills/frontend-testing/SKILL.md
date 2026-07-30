@@ -33,7 +33,7 @@ Activate this skill when:
 - **Path alias**: `@/` maps to `<rootDir>/src/`
 - **Test match patterns**: `src/**/__tests__/**/*.{test,spec}.{ts,tsx}` and `src/**/*.{test,spec}.{ts,tsx}`
 - **Transform**: Custom `transform-import-meta.js` handles `import.meta` for Jest compatibility
-- **Global mocks** (in `jest.setup.js`): `@radix-ui/react-form`, `react-markdown`, `lucide-react/dynamicIconImports`, `@/components/common/genericIconComponent`, `@/icons/BotMessageSquare`, `@/stores/darkStore`, `localStorage`, `sessionStorage`, `crypto`
+- **Global mocks** (in `jest.setup.js`): `@radix-ui/react-form`, `react-markdown`, `remark-gfm`, `remark-math`, `rehype-mathjax/browser`, `lucide-react/dynamicIconImports`, `@/components/common/genericIconComponent`, `@/icons/BotMessageSquare`, `@/stores/darkStore`, `localStorage`, `sessionStorage`, `crypto`
 
 ## Key Commands
 

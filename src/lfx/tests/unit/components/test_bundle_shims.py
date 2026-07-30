@@ -40,7 +40,7 @@ COMPONENTS_DIR = Path(__file__).resolve().parents[3] / "src" / "lfx" / "componen
 SHIM_MARKER = "# lfx-bundles-shim"
 
 # The two install-message shapes the shims are allowed to emit.
-_METAPACKAGE_MSG = "pip install lfx-bundles"
+_METAPACKAGE_MSG = "Install it with: pip install lfx-bundles."
 _PARTNER_MSG_PREFIX = "pip install lfx-"
 
 
@@ -224,7 +224,7 @@ except ModuleNotFoundError as exc:
     if exc.name is not None and (exc.name == "fake_lfx_target" or exc.name.startswith("fake_lfx_target.")):
         msg = (
             "The 'alpha' components moved to the 'fake-lfx-target' distribution. "
-            "Install it with:  pip install fake-lfx-target"
+            "Install it with: pip install fake-lfx-target"
         )
         raise ModuleNotFoundError(msg, name="fake_lfx_target") from exc
     raise

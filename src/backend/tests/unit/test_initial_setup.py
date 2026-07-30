@@ -9,6 +9,7 @@ from pathlib import Path as SyncPath
 from unittest.mock import AsyncMock, patch
 from urllib.parse import urlparse
 
+import orjson
 import pytest
 from anyio import Path
 from httpx import AsyncClient
@@ -16,6 +17,7 @@ from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
     detect_github_url,
+    filter_starter_projects_by_available_components,
     get_project_data,
     load_bundles_from_urls,
     load_starter_projects,
@@ -26,6 +28,7 @@ from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
+from lfx.extension.bundle_registry import BundleRecord, BundleRegistry
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
@@ -35,6 +38,119 @@ async def test_load_starter_projects():
     assert isinstance(projects, list)
     assert all(isinstance(project[1], dict) for project in projects)
     assert all(isinstance(project[0], Path) for project in projects)
+
+
+def test_filter_starter_projects_by_available_components():
+    available_components = {
+        "input_output": {
+            "ChatInput": {
+                "display_name": "Chat Input",
+                "template": {"_type": "ChatInput"},
+            }
+        }
+    }
+    valid_project = {
+        "name": "Core starter",
+        "data": {
+            "nodes": [
+                {
+                    "data": {
+                        "type": "ChatInput",
+                        "node": {"metadata": {"module": "lfx.components.input_output.chat"}, "template": {}},
+                    }
+                },
+                {"data": {"type": "note", "node": {"metadata": {}, "template": {}}}},
+                {
+                    "data": {
+                        "type": "EmbeddedCustomComponent",
+                        "node": {"metadata": {}, "template": {"code": {"value": "class Embedded: pass"}}},
+                    }
+                },
+            ]
+        },
+    }
+    unavailable_project = {
+        "name": "Bundle starter",
+        "data": {
+            "nodes": [
+                {
+                    "data": {
+                        "type": "OpenAIModelComponent",
+                        "node": {
+                            "metadata": {"module": "lfx.components.openai.openai_chat_model"},
+                            "template": {"code": {"value": "class OpenAIModelComponent: pass"}},
+                        },
+                    }
+                }
+            ]
+        },
+    }
+    projects = [
+        (Path("core.json"), valid_project),
+        (Path("bundle.json"), unavailable_project),
+    ]
+
+    filtered = filter_starter_projects_by_available_components(projects, available_components)
+
+    assert filtered == [(Path("core.json"), valid_project)]
+
+
+async def test_core_catalog_filters_starter_projects_from_other_packages():
+    repo_root = SyncPath(__file__).resolve().parents[4]
+    index_path = repo_root / "src" / "lfx" / "src" / "lfx" / "_assets" / "component_index.json"
+    core_components = dict(orjson.loads(index_path.read_bytes())["entries"])
+    with patch("langflow.initial_setup.setup.get_default_registry", return_value=BundleRegistry()):
+        projects = await load_starter_projects()
+
+    filtered = filter_starter_projects_by_available_components(projects, core_components)
+
+    filtered_names = {project["name"] for _, project in filtered}
+    removed_names = {project["name"] for _, project in projects} - filtered_names
+    assert removed_names == {
+        "Hybrid Search RAG",
+        "Research Translation Loop",
+    }
+
+
+async def test_load_starter_projects_from_manifestless_bundle(tmp_path):
+    bundle_root = tmp_path / "youtube"
+    projects_dir = bundle_root / "starter_projects"
+    projects_dir.mkdir(parents=True)
+    project = {"name": "Bundle starter", "data": {"nodes": [], "edges": []}}
+    (projects_dir / "Bundle starter.json").write_bytes(orjson.dumps(project))
+
+    manifest_bundle_root = tmp_path / "manifest_bundle"
+    manifest_projects_dir = manifest_bundle_root / "starter_projects"
+    manifest_projects_dir.mkdir(parents=True)
+    deferred_project = {"name": "Deferred starter", "data": {"nodes": [], "edges": []}}
+    (manifest_projects_dir / "Deferred starter.json").write_bytes(orjson.dumps(deferred_project))
+
+    registry = BundleRegistry()
+    registry.install_bundle(
+        BundleRecord(
+            bundle="youtube",
+            extension_id="lfx-bundles",
+            extension_version="1.1.1",
+            slot="official",
+            source_path=bundle_root,
+            manifestless=True,
+        )
+    )
+    registry.install_bundle(
+        BundleRecord(
+            bundle="manifest_bundle",
+            extension_id="manifest-bundle",
+            extension_version="1.0.0",
+            slot="official",
+            source_path=manifest_bundle_root,
+        )
+    )
+
+    with patch("langflow.initial_setup.setup.get_default_registry", return_value=registry):
+        projects = await load_starter_projects()
+
+    assert (Path(projects_dir / "Bundle starter.json"), project) in projects
+    assert all(project_data != deferred_project for _, project_data in projects)
 
 
 async def test_get_project_data():
@@ -96,18 +212,18 @@ async def test_should_not_leak_caio_contexts_when_loading_starter_projects():
 @pytest.mark.usefixtures("client")
 async def test_create_or_update_starter_projects():
     async with session_scope() as session:
-        # Get the number of projects returned by load_starter_projects
-        num_projects = len(await load_starter_projects())
+        projects = await load_starter_projects()
+        all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
+        expected_project_names = {
+            project["name"] for _, project in filter_starter_projects_by_available_components(projects, all_types_dict)
+        }
 
-        # Get the number of projects in the database
         stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.name == STARTER_FOLDER_NAME)
         folder = (await session.exec(stmt)).first()
         assert folder is not None
-        num_db_projects = len(folder.flows)
+        db_project_names = {flow.name for flow in folder.flows}
 
-        # Check that the number of projects in the database is the same as the number of projects returned by
-        # load_starter_projects
-        assert num_db_projects == num_projects
+        assert db_project_names == expected_project_names
 
 
 # Some starter projects require integration
@@ -597,6 +713,52 @@ def test_update_projects_resolves_prompt_via_component_type_alias():
         f"Expected code to be updated to 'new_prompt_code_v2' but got '{updated_code}'. "
         "The legacy 'Prompt' type should resolve to 'Prompt Template'."
     )
+
+
+def test_update_projects_preserves_current_prompt_custom_fields():
+    """Current Prompt Template nodes must retain serialized dynamic inputs."""
+    url_field = {
+        "name": "URL",
+        "type": "str",
+        "value": "",
+        "input_types": ["Message", "Text"],
+    }
+    all_types_dict = {
+        "models_and_agents": {
+            "Prompt Template": {
+                "template": {
+                    "_type": "Component",
+                    "code": {"value": "new_prompt_code"},
+                    "template": {"type": "prompt", "value": ""},
+                },
+                "display_name": "Prompt Template",
+            }
+        }
+    }
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Prompt Template",
+                    "node": {
+                        "custom_fields": {"template": ["URL"]},
+                        "template": {
+                            "_type": "Component",
+                            "code": {"value": "old_prompt_code"},
+                            "template": {"type": "prompt", "value": "Source: {URL}"},
+                            "URL": url_field,
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+
+    updated_template = updated_project["nodes"][0]["data"]["node"]["template"]
+    assert updated_template["URL"] == url_field
 
 
 def test_update_projects_direct_key_takes_precedence_over_alias():

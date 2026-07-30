@@ -229,6 +229,34 @@ def apply_provider_variable_config_to_build_config(
     return build_config
 
 
+def _filter_model_options_by_policy(
+    user_id: Any,
+    options: list[Any],
+    *,
+    additional_providers: tuple[str, ...] = (),
+):
+    """Filter provider-bearing options and return the decision snapshot used."""
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+    from .provider_queries import get_model_providers
+
+    option_providers = {
+        option.get("provider") for option in options if isinstance(option, dict) and option.get("provider")
+    }
+    option_providers.update(additional_providers)
+    policy = resolve_model_provider_policy(
+        user_id=user_id,
+        providers=[*get_model_providers(), *option_providers],
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+    visible_options = [
+        option
+        for option in options
+        if not isinstance(option, dict) or not option.get("provider") or policy.allows(option["provider"])
+    ]
+    return visible_options, policy
+
+
 def update_model_options_in_build_config(
     component: Any,
     build_config: dict,
@@ -257,8 +285,16 @@ def update_model_options_in_build_config(
 
     # If component has static options, skip the refresh logic entirely
     if component.cache.get(static_options_cache_key, False):
-        # Static options - don't override them
-        # Just handle the visibility logic and return
+        static_options = build_config.get(model_field_name, {}).get("options") or []
+        visible_options, provider_policy = _filter_model_options_by_policy(component.user_id, static_options)
+        build_config[model_field_name]["options"] = visible_options
+        current_value = build_config.get(model_field_name, {}).get("value")
+        if isinstance(current_value, list) and current_value and isinstance(current_value[0], dict):
+            current_provider = current_value[0].get("provider")
+            if current_provider and not provider_policy.allows(current_provider):
+                build_config[model_field_name]["value"] = [visible_options[0]] if visible_options else None
+
+        # Static options remain the source; policy only narrows their visibility.
         if field_value == "connect_other_models":
             # User explicitly selected "Connect other models", show the handle
             if cache_key_prefix == "embedding_model_options":
@@ -307,7 +343,18 @@ def update_model_options_in_build_config(
 
     # Use cached results
     cached = component.cache.get(cache_key, {"options": []})
-    build_config[model_field_name]["options"] = cached["options"]
+    cached_options = cached.get("options", [])
+    current_value = build_config.get(model_field_name, {}).get("value")
+    saved_provider = ""
+    if isinstance(current_value, list) and current_value and isinstance(current_value[0], dict):
+        saved_provider = current_value[0].get("provider", "")
+    additional_providers = (saved_provider,) if saved_provider else ()
+    visible_options, provider_policy = _filter_model_options_by_policy(
+        component.user_id,
+        cached_options,
+        additional_providers=additional_providers,
+    )
+    build_config[model_field_name]["options"] = visible_options
 
     # Sticky-default: if the currently saved value references a model that
     # isn't in the freshly-fetched options list (e.g. an imported flow whose
@@ -317,7 +364,6 @@ def update_model_options_in_build_config(
     # The frontend surfaces a "configure" wrench next to the trigger when it
     # sees this flag so the user can enable the provider without silently
     # losing their selection.
-    current_value = build_config.get(model_field_name, {}).get("value")
     if (
         isinstance(current_value, list)
         and current_value
@@ -326,12 +372,15 @@ def update_model_options_in_build_config(
     ):
         saved = current_value[0]
         saved_name = saved["name"]
-        saved_provider = saved.get("provider", "")
         options_list = build_config[model_field_name]["options"]
+        saved_provider_allowed = not saved_provider or provider_policy.allows(saved_provider)
         already_present = any(
             opt.get("name") == saved_name and opt.get("provider", "") == saved_provider for opt in options_list
         )
-        if not already_present:
+        if not saved_provider_allowed:
+            logger.debug("Dropping saved model from policy-hidden provider %s", saved_provider)
+            build_config[model_field_name]["value"] = None
+        elif not already_present:
             # When the ModelInput declares filters (e.g. Agent passes
             # ``filters={"tool_calling": True}``) and the saved selection
             # exists in the catalog but doesn't satisfy them, the regular
@@ -362,7 +411,7 @@ def update_model_options_in_build_config(
     # non-model field (like api_key) is cleared or set to a global variable.
     current_model_value = build_config.get(model_field_name, {}).get("value")
     if not current_model_value:
-        options = cached.get("options", [])
+        options = visible_options
         if options:
             # Determine model type based on cache_key_prefix
             model_type = "embeddings" if cache_key_prefix == "embedding_model_options" else "language"
@@ -476,6 +525,15 @@ def handle_model_input_update(
     """Full update_build_config lifecycle for any component with a ModelInput."""
     from lfx.base.models import unified_models as unified_models_module
 
+    def _selected_provider() -> str | None:
+        selection = build_config.get(model_field_name, {}).get("value")
+        if isinstance(selection, list) and selection and isinstance(selection[0], dict):
+            provider = selection[0].get("provider")
+            return provider if isinstance(provider, str) and provider else None
+        return None
+
+    selected_provider_before_refresh = _selected_provider()
+
     # If get_options_func is not provided, derive one from the declarative
     # ``filters`` dict on the ModelInput (e.g. Agent declares
     # ``filters={"tool_calling": True}``). The cache prefix is namespaced by
@@ -516,11 +574,13 @@ def handle_model_input_update(
         field_value=field_value,
         model_field_name=model_field_name,
     )
+    selected_provider_after_refresh = _selected_provider()
+    provider_changed_during_refresh = selected_provider_before_refresh != selected_provider_after_refresh
 
     # When the user directly edits a provider-specific field (e.g. api_key),
     # skip the provider reset/re-population so their value is preserved.
     provider_mapped_fields = _get_all_provider_mapped_fields()
-    if field_name in provider_mapped_fields:
+    if field_name in provider_mapped_fields and not provider_changed_during_refresh:
         return build_config
 
     # If the model field is in connection mode (user chose "Connect other models"),
@@ -537,8 +597,11 @@ def handle_model_input_update(
         if value_missing:
             # If the current value is not in the options (e.g. user switched to a model that
             # is no longer available), reset to avoid confusion so the user can pick a valid one.
-            option_names = {opt["name"] for opt in options}
-            value_is_valid = bool(field_value) and field_value[0]["name"] in option_names
+            value_is_valid = bool(field_value) and any(
+                option.get("name") == field_value[0].get("name")
+                and option.get("provider") == field_value[0].get("provider")
+                for option in options
+            )
 
             # If the value is invalid, reset to the first option if available, otherwise empty.
             build_config[model_field_name]["value"] = field_value if value_is_valid else [options[0]] if options else ""
@@ -558,6 +621,9 @@ def handle_model_input_update(
             field_config = build_config[field]
             field_config["show"] = False
             field_config["required"] = False
+            if provider_changed_during_refresh:
+                field_config["value"] = ""
+                field_config["load_from_db"] = False
 
     # Step 3: Show/configure the right fields for the selected provider
     # Use field_value when the user actively changed the model selection;

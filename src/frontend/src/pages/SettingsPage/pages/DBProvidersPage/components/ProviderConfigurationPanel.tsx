@@ -79,7 +79,7 @@ export function ProviderConfigurationPanel({
                 </Badge>
               )}
               {isComingSoon && (
-                <Badge variant="secondaryStatic" size="sq" className="text-xs">
+                <Badge variant="secondary" size="sq" className="text-xs">
                   {t("settings.dbProviders.comingSoon")}
                 </Badge>
               )}

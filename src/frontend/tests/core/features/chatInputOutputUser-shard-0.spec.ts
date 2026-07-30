@@ -5,8 +5,8 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import {
-  closeAdvancedOptions,
-  openAdvancedOptions,
+  closeParametersPanel,
+  openParametersPanel,
 } from "../../utils/open-advanced-options";
 
 test(
@@ -37,8 +37,8 @@ test(
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
     await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
-    await openAdvancedOptions(page);
-    await closeAdvancedOptions(page);
+    await openParametersPanel(page);
+    await closeParametersPanel(page);
     await page
       .getByRole("button", { name: TEXTS.playground, exact: true })
       .click();
