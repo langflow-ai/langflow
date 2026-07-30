@@ -342,6 +342,39 @@ async def test_public_endpoint_runs_as_flow_owner(client: AsyncClient, public_fl
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_public_endpoint_builds_from_server_sanitized_flow_data(client: AsyncClient, public_flow_id, monkeypatch):
+    """Stored component code is replaced before the anonymous v2 run starts."""
+    import langflow.api.v2.workflow_public as workflow_public_module
+
+    captured: dict = {}
+    _stub_generate_flow_events(monkeypatch, captured)
+    sanitized = {
+        "nodes": [{"id": "trusted-node", "data": {"type": "TrustedComponent"}}],
+        "edges": [],
+    }
+
+    async def _prepare(_flow_data):
+        return sanitized
+
+    monkeypatch.setattr(workflow_public_module, "prepare_public_flow_build", _prepare)
+
+    _send_unauthenticated(client, "trusted-code-test-client")
+    async with client.stream(
+        "POST",
+        "api/v2/workflows/public",
+        json={"flow_id": str(public_flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    ) as response:
+        assert response.status_code == codes.OK
+        await _read_stream(response)
+
+    assert captured["data"] is not None
+    assert captured["data"].nodes == sanitized["nodes"]
+    assert captured["data"].edges == sanitized["edges"]
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_public_endpoint_rejects_missing_client_id(client: AsyncClient, public_flow_id):
     """Without a ``client_id`` cookie or authenticated user, the request is rejected."""
     client.cookies.clear()  # no client_id, no auth
