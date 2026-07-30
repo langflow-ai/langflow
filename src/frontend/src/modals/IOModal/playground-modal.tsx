@@ -396,16 +396,26 @@ export default function IOModal({
                   <ShadTooltip
                     styleClasses="z-50"
                     side="right"
-                    content={t("modal.io.hideSidebar")}
+                    content={
+                      sidebarOpen
+                        ? t("modal.io.hideSidebar")
+                        : t("modal.io.showSidebar")
+                    }
                   >
                     <Button
                       variant="ghost"
                       className="flex h-8 w-8 items-center justify-center !p-0"
                       onClick={() => setSidebarOpen(!sidebarOpen)}
+                      aria-label={
+                        sidebarOpen
+                          ? t("modal.io.hideSidebar")
+                          : t("modal.io.showSidebar")
+                      }
                     >
                       <IconComponent
                         name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
                         className="h-[18px] w-[18px] text-ring"
+                        ariaHidden
                       />
                     </Button>
                   </ShadTooltip>
@@ -433,7 +443,7 @@ export default function IOModal({
                       variant="primary"
                       className="w-full !rounded-xl shadow-lg"
                     >
-                      <LangflowLogoColor />
+                      <LangflowLogoColor aria-hidden="true" />
                       <div className="text-sm">
                         {t("modal.io.builtWithLangflow")}
                       </div>
@@ -453,8 +463,12 @@ export default function IOModal({
                     variant="primary"
                     className="h-12 w-12 !rounded-xl !p-4 shadow-lg"
                     onClick={LangflowButtonClick}
+                    aria-label={t("modal.io.builtWithLangflow")}
                   >
-                    <LangflowLogoColor className="h-[18px] w-[18px] scale-150" />
+                    <LangflowLogoColor
+                      className="h-[18px] w-[18px] scale-150"
+                      aria-hidden="true"
+                    />
                   </Button>
                 </ShadTooltip>
               </div>

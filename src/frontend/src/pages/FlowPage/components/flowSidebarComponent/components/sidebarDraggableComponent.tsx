@@ -104,14 +104,6 @@ export const SidebarDraggableComponent = forwardRef(
       }
     }
 
-    const handleKeyDown = (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        e.stopPropagation();
-        addComponent(apiClass, itemName);
-      }
-    };
-
     return (
       <Select
         onValueChange={handleSelectChange}
@@ -131,9 +123,6 @@ export const SidebarDraggableComponent = forwardRef(
             }}
             key={itemName}
             data-tooltip-id={itemName}
-            tabIndex={0}
-            onKeyDown={handleKeyDown}
-            className="rounded-md outline-none ring-ring focus-visible:ring-1"
             data-testid={`${sectionName.toLowerCase()}_${display_name.toLowerCase()}_draggable`}
           >
             <div
@@ -206,13 +195,15 @@ export const SidebarDraggableComponent = forwardRef(
                     )}`}
                     variant="ghost"
                     size="icon"
-                    tabIndex={-1}
+                    aria-label={t("sidebar.addComponentToCanvas", {
+                      name: display_name,
+                    })}
                     className="text-primary"
                     onClick={() => addComponent(apiClass, itemName)}
                   >
                     <ForwardedIconComponent
                       name="Plus"
-                      className="h-4 w-4 shrink-0 transition-all group-hover/draggable:opacity-100 group-focus/draggable:opacity-100 sm:opacity-0"
+                      className="h-4 w-4 shrink-0 transition-all group-hover/draggable:opacity-100 group-focus-within/draggable:opacity-100 sm:opacity-0"
                     />
                   </Button>
                 )}

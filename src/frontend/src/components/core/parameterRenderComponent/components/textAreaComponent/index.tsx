@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
@@ -7,6 +8,7 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import { getSuppressedAutoComplete } from "@/utils/inputAutofill";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
+import { Button } from "../../../../ui/button";
 import { Input } from "../../../../ui/input";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { normalizeNFC, useIMEInput } from "../../hooks/use-ime-input";
@@ -75,6 +77,7 @@ export default function TextAreaComponent({
   nodeInformationMetadata,
   showParameter = true,
 }: InputProps<string, TextAreaComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -148,47 +151,43 @@ export default function TextAreaComponent({
     }
   };
 
-  const renderIcon = () => (
-    <div>
-      {!disabled && !isFocused && (
-        <div
-          className={cn(
-            externalLinkIconClasses.gradient({
-              disabled,
-              editNode,
-              password: password!,
-            }),
-            editNode
-              ? externalLinkIconClasses.editNodeTop
-              : externalLinkIconClasses.normalTop,
-          )}
-          style={{
-            pointerEvents: "none",
-            background: isFocused
-              ? undefined
-              : disabled
-                ? "bg-background"
-                : GRADIENT_CLASS,
-          }}
-          aria-hidden="true"
-        />
-      )}
-
-      <IconComponent
-        dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
-        name={getIconName(disabled, "", "", false, isToolMode) || "Scan"}
+  const renderGradient = () =>
+    !disabled &&
+    !isFocused && (
+      <div
         className={cn(
-          "cursor-pointer bg-background",
-          externalLinkIconClasses.icon,
+          externalLinkIconClasses.gradient({
+            disabled,
+            editNode,
+            password: password!,
+          }),
           editNode
             ? externalLinkIconClasses.editNodeTop
-            : externalLinkIconClasses.iconTop,
-          disabled
-            ? "bg-muted text-placeholder-foreground"
-            : "bg-background text-foreground",
+            : externalLinkIconClasses.normalTop,
         )}
+        style={{
+          pointerEvents: "none",
+          background: isFocused
+            ? undefined
+            : disabled
+              ? "bg-background"
+              : GRADIENT_CLASS,
+        }}
+        aria-hidden="true"
       />
-    </div>
+    );
+
+  const renderIcon = () => (
+    <IconComponent
+      dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
+      name={getIconName(disabled, "", "", false, isToolMode) || "Scan"}
+      className={cn(
+        "h-4 w-4 cursor-pointer bg-background",
+        disabled
+          ? "bg-muted text-placeholder-foreground"
+          : "bg-background text-foreground",
+      )}
+    />
   );
 
   if (!showParameter) {
@@ -219,20 +218,36 @@ export default function TextAreaComponent({
         readOnly={isWebhook}
       />
 
-      <ComponentTextModal
-        changeVisibility={updateVisibility}
-        value={displayValue}
-        setValue={(newValue) => commitValue(normalizeNFC(newValue))}
-        disabled={disabled}
-        onCloseModal={() => changeWebhookFormat("singleline")}
-      >
-        <div
-          onClick={() => changeWebhookFormat("multiline")}
-          className="relative w-full"
+      <div className="relative w-full">
+        {renderGradient()}
+        <ComponentTextModal
+          changeVisibility={updateVisibility}
+          value={displayValue}
+          setValue={(newValue) => commitValue(normalizeNFC(newValue))}
+          disabled={disabled}
+          onCloseModal={() => changeWebhookFormat("singleline")}
         >
-          {renderIcon()}
-        </div>
-      </ComponentTextModal>
+          <Button
+            unstyled
+            onClick={() => changeWebhookFormat("multiline")}
+            aria-label={t("input.expandTextEditor")}
+            className={cn(
+              // `before:` pseudo-element pads the touch target out to the
+              // WCAG 2.5.8 minimum (24x24) without resizing the visible
+              // icon or shifting its position. The button is already
+              // `position: absolute` (via externalLinkIconClasses.icon),
+              // which is enough to anchor the pseudo-element.
+              "flex items-center justify-center before:absolute before:-inset-1 before:content-['']",
+              externalLinkIconClasses.icon,
+              editNode
+                ? externalLinkIconClasses.editNodeTop
+                : externalLinkIconClasses.iconTop,
+            )}
+          >
+            {renderIcon()}
+          </Button>
+        </ComponentTextModal>
+      </div>
       {password && !isFocused && (
         <div
           onClick={() => {

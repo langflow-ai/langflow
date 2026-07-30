@@ -15,7 +15,7 @@ from lfx.cli.script_loader import (
     load_graph_from_script,
 )
 from lfx.cli.validation import validate_global_variables_for_env
-from lfx.execution import get_default_coordinator
+from lfx.execution import aget_default_coordinator
 from lfx.log.logger import logger
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars, validate_provided_id
 from lfx.schema.schema import InputValueRequest
@@ -538,7 +538,8 @@ async def run_flow(
                     "interactive-session only (in-memory, no durable resume). Run in a "
                     "terminal or pass --human-input to enable the interactive prompts.\n"
                 )
-            async for result in get_default_coordinator().stream(
+            coordinator = await aget_default_coordinator()
+            async for result in coordinator.stream(
                 graph,
                 initial_inputs=inputs,
                 event_manager=event_manager,

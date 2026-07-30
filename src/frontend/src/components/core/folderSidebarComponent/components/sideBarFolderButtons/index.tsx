@@ -22,10 +22,8 @@ import {
   usePostUploadFolders,
 } from "@/controllers/API/queries/folders";
 import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
-import { CustomStoreButton } from "@/customization/components/custom-store-button";
 import {
   ENABLE_CUSTOM_PARAM,
-  ENABLE_DATASTAX_LANGFLOW,
   ENABLE_FILE_MANAGEMENT,
   ENABLE_KNOWLEDGE_BASES,
   ENABLE_MCP_NOTICE,
@@ -522,8 +520,6 @@ const SideBarFoldersButtonsComponent = ({
       {ENABLE_FILE_MANAGEMENT && (
         <SidebarFooter className="border-t">
           <div className="grid w-full items-center gap-2 p-2">
-            {/* TODO: Remove this on cleanup */}
-            {ENABLE_DATASTAX_LANGFLOW && <CustomStoreButton />}{" "}
             {ENABLE_KNOWLEDGE_BASES && (
               <SidebarMenuButton
                 onClick={handleKnowledgeNavigation}
