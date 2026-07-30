@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Any
 from weakref import WeakValueDictionary
 
+from lfx.log.logger import logger
 from lfx.observability import (
     APPLICATION_INSTRUMENTATION_SCOPES,
     APPLICATION_METER_NAME,
@@ -439,5 +440,12 @@ def instrument_db_pool(meter_provider, engine) -> list[str]:
             description="Connections allowed beyond the configured pool size.",
         )
         registered.append(DB_POOL_MAX_OVERFLOW_GAUGE)
+
+    if not registered:
+        # Say so rather than exporting nothing quietly. NullPool is a supported poolclass and
+        # the usual setting behind PgBouncer, so this is a real deployment rather than a broken
+        # one -- but an alert written against these series would sit on absent data forever
+        # without this line to explain why.
+        logger.debug(f"DB pool metrics unavailable: {type(pool).__name__} does not count connections.")
 
     return registered
