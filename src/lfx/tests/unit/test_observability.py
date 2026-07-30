@@ -303,4 +303,13 @@ async def test_event_loop_lag_monitor_records_a_blocked_loop():
     ]
     assert points, f"{EVENT_LOOP_LAG_METRIC} was never recorded"
     assert max(p.max for p in points) >= 0.2, "a 0.3s block should surface as at least 0.2s of lag"
+
+    # The buckets have to separate healthy from blocked, not just carry the right sum. The SDK
+    # default boundaries start at 5 and are shaped for milliseconds, so recording seconds
+    # against them files a 0.2ms loop and a 4s stall in the same bucket and the histogram
+    # cannot answer the p99 question it exists for.
+    occupied = {index for point in points for index, count in enumerate(point.bucket_counts) if count}
+    assert len(occupied) > 1, (
+        f"every sample landed in one bucket ({points[0].explicit_bounds}); healthy and blocked must be distinguishable"
+    )
     provider.shutdown()

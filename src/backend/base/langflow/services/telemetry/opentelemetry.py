@@ -337,7 +337,7 @@ DB_POOL_GAUGES = (
     ("langflow_db_pool_connections_in_use", "checkedout", "Connections currently checked out of the pool."),
     ("langflow_db_pool_connections_idle", "checkedin", "Connections sitting idle in the pool."),
     ("langflow_db_pool_size", "size", "Configured pool size, excluding overflow."),
-    ("langflow_db_pool_overflow", "overflow", "Connections open beyond the configured pool size."),
+    ("langflow_db_pool_overflow", "overflow", "Connections open beyond the configured pool size, 0 when within it."),
 )
 
 
@@ -346,7 +346,9 @@ def _pool_observer(pool, method_name: str):
 
     def observe(_options):
         try:
-            return [metrics.Observation(getattr(pool, method_name)())]
+            # Clamp: SQLAlchemy's overflow() starts at -pool_size, so a healthy pool reports a
+            # negative 'overflow'. None of these counters are meaningful below zero.
+            return [Observation(max(getattr(pool, method_name)(), 0))]
         except Exception:  # noqa: BLE001 - a broken gauge must not stop the other metrics
             return []
 

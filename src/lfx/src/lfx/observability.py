@@ -41,8 +41,8 @@ APPLICATION_TRACER_NAME = "langflow.observability"
 
 # The meter name the application records its own counters and histograms on. Kept as
 # "langflow" because that is the scope langflow's custom metrics already use, and the metric
-# filter must allowlist it. Under bare ``lfx serve`` nothing records on this meter, so
-# allowlisting it is simply harmless.
+# filter must allowlist it. Under bare ``lfx serve`` the only thing recording here is the
+# event-loop lag sampler below; langflow's own counters and gauges are additional.
 APPLICATION_METER_NAME = "langflow"
 
 DEFAULT_SERVICE_NAME = "langflow"
@@ -52,6 +52,12 @@ DEFAULT_SERVICE_NAME = "langflow"
 # measure how late the answer comes back.
 EVENT_LOOP_LAG_METRIC = "langflow_event_loop_lag_seconds"
 EVENT_LOOP_LAG_INTERVAL_SECONDS = 0.25
+
+# Explicit buckets, because the SDK default boundaries start (0, 5, 10, 25, ...) and are
+# shaped for milliseconds. Recording seconds against them puts a healthy 0.2ms loop and a
+# catastrophic 4s stall in the same bucket, which makes the histogram unable to answer the
+# one question it exists for. These span "healthy" (sub-millisecond) to "the loop is gone".
+EVENT_LOOP_LAG_BUCKETS_SECONDS = (0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
 SUPPORTED_OTLP_PROTOCOLS = ("grpc", "http/protobuf")
 
 # The endpoint vars that mean "an operator wants to export". Any one of these being set is the
@@ -578,6 +584,7 @@ def start_event_loop_lag_monitor(
         EVENT_LOOP_LAG_METRIC,
         unit="s",
         description="How much later than requested the event loop resumed a sleeping task.",
+        explicit_bucket_boundaries_advisory=list(EVENT_LOOP_LAG_BUCKETS_SECONDS),
     )
 
     async def _monitor() -> None:
