@@ -58,6 +58,7 @@ def _raw_watsonx_selection() -> list[dict]:
 
 def _build_llm_from_raw_selection() -> dict:
     from lfx.base.models import unified_models as unified_models_module
+    from lfx.base.models.unified_models import instantiation
     from lfx.base.models.unified_models.instantiation import get_llm
 
     fake_cls, captured = _capture_factory()
@@ -77,6 +78,7 @@ def _build_llm_from_raw_selection() -> dict:
                 "WATSONX_PROJECT_ID": "proj-123",
             },
         ),
+        patch.object(instantiation, "validate_url_for_ssrf_or_raise"),
     ):
         get_llm(_raw_watsonx_selection(), user_id=None, stream=True)
 
