@@ -21,6 +21,22 @@ def _as_user_turn(message: BaseMessage) -> BaseMessage:
     return message
 
 
+def _remediate(error: Exception, runnable: Any, applied: set[str]) -> bool:
+    """Clear a model constraint the provider only reports at call time; True means retry.
+
+    Mirrors ``LCModelComponent._remediate_model_error`` for the components that reach a
+    model over a connection (Structured Output, LLM Selector) rather than building it.
+    """
+    from lfx.base.models.model_remediation import apply_overrides_to_model, find_remediation
+
+    error_text = f"{error} {getattr(error, '__cause__', '') or ''}"
+    remediation = find_remediation(error_text, provider=None, already_applied=applied)
+    if remediation is None or not apply_overrides_to_model(runnable, remediation.overrides):
+        return False
+    applied.add(remediation.name)
+    return True
+
+
 def build_messages_and_runnable(
     input_value: str | Message, system_message: str | None, original_runnable: LanguageModel
 ) -> tuple[list[BaseMessage], LanguageModel]:
@@ -65,30 +81,38 @@ def get_chat_result(
         msg = "The message you want to send to the model is empty."
         raise ValueError(msg)
 
+    # A Prompt input turns ``runnable`` into a chain; remediation has to target the
+    # chat model itself, which that chain keeps a reference to.
+    chat_model = runnable
     messages, runnable = build_messages_and_runnable(
         input_value=input_value, system_message=system_message, original_runnable=runnable
     )
 
     inputs: list | dict = messages or {}
-    try:
-        if config and config.get("output_parser") is not None:
-            runnable |= config["output_parser"]
+    applied_remediations: set[str] = set()
+    while True:
+        try:
+            active: Any = runnable
+            if config and config.get("output_parser") is not None:
+                active |= config["output_parser"]
 
-        if config:
-            runnable = runnable.with_config(
-                {
-                    "run_name": config.get("display_name", ""),
-                    "project_name": config.get("get_project_name", lambda: "")(),
-                    "callbacks": config.get("get_langchain_callbacks", list)(),
-                }
-            )
-        if stream:
-            return runnable.stream(inputs)
-        message = runnable.invoke(inputs)
-        if token_usage_callback is not None and hasattr(message, "content"):
-            token_usage_callback(message)
-        return message.content if hasattr(message, "content") else message
-    except Exception as e:
-        if config and config.get("_get_exception_message") and (message := config["_get_exception_message"](e)):
-            raise ValueError(message) from e
-        raise
+            if config:
+                active = active.with_config(
+                    {
+                        "run_name": config.get("display_name", ""),
+                        "project_name": config.get("get_project_name", lambda: "")(),
+                        "callbacks": config.get("get_langchain_callbacks", list)(),
+                    }
+                )
+            if stream:
+                return active.stream(inputs)
+            message = active.invoke(inputs)
+            if token_usage_callback is not None and hasattr(message, "content"):
+                token_usage_callback(message)
+            return message.content if hasattr(message, "content") else message
+        except Exception as e:
+            if _remediate(e, chat_model, applied_remediations):
+                continue
+            if config and config.get("_get_exception_message") and (message := config["_get_exception_message"](e)):
+                raise ValueError(message) from e
+            raise
