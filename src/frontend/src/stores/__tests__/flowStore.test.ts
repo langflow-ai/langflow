@@ -1249,7 +1249,7 @@ describe("useFlowStore", () => {
     });
 
     it("uses the public playground virtual flow id for the active building session", async () => {
-      const expectedFlowId = uuidv5("client-123_flow-abc", uuidv5.DNS);
+      const expectedFlowId = uuidv5("client:client-123_flow-abc", uuidv5.DNS);
 
       useUtilityStore.setState({ clientId: "client-123" });
       useAuthStore.setState({

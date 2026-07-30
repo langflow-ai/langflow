@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from fastapi import HTTPException
 from lfx.graph.graph.base import Graph
@@ -171,17 +171,25 @@ def validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) ->
             raise HTTPException(status_code=400, detail="Invalid filename")
 
 
-def compute_virtual_flow_id(identifier: str | uuid.UUID, flow_id: uuid.UUID) -> uuid.UUID:
+def compute_virtual_flow_id(
+    identifier: str | uuid.UUID,
+    flow_id: uuid.UUID,
+    *,
+    principal_type: Literal["user", "client"] | None = None,
+) -> uuid.UUID:
     """Compute a deterministic virtual flow ID for session/message isolation.
 
     Args:
         identifier: A unique identifier (user_id for authenticated users, client_id for anonymous).
         flow_id: The original flow ID.
+        principal_type: Optional identity domain for public-flow callers. Authenticated
+            user IDs and anonymous client IDs must never share a UUID namespace.
 
     Returns:
         A deterministic UUID v5 derived from the identifier and flow_id.
     """
-    return uuid.uuid5(uuid.NAMESPACE_DNS, f"{identifier}_{flow_id}")
+    namespaced_identifier = f"{principal_type}:{identifier}" if principal_type else str(identifier)
+    return uuid.uuid5(uuid.NAMESPACE_DNS, f"{namespaced_identifier}_{flow_id}")
 
 
 def scope_session_to_namespace(session: str | None, namespace: str) -> str | None:
@@ -250,8 +258,10 @@ async def verify_public_flow_and_get_user(
             raise HTTPException(status_code=403, detail="Flow is not public")
 
     # Use authenticated user_id for deterministic UUID when available, otherwise client_id
-    identifier = str(authenticated_user_id) if authenticated_user_id else client_id
-    new_flow_id = compute_virtual_flow_id(identifier, flow_id)
+    is_authenticated = authenticated_user_id is not None
+    identifier = str(authenticated_user_id) if is_authenticated else client_id
+    principal_type: Literal["user", "client"] = "user" if is_authenticated else "client"
+    new_flow_id = compute_virtual_flow_id(identifier, flow_id, principal_type=principal_type)
 
     # Get the user associated with the flow
     try:

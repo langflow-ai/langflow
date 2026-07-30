@@ -41,6 +41,16 @@ def test_compute_virtual_flow_id_differs_per_user():
     assert result_a != result_b
 
 
+def test_compute_virtual_flow_id_separates_user_and_client_identity_domains():
+    shared_identifier = uuid.uuid4()
+    flow_id = uuid.uuid4()
+
+    user_namespace = compute_virtual_flow_id(shared_identifier, flow_id, principal_type="user")
+    client_namespace = compute_virtual_flow_id(shared_identifier, flow_id, principal_type="client")
+
+    assert user_namespace != client_namespace
+
+
 def test_compute_virtual_flow_id_differs_per_flow():
     """Same user produces different virtual flow_ids for different flows."""
     user_id = uuid.uuid4()

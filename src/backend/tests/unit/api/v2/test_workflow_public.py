@@ -239,7 +239,7 @@ async def test_public_endpoint_namespaces_caller_session(client: AsyncClient, pu
         assert response.status_code == codes.OK
         await _read_stream(response)
 
-    expected_namespace = str(compute_virtual_flow_id(client_id, public_flow_id))
+    expected_namespace = str(compute_virtual_flow_id(client_id, public_flow_id, principal_type="client"))
     sent_inputs = captured["inputs"]
     assert sent_inputs is not None
     assert sent_inputs.session == f"{expected_namespace}:{victim_session}"
@@ -272,7 +272,7 @@ async def test_public_endpoint_uses_virtual_flow_id_for_storage(client: AsyncCli
         assert response.status_code == codes.OK
         await _read_stream(response)
 
-    expected_virtual = compute_virtual_flow_id(client_id, public_flow_id)
+    expected_virtual = compute_virtual_flow_id(client_id, public_flow_id, principal_type="client")
     assert captured["flow_id"] == expected_virtual
     assert captured["source_flow_id"] == public_flow_id
 
