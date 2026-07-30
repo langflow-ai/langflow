@@ -49,7 +49,8 @@ export interface StepperStepConfig {
   label?: string;
   /**
    * Per-step validation gate: while false, `next()` is a no-op and
-   * `canGoNext` is false. Defaults to true.
+   * `canGoNext` is false. Defaults to true. The function form is evaluated on
+   * every render (it feeds `canGoNext`), so it must be pure and side-effect-free.
    */
   canNext?: boolean | (() => boolean);
 }
