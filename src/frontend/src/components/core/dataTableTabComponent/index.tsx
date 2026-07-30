@@ -52,7 +52,11 @@ export interface DataTableTabProps<TData> {
   gridOptions?: AgGridReactProps["gridOptions"];
   /** Wraps the table container (e.g. a file-drop zone). */
   renderTableWrapper?: (table: JSX.Element) => ReactNode;
-  /** Feature-specific modals rendered inside the shell root. */
+  /**
+   * Feature-specific modals rendered inside the shell root in every state
+   * (table, loading and empty), so a modal opened from the empty or loading UI
+   * — e.g. "create the first knowledge base" — actually mounts and can open.
+   */
   children?: ReactNode;
 }
 
@@ -96,11 +100,21 @@ const DataTableTab = <TData,>({
   };
 
   if (isLoading) {
-    return <>{loadingState}</>;
+    return (
+      <>
+        {loadingState}
+        {children}
+      </>
+    );
   }
 
   if (rowData.length === 0) {
-    return <>{emptyState}</>;
+    return (
+      <>
+        {emptyState}
+        {children}
+      </>
+    );
   }
 
   const table = (
