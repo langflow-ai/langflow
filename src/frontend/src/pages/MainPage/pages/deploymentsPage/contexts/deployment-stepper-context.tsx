@@ -14,7 +14,7 @@ import type { DeploymentCreateRequest } from "@/controllers/API/queries/deployme
 import {
   type StepperStepConfig,
   useStepperState,
-} from "@/modals/stepperModal/StepperModal";
+} from "@/modals/stepperModal";
 import {
   buildDeploymentPayload as buildDeploymentPayloadValue,
   buildDeploymentUpdatePayload as buildDeploymentUpdatePayloadValue,
