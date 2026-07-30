@@ -14,6 +14,7 @@ class DataFrameOperationsComponent(Component):
     icon = "table"
     name = "DataFrameOperations"
     legacy = True
+    replacement = ["processing.Operations"]
     metadata = {
         "keywords": [
             "dataframe",

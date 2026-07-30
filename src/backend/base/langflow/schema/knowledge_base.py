@@ -6,9 +6,11 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from langflow.utils.kb_constants import MAX_CHUNK_OVERLAP, MAX_CHUNK_SIZE, MIN_CHUNK_OVERLAP, MIN_CHUNK_SIZE
 
-_REQUIRED_BACKEND_CONFIG: dict[str, tuple[str, ...]] = {
-    BackendType.OPENSEARCH.value: ("index_name",),
-}
+# Required ``backend_config`` fields per backend, enforced at request time.
+# OpenSearch no longer requires ``index_name``: the backend derives a unique
+# index per KB/MB from its name (created lazily on first write), so the index
+# does not need to exist — or even be named — at create / test-connection time.
+_REQUIRED_BACKEND_CONFIG: dict[str, tuple[str, ...]] = {}
 
 # Backends the API accepts for *new* KB creation. Other ``BackendType``
 # values exist as stubs so existing DB rows referencing them can still

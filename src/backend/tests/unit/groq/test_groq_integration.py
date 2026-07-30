@@ -8,6 +8,10 @@ Tests cover:
 
 from unittest.mock import patch
 
+import pytest
+
+pytest.importorskip("lfx_bundles")
+
 # Capture the module object ONCE and bind both the class and every patch
 # target from it. groq lives in the lfx-bundles metapackage now, so the
 # same source file can materialize under several sys.modules identities
@@ -16,7 +20,6 @@ from unittest.mock import patch
 # can land on a different module object than the one that defined the
 # class, leaving the real get_groq_models in the instance's __globals__.
 import lfx.components.groq.groq as groq_module
-import pytest
 
 
 class TestGroqModelIntegration:

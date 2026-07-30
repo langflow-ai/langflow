@@ -16,18 +16,32 @@ system functionality AND the actual module code quality are validated.
 import asyncio
 import importlib
 import pkgutil
+from pathlib import Path
 
 import pytest
 from langflow import components
 from lfx.interface.components import _warm_circular_imports
 
-# Provider components ship in bundle distributions that can be temporarily
-# unpublished (see the re-enable note in pyproject.toml). While a bundle is
-# absent its category stays in
-# ``components.__all__`` but cannot be imported, so these tests skip it instead
-# of failing. Each guard is computed from the live import result, so it turns
-# back into a no-op the moment the bundle is restored -- no revert needed.
-_OPTIONAL_BUNDLE_CATEGORIES = ("openai", "datastax", "oracle")
+# Provider components ship in bundle distributions. Partner packages are
+# expected in the base Langflow install, but the long-tail lfx-bundles
+# metapackage is opt-in. While an optional bundle is absent its compatibility
+# shim stays in ``components.__all__`` but cannot be imported, so these tests
+# skip that category instead of failing.
+_OPTIONAL_PARTNER_BUNDLE_CATEGORIES = ("openai", "datastax", "oracle")
+
+
+def _lfx_bundles_shim_categories() -> tuple[str, ...]:
+    components_dir = Path(components.__file__).parent
+    return tuple(
+        sorted(
+            init_file.parent.name
+            for init_file in components_dir.glob("*/__init__.py")
+            if 'importlib.import_module("lfx_bundles.' in init_file.read_text(encoding="utf-8")
+        )
+    )
+
+
+_OPTIONAL_BUNDLE_CATEGORIES = (*_OPTIONAL_PARTNER_BUNDLE_CATEGORIES, *_lfx_bundles_shim_categories())
 
 
 def _unavailable_bundle_categories() -> set[str]:
@@ -68,22 +82,6 @@ class TestAllModulesImportable:
 
     def test_all_components_in_categories_importable(self):
         """Test that all components in each category's __all__ can be imported."""
-        import sys
-
-        # Components whose underlying packages are gated to python_version<'3.14'
-        # in pyproject.toml because upstream pins exclude 3.14. These are expected
-        # to fail import on 3.14 until the upstreams adapt.
-        # NOTE: ibm.* moved to the lfx-ibm bundle (src/bundles/ibm) and is no
-        # longer iterated through ``langflow.components``; the watsonx
-        # 3.14-gating moved with them.
-        gated_on_py314 = {
-            "altk.ALTKAgentComponent",
-            "crewai.CrewAIAgentComponent",
-            "crewai.HierarchicalCrewComponent",
-            "crewai.SequentialCrewComponent",
-        }
-        on_py314 = sys.version_info >= (3, 14)
-
         failed_imports = []
         successful_imports = 0
 
@@ -108,8 +106,8 @@ class TestAllModulesImportable:
                             successful_imports += 1
 
                         except Exception as e:
-                            if on_py314 and qualified in gated_on_py314:
-                                print(f"SKIPPED on 3.14: {qualified}: {e!s}")  # noqa: T201
+                            if "lfx-bundles" in str(e):
+                                print(f"SKIPPED optional lfx-bundles component: {qualified}: {e!s}")  # noqa: T201
                                 continue
                             failed_imports.append(f"{qualified}: {e!s}")
                             print(f"FAILED: {qualified}: {e!s}")  # noqa: T201
@@ -351,6 +349,9 @@ class TestSpecificModulePatterns:
 
     def test_platform_specific_imports(self):
         """Test platform-specific imports like NVIDIA Windows components."""
+        if "nvidia" in UNAVAILABLE_BUNDLE_CATEGORIES:
+            pytest.skip("NVIDIA moved to the opt-in lfx-bundles distribution")
+
         # Test NVIDIA module which has platform-specific logic
         nvidia_module = components.nvidia
         assert nvidia_module is not None
@@ -413,6 +414,9 @@ class TestDirectModuleImports:
             # Skip deactivated components
             if "deactivated" in modname:
                 continue
+            category_name = modname.removeprefix(f"{components_pkg.__name__}.").split(".", 1)[0]
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             # Skip private modules
             if any(part.startswith("_") for part in modname.split(".")):
                 continue
@@ -448,8 +452,7 @@ class TestDirectModuleImports:
                         "redis",
                         "elasticsearch",
                         "langchain_community",
-                        # Gated to python_version<'3.14' in pyproject.toml until
-                        # upstream caps lift.
+                        # ALTK is excluded on Intel macOS; the IBM integrations remain optional.
                         "altk",
                         "langchain_ibm",
                         "ibm_watsonx_ai",
@@ -458,12 +461,6 @@ class TestDirectModuleImports:
                         "lfx-openai",
                         "lfx-datastax",
                         "lfx-oracle",
-                        # litellm has no 3.14-compatible release, so it is gated to
-                        # python_version<'3.14'. Its absence surfaces transitively
-                        # via crewai (``from crewai import Agent`` -> litellm) and
-                        # via toolguard (the policies components import it directly).
-                        "litellm",
-                        "toolguard",
                     ]
                 ):
                     return ("skipped", modname, "missing optional dependency")
@@ -594,6 +591,10 @@ class TestDirectModuleImports:
 
         async def test_vector_store_import(module_name, class_name):
             """Test import of a single vector store component."""
+            category_name = module_name.split(".")[2]
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                return ("skipped", module_name, class_name, "optional bundle not installed")
+
             try:
 
                 def _import():
@@ -645,6 +646,9 @@ class TestDirectModuleImports:
         This test specifically validates that the Qdrant component can be
         imported after fixing the deprecated langchain.embeddings.base import.
         """
+        if "qdrant" in UNAVAILABLE_BUNDLE_CATEGORIES:
+            pytest.skip("Qdrant moved to the opt-in lfx-bundles distribution")
+
         try:
             from lfx.components.qdrant import QdrantVectorStoreComponent
 

@@ -1,9 +1,10 @@
 import * as Form from "@radix-ui/react-form";
-import { Eye, EyeOff } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
+import { getRequiredFieldError } from "@/utils/authErrorMessages";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { CONTROL_NEW_USER } from "../../constants/constants";
@@ -28,8 +29,6 @@ export default function UserManagementModal({
   asChild,
 }: UserManagementType) {
   const { t } = useTranslation();
-  const [pwdVisible, setPwdVisible] = useState(false);
-  const [confirmPwdVisible, setConfirmPwdVisible] = useState(false);
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState(data?.password ?? "");
   const [username, setUserName] = useState(data?.username ?? "");
@@ -37,7 +36,36 @@ export default function UserManagementModal({
   const [isActive, setIsActive] = useState(data?.is_active ?? false);
   const [isSuperUser, setIsSuperUser] = useState(data?.is_superuser ?? false);
   const [inputState, setInputState] = useState<UserInputType>(CONTROL_NEW_USER);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
   const { userData } = useContext(AuthContext);
+
+  // Password is only required when creating a user; editing leaves it blank to
+  // keep the existing password. Errors surface after a submit attempt (or once
+  // the confirm field is blurred for the mismatch case), matching the
+  // login/signup auth surfaces.
+  const isCreating = !data;
+  const passwordMismatch =
+    password !== "" && confirmPassword !== "" && password !== confirmPassword;
+  const passwordError = isCreating
+    ? getRequiredFieldError(
+        submitAttempted,
+        password,
+        t("admin.passwordRequired"),
+      )
+    : undefined;
+  const shouldShowMismatch =
+    passwordMismatch && (submitAttempted || confirmPasswordTouched);
+  const confirmPasswordRequiredError = isCreating
+    ? getRequiredFieldError(
+        submitAttempted,
+        confirmPassword,
+        t("admin.confirmPasswordRequired"),
+      )
+    : undefined;
+  const confirmPasswordError =
+    confirmPasswordRequiredError ??
+    (shouldShowMismatch ? t("admin.passwordsDoNotMatch") : undefined);
 
   function handleInput({
     target: { name, value },
@@ -69,6 +97,8 @@ export default function UserManagementModal({
     setConfirmPassword("");
     setIsActive(false);
     setIsSuperUser(false);
+    setSubmitAttempted(false);
+    setConfirmPasswordTouched(false);
   }
 
   return (
@@ -85,6 +115,7 @@ export default function UserManagementModal({
       <BaseModal.Content>
         <Form.Root
           onSubmit={(event) => {
+            setSubmitAttempted(true);
             if (password !== confirmPassword) {
               event.preventDefault();
               return;
@@ -130,57 +161,45 @@ export default function UserManagementModal({
               <div className="mr-3 basis-1/2">
                 <Form.Field
                   name="password"
-                  serverInvalid={password != confirmPassword}
+                  serverInvalid={Boolean(passwordError)}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "baseline",
-                      justifyContent: "space-between",
-                    }}
+                  <Form.Label
+                    htmlFor="form-new-user-password"
+                    className={`flex items-center gap-1 ${
+                      passwordError ? "label-invalid" : ""
+                    }`}
                   >
-                    <Form.Label className="data-[invalid]:label-invalid flex">
-                      {t("admin.passwordLabel")}{" "}
-                      <span className="ml-1 mr-1 font-medium text-destructive">
-                        *
-                      </span>
-                      {pwdVisible && (
-                        <Eye
-                          onClick={() => setPwdVisible(!pwdVisible)}
-                          className="h-5 cursor-pointer"
-                          strokeWidth={1.5}
-                        />
-                      )}
-                      {!pwdVisible && (
-                        <EyeOff
-                          onClick={() => setPwdVisible(!pwdVisible)}
-                          className="h-5 cursor-pointer"
-                          strokeWidth={1.5}
-                        />
-                      )}
-                    </Form.Label>
-                  </div>
-                  <Form.Control asChild>
-                    <input
-                      onChange={({ target: { value } }) => {
-                        handleInput({ target: { name: "password", value } });
-                        setPassword(value);
-                      }}
-                      value={password}
-                      className="primary-input"
-                      required={data ? false : true}
-                      type={pwdVisible ? "text" : "password"}
-                    />
-                  </Form.Control>
-
-                  <Form.Message className="field-invalid" match="valueMissing">
-                    {t("admin.passwordRequired")}
-                  </Form.Message>
-
-                  {password != confirmPassword && (
-                    <Form.Message className="field-invalid">
-                      {t("admin.passwordsDoNotMatch")}
-                    </Form.Message>
+                    <span>{t("admin.passwordLabel")}</span>
+                    <span className="font-medium text-destructive">*</span>
+                  </Form.Label>
+                  <InputComponent
+                    id="new-user-password"
+                    name="password"
+                    isForm
+                    password
+                    value={password}
+                    onChange={(value) => {
+                      handleInput({ target: { name: "password", value } });
+                      setPassword(value);
+                    }}
+                    required={isCreating}
+                    placeholder={t("admin.passwordLabel")}
+                    className="w-full"
+                    inputProps={{
+                      "aria-describedby": passwordError
+                        ? "new-user-password-error"
+                        : undefined,
+                      "aria-invalid": Boolean(passwordError) || undefined,
+                    }}
+                  />
+                  {passwordError && (
+                    <p
+                      id="new-user-password-error"
+                      role="alert"
+                      className="field-invalid"
+                    >
+                      {passwordError}
+                    </p>
                   )}
                 </Form.Field>
               </div>
@@ -188,61 +207,55 @@ export default function UserManagementModal({
               <div className="basis-1/2">
                 <Form.Field
                   name="confirmpassword"
-                  serverInvalid={password != confirmPassword}
+                  serverInvalid={Boolean(confirmPasswordError)}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "baseline",
-                      justifyContent: "space-between",
-                    }}
+                  <Form.Label
+                    htmlFor="form-new-user-confirm-password"
+                    className={`flex items-center gap-1 ${
+                      confirmPasswordError ? "label-invalid" : ""
+                    }`}
                   >
-                    <Form.Label className="data-[invalid]:label-invalid flex">
-                      {t("admin.confirmPasswordLabel")}{" "}
-                      <span className="ml-1 mr-1 font-medium text-destructive">
-                        *
-                      </span>
-                      {confirmPwdVisible && (
-                        <Eye
-                          onClick={() =>
-                            setConfirmPwdVisible(!confirmPwdVisible)
-                          }
-                          className="h-5 cursor-pointer"
-                          strokeWidth={1.5}
-                        />
-                      )}
-                      {!confirmPwdVisible && (
-                        <EyeOff
-                          onClick={() =>
-                            setConfirmPwdVisible(!confirmPwdVisible)
-                          }
-                          className="h-5 cursor-pointer"
-                          strokeWidth={1.5}
-                        />
-                      )}
-                    </Form.Label>
-                  </div>
-                  <Form.Control asChild>
-                    <input
-                      onChange={(input) => {
-                        setConfirmPassword(input.target.value);
-                      }}
-                      value={confirmPassword}
-                      className="primary-input"
-                      required={data ? false : true}
-                      type={confirmPwdVisible ? "text" : "password"}
-                    />
-                  </Form.Control>
-                  <Form.Message className="field-invalid" match="valueMissing">
-                    {t("admin.confirmPasswordRequired")}
-                  </Form.Message>
+                    <span>{t("admin.confirmPasswordLabel")}</span>
+                    <span className="font-medium text-destructive">*</span>
+                  </Form.Label>
+                  <InputComponent
+                    id="new-user-confirm-password"
+                    name="confirmpassword"
+                    isForm
+                    password
+                    value={confirmPassword}
+                    onChange={(value) => setConfirmPassword(value)}
+                    onBlur={() => setConfirmPasswordTouched(true)}
+                    required={isCreating}
+                    placeholder={t("admin.confirmPasswordLabel")}
+                    className="w-full"
+                    inputProps={{
+                      "aria-describedby": confirmPasswordError
+                        ? "new-user-confirm-password-error"
+                        : undefined,
+                      "aria-invalid":
+                        Boolean(confirmPasswordError) || undefined,
+                    }}
+                  />
+                  {confirmPasswordError && (
+                    <p
+                      id="new-user-confirm-password-error"
+                      role="alert"
+                      className="field-invalid"
+                    >
+                      {confirmPasswordError}
+                    </p>
+                  )}
                 </Form.Field>
               </div>
             </div>
             <div className="flex gap-8">
               <Form.Field name="is_active">
                 <div>
-                  <Form.Label className="data-[invalid]:label-invalid mr-3">
+                  <Form.Label
+                    htmlFor="is_active"
+                    className="data-[invalid]:label-invalid mr-3"
+                  >
                     {t("admin.columnActive")}
                   </Form.Label>
                   {data?.id === userData?.id ? (
@@ -276,7 +289,10 @@ export default function UserManagementModal({
               {userData?.is_superuser && (
                 <Form.Field name="is_superuser">
                   <div>
-                    <Form.Label className="data-[invalid]:label-invalid mr-3">
+                    <Form.Label
+                      htmlFor="is_superuser"
+                      className="data-[invalid]:label-invalid mr-3"
+                    >
                       {t("admin.columnSuperuser")}
                     </Form.Label>
                     <Form.Control asChild>

@@ -4,6 +4,9 @@ import os
 from unittest.mock import patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx_bundles.twelvelabs.split_video import SplitVideoComponent
 from lfx_bundles.twelvelabs.video_file import VideoFileComponent
 

@@ -6,7 +6,7 @@ from lfx.log.logger import logger
 
 
 class McpSettings(BaseModel):
-    """MCP server, session manager, and composer settings."""
+    """MCP server, session manager, and composer settings, plus the A2A protocol toggle."""
 
     mcp_base_url: str = ""
     """External base URL used to build MCP server URLs in the UI configuration JSON
@@ -73,12 +73,55 @@ class McpSettings(BaseModel):
     mcp_composer_version: str = "==0.1.0.8.10"
     """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax."""
 
+    mcp_sdk_constraint: str = "mcp~=1.28"
+    """Requirement injected as ``uvx --with`` when Langflow launches an MCP server through uvx.
+
+    ``uvx`` resolves each server into its own ephemeral environment, so Langflow's own
+    ``mcp`` pin does not apply there. ``mcp-proxy`` and ``mcp-composer`` still declare an
+    unbounded ``mcp>=1.x``, and the 2.0 SDK removed ``request_ctx`` and renamed ``McpError``,
+    so an unconstrained resolve installs a release those packages cannot import. Keep the
+    specifier free of ``<``/``>``, which the stdio command policy rejects as shell
+    metacharacters. The exact configured specifier is exempt from
+    ``mcp_server_allowed_packages``, so allowlisted deployments keep working without
+    adding ``mcp``. Set to an empty string to disable the injection once upstream
+    supports the 2.x SDK. Env var: LANGFLOW_MCP_SDK_CONSTRAINT."""
+
+    # A2A protocol
+    a2a_enabled: bool = False
+    """If set to True, Langflow serves spec-valid A2A agent cards at a per-flow
+    discovery endpoint for agent-typed, a2a_enabled flows. Default off (opt-in).
+    Env var: LANGFLOW_A2A_ENABLED."""
+    a2a_allow_private_webhooks: bool = False
+    """If True, A2A push-notification webhooks may target private/loopback/link-local
+    addresses. Default False blocks them (SSRF protection on the public endpoint); enable
+    only in a trusted network where agents notify internal services.
+    Env var: LANGFLOW_A2A_ALLOW_PRIVATE_WEBHOOKS."""
+
     # MCP Server management
     mcp_servers_locked: bool = False
     """If set to True, users cannot add or modify MCP servers via the UI/API.
 
     This control is independent from ``embedded_mode`` and must be enabled
     explicitly when you want to lock MCP server management.
+    """
+
+    mcp_server_allowed_packages: str | None = None
+    """Comma-separated package allowlist for MCP ``npx``/``uvx`` stdio servers.
+
+    When set, package runners may download and execute only these exact package names.
+    Version specifiers are allowed but do not change the package identity. Leave unset to
+    preserve the legacy single-tenant behavior. Multi-tenant deployments should set this
+    to the packages installed by their operator; an empty value blocks all package runners.
+    """
+
+    mcp_server_interpreter_hardening: bool = False
+    """If set to True, blocks tenant-controlled Python, Node.js, and shell MCP entrypoints.
+
+    The command allowlist alone cannot make ``python <uploaded-file>`` or
+    ``node <uploaded-file>`` or ``bash <uploaded-file>`` safe. Hardened mode rejects direct
+    interpreter/script invocations while retaining validated package wrappers and the
+    authenticated internal ``python -m langflow.agentic.mcp`` server. Leave disabled to
+    preserve legacy single-tenant MCP configurations.
     """
 
     @field_validator("mcp_composer_version", mode="before")

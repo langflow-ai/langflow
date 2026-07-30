@@ -33,12 +33,14 @@ def test_vertex_getstate_drops_custom_component_runtime_state():
     vertex = object.__new__(Vertex)
     vertex._lock = Mock()
     vertex.custom_component = UnpickleableComponent()
+    vertex._upstream_secret_values = {"do-not-persist"}
     vertex.built_object = object()
     vertex.built_result = object()
 
     state = vertex.__getstate__()
 
     assert state["custom_component"] is None
+    assert state["_upstream_secret_values"] == set()
     pickle.dumps(state)
 
 

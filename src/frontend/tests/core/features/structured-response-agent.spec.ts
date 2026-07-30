@@ -5,7 +5,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { openAdvancedOptions } from "../../utils/open-advanced-options";
+import { openParametersPanel } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
 
 /**
@@ -103,17 +103,18 @@ test(
       .first();
     await agentNode.click();
 
-    await openAdvancedOptions(page);
+    await openParametersPanel(page);
 
-    // Both fields must be reachable so the user can fill the schema and
-    // format instructions for scenarios A, E, F, G — and clear the schema
-    // for scenario D. Before the hidden-fields.ts fix these IDs were
-    // filtered out of the inspection panel and the feature was unreachable.
-    await expect(page.locator('//*[@id="showoutput_schema"]')).toBeVisible({
-      timeout: 10000,
-    });
+    // Both fields must be reachable so the user can add the schema and
+    // format instructions to the node for scenarios A, E, F, G — and clear
+    // the schema for scenario D. Before the hidden-fields.ts fix these
+    // fields were filtered out of the inspection panel and the feature was
+    // unreachable (LE-1810: the panel lists them as manageable parameters).
+    await expect(page.getByTestId("inspector-param-output_schema")).toBeVisible(
+      { timeout: 10000 },
+    );
     await expect(
-      page.locator('//*[@id="showformat_instructions"]'),
+      page.getByTestId("inspector-param-format_instructions"),
     ).toBeVisible({ timeout: 10000 });
   },
 );

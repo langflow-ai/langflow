@@ -20,6 +20,7 @@ from ag_ui.core import RunFinishedEvent, RunStartedEvent
 
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
+from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.constants import Finish, lazy_load_vertex_dict
 from lfx.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from lfx.graph.graph.schema import GraphData, GraphDump, StartConfigDict, VertexBuildResult
@@ -38,11 +39,21 @@ from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
+from lfx.observability import APPLICATION_TRACER_NAME
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.async_helpers import run_until_complete
+
+try:
+    from opentelemetry import trace as otel_trace
+except ImportError:
+    # lfx does not depend on opentelemetry. Under langflow it is installed and the application
+    # span is emitted; under bare lfx this stays None and the span code path is a no-op.
+    otel_trace = None
+
+FLOW_EXECUTION_SPAN_NAME = "flow.execute"
 
 INPUT_TYPE_COMPONENT_TYPES = {
     "chat": {InterfaceComponentTypes.ChatInput.value},
@@ -55,6 +66,8 @@ if TYPE_CHECKING:
 
     from lfx.custom.custom_component.component import Component
     from lfx.events.event_manager import EventManager
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+    from lfx.graph.checkpoint.store import CheckpointStore
     from lfx.graph.edge.schema import EdgeData
     from lfx.graph.schema import ResultData
     from lfx.schema.schema import InputValueRequest
@@ -141,6 +154,20 @@ class Graph:
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
         self._is_subgraph = False
+        self.checkpointing_enabled = False
+        self.pause_requested = False
+        self.pause_info: dict[str, Any] | None = None
+        self.checkpoint_store: CheckpointStore | None = None
+        self.job_id: str | None = None
+        self.resumed_from_checkpoint = False
+        # Vertices already built at checkpoint time: on resume their async generators are exhausted,
+        # so the output-collection loop must NOT re-consume them. Empty for fresh (non-resume) runs.
+        self.checkpoint_restored_built_ids: set[str] = set()
+        # Built vertices whose live output (Tool/model client) was opaque-dropped to None in the
+        # checkpoint: only these re-run on resume to regenerate the object, so producers whose output
+        # round-tripped (e.g. an Agent's Message) are not needlessly re-executed. Empty otherwise.
+        self.checkpoint_opaque_dropped_ids: set[str] = set()
+        self.pause_probe: Callable[[str], Any] | None = None
 
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
@@ -261,7 +288,8 @@ class Graph:
             graph_dict["description"] = description
         elif description is None and self.description:
             graph_dict["description"] = self.description
-        graph_dict["endpoint_name"] = str(endpoint_name)
+        if endpoint_name is not None:
+            graph_dict["endpoint_name"] = str(endpoint_name)
         return graph_dict
 
     def add_nodes_and_edges(self, nodes: list[NodeData], edges: list[EdgeData]) -> None:
@@ -377,48 +405,50 @@ class Graph:
         reset_output_values: bool = True,
         fallback_to_env_vars: bool = False,
     ):
-        # Preserve start_component_id from constructor if available
-        start_component_id = self._start.get_id() if self._start else None
-        self.prepare(start_component_id=start_component_id)
-        if reset_output_values:
-            self._reset_all_output_values()
+        # make_current=False: this is an async generator, see flow_execution_span.
+        with self.flow_execution_span(make_current=False):
+            # Preserve start_component_id from constructor if available
+            start_component_id = self._start.get_id() if self._start else None
+            self.prepare(start_component_id=start_component_id)
+            if reset_output_values:
+                self._reset_all_output_values()
 
-        await self.initialize_run()
+            await self.initialize_run()
 
-        # The idea is for this to return a generator that yields the result of
-        # each step call and raise StopIteration when the graph is done
-        if config is not None:
-            self.__apply_config(config)
-        # I want to keep a counter of how many tyimes result.vertex.id
-        # has been yielded
-        yielded_counts: dict[str, int] = defaultdict(int)
+            # The idea is for this to return a generator that yields the result of
+            # each step call and raise StopIteration when the graph is done
+            if config is not None:
+                self.__apply_config(config)
+            # I want to keep a counter of how many tyimes result.vertex.id
+            # has been yielded
+            yielded_counts: dict[str, int] = defaultdict(int)
 
-        while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(
-                event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
-            )
-            yield result
-            if isinstance(result, Finish):
-                return
-            if hasattr(result, "vertex"):
-                yielded_counts[result.vertex.id] += 1
-                # Emit on_end_vertex event for each completed vertex
-                if event_manager is not None:
-                    result_data_dict = None
-                    if hasattr(result, "result_dict") and result.result_dict:
-                        try:
-                            result_data_dict = result.result_dict.model_dump()
-                        except (AttributeError, TypeError):
-                            result_data_dict = result.result_dict
-                    build_data = {
-                        "id": result.vertex.id,
-                        "valid": result.valid if hasattr(result, "valid") else True,
-                        "data": result_data_dict,
-                    }
-                    event_manager.on_end_vertex(data={"build_data": build_data})
+            while should_continue(yielded_counts, max_iterations):
+                result = await self.astep(
+                    event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+                )
+                yield result
+                if isinstance(result, Finish):
+                    return
+                if hasattr(result, "vertex"):
+                    yielded_counts[result.vertex.id] += 1
+                    # Emit on_end_vertex event for each completed vertex
+                    if event_manager is not None:
+                        result_data_dict = None
+                        if hasattr(result, "result_dict") and result.result_dict:
+                            try:
+                                result_data_dict = result.result_dict.model_dump()
+                            except (AttributeError, TypeError):
+                                result_data_dict = result.result_dict
+                        build_data = {
+                            "id": result.vertex.id,
+                            "valid": result.valid if hasattr(result, "valid") else True,
+                            "data": result_data_dict,
+                        }
+                        event_manager.on_end_vertex(data={"build_data": build_data})
 
-        msg = "Max iterations reached"
-        raise ValueError(msg)
+            msg = "Max iterations reached"
+            raise ValueError(msg)
 
     def _snapshot(self):
         return {
@@ -678,6 +708,90 @@ class Graph:
 
         self._run_id = str(run_id)
 
+    def request_pause(self, reason: str = "pause_requested", data: dict[str, Any] | None = None) -> None:
+        self.pause_requested = True
+        self.pause_info = {"reason": reason, "data": data or {}}
+
+    @classmethod
+    def resume_from_checkpoint(cls, checkpoint: GraphCheckpoint, *, checkpoint_store: CheckpointStore | None = None):
+        from lfx.graph.checkpoint.resume import restore_graph_from_checkpoint
+
+        return restore_graph_from_checkpoint(checkpoint, store=checkpoint_store)
+
+    def resume_first_layer(self) -> list[str]:
+        from lfx.graph.checkpoint.resume import compute_resume_layer
+
+        return compute_resume_layer(self)
+
+    def build_checkpoint(self) -> GraphCheckpoint:
+        from lfx.graph.checkpoint.builder import build_checkpoint
+
+        return build_checkpoint(self)
+
+    def _persist_resolved_branch_exclusions(self) -> None:
+        """Promote already-answered HumanInput decisions into the persistent exclusion channel.
+
+        A HumanInput stops its non-chosen branches with ``self.stop()`` (transient INACTIVE: reset
+        per build and never checkpointed). When a later HumanInput pauses, the earlier node's dead
+        branches would revive on resume and run — surfacing extra outputs and a re-paused first node.
+        Move each resolved decision into ``conditionally_excluded_vertices`` (the same durable channel
+        ConditionalRouter uses) so the dead branches stay dead across the resume. Derived from graph
+        edges plus the recorded decision, so it also covers saved flows whose frozen component code
+        predates any in-component exclusion call.
+        """
+        decisions = getattr(self, "human_input_decisions", {}) or {}
+        if not decisions:
+            return
+        for vertex in self.vertices:
+            if (getattr(vertex, "data", None) or {}).get("type") != "HumanInput":
+                continue
+            decision = decisions.get(f"{vertex.id}:{self.run_id}")
+            if not decision:
+                continue
+            chosen = decision.get("action_id")
+            branch_outputs = {
+                edge.source_handle.name
+                for edge in self.edges
+                if edge.source_id == vertex.id and edge.source_handle.name.startswith("branch_")
+            }
+            non_chosen = sorted(branch_outputs - {f"branch_{chosen}"})
+            if non_chosen:
+                self.exclude_branches_conditionally(vertex.id, non_chosen)
+
+    async def _check_for_pause_signal(self) -> None:
+        if self.pause_probe is None or self.job_id is None:
+            return
+        decision = await self.pause_probe(self.job_id)
+        if decision == "pause":
+            self.request_pause()
+        elif decision == "cancel":
+            raise asyncio.CancelledError
+
+    async def check_and_handle_pause(self) -> None:
+        """Boundary hook: consult the probe and suspend if a pause is pending.
+
+        Raises GraphPausedException after persisting the checkpoint. Default-off:
+        with no probe, no pause request, or checkpointing disabled this is a no-op,
+        so existing flows are unchanged.
+        """
+        await self._check_for_pause_signal()
+        if not (self.checkpointing_enabled and self.pause_requested):
+            return
+        self._persist_resolved_branch_exclusions()
+        checkpoint = self.build_checkpoint()
+        store = self.checkpoint_store
+        if store is None:
+            from lfx.services.deps import get_checkpoint_service
+
+            store = get_checkpoint_service()
+        await store.save(checkpoint)
+        info = self.pause_info or {}
+        raise GraphPausedException(
+            checkpoint_id=checkpoint.checkpoint_id,
+            reason=info.get("reason", "pause_requested"),
+            data=info.get("data"),
+        )
+
     async def initialize_run(self) -> None:
         if not self._run_id:
             self.set_run_id()
@@ -691,6 +805,55 @@ class Graph:
                 flow_id=self.flow_id,
                 tracing_user_id=self.tracing_user_id,
             )
+
+    @contextlib.contextmanager
+    def flow_execution_span(self, *, make_current: bool = True):
+        """One application span per flow execution, for the operator's APM.
+
+        Attributes are set on exit because run_id is assigned by initialize_run, inside this scope.
+        The span carries identifiers only: prompts, completions and component payloads belong to the
+        LLM tracer integrations and must never reach the operator's APM, which is also why the error
+        attribute is the exception type and not its message. Subgraphs (Loop iterations) are skipped
+        so a loop over N items stays one span instead of N.
+
+        make_current attaches the span to the OTel context so a flow run from inside another flow
+        (flow-as-tool, sub-flow components) nests under its caller instead of appearing as a sibling
+        of it. It must stay False when the scope wraps an async generator: the context token would be
+        attached and detached across the generator's suspension points, which leaks it into whatever
+        task resumes the generator.
+        """
+        if otel_trace is None or self._is_subgraph:
+            yield
+            return
+        span = otel_trace.get_tracer(APPLICATION_TRACER_NAME).start_span(FLOW_EXECUTION_SPAN_NAME)
+        try:
+            with contextlib.ExitStack() as stack:
+                if make_current:
+                    # Not end_on_exit: the finally below ends it after the attributes are set.
+                    # Neither recording nor status-setting is delegated, because the SDK's version
+                    # of both writes the exception message onto the span and that can carry flow data.
+                    stack.enter_context(
+                        otel_trace.use_span(
+                            span, end_on_exit=False, record_exception=False, set_status_on_exception=False
+                        )
+                    )
+                yield
+        except GraphPausedException:
+            # A HITL pause suspends the unit of work; it is not a failed request. The resume is
+            # driven through Graph.process by the durable runner, which opens its own span.
+            raise
+        except Exception as exc:
+            span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, type(exc).__name__))
+            span.set_attribute("error.type", type(exc).__name__)
+            raise
+        finally:
+            if self.flow_id:
+                span.set_attribute("flow_id", str(self.flow_id))
+            if self._run_id:
+                span.set_attribute("run_id", self._run_id)
+            if self.session_id:
+                span.set_attribute("session_id", str(self.session_id))
+            span.end()
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
         # Subgraphs don't end traces - the parent graph owns the trace lifecycle
@@ -844,6 +1007,10 @@ class Graph:
                 event_manager=event_manager,
             )
             self.increment_run_count()
+        except (GraphPausedException, asyncio.CancelledError):
+            # Why: a HITL pause/cancel must propagate UNWRAPPED so the job/runner layer suspends the
+            # run instead of finalizing it; wrapping it as ValueError terminalizes the job (LE-1440).
+            raise
         except Exception as exc:
             self._end_all_traces_async(error=exc)
             msg = f"Error running graph: {exc}"
@@ -859,7 +1026,14 @@ class Graph:
                 msg = f"Vertex {vertex_id} not found"
                 raise ValueError(msg)
 
-            if not vertex.result and not stream and hasattr(vertex, "consume_async_generator"):
+            if (
+                not vertex.result
+                and not stream
+                and vertex.id not in self.checkpoint_restored_built_ids
+                and hasattr(vertex, "consume_async_generator")
+            ):
+                # A vertex restored from a checkpoint already consumed its generator in the original
+                # run; re-consuming here would re-iterate an exhausted/absent iterator and raise.
                 await vertex.consume_async_generator()
             if (not outputs and vertex.is_output) or (vertex.display_name in outputs or vertex.id in outputs):
                 vertex_outputs.append(vertex.result)
@@ -879,9 +1053,10 @@ class Graph:
         event_manager: EventManager | None = None,
     ) -> list[RunOutputs]:
         """Runs the graph with the given inputs via the configured executor."""
-        from lfx.execution import get_default_coordinator
+        from lfx.execution import aget_default_coordinator
 
-        return await get_default_coordinator().run_to_completion(
+        coordinator = await aget_default_coordinator()
+        return await coordinator.run_to_completion(
             self,
             inputs=inputs,
             inputs_components=inputs_components,
@@ -923,20 +1098,21 @@ class Graph:
             self.session_id = session_id
         for _ in range(len(inputs) - len(types)):
             types.append("chat")  # default to chat
-        for run_inputs, components, input_type in zip(inputs, inputs_components, types, strict=True):
-            run_outputs = await self._run(
-                inputs=run_inputs,
-                input_components=components,
-                input_type=input_type,
-                outputs=outputs or [],
-                stream=stream,
-                session_id=session_id or "",
-                fallback_to_env_vars=fallback_to_env_vars,
-                event_manager=event_manager,
-            )
-            run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
-            await logger.adebug(f"Run outputs: {run_output_object}")
-            vertex_outputs.append(run_output_object)
+        with self.flow_execution_span():
+            for run_inputs, components, input_type in zip(inputs, inputs_components, types, strict=True):
+                run_outputs = await self._run(
+                    inputs=run_inputs,
+                    input_components=components,
+                    input_type=input_type,
+                    outputs=outputs or [],
+                    stream=stream,
+                    session_id=session_id or "",
+                    fallback_to_env_vars=fallback_to_env_vars,
+                    event_manager=event_manager,
+                )
+                run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
+                await logger.adebug(f"Run outputs: {run_output_object}")
+                vertex_outputs.append(run_output_object)
         return vertex_outputs
 
     def next_vertex_to_build(self):
@@ -1832,7 +2008,11 @@ class Graph:
     ) -> Graph:
         """Processes the graph with vertices in each layer run in parallel."""
         has_webhook_component = "webhook" in start_component_id.lower() if start_component_id else False
-        first_layer = self.sort_vertices(start_component_id=start_component_id)
+        if self.resumed_from_checkpoint:
+            # A full re-sort would reset the restored run state and re-queue built vertices.
+            first_layer = self.resume_first_layer()
+        else:
+            first_layer = self.sort_vertices(start_component_id=start_component_id)
         vertex_task_run_count: dict[str, int] = {}
         to_process = deque(first_layer)
         layer_index = 0
@@ -1853,6 +2033,7 @@ class Graph:
         await self.initialize_run()
         lock = asyncio.Lock()
         while to_process:
+            await self.check_and_handle_pause()
             current_batch = list(to_process)  # Copy current deque items to a list
             to_process.clear()  # Clear the deque for new items
             tasks = []
@@ -2376,6 +2557,23 @@ class Graph:
         """
         return [vertex.id for vertex in self.vertices if not self.successor_map.get(vertex.id, [])]
 
+    def _orphaned_tool_vertex_ids(self) -> set[str]:
+        """Tool-mode components with no consumer, excluded from scheduling.
+
+        A tool-mode component's only output is the synthetic ``component_as_tool`` Tool, meaningful
+        only when wired into a consumer (an Agent). With no successor it is a leftover — typically a
+        tool left behind after its Agent was deleted — and building it standalone runs its underlying
+        logic with no inputs (e.g. a URL fetch with no URL), raising a ComponentBuildError that fails
+        the whole run. Skipping it keeps the rest of the flow runnable.
+        """
+        orphaned: set[str] = set()
+        for vertex in self.vertices:
+            data = getattr(vertex, "data", None)
+            node = data.get("node") if isinstance(data, dict) else None
+            if isinstance(node, dict) and node.get("tool_mode") and not self.successor_map.get(vertex.id):
+                orphaned.add(vertex.id)
+        return orphaned
+
     def sort_vertices(
         self,
         stop_component_id: str | None = None,
@@ -2398,6 +2596,15 @@ class Graph:
             get_vertex_successors=self.get_vertex_successors_ids,
             is_cyclic=self.is_cyclic,
         )
+
+        # A run that explicitly targets the tool-mode node (the node's play button sets
+        # stop/start to it) is the user inspecting its toolset output — never skip that one.
+        orphaned_tools = self._orphaned_tool_vertex_ids() - {stop_component_id, start_component_id}
+        if orphaned_tools:
+            first_layer = [vertex_id for vertex_id in first_layer if vertex_id not in orphaned_tools]
+            remaining_layers = [
+                [vertex_id for vertex_id in layer if vertex_id not in orphaned_tools] for layer in remaining_layers
+            ]
 
         self.increment_run_count()
         self._sorted_vertices_layers = [first_layer, *remaining_layers]
@@ -2441,8 +2648,14 @@ class Graph:
         # Check if vertex is conditionally excluded (for conditional routing)
         if vertex_id in self.conditionally_excluded_vertices:
             return False
-        is_active = self.get_vertex(vertex_id).is_active()
-        is_loop = self.get_vertex(vertex_id).is_loop
+        vertex = self.get_vertex(vertex_id)
+        is_active = vertex.is_active()
+        is_loop = vertex.is_loop
+        # A resume keeps the checkpoint's vertices_to_run, so a restored-built vertex stays eligible
+        # and the backward predecessor walk can re-execute it (Chat Input then persists a duplicate
+        # User message). Vertices the resume un-builds have built=False and stay eligible.
+        if not is_loop and vertex.built and vertex_id in self.checkpoint_restored_built_ids:
+            return False
         return self.run_manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
 
     def build_run_map(self) -> None:

@@ -156,6 +156,11 @@ jobs:
       - name: Run the bundle's own tests
         run: |
           if [ -d "${{ matrix.bundle }}/tests" ]; then
+            # Provider regression tests for the manifest-less metapackage live
+            # with the provider code and require only that provider's SDKs.
+            if [ "${{ matrix.bundle }}" = "src/bundles/lfx-bundles" ]; then
+              uv pip install "./${{ matrix.bundle }}[google]"
+            fi
             .venv/bin/python -m pytest "${{ matrix.bundle }}/tests" -q
           else
             echo "no tests/ directory in ${{ matrix.bundle }}; skipping"

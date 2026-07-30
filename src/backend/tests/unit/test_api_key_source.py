@@ -5,6 +5,7 @@ This module tests the check_key function behavior when:
 - API_KEY_SOURCE='env': Validates against LANGFLOW_API_KEY environment variable
 """
 
+import secrets
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -214,15 +215,22 @@ class TestCheckKeyFromEnv:
         """Valid API key matching env var should return the superuser."""
         monkeypatch.setenv("LANGFLOW_API_KEY", "sk-test-env-key")
 
-        with patch(
-            "langflow.services.database.models.user.crud.get_user_by_username",
-            new_callable=AsyncMock,
-        ) as mock_get_user:
+        with (
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_username",
+                new_callable=AsyncMock,
+            ) as mock_get_user,
+            patch(
+                "langflow.services.database.models.api_key.crud.secrets.compare_digest",
+                wraps=secrets.compare_digest,
+            ) as compare_digest,
+        ):
             mock_get_user.return_value = mock_superuser
 
             result = await _check_key_from_env(mock_session, "sk-test-env-key", mock_settings_service_env)
 
             assert result == mock_superuser
+            compare_digest.assert_called_once_with(b"sk-test-env-key", b"sk-test-env-key")
             mock_get_user.assert_called_once_with(mock_session, "langflow")
 
     @pytest.mark.asyncio

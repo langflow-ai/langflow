@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 import jwt
-from cryptography.fernet import Fernet
 from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.auth.base import BaseAuthService
+from lfx.services.model_provider_policy import set_current_model_provider_policy_context
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
 from sqlalchemy.exc import IntegrityError
 
@@ -55,6 +55,7 @@ from langflow.services.deps import session_scope
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
+    from cryptography.fernet import Fernet, MultiFernet
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -684,11 +685,16 @@ class AuthService(BaseAuthService):
     async def get_current_active_user(self, current_user: User | UserRead) -> User | UserRead | None:
         if not current_user.is_active:
             return None
+        set_current_model_provider_policy_context(
+            user_id=current_user.id,
+            attributes={"is_superuser": bool(current_user.is_superuser)},
+        )
         return current_user
 
     async def get_current_active_superuser(self, current_user: User | UserRead) -> User | UserRead | None:
         if not current_user.is_active or not current_user.is_superuser:
             return None
+        set_current_model_provider_policy_context(user_id=current_user.id, attributes={"is_superuser": True})
         return current_user
 
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:
@@ -984,10 +990,14 @@ class AuthService(BaseAuthService):
         return user
 
     def _get_fernet(self) -> Fernet:
-        from langflow.services.auth.utils import ensure_fernet_key
+        from langflow.services.auth.utils import get_fernet
 
-        secret_key: str = self.settings.auth_settings.SECRET_KEY.get_secret_value()
-        return Fernet(ensure_fernet_key(secret_key))
+        return get_fernet(self.settings)
+
+    def _get_decryption_fernet(self) -> Fernet | MultiFernet:
+        from langflow.services.auth.utils import get_fernet_for_decryption
+
+        return get_fernet_for_decryption(self.settings)
 
     def encrypt_api_key(self, api_key: str) -> str:
         fernet = self._get_fernet()
@@ -1016,7 +1026,7 @@ class AuthService(BaseAuthService):
         if not encrypted_api_key.startswith("gAAAAA"):
             return encrypted_api_key
 
-        fernet = self._get_fernet()
+        fernet = self._get_decryption_fernet()
         try:
             return fernet.decrypt(encrypted_api_key.encode()).decode()
         except Exception as primary_exception:  # noqa: BLE001
@@ -1109,6 +1119,10 @@ class AuthService(BaseAuthService):
     async def get_current_active_user_mcp(self, current_user: User | UserRead) -> User | UserRead:
         if not current_user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
+        set_current_model_provider_policy_context(
+            user_id=current_user.id,
+            attributes={"is_superuser": bool(current_user.is_superuser)},
+        )
         return current_user
 
     async def teardown(self) -> None:

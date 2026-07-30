@@ -500,6 +500,8 @@ class TestCugaGetMemoryDataIntegration:
 
     @staticmethod
     def _make_cuga(flow_id: str | UUID | None, session_id: str = "shared", n_messages: int = 10):
+        pytest.importorskip("lfx_bundles")
+
         try:
             from lfx_bundles.cuga import cuga_agent
         except Exception as exc:  # pragma: no cover - optional deps

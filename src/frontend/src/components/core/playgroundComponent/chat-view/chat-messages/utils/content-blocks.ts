@@ -66,6 +66,25 @@ export function resolveContentBlockLayout(
 }
 
 /**
+ * Drops blocks that carry a human_input content. The playground's bot message
+ * renders the interactive HITL card itself; letting the generic content-block
+ * renderer see the pause block paints a second, duplicate card.
+ */
+export function excludeHumanInputBlocks(
+  contentBlocks: ContentBlockItem[],
+): ContentBlockItem[] {
+  const carriesHumanInput = (block: ContentBlockItem): boolean => {
+    if ((block as ContentType).type === "human_input") return true;
+    const contents = (block as { contents?: ContentType[] }).contents;
+    return (
+      Array.isArray(contents) &&
+      contents.some((leaf) => leaf?.type === "human_input")
+    );
+  };
+  return contentBlocks.filter((block) => !carriesHumanInput(block));
+}
+
+/**
  * Collects a group's leaves that should render in the loose content stream:
  * displayable non-tool content (reasoning, citation, media, image, error, …).
  *

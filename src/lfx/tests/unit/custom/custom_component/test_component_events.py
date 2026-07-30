@@ -9,6 +9,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.events.event_manager import EventManager
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.content_types import TextContent, ToolContent
+from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.schema.properties import Properties, Source
 from lfx.template.field.base import Output
@@ -171,6 +172,44 @@ async def test_component_build_results():
     assert "text_output" in artifacts
     assert "tool_output" in artifacts
     assert artifacts["text_output"]["type"] == "text"
+
+
+@pytest.mark.asyncio
+async def test_component_build_results_masks_display_values_without_mutating_output_value():
+    """Display results are masked copies while graph-edge output values remain usable."""
+
+    class SecretOutputComponent(Component):
+        def get_connection_string(self) -> Message:
+            return Message(text="postgresql://demo:hunter2@localhost/db")  # pragma: allowlist secret
+
+        def get_connection_data(self) -> Data:
+            return Data(
+                data={"url": "postgresql://demo:hunter2@localhost/db"},  # pragma: allowlist secret
+                default_value="token=hunter2",  # pragma: allowlist secret
+            )
+
+    component = SecretOutputComponent()
+    component._secret_values.add("hunter2")  # pragma: allowlist secret
+    message_output = Output(name="connection_string", method="get_connection_string")
+    data_output = Output(name="connection_data", method="get_connection_data")
+    component._outputs_map = {message_output.name: message_output, data_output.name: data_output}
+    component.outputs = [message_output, data_output]
+
+    results, artifacts = await component._build_results()
+
+    displayed_message = results[message_output.name]
+    assert displayed_message.text == "postgresql://demo:**********@localhost/db"
+    assert artifacts[message_output.name]["raw"] == "postgresql://demo:**********@localhost/db"
+    assert message_output.value.text == "postgresql://demo:hunter2@localhost/db"  # pragma: allowlist secret
+    assert displayed_message is not message_output.value
+
+    displayed_data = results[data_output.name]
+    assert displayed_data.data["url"] == "postgresql://demo:**********@localhost/db"
+    assert displayed_data.default_value == "token=**********"
+    assert artifacts[data_output.name]["raw"]["url"] == "postgresql://demo:**********@localhost/db"
+    assert data_output.value.data["url"] == "postgresql://demo:hunter2@localhost/db"  # pragma: allowlist secret
+    assert data_output.value.default_value == "token=hunter2"  # pragma: allowlist secret
+    assert displayed_data is not data_output.value
 
 
 @pytest.mark.asyncio

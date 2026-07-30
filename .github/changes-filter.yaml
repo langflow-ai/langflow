@@ -3,6 +3,7 @@ python:
   - "src/backend/**"
   - "src/backend/**.py"
   - "src/lfx/**"
+  - "src/langflow-core/**"
   - "pyproject.toml"
   - "uv.lock"
   - "src/backend/base/pyproject.toml"
@@ -34,7 +35,9 @@ docker:
   - "src/backend/**"
   - "src/frontend/**"
   - "src/lfx/**"
+  - "src/langflow-core/**"
   - ".dockerignore"
+  - ".github/workflows/docker-build-v2.yml"
   - ".github/workflows/docker_test.yml"
 
 # Test categories and their associated paths

@@ -76,14 +76,23 @@ async def get_instance_results(
         vertex.load_from_db_fields,
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
-        if base_type == "custom_components":
-            return await build_custom_component(params=custom_params, custom_component=custom_component)
-        if base_type == "component":
-            return await build_component(params=custom_params, custom_component=custom_component)
-        msg = f"Base type {base_type} not found."
-        raise ValueError(msg)
+    from lfx.memory.flow_context import reset_current_flow_id, set_current_flow_id
+
+    flow_id = getattr(getattr(vertex, "graph", None), "flow_id", None)
+    # Always bind — including None — so a graph without flow_id shadows any outer
+    # flow scope instead of inheriting it (nested runs must stay legacy-unscoped).
+    flow_scope_token = set_current_flow_id(flow_id)
+    try:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
+            if base_type == "custom_components":
+                return await build_custom_component(params=custom_params, custom_component=custom_component)
+            if base_type == "component":
+                return await build_component(params=custom_params, custom_component=custom_component)
+            msg = f"Base type {base_type} not found."
+            raise ValueError(msg)
+    finally:
+        reset_current_flow_id(flow_scope_token)
 
 
 def get_params(vertex_params):

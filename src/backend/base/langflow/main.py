@@ -21,7 +21,7 @@ from fastapi_pagination import add_pagination
 from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from lfx.observability import instrument_fastapi_app
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -49,7 +49,6 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.schema import ServiceType
-from langflow.services.tracing.otel_fastapi_patch import patch_otel_fastapi_route_details
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
@@ -273,6 +272,19 @@ def get_lifespan(*, fix_migration=False, version=None):
                 )
             except Exception as exc:  # noqa: BLE001
                 await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
+
+            # Memory Bases resolve their backend + embedding purely from the
+            # knowledge_base row (no on-disk sidecar), so ensure every Memory Base
+            # has one. Sourced from the memory_base table, not disk, so it's
+            # replica-safe; only Memory Bases missing a row are touched.
+            try:
+                from langflow.api.utils import knowledge_base_service
+
+                mb_inserted = await knowledge_base_service.backfill_memory_base_rows()
+                if mb_inserted:
+                    await logger.adebug(f"Memory Base row reconciliation inserted {mb_inserted} rows")
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning("Memory Base row reconciliation skipped after startup error: %s", exc)
 
             if get_settings_service().settings.prometheus_enabled:
                 try:
@@ -606,6 +618,13 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await stop_streamable_http_manager()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Close the shared A2A push-notification webhook client.
+                    try:
+                        from langflow.api.v1.a2a import close_push_client
+
+                        await close_push_client()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to close A2A push notification client: {e}")
                     # Stop the authz audit-log retention worker (best-effort;
                     # no-op when it was never scheduled).
                     try:
@@ -908,11 +927,10 @@ def create_app():
             content={"message": str(exc)},
         )
 
-    # FastAPI >=0.137 lazy include_router puts `_IncludedRouter` wrappers (no `.path`)
-    # in `app.routes`, which crashes OTel's span route extraction on partial matches
-    # (e.g. CORS preflight). Patch the helper before instrumenting.
-    patch_otel_fastapi_route_details()
-    FastAPIInstrumentor.instrument_app(app)
+    # Instrument this app for HTTP server telemetry (stable semconv + the FastAPI >=0.137
+    # lazy-include route patch + instrument_app). The helper lives in lfx so lfx serve
+    # instruments its own app the same way.
+    instrument_fastapi_app(app)
 
     add_pagination(app)
 
@@ -964,6 +982,22 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
     # get a native 405, and real API routes are registered earlier so they win.
     @app.api_route("/api/{_path:path}", include_in_schema=False, methods=["GET", "HEAD"])
     async def api_not_found(_path: str):
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    # Serve the favicon from an explicit high-priority route instead of relying on
+    # the low-priority app.frontend() static route. Browsers request /favicon.ico
+    # with an image Accept header, which app.frontend() does not treat as a
+    # navigation request; if the file is ever missed there the request falls
+    # through to the 404 handler, which returns index.html (HTML) and the browser
+    # renders no icon. A dedicated route always answers with the file and the
+    # correct media type, or a clean 404 when it is absent, independent of the
+    # frontend fallback heuristics.
+    favicon_path = static_files_dir / "favicon.ico"
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon():
+        if await anyio.Path(favicon_path).exists():
+            return FileResponse(favicon_path, media_type="image/x-icon")
         raise HTTPException(status_code=404, detail="Not Found")
 
     # FastAPI >=0.138 serves the frontend build as low-priority routes: path

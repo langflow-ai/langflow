@@ -1045,6 +1045,71 @@ describe("useAssistantChat", () => {
       expect(arg).toHaveLength(1 + FRESH_FLOW.data.nodes.length);
       expect(arg[0].id).toBe("Existing-1");
     });
+
+    it("should_drop_conflicting_flow_input_when_mode_is_add", async () => {
+      _mockNodes = [
+        {
+          id: "ChatInput-old",
+          position: { x: 0, y: 0 },
+          data: { type: "ChatInput" },
+        },
+      ];
+      _mockEdges = [];
+
+      const CONFLICTING_FLOW = {
+        name: "Conflicting",
+        data: {
+          nodes: [
+            {
+              id: "ChatInput-new",
+              position: { x: 0, y: 0 },
+              data: { type: "ChatInput" },
+            },
+            {
+              id: "Agent-new",
+              position: { x: 200, y: 0 },
+              data: { type: "Agent" },
+            },
+          ],
+          edges: [{ id: "e1", source: "ChatInput-new", target: "Agent-new" }],
+        },
+      };
+
+      mockPostAssistStream.mockImplementation(
+        async (_req: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "set_flow",
+            flow: CONFLICTING_FLOW,
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("build a flow", TEST_MODEL);
+      });
+      const msg = result.current.messages[1];
+
+      mockSetNodes.mockClear();
+      mockSetEdges.mockClear();
+
+      act(() => {
+        result.current.handleApplyFlowProposal(msg.id, "add");
+      });
+
+      const nodesArg = mockSetNodes.mock.calls[0][0] as Array<{
+        id: string;
+        data?: { type?: string };
+      }>;
+      expect(nodesArg.filter((n) => n.data?.type === "ChatInput")).toHaveLength(
+        1,
+      );
+      expect(nodesArg.map((n) => n.id)).toContain("ChatInput-old");
+
+      const edgesArg = mockSetEdges.mock.calls[0][0] as Array<{ id: string }>;
+      expect(edgesArg).toHaveLength(0);
+    });
   });
 
   describe("flow proposal gating (set_flow only)", () => {

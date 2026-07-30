@@ -70,7 +70,7 @@ env:
   # Define the directory where Playwright browsers will be installed.
   # This path is used for caching across workflows
   PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
-  PLAYWRIGHT_VERSION: "1.59.1"
+  PLAYWRIGHT_VERSION: "1.60.0"
   LANGFLOW_FEATURE_WXO_DEPLOYMENTS: "true"
 
 jobs:
@@ -379,11 +379,10 @@ jobs:
             printf '%s\n' "$TEST_LIST"
 
             WORKERS=2
-            # The sweep lives in starter-projects-outdated-components.spec.ts
-            # (renamed from starter-projects-shardN in #13844 — keep this
-            # pattern in sync or the one-worker mitigation silently no-ops).
-            if printf '%s\n' "$TEST_LIST" | grep -q 'starter-projects-outdated-components'; then
-              echo "Detected starter project template sweep in this shard; running it with one worker to avoid shared backend contention."
+            # These suites mutate shared SQLite-backed state and are unsafe with
+            # multiple workers against the same test server.
+            if printf '%s\n' "$TEST_LIST" | grep -Eq 'starter-projects-outdated-components|user-flow-state-cleanup\.spec\.ts|user-progress-track\.spec\.ts'; then
+              echo "Detected shared-state tests in this shard; running with one worker."
               WORKERS=1
             fi
 
@@ -496,12 +495,13 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           path: all-blob-reports
-          pattern: blob-report-*
+          pattern: blob-report-${{ runner.os }}-*
           merge-multiple: true
 
       - name: Merge into JSON report
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: flaky-report.json
+        shell: bash
         # Pinned to the repo's Playwright version: blob format is
         # version-sensitive and bare npx would fetch latest.
         run: |
@@ -509,11 +509,11 @@ jobs:
             echo "No blob reports downloaded; skipping flaky report."
             exit 0
           fi
-          npx playwright@1.60.0 merge-reports --reporter json ./all-blob-reports
+          npx playwright@"${PLAYWRIGHT_VERSION}" merge-reports --reporter json ./all-blob-reports
 
       - name: Upload flaky report
         uses: actions/upload-artifact@v6
         with:
-          name: flaky-report--attempt-${{ github.run_attempt }}
+          name: flaky-report-${{ runner.os }}--attempt-${{ github.run_attempt }}
           path: flaky-report.json
           retention-days: 30

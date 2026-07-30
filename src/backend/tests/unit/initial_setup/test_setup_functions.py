@@ -365,3 +365,44 @@ def test_update_components_syncs_module_for_in_tree_components():
 
     merged = result["nodes"][0]["data"]["node"]["metadata"]
     assert merged["module"] == "lfx.components.test.test_component.TestComponent"
+
+
+def test_update_components_syncs_metadata_for_skipped_language_model():
+    """Refreshing skipped dynamic components must keep source metadata consistent."""
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "LanguageModelComponent",
+                    "node": {
+                        "metadata": {"code_hash": "old-hash", "module": "old.module"},
+                        "template": {
+                            "_type": "Component",
+                            "code": {"type": "code", "value": "old source"},
+                            "model": {"value": "persisted-model"},
+                        },
+                    },
+                }
+            }
+        ],
+        "edges": [],
+    }
+    all_types_dict = {
+        "models_and_agents": {
+            "LanguageModelComponent": {
+                "metadata": {"code_hash": "new-hash", "module": "new.module"},
+                "template": {
+                    "_type": "Component",
+                    "code": {"type": "code", "value": "new source"},
+                    "model": {"value": "default-model"},
+                },
+            }
+        }
+    }
+
+    result = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    node = result["nodes"][0]["data"]["node"]
+
+    assert node["template"]["code"]["value"] == "new source"
+    assert node["template"]["model"]["value"] == "persisted-model"
+    assert node["metadata"] == {"code_hash": "new-hash", "module": "new.module"}
