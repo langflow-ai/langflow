@@ -1276,6 +1276,34 @@ describe("useFlowStore", () => {
         }),
       );
     });
+
+    it("uses the authenticated user virtual flow id for the active building session", async () => {
+      const expectedFlowId = uuidv5("user:user-123_flow-abc", uuidv5.DNS);
+
+      useAuthStore.setState({
+        isAuthenticated: true,
+        autoLogin: false,
+        userData: { id: "user-123" },
+      });
+      useFlowStore.setState({ playgroundPage: true });
+      mockedRunFlow.mockImplementation(async () => {
+        const state = useFlowStore.getState();
+        expect(state.buildingFlowId).toBe(expectedFlowId);
+        expect(state.buildingSessionId).toBe("session-123");
+        useFlowStore.setState({ buildInfo: null });
+      });
+
+      await useFlowStore.getState().buildFlow({
+        session: "session-123",
+      });
+
+      expect(mockedRunFlow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flowId: "flow-abc",
+          threadId: "session-123",
+        }),
+      );
+    });
   });
 
   describe("setNode broken-edge warning", () => {

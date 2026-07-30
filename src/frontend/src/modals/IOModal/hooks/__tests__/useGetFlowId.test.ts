@@ -37,7 +37,7 @@ const USER_ID = "user-id-789";
 
 type AuthState = {
   isAuthenticated: boolean;
-  autoLogin: boolean;
+  autoLogin: boolean | null;
   userData: { id: string } | null;
 };
 type FlowState = { playgroundPage: boolean };
@@ -151,6 +151,31 @@ describe("useGetFlowId", () => {
       selector({
         isAuthenticated: true,
         autoLogin: true,
+        userData: { id: USER_ID },
+      }),
+    );
+
+    const result = useGetFlowId();
+    const expected = uuidv5(`client:${CLIENT_ID}_${REAL_FLOW_ID}`, uuidv5.DNS);
+    expect(result).toBe(expected);
+  });
+
+  it("should_use_client_id_while_autologin_is_unresolved", () => {
+    mockFlowStore.mockImplementation((selector: StoreSelector<FlowState>) =>
+      selector({ playgroundPage: true }),
+    );
+    mockFlowsManagerStore.mockImplementation(
+      (selector: StoreSelector<FlowsManagerState>) =>
+        selector({ currentFlowId: REAL_FLOW_ID }),
+    );
+    mockUtilityStore.mockImplementation(
+      (selector: StoreSelector<UtilityState>) =>
+        selector({ clientId: CLIENT_ID }),
+    );
+    mockAuthStore.mockImplementation((selector: StoreSelector<AuthState>) =>
+      selector({
+        isAuthenticated: true,
+        autoLogin: null,
         userData: { id: USER_ID },
       }),
     );

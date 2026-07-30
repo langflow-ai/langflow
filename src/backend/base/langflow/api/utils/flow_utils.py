@@ -257,10 +257,16 @@ async def verify_public_flow_and_get_user(
         if not flow or flow.access_type is not AccessTypeEnum.PUBLIC:
             raise HTTPException(status_code=403, detail="Flow is not public")
 
-    # Use authenticated user_id for deterministic UUID when available, otherwise client_id
-    is_authenticated = authenticated_user_id is not None
-    identifier = str(authenticated_user_id) if is_authenticated else client_id
-    principal_type: Literal["user", "client"] = "user" if is_authenticated else "client"
+    # Use authenticated user_id for deterministic UUID when available, otherwise client_id.
+    # Keep the branches explicit so identifier is non-optional at the UUID boundary.
+    if authenticated_user_id is not None:
+        identifier = str(authenticated_user_id)
+        principal_type: Literal["user", "client"] = "user"
+    else:
+        if client_id is None:
+            raise HTTPException(status_code=400, detail="No client_id cookie found")
+        identifier = client_id
+        principal_type = "client"
     new_flow_id = compute_virtual_flow_id(identifier, flow_id, principal_type=principal_type)
 
     # Get the user associated with the flow
