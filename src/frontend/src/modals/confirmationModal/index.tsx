@@ -64,6 +64,8 @@ function ConfirmationModal({
   const triggerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Trigger,
   );
+  const triggerProps =
+    (triggerChild as React.ReactElement<TriggerProps>)?.props ?? undefined;
   const ContentChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Content,
   );
@@ -85,7 +87,12 @@ function ConfirmationModal({
       setOpen={setModalOpen}
       onOpenAutoFocus={onOpenAutoFocus}
     >
-      <BaseModal.Trigger>{triggerChild}</BaseModal.Trigger>
+      <BaseModal.Trigger
+        ariaLabel={triggerProps?.ariaLabel}
+        ariaPressed={triggerProps?.ariaPressed}
+      >
+        {triggerChild}
+      </BaseModal.Trigger>
       <BaseModal.Header description={titleHeader ?? null}>
         <span className="pr-2">{title}</span>
         {icon && (

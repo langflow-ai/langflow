@@ -3,6 +3,9 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from langchain_core.embeddings import Embeddings
 from lfx.base.vectorstores.chroma_security import (
     chroma_client_create_collection_kwargs,
@@ -28,7 +31,12 @@ class _KeywordEmbeddings(Embeddings):
         return self._embed(text)
 
 
-def test_remote_chroma_server_uses_http_client() -> None:
+def test_remote_chroma_server_uses_http_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    # This test asserts the remote HttpClient wiring (host/port/ssl), not SSRF behavior; the
+    # connector SSRF guard is covered separately (test_connector_ssrf.py / test_ssrf_protection.py).
+    # Disable connector SSRF validation so the fake ``chroma.example.com`` host is not DNS-resolved.
+    monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "false")
+
     mock_client = MagicMock()
     mock_chroma = MagicMock()
     mock_chroma.get.return_value = {"ids": [], "documents": [], "metadatas": []}

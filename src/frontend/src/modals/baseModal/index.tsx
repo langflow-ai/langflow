@@ -32,6 +32,8 @@ type TriggerProps = {
   asChild?: boolean;
   disable?: boolean;
   className?: string;
+  ariaLabel?: string;
+  ariaPressed?: boolean;
 };
 
 const Content: React.FC<ContentProps> = ({
@@ -56,6 +58,8 @@ const Trigger: React.FC<TriggerProps> = ({
   asChild,
   disable,
   className,
+  ariaLabel,
+  ariaPressed,
 }) => {
   const childCount = React.Children.count(children);
   const isEmptyFragment =
@@ -85,6 +89,8 @@ const Trigger: React.FC<TriggerProps> = ({
       hidden={!hasUsableChild}
       disabled={disable}
       asChild={asChild}
+      aria-label={ariaLabel}
+      aria-pressed={ariaPressed}
     >
       {triggerChild}
     </DialogTrigger>
@@ -95,19 +101,33 @@ const Header: React.FC<{
   children: ReactNode;
   description?: string | JSX.Element | null;
   clampDescription?: number;
+  className?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
 }> = ({
   children,
   description,
   clampDescription,
+  className,
+  titleClassName,
+  descriptionClassName,
 }: modalHeaderType): JSX.Element => {
   return (
-    <DialogHeader>
-      <DialogTitle className="line-clamp-1 flex items-center pb-0.5 text-base">
+    <DialogHeader className={className}>
+      <DialogTitle
+        className={cn(
+          "line-clamp-1 flex items-center pb-0.5 text-base",
+          titleClassName,
+        )}
+      >
         {children}
       </DialogTitle>
       {description && (
         <DialogDescription
-          className={`line-clamp-${clampDescription ?? 2} text-sm`}
+          className={cn(
+            `line-clamp-${clampDescription ?? 2} text-sm`,
+            descriptionClassName,
+          )}
         >
           {description}
         </DialogDescription>
@@ -143,7 +163,8 @@ const Footer: React.FC<{
       {submit ? (
         <div className="flex w-full items-center justify-between">
           {children ?? <div />}
-          <div className="flex items-center gap-3">
+          {/* p-2/-m-2 keeps layout unchanged while giving ring-offset-2 room to paint */}
+          <div className="-m-2 flex items-center gap-3 overflow-visible p-2">
             <DialogClose asChild>
               <Button
                 variant="outline"
@@ -221,6 +242,7 @@ interface BaseModalProps {
   onSubmit?: () => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
   onOpenAutoFocus?: (e: Event) => void;
+  onCloseAutoFocus?: (e: Event) => void;
   closeButtonClassName?: string;
   dialogContentWithouFixed?: boolean;
   height?: string;
@@ -239,6 +261,7 @@ function BaseModal({
   onSubmit,
   onEscapeKeyDown,
   onOpenAutoFocus,
+  onCloseAutoFocus,
   closeButtonClassName,
   dialogContentWithouFixed = false,
   height: customHeight,
@@ -259,6 +282,15 @@ function BaseModal({
   );
 
   const { minWidth, height } = switchCaseModalSize(size);
+
+  // BaseModal.Header renders DialogTitle/Description inside its own component
+  // body, so DialogContent's child-tree scan cannot see them and would inject a
+  // VisuallyHidden "Dialog" title that steals aria-labelledby. Skip that
+  // fallback whenever a Header is present.
+  const hideTitleFallback = !!headerChild;
+  const hideDescriptionFallback =
+    React.isValidElement(headerChild) &&
+    !!(headerChild.props as { description?: unknown }).description;
 
   useEffect(() => {
     if (onChangeOpenModal) {
@@ -286,7 +318,7 @@ function BaseModal({
     className,
   );
 
-  const formClasses = "flex flex-col flex-1 gap-6 overflow-hidden";
+  const formClasses = "flex min-h-0 flex-col flex-1 gap-6";
 
   //UPDATE COLORS AND STYLE CLASSSES
   return (
@@ -318,9 +350,12 @@ function BaseModal({
               onClick={(e) => e.stopPropagation()}
               onEscapeKeyDown={onEscapeKeyDown}
               onOpenAutoFocus={onOpenAutoFocus}
+              onCloseAutoFocus={onCloseAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
               style={customHeight || customWidth ? customStyle : undefined}
+              hideTitle={hideTitleFallback}
+              hideDescription={hideDescriptionFallback}
             >
               {onSubmit ? (
                 <Form.Root
@@ -341,9 +376,12 @@ function BaseModal({
               onClick={(e) => e.stopPropagation()}
               onEscapeKeyDown={onEscapeKeyDown}
               onOpenAutoFocus={onOpenAutoFocus}
+              onCloseAutoFocus={onCloseAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
               style={customHeight || customWidth ? customStyle : undefined}
+              hideTitle={hideTitleFallback}
+              hideDescription={hideDescriptionFallback}
             >
               {onSubmit ? (
                 <Form.Root

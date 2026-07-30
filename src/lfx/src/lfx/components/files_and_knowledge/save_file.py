@@ -1,3 +1,4 @@
+import contextlib
 import json
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path, PurePath, PureWindowsPath
@@ -15,6 +16,7 @@ from lfx.io import BoolInput, DropdownInput, SecretStrInput, StrInput
 from lfx.schema import Data, DataFrame, Message
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 from lfx.template.field.base import Output
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 
@@ -38,14 +40,7 @@ def _is_default_storage(storage_name: str) -> bool:
 
 class SaveToFileComponent(Component):
     display_name = "Write File"
-    description = (
-        "Save data to a file. "
-        "Arguments: 'input' — the content to save (pass a DataFrame directly, or a JSON string "
-        "for tabular data, or plain text for messages); "
-        "'file_name' — the name to save as, without extension (e.g. 'report'); "
-        "'file_format' — output format: 'csv', 'json', 'txt', 'html', 'excel', 'markdown' (optional). "
-        "Returns a confirmation with the file path or URL."
-    )
+    description = "Save content to a file in the specified format and return its path."
     documentation: str = "https://docs.langflow.org/write-file"
     icon = "file-text"
     name = "SaveToFile"
@@ -207,7 +202,25 @@ class SaveToFileComponent(Component):
         ),
     ]
 
-    outputs = [Output(display_name="File Path", name="message", method="save_to_file")]
+    outputs = [
+        Output(
+            display_name="File Path",
+            name="message",
+            method="save_to_file",
+            # Tool-facing documentation: ``build_description`` prefers output
+            # ``info`` over the component description when this component is
+            # exposed as an agent tool, so the argument reference lives here
+            # instead of bloating the UI card description.
+            info=(
+                "Save data to a file. "
+                "Arguments: 'input' — the content to save (pass a DataFrame directly, or a JSON string "
+                "for tabular data, or plain text for messages); "
+                "'file_name' — the name to save as, without extension (e.g. 'report'); "
+                "'file_format' — output format: 'csv', 'json', 'txt', 'html', 'excel', 'markdown' (optional). "
+                "Returns a confirmation with the file path or URL."
+            ),
+        )
+    ]
 
     def update_build_config(self, build_config, field_value, field_name=None):
         """Update build configuration to show/hide fields based on storage location selection."""
@@ -413,8 +426,13 @@ class SaveToFileComponent(Component):
         plain_text_formats = ["txt", "json", "markdown", "md", "csv", "xml", "html", "yaml", "log", "tsv", "jsonl"]
         return fmt.lower() in plain_text_formats
 
-    async def _upload_file(self, file_path: Path) -> None:
-        """Upload the saved file using the upload_user_file service."""
+    async def _upload_file(self, file_path: Path) -> Any:
+        """Upload the saved file using the upload_user_file service.
+
+        Returns the ``UploadFileResponse`` (with the durable storage ``path`` and
+        ``provider``) so the caller can report the real destination and, for
+        remote backends, discard the local staging copy.
+        """
         from langflow.api.v2.files import upload_user_file
         from langflow.services.database.models.user.crud import get_user_by_id
 
@@ -432,7 +450,7 @@ class SaveToFileComponent(Component):
                     raise ValueError(msg)
                 current_user = await get_user_by_id(db, self.user_id)
 
-                await upload_user_file(
+                return await upload_user_file(
                     file=UploadFile(filename=file_path.name, file=f, size=file_path.stat().st_size),
                     session=db,
                     current_user=current_user,
@@ -637,9 +655,19 @@ class SaveToFileComponent(Component):
             msg = f"Invalid file format '{file_format}' for {self._get_input_type()}. Allowed: {allowed_formats}"
             raise ValueError(msg)
 
-        # Prepare file path
-        file_path = Path(self._get_safe_local_file_name())
+        # Prepare file path. file_name is tenant-controlled and this writes to local disk.
+        settings = get_settings_service().settings
+        scope_ids = component_file_access_scopes(self)
+        file_path = Path(self._get_safe_local_file_name()).expanduser()
+        if settings.restrict_local_file_access and not file_path.is_absolute():
+            # New files belong to the authenticated user's storage namespace. If no
+            # user/flow scope exists, ``enforce_local_file_access`` below fails closed.
+            scope_root = Path(scope_ids[0]) if scope_ids else Path()
+            file_path = Path(settings.config_dir) / scope_root / file_path
         file_path = self._adjust_file_path_with_format(file_path, file_format)
+        file_path = enforce_local_file_access(file_path, scope_ids=scope_ids)
+        if not file_path.parent.exists():
+            file_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Save the input to file based on type
         if self._get_input_type() == "DataFrame":
@@ -652,10 +680,42 @@ class SaveToFileComponent(Component):
             msg = f"Unsupported input type: {self._get_input_type()}"
             raise ValueError(msg)
 
-        # Upload the saved file
-        await self._upload_file(file_path)
+        # Upload the saved file into the configured storage backend.
+        upload_result = await self._upload_file(file_path)
 
-        # Return the final file path and confirmation message
+        # When the backend is remote (e.g. S3) the local file was only a
+        # serialization staging area — the durable copy now lives in the storage
+        # service. Delete the staging file (matching AWS-mode cleanup) and report
+        # the storage destination instead of the misleading local path.
+        # Why: on disposable executor pods the local copy is both redundant and
+        # unreachable by other pods, so leaving it behind leaks a file and makes
+        # the returned path point somewhere that does not durably exist. For local
+        # storage the staged file IS the durable artifact, so it is kept as-is.
+        #
+        # Exception: append_mode accumulates content by reading the persisted local
+        # file across calls (should_append hinges on path.exists()). Deleting it
+        # would make the next append silently fall back to overwrite and lose the
+        # accumulated content — so the staging file is preserved when appending.
+        settings = get_settings_service().settings
+        if settings.storage_type != "local":
+            if not getattr(self, "append_mode", False):
+                with contextlib.suppress(OSError):
+                    file_path.unlink()
+            destination = upload_result.path if upload_result is not None else file_path.name
+            provider = (
+                upload_result.provider
+                if upload_result is not None and upload_result.provider
+                else settings.storage_type
+            ).upper()
+            action = (
+                "appended to"
+                if getattr(self, "append_mode", False) and self._is_plain_text_format(file_format)
+                else "saved successfully as"
+            )
+            return Message(text=f"{self._get_input_type()} {action} '{destination}' in {provider} storage")
+
+        # Local storage: the staged file is the durable artifact — keep it and
+        # report its on-disk path.
         final_path = Path.cwd() / file_path if not file_path.is_absolute() else file_path
         return Message(text=f"{confirmation} at {final_path}")
 
@@ -729,10 +789,18 @@ class SaveToFileComponent(Component):
         content = self._extract_content_for_upload()
         file_format = self._get_file_format_for_location("AWS")
 
-        # Generate file path
-        file_path = f"{self.file_name}.{file_format}"
+        # Generate file path. Namespace by user_id so concurrent multi-user runs
+        # writing the same file_name don't overwrite each other — mirrors how the
+        # platform storage service isolates files under "{user_id}/". Layout:
+        #   {s3_prefix}/{user_id}/{file_name}.{ext}
+        file_name = f"{self.file_name}.{file_format}"
+        path_segments = []
         if hasattr(self, "s3_prefix") and self.s3_prefix:
-            file_path = f"{self.s3_prefix.rstrip('/')}/{file_path}"
+            path_segments.append(self.s3_prefix.rstrip("/"))
+        if self.user_id:
+            path_segments.append(str(self.user_id))
+        path_segments.append(file_name)
+        file_path = "/".join(path_segments)
 
         # Create temporary file
         import tempfile

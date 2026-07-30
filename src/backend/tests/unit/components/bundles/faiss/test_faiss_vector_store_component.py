@@ -5,9 +5,9 @@ from typing import Any
 
 import pytest
 
+pytest.importorskip("lfx_bundles")
 pytest.importorskip("langchain_community")
 
-import lfx_bundles.faiss.faiss as faiss_module
 from langchain_core.documents import Document
 from lfx.io import BoolInput
 from lfx.schema.data import Data
@@ -73,7 +73,12 @@ def test_faiss_same_namespace_cannot_load_another_users_index(tmp_path: Path, mo
     attacker_document = "ATTACKER_PRESEEDED_FAISS_DOCUMENT"
     owner_document = "OWNER_EXPECTED_FAISS_DOCUMENT"
 
-    monkeypatch.setattr(faiss_module, "FAISS", _FakeFAISS)
+    # Patch FAISS on the exact module namespace the imported component class closes over.
+    # Another test in the suite can delete-and-reimport lfx_bundles.faiss.faiss, replacing the
+    # sys.modules entry with a new module object; a dotted-string monkeypatch would then patch
+    # that new module while this test's (already-imported) class still resolves the real FAISS
+    # from its original namespace -> real FAISS runs and hits ``object().embed_documents``.
+    monkeypatch.setitem(FaissVectorStoreComponent.search_documents.__globals__, "FAISS", _FakeFAISS)
 
     attacker_component = _component("attacker-user", tmp_path, attacker_document, "attacker")
     attacker_results = attacker_component.search_documents()

@@ -1,6 +1,17 @@
 from lfx.serialization import constants
 
 
+def escape_like_pattern(value: str) -> str:
+    r"""Escape SQL ``LIKE``/``ILIKE`` wildcards (and the escape char) in a user-supplied term.
+
+    Use with ``escape="\\"`` so a search term containing ``%`` or ``_`` matches literally instead
+    of acting as a wildcard (avoids over-broad matches and pathological patterns). Not an injection
+    fix on its own — the value must still be passed as a bound parameter — it neutralizes the
+    LIKE pattern metacharacters within that parameter.
+    """
+    return value.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+
+
 def truncate_long_strings(data, max_length=None):
     """Recursively traverse the dictionary or list and truncate strings longer than max_length.
 

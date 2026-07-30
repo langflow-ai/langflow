@@ -22,10 +22,8 @@ import {
   usePostUploadFolders,
 } from "@/controllers/API/queries/folders";
 import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
-import { CustomStoreButton } from "@/customization/components/custom-store-button";
 import {
   ENABLE_CUSTOM_PARAM,
-  ENABLE_DATASTAX_LANGFLOW,
   ENABLE_FILE_MANAGEMENT,
   ENABLE_KNOWLEDGE_BASES,
   ENABLE_MCP_NOTICE,
@@ -39,6 +37,7 @@ import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useAuthStore from "@/stores/authStore";
 import type { FlowType } from "@/types/flow";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import type { FolderType } from "../../../../../pages/MainPage/entities";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
@@ -224,6 +223,12 @@ const SideBarFoldersButtonsComponent = ({
         onSuccess: (folder) => {
           track("Create New Project");
           handleChangeFolder!(folder.id);
+        },
+        onError: (error) => {
+          setErrorData({
+            title: t("sidebar.projectCreateError"),
+            list: extractApiErrorMessages(error),
+          });
         },
       },
     );
@@ -515,8 +520,6 @@ const SideBarFoldersButtonsComponent = ({
       {ENABLE_FILE_MANAGEMENT && (
         <SidebarFooter className="border-t">
           <div className="grid w-full items-center gap-2 p-2">
-            {/* TODO: Remove this on cleanup */}
-            {ENABLE_DATASTAX_LANGFLOW && <CustomStoreButton />}{" "}
             {ENABLE_KNOWLEDGE_BASES && (
               <SidebarMenuButton
                 onClick={handleKnowledgeNavigation}

@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import random
 from typing import TYPE_CHECKING, Annotated, Final
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, MultiFernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope, session_scope
+from lfx.services.settings.constants import MINIMUM_SECRET_KEY_LENGTH
 
 from langflow.services.auth.exceptions import (
     AuthenticationError,
@@ -402,20 +404,12 @@ def ensure_fernet_key(secret_key: str) -> bytes:
     For short keys (< 32 chars), the 32-byte key is derived with SHA-256, a
     cryptographic hash. For longer keys, base64 padding is added.
 
-    Security note: short keys previously seeded Python's ``random`` module
-    (``random.seed(secret_key)``) to generate the key bytes. ``random`` is a
-    non-cryptographic Mersenne-Twister PRNG, so the resulting Fernet key was
-    fully predictable from the secret, and seeding it also mutated global PRNG
-    state. SHA-256 is deterministic (so the key stays stable for a given
-    secret) but is not predictable/reversible the way the PRNG output was.
-
-    Deployments that set a ``SECRET_KEY`` shorter than 32 characters will derive
-    a different key than before this fix and must re-enter encrypted secrets
-    (API keys, global variables) after upgrading. The default ``SECRET_KEY`` is
-    a 43-char ``secrets.token_urlsafe(32)`` value and is unaffected.
+    Security note: short keys previously seeded Python's ``random`` module to
+    generate key bytes. New encryption uses SHA-256 so it never depends on a
+    non-cryptographic PRNG or mutates global PRNG state. Short, guessable input
+    remains unsuitable for production; settings validation warns operators.
     """
-    MINIMUM_KEY_LENGTH = 32  # noqa: N806
-    if len(secret_key) < MINIMUM_KEY_LENGTH:
+    if len(secret_key) < MINIMUM_SECRET_KEY_LENGTH:
         digest = hashlib.sha256(secret_key.encode()).digest()  # 32 bytes
         key = base64.urlsafe_b64encode(digest)
     else:
@@ -423,17 +417,41 @@ def ensure_fernet_key(secret_key: str) -> bytes:
     return key
 
 
+def _ensure_legacy_fernet_key(secret_key: str) -> bytes:
+    """Reproduce the pre-1.10.1 short-secret key for decryption only.
+
+    This compatibility key must never be used for encryption. A local PRNG
+    instance reproduces the legacy bytes without mutating global random state.
+    """
+    legacy_random = random.Random(secret_key)  # noqa: S311
+    legacy_bytes = bytes(legacy_random.getrandbits(8) for _ in range(32))
+    return base64.urlsafe_b64encode(legacy_bytes)
+
+
 def get_fernet(settings_service: SettingsService) -> Fernet:
-    """Get a Fernet instance for encryption/decryption.
+    """Get the current Fernet instance used for encryption and decryption."""
+    secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+    return Fernet(ensure_fernet_key(secret_key))
+
+
+def get_fernet_for_decryption(settings_service: SettingsService) -> Fernet | MultiFernet:
+    """Get a Fernet-compatible instance that can read legacy ciphertext.
 
     Args:
         settings_service: Settings service to get the secret key
 
     Returns:
-        Fernet instance for encryption/decryption
+        For short secrets, MultiFernet with the current key first and the
+        pre-1.10.1 key second. This function is used only for decryption; all
+        encryption goes through :func:`get_fernet` and the current key.
     """
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-    return Fernet(ensure_fernet_key(secret_key))
+    current_fernet = get_fernet(settings_service)
+    if len(secret_key) >= MINIMUM_SECRET_KEY_LENGTH:
+        return current_fernet
+
+    legacy_fernet = Fernet(_ensure_legacy_fernet_key(secret_key))
+    return MultiFernet([current_fernet, legacy_fernet])
 
 
 def encrypt_api_key(api_key: str, settings_service: SettingsService | None = None) -> str:  # noqa: ARG001

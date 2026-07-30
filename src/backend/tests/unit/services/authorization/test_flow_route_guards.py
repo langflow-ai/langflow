@@ -234,6 +234,22 @@ def test_upsert_flow_update_branch_authorizes_destination_on_move(routes):
     ), "upsert_flow must authorize WRITE at target_workspace_id/target_folder_id when moving"
 
 
+def test_upsert_flow_reauthorizes_fresh_source_and_destination(routes):
+    """Every PUT retry must re-check the freshly loaded source and destination."""
+    func = routes["upsert_flow"]
+    write_calls = [call for call in _ensure_flow_permission_calls(func) if _action_arg(call) == "FlowAction.WRITE"]
+    assert any(
+        _kwarg_source(call, "workspace_id") == "existing_flow_for_attempt.workspace_id"
+        and _kwarg_source(call, "folder_id") == "existing_flow_for_attempt.folder_id"
+        for call in write_calls
+    ), "upsert_flow retry must re-authorize the freshly loaded source scope"
+    assert _has_destination_check(
+        func,
+        target_workspace_kw="attempt_target_workspace_id",
+        target_folder_kw="attempt_target_folder_id",
+    ), "upsert_flow retry must re-authorize its freshly resolved destination scope"
+
+
 def test_no_bare_string_actions_remain(routes):
     """No flow-route guard should use a bare string action — the enum is now canonical."""
     offenders: list[str] = []

@@ -35,6 +35,12 @@ class ComponentsSettings(BaseModel):
     successfully either way.) Set ``True`` to opt into "prepackaged flows are the source of
     truth on restart" semantics, typically for CI/CD pipelines.
     """
+    load_flows_preserve_variable_bindings: bool = True
+    """Preserve global-variable bindings configured in the UI when reloading an existing flow.
+
+    The flow file remains authoritative for the rest of the flow structure and for bindings it
+    explicitly defines. Set this to ``False`` to restore blind ``data`` replacement on restart.
+    """
     bundle_urls: list[str] = []
 
     lazy_load_components: bool = False

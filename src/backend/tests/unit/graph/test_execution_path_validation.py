@@ -142,19 +142,19 @@ async def test_flow_execution_equivalence(flow_name: str):
 
     graph_data = flow_data.get("data", flow_data)
 
-    # Create two independent copies - use valid UUIDs for flow_id
+    # Create two independent copies with valid UUIDs for persisted identifiers.
     graph_for_async_start = Graph.from_payload(
         deepcopy(graph_data),
         flow_id=str(uuid4()),
         flow_name=flow_name,
-        user_id="test-user-async",
+        user_id=str(uuid4()),
     )
 
     graph_for_arun = Graph.from_payload(
         deepcopy(graph_data),
         flow_id=str(uuid4()),
         flow_name=flow_name,
-        user_id="test-user-arun",
+        user_id=str(uuid4()),
     )
 
     # Run both paths with tracing

@@ -37,3 +37,5 @@ Version shown by IBM: 7.3
 - Visible focus and focus order are covered by 2.4.3 and 2.4.7.
 - Keyboard operability is covered by 2.1.1.
 - Disabled state exposure is covered by 4.1.2.
+- Global Variables table: Space toggles row checkbox; Enter opens edit modal (2.1.1).
+- Global Variables edit modal: on close, restore focus to the last focused table cell (2.4.3).

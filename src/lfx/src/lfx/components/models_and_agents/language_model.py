@@ -11,10 +11,9 @@ from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, StrInput
 from lfx.io import IntInput, MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput
 
-DEFAULT_OLLAMA_URL = "http://localhost:11434"
-
 
 class LanguageModelComponent(LCModelComponent):
+    model_provider_policy_mode = "delegate"
     display_name = "Language Model"
     description = "Runs a language model given a specified provider."
     documentation: str = "https://docs.langflow.org/components-models"
@@ -77,8 +76,7 @@ class LanguageModelComponent(LCModelComponent):
         StrInput(
             name="ollama_base_url",
             display_name="Ollama API URL",
-            info=f"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}",
-            value=DEFAULT_OLLAMA_URL,
+            info="Endpoint of the Ollama API (Ollama only)",
             show=False,
             real_time_refresh=True,
         ),

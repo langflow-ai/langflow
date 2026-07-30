@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
+import DataDisplayComponent from "@/components/core/parameterRenderComponent/components/dataDisplayComponent";
 import DBProviderInputComponent from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
 import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
@@ -13,7 +14,9 @@ import CustomLinkComponent from "@/customization/components/custom-linkComponent
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import type { APIClassType, InputFieldType } from "@/types/api";
 import AccordionPromptComponent from "./components/accordionPromptComponent";
+import ActionPickerComponent from "./components/actionPickerComponent";
 import DictComponent from "./components/dictComponent";
+import DurationComponent from "./components/durationComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
 import InputListComponent from "./components/inputListComponent";
@@ -281,6 +284,27 @@ export function ParameterRenderComponent({
             id={`sortablelist_${id}`}
           />
         );
+      case "duration":
+        return (
+          <DurationComponent
+            {...baseInputProps}
+            options={
+              Array.isArray(templateData.options) ? templateData.options : []
+            }
+            id={`duration_${id}`}
+          />
+        );
+      case "actionPicker":
+        return (
+          <ActionPickerComponent
+            {...baseInputProps}
+            options={
+              Array.isArray(templateData.options) ? templateData.options : []
+            }
+            combobox={templateData.combobox}
+            id={`actionpicker_${id}`}
+          />
+        );
       case "connect": {
         const link =
           templateData?.options?.find(
@@ -345,6 +369,15 @@ export function ParameterRenderComponent({
           <DBProviderInputComponent
             {...baseInputProps}
             id={`dbprovider_${id}`}
+          />
+        );
+      case "data_display":
+        return (
+          <DataDisplayComponent
+            {...baseInputProps}
+            buttonText={templateData?.button_text}
+            buttonIcon={templateData?.button_icon}
+            id={`data_display_${id}`}
           />
         );
       default:

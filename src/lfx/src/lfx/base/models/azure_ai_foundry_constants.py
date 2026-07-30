@@ -1,10 +1,4 @@
-"""Azure AI Foundry model catalog primitives.
-
-Foundry deployments are user-specific (the ``model`` parameter must match the
-deployment name in the portal), so this is a small seed list shown before
-credentials are configured. Once a provider is set up, users enable the
-deployments they actually have.
-"""
+"""Azure AI Foundry seed catalog; inference uses portal deployment names, not catalog IDs."""
 
 from .model_metadata import create_model_metadata
 
@@ -14,7 +8,6 @@ AZURE_AI_FOUNDRY_MODELS_DETAILED = [
         name="gpt-4o",
         icon="Azure",
         tool_calling=True,
-        default=True,
     ),
     create_model_metadata(
         provider="Azure AI Foundry",

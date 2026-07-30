@@ -86,38 +86,42 @@ export default function FilePreviewDisplay({
     return (
       <div
         className={cn(
-          "relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-primary-foreground shadow-sm",
+          "relative h-16 w-16 shrink-0 rounded-xl border border-border/70 bg-primary-foreground shadow-sm",
           error && "border-error",
           className,
         )}
       >
-        {loading ? (
-          <Loading className="h-4 w-4" />
-        ) : previewUrl && !imageError ? (
-          <img
-            src={previewUrl}
-            alt={fileInfo.name}
-            className="h-full w-full rounded-xl object-cover p-1"
-            crossOrigin={file instanceof File ? undefined : "use-credentials"}
-            onError={() => {
-              setImageError(true);
-              console.error("Failed to load image:", previewUrl);
-            }}
-          />
-        ) : (
-          <div className="p-3">
-            <ForwardedIconComponent name="File" className="h-6 w-6" />
-          </div>
-        )}
+        {/* Clipping lives on this inner box so the delete button, which sits
+            outside the thumbnail bounds, is not cut off by overflow-hidden. */}
+        <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-xl">
+          {loading ? (
+            <Loading className="h-4 w-4" />
+          ) : previewUrl && !imageError ? (
+            <img
+              src={previewUrl}
+              alt={fileInfo.name}
+              className="h-full w-full rounded-xl object-cover p-1"
+              crossOrigin={file instanceof File ? undefined : "use-credentials"}
+              onError={() => {
+                setImageError(true);
+                console.error("Failed to load image:", previewUrl);
+              }}
+            />
+          ) : (
+            <div className="p-3">
+              <ForwardedIconComponent name="File" className="h-6 w-6" />
+            </div>
+          )}
+        </div>
 
         {showDelete && onDelete && (
           <button
             onClick={onDelete}
-            className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             type="button"
             aria-label={t("playgroundComponent.deleteFile")}
           >
-            <ForwardedIconComponent name="X" className="h-3 w-3" />
+            <ForwardedIconComponent name="X" className="h-3.5 w-3.5" />
           </button>
         )}
       </div>

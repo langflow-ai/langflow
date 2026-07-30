@@ -663,7 +663,7 @@ input[type="password"]::-ms-clear {
   }
 
   .app-div {
-    @apply absolute bottom-20 left-5 flex flex-col-reverse;
+    @apply absolute bottom-4 left-4 flex flex-col-reverse;
   }
 
   .chat-input-modal-txtarea {
@@ -1134,6 +1134,15 @@ input[type="password"]::-ms-clear {
 
   .label-invalid {
     @apply text-destructive;
+  }
+
+  /* In dark mode the default destructive red only reaches ~3.9:1 on the dark
+     background, below the WCAG AA 4.5:1 minimum for this small/medium-weight
+     error text. Use the brighter accent-red (which the dark theme already
+     defines) so form error messages and invalid labels stay legible. */
+  .dark .field-invalid,
+  .dark .label-invalid {
+    color: hsl(var(--accent-red-foreground));
   }
 
   .input-invalid {

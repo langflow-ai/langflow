@@ -1,7 +1,7 @@
+import contextlib
 from collections.abc import Callable
 from typing import Any, cast
 
-import litellm
 from pydantic import SecretStr
 
 from lfx.custom.custom_component.component import Component
@@ -223,8 +223,16 @@ class BaseCrewComponent(Component):
             crew = self.build_crew()
             result = await crew.kickoff_async()
             message = Message(text=result.raw, sender=MESSAGE_SENDER_AI)
-        except litellm.exceptions.BadRequestError as e:
-            raise ValueError(e) from e
+        except Exception as exc:
+            # LiteLLM is an optional CrewAI execution dependency. Keep this
+            # module importable when it is absent, while preserving the
+            # user-facing conversion for its request validation errors.
+            with contextlib.suppress(ImportError):
+                from litellm.exceptions import BadRequestError
+
+                if isinstance(exc, BadRequestError):
+                    raise ValueError(exc) from exc  # noqa: TRY004
+            raise
 
         self.status = message
 

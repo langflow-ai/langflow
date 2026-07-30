@@ -327,7 +327,8 @@ def test_public_flow_blocks_structured_data_analysis_starter_template():
     """The bundled data-analysis starter contains OpenDsStarAgent and must be rejected publicly."""
     repo_root = Path(__file__).resolve().parents[5]
     starter_path = (
-        repo_root / "src/backend/base/langflow/initial_setup/starter_projects/Structured Data Analysis Agent.json"
+        repo_root
+        / "src/bundles/lfx-bundles/src/lfx_bundles/codeagents/starter_projects/Structured Data Analysis Agent.json"
     )
     starter_flow = json.loads(starter_path.read_text())
 
@@ -522,3 +523,107 @@ def test_public_flow_type_block_works_without_hash_lookups(monkeypatch):
     monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: None)
     with pytest.raises(PublicFlowValidationError):
         validate_public_flow_no_code_execution(_flow_with_component("RunFlow"))
+
+
+# --- block_code_interpreter_components (built-in code-exec component gate) ----------
+
+
+def _code_interpreter_raw_graph(
+    component_type: str = "PythonREPLComponent",
+    display_name: str = "Python Interpreter",
+) -> dict:
+    """A graph whose single node is a built-in code-execution component."""
+    return {
+        "nodes": [
+            {
+                "id": "py-1",
+                "data": {
+                    "id": "py-1",
+                    "type": component_type,
+                    "node": {
+                        "display_name": display_name,
+                        "template": {"code": {"value": "print('builtin component')"}},
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+
+
+@pytest.mark.parametrize(
+    ("component_type", "display_name"),
+    [
+        ("PythonREPLComponent", "Python Interpreter"),
+        ("PythonCodeStructuredTool", "Python Code Structured"),
+        ("BenignComponent", "Python Code Structured"),  # display_name alias must also be caught
+        ("PythonREPLToolComponent", "Python REPL"),
+        ("PythonFunction", "Python Function"),  # prototypes/python_function.py - exec of user function_code
+        ("BenignComponent", "Python Function"),  # display_name alias
+        ("LambdaFilterComponent", "Smart Transform"),
+        ("BenignComponent", "Smart Transform"),  # alias must also be caught
+        # Code-agent components run LLM-generated Python in-process (smolagents local
+        # executor / DS-Star bare exec); they must be covered by the same block list.
+        ("CodeActAgentSmolagents", "CodeAct Agent (Smolagents)"),
+        ("BenignComponent", "CodeAct Agent (Smolagents)"),  # display-name alias
+        ("OpenDsStarAgent", "OpenDsStar Agent"),
+        ("BenignComponent", "OpenDsStar Agent"),  # display-name alias
+    ],
+)
+def test_block_code_interpreter_components_blocks_flow(monkeypatch, component_type, display_name):
+    """When the flag is on, flows with code-execution components are blocked."""
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=True,
+            block_code_interpreter_components=True,
+        ),
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    graph = SimpleNamespace(raw_graph_data=_code_interpreter_raw_graph(component_type, display_name))
+
+    with pytest.raises(CustomComponentValidationError, match="code-execution components are not allowed"):
+        validate_flow_for_current_settings(graph)
+
+
+def test_block_code_interpreter_components_disabled_allows_flow(monkeypatch):
+    """With the flag off (default), code-execution components are permitted."""
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=True,
+            block_code_interpreter_components=False,
+        ),
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    graph = SimpleNamespace(raw_graph_data=_code_interpreter_raw_graph())
+
+    # Should not raise.
+    validate_flow_for_current_settings(graph)
+
+
+def test_block_code_interpreter_components_detects_nested_flow(monkeypatch):
+    """A code-execution component hidden inside a nested/sub-flow must still be caught."""
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=True,
+            block_code_interpreter_components=True,
+        ),
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    nested = _code_interpreter_raw_graph()
+    outer = {
+        "nodes": [
+            {
+                "id": "wrapper",
+                "data": {
+                    "id": "wrapper",
+                    "type": "SomeBenignComponent",
+                    "node": {"flow": {"data": nested}},
+                },
+            }
+        ],
+        "edges": [],
+    }
+    graph = SimpleNamespace(raw_graph_data=outer)
+
+    with pytest.raises(CustomComponentValidationError, match="code-execution components are not allowed"):
+        validate_flow_for_current_settings(graph)

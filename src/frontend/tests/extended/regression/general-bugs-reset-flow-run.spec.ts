@@ -62,18 +62,11 @@ test(
 
     await page.getByTestId("generic-node-title-arrangement").last().click();
 
-    await page.getByTestId("panel-description").hover();
-    await page
-      .getByTestId("panel-description")
-      .getByTestId("edit-name-description-button")
-      .click();
+    await page.getByTestId("node-edit-name-description-button").click();
 
-    await page.getByTestId("inspection-panel-name").fill("textoutputfalse");
+    await page.getByTestId("input-title-Text Output").fill("textoutputfalse");
 
-    await page
-      .getByTestId("panel-description")
-      .getByTestId("save-name-description-button")
-      .click();
+    await page.getByTestId("node-save-name-description-button").click();
 
     await page.waitForTimeout(2000);
 

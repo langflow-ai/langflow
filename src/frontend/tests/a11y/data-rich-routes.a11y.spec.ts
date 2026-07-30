@@ -91,46 +91,6 @@ test.describe("data-rich route accessibility", () => {
   // delete modal / rename editing + keyboard operability).
 
   test(
-    "scans global variables page with saved variables",
-    { tag: ["@release", "@workspace"] },
-    async ({ page }) => {
-      await page.route("**/api/v1/variables/", async (route) => {
-        await route.fulfill({
-          json: [
-            {
-              id: "a11y-variable-1",
-              name: "OPENAI_API_KEY",
-              type: "Credential",
-              value: "sk-a11y-redacted",
-              default_fields: ["api_key"],
-              is_valid: true,
-              validation_error: null,
-            },
-            {
-              id: "a11y-variable-2",
-              name: "DEFAULT_MODEL",
-              type: "Generic",
-              value: "gpt-4.1-mini",
-              default_fields: ["model_name"],
-              is_valid: null,
-              validation_error: null,
-            },
-          ],
-        });
-      });
-
-      await openRoute(page, "/settings/global-variables");
-      await expect(page.getByText("OPENAI_API_KEY")).toBeVisible({
-        timeout: TIMEOUTS.standard,
-      });
-      await expect(page.getByText("DEFAULT_MODEL")).toBeVisible();
-      await waitForNetworkToSettle(page);
-
-      await page.runA11yScan("settings-global-variables-data-rich");
-    },
-  );
-
-  test(
     "scans MCP servers page with configured servers",
     { tag: ["@release", "@workspace"] },
     async ({ page }) => {

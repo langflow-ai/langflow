@@ -2,14 +2,12 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import type { ModelTypeFilter } from "@/types/models";
 import ProviderListItem from "./ProviderListItem";
 import { Provider } from "./types";
 
-// Supported model types for filtering providers
-type ModelType = "llm" | "embeddings" | "all";
-
 export interface ProviderListProps {
-  modelType: ModelType;
+  modelType: ModelTypeFilter;
   onProviderSelect?: (provider: Provider) => void;
   selectedProviderName?: string | null;
   /** Case-insensitive substring filter applied to the provider name. */

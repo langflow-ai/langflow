@@ -21,13 +21,19 @@ from pathlib import Path
 import pytest
 
 STARTER_PROJECTS_DIR = Path(__file__).resolve().parents[3] / "base" / "langflow" / "initial_setup" / "starter_projects"
+BUNDLE_STARTER_PROJECTS_DIR = Path(__file__).resolve().parents[4] / "bundles"
 
 
 def _starter_project_files() -> list[Path]:
     if not STARTER_PROJECTS_DIR.is_dir():
         msg = f"starter_projects directory not found at {STARTER_PROJECTS_DIR}"
         raise FileNotFoundError(msg)
-    return sorted(STARTER_PROJECTS_DIR.glob("*.json"))
+    return sorted(
+        [
+            *STARTER_PROJECTS_DIR.glob("*.json"),
+            *BUNDLE_STARTER_PROJECTS_DIR.glob("**/starter_projects/*.json"),
+        ]
+    )
 
 
 def _agent_nodes_in(path: Path) -> list[dict]:

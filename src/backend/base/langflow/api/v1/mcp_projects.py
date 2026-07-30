@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log import logger
 from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.mcp_composer.service import (
@@ -765,7 +766,18 @@ def is_local_ip(ip_str: str) -> bool:
 
 
 def get_client_ip(request: Request) -> str:
-    """Extract the client IP address from a FastAPI request.
+    """Resolve the client IP for the local-only install locality check.
+
+    ``X-Forwarded-For`` is client-controlled and must NOT be trusted by default:
+    trusting it lets a remote caller spoof a loopback address and defeat the
+    local-only restriction on :func:`install_mcp_config` (which writes MCP client
+    config to the host filesystem). By default we use the real TCP peer
+    (``request.client.host``), so a spoofed header has no effect.
+
+    Only when the operator has explicitly opted into a trusted proxy
+    (``rate_limit_trust_proxy``) do we consult ``X-Forwarded-For``, and then we
+    take the rightmost entry — the last hop added by the trusted proxy, which a
+    client cannot forge — mirroring ``langflow.services.rate_limit.service.get_client_ip``.
 
     Args:
         request: FastAPI Request object
@@ -773,13 +785,16 @@ def get_client_ip(request: Request) -> str:
     Returns:
         str: The client's IP address
     """
-    # Check for X-Forwarded-For header (common when behind proxies)
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        # The client IP is the first one in the list
-        return forwarded_for.split(",")[0].strip()
+    # Only consult X-Forwarded-For when an operator has explicitly declared a
+    # trusted proxy; otherwise the header is attacker-controlled.
+    if get_settings_service().settings.rate_limit_trust_proxy:
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            # Rightmost entry = last hop added by the trusted proxy (unspoofable);
+            # the leftmost entry is client-supplied and must never be trusted.
+            return forwarded_for.split(",")[-1].strip()
 
-    # If no proxy headers, use the client's direct IP
+    # Default: trust only the real TCP peer.
     if request.client:
         return request.client.host
 
@@ -866,6 +881,7 @@ async def install_mcp_config(
             settings = get_settings_service().settings
             command = "uvx"
             args = [
+                *mcp_sdk_constraint_args(),
                 f"mcp-composer{settings.mcp_composer_version}",
                 "--mode",
                 "http",
@@ -882,7 +898,7 @@ async def install_mcp_config(
             streamable_http_url = await get_project_streamable_http_url(project_id)
             legacy_sse_url = await get_project_sse_url(project_id)
             command = "uvx"
-            args = ["mcp-proxy"]
+            args = [*mcp_sdk_constraint_args(), "mcp-proxy"]
             # Check if we need to add Langflow API key headers
             # Necessary only when Project API Key Authentication is enabled
 

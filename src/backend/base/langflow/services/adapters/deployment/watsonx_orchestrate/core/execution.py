@@ -26,7 +26,11 @@ def build_orchestrate_run_payload(
 
     payload: dict[str, Any] = {
         "message": message_payload,
-        "agent_id": str(provider_data.get("agent_id") or deployment_id),
+        # The run target is always the deployment's own (owner-pinned) resource key. Do NOT honor a
+        # caller-supplied provider_data["agent_id"]: the API input slot (WatsonxApiExecutionInput) is
+        # extra="forbid" so it can't arrive today, and reading it here would let a future caller that
+        # bypasses the slot redirect the run to an arbitrary agent in the owner's WxO tenant.
+        "agent_id": str(deployment_id),
     }
 
     thread_id = provider_data.get("thread_id")

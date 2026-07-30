@@ -1,6 +1,6 @@
 # Add helper functions for each event type
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from time import perf_counter
 from typing import Any, Protocol
 
@@ -10,6 +10,8 @@ from langchain_core.messages import AIMessageChunk
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 from lfx.schema.message import Message
+
+GetPendingInterrupt = Callable[[], Awaitable[dict[str, Any] | None]]
 
 
 class ExceptionWithMessageError(Exception):
@@ -24,6 +26,20 @@ class ExceptionWithMessageError(Exception):
             if self.agent_message.error or self.agent_message.text
             else f"{self.message}."
         )
+
+
+class AgentPausedError(Exception):
+    """Raised when the agent stops on a pending tool-approval interrupt (LE-1447).
+
+    Carries the ``tool_approval`` human request so the AgentComponent can suspend the
+    run through the graph pause seam instead of finalizing an empty 'complete' message.
+    """
+
+    def __init__(self, request: dict[str, Any], agent_message: "Message | None" = None):
+        self.request = request
+        # Why: carries the persisted id so the caller can retract the bubble (its own ref predates streaming reassigns).
+        self.agent_message = agent_message
+        super().__init__("Agent paused for human approval")
 
 
 def _calculate_duration(start_time: float) -> int:
@@ -73,26 +89,20 @@ def _extract_output_text(output: str | list) -> str:
             if isinstance(item, str):
                 return item
             if isinstance(item, dict):
-                if "text" in item:
-                    return item["text"] or ""
-                if "content" in item:
-                    return str(item["content"])
-                if "message" in item:
-                    return str(item["message"])
-
-                # Special case handling for non-text-like dicts
-                if (
-                    item.get("type") == "tool_use"  # Handle tool use items
-                    or ("index" in item and len(item) == 1)  # Handle index-only items
-                    or "partial_json" in item  # Handle partial json items
-                    # Handle index-only items
-                    or ("index" in item and not any(k in item for k in ("text", "content", "message")))
-                    # Handle other metadata-only chunks that don't contain meaningful text
-                    or not any(key in item for key in ["text", "content", "message"])
-                ):
+                # Why: reasoning/tool blocks have no display text; str()-ing their content leaked "[]" as a token.
+                if item.get("type") in {"reasoning", "thinking", "tool_use", "function_call", "tool_call"}:
                     return ""
-
-                # For any other dict format, return empty string
+                if isinstance(item.get("text"), str):
+                    return item["text"]
+                content = item.get("content")
+                if isinstance(content, str):
+                    return content
+                if isinstance(content, list):
+                    return _extract_output_text(content)
+                message = item.get("message")
+                if isinstance(message, str):
+                    return message
+                # Any other dict (index-only/partial_json/metadata chunk) has no text.
                 return ""
             # For any other single item type (not str or dict), return empty string
             return ""
@@ -484,6 +494,7 @@ async def process_agent_events(
     agent_message: Message,
     send_message_callback: SendMessageFunctionType,
     send_token_callback: OnTokenFunctionType | None = None,
+    get_pending_interrupt: GetPendingInterrupt | None = None,
 ) -> Message:
     """Process agent events and return the final output."""
     if isinstance(agent_message.properties, dict):
@@ -529,9 +540,17 @@ async def process_agent_events(
                         event, agent_message, send_message_callback, None, start_time, had_streaming=had_streaming
                     )
 
+        # A tool-approval interrupt ends the loop without completing: suspend, don't finalize.
+        if get_pending_interrupt is not None:
+            pending = await get_pending_interrupt()
+            if pending is not None:
+                raise AgentPausedError(pending, agent_message)
+
         agent_message.properties.state = "complete"
         # Final DB update with the complete message (skip_db_update=False by default)
         agent_message = await send_message_callback(message=agent_message)
+    except AgentPausedError:
+        raise
     except Exception as e:
         raise ExceptionWithMessageError(agent_message, str(e)) from e
     return await Message.create(**agent_message.model_dump())

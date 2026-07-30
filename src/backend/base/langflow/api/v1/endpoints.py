@@ -5,7 +5,7 @@ import json
 import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID, uuid4
 
 import orjson
@@ -26,6 +26,12 @@ from lfx.interface.components import component_cache
 from lfx.log.logger import logger
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyPurpose,
+    reset_current_model_provider_policy_context,
+    resolve_model_provider_policy,
+    set_current_model_provider_policy_context,
+)
 from lfx.services.settings.service import SettingsService
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
@@ -38,6 +44,7 @@ from sqlmodel import select
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
 from langflow.api.v1.files import get_flow
 from langflow.api.v1.global_variable_defaults import apply_global_variable_defaults
+from langflow.api.v1.run_validation import raise_if_hitl_unsupported
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -58,7 +65,6 @@ from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import (
     api_key_security,
-    get_current_active_user,
     get_current_user_for_sse,
     get_optional_user,
 )
@@ -173,8 +179,8 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
         return SimplifiedAPIRequest()
 
 
-@router.get("/all", dependencies=[Depends(get_current_active_user)])
-async def get_all(request: Request):
+@router.get("/all")
+async def get_all(request: Request, current_user: CurrentActiveUser):
     """Retrieve all component types with compression for better performance.
 
     Returns a compressed response containing all available component types,
@@ -185,15 +191,61 @@ async def get_all(request: Request):
 
     try:
         all_types_en = await get_and_cache_all_types_dict(settings_service=get_settings_service())
+        visible_types_en = _filter_component_palette_by_provider_policy(
+            all_types_en,
+            user_id=current_user.id,
+            attributes={"is_superuser": bool(current_user.is_superuser)},
+        )
 
         locale = getattr(request.state, "locale", "en")
-        all_types = translate_component_dict(all_types_en, locale) if locale != "en" else all_types_en
+        all_types = translate_component_dict(visible_types_en, locale) if locale != "en" else visible_types_en
 
-        component_display_names = build_component_display_names(all_types_en)
+        component_display_names = build_component_display_names(visible_types_en)
         return compress_response({**all_types, "component_display_names": component_display_names})
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+def _filter_component_palette_by_provider_policy(
+    all_types: dict[str, dict[str, dict]],
+    *,
+    user_id: UUID | str | None,
+    attributes: dict[str, Any] | None = None,
+) -> dict[str, dict[str, dict]]:
+    """Return a request-local palette with denied model providers removed.
+
+    The component registry is a process-wide cache. Copy category mappings and
+    never delete from the cached object, otherwise one user's policy decision
+    would leak into every later request. Unrelated components in mixed bundles
+    have no ``model_provider_id`` and always remain present.
+    """
+    provider_ids = {
+        provider_id
+        for components in all_types.values()
+        for component in components.values()
+        if isinstance(component, dict)
+        and isinstance((metadata := component.get("metadata")), dict)
+        and isinstance((provider_id := metadata.get("model_provider_id")), str)
+        and provider_id
+    }
+    policy = resolve_model_provider_policy(
+        user_id=user_id,
+        providers=provider_ids,
+        purpose=ModelProviderPolicyPurpose.DISCOVER,
+        attributes=attributes,
+    )
+    return {
+        category: {
+            name: component
+            for name, component in components.items()
+            if not isinstance(component, dict)
+            or not isinstance(component.get("metadata"), dict)
+            or not (provider_id := component["metadata"].get("model_provider_id"))
+            or policy.allows(provider_id)
+        }
+        for category, components in all_types.items()
+    }
 
 
 def validate_input_and_tweaks(input_request: SimplifiedAPIRequest) -> None:
@@ -239,6 +291,10 @@ async def simple_run_flow(
     run_id: str | None = None,
 ):
     validate_input_and_tweaks(input_request)
+    policy_context_token = set_current_model_provider_policy_context(
+        user_id=getattr(api_key_user, "id", None),
+        attributes={"is_superuser": bool(getattr(api_key_user, "is_superuser", False))},
+    )
     try:
         task_result: list[RunOutputs] = []
         user_id = api_key_user.id if api_key_user else None
@@ -248,6 +304,7 @@ async def simple_run_flow(
             raise ValueError(msg)
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
+        raise_if_hitl_unsupported(graph_data)
         # Mirror the Playground's one-time fix in-memory: bind empty fields whose
         # display_name matches a user global variable's default_fields. Without
         # this, API-only workflows never trigger the frontend hook that persists
@@ -343,6 +400,8 @@ async def simple_run_flow(
 
     except sa.exc.StatementError as exc:
         raise ValueError(str(exc)) from exc
+    finally:
+        reset_current_model_provider_policy_context(policy_context_token)
 
 
 def _get_vertex_ids_from_flow(flow: Flow) -> list[str]:
@@ -762,6 +821,8 @@ async def _run_flow_internal(
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
     except InvalidChatInputError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except HTTPException:
+        raise
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_run,
@@ -1036,6 +1097,8 @@ async def webhook_run_flow(
         error_msg = "Request body is empty. You should provide a JSON payload containing the flow ID."
         raise HTTPException(status_code=400, detail=error_msg)
 
+    raise_if_hitl_unsupported(flow.data or {})
+
     try:
         # get all webhook components in the flow
         webhook_components = get_all_webhook_components_in_flow(flow.data)
@@ -1193,9 +1256,12 @@ async def experimental_run_flow(
         try:
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
+            raise_if_hitl_unsupported(graph_data)
             graph = Graph.from_payload(graph_data, flow_id=flow_id_str)
         except CustomComponentValidationError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        except HTTPException:
+            raise
         except Exception as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
@@ -1485,12 +1551,22 @@ async def custom_component_update(
                 detail="Custom component creation is disabled",
             )
 
+    policy_context_token = set_current_model_provider_policy_context(
+        user_id=user.id,
+        attributes={"is_superuser": bool(user.is_superuser)},
+    )
     try:
         component = Component(_code=effective_code)
         component_node, cc_instance = build_custom_component_template(
             component,
             user_id=user.id,
         )
+
+        if isinstance(cc_instance, Component):
+            # Dynamic configuration may resolve DB-backed credentials or call
+            # provider APIs. Apply the same standalone-component policy before
+            # either can happen.
+            cc_instance.require_model_provider_policy(ModelProviderPolicyPurpose.CONFIGURE)
 
         component_node["tool_mode"] = code_request.tool_mode
 
@@ -1555,6 +1631,8 @@ async def custom_component_update(
 
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        reset_current_model_provider_policy_context(policy_context_token)
 
     locale = getattr(request.state, "locale", "en")
     if locale != "en":

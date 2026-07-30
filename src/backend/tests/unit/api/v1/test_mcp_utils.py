@@ -5,6 +5,9 @@ import pytest
 from langflow.api.utils.core import extract_global_variables_from_headers
 from langflow.api.v1 import mcp_utils
 from langflow.helpers import flow as flow_helpers
+from langflow.services.database.models import Flow
+from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.user.model import User
 from lfx.interface.components import component_cache
 
 
@@ -324,6 +327,48 @@ async def test_handle_read_resource_denies_user_bucket_under_project_scope(monke
 
 
 @pytest.mark.asyncio
+async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypatch, async_session):
+    """A flow UUID parsed from an advertised resource URI must remain UUID-typed in the database query."""
+    user = User(username="mcp-resource-reader", password="test-password")  # noqa: S106
+    project = Folder(name="MCP Resource Project", user_id=user.id)
+    flow = Flow(name="MCP Resource Flow", user_id=user.id, folder_id=project.id)
+    other_project = Folder(name="Other MCP Resource Project", user_id=user.id)
+    other_flow = Flow(name="Other MCP Resource Flow", user_id=user.id, folder_id=other_project.id)
+    async_session.add_all([user, project, flow, other_project, other_flow])
+    await async_session.flush()
+
+    file_name = "project-resource.txt"
+    storage_service = FakeStorageService(
+        {},
+        {
+            f"{flow.id}/{file_name}": b"project file contents",
+            f"{other_flow.id}/{file_name}": b"other project file contents",
+        },
+    )
+
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(async_session))
+    monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
+
+    token = mcp_utils.current_user_ctx.set(user)
+    try:
+        uri = f"http://host/api/v1/files/download/{flow.id}/{file_name}"
+        result = await mcp_utils.handle_read_resource(uri, project_id=project.id)
+
+        other_uri = f"http://host/api/v1/files/download/{other_flow.id}/{file_name}"
+        with pytest.raises(ValueError, match="access denied"):
+            await mcp_utils.handle_read_resource(other_uri, project_id=project.id)
+
+        with pytest.raises(ValueError, match="access denied"):
+            await mcp_utils.handle_read_resource(uri, project_id="not-a-uuid")
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+    import base64
+
+    assert base64.b64decode(result) == b"project file contents"
+
+
+@pytest.mark.asyncio
 async def test_handle_list_resources_project_scoped_excludes_user_bucket(monkeypatch):
     """A project-scoped resources/list must not leak user-bucket files unrelated to the project."""
     user_id = "user-bob"
@@ -393,8 +438,15 @@ async def _invoke_handle_call_tool(monkeypatch, arguments: dict) -> AsyncMock:
     """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock."""
     # ``user_id`` matches the current user (see ``current_user_ctx`` below) so the
     # owner-override path in ``ensure_flow_permission`` is exercised; ``workspace_id``
-    # is read by the same guard.
-    flow = SimpleNamespace(id="flow-id-1", name="my_flow", folder_id=None, user_id="user-1", workspace_id=None)
+    # is read by the same guard. ``data`` feeds the HITL support gate.
+    flow = SimpleNamespace(
+        id="flow-id-1",
+        name="my_flow",
+        folder_id=None,
+        user_id="user-1",
+        workspace_id=None,
+        data={"nodes": [], "edges": []},
+    )
 
     async def fake_get_flow_snake_case(*_args, **_kwargs):
         return flow
@@ -465,6 +517,79 @@ async def test_handle_call_tool_falls_back_when_session_id_blank(monkeypatch):
     assert forwarded_request.session_id != ""
 
 
+async def test_handle_call_tool_forwards_only_advertised_input_fields(monkeypatch):
+    """Advertised MCP arguments must reach only the input nodes that expose them."""
+
+    class _FakeNode:
+        def __init__(self, node_id, *, is_input, template):
+            self.id = node_id
+            self.is_input = is_input
+            self.data = {"node": {"template": template}}
+
+    class _FakeGraph:
+        def __init__(self):
+            self.vertices = [
+                _FakeNode(
+                    "input-a",
+                    is_input=True,
+                    template={
+                        "input_value": {"show": True, "advanced": False},
+                        "backend_token": {"show": True, "advanced": False},
+                        "enabled": {"show": True, "advanced": False},
+                        "hidden": {"show": False, "advanced": False},
+                        "advanced": {"show": True, "advanced": True},
+                    },
+                ),
+                _FakeNode(
+                    "input-b",
+                    is_input=True,
+                    template={
+                        "backend_token": {"show": True, "advanced": False},
+                        "backend_url": {"show": True, "advanced": False},
+                    },
+                ),
+                _FakeNode(
+                    "downstream",
+                    is_input=False,
+                    template={"backend_url": {"show": True, "advanced": False}},
+                ),
+            ]
+
+        @classmethod
+        def from_payload(cls, _flow_data):
+            return cls()
+
+    import lfx.graph.graph.base as graph_base_module
+
+    monkeypatch.setattr(graph_base_module, "Graph", _FakeGraph)
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={
+            "input_value": "test request",
+            "session_id": "thread-1",
+            "backend_token": "example-token",
+            "backend_url": "https://backend.example.com",
+            "enabled": False,
+            "hidden": "must-not-forward",
+            "advanced": "must-not-forward",
+            "unknown": "must-not-forward",
+        },
+    )
+
+    forwarded_request = simple_run_flow_mock.await_args.kwargs["input_request"]
+    assert forwarded_request.input_value == "test request"
+    assert forwarded_request.session_id == "thread-1"
+    assert forwarded_request.tweaks is not None
+    assert forwarded_request.tweaks.root == {
+        "input-a": {"backend_token": "example-token", "enabled": False},
+        "input-b": {
+            "backend_token": "example-token",
+            "backend_url": "https://backend.example.com",
+        },
+    }
+
+
 def test_json_schema_from_flow_includes_optional_session_id(monkeypatch):
     """json_schema_from_flow must advertise session_id so MCP clients can supply it."""
 
@@ -532,3 +657,53 @@ def test_json_schema_from_flow_preserves_flow_defined_session_id(monkeypatch):
     # The flow's own definition wins — the reserved injection must not clobber it.
     assert schema["properties"]["session_id"]["description"] == custom_session_id_property["description"]
     assert "session_id" in schema["required"]
+
+
+@pytest.mark.asyncio
+async def test_handle_call_tool_blocks_hitl_flow(monkeypatch):
+    """A HITL flow invoked as an MCP tool must raise so the MCP result is isError, pointing to the v2 API."""
+    hitl_flow = SimpleNamespace(
+        id="flow-hitl",
+        name="HITL Tools",
+        folder_id=None,
+        # Owner of the flow (matches current_user_ctx below) so ensure_flow_permission's
+        # owner-override path passes and the run reaches the HITL support gate.
+        user_id="user-1",
+        workspace_id=None,
+        data={
+            "nodes": [
+                {
+                    "id": "url",
+                    "data": {
+                        "id": "url",
+                        "type": "URLComponent",
+                        "node": {
+                            "template": {
+                                "tools_metadata": {
+                                    "value": [{"name": "fetch", "approval_actions": ["approve", "reject"]}]
+                                }
+                            }
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    )
+
+    async def fake_get_flow(*_args, **_kwargs):
+        return hitl_flow
+
+    async def fake_with_db_session(operation):
+        return await operation(object())
+
+    monkeypatch.setattr(mcp_utils, "get_flow_snake_case", fake_get_flow)
+    monkeypatch.setattr(mcp_utils, "with_db_session", fake_with_db_session)
+    monkeypatch.setattr(mcp_utils, "get_mcp_config", lambda: SimpleNamespace(enable_progress_notifications=False))
+
+    token = mcp_utils.current_user_ctx.set(SimpleNamespace(id="user-1"))
+    try:
+        with pytest.raises(RuntimeError, match="Human-in-the-Loop"):
+            await mcp_utils.handle_call_tool("hitl_tools", {"input_value": "hi"}, server=SimpleNamespace())
+    finally:
+        mcp_utils.current_user_ctx.reset(token)

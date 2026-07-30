@@ -54,7 +54,7 @@ DEFAULT_TEXT_EXTENSIONS: tuple[str, ...] = (
 
 # Files larger than this are skipped to prevent a single pathological
 # file from blocking a batch. Matches WxO's per-file ceiling for PDFs
-# etc. Can be overridden in ``source_config["max_file_size_bytes"]``.
+# etc. Public API routes overwrite this config value from operator settings.
 DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
 
 
@@ -67,17 +67,17 @@ class FolderSource(KBIngestionSource):
             "path": "/absolute/or/expanded/~ path",
             "recursive": True,           # default: True
             "extensions": ["pdf", "md"], # default: DEFAULT_TEXT_EXTENSIONS
-            "max_file_size_bytes": 10_000_000,  # default: DEFAULT_MAX_FILE_SIZE_BYTES
-            "allowed_roots": ["/home/alice"],  # required for safety
+            "max_file_size_bytes": 10_000_000,  # operator-owned at public API boundary
+            "allowed_roots": ["/home/alice"],  # operator-owned at public API boundary
             "per_file_metadata": {
                 "relative/path.pdf": {"category": "invoice"},
                 "basename.txt": {"tag": ["urgent"]},
             },
         }
 
-    ``allowed_roots`` comes from settings at the call site — sources
-    don't reach into settings themselves so tests can drive the
-    constraint directly.
+    ``allowed_roots`` and ``max_file_size_bytes`` come from settings at public
+    API call sites — sources don't reach into settings themselves so trusted
+    internal callers and tests can drive the constraints directly.
 
     ``per_file_metadata`` is matched on either the relative path under
     the resolved root (``item_id``) or the bare filename, with the
@@ -107,10 +107,7 @@ class FolderSource(KBIngestionSource):
 
         allowed_roots = self.source_config.get("allowed_roots") or []
         if not allowed_roots:
-            msg = (
-                "FolderSource refuses to walk without an allow-list. Configure "
-                "LANGFLOW_KB_ALLOWED_FOLDER_ROOTS or pass 'allowed_roots' in source_config."
-            )
+            msg = "FolderSource refuses to walk without an allow-list. Configure LANGFLOW_KB_ALLOWED_FOLDER_ROOTS."
             raise ValueError(msg)
 
         resolved_roots = [Path(r).expanduser().resolve() for r in allowed_roots]

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -12,7 +12,7 @@ import { cn } from "@/utils/utils";
 
 export interface SessionMoreMenuProps {
   onRename: () => void;
-  onMessageLogs?: () => void;
+  onMessageLogs?: (triggerElement: HTMLElement | null) => void;
   onDelete: () => void;
   onClearChat?: () => void;
   showMessageLogs?: boolean;
@@ -62,6 +62,7 @@ export function SessionMoreMenu({
   const { t } = useTranslation();
   const [selectValue, setSelectValue] = useState("");
   const [internalOpen, setInternalOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   // Use controlled state if provided, otherwise use internal state
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
@@ -74,7 +75,7 @@ export function SessionMoreMenu({
         onRename();
         break;
       case "messageLogs":
-        onMessageLogs?.();
+        onMessageLogs?.(triggerRef.current);
         break;
       case "clearChat":
         onClearChat?.();
@@ -101,6 +102,7 @@ export function SessionMoreMenu({
           content={tooltipContent}
         >
           <SelectTrigger
+            ref={triggerRef}
             className={cn(
               "h-8 w-8 border-none bg-transparent p-2 rounded transition-colors text-muted-foreground hover:bg-accent hover:text-foreground focus:ring-0",
               !isVisible && "invisible group-hover:visible",
@@ -125,7 +127,10 @@ export function SessionMoreMenu({
           align={align}
           sideOffset={sideOffset}
           className={cn("p-0", contentClassName)}
-          onCloseAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            triggerRef.current?.focus();
+          }}
         >
           {showRename && (
             <SelectItem

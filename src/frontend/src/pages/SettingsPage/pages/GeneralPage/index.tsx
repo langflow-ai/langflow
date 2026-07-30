@@ -8,6 +8,8 @@ import {
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
 import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
+import { CustomRegistrationData } from "@/customization/components/custom-registration-data";
+import { CustomTelemetryToggle } from "@/customization/components/custom-telemetry-toggle";
 import { CustomTermsLinks } from "@/customization/components/custom-terms-links";
 import { ENABLE_PROFILE_ICONS } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
@@ -36,7 +38,7 @@ export const GeneralPage = () => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);
-  const { password, cnfPassword, profilePicture } = inputState;
+  const { currentPassword, password, cnfPassword, profilePicture } = inputState;
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const { storeApiKey } = useContext(AuthContext);
@@ -56,11 +58,15 @@ export const GeneralPage = () => {
       return;
     }
 
-    if (password !== "") {
+    if (currentPassword !== "" && password !== "") {
       mutateResetPassword(
-        { user_id: userData!.id, password: { password } },
+        {
+          user_id: userData!.id,
+          password: { current_password: currentPassword, password },
+        },
         {
           onSuccess: () => {
+            handleInput({ target: { name: "currentPassword", value: "" } });
             handleInput({ target: { name: "password", value: "" } });
             handleInput({ target: { name: "cnfPassword", value: "" } });
             setSuccessData({ title: t("success.changesSaved") });
@@ -156,6 +162,7 @@ export const GeneralPage = () => {
 
         {!autoLogin && (
           <PasswordFormComponent
+            currentPassword={currentPassword}
             password={password}
             cnfPassword={cnfPassword}
             handleInput={handleInput}
@@ -163,6 +170,10 @@ export const GeneralPage = () => {
           />
         )}
       </div>
+
+      <CustomTelemetryToggle />
+
+      <CustomRegistrationData />
 
       <CustomTermsLinks />
     </div>
