@@ -128,7 +128,7 @@ class TestWatsonxEmbeddingsComponent:
         mock_get.assert_called_once()
         call_args = mock_get.call_args
         assert "https://us-south.ml.cloud.ibm.com/ml/v1/foundation_model_specs" in call_args[0]
-        assert call_args[1]["params"]["version"] == "2024-09-16"
+        assert call_args[1]["params"]["version"] == "2026-04-15"
         assert call_args[1]["params"]["filters"] == "function_embedding,!lifecycle_withdrawn:and"
         assert call_args[1]["timeout"] == 10
 

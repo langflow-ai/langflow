@@ -367,7 +367,7 @@ def get_watsonx_llm_models(
     try:
         endpoint = f"{base_url}/ml/v1/foundation_model_specs"
         params = {
-            "version": "2024-09-16",
+            "version": "2026-04-15",
             "filters": "function_text_chat,!lifecycle_withdrawn",
         }
         # base_url is tenant-controlled: block SSRF to internal/cloud-metadata hosts (the
@@ -402,7 +402,7 @@ def get_watsonx_embedding_models(
     try:
         endpoint = f"{base_url}/ml/v1/foundation_model_specs"
         params = {
-            "version": "2024-09-16",
+            "version": "2026-04-15",
             "filters": "function_embedding,!lifecycle_withdrawn:and",
         }
         # base_url is tenant-controlled: block SSRF to internal/cloud-metadata hosts (the
