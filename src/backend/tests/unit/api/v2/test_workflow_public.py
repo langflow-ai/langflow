@@ -239,7 +239,7 @@ async def test_public_endpoint_namespaces_caller_session(client: AsyncClient, pu
         assert response.status_code == codes.OK
         await _read_stream(response)
 
-    expected_namespace = str(compute_virtual_flow_id(client_id, public_flow_id))
+    expected_namespace = str(compute_virtual_flow_id(client_id, public_flow_id, principal_type="client"))
     sent_inputs = captured["inputs"]
     assert sent_inputs is not None
     assert sent_inputs.session == f"{expected_namespace}:{victim_session}"
@@ -272,7 +272,7 @@ async def test_public_endpoint_uses_virtual_flow_id_for_storage(client: AsyncCli
         assert response.status_code == codes.OK
         await _read_stream(response)
 
-    expected_virtual = compute_virtual_flow_id(client_id, public_flow_id)
+    expected_virtual = compute_virtual_flow_id(client_id, public_flow_id, principal_type="client")
     assert captured["flow_id"] == expected_virtual
     assert captured["source_flow_id"] == public_flow_id
 
@@ -338,6 +338,39 @@ async def test_public_endpoint_runs_as_flow_owner(client: AsyncClient, public_fl
         owner_id = flow.user_id
 
     assert captured["current_user"].id == owner_id
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_public_endpoint_builds_from_server_sanitized_flow_data(client: AsyncClient, public_flow_id, monkeypatch):
+    """Stored component code is replaced before the anonymous v2 run starts."""
+    import langflow.api.v2.workflow_public as workflow_public_module
+
+    captured: dict = {}
+    _stub_generate_flow_events(monkeypatch, captured)
+    sanitized = {
+        "nodes": [{"id": "trusted-node", "data": {"type": "TrustedComponent"}}],
+        "edges": [],
+    }
+
+    async def _prepare(_flow_data):
+        return sanitized
+
+    monkeypatch.setattr(workflow_public_module, "prepare_public_flow_build", _prepare)
+
+    _send_unauthenticated(client, "trusted-code-test-client")
+    async with client.stream(
+        "POST",
+        "api/v2/workflows/public",
+        json={"flow_id": str(public_flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    ) as response:
+        assert response.status_code == codes.OK
+        await _read_stream(response)
+
+    assert captured["data"] is not None
+    assert captured["data"].nodes == sanitized["nodes"]
+    assert captured["data"].edges == sanitized["edges"]
 
 
 @pytest.mark.benchmark
