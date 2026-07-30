@@ -36,19 +36,21 @@ def test_bundle_build_only_restamps_unpublished_versions() -> None:
     assert "Relax bundle lfx floor for pre-release" in bundle_job
 
 
-def test_nightly_coordinates_core_from_tag_commit_through_publish() -> None:
+def test_nightly_coordinates_base_from_tag_commit_through_publish() -> None:
     nightly_build = NIGHTLY_BUILD_PATH.read_text(encoding="utf-8")
     nightly_release = NIGHTLY_RELEASE_PATH.read_text(encoding="utf-8")
     cross_platform = CROSS_PLATFORM_PATH.read_text(encoding="utf-8")
 
-    assert "src/langflow-core/pyproject.toml" in nightly_build
-    assert "build-nightly-core:" in nightly_release
-    assert "dist-nightly-core" in nightly_release
-    assert "publish-nightly-core:" in nightly_release
-    assert 'core-artifact-name: "dist-nightly-core"' in nightly_release
-    assert "needs: [build-nightly-main, test-cross-platform, publish-nightly-core" in nightly_release
-    assert "core-artifact-name:" in cross_platform
-    assert "./core-dist" in cross_platform
+    assert "src/langflow-core/pyproject.toml" not in nightly_build
+    assert "build-nightly-core:" not in nightly_release
+    assert "dist-nightly-core" not in nightly_release
+    assert "publish-nightly-core:" not in nightly_release
+    assert 'base-artifact-name: "dist-nightly-base"' in nightly_release
+    assert "publish-nightly-base" in nightly_release
+    assert "core-artifact-name:" not in cross_platform
+    assert "./core-dist" not in cross_platform
+    assert "test-base-runtime:" in cross_platform
+    assert "base-test-env/bin/langflow run" in cross_platform
 
 
 def test_release_docker_builds_consume_built_wheels() -> None:
@@ -68,6 +70,6 @@ def test_release_docker_builds_consume_built_wheels() -> None:
 if __name__ == "__main__":
     test_finalized_bundles_do_not_influence_shared_rc_number()
     test_bundle_build_only_restamps_unpublished_versions()
-    test_nightly_coordinates_core_from_tag_commit_through_publish()
+    test_nightly_coordinates_base_from_tag_commit_through_publish()
     test_release_docker_builds_consume_built_wheels()
     print("All release workflow tests passed.")
