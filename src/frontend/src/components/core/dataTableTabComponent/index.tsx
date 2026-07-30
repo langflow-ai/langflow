@@ -7,6 +7,20 @@ import TableComponent, {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/utils/utils";
 
+/**
+ * Shared shell for the Files and Knowledge-Bases table tabs. It owns only the
+ * genuinely common surface: the search input, the header/toolbar row, the
+ * loading/empty short-circuit, the shared AG-Grid defaults and the multi-select
+ * handler.
+ *
+ * The `ReactNode` slots (`loadingState`, `emptyState`, `toolbarActions`,
+ * `children`) and the AG-Grid passthroughs (`editable`, `onCellKeyDown`,
+ * `onRowClicked`, `getRowId`, `gridOptions`, `tableRef`, `tableClassName`) exist
+ * to FREEZE each consumer's current DOM during the two-into-one extraction —
+ * they are not a design goal. A third consumer, or further divergence, should
+ * narrow this surface (e.g. extract a header component and a `useTableSelection`
+ * hook) rather than grow it one prop per tab.
+ */
 export interface DataTableTabProps<TData> {
   columnDefs: ColDef[];
   /** Row data already sorted by the consumer tab. */
