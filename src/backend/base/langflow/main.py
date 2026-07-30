@@ -42,6 +42,7 @@ from langflow.services.database.models.deployment.exceptions import DeploymentGu
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
     get_background_execution_service,
+    get_db_service,
     get_queue_service,
     get_service,
     get_settings_service,
@@ -49,6 +50,7 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.schema import ServiceType
+from langflow.services.telemetry.opentelemetry import instrument_db_pool
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
@@ -553,6 +555,10 @@ def get_lifespan(*, fix_migration=False, version=None):
             # needs the running loop, and under gunicorn the services are initialized in the
             # master before the fork, so a task created there would not exist in the workers.
             lag_monitor = start_event_loop_lag_monitor(telemetry_service.ot.meter_provider)
+            # Pool saturation is read from the live engine at collection time, so it has to be
+            # registered after the database service exists. No-op on SQLite, whose StaticPool
+            # counts nothing.
+            instrument_db_pool(telemetry_service.ot.meter_provider, get_db_service().engine)
 
             yield
         except asyncio.CancelledError:
