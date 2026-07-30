@@ -21,7 +21,8 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi.encoders import jsonable_encoder
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, HumanMessage
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.prompts import ChatPromptTemplate
 from lfx.base.models.model import LCModelComponent
@@ -30,6 +31,8 @@ from lfx.schema.message import Message
 from pydantic import Field
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from langchain_core.callbacks import CallbackManagerForLLMRun
 
 # Verbatim provider response captured from a live claude-sonnet-5 call.
@@ -98,6 +101,18 @@ class RateLimitedChatModel(BaseChatModel):
     ) -> ChatResult:
         self.call_count += 1
         raise ProviderBadRequestError(UNRELATED_ERROR)
+
+
+class PartialThenFailStreamingModel:
+    """Yield once before failing to verify retries never duplicate partial output."""
+
+    temperature: float | None = 0.1
+    call_count: int = 0
+
+    def stream(self, _inputs: Any) -> Iterator[AIMessageChunk]:
+        self.call_count += 1
+        yield AIMessageChunk(content="partial")
+        raise ProviderBadRequestError(ANTHROPIC_TEMPERATURE_ERROR)
 
 
 class _Probe(LCModelComponent):
@@ -268,6 +283,44 @@ class TestSyncGetChatResultRetry:
 
         assert result == "ok"
         assert model.seen_temperatures == [0.1, None]
+
+    def test_should_remediate_the_model_inside_an_incoming_wrapper(self):
+        from lfx.base.models.chat_result import get_chat_result
+
+        model = TemperatureSensitiveChatModel(temperature=0.1)
+        wrapped = model | StrOutputParser()
+
+        result = get_chat_result(
+            runnable=wrapped,
+            remediation_target=model,
+            input_value="say ok",
+        )
+
+        assert result == "ok"
+        assert model.seen_temperatures == [0.1, None]
+
+    def test_should_retry_a_lazy_stream_before_the_first_chunk(self):
+        from lfx.base.models.chat_result import get_chat_result
+
+        model = TemperatureSensitiveChatModel(temperature=0.1)
+
+        chunks = list(get_chat_result(runnable=model, input_value="say ok", stream=True))
+
+        assert [chunk.content for chunk in chunks] == ["ok"]
+        assert model.seen_temperatures == [0.1, None]
+
+    def test_should_not_retry_a_stream_after_emitting_a_chunk(self):
+        from lfx.base.models.chat_result import get_chat_result
+
+        model = PartialThenFailStreamingModel()
+        chunks = iter(get_chat_result(runnable=model, input_value="say ok", stream=True))
+
+        assert next(chunks).content == "partial"
+        with pytest.raises(ProviderBadRequestError, match="temperature"):
+            next(chunks)
+
+        assert model.call_count == 1
+        assert model.temperature == 0.1
 
     def test_should_not_retry_when_the_error_is_unrelated(self):
         from lfx.base.models.chat_result import get_chat_result

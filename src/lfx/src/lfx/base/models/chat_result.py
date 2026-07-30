@@ -1,5 +1,5 @@
 import warnings
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -35,6 +35,48 @@ def _remediate(error: Exception, runnable: Any, applied: set[str]) -> bool:
         return False
     applied.add(remediation.name)
     return True
+
+
+def _configure_runnable(runnable: Any, config: dict | None) -> Any:
+    """Apply the optional parser and tracing configuration to a runnable."""
+    active = runnable
+    if config and config.get("output_parser") is not None:
+        active |= config["output_parser"]
+
+    if config:
+        active = active.with_config(
+            {
+                "run_name": config.get("display_name", ""),
+                "project_name": config.get("get_project_name", lambda: "")(),
+                "callbacks": config.get("get_langchain_callbacks", list)(),
+            }
+        )
+    return active
+
+
+def _stream_with_remediation(
+    runnable: Any,
+    inputs: list | dict,
+    config: dict | None,
+    remediation_target: Any,
+) -> Iterator[Any]:
+    """Iterate a stream inside the retry boundary, retrying only before its first chunk."""
+    applied_remediations: set[str] = set()
+    while True:
+        yielded_chunk = False
+        try:
+            active = _configure_runnable(runnable, config)
+            for chunk in active.stream(inputs):
+                yielded_chunk = True
+                yield chunk
+        except Exception as e:
+            if not yielded_chunk and _remediate(e, remediation_target, applied_remediations):
+                continue
+            if config and config.get("_get_exception_message") and (message := config["_get_exception_message"](e)):
+                raise ValueError(message) from e
+            raise
+        else:
+            return
 
 
 def build_messages_and_runnable(
@@ -76,36 +118,27 @@ def get_chat_result(
     *,
     stream: bool = False,
     token_usage_callback: Callable[[Any], None] | None = None,
+    remediation_target: Any | None = None,
 ):
     if not input_value and not system_message:
         msg = "The message you want to send to the model is empty."
         raise ValueError(msg)
 
-    # A Prompt input turns ``runnable`` into a chain; remediation has to target the
-    # chat model itself, which that chain keeps a reference to.
-    chat_model = runnable
+    # A Prompt input or a caller-supplied structured-output wrapper turns ``runnable``
+    # into a chain; remediation has to target the chat model that chain references.
+    chat_model = remediation_target if remediation_target is not None else runnable
     messages, runnable = build_messages_and_runnable(
         input_value=input_value, system_message=system_message, original_runnable=runnable
     )
 
     inputs: list | dict = messages or {}
+    if stream:
+        return _stream_with_remediation(runnable, inputs, config, chat_model)
+
     applied_remediations: set[str] = set()
     while True:
         try:
-            active: Any = runnable
-            if config and config.get("output_parser") is not None:
-                active |= config["output_parser"]
-
-            if config:
-                active = active.with_config(
-                    {
-                        "run_name": config.get("display_name", ""),
-                        "project_name": config.get("get_project_name", lambda: "")(),
-                        "callbacks": config.get("get_langchain_callbacks", list)(),
-                    }
-                )
-            if stream:
-                return active.stream(inputs)
+            active = _configure_runnable(runnable, config)
             message = active.invoke(inputs)
             if token_usage_callback is not None and hasattr(message, "content"):
                 token_usage_callback(message)
