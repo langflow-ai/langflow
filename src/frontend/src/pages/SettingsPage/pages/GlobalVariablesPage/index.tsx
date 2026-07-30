@@ -19,8 +19,8 @@ import {
   usePermissions,
 } from "@/contexts/permissionsContext";
 import {
+  useDeleteGlobalVariables,
   useGetGlobalVariables,
-  useGlobalVariableUpsert,
 } from "@/controllers/API/queries/variables";
 import CustomVariableShareAction from "@/customization/components/custom-variable-share-action";
 import type { GlobalVariable } from "@/types/global_variables";
@@ -181,7 +181,7 @@ function GlobalVariablesPageContent({
 
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  const { deleteGlobalVariable } = useGlobalVariableUpsert();
+  const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
 
   // Get list of provider variable names to identify provider credentials
   const providerVariableNames = useMemo(
@@ -286,7 +286,7 @@ function GlobalVariablesPageContent({
 
     authorizedIds.forEach((id) => {
       const row = validGlobalVariables.find((variable) => variable.id === id);
-      deleteGlobalVariable(
+      mutateDeleteGlobalVariable(
         { id },
         {
           onError: () => {
