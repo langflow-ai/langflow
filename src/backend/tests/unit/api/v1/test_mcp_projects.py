@@ -431,6 +431,33 @@ async def test_streamable_none_auth_project_runs_as_project_owner(
     assert authenticated_user.is_superuser is False
 
 
+async def test_streamable_none_auth_project_without_owner_returns_not_found(
+    client: AsyncClient,
+    other_test_project,
+    mock_streamable_http_manager,
+    mock_current_user_ctx,
+    enable_mcp_composer,
+):
+    """A public MCP project without an owner must not fall back to superuser identity."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(other_test_project.id, "none")
+    async with session_scope() as session:
+        project = await session.get(Folder, other_test_project.id)
+        assert project is not None
+        project.user_id = None
+        session.add(project)
+
+    response = await client.post(
+        f"api/v1/mcp/project/{other_test_project.id}/streamable",
+        json={"type": "test", "content": "message"},
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "Project owner not found"
+    mock_current_user_ctx.set.assert_not_called()
+    mock_streamable_http_manager.handle_request.assert_not_called()
+
+
 async def test_handle_project_messages_success(
     client: AsyncClient, user_test_project, mock_sse_transport, logged_in_headers
 ):
