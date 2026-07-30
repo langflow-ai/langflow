@@ -133,3 +133,28 @@ async def test_file_backed_sqlite_is_instrumented():
         finally:
             await engine.dispose()
             provider.shutdown()
+
+
+async def test_gauges_retarget_when_the_whole_engine_is_replaced():
+    """Re-instrumenting with a replacement engine must move the gauges to it.
+
+    OpenTelemetry de-duplicates observable gauges by name, so the second registration returns
+    the existing instrument and drops the new callbacks. If the engine were captured per
+    callback, the gauges would keep reporting on the first, disposed engine -- a permanently
+    healthy pool for one that no longer exists. Swapping only ``engine.pool`` does not catch
+    this; the whole engine has to be replaced.
+    """
+    provider, reader = _provider_with_reader()
+    first = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=AsyncAdaptedQueuePool, pool_size=5)
+    second = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=AsyncAdaptedQueuePool, pool_size=5)
+    try:
+        instrument_db_pool(provider, first)
+        instrument_db_pool(provider, second)
+
+        # Hold a connection on the replacement only. A gauge still bound to `first` reports 0.
+        async with second.connect():
+            assert _collect(reader)["langflow_db_pool_connections_in_use"] == 1
+    finally:
+        await first.dispose()
+        await second.dispose()
+        provider.shutdown()

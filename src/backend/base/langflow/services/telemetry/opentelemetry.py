@@ -343,19 +343,27 @@ DB_POOL_GAUGES = (
 )
 
 
-def _pool_observer(engine, method_name: str):
+# The engine the pool gauges report on. Deliberately a module-level cell rather than a value
+# captured in each callback: OpenTelemetry de-duplicates observable gauges by name, so
+# instrumenting a replacement engine returns the *existing* instrument and silently discards the
+# new callbacks. A captured engine would leave the gauges reporting on an engine that is gone,
+# which reads as a permanently healthy pool. Re-instrumentation updates this instead.
+_instrumented_engine = None
+
+
+def _pool_observer(method_name: str):
     """Read one pool counter, never raising into the collection cycle.
 
-    Reads ``engine.pool`` per observation rather than capturing it: ``dispose()`` does not
-    reset a pool in place, it swaps in a fresh one, so a captured pool would keep answering
-    for the dead one and report a permanently healthy zero after any reconnect.
+    Resolves the engine and its pool per observation. ``dispose()`` swaps in a fresh pool
+    rather than resetting one, and a whole engine can be replaced, so nothing here may be
+    captured at registration time.
     """
 
     def observe(_options):
         try:
             # Clamp: SQLAlchemy's overflow() starts at -pool_size, so a healthy pool reports a
             # negative 'overflow'. None of these counters are meaningful below zero.
-            return [Observation(max(getattr(engine.pool, method_name)(), 0))]
+            return [Observation(max(getattr(_instrumented_engine.pool, method_name)(), 0))]
         except Exception:  # noqa: BLE001 - a broken gauge must not stop the other metrics
             return []
 
@@ -372,16 +380,23 @@ def instrument_db_pool(meter_provider, engine) -> None:
     Carries no attributes: the numbers describe this process's pool, and identity on a metric
     label is what makes cardinality explode.
     """
+    global _instrumented_engine  # noqa: PLW0603
+
     pool = getattr(engine, "pool", None)
     if meter_provider is None or pool is None:
         return
+
+    # Point the gauges at this engine before (re-)registering. On a second call the instruments
+    # already exist and the new callbacks are dropped, so this assignment is what actually
+    # re-targets them.
+    _instrumented_engine = engine
 
     meter = meter_provider.get_meter(langflow_meter_name)
     for name, method_name, description in DB_POOL_GAUGES:
         if callable(getattr(pool, method_name, None)):
             meter.create_observable_gauge(
                 name,
-                callbacks=[_pool_observer(engine, method_name)],
+                callbacks=[_pool_observer(method_name)],
                 unit="",
                 description=description,
             )
