@@ -920,6 +920,8 @@ jobs:
       (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped') &&
       (inputs.base-artifact-name != '' || needs.build-if-needed.outputs.base-artifact-name != '')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Setup UV
         uses: astral-sh/setup-uv@v6

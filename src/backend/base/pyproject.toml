@@ -124,7 +124,7 @@ dependencies = [
     "opik>=2.0.0,<3.0.0",
     "traceloop-sdk>=0.43.1,<1.0.0",
     "openlayer>=0.9.0,<1.0.0",
-    "kubernetes==31.0.0",
+    "kubernetes>=31.0.0,<33.0.0",
     "aiobotocore>=3.7.0,<4.0.0",
 ]
 

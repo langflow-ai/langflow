@@ -22,12 +22,22 @@ The component talks to the API over HTTP and does not require the `paddleocr` Py
 The **Paddle** bundle is included in the `lfx-paddle` Extension bundle. It is
 not installed by the default `uv pip install langflow` profile.
 
-Install it directly, or include it with the other opt-in standalone and
-long-tail bundles:
+Install it directly:
 
 ```bash
 uv pip install lfx-paddle
+```
+
+Alternatively, include it with the other opt-in standalone and long-tail
+bundles:
+
+```bash
 uv pip install "langflow[bundles]"
+```
+
+Then run Langflow:
+
+```bash
 uv run langflow run
 ```
 

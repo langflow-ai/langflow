@@ -7,6 +7,7 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 PUBLISHED_IMAGES = (
     pytest.param("build_and_push.Dockerfile", "base", id="base"),
     pytest.param("build_and_push.Dockerfile", "full", id="full"),
+    pytest.param("build_and_push.Dockerfile", "full-bundles", id="full-bundles"),
     pytest.param("build_and_push_backend.Dockerfile", None, id="backend"),
     pytest.param("build_and_push_ep.Dockerfile", None, id="ep"),
 )

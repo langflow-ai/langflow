@@ -63,6 +63,7 @@ COPY ./src/lfx/README.md /app/src/lfx/README.md
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
+COPY ./scripts/ci/rewrite_langflow_base_constraint.sh /tmp/rewrite_langflow_base_constraint.sh
 
 # Every directory under src/bundles is a uv workspace member. Copy the tree
 # once so adding a bundle does not also require another Dockerfile edit.
@@ -106,7 +107,8 @@ COPY --from=frontend-builder /tmp/frontend-build/ /app/src/backend/base/langflow
 
 # Release workflows can resolve an RC version without mutating the source tag.
 # The dependency lock was already resolved from the unmodified workspace.
-RUN if [ -n "$BASE_VERSION" ]; then \
+RUN --mount=type=cache,target=/root/.cache/uv \
+    if [ -n "$BASE_VERSION" ]; then \
         sed -i "s/^version = .*/version = \"${BASE_VERSION}\"/" \
             /app/src/backend/base/pyproject.toml; \
     fi \
@@ -142,13 +144,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     && if [ -n "$BASE_VERSION" ]; then \
         sed -i "s/^version = .*/version = \"${BASE_VERSION}\"/" \
             /app/src/backend/base/pyproject.toml; \
-        base_major=${BASE_VERSION%%.*}; \
-        base_remainder=${BASE_VERSION#*.}; \
-        base_minor=${base_remainder%%.*}; \
-        base_upper_bound="${base_major}.$((base_minor + 1)).dev0"; \
-        sed -i -E \
-            "s|\"langflow-base(\\[[^]]+\\])?[^\";]*\"|\"langflow-base\\1>=${BASE_VERSION},<${base_upper_bound}\"|g" \
-            /app/pyproject.toml; \
+        sh /tmp/rewrite_langflow_base_constraint.sh "$BASE_VERSION" /app/pyproject.toml; \
     fi \
     && uv sync --frozen --extra postgresql --no-default-groups --no-editable \
     && uv pip check --python /app/.venv/bin/python \
@@ -175,8 +171,12 @@ FROM full-builder AS full-bundles-builder
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --extra postgresql --extra bundles \
         --no-default-groups --no-editable \
+    && python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
+        --python /app/.venv/bin/python \
+        --mode main \
+        --frontend-source /app/src/backend/base/langflow/frontend \
     && uv pip check --python /app/.venv/bin/python \
-    && /app/.venv/bin/python -c 'import importlib.metadata as m; names = {d.metadata["Name"].lower() for d in m.distributions()}; required = {"lfx-bundles", "lfx-arxiv", "lfx-duckduckgo", "lfx-empiriolabs", "lfx-exa", "lfx-firecrawl", "lfx-nextplaid", "lfx-paddle", "lfx-valkey"}; missing = sorted(required - names); assert not missing, f"full-bundles image is missing distributions: {missing}"'
+    && /app/.venv/bin/python -c 'import importlib.metadata as m; from packaging.requirements import Requirement; names = {d.metadata["Name"].lower() for d in m.distributions()}; requirements = [Requirement(value) for value in (m.requires("langflow") or ())]; required = {requirement.name.lower() for requirement in requirements if requirement.marker is not None and requirement.marker.evaluate({"extra": "bundles"})}; missing = sorted(required - names); assert not missing, f"full-bundles image is missing distributions: {missing}"'
 
 ################################
 # SHARED RUNTIME

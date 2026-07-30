@@ -49,6 +49,7 @@ COPY ./src/lfx/README.md /app/src/lfx/README.md
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
+COPY ./scripts/ci/rewrite_langflow_base_constraint.sh /tmp/rewrite_langflow_base_constraint.sh
 # Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
 # is a uv workspace member, so each bundle's pyproject.toml must be present
 # for ``uv sync --no-install-project`` to resolve the workspace.  Copy the
@@ -81,13 +82,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     fi \
     && if [ -n "$BASE_VERSION" ]; then \
         sed -i "s/^version = .*/version = \"${BASE_VERSION}\"/" /app/src/backend/base/pyproject.toml; \
-        base_major=${BASE_VERSION%%.*}; \
-        base_remainder=${BASE_VERSION#*.}; \
-        base_minor=${base_remainder%%.*}; \
-        base_upper_bound="${base_major}.$((base_minor + 1)).dev0"; \
-        sed -i -E \
-            "s|\"langflow-base(\\[[^]]+\\])?[^\";]*\"|\"langflow-base\\1>=${BASE_VERSION},<${base_upper_bound}\"|g" \
-            /app/pyproject.toml; \
+        sh /tmp/rewrite_langflow_base_constraint.sh "$BASE_VERSION" /app/pyproject.toml; \
     fi \
     && RUSTFLAGS='--cfg reqwest_unstable' \
         uv sync --frozen --no-editable --extra nv-ingest --extra postgresql --no-group dev \

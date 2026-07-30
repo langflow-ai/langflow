@@ -1,8 +1,8 @@
 """Pydantic models for the v0 Extension manifest schema.
 
 A Langflow Extension is the distribution unit that gets pip-installed. It
-ships one or more Bundles (named groups of components) plus a manifest at
-the distribution root.  The manifest tells Langflow:
+ships Bundles (named groups of components) and/or model providers, plus a
+manifest at the distribution root. The manifest tells Langflow:
 
     - which Bundles to register (``bundles``),
     - what component-base-class API surface the Bundle was built against

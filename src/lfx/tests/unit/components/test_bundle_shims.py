@@ -208,6 +208,22 @@ def test_component_walk_skip_includes_compat_shims() -> None:
     assert "knowledge_bases" in detected
 
 
+def test_policies_compat_shim_preserves_transitive_import_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A broken ToolGuard install must not be misreported as an absent extension."""
+    shim = COMPONENTS_DIR / "models_and_agents" / "policies" / "__init__.py"
+
+    def _raise_transitive_import_error(_name: str):
+        message = "No module named 'toolguard_runtime'"
+        raise ModuleNotFoundError(message, name="toolguard_runtime")
+
+    monkeypatch.setattr(importlib, "import_module", _raise_transitive_import_error)
+
+    with pytest.raises(ModuleNotFoundError, match="toolguard_runtime") as exc_info:
+        _import_file_as("synthetic_shim_policies", shim)
+
+    assert exc_info.value.name == "toolguard_runtime"
+
+
 # ---------------------------------------------------------------------------
 # Mechanism tests against a synthetic shim (hermetic)
 # ---------------------------------------------------------------------------

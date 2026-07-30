@@ -336,11 +336,14 @@ jobs:
         run: mkdir -p bundles-dist
 
       - name: Build base, default, and full application images
+        env:
+          BASE_VERSION: ${{ inputs.base-version }}
+          MAIN_VERSION: ${{ inputs.main-version }}
         run: |
           set -euo pipefail
           common_args=(
-            --build-arg "MAIN_VERSION=${{ inputs.main-version }}"
-            --build-arg "BASE_VERSION=${{ inputs.base-version }}"
+            --build-arg "MAIN_VERSION=$MAIN_VERSION"
+            --build-arg "BASE_VERSION=$BASE_VERSION"
             -f docker/build_and_push.Dockerfile
           )
           docker build "${common_args[@]}" --target base -t "langflow-inventory:base-${{ matrix.arch }}" .

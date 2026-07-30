@@ -62,6 +62,9 @@ the curated standalone `lfx-*` extensions.
     version-aligned with `langflow` through stable, release-candidate, patch,
     and nightly releases. A dependency such as `langflow-base~=0.12` remains on
     the old package line and must be updated explicitly to select 1.12.
+    Before upgrading an existing environment, remove the retired package with
+    `pip uninstall langflow-core`; leaving an older `langflow-core` installed
+    can create conflicting dependency requirements.
 
 - Base command and image tags
 
@@ -91,6 +94,19 @@ the curated standalone `lfx-*` extensions.
     The default base and curated Langflow installations do not install PyTorch
     or TorchVision. Components that require them must be installed through an
     explicit opt-in profile.
+
+- IBM watsonx Orchestrate clients move to the IBM extension
+
+    The base deployment adapter remains feature-flagged, but its client
+    dependencies now ship with `lfx-ibm`. Install `lfx-ibm` or use the
+    compatibility extra `langflow-base[ibm-watsonx-clients]` before enabling
+    the adapter in a base-only environment.
+
+- LiteLLM remains optional in base-only environments
+
+    `langflow-base` no longer imports LiteLLM by default. Install
+    `langflow-base[litellm]` when custom components or IDE tooling depend on
+    the LiteLLM compatibility surface.
 
 ## 1.11.x
 

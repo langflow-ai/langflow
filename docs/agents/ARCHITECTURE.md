@@ -7,7 +7,7 @@ adding a new file.
 
 ## Package dependency graph (one-way only)
 
-```
+```text
 frontend (TS)  ──HTTP──▶  langflow-base (UI/API, services, graph, db, alembic)
                                    │
                                    ▼ may import

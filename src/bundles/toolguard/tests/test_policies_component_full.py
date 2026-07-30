@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -298,6 +299,31 @@ def test_work_dir_property():
 
     assert "test_project" in str(work_dir)
     assert work_dir.name == "test_project"
+
+
+def test_work_dir_isolates_flows_and_components_with_the_same_project():
+    """Identical project names cannot share generated guards across runtime identities."""
+
+    def _component(flow_id: str, component_id: str) -> PoliciesComponent:
+        component = PoliciesComponent()
+        component.project = "shared project"
+        component._vertex = SimpleNamespace(
+            id=component_id,
+            graph=SimpleNamespace(flow_id=flow_id, user_id="shared-user"),
+        )
+        return component
+
+    flow_a_node_a = _component("flow-a", "policies-a")
+    flow_b_node_a = _component("flow-b", "policies-a")
+    flow_a_node_b = _component("flow-a", "policies-b")
+
+    work_dirs = {
+        flow_a_node_a.work_dir,
+        flow_b_node_a.work_dir,
+        flow_a_node_b.work_dir,
+    }
+    assert len(work_dirs) == 3
+    assert all(work_dir.name == "shared_project" for work_dir in work_dirs)
 
 
 def test_to_snake_case():

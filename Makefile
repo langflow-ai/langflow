@@ -445,6 +445,8 @@ endif
 
 publish_testpypi: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
+	$(MAKE) publish_base_testpypi
+	$(MAKE) publish_langflow_testpypi
 
 ######################
 # LFX PACKAGE

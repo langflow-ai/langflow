@@ -1591,7 +1591,7 @@ def main() -> int:
             "patches the workspace, and -- with ``--migration-release`` -- "
             "appends migration entries, writes the pilot test, surgically "
             "removes the bundle's category from component_index.json, and "
-            "patches both Dockerfiles."
+            "patches the backend Dockerfile."
         )
     )
     parser.add_argument("--bundle", required=True, help="Snake-case provider name.")

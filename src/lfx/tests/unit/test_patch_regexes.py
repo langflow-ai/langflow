@@ -114,7 +114,7 @@ postgresql = ["langflow-base[postgresql]~=1.12.0"]
 
 class TestLfxPinSubstitution:
     V = "1.12.0"
-    B = "1.12.0"
+    B = "1.12.1"
 
     def test_replaces_tilde_form(self):
         # Stable form written by make patch
@@ -137,7 +137,7 @@ class TestLfxPinSubstitution:
 
     def test_updates_version_field(self):
         txt = 'version = "0.10.0"'
-        assert 'version = "1.12.0"' in _patch_langflow_base_pyproject(txt, self.B, self.V)
+        assert 'version = "1.12.1"' in _patch_langflow_base_pyproject(txt, self.B, self.V)
 
     def test_realistic_langflow_base_fragment(self):
         txt = """\
@@ -149,8 +149,8 @@ dependencies = [
     "pydantic>=2.0.0",
 ]
 """
-        result = _patch_langflow_base_pyproject(txt, "1.12.0", "1.12.0")
-        assert 'version = "1.12.0"' in result
+        result = _patch_langflow_base_pyproject(txt, "1.12.1", "1.12.0")
+        assert 'version = "1.12.1"' in result
         assert '"lfx~=1.12.0"' in result
         assert '"pydantic>=2.0.0"' in result  # unrelated dep untouched
 
@@ -165,7 +165,7 @@ dependencies = [
     "pydantic>=2.0.0",
 ]
 """
-        result = _patch_langflow_base_pyproject(txt, "1.12.0", "1.12.0")
+        result = _patch_langflow_base_pyproject(txt, "1.12.1", "1.12.0")
         assert '"lfx~=1.12.0"' in result
         assert '"pydantic>=2.0.0"' in result
 

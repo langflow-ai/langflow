@@ -95,7 +95,7 @@ jobs:
           version=$(${{ env.CONTAINER_RUNTIME }} run --rm --entrypoint python langflowai/langflow:base-latest-dev -c 'from importlib.metadata import version; print(version("langflow-base"))')
           if [ "$expected_version" != "$version" ]; then
             echo "Expected base version: $expected_version"
-            echo "Actual core version: $version"
+            echo "Actual base version: $version"
             exit 1
           fi
 

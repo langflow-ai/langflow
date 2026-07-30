@@ -478,7 +478,7 @@ def load_extension(
                     code="reload-bundle-name-mismatch",
                     message=f"Extension {manifest.id!r} does not declare bundle {bundle_name!r}.",
                     location=str(source.path),
-                    content=manifest.bundles[0].name if manifest.bundles else bundle_name,
+                    content=bundle_name,
                     hint="Select one of the bundle names declared in extension.json.",
                 )
             )

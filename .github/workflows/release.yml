@@ -93,32 +93,38 @@ jobs:
           ref: ${{ inputs.release_tag }}
           fetch-depth: 0 # Fetch all history - required for tags (?)
       - name: Validate release source
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          RELEASE_REF: ${{ inputs.release_tag }}
         run: |
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
+          if [ "$DRY_RUN" = "true" ]; then
             resolved=$(git rev-parse HEAD)
-            if [[ ! "$resolved" =~ ^[0-9a-f]{40}$ ]]; then
-              echo "Error: dry-run ref did not resolve to an immutable commit SHA."
+            if [[ "$RELEASE_REF" =~ ^[0-9a-fA-F]{40}$ ]] ||
+               [[ "$RELEASE_REF" =~ ^refs/pull/[0-9]+/(head|merge)$ ]] ||
+               git show-ref --verify --quiet "refs/tags/$RELEASE_REF"; then
+              echo "Validated dry-run source '$RELEASE_REF' at $resolved."
+              exit 0
+            else
+              echo "Error: dry-run source must be a full commit SHA, pull request ref, or existing tag."
               exit 1
             fi
-            echo "Validated dry-run source '${{ inputs.release_tag }}' at $resolved."
-            exit 0
           fi
 
           # Check if the input exists as a tag
-          if ! git tag -l | grep -q "^${{ inputs.release_tag }}$"; then
-            echo "Error: '${{ inputs.release_tag }}' is not a valid tag."
+          if ! git show-ref --verify --quiet "refs/tags/$RELEASE_REF"; then
+            echo "Error: '$RELEASE_REF' is not a valid tag."
             echo "Available tags:"
             git tag -l | head -20
             exit 1
           fi
 
           # Check if the input also exists as a branch (warn if so, but don't fail)
-          if git branch -r | grep -q "origin/${{ inputs.release_tag }}$"; then
-            echo "Tag '${{ inputs.release_tag }}' also exists as a branch. Exiting out of caution."
+          if git show-ref --verify --quiet "refs/remotes/origin/$RELEASE_REF"; then
+            echo "Tag '$RELEASE_REF' also exists as a branch. Exiting out of caution."
             exit 1
           fi
 
-          echo "Validated: '${{ inputs.release_tag }}' is a valid tag."
+          echo "Validated: '$RELEASE_REF' is a valid tag."
 
   validate-tag-format:
     name: Validate Tag Format and Check for Duplicates
@@ -165,12 +171,13 @@ jobs:
   validate-dependencies:
     name: Validate Release Dependencies
     runs-on: ubuntu-latest
-    if: ${{ inputs.release_package_base || inputs.release_package_main || inputs.release_lfx || inputs.release_sdk || inputs.build_docker_base || inputs.build_docker_main }}
+    if: ${{ inputs.release_package_base || inputs.release_package_main || inputs.release_lfx || inputs.release_sdk || inputs.release_bundles || inputs.build_docker_base || inputs.build_docker_main }}
     needs: [validate-tag]
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
+          persist-credentials: false
           ref: ${{ inputs.release_tag }}
       - name: Validate selected package dependencies
         run: |
@@ -769,29 +776,6 @@ jobs:
             exit 1
           fi
           echo "✅ Version verified: $EXPECTED_VERSION"
-      - name: Verify base wheel composition
-        run: |
-          WHEEL_FILE=$(find dist -name 'langflow_base-*.whl' -type f)
-          uv run --no-project --with packaging python - "$WHEEL_FILE" <<'PY'
-          import email
-          import pathlib
-          import sys
-          import zipfile
-
-          wheel = pathlib.Path(sys.argv[1])
-          with zipfile.ZipFile(wheel) as archive:
-              names = archive.namelist()
-              metadata_name = next(name for name in names if name.endswith(".dist-info/METADATA"))
-              metadata = email.message_from_bytes(archive.read(metadata_name))
-              entry_points = archive.read(
-                  next(name for name in names if name.endswith(".dist-info/entry_points.txt"))
-              ).decode()
-
-          assert metadata["Name"] == "langflow-base"
-          assert {"all", "complete"} <= set(metadata.get_all("Provides-Extra", []))
-          assert "langflow = langflow.__main__:main" in entry_points
-          assert "langflow-base" not in entry_points
-          PY
       - name: Test CLI
         run: |
           cd src/lfx
@@ -901,13 +885,36 @@ jobs:
             exit 1
           fi
           echo "✅ Version verified: $EXPECTED_VERSION"
+      - name: Verify base wheel composition
+        run: |
+          WHEEL_FILE=$(find dist -name 'langflow_base-*.whl' -type f)
+          uv run --no-project --with packaging python - "$WHEEL_FILE" <<'PY'
+          import email
+          import pathlib
+          import sys
+          import zipfile
+
+          wheel = pathlib.Path(sys.argv[1])
+          with zipfile.ZipFile(wheel) as archive:
+              names = archive.namelist()
+              metadata_name = next(name for name in names if name.endswith(".dist-info/METADATA"))
+              metadata = email.message_from_bytes(archive.read(metadata_name))
+              entry_points = archive.read(
+                  next(name for name in names if name.endswith(".dist-info/entry_points.txt"))
+              ).decode()
+
+          assert metadata["Name"] == "langflow-base"
+          assert {"all", "complete"} <= set(metadata.get_all("Provides-Extra", []))
+          assert "langflow = langflow.langflow_launcher:main" in entry_points
+          assert "langflow-base" not in entry_points
+          PY
       - name: Test CLI
         run: |
           # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
           mv dist/*.whl src/backend/base/dist
           uv pip install src/backend/base/dist/*.whl
-          python - <<'PY'
+          uv run --no-sync python - <<'PY'
           import re
           from importlib.metadata import distributions
 
@@ -918,7 +925,10 @@ jobs:
           assert not forbidden, f"forbidden base distributions: {sorted(forbidden)}"
           PY
           command -v langflow
-          ! command -v langflow-base
+          if command -v langflow-base; then
+            echo "Unexpected langflow-base console command is installed."
+            exit 1
+          fi
           uv run python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
@@ -1084,6 +1094,7 @@ jobs:
           import email
           import pathlib
           import sys
+          import tomllib
           import zipfile
 
           from packaging.requirements import Requirement
@@ -1097,15 +1108,10 @@ jobs:
 
           requirements = [Requirement(value) for value in metadata.get_all("Requires-Dist", [])]
           dependency_names = {canonicalize_name(requirement.name) for requirement in requirements}
-          opt_in_standalone = {
-              "lfx-arxiv",
-              "lfx-duckduckgo",
-              "lfx-empiriolabs",
-              "lfx-exa",
-              "lfx-firecrawl",
-              "lfx-nextplaid",
-              "lfx-paddle",
-              "lfx-valkey",
+          root_metadata = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))
+          expected_bundle_names = {
+              canonicalize_name(Requirement(value).name)
+              for value in root_metadata["project"]["optional-dependencies"]["bundles"]
           }
           bundle_requirements = [
               requirement
@@ -1120,7 +1126,7 @@ jobs:
           assert "langflow-core" not in dependency_names
           assert any(name.startswith("lfx-") for name in dependency_names)
           assert "bundles" in metadata.get_all("Provides-Extra", [])
-          assert bundle_requirement_names == {"lfx-bundles", *opt_in_standalone}
+          assert bundle_requirement_names == expected_bundle_names
           lfx_bundles = next(
               requirement
               for requirement in bundle_requirements

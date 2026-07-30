@@ -105,6 +105,17 @@ def test_multi_bundle_requires_selection_for_single_result_api(tmp_path: Path) -
     assert result.errors[0].code == "multi-bundle-unsupported"
 
 
+def test_unknown_bundle_selection_reports_the_requested_name(tmp_path: Path) -> None:
+    multi = {**_BASE_MANIFEST, "bundles": [{"name": "alpha", "path": "alpha"}, {"name": "bravo", "path": "bravo"}]}
+    (tmp_path / "extension.json").write_text(json.dumps(multi), encoding="utf-8")
+
+    result = load_extension(tmp_path, bundle_name="charlie")
+
+    assert not result.ok
+    assert result.errors[0].code == "reload-bundle-name-mismatch"
+    assert result.errors[0].content == "charlie"
+
+
 def test_load_extension_bundles_loads_every_manifest_entry(tmp_path: Path) -> None:
     manifest = {
         **_BASE_MANIFEST,

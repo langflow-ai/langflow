@@ -80,8 +80,7 @@ def test_full_langflow_consumes_base_workspace_distribution():
 def test_langflow_base_is_the_only_langflow_console_script_owner():
     distribution_pyprojects = [
         REPO_ROOT / "pyproject.toml",
-        BASE_ROOT / "pyproject.toml",
-        REPO_ROOT / "src" / "lfx" / "pyproject.toml",
+        *sorted((REPO_ROOT / "src").glob("**/pyproject.toml")),
     ]
     langflow_script_owners = [
         pyproject

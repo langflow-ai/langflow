@@ -5,6 +5,7 @@ import re
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
+from uuid import uuid4
 
 from lfx.base.models import LCModelComponent
 from lfx.base.models.unified_models import (
@@ -184,7 +185,28 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
     @property
     def work_dir(self) -> Path:
-        return TOOLGUARD_WORK_DIR / self._to_snake_case(self.project)
+        """Return a path isolated by user, flow, component, and project."""
+        try:
+            user_id = self.user_id
+        except (AttributeError, ValueError):
+            user_id = None
+        try:
+            flow_id = self.flow_id
+        except (AttributeError, ValueError):
+            flow_id = None
+
+        vertex = getattr(self, "_vertex", None)
+        component_id = getattr(self, "_id", None) or getattr(vertex, "id", None)
+        instance_id = getattr(self, "_toolguard_instance_id", None)
+        if instance_id is None:
+            instance_id = uuid4().hex
+            self._toolguard_instance_id = instance_id
+
+        user_namespace = self._to_snake_case(str(user_id)) if user_id else "anonymous"
+        flow_namespace = self._to_snake_case(str(flow_id)) if flow_id else f"standalone_{instance_id}"
+        component_namespace = self._to_snake_case(str(component_id)) if component_id else f"component_{instance_id}"
+        project_namespace = self._to_snake_case(self.project)
+        return TOOLGUARD_WORK_DIR / user_namespace / flow_namespace / component_namespace / project_namespace
 
     def build_model(self) -> LanguageModel:
         llm_model = get_llm(
