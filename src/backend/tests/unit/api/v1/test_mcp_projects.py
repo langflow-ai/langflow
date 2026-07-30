@@ -407,6 +407,30 @@ async def test_streamable_oauth_project_rejects_invalid_api_key(
     mock_streamable_http_manager.handle_request.assert_not_called()
 
 
+async def test_streamable_none_auth_project_runs_as_project_owner(
+    client: AsyncClient,
+    other_test_project,
+    other_test_user,
+    mock_streamable_http_manager,
+    mock_current_user_ctx,
+    enable_mcp_composer,
+):
+    """A public MCP project must not grant the anonymous caller superuser identity."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(other_test_project.id, "none")
+
+    response = await client.post(
+        f"api/v1/mcp/project/{other_test_project.id}/streamable",
+        json={"type": "test", "content": "message"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    mock_streamable_http_manager.handle_request.assert_called_once()
+    authenticated_user = mock_current_user_ctx.set.call_args.args[0]
+    assert authenticated_user.id == other_test_user.id
+    assert authenticated_user.is_superuser is False
+
+
 async def test_handle_project_messages_success(
     client: AsyncClient, user_test_project, mock_sse_transport, logged_in_headers
 ):
