@@ -608,6 +608,13 @@ async def stop_event_loop_lag_monitor(task: asyncio.Task | None) -> None:
     """Cancel the monitor started by :func:`start_event_loop_lag_monitor`. Safe with None."""
     if task is None:
         return
+
+    async def _wait_for_monitor() -> None:
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
     task.cancel()
-    with contextlib.suppress(asyncio.CancelledError):
-        await task
+    # The waiter absorbs only the monitor's expected cancellation. Shielding it keeps
+    # cancellation of the calling lifespan task from being forwarded into that waiter
+    # and mistaken for the monitor's cancellation.
+    await asyncio.shield(_wait_for_monitor())

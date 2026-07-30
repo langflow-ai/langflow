@@ -265,6 +265,30 @@ def test_event_loop_lag_monitor_is_a_noop_without_a_provider():
     assert start_event_loop_lag_monitor(None) is None
 
 
+async def test_stop_event_loop_lag_monitor_preserves_caller_cancellation():
+    """Stopping the monitor must not consume cancellation of the lifespan task."""
+    import asyncio
+
+    from lfx.observability import stop_event_loop_lag_monitor
+
+    async def monitor():
+        await asyncio.Event().wait()
+
+    monitor_task = asyncio.create_task(monitor())
+    await asyncio.sleep(0)
+
+    async def stop_from_cancelled_caller():
+        asyncio.current_task().cancel()
+        await stop_event_loop_lag_monitor(monitor_task)
+
+    caller_task = asyncio.create_task(stop_from_cancelled_caller())
+    with pytest.raises(asyncio.CancelledError):
+        await caller_task
+
+    assert caller_task.cancelled()
+    assert monitor_task.cancelled()
+
+
 @requires_otel
 async def test_event_loop_lag_monitor_records_a_blocked_loop():
     """The point of the metric: a blocked loop must show up as lag.
