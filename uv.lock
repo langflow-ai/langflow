@@ -27,7 +27,6 @@ resolution-markers = [
 members = [
     "langflow",
     "langflow-base",
-    "langflow-core",
     "langflow-sdk",
     "langflow-stepflow",
     "lfx",
@@ -51,6 +50,7 @@ members = [
     "lfx-openai-compatible",
     "lfx-oracle",
     "lfx-paddle",
+    "lfx-toolguard",
     "lfx-valkey",
     "lfx-vllm",
 ]
@@ -7803,36 +7803,37 @@ name = "langflow"
 version = "1.12.0"
 source = { editable = "." }
 dependencies = [
-    { name = "langflow-core" },
+    { name = "langflow-base" },
     { name = "lfx-amazon" },
     { name = "lfx-anthropic" },
-    { name = "lfx-arxiv" },
     { name = "lfx-azure" },
     { name = "lfx-cohere" },
     { name = "lfx-datastax" },
     { name = "lfx-docling" },
-    { name = "lfx-duckduckgo" },
-    { name = "lfx-empiriolabs" },
-    { name = "lfx-exa" },
-    { name = "lfx-firecrawl" },
     { name = "lfx-google" },
     { name = "lfx-ibm" },
-    { name = "lfx-nextplaid" },
     { name = "lfx-ollama" },
     { name = "lfx-openai" },
     { name = "lfx-openai-compatible" },
     { name = "lfx-oracle" },
-    { name = "lfx-paddle" },
-    { name = "lfx-valkey" },
+    { name = "lfx-toolguard" },
     { name = "lfx-vllm" },
 ]
 
 [package.optional-dependencies]
 audio = [
-    { name = "langflow-core", extra = ["audio"] },
+    { name = "langflow-base", extra = ["audio"] },
 ]
 bundles = [
+    { name = "lfx-arxiv" },
     { name = "lfx-bundles", extra = ["all-no-torch"] },
+    { name = "lfx-duckduckgo" },
+    { name = "lfx-empiriolabs" },
+    { name = "lfx-exa" },
+    { name = "lfx-firecrawl" },
+    { name = "lfx-nextplaid" },
+    { name = "lfx-paddle" },
+    { name = "lfx-valkey" },
 ]
 cassio = [
     { name = "cassio" },
@@ -7861,13 +7862,13 @@ nv-ingest = [
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
 ]
 opensearch = [
-    { name = "langflow-core", extra = ["opensearch"] },
+    { name = "langflow-base", extra = ["opensearch"] },
 ]
 pgvector = [
-    { name = "langflow-core", extra = ["pgvector"] },
+    { name = "langflow-base", extra = ["pgvector"] },
 ]
 postgresql = [
-    { name = "langflow-core", extra = ["postgresql"] },
+    { name = "langflow-base", extra = ["postgresql"] },
 ]
 
 [package.dev-dependencies]
@@ -7919,14 +7920,14 @@ requires-dist = [
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "langflow-core", editable = "src/langflow-core" },
-    { name = "langflow-core", extras = ["audio"], marker = "extra == 'audio'", editable = "src/langflow-core" },
-    { name = "langflow-core", extras = ["opensearch"], marker = "extra == 'opensearch'", editable = "src/langflow-core" },
-    { name = "langflow-core", extras = ["pgvector"], marker = "extra == 'pgvector'", editable = "src/langflow-core" },
-    { name = "langflow-core", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "src/langflow-core" },
+    { name = "langflow-base", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["audio"], marker = "extra == 'audio'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["opensearch"], marker = "extra == 'opensearch'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["pgvector"], marker = "extra == 'pgvector'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "src/backend/base" },
     { name = "lfx-amazon", editable = "src/bundles/amazon" },
     { name = "lfx-anthropic", editable = "src/bundles/anthropic" },
-    { name = "lfx-arxiv", editable = "src/bundles/arxiv" },
+    { name = "lfx-arxiv", marker = "extra == 'bundles'", editable = "src/bundles/arxiv" },
     { name = "lfx-azure", editable = "src/bundles/azure" },
     { name = "lfx-bundles", extras = ["all-no-torch"], marker = "extra == 'bundles'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-cohere", editable = "src/bundles/cohere" },
@@ -7935,19 +7936,20 @@ requires-dist = [
     { name = "lfx-docling", extras = ["chunking"], marker = "extra == 'docling-chunking'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["image-description"], marker = "extra == 'docling-image-description'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["local"], marker = "extra == 'docling'", editable = "src/bundles/docling" },
-    { name = "lfx-duckduckgo", editable = "src/bundles/duckduckgo" },
-    { name = "lfx-empiriolabs", editable = "src/bundles/empiriolabs" },
-    { name = "lfx-exa", editable = "src/bundles/exa" },
-    { name = "lfx-firecrawl", editable = "src/bundles/firecrawl" },
+    { name = "lfx-duckduckgo", marker = "extra == 'bundles'", editable = "src/bundles/duckduckgo" },
+    { name = "lfx-empiriolabs", marker = "extra == 'bundles'", editable = "src/bundles/empiriolabs" },
+    { name = "lfx-exa", marker = "extra == 'bundles'", editable = "src/bundles/exa" },
+    { name = "lfx-firecrawl", marker = "extra == 'bundles'", editable = "src/bundles/firecrawl" },
     { name = "lfx-google", editable = "src/bundles/google" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
-    { name = "lfx-nextplaid", editable = "src/bundles/nextplaid" },
+    { name = "lfx-nextplaid", marker = "extra == 'bundles'", editable = "src/bundles/nextplaid" },
     { name = "lfx-ollama", editable = "src/bundles/ollama" },
     { name = "lfx-openai", editable = "src/bundles/openai" },
     { name = "lfx-openai-compatible", editable = "src/bundles/openai-compatible" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
-    { name = "lfx-paddle", editable = "src/bundles/paddle" },
-    { name = "lfx-valkey", editable = "src/bundles/valkey" },
+    { name = "lfx-paddle", marker = "extra == 'bundles'", editable = "src/bundles/paddle" },
+    { name = "lfx-toolguard", editable = "src/bundles/toolguard" },
+    { name = "lfx-valkey", marker = "extra == 'bundles'", editable = "src/bundles/valkey" },
     { name = "lfx-vllm", editable = "src/bundles/vllm" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<26.3.0" },
@@ -7999,21 +8001,24 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.12.0"
+version = "1.12.0"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "a2a-sdk" },
     { name = "ag-ui-protocol" },
+    { name = "aiobotocore" },
     { name = "aiofile", version = "3.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "aiofile", version = "3.11.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "aiofiles" },
     { name = "aiosqlite" },
     { name = "alembic" },
+    { name = "arize-phoenix-otel" },
     { name = "assemblyai" },
     { name = "asyncer" },
     { name = "bcrypt" },
     { name = "cachetools" },
     { name = "chardet" },
+    { name = "chromadb" },
     { name = "clickhouse-connect" },
     { name = "cryptography", version = "48.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
     { name = "cryptography", version = "49.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or python_full_version >= '3.14'" },
@@ -8038,6 +8043,7 @@ dependencies = [
     { name = "jq", marker = "sys_platform != 'win32'" },
     { name = "json-repair" },
     { name = "jsonquerylang" },
+    { name = "kubernetes" },
     { name = "langchain" },
     { name = "langchain-chroma" },
     { name = "langchain-community" },
@@ -8049,7 +8055,10 @@ dependencies = [
     { name = "langchain-qdrant" },
     { name = "langchain-weaviate" },
     { name = "langchainhub" },
+    { name = "langfuse" },
     { name = "langgraph-checkpoint" },
+    { name = "langsmith" },
+    { name = "langwatch", marker = "python_full_version < '3.14'" },
     { name = "lfx" },
     { name = "loguru" },
     { name = "mcp" },
@@ -8060,6 +8069,8 @@ dependencies = [
     { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "onnxruntime", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
     { name = "onnxruntime", version = "1.28.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
+    { name = "openinference-instrumentation-langchain" },
+    { name = "openlayer" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-exporter-prometheus" },
@@ -8068,6 +8079,7 @@ dependencies = [
     { name = "opentelemetry-instrumentation-system-metrics" },
     { name = "opentelemetry-instrumentation-urllib3" },
     { name = "opentelemetry-sdk" },
+    { name = "opik" },
     { name = "orjson" },
     { name = "pandas", version = "2.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -8084,6 +8096,7 @@ dependencies = [
     { name = "pyperclip" },
     { name = "python-docx" },
     { name = "python-multipart" },
+    { name = "redis" },
     { name = "rich" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
@@ -8095,6 +8108,7 @@ dependencies = [
     { name = "sqlalchemy", extra = ["aiosqlite"] },
     { name = "sqlmodel" },
     { name = "structlog" },
+    { name = "traceloop-sdk" },
     { name = "transformers" },
     { name = "trustcall" },
     { name = "typer" },
@@ -8113,31 +8127,6 @@ aioboto3 = [
 ]
 aiobotocore = [
     { name = "aiobotocore" },
-]
-all = [
-    { name = "aiobotocore" },
-    { name = "apscheduler" },
-    { name = "arize-phoenix-otel" },
-    { name = "chromadb" },
-    { name = "cryptography", version = "48.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
-    { name = "cryptography", version = "49.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or python_full_version >= '3.14'" },
-    { name = "ibm-cloud-sdk-core" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
-    { name = "kubernetes" },
-    { name = "langchain-chroma" },
-    { name = "langfuse" },
-    { name = "langsmith" },
-    { name = "langwatch", marker = "python_full_version < '3.14'" },
-    { name = "lfx", extra = ["cassandra", "toolguard"] },
-    { name = "litellm" },
-    { name = "mcp" },
-    { name = "openinference-instrumentation-langchain" },
-    { name = "openlayer" },
-    { name = "opik" },
-    { name = "pydantic" },
-    { name = "redis" },
-    { name = "traceloop-sdk" },
 ]
 altk = [
     { name = "agent-lifecycle-toolkit", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
@@ -8180,31 +8169,6 @@ cleanlab = [
 ]
 clickhouse = [
     { name = "clickhouse-connect" },
-]
-complete = [
-    { name = "aiobotocore" },
-    { name = "apscheduler" },
-    { name = "arize-phoenix-otel" },
-    { name = "chromadb" },
-    { name = "cryptography", version = "48.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
-    { name = "cryptography", version = "49.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or python_full_version >= '3.14'" },
-    { name = "ibm-cloud-sdk-core" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
-    { name = "kubernetes" },
-    { name = "langchain-chroma" },
-    { name = "langfuse" },
-    { name = "langsmith" },
-    { name = "langwatch", marker = "python_full_version < '3.14'" },
-    { name = "lfx", extra = ["cassandra", "toolguard"] },
-    { name = "litellm" },
-    { name = "mcp" },
-    { name = "openinference-instrumentation-langchain" },
-    { name = "openlayer" },
-    { name = "opik" },
-    { name = "pydantic" },
-    { name = "redis" },
-    { name = "traceloop-sdk" },
 ]
 composio = [
     { name = "composio" },
@@ -8526,6 +8490,7 @@ requires-dist = [
     { name = "ag-ui-protocol", specifier = "==0.1.18" },
     { name = "ag2", marker = "extra == 'ag2'", specifier = ">=0.1.0" },
     { name = "agent-lifecycle-toolkit", marker = "(platform_machine != 'x86_64' and extra == 'altk') or (sys_platform != 'darwin' and extra == 'altk')", specifier = ">=0.10.1,<1.0" },
+    { name = "aiobotocore", specifier = ">=3.7.0,<4.0.0" },
     { name = "aiobotocore", marker = "extra == 'aioboto3'", specifier = ">=3.7.0,<4.0.0" },
     { name = "aiobotocore", marker = "extra == 'aiobotocore'", specifier = ">=3.7.0,<4.0.0" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
@@ -8534,6 +8499,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.13.0,<2.0.0" },
     { name = "apify-client", marker = "extra == 'apify'", specifier = ">=1.8.1" },
     { name = "apscheduler", marker = "extra == 'litellm'", specifier = ">=3.10.4,<4.0.0" },
+    { name = "arize-phoenix-otel", specifier = ">=0.6.1" },
     { name = "arize-phoenix-otel", marker = "extra == 'arize'", specifier = ">=0.6.1" },
     { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
     { name = "assemblyai", marker = "extra == 'assemblyai'", specifier = "==0.35.1" },
@@ -8544,6 +8510,7 @@ requires-dist = [
     { name = "boto3", marker = "extra == 'aws'", specifier = ">=1.34.162,<2.0.0" },
     { name = "cachetools", specifier = ">=6.0.0" },
     { name = "chardet", specifier = ">=7.3.0" },
+    { name = "chromadb", specifier = ">=1.0.0,<2.0.0" },
     { name = "chromadb", marker = "extra == 'chroma'", specifier = ">=1.0.0,<2.0.0" },
     { name = "cleanlab-tlm", marker = "extra == 'cleanlab'", specifier = ">=1.1.2,<2.0.0" },
     { name = "clickhouse-connect", specifier = "==0.7.19" },
@@ -8603,6 +8570,7 @@ requires-dist = [
     { name = "json-repair", specifier = ">=0.30.3,<1.0.0" },
     { name = "json-repair", marker = "extra == 'json-repair'", specifier = ">=0.60.1" },
     { name = "jsonquerylang", specifier = ">=1.1.1,<2.0.0" },
+    { name = "kubernetes", specifier = ">=31.0.0,<33.0.0" },
     { name = "kubernetes", marker = "extra == 'kubernetes'", specifier = "==31.0.0" },
     { name = "langchain", specifier = "~=1.3.0" },
     { name = "langchain-chroma", specifier = "~=0.2.6" },
@@ -8634,29 +8602,14 @@ requires-dist = [
     { name = "langchain-unstructured", marker = "extra == 'langchain-unstructured'", specifier = "~=1.0.0" },
     { name = "langchain-weaviate", specifier = ">=0.0.6" },
     { name = "langchainhub", specifier = "~=0.1.15" },
-    { name = "langflow-base", extras = ["aiobotocore"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["arize"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["cassandra"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["chroma"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["complete"], marker = "extra == 'all'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["docling"], marker = "extra == 'docling-chunking'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["docling"], marker = "extra == 'docling-image-description'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["ibm-watsonx-clients"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["kubernetes"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langfuse"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langsmith"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langwatch"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["litellm"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["mcp"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["openinference"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["openlayer"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["opik"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["redis"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["toolguard"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["traceloop"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langfuse", specifier = "~=3.8" },
     { name = "langfuse", marker = "extra == 'langfuse'", specifier = "~=3.8" },
     { name = "langgraph-checkpoint", specifier = ">4.0.0,<5.0.0" },
+    { name = "langsmith", specifier = ">=0.3.42,<1.0.0" },
     { name = "langsmith", marker = "extra == 'langsmith'", specifier = ">=0.3.42,<1.0.0" },
+    { name = "langwatch", marker = "python_full_version < '3.14'", specifier = "~=0.10.0" },
     { name = "langwatch", marker = "python_full_version < '3.14' and extra == 'langwatch'", specifier = "~=0.10.0" },
     { name = "lark", marker = "extra == 'lark'", specifier = "==1.2.2" },
     { name = "lfx", editable = "src/lfx" },
@@ -8684,7 +8637,9 @@ requires-dist = [
     { name = "onnxruntime", marker = "python_full_version >= '3.14'", specifier = ">=1.26" },
     { name = "openai", marker = "extra == 'audio'", specifier = ">=1.68.2,<3.0.0" },
     { name = "opendsstar", marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'x86_64' and extra == 'opendsstar') or (python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'opendsstar')", specifier = "==1.0.26" },
+    { name = "openinference-instrumentation-langchain", specifier = ">=0.1.29" },
     { name = "openinference-instrumentation-langchain", marker = "extra == 'openinference'", specifier = ">=0.1.29" },
+    { name = "openlayer", specifier = ">=0.9.0,<1.0.0" },
     { name = "openlayer", marker = "extra == 'openlayer'", specifier = ">=0.9.0,<1.0.0" },
     { name = "opensearch-py", marker = "extra == 'opensearch'", specifier = "==2.8.0" },
     { name = "opentelemetry-api", specifier = ">=1.30.0,<2.0.0" },
@@ -8695,6 +8650,7 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-system-metrics", specifier = ">=0.50b0,<1.0.0" },
     { name = "opentelemetry-instrumentation-urllib3", specifier = ">=0.50b0,<1.0.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.30.0,<2.0.0" },
+    { name = "opik", specifier = ">=2.0.0,<3.0.0" },
     { name = "opik", marker = "extra == 'opik'", specifier = ">=2.0.0,<3.0.0" },
     { name = "orjson", specifier = ">=3.11.6,<4.0.0" },
     { name = "pandas", specifier = ">=2.2.3" },
@@ -8722,6 +8678,7 @@ requires-dist = [
     { name = "qdrant-client", marker = "extra == 'qdrant'", specifier = ">=1.12.0,<2.0.0" },
     { name = "qianfan", marker = "extra == 'qianfan'", specifier = "==0.3.5" },
     { name = "ragstack-ai-knowledge-store", marker = "python_full_version < '3.13' and extra == 'ragstack'", specifier = "==0.2.1" },
+    { name = "redis", specifier = ">=7.4.0,<8.0.0" },
     { name = "redis", marker = "extra == 'redis'", specifier = ">=7.4.0,<8.0.0" },
     { name = "rich", specifier = ">=13.7.0,<14.0.0" },
     { name = "scipy", specifier = ">=1.15.2,<2.0.0" },
@@ -8742,6 +8699,7 @@ requires-dist = [
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
     { name = "supabase", marker = "extra == 'supabase'", specifier = ">=2.6.0,<3.0.0" },
     { name = "tiktoken", marker = "extra == 'docling-chunking'", specifier = ">=0.7.0" },
+    { name = "traceloop-sdk", specifier = ">=0.43.1,<1.0.0" },
     { name = "traceloop-sdk", marker = "extra == 'traceloop'", specifier = ">=0.43.1,<1.0.0" },
     { name = "transformers", specifier = ">=5.6.0,<6.0.0" },
     { name = "trustcall", specifier = ">=0.0.38,<1.0.0" },
@@ -8790,38 +8748,6 @@ dev = [
     { name = "types-markdown", specifier = ">=3.7.0.20240822" },
     { name = "vulture", specifier = ">=2.11" },
 ]
-
-[[package]]
-name = "langflow-core"
-version = "1.12.0"
-source = { editable = "src/langflow-core" }
-dependencies = [
-    { name = "langflow-base", extra = ["complete"] },
-]
-
-[package.optional-dependencies]
-audio = [
-    { name = "langflow-base", extra = ["audio"] },
-]
-opensearch = [
-    { name = "langflow-base", extra = ["opensearch"] },
-]
-pgvector = [
-    { name = "langflow-base", extra = ["pgvector"] },
-]
-postgresql = [
-    { name = "langflow-base", extra = ["postgresql"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "langflow-base", extras = ["audio"], marker = "extra == 'audio'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["opensearch"], marker = "extra == 'opensearch'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pgvector"], marker = "extra == 'pgvector'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "src/backend/base" },
-]
-provides-extras = ["audio", "postgresql", "pgvector", "opensearch"]
 
 [[package]]
 name = "langflow-sdk"
@@ -9162,7 +9088,7 @@ bundles = [
     { name = "lfx-bundles", extra = ["all"] },
 ]
 cassandra = [
-    { name = "cassio" },
+    { name = "lfx-datastax" },
 ]
 opendsstar = [
     { name = "opendsstar", marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform != 'darwin')" },
@@ -9176,7 +9102,7 @@ otel = [
     { name = "opentelemetry-sdk" },
 ]
 toolguard = [
-    { name = "toolguard" },
+    { name = "lfx-toolguard" },
 ]
 
 [package.dev-dependencies]
@@ -9211,7 +9137,6 @@ requires-dist = [
     { name = "asyncer", specifier = ">=0.0.8,<1.0.0" },
     { name = "beautifulsoup4", specifier = ">=4.12.3,<5.0.0" },
     { name = "cachetools", specifier = ">=6.0.0" },
-    { name = "cassio", marker = "extra == 'cassandra'", specifier = ">=0.1.7" },
     { name = "chardet", specifier = ">=7.3.0" },
     { name = "cryptography", specifier = ">=48.0.1" },
     { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
@@ -9227,6 +9152,8 @@ requires-dist = [
     { name = "langchain-core", specifier = ">=1.2.28,<2.0.0" },
     { name = "langflow-sdk", editable = "src/sdk" },
     { name = "lfx-bundles", extras = ["all"], marker = "extra == 'bundles'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-datastax", marker = "extra == 'cassandra'", editable = "src/bundles/datastax" },
+    { name = "lfx-toolguard", marker = "extra == 'toolguard'", editable = "src/bundles/toolguard" },
     { name = "loguru", specifier = ">=0.7.3,<1.0.0" },
     { name = "markitdown", specifier = ">=0.1.4,<2.0.0" },
     { name = "mcp", specifier = ">=1.17.0,<2.0.0" },
@@ -9257,7 +9184,6 @@ requires-dist = [
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
     { name = "toml", specifier = ">=0.10.2,<1.0.0" },
     { name = "tomli", specifier = ">=2.2.1,<3.0.0" },
-    { name = "toolguard", marker = "extra == 'toolguard'", specifier = ">=0.2.20,<1.0.0" },
     { name = "typer", specifier = ">=0.16.0,<1.0.0" },
     { name = "typing-extensions", specifier = ">=4.14.0,<5.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34.3,<1.0.0" },
@@ -9996,12 +9922,14 @@ requires-dist = [
 
 [[package]]
 name = "lfx-datastax"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "src/bundles/datastax" }
 dependencies = [
     { name = "astrapy" },
+    { name = "cassio" },
     { name = "graph-retriever" },
     { name = "langchain-astradb" },
+    { name = "langchain-community" },
     { name = "langchain-graph-retriever" },
     { name = "lfx" },
     { name = "requests" },
@@ -10010,8 +9938,10 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "astrapy", specifier = ">=2.1.0,<3.0.0" },
+    { name = "cassio", specifier = ">=0.1.7" },
     { name = "graph-retriever", specifier = "==0.8.0" },
     { name = "langchain-astradb", specifier = "~=1.0.0" },
+    { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-graph-retriever", specifier = "==0.8.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "requests", specifier = ">=2.32.0" },
@@ -10187,12 +10117,15 @@ requires-dist = [
 
 [[package]]
 name = "lfx-ibm"
-version = "0.1.4"
+version = "0.1.5"
 source = { editable = "src/bundles/ibm" }
 dependencies = [
+    { name = "ibm-cloud-sdk-core" },
     { name = "ibm-db", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
     { name = "ibm-watsonx-ai", version = "1.3.42", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "ibm-watsonx-ai", version = "1.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
     { name = "langchain-community" },
     { name = "langchain-ibm" },
     { name = "lfx" },
@@ -10200,8 +10133,11 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ibm-cloud-sdk-core", specifier = "~=3.24.4" },
     { name = "ibm-db", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'", specifier = ">=3.2.9,<4.0.0" },
     { name = "ibm-watsonx-ai", specifier = ">=1.3.1,<2.0.0" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'", specifier = "~=2.12.0" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'", specifier = "~=2.12.0" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-ibm", specifier = "~=1.1.0" },
     { name = "lfx", editable = "src/lfx" },
@@ -10305,6 +10241,21 @@ dependencies = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-toolguard"
+version = "0.1.0"
+source = { editable = "src/bundles/toolguard" }
+dependencies = [
+    { name = "lfx" },
+    { name = "toolguard" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "lfx", editable = "src/lfx" },
+    { name = "toolguard", specifier = ">=0.2.20,<1.0.0" },
 ]
 
 [[package]]
@@ -14746,7 +14697,7 @@ wheels = [
 
 [package.optional-dependencies]
 binary = [
-    { name = "psycopg-binary", marker = "(python_full_version < '3.14' and implementation_name != 'pypy' and platform_machine == 'arm64') or (python_full_version < '3.14' and implementation_name != 'pypy' and sys_platform != 'darwin')" },
+    { name = "psycopg-binary", marker = "implementation_name != 'pypy'" },
 ]
 
 [[package]]
