@@ -23,6 +23,7 @@ import json
 import time
 from collections.abc import AsyncIterator
 from copy import deepcopy
+from typing import Final
 from uuid import UUID, uuid4
 
 from ag_ui.core import CustomEvent
@@ -68,6 +69,11 @@ def _resolve_execution_timeout() -> int:
 # so a slow consumer applies backpressure to the build loop instead of
 # letting frames accumulate without bound when the network is slow.
 _EVENT_QUEUE_MAX_SIZE = 256
+
+# Default for ``_stream_event_frames(execution_timeout=...)``: resolve the ceiling
+# from settings. Distinct from ``None`` so a caller can ask for "unbounded" without
+# it collapsing into "use the default".
+_CEILING_FROM_SETTINGS: Final = object()
 
 
 async def generate_flow_events(*args, **kwargs) -> None:
@@ -185,6 +191,7 @@ async def _stream_event_frames(
     job_id: UUID | None = None,
     resume: dict | None = None,
     track_job_status: bool = True,
+    execution_timeout: float | None | object = _CEILING_FROM_SETTINGS,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
@@ -202,6 +209,14 @@ async def _stream_event_frames(
     the raw Langflow payload alongside the AG-UI translation for the
     playground's chat-view. A follow-up retires this once chat-view
     consumes the AG-UI ``TEXT_MESSAGE_*`` lifecycle directly.
+
+    ``execution_timeout`` bounds the run. It defaults to the settings ceiling,
+    which is the right budget for a caller with a waiting HTTP client (stream,
+    public). Background runs pass ``None``: nothing is waiting on them, and their
+    budget is ``background_job_timeout``, enforced by ``JobRunner`` one layer out.
+    Resolving the ceiling here for them too nested two budgets, and the inner one
+    always wins, which made the documented ``background_job_timeout=None``
+    ("no timeout") silently cap at the sync ceiling instead.
     """
     # EventManager uses put_nowait(), so a plain bounded asyncio.Queue would
     # silently drop frames via QueueFull. This adapter keeps memory bounded and
@@ -210,9 +225,11 @@ async def _stream_event_frames(
     event_manager = create_default_event_manager(queue)
     input_request = _single_input_value_request(parsed)
     flow_data = FlowDataRequest(**parsed.data) if parsed.data else None
-    # Single wall-clock ceiling for every mode that drives this loop (stream,
-    # background, public). Sync uses its own asyncio.wait_for upstream.
-    execution_timeout = _resolve_execution_timeout()
+    # Ceiling for the modes whose caller is waiting on a socket (stream, public).
+    # Sync uses its own asyncio.wait_for upstream; background passes None and is
+    # bounded by JobRunner instead. wait_for(timeout=None) simply awaits.
+    if execution_timeout is _CEILING_FROM_SETTINGS:
+        execution_timeout = _resolve_execution_timeout()
 
     # Captured from drive()'s exception path so the consumer can yield a
     # guaranteed adapter.error_events(...) fallback after the queue loop ends.

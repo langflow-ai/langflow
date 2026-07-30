@@ -458,6 +458,11 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 # job_id) and fires the memory-base hook below with that id, so the build pipeline
                 # must not mint its own run_id-keyed WORKFLOW row + hook (it would double both).
                 track_job_status=False,
+                # No client is waiting on a background run, so the sync HTTP ceiling is the wrong
+                # budget for it: nesting it inside the runner's asyncio.wait_for capped every
+                # background job at workflow_execution_timeout and made the documented
+                # background_job_timeout=None ("no timeout") unreachable. JobRunner owns it.
+                execution_timeout=None,
             ):
                 if terminal_error_type is not None and event_type == terminal_error_type:
                     errored = True
