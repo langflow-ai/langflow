@@ -591,9 +591,15 @@ def start_event_loop_lag_monitor(
         while True:
             started = time.perf_counter()
             await asyncio.sleep(interval)
-            # perf_counter is monotonic, so drift cannot go negative from a clock change;
-            # clamp anyway so a pathological scheduler cannot record a negative latency.
-            histogram.record(max(time.perf_counter() - started - interval, 0.0))
+            try:
+                # perf_counter is monotonic, so drift cannot go negative from a clock change;
+                # clamp anyway so a pathological scheduler cannot record a negative latency.
+                histogram.record(max(time.perf_counter() - started - interval, 0.0))
+            except Exception:  # noqa: BLE001 - a sampler must not take the app down
+                # Without this the task dies silently (the metric simply stops) and the
+                # exception waits on the task until shutdown awaits it, where it would
+                # replace whatever was actually shutting the app down.
+                logger.exception("Event loop lag sampler failed; continuing without this sample")
 
     return asyncio.create_task(_monitor(), name="langflow-event-loop-lag")
 

@@ -332,7 +332,9 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
 # Pool exhaustion is a textbook FastAPI outage: every endpoint hangs waiting for a checkout,
 # latency climbs uniformly, and CPU stays flat, so nothing in the process metrics points at
 # the cause. (name, pool method, description) — only pools that expose the method are
-# registered, because the default SQLite engine uses StaticPool, which counts nothing.
+# registered. Not every pool counts: SQLite ``:memory:`` uses StaticPool and NullPool counts
+# nothing either, while a file-backed SQLite with langflow's default pool settings does get a
+# counting queue pool, so this registers there too.
 DB_POOL_GAUGES = (
     ("langflow_db_pool_connections_in_use", "checkedout", "Connections currently checked out of the pool."),
     ("langflow_db_pool_connections_idle", "checkedin", "Connections sitting idle in the pool."),
@@ -341,14 +343,19 @@ DB_POOL_GAUGES = (
 )
 
 
-def _pool_observer(pool, method_name: str):
-    """Read one pool counter, never raising into the collection cycle."""
+def _pool_observer(engine, method_name: str):
+    """Read one pool counter, never raising into the collection cycle.
+
+    Reads ``engine.pool`` per observation rather than capturing it: ``dispose()`` does not
+    reset a pool in place, it swaps in a fresh one, so a captured pool would keep answering
+    for the dead one and report a permanently healthy zero after any reconnect.
+    """
 
     def observe(_options):
         try:
             # Clamp: SQLAlchemy's overflow() starts at -pool_size, so a healthy pool reports a
             # negative 'overflow'. None of these counters are meaningful below zero.
-            return [Observation(max(getattr(pool, method_name)(), 0))]
+            return [Observation(max(getattr(engine.pool, method_name)(), 0))]
         except Exception:  # noqa: BLE001 - a broken gauge must not stop the other metrics
             return []
 
@@ -358,9 +365,9 @@ def _pool_observer(pool, method_name: str):
 def instrument_db_pool(meter_provider, engine) -> None:
     """Expose SQLAlchemy connection-pool saturation as observable gauges.
 
-    No-op when nothing is exported, or when the engine's pool does not count connections.
-    The SQLite default uses StaticPool and NullPool counts nothing either, so this registers
-    only against a real QueuePool (the Postgres deployments where exhaustion actually bites).
+    No-op when nothing is exported, or when the engine's pool does not count connections
+    (SQLite ``:memory:`` uses StaticPool, and NullPool counts nothing either). File-backed
+    SQLite and Postgres both get a counting queue pool, so both are instrumented.
 
     Carries no attributes: the numbers describe this process's pool, and identity on a metric
     label is what makes cardinality explode.
@@ -374,7 +381,7 @@ def instrument_db_pool(meter_provider, engine) -> None:
         if callable(getattr(pool, method_name, None)):
             meter.create_observable_gauge(
                 name,
-                callbacks=[_pool_observer(pool, method_name)],
+                callbacks=[_pool_observer(engine, method_name)],
                 unit="",
                 description=description,
             )

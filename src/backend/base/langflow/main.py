@@ -582,13 +582,14 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await log_exception_to_telemetry(exc, "lifespan")
             raise
         finally:
-            # Stop the sampler before the loop winds down, so its cancellation is not competing
-            # with the rest of shutdown. Safe when startup never got far enough to create it.
-            await stop_event_loop_lag_monitor(lag_monitor)
-
             # CRITICAL: Cleanup MCP sessions FIRST, before any other shutdown logic.
             # This ensures MCP subprocesses are killed even if shutdown is interrupted.
             await cleanup_mcp_sessions()
+
+            # After the MCP cleanup above, deliberately: stopping the sampler awaits a
+            # cancellation, and parking there first would both delay that guarantee and give
+            # the supervisor's own cancellation somewhere to be swallowed.
+            await stop_event_loop_lag_monitor(lag_monitor)
 
             # Clean shutdown with progress indicator
             # Create shutdown progress (show verbose timing if log level is DEBUG)

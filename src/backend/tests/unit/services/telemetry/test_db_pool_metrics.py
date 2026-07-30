@@ -7,6 +7,9 @@ would keep every assertion green even if ``AsyncEngine`` did not proxy the attri
 the feature were a no-op in production.
 """
 
+import tempfile
+from pathlib import Path
+
 from langflow.services.telemetry.opentelemetry import DB_POOL_GAUGES, instrument_db_pool
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
@@ -87,3 +90,46 @@ async def test_instrumenting_without_a_provider_is_a_noop():
         instrument_db_pool(None, engine)
     finally:
         await engine.dispose()
+
+
+async def test_gauges_follow_the_pool_across_a_dispose():
+    """dispose() swaps in a fresh pool rather than resetting one in place.
+
+    A gauge holding the original pool would answer for the dead one forever, reporting a
+    permanently healthy zero after any reconnect -- the exact false-healthy reading these
+    exist to prevent.
+    """
+    provider, reader = _provider_with_reader()
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=AsyncAdaptedQueuePool, pool_size=5)
+    try:
+        instrument_db_pool(provider, engine)
+        original_pool = engine.pool
+
+        await engine.dispose()
+        assert engine.pool is not original_pool, "sqlalchemy no longer swaps the pool; test premise is stale"
+
+        async with engine.connect():
+            assert _collect(reader)["langflow_db_pool_connections_in_use"] == 1
+    finally:
+        await engine.dispose()
+        provider.shutdown()
+
+
+async def test_file_backed_sqlite_is_instrumented():
+    """The default deployment is file-backed SQLite, which does get a counting pool.
+
+    Only ``:memory:`` uses StaticPool, so this is the branch that actually runs for most
+    installs and it must not be left to the memory-only tests above.
+    """
+    provider, reader = _provider_with_reader()
+    with tempfile.TemporaryDirectory() as tmp:
+        engine = create_async_engine(f"sqlite+aiosqlite:///{Path(tmp) / 'langflow.db'}", pool_size=20, max_overflow=30)
+        try:
+            instrument_db_pool(provider, engine)
+            collected = _collect(reader)
+            assert collected["langflow_db_pool_size"] == 20
+            # overflow() starts at -pool_size on a queue pool; the clamp must hide that.
+            assert collected["langflow_db_pool_overflow"] == 0
+        finally:
+            await engine.dispose()
+            provider.shutdown()
