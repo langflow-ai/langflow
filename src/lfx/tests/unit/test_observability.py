@@ -316,6 +316,12 @@ async def test_event_loop_lag_monitor_records_a_blocked_loop():
     _time.sleep(0.3)  # noqa: ASYNC251
     await asyncio.sleep(0.05)
     await stop_event_loop_lag_monitor(task)
+    # Pins the stop helper itself: without it the body could be emptied and every assertion
+    # below would still pass. The None branch is the *default* runtime path, not a failure
+    # one -- start returns None whenever nothing is exported, which is the default install --
+    # so both shutdown call sites hit it on every clean shutdown.
+    assert task.cancelled()
+    await stop_event_loop_lag_monitor(None)
 
     points = [
         point
@@ -333,6 +339,10 @@ async def test_event_loop_lag_monitor_records_a_blocked_loop():
     # against them files a 0.2ms loop and a 4s stall in the same bucket and the histogram
     # cannot answer the p99 question it exists for.
     occupied = {index for point in points for index, count in enumerate(point.bucket_counts) if count}
+    # Pins the "- interval" subtraction: without it every idle sample records the full sleep
+    # duration, so a healthy service would report a constant interval-sized lag straight into
+    # the alarm region, and the assertions above would not notice.
+    assert min(p.min for p in points) < 0.005, "an idle loop must record near-zero lag, not the sleep duration"
     assert len(occupied) > 1, (
         f"every sample landed in one bucket ({points[0].explicit_bounds}); healthy and blocked must be distinguishable"
     )

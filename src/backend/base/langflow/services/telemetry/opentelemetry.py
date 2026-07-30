@@ -144,6 +144,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
     _metrics_registry: dict[str, Metric] = {}
     _metrics: dict[str, Counter | ObservableGaugeWrapper | Histogram | UpDownCounter] = {}
     _meter_provider: MeterProvider | None = None
+    _owns_meter_provider: bool = False
     _tracer_provider: TracerProvider | None = None
     _logger_provider: LoggerProvider | None = None
     _initialized: bool = False  # Add initialization flag
@@ -211,10 +212,15 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         # lfx serve and lfx run get identical application observability. This installs it and
         # hands back the meter provider our custom metrics register on.
         telemetry: ApplicationTelemetry = bootstrap_application_telemetry(prometheus_enabled=prometheus_enabled)
-        self._meter_provider = telemetry.meter_provider
-        self._owns_meter_provider = telemetry.owns_meter_provider
-        self._tracer_provider = telemetry.tracer_provider
-        self._logger_provider = telemetry.logger_provider
+        # Assigned on the class, not the instance. ``__init__`` early-returns on the class-level
+        # ``_initialized`` flag, and the singleton is held in a WeakValueDictionary, so once the
+        # first instance is collected a later construction skips this block entirely and would
+        # read the class defaults (None) -- leaving every subsequent app in the process with no
+        # provider to register metrics on. The providers are process-global anyway.
+        OpenTelemetry._meter_provider = telemetry.meter_provider
+        OpenTelemetry._owns_meter_provider = telemetry.owns_meter_provider
+        OpenTelemetry._tracer_provider = telemetry.tracer_provider
+        OpenTelemetry._logger_provider = telemetry.logger_provider
 
         # meter_provider is None when nothing is exported and Prometheus is off (the default):
         # the bootstrap declines to install a reader-less provider. Fall back to the global API
@@ -351,6 +357,21 @@ DB_POOL_GAUGES = (
 _instrumented_engine = None
 
 
+DB_POOL_MAX_OVERFLOW_GAUGE = "langflow_db_pool_max_overflow"
+
+
+def _max_overflow_observer():
+    """Report the overflow ceiling, so saturation is derivable rather than guessed."""
+
+    def observe(_options):
+        try:
+            return [Observation(_instrumented_engine.pool._max_overflow)]  # noqa: SLF001
+        except Exception:  # noqa: BLE001 - a broken gauge must not stop the other metrics
+            return []
+
+    return observe
+
+
 def _pool_observer(method_name: str):
     """Read one pool counter, never raising into the collection cycle.
 
@@ -370,7 +391,7 @@ def _pool_observer(method_name: str):
     return observe
 
 
-def instrument_db_pool(meter_provider, engine) -> None:
+def instrument_db_pool(meter_provider, engine) -> list[str]:
     """Expose SQLAlchemy connection-pool saturation as observable gauges.
 
     No-op when nothing is exported, or when the engine's pool does not count connections
@@ -379,12 +400,15 @@ def instrument_db_pool(meter_provider, engine) -> None:
 
     Carries no attributes: the numbers describe this process's pool, and identity on a metric
     label is what makes cardinality explode.
+
+    Returns the gauge names actually registered, so callers (and tests) can tell "this pool is
+    not measurable" apart from "this pool is idle" -- both of which emit no data points.
     """
     global _instrumented_engine  # noqa: PLW0603
 
     pool = getattr(engine, "pool", None)
     if meter_provider is None or pool is None:
-        return
+        return []
 
     # Point the gauges at this engine before (re-)registering. On a second call the instruments
     # already exist and the new callbacks are dropped, so this assignment is what actually
@@ -392,6 +416,7 @@ def instrument_db_pool(meter_provider, engine) -> None:
     _instrumented_engine = engine
 
     meter = meter_provider.get_meter(langflow_meter_name)
+    registered = []
     for name, method_name, description in DB_POOL_GAUGES:
         if callable(getattr(pool, method_name, None)):
             meter.create_observable_gauge(
@@ -400,3 +425,19 @@ def instrument_db_pool(meter_provider, engine) -> None:
                 unit="",
                 description=description,
             )
+            registered.append(name)
+
+    # The configured ceiling, without which none of the numbers above mean anything: 25 open
+    # connections is healthy against a max_overflow of 30 and one slot from exhaustion against
+    # 26. QueuePool exposes no public accessor for it, and _pool_observer's guard already covers
+    # the attribute going away.
+    if registered and hasattr(pool, "_max_overflow"):
+        meter.create_observable_gauge(
+            DB_POOL_MAX_OVERFLOW_GAUGE,
+            callbacks=[_max_overflow_observer()],
+            unit="",
+            description="Connections allowed beyond the configured pool size.",
+        )
+        registered.append(DB_POOL_MAX_OVERFLOW_GAUGE)
+
+    return registered

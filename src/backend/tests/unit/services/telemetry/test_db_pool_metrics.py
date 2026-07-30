@@ -48,7 +48,7 @@ async def test_checkout_from_a_real_async_engine_moves_the_in_use_gauge():
         "sqlite+aiosqlite:///:memory:", poolclass=AsyncAdaptedQueuePool, pool_size=5, max_overflow=2
     )
     try:
-        instrument_db_pool(provider, engine)
+        assert instrument_db_pool(provider, engine), "a counting pool must register gauges"
         assert _collect(reader)["langflow_db_pool_connections_in_use"] == 0
 
         async with engine.connect():
@@ -76,7 +76,10 @@ async def test_pools_that_count_nothing_register_nothing():
     provider, reader = _provider_with_reader()
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     try:
-        instrument_db_pool(provider, engine)
+        # Assert on what was REGISTERED, not on emitted points: an unmeasurable pool and an
+        # idle one both emit nothing, so a data-point assertion passes even if the guard is
+        # removed entirely.
+        assert instrument_db_pool(provider, engine) == []
         assert not [name for name, *_ in DB_POOL_GAUGES if name in _collect(reader)]
     finally:
         await engine.dispose()
@@ -128,6 +131,9 @@ async def test_file_backed_sqlite_is_instrumented():
             instrument_db_pool(provider, engine)
             collected = _collect(reader)
             assert collected["langflow_db_pool_size"] == 20
+            # Without the ceiling the other numbers are unreadable: 25 in use is healthy
+            # against a max_overflow of 30 and one slot from exhaustion against 26.
+            assert collected["langflow_db_pool_max_overflow"] == 30
             # overflow() starts at -pool_size on a queue pool; the clamp must hide that.
             assert collected["langflow_db_pool_overflow"] == 0
         finally:

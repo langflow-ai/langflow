@@ -50,8 +50,15 @@ DEFAULT_SERVICE_NAME = "langflow"
 # Event-loop scheduling delay. Sampled rather than instrumented: there is no hook that
 # reports "the loop was blocked", so the only way to see it is to ask for a known sleep and
 # measure how late the answer comes back.
+#
+# The interval bounds what is observable: only the part of a stall that outlasts a sleep
+# deadline is recorded, so sampling too slowly under-reports repeated sub-second blocking (the
+# common shape - one sync call per request) by an order of magnitude, and can phase-lock with a
+# periodic workload and miss it almost entirely. 50ms costs about a tenth of a percent of one
+# core and keeps the healthy-loop floor near 1ms; going much finer just fills the low buckets
+# with sampler noise.
 EVENT_LOOP_LAG_METRIC = "langflow_event_loop_lag_seconds"
-EVENT_LOOP_LAG_INTERVAL_SECONDS = 0.25
+EVENT_LOOP_LAG_INTERVAL_SECONDS = 0.05
 
 # Explicit buckets, because the SDK default boundaries start (0, 5, 10, 25, ...) and are
 # shaped for milliseconds. Recording seconds against them puts a healthy 0.2ms loop and a
