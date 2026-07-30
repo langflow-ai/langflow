@@ -13433,7 +13433,7 @@ wheels = [
 
 [[package]]
 name = "opentelemetry-instrumentation-system-metrics"
-version = "0.64b0"
+version = "0.65b0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "opentelemetry-api" },
@@ -13441,9 +13441,9 @@ dependencies = [
     { name = "opentelemetry-semantic-conventions" },
     { name = "psutil" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6c/55/ffa2d8f9a11356fde23fa48eb450a896b4935f6af05cae035f79e65dfa54/opentelemetry_instrumentation_system_metrics-0.64b0.tar.gz", hash = "sha256:ec8280693cdf6ea9020384c3fe884eea64a43ae78f1e2f6edc20951c871aac7e", size = 17412, upload-time = "2026-06-24T15:19:42.512Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/91/8f/d4be5113ec220a49e7c5c37b450cdc4008709500526a43e2c0d2826fe3f0/opentelemetry_instrumentation_system_metrics-0.65b0.tar.gz", hash = "sha256:c8b82821ccc95c5f2c516bb72356f75673ced51364eed583a14bf3b85fa6a0c7", size = 17414, upload-time = "2026-07-16T15:26:21.702Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/08/b6037ef930e84a49905f09660f1e6cd928fb8f8ff4af1bccb1c689f0f463/opentelemetry_instrumentation_system_metrics-0.64b0-py3-none-any.whl", hash = "sha256:38bc9c4ed4fccea2a68b1a43d57764649d1c3096927dc7244c5e7f173899044b", size = 14007, upload-time = "2026-06-24T15:18:59.896Z" },
+    { url = "https://files.pythonhosted.org/packages/23/9e/90c142f60d91c80b725b5830cf02d1ab91344611e857427fec048695579f/opentelemetry_instrumentation_system_metrics-0.65b0-py3-none-any.whl", hash = "sha256:48ef6c8f5924f391d07c073a40c7018874046703477e538fbe64ff37af196cf0", size = 14005, upload-time = "2026-07-16T15:25:36.329Z" },
 ]
 
 [[package]]
