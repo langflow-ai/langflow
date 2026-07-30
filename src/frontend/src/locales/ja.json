@@ -1680,6 +1680,8 @@
   "noteNode.emptyPlaceholder": "ダブルクリックして入力を開始するか、Markdownを入力してください...",
   "noteNode.pickColor": "色を選ぶ",
   "output.componentOutput": "コンポーネント出力",
+  "output.copyOutputAria": "出力をコピー",
+  "output.copyLogsAria": "ログをコピー",
   "output.csvError": "CSV の読み込みに失敗しました",
   "output.csvNoData": "使用可能なデータがありません",
   "output.csvTitle": "CSV 出力",

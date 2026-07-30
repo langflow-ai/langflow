@@ -1680,6 +1680,8 @@
   "noteNode.emptyPlaceholder": "Double-cliquez pour commencer à taper ou entrez du code Markdown...",
   "noteNode.pickColor": "Choisissez une couleur",
   "output.componentOutput": "Sortie composante",
+  "output.copyOutputAria": "Copier la sortie",
+  "output.copyLogsAria": "Copier les journaux",
   "output.csvError": "Erreur lors du chargement de CSV",
   "output.csvNoData": "Aucune donnée disponible",
   "output.csvTitle": "CSV résultat",

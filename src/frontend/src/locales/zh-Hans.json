@@ -1680,6 +1680,8 @@
   "noteNode.emptyPlaceholder": "双击开始输入或输入 Markdown 代码...",
   "noteNode.pickColor": "选择颜色",
   "output.componentOutput": "分量输出",
+  "output.copyOutputAria": "复制输出",
+  "output.copyLogsAria": "复制日志",
   "output.csvError": "加载 CSV 时出错",
   "output.csvNoData": "无可用数据",
   "output.csvTitle": "CSV 输出",
