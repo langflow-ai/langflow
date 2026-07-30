@@ -305,6 +305,11 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             msg = f"Metric '{metric_name}' is not a histogram"
             raise TypeError(msg)
 
+    @property
+    def meter_provider(self):
+        """The meter provider the bootstrap installed, or None when nothing is exported."""
+        return self._meter_provider
+
     def shutdown(self):
         # Only shut down if initialized
         if not self._initialized:

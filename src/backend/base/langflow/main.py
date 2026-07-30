@@ -21,7 +21,7 @@ from fastapi_pagination import add_pagination
 from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
-from lfx.observability import instrument_fastapi_app
+from lfx.observability import instrument_fastapi_app, start_event_loop_lag_monitor, stop_event_loop_lag_monitor
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -178,6 +178,9 @@ def get_lifespan(*, fix_migration=False, version=None):
         sync_flows_from_fs_task = None
         mcp_init_task = None
         models_dev_refresh_task = None
+        # Same reason as ``temp_dirs`` below: the shutdown path stops this, so it must exist
+        # even when startup fails before it is created.
+        lag_monitor = None
         # Bind ``temp_dirs`` before the ``try`` so the shutdown cleanup in the
         # ``finally`` block (which iterates it) never raises ``UnboundLocalError``
         # when startup fails before bundle loading assigns it below. Otherwise an
@@ -546,6 +549,11 @@ def get_lifespan(*, fix_migration=False, version=None):
             await start_streamable_http_manager()
             await start_project_task_group()
 
+            # Started in the lifespan rather than with the rest of the telemetry setup: it
+            # needs the running loop, and under gunicorn the services are initialized in the
+            # master before the fork, so a task created there would not exist in the workers.
+            lag_monitor = start_event_loop_lag_monitor(telemetry_service.ot.meter_provider)
+
             yield
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")
@@ -568,6 +576,10 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await log_exception_to_telemetry(exc, "lifespan")
             raise
         finally:
+            # Stop the sampler before the loop winds down, so its cancellation is not competing
+            # with the rest of shutdown. Safe when startup never got far enough to create it.
+            await stop_event_loop_lag_monitor(lag_monitor)
+
             # CRITICAL: Cleanup MCP sessions FIRST, before any other shutdown logic.
             # This ensures MCP subprocesses are killed even if shutdown is interrupted.
             await cleanup_mcp_sessions()
