@@ -38,6 +38,8 @@ def test_langflow_core_metadata_contract():
     assert project["dependencies"] == [f"langflow-base[complete]~={base_floor}"]
     assert project["optional-dependencies"] == {
         "audio": [f"langflow-base[audio]~={base_floor}"],
+        "opensearch": [f"langflow-base[opensearch]~={base_floor}"],
+        "pgvector": [f"langflow-base[pgvector]~={base_floor}"],
         "postgresql": [f"langflow-base[postgresql]~={base_floor}"],
     }
     assert project["scripts"] == {

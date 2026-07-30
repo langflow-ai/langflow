@@ -307,12 +307,7 @@ numexpr = ["numexpr>=2.10.2"]
 qianfan = ["qianfan==0.3.5"]
 pgvector = [
     "pgvector>=0.4.2",
-    # Maintained Postgres vector store (replaces the sunset langchain-community
-    # PGVector). It declares pgvector<0.4; the workspace [tool.uv]
-    # override-dependencies forces the security-pinned pgvector>=0.4.2, which is
-    # runtime-compatible. langchain-postgres also pulls psycopg[binary]>=3 +
-    # sqlalchemy[asyncio], so this extra is self-sufficient for the KB backend.
-    "langchain-postgres>=0.0.14,<0.1.0",
+    "psycopg[binary]>=3.1,<4.0",
 ]
 litellm = [
     "litellm>=1.93.0,<2.0.0",

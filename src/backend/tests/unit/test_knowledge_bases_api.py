@@ -223,11 +223,7 @@ class TestKnowledgeBaseAPI:
         assert data["name"] == "New KB"
         assert data["backend_type"] == "opensearch"
         assert data["backend_config"] == {"index_name": "new_kb_index"}
-        mock_fresh_client.return_value.create_collection.assert_called_once_with(
-            name=kb_name,
-            configuration={"embedding_function": None},
-            embedding_function=None,
-        )
+        mock_fresh_client.assert_not_called()
         record = await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name)
         assert record is not None
         assert record.model_selection == model_selection
@@ -384,6 +380,42 @@ class TestKnowledgeBaseAPI:
         assert data["backend_type"] == "opensearch"
         # No shared index pinned into the config — the index is derived per-KB.
         assert "index_name" not in data["backend_config"]
+        mock_fresh_client.assert_not_called()
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_create_knowledge_base_postgres_persists_backend(
+        self,
+        mock_root,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        from lfx.base.knowledge_bases.backends.base import TestConnectionResult
+        from lfx.base.knowledge_bases.backends.postgres import PostgresBackend
+
+        mock_root.return_value = tmp_path
+        connection_result = TestConnectionResult(ok=True, message="Connected")
+        with patch.object(PostgresBackend, "test_connection", new=AsyncMock(return_value=connection_result)):
+            response = await client.post(
+                "api/v1/knowledge_bases",
+                headers=logged_in_headers,
+                json={
+                    "name": "Postgres_KB",
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "text-embedding-3-small",
+                    "backend_type": "postgres",
+                    "backend_config": {},
+                },
+            )
+
+        assert response.status_code == 201, response.text
+        assert response.json()["backend_type"] == "postgres"
+        assert response.json()["backend_config"] == {}
+        record = await knowledge_base_service.get_by_user_and_name(active_user.id, "Postgres_KB")
+        assert record is not None
+        assert record.backend_type == "postgres"
+        assert record.backend_config == {}
 
     async def test_create_knowledge_base_rejects_stubbed_backend(self, client: AsyncClient, logged_in_headers):
         """Stubbed backends fail at the schema layer with a "not enabled" message.

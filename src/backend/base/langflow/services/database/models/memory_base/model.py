@@ -45,8 +45,9 @@ class MemoryBaseCreate(MemoryBaseBase):
     # create payload rather than on ``MemoryBaseBase`` so no column is added to
     # the ``memory_base`` table: the values are persisted on the
     # ``knowledge_base`` row this Memory Base creates, which is what every read
-    # path resolves against. Defaults keep existing callers on local Chroma.
-    backend_type: str = "chroma"
+    # path resolves against. ``None`` lets the server choose the deployment
+    # default (pgvector when its fixed server environment variable is present).
+    backend_type: str | None = None
     backend_config: dict = Field(default_factory=dict)
 
     @model_validator(mode="after")

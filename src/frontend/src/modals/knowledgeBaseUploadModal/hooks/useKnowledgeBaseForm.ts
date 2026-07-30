@@ -8,6 +8,7 @@ import {
   type DBProviderConfigValue,
   getDBProviderOption,
   getDefaultDBProviderConfig,
+  getGlobalVariableValue,
   isDBProviderConfigured,
   resolveUIBackendType,
   toAPIBackendType,
@@ -474,8 +475,8 @@ export function useKnowledgeBaseForm({
         // env-configured pgVector auto-become the backend instead of Chroma.
         // An explicit selection (active variable set, or any non-Chroma pick)
         // is always sent through and honored.
-        const hasExplicitActiveProvider = globalVariables.some(
-          (variable) => variable.name === ACTIVE_DB_PROVIDER_VARIABLE,
+        const hasExplicitActiveProvider = Boolean(
+          getGlobalVariableValue(globalVariables, ACTIVE_DB_PROVIDER_VARIABLE),
         );
         const resolvedBackendType =
           !hasExplicitActiveProvider && backendType === "chroma"

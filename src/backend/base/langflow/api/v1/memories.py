@@ -161,10 +161,11 @@ async def create_memory_base(
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     # ``backend_type``/``backend_config`` live on the knowledge_base row, not the
-    # memory_base table; at create time the request payload is the source of truth.
+    # memory_base table. Read back the effective server-resolved values so an
+    # omitted type correctly reports an env-defaulted pgvector backend.
     read = MemoryBaseRead.model_validate(mb)
-    read.backend_type = payload.backend_type or "chroma"
-    read.backend_config = payload.backend_config or {}
+    backends = await knowledge_base_service.get_backends_for_names([mb.kb_name])
+    read.backend_type, read.backend_config = backends.get(mb.kb_name, ("chroma", {}))
     return read
 
 

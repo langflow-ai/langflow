@@ -379,6 +379,12 @@ export default function DBProvidersPage() {
         ),
         backend_config: backendConfig,
       });
+      if (selectedProvider.id === "postgres") {
+        setPostgresStatus({
+          ok: response.ok,
+          message: response.message,
+        });
+      }
       if (response.ok) {
         // ``setSuccessData`` only takes a title; pack any backend
         // detail (cluster name, version) into the title so it shows.
@@ -398,6 +404,12 @@ export default function DBProvidersPage() {
         });
       }
     } catch (error: unknown) {
+      if (selectedProvider.id === "postgres") {
+        setPostgresStatus({
+          ok: false,
+          message: getErrorDetail(error),
+        });
+      }
       setErrorData({
         title: t("settings.dbProviders.errorTesting"),
         list: [getErrorDetail(error)],

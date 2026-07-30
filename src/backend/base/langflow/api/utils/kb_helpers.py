@@ -107,23 +107,6 @@ def _coerce_backend_config_value(value: Any) -> dict[str, Any]:
     return {}
 
 
-def resolve_default_kb_backend() -> str:
-    """Return the backend a *new* KB/MB should use when none is explicitly chosen.
-
-    pgVector is environment-driven: when ``PGVECTOR_CONNECTION_STRING`` is set the
-    whole deployment snap-configures to Postgres, so an omitted/auto backend
-    selection becomes ``postgres``. Otherwise it stays ``chroma``. Explicit
-    selections (opensearch, chroma, postgres) bypass this and always win.
-
-    Reachability is not probed here (it would make every create pay a DB round
-    trip); ``PostgresBackend.test_connection`` surfaces an unreachable database at
-    configure time and the first ingest raises clearly.
-    """
-    from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured
-
-    return BackendType.POSTGRES.value if postgres_env_configured() else BackendType.CHROMA.value
-
-
 async def resolve_backend_selection(
     *,
     user_id: uuid.UUID,

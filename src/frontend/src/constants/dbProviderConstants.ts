@@ -390,11 +390,14 @@ export function isDBProviderConfigured(
     return true;
   }
 
-  // pgVector has no UI fields — it's configured from the server env. Treat it
-  // as "configured" here (the option is usable); the DB Providers panel confirms
-  // real reachability via the test-connection call.
+  // pgVector has no UI fields. It becomes explicitly selectable only after the
+  // DB Providers panel has successfully tested and activated it; the server
+  // still re-validates connectivity during creation.
   if (providerType === "postgres") {
-    return true;
+    return (
+      getGlobalVariableValue(variables, ACTIVE_DB_PROVIDER_VARIABLE) ===
+      "postgres"
+    );
   }
 
   const provider = getDBProviderOption(providerType);
