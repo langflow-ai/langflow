@@ -1369,6 +1369,7 @@
   "mcp.servers.statusLoading": "ロード中...",
   "mcp.servers.statusNoTools": "ツールが見つかりません",
   "mcp.servers.statusTimeout": "タイムアウトになる。",
+  "mcp.saveServer": "サーバーを保存",
   "mcp.servers.title": "MCPサーバー",
   "mcp.servers.toolsCount": "{{count}} ツール",
   "mcp.servers.toolsCount_one": "{{count}}個のツール",

@@ -278,6 +278,7 @@ export default function McpComponent({
               className="px-2.5"
               onClick={handleSaveButtonClick}
               data-testid="save-mcp-server-button"
+              aria-label={t("mcp.saveServer")}
             >
               <ForwardedIconComponent
                 name="Save"

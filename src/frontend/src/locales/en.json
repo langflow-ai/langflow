@@ -536,6 +536,7 @@
   "messages.column.files": "files",
   "settings.title": "Settings",
   "settings.description": "Manage the general settings for Langflow.",
+  "mcp.saveServer": "Save server",
   "mcp.servers.title": "MCP Servers",
   "mcp.servers.description": "Manage MCP Servers for use in your flows.",
   "mcp.servers.addButton": "Add MCP Server",

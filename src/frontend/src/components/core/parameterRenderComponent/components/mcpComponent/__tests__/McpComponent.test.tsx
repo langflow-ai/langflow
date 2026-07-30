@@ -145,6 +145,19 @@ describe("McpComponent", () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 
+  it("names the save button when a pending server config is shown", () => {
+    render(
+      <McpComponent
+        {...defaultProps()}
+        value={{ name: "", config: { command: "test" } }}
+      />,
+    );
+
+    expect(screen.getByTestId("save-mcp-server-button")).toHaveAccessibleName(
+      "Save server",
+    );
+  });
+
   it("names the server-select button by its current value, and the clear button distinctly", () => {
     render(<McpComponent {...defaultProps()} />);
     expect(screen.getByTestId("mcp-server-dropdown")).toHaveAccessibleName(

@@ -41,4 +41,24 @@ describe("SearchConfigTrigger accessibility (real Button/ShadTooltip, unmocked)"
       screen.getByRole("button", { name: "Component settings" }),
     ).toBeInTheDocument();
   });
+
+  it("reflects the panel open state via aria-expanded", () => {
+    const { rerender } = render(
+      <SearchConfigTrigger showConfig={false} setShowConfig={jest.fn()} />,
+    );
+
+    expect(screen.getByTestId("sidebar-options-trigger")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+
+    rerender(
+      <SearchConfigTrigger showConfig={true} setShowConfig={jest.fn()} />,
+    );
+
+    expect(screen.getByTestId("sidebar-options-trigger")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
 });

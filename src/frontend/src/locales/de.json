@@ -1369,6 +1369,7 @@
   "mcp.servers.statusLoading": "Ladevorgang läuft...",
   "mcp.servers.statusNoTools": "Keine Tools gefunden",
   "mcp.servers.statusTimeout": "Zeitlimit",
+  "mcp.saveServer": "Server speichern",
   "mcp.servers.title": "MCP-Server",
   "mcp.servers.toolsCount": "{{count}} Werkzeug(e)",
   "mcp.servers.toolsCount_one": "{{count}} Tool",
