@@ -426,6 +426,18 @@ async def test_build_vertex_returns_404_for_other_users_private_flow(
     assert response.status_code == 404, response.text
 
 
+async def test_build_vertex_stream_returns_404_for_other_users_private_flow(
+    client, added_flow_webhook_test, second_user_headers
+):
+    """The deprecated stream route must authorize before reading the shared graph cache."""
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.get(
+        f"/api/v1/build/{flow_id}/ChatInput-some-id/stream",
+        headers=second_user_headers,
+    )
+    assert response.status_code == 404, response.text
+
+
 async def test_build_vertex_invalid_vertex_id(client, added_flow_webhook_test, logged_in_headers):
     flow_id = added_flow_webhook_test["id"]
     response = await client.post(f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers)
