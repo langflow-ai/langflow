@@ -24,6 +24,7 @@ import type {
   inputHandlerEventType,
   loginInputStateType,
 } from "../../types/components";
+import DotGridBackground from "./components/dot-grid-background";
 
 export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =
@@ -103,130 +104,136 @@ export default function LoginPage(): JSX.Element {
         const _data = Object.fromEntries(new FormData(event.currentTarget));
         event.preventDefault();
       }}
-      className="h-screen w-full"
+      className="dark min-h-svh w-full overflow-auto bg-canvas text-foreground"
     >
-      <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
-        <div className="flex w-full max-w-xs flex-col items-center justify-center gap-2">
-          <LangflowLogo
-            title={t("common.langflowLogo")}
-            className="mb-4 h-10 w-10 scale-[1.5]"
-          />
-          <span className="mb-6 text-2xl font-semibold text-primary text-center">
-            {t("auth.loginTitle")}
-          </span>
-          <CustomLoginSsoOptions />
-          <div className="mb-3 w-full">
-            <Form.Field name="username">
-              <label
-                htmlFor="login-username"
-                className={`flex items-center gap-1 overflow-hidden ${
-                  usernameError ? "label-invalid" : ""
-                }`}
-              >
-                <span className="truncate">{t("auth.usernameLabel")}</span>
-                <span className="shrink-0 font-medium text-destructive">*</span>
-              </label>
-
-              <Input
-                id="login-username"
-                name="username"
-                type="text"
-                allowAutofill
-                autoComplete="username"
-                onChange={({ target: { value } }) => {
-                  handleInput({ target: { name: "username", value } });
-                }}
-                value={username}
-                className="w-full"
-                required
-                aria-describedby={
-                  usernameError ? "login-username-error" : undefined
-                }
-                aria-invalid={Boolean(usernameError)}
-                placeholder={t("auth.usernamePlaceholder")}
-              />
-
-              {usernameError && (
-                <p
-                  id="login-username-error"
-                  role="alert"
-                  className="field-invalid"
-                >
-                  {usernameError}
-                </p>
-              )}
-            </Form.Field>
+      <DotGridBackground />
+      <main className="relative z-10 flex min-h-svh w-full flex-col items-center justify-center px-6 py-10">
+        <div className="flex w-full max-w-[420px] flex-col items-center gap-8">
+          <div className="flex items-center gap-2">
+            <LangflowLogo
+              title={t("common.langflowLogo")}
+              className="h-12 w-12 text-foreground"
+            />
+            <h1 className="pl-2 text-center text-4xl font-semibold tracking-tight">
+              {t("auth.loginTitle")}
+            </h1>
           </div>
-          <div className="mb-3 w-full">
-            <Form.Field name="password">
-              <label
-                htmlFor="form-login-password"
-                className={`flex items-center gap-1 overflow-hidden ${
-                  passwordError ? "label-invalid" : ""
-                }`}
-              >
-                <span className="truncate">{t("auth.passwordLabel")}</span>
-                <span className="shrink-0 font-medium text-destructive">*</span>
-              </label>
-
-              <InputComponent
-                onChange={(value) => {
-                  handleInput({ target: { name: "password", value } });
-                }}
-                value={password}
-                isForm
-                allowAutofill
-                password={true}
-                required
-                id="login-password"
-                inputProps={{
-                  "aria-describedby": passwordError
-                    ? "login-password-error"
-                    : undefined,
-                  "aria-invalid": Boolean(passwordError) || undefined,
-                }}
-                placeholder={t("auth.passwordPlaceholder")}
-                className="w-full"
-              />
-
-              {passwordError && (
-                <p
-                  id="login-password-error"
-                  role="alert"
-                  className="field-invalid"
+          <section className="w-full rounded-xl border border-border bg-card p-8 shadow-2xl shadow-black/40 sm:p-10">
+            <CustomLoginSsoOptions />
+            <div className="flex flex-col gap-6">
+              <Form.Field name="username" className="pb-3">
+                <label
+                  htmlFor="login-username"
+                  className={`mb-2 flex items-center gap-1 overflow-hidden text-sm font-medium ${
+                    usernameError ? "label-invalid" : ""
+                  }`}
                 >
-                  {passwordError}
-                </p>
-              )}
-            </Form.Field>
-          </div>
-          <div className="w-full">
-            <Form.Submit asChild>
-              <Button className="mr-3 mt-6 w-full" type="submit">
-                {t("auth.signInButton")}
-              </Button>
-            </Form.Submit>
-          </div>
-          <div className="w-full">
-            <CustomLink to="/signup">
-              <ShadTooltip
-                content={`${t("auth.noAccount")} ${t("auth.signUpLink")}`}
-                styleClasses="z-50"
-              >
-                <Button
-                  className="w-full overflow-hidden"
-                  variant="outline"
-                  type="button"
-                >
-                  <span className="truncate">
-                    {t("auth.noAccount")}&nbsp;<b>{t("auth.signUpLink")}</b>
+                  <span className="truncate">{t("auth.usernameLabel")}</span>
+                  <span className="shrink-0 font-medium text-destructive">
+                    *
                   </span>
+                </label>
+
+                <Input
+                  id="login-username"
+                  name="username"
+                  type="text"
+                  allowAutofill
+                  autoComplete="username"
+                  onChange={({ target: { value } }) => {
+                    handleInput({ target: { name: "username", value } });
+                  }}
+                  value={username}
+                  className="h-11 w-full rounded-lg bg-muted"
+                  required
+                  aria-describedby={
+                    usernameError ? "login-username-error" : undefined
+                  }
+                  aria-invalid={Boolean(usernameError)}
+                  placeholder={t("auth.usernamePlaceholder")}
+                />
+
+                {usernameError && (
+                  <p
+                    id="login-username-error"
+                    role="alert"
+                    className="field-invalid"
+                  >
+                    {usernameError}
+                  </p>
+                )}
+              </Form.Field>
+
+              <Form.Field name="password" className="pb-3">
+                <label
+                  htmlFor="form-login-password"
+                  className={`mb-2 flex items-center gap-1 overflow-hidden text-sm font-medium ${
+                    passwordError ? "label-invalid" : ""
+                  }`}
+                >
+                  <span className="truncate">{t("auth.passwordLabel")}</span>
+                  <span className="shrink-0 font-medium text-destructive">
+                    *
+                  </span>
+                </label>
+
+                <InputComponent
+                  onChange={(value) => {
+                    handleInput({ target: { name: "password", value } });
+                  }}
+                  value={password}
+                  isForm
+                  allowAutofill
+                  password={true}
+                  required
+                  id="login-password"
+                  inputProps={{
+                    "aria-describedby": passwordError
+                      ? "login-password-error"
+                      : undefined,
+                    "aria-invalid": Boolean(passwordError) || undefined,
+                  }}
+                  placeholder={t("auth.passwordPlaceholder")}
+                  className="h-11 w-full rounded-lg bg-muted"
+                />
+
+                {passwordError && (
+                  <p
+                    id="login-password-error"
+                    role="alert"
+                    className="field-invalid"
+                  >
+                    {passwordError}
+                  </p>
+                )}
+              </Form.Field>
+
+              <Form.Submit asChild>
+                <Button className="h-11 w-full rounded-lg" type="submit">
+                  {t("auth.signInButton")}
                 </Button>
-              </ShadTooltip>
-            </CustomLink>
-          </div>
+              </Form.Submit>
+
+              <CustomLink className="block w-full" to="/signup">
+                <ShadTooltip
+                  content={`${t("auth.noAccount")} ${t("auth.signUpLink")}`}
+                  styleClasses="z-50"
+                >
+                  <Button
+                    className="h-11 w-full overflow-hidden rounded-lg"
+                    variant="outline"
+                    type="button"
+                  >
+                    <span className="truncate">
+                      {t("auth.noAccount")}&nbsp;<b>{t("auth.signUpLink")}</b>
+                    </span>
+                  </Button>
+                </ShadTooltip>
+              </CustomLink>
+            </div>
+          </section>
         </div>
-      </div>
+      </main>
     </Form.Root>
   );
 }
