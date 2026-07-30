@@ -1,0 +1,123 @@
+---
+title: Application observability
+slug: /observability-otlp
+description: Export Langflow's own request rate, error rate, latency, runtime health, and correlated logs to any OTLP backend.
+---
+
+Langflow reports on itself as an ordinary HTTP service, so the team running the servers can answer "is Langflow healthy?" from their existing observability platform.
+It emits three OpenTelemetry signals over OTLP: traces, metrics, and logs.
+
+This is separate from the LLM tracing integrations. Those answer "what did my agent do?" for the person who built the flow, and they carry prompt and completion text.
+Application observability answers "is the service healthy?" for the person running it. Prompts and completions never travel on this channel. For flow-level tracing, see [Traces](/traces) and the monitoring integrations such as [Langfuse](/integrations-langfuse) or [Traceloop and Instana](/integrations-instana-traceloop).
+
+Nothing is exported unless you set an endpoint. There is no agent, no sidecar, and no vendor SDK.
+
+## Prerequisites
+
+- An OTLP-compatible backend, such as Instana, New Relic, Datadog, Grafana Tempo, or an OpenTelemetry Collector.
+- The OpenTelemetry dependencies. The full `langflow` distribution already includes them. If you run standalone `lfx`, install the extra:
+
+   ```bash
+   pip install "lfx[otel]"
+   ```
+
+   If you set an endpoint without the extra installed, Langflow logs a warning at startup instead of exporting nothing silently.
+
+## Quickstart
+
+1. Set the endpoint and a service name:
+
+   ```text
+   OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.example.com
+   OTEL_SERVICE_NAME=langflow
+   ```
+
+2. Restart Langflow, and send some traffic through it.
+
+3. In your backend, look for a service named `langflow`. You should see request rate, error rate, and latency broken down per endpoint, plus runtime metrics for the process.
+
+Both `langflow` and `lfx serve` use the same bootstrap, so they report identically.
+
+## What you can measure
+
+| Area | Signals |
+|---|---|
+| Service health | Request rate, error rate, and latency per endpoint, from `http.server.request.duration`. In-flight load from `http.server.active_requests`. |
+| Runtime health | Process CPU, memory, thread count, open file descriptors, context switches, and CPython garbage collection. |
+| Queue health | `langflow_job_queue_active_jobs` for depth, and `langflow_job_queue_cancel_events_total` for cancel-channel and watchdog events. |
+| Flow execution | One `flow.execute` span per run, carrying `flow_id`, `run_id`, `session_id`, and `error.type` on failure. |
+| Correlation | Every exported log record carries the active `trace_id`, so a failing request's logs, its span, and its metrics join up. |
+
+Runtime metrics describe this process, not the host. Host-level CPU, disk, and network are deliberately excluded, because under Kubernetes they report the node, which is misleading next to a per-pod request rate. Your infrastructure agent already provides those.
+
+Flow identity is carried on spans and log records, never on metric labels, because `flow_id` is unbounded and would create a new time series per flow. "Which flow is slow?" is therefore a trace query rather than a dashboard panel.
+
+## Configuration
+
+Langflow reads the standard OpenTelemetry environment variables.
+
+| Variable | Effect |
+|---|---|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Enables export. Nothing is exported without it. |
+| `OTEL_SERVICE_NAME` | Service name in your backend. Also settable through `OTEL_RESOURCE_ATTRIBUTES`. |
+| `OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_ENDPOINT` | Per-signal endpoint override, for splitting signals across backends. |
+| `OTEL_EXPORTER_OTLP_{,TRACES_,METRICS_,LOGS_}PROTOCOL` | `http/protobuf` or `grpc`. Unknown values log a warning and fall back to `http/protobuf`. |
+| `OTEL_{TRACES,METRICS,LOGS}_EXPORTER=none` | Turns off one signal while a shared configuration supplies the endpoint. |
+| `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` | Passed through. New Relic requires `delta`. |
+| `OTEL_SEMCONV_STABILITY_OPT_IN` | Defaults to `http`. See [Migrating from the pre-1.0 metric names](#semconv-migration). |
+| `LANGFLOW_OTEL_LOG_LEVEL` | Minimum severity exported over OTLP. Defaults to `INFO`. Lowering it logs a warning. |
+| `LANGFLOW_PROMETHEUS_ENABLED` | Exposes a local Prometheus scrape endpoint alongside OTLP push. Defaults to `false`. |
+| `LANGFLOW_PROMETHEUS_PORT` | Port for that endpoint. Defaults to `9090`. |
+
+Langflow pushes metrics over OTLP rather than relying only on a Prometheus scrape, because a pull endpoint cannot cover a process that exits between scrapes, which is every `lfx run`.
+
+## What reaches your backend, and what does not
+
+The export path filters on the way out rather than trusting each integration to behave. Langflow installs a global tracer provider, and LLM instrumentation libraries deliberately bind to whichever global provider they find, so the boundary is enforced in the exporter.
+
+Exported:
+
+- Spans from the HTTP server instrumentation and Langflow's own `flow.execute` span.
+- Application and runtime metrics listed above.
+- Log records at `INFO` and above.
+
+Not exported:
+
+- Prompts, completions, and component payloads.
+- `gen_ai` token metrics. These stay on the local Prometheus endpoint, which belongs to the flow author's own process.
+- Per-component spans, and exception messages on spans.
+- Outbound LLM API call spans. Provider keys often travel in URL query parameters, so those scopes are deliberately excluded.
+
+:::warning
+The log channel is filtered by severity, not by content. That drops the bulk payload logging Langflow writes at `DEBUG`, but it does not make the channel content-free: an `ERROR` record can still contain flow-derived text, because a component's output value may be interpolated into an error message and a provider exception carries its own text.
+
+Similarly, `session_id` is exported on the `flow.execute` span exactly as your application supplies it. If you use email addresses or usernames as session IDs, they reach your backend. Use an opaque identifier if that matters to you.
+:::
+
+Setting `LANGFLOW_OTEL_LOG_LEVEL` below `INFO` sends `DEBUG` records, which include flow inputs and outputs, to your backend. Langflow logs a warning when you do this. Unknown values fall back to `INFO`, so a typo cannot silently widen the channel.
+
+## Migrating from the pre-1.0 metric names {#semconv-migration}
+
+Langflow now opts into the stable OpenTelemetry HTTP semantic conventions by default, because APMs key their HTTP dashboards and service maps off the stable names. If you have existing dashboards or alerts built on the older names, they need updating.
+
+| Before | After |
+|---|---|
+| `http.server.duration` (milliseconds) | `http.server.request.duration` (seconds) |
+| `http.method` | `http.request.method` |
+| `http.status_code` | `http.response.status_code` |
+| `http.target` | `http.route` |
+
+To emit both generations while you migrate, set:
+
+```text
+OTEL_SEMCONV_STABILITY_OPT_IN=http/dup
+```
+
+The `http.route` label is the templated path, such as `/api/v1/flows/{flow_id}`, so distinct flow IDs collapse into one time series rather than creating one per ID.
+
+## See also
+
+* [Logs](/logging)
+* [Grafana and Loki](/observability-grafana-loki)
+* [Traces](/traces)
+* [Traceloop and Instana](/integrations-instana-traceloop)

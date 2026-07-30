@@ -169,6 +169,7 @@ module.exports = {
           items: [
             "Develop/logging",
             "Develop/observability-grafana-loki",
+            "Develop/observability-otlp",
             "Develop/traces",
             {
               type: "category",
