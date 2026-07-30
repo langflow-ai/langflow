@@ -1,4 +1,5 @@
 import { VALID_CATEGORIES } from "@/constants/constants";
+import type { TAB_TYPES } from "@/types/global_variables";
 import { useDeleteGlobalVariables } from "./use-delete-global-variables";
 import { useGetGlobalVariables } from "./use-get-global-variables";
 import { usePatchGlobalVariables } from "./use-patch-global-variables";
@@ -10,7 +11,7 @@ export interface UpsertGlobalVariableParams {
   name: string;
   value: string;
   /** Create-only: the PATCH endpoint does not change a variable's type. */
-  type?: string;
+  type?: TAB_TYPES;
   default_fields?: string[];
   category?: VariableCategory;
 }
@@ -19,6 +20,21 @@ export interface UpsertGlobalVariableResult {
   action: "created" | "updated";
   name: string;
   id: string;
+}
+
+/**
+ * Tags a rejected upsert with the branch that failed ("created" | "updated") so
+ * the caller can attribute the error message without re-deriving which path ran.
+ */
+function withAction(
+  error: unknown,
+  action: UpsertGlobalVariableResult["action"],
+): unknown {
+  if (error && typeof error === "object") {
+    (error as { action?: UpsertGlobalVariableResult["action"] }).action =
+      action;
+  }
+  return error;
 }
 
 /**
@@ -39,31 +55,60 @@ export function useGlobalVariableUpsert() {
       (variable) => variable.name === params.name,
     );
 
-    if (existing) {
+    // Only route a same-name request into the PATCH branch when it is safe to
+    // do so. The stored type must match the requested one — PATCH cannot change
+    // a variable's type, so a mismatch would silently overwrite (e.g.) a Generic
+    // variable's value with Credential input and keep it Generic. And the
+    // variable must be owned by the current user — a variable only shared to
+    // them would PATCH an id they cannot write and surface a misleading 403.
+    // Any other case falls through to the create path, where the backend
+    // returns its authoritative duplicate-name error instead of this hook
+    // mutating data it should not touch.
+    if (
+      existing &&
+      existing.is_owner !== false &&
+      (params.type === undefined || existing.type === params.type)
+    ) {
       const updateData: {
         id: string;
         value: string;
         default_fields?: string[];
       } = { id: existing.id, value: params.value };
       if (params.default_fields !== undefined) {
-        updateData.default_fields = params.default_fields;
+        // Union, not replace: the create form only ever carries the field(s)
+        // the user just picked, so writing them wholesale would detach the
+        // variable from every other field it was already applied to.
+        updateData.default_fields = Array.from(
+          new Set([
+            ...(existing.default_fields ?? []),
+            ...params.default_fields,
+          ]),
+        );
       }
-      const res = await patchMutation.mutateAsync(updateData);
-      return {
-        action: "updated",
-        name: res?.name ?? params.name,
-        id: existing.id,
-      };
+      try {
+        const res = await patchMutation.mutateAsync(updateData);
+        return {
+          action: "updated",
+          name: res?.name ?? params.name,
+          id: existing.id,
+        };
+      } catch (error) {
+        throw withAction(error, "updated");
+      }
     }
 
-    const res = await postMutation.mutateAsync({
-      name: params.name,
-      value: params.value,
-      type: params.type,
-      default_fields: params.default_fields ?? [],
-      category: params.category,
-    });
-    return { action: "created", name: res.name, id: res.id };
+    try {
+      const res = await postMutation.mutateAsync({
+        name: params.name,
+        value: params.value,
+        type: params.type,
+        default_fields: params.default_fields ?? [],
+        category: params.category,
+      });
+      return { action: "created", name: res.name, id: res.id };
+    } catch (error) {
+      throw withAction(error, "created");
+    }
   };
 
   return {

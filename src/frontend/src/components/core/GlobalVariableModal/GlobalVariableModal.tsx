@@ -118,12 +118,19 @@ export default function GlobalVariableModal({
             : t("globalVars.modal.successCreated", { name }),
       });
     } catch (error) {
-      const responseError = error as ResponseErrorDetailAPI;
+      const responseError = error as ResponseErrorDetailAPI & {
+        action?: "created" | "updated";
+      };
+      const didUpdate = responseError?.action === "updated";
       setErrorData({
-        title: t("globalVars.modal.errorCreating"),
+        title: didUpdate
+          ? t("globalVars.modal.errorUpdating")
+          : t("globalVars.modal.errorCreating"),
         list: [
           responseError?.response?.data?.detail ??
-            t("globalVars.modal.errorUnexpectedCreate"),
+            (didUpdate
+              ? t("globalVars.modal.errorUnexpectedUpdate")
+              : t("globalVars.modal.errorUnexpectedCreate")),
         ],
       });
     }
