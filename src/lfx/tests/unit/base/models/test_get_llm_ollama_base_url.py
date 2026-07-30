@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import lfx.base.models.unified_models as unified_models_module
 import pytest
+from lfx.base.models.unified_models import instantiation
 from lfx.base.models.unified_models.instantiation import get_llm
 
 
@@ -69,6 +70,7 @@ def test_get_llm_resolves_ollama_base_url_by_precedence(
         patch.object(unified_models_module, "get_api_key_for_provider", return_value=None),
         patch.object(unified_models_module, "get_model_class", return_value=fake_cls),
         patch.object(unified_models_module, "get_all_variables_for_provider", return_value=provider_vars),
+        patch.object(instantiation, "ssrf_protected_httpx_client_kwargs_for_url", return_value=({}, {})),
     ):
         get_llm(
             _ollama_model_selection(),
