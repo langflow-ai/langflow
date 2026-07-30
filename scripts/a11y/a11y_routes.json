@@ -103,12 +103,6 @@
       "path": "/settings/messages",
       "surface": "Messages settings page",
       "ready": [{ "testId": "settings_menu_header" }]
-    },
-    {
-      "id": "account-delete",
-      "path": "/account/delete",
-      "surface": "Delete account page",
-      "ready": [{ "role": "button", "name": "delete", "first": true }]
     }
   ],
   "dynamic": [
