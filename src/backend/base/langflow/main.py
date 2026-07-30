@@ -554,11 +554,18 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Started in the lifespan rather than with the rest of the telemetry setup: it
             # needs the running loop, and under gunicorn the services are initialized in the
             # master before the fork, so a task created there would not exist in the workers.
-            lag_monitor = start_event_loop_lag_monitor(telemetry_service.ot.meter_provider)
+            # Best-effort, like every other optional subsystem here: instrumentation must
+            # never be the reason the server fails to boot.
+            try:
+                lag_monitor = start_event_loop_lag_monitor(telemetry_service.ot.meter_provider)
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(f"Event loop lag monitor failed to start: {e}")
             # Pool saturation is read from the live engine at collection time, so it has to be
-            # registered after the database service exists. No-op on SQLite, whose StaticPool
-            # counts nothing.
-            instrument_db_pool(telemetry_service.ot.meter_provider, get_db_service().engine)
+            # registered after the database service exists.
+            try:
+                instrument_db_pool(telemetry_service.ot.meter_provider, get_db_service().engine)
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(f"DB pool metrics failed to register: {e}")
 
             yield
         except asyncio.CancelledError:

@@ -682,7 +682,12 @@ def create_multi_serve_app(
     async def _lifespan(_app: FastAPI):
         # Started here rather than at app construction because it needs the running loop, and
         # under ``--workers`` the app is built in the gunicorn master before the fork.
-        lag_monitor = start_event_loop_lag_monitor(telemetry.meter_provider)
+        # Best-effort: optional instrumentation must never keep the server from starting.
+        lag_monitor = None
+        try:
+            lag_monitor = start_event_loop_lag_monitor(telemetry.meter_provider)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Event loop lag monitor failed to start: {e}")
         # Flush the OTLP buffers on shutdown. uvicorn dies by signal and never runs the SDK's
         # atexit flush, so without this the last batch of spans, metrics and logs drops on every
         # restart and pod eviction. Off the event loop: the final export can block on the network.
