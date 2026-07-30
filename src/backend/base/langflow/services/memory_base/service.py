@@ -17,6 +17,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
+from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 from lfx.base.models.provider_registry import is_api_key_optional
 from lfx.base.models.unified_models import get_api_key_for_provider
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, require_model_provider
@@ -142,6 +143,9 @@ class MemoryBaseService(Service):
     # ------------------------------------------------------------------ #
 
     async def create(self, payload: MemoryBaseCreate, user_id: uuid.UUID) -> MemoryBase:
+        backend_type = payload.backend_type or resolve_default_kb_backend()
+        backend_config = payload.backend_config or {}
+
         # 1. Verify that the referenced flow belongs to this user.
         async with session_scope() as db:
             from langflow.services.database.models.flow.model import Flow
@@ -206,8 +210,8 @@ class MemoryBaseService(Service):
                 kb_name=kb_name,
                 kb_username=kb_username,
                 user_id=user_id,
-                backend_type=payload.backend_type,
-                backend_config=payload.backend_config,
+                backend_type=backend_type,
+                backend_config=backend_config,
             )
             # From here on a collection may exist and the row will be written, so
             # any later failure must roll both back.
@@ -217,8 +221,8 @@ class MemoryBaseService(Service):
                 kb_name=kb_name,
                 embedding_provider=embedding_provider,
                 embedding_model=payload.embedding_model,
-                backend_type=payload.backend_type,
-                backend_config=payload.backend_config,
+                backend_type=backend_type,
+                backend_config=backend_config,
             )
 
             async with session_scope() as db:

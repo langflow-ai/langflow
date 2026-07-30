@@ -862,17 +862,31 @@ class KnowledgeComponent(Component):
             self.log(f"Warning: Could not update backend metadata metrics: {e}")
 
     @staticmethod
-    def _normalize_backend_selection(value: Any) -> tuple[str, dict[str, Any]]:
+    def _default_backend_selection() -> tuple[str, dict[str, Any]]:
+        """Deployment default for a new KB with no explicit backend chosen.
+
+        pgVector is environment-driven: when ``PGVECTOR_CONNECTION_STRING`` is set
+        the deployment snap-configures to Postgres, so an unspecified selection
+        (headless flows, multi-replica) becomes ``postgres``. Otherwise Chroma.
+        """
+        from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured
+
+        if postgres_env_configured():
+            return BackendType.POSTGRES.value, {}
+        return BackendType.CHROMA.value, {}
+
+    @classmethod
+    def _normalize_backend_selection(cls, value: Any) -> tuple[str, dict[str, Any]]:
         """Normalize a DBProviderInput value into backend type/config."""
         if not value:
-            return BackendType.CHROMA.value, {}
+            return cls._default_backend_selection()
 
         if isinstance(value, str):
-            backend_type = value if value == BackendType.OPENSEARCH.value else BackendType.CHROMA.value
-            return (
-                backend_type,
-                _DEFAULT_OPENSEARCH_CONFIG.copy() if backend_type == BackendType.OPENSEARCH.value else {},
-            )
+            if value == BackendType.OPENSEARCH.value:
+                return BackendType.OPENSEARCH.value, _DEFAULT_OPENSEARCH_CONFIG.copy()
+            if value == BackendType.POSTGRES.value:
+                return BackendType.POSTGRES.value, {}
+            return BackendType.CHROMA.value, {}
 
         if not isinstance(value, dict):
             return BackendType.CHROMA.value, {}
@@ -884,6 +898,9 @@ class KnowledgeComponent(Component):
             if not isinstance(backend_config, dict):
                 backend_config = {}
             return BackendType.OPENSEARCH.value, {**_DEFAULT_OPENSEARCH_CONFIG, **backend_config}
+
+        if backend_type == BackendType.POSTGRES.value:
+            return BackendType.POSTGRES.value, {}
 
         if backend_type == "chroma_cloud":
             backend_config = value.get("backend_config") or value.get("config") or {}

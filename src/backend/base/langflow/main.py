@@ -223,6 +223,19 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
+            # Surface env-driven pgVector so operators can confirm the deployment
+            # snap-configured to Postgres as the default Knowledge Base vector store.
+            try:
+                from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured
+
+                if postgres_env_configured():
+                    await logger.ainfo(
+                        "pgVector detected via PGVECTOR_CONNECTION_STRING — "
+                        "default Knowledge Base vector store is Postgres (pgvector)."
+                    )
+            except Exception as exc:  # noqa: BLE001 — never block startup on a detection log
+                await logger.adebug(f"pgVector detection skipped: {exc}")
+
             # Start the telemetry writer (no-op when telemetry_writer_enabled is False).
             try:
                 from langflow.services.deps import get_telemetry_writer_service

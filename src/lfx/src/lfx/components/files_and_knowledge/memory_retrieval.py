@@ -222,17 +222,19 @@ class MemoryBaseComponent(Component):
         """Construct the KB's configured backend, wired to its embedding function.
 
         Both the embedding config and the backend are resolved from the
-        ``knowledge_base`` row (sidecar only as a legacy fallback), so a Memory
-        Base provisioned on OpenSearch or Chroma Cloud is queried there — and with
-        the right embedding model — even on a replica whose local disk never held
-        the KB directory or its ``embedding_metadata.json``.
+        ``knowledge_base`` row — no ``kb_path`` is passed to either resolver, so
+        the on-disk sidecar (``embedding_metadata.json``) is never consulted for
+        a Memory Base. A Memory Base always has a row (created at MB-create and
+        backfilled for pre-existing ones), so a disk fallback here would only
+        ever mask a real DB problem, not recover from a missing sidecar — and a
+        Memory Base provisioned on OpenSearch or Chroma Cloud is queried there —
+        with the right embedding model — even on a replica whose local disk
+        never held the KB directory.
         """
-        provider, model = await resolve_embedding_selection(user_id=owner.id, kb_name=kb_name, kb_path=kb_path)
+        provider, model = await resolve_embedding_selection(user_id=owner.id, kb_name=kb_name)
         embedding_function = await KBIngestionHelper.build_embeddings(provider, model, owner)
 
-        backend_type, backend_config = await resolve_backend_selection(
-            user_id=owner.id, kb_name=kb_name, kb_path=kb_path
-        )
+        backend_type, backend_config = await resolve_backend_selection(user_id=owner.id, kb_name=kb_name)
         backend = create_backend(
             backend_type,
             kb_name=kb_name,

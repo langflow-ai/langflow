@@ -305,7 +305,10 @@ markup = ["MarkupSafe==3.0.2"]
 aws = ["boto3>=1.34.162,<2.0.0"]
 numexpr = ["numexpr>=2.10.2"]
 qianfan = ["qianfan==0.3.5"]
-pgvector = ["pgvector>=0.4.2"]
+pgvector = [
+    "pgvector>=0.4.2",
+    "psycopg[binary]>=3.1,<4.0",
+]
 litellm = [
     "litellm>=1.93.0,<2.0.0",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
