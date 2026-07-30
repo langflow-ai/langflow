@@ -70,10 +70,18 @@ def _resolve_execution_timeout() -> int:
 # letting frames accumulate without bound when the network is slow.
 _EVENT_QUEUE_MAX_SIZE = 256
 
-# Default for ``_stream_event_frames(execution_timeout=...)``: resolve the ceiling
-# from settings. Distinct from ``None`` so a caller can ask for "unbounded" without
-# it collapsing into "use the default".
-_CEILING_FROM_SETTINGS: Final = object()
+
+class _CeilingFromSettings:
+    """Sentinel type for ``_stream_event_frames(execution_timeout=...)``.
+
+    Its own class rather than a bare ``object()`` so the parameter carries a real
+    static type and an ``isinstance`` check narrows the remaining value to
+    ``float | None`` for ``asyncio.wait_for``. Distinct from ``None`` so a caller
+    can ask for "unbounded" without it collapsing into "use the default".
+    """
+
+
+_CEILING_FROM_SETTINGS: Final = _CeilingFromSettings()
 
 
 async def generate_flow_events(*args, **kwargs) -> None:
@@ -191,7 +199,7 @@ async def _stream_event_frames(
     job_id: UUID | None = None,
     resume: dict | None = None,
     track_job_status: bool = True,
-    execution_timeout: float | None | object = _CEILING_FROM_SETTINGS,
+    execution_timeout: float | None | _CeilingFromSettings = _CEILING_FROM_SETTINGS,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
@@ -228,7 +236,7 @@ async def _stream_event_frames(
     # Ceiling for the modes whose caller is waiting on a socket (stream, public).
     # Sync uses its own asyncio.wait_for upstream; background passes None and is
     # bounded by JobRunner instead. wait_for(timeout=None) simply awaits.
-    if execution_timeout is _CEILING_FROM_SETTINGS:
+    if isinstance(execution_timeout, _CeilingFromSettings):
         execution_timeout = _resolve_execution_timeout()
 
     # Captured from drive()'s exception path so the consumer can yield a
