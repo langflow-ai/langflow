@@ -80,6 +80,18 @@ opendsstar = [
 # for these lfx-core components after the bundle split.
 cassandra = ["cassio>=0.1.7"]  # Cassandra vector-store / chat-memory components
 toolguard = ["toolguard>=0.2.20,<1.0.0"]  # ToolGuard Policies component
+# Application observability: OTLP export of traces, metrics and logs for ``lfx serve`` / ``lfx
+# run``. lfx.observability guards every import, so a bare ``pip install lfx`` skips these and
+# the whole path no-ops; installing this extra turns it on. The full ``langflow`` distribution
+# carries the same packages through langflow-base, so it needs no change here.
+otel = [
+    "opentelemetry-api>=1.30.0,<2.0.0",
+    "opentelemetry-sdk>=1.30.0,<2.0.0",
+    "opentelemetry-exporter-otlp>=1.30.0,<2.0.0",
+    "opentelemetry-exporter-prometheus>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-fastapi>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-system-metrics>=0.50b0,<1.0.0",
+]
 # Engine-only by default: ``pip install lfx`` ships NO bundles.  This optional
 # extra pulls the long-tail metapackage for users who want the provider
 # components without the full ``langflow`` server install:

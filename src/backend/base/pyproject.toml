@@ -71,6 +71,9 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.50b0,<1.0.0",
     "opentelemetry-instrumentation-requests>=0.50b0,<1.0.0",
     "opentelemetry-instrumentation-urllib3>=0.50b0,<1.0.0",
+    # Process CPU, memory, GC and thread counts. Without it the only metrics the APM gets are
+    # request-shaped, so "is the service healthy" cannot be answered when nothing is failing yet.
+    "opentelemetry-instrumentation-system-metrics>=0.50b0,<1.0.0",
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
     "pip>=26.0.0,<27.0.0",

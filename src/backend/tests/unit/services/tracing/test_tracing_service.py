@@ -720,3 +720,54 @@ async def test_stop_drains_pending_queue_items(tracing_service):
 
     assert processed == ["Chat Output"]
     assert trace_context.traces_queue.empty()
+
+
+def test_get_tracer_is_silent_when_tracing_is_deactivated(mock_settings_service):
+    """Deactivated tracing must not warn about the trace context it deliberately never creates.
+
+    Without the guard this logged once per component per run, which on a box running with
+    LANGFLOW_DEACTIVATE_TRACING=true was the majority of the log volume -- and reads, to anyone
+    looking at a log viewer, as though tracing were broken.
+
+    Asserted behaviourally rather than by capturing the log line: lfx configures structlog with
+    ``cache_logger_on_first_use``, so ``capture_logs`` sees nothing. Short-circuiting before the
+    context var is read is the same property -- a deactivated service hands back nothing even
+    when a context happens to be set, which is exactly what the missing guard failed to do.
+    """
+    mock_settings_service.settings.deactivate_tracing = True
+    tracing_service = TracingService(mock_settings_service)
+
+    trace_context = TraceContext(
+        run_id=uuid.uuid4(),
+        run_name="run",
+        project_name="proj",
+        user_id="u",
+        session_id="s",
+    )
+    trace_context.tracers["langfuse"] = MockTracer("t", "chain", "proj", uuid.uuid4())
+    token = trace_context_var.set(trace_context)
+    try:
+        assert tracing_service.get_tracer("langfuse") is None
+    finally:
+        trace_context_var.reset(token)
+
+
+def test_get_tracer_still_returns_tracers_when_tracing_is_active(mock_settings_service):
+    """The guard must not swallow the normal path: an active context still hands back its tracer."""
+    mock_settings_service.settings.deactivate_tracing = False
+    tracing_service = TracingService(mock_settings_service)
+    trace_context = TraceContext(
+        run_id=uuid.uuid4(),
+        run_name="run",
+        project_name="proj",
+        user_id="u",
+        session_id="s",
+    )
+    tracer = MockTracer("t", "chain", "proj", uuid.uuid4())
+    trace_context.tracers["langfuse"] = tracer
+    token = trace_context_var.set(trace_context)
+    try:
+        assert tracing_service.get_tracer("langfuse") is tracer
+        assert tracing_service.get_tracer("absent") is None
+    finally:
+        trace_context_var.reset(token)
