@@ -1,4 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { createElement, type PropsWithChildren } from "react";
+import { MemoryRouter } from "react-router-dom";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import type { FlowType } from "@/types/flow";
 import useLoadFlowForRoute from "../use-load-flow-for-route";
 
@@ -24,6 +27,18 @@ const deferred = <T>(): Deferred<T> => {
   });
   return { promise, resolve, reject };
 };
+
+const RouterWrapper = ({ children }: PropsWithChildren) =>
+  createElement(
+    MemoryRouter,
+    {
+      future: {
+        v7_relativeSplatPath: true,
+        v7_startTransition: true,
+      },
+    },
+    children,
+  );
 
 const renderRouteLoader = (
   options: {
@@ -70,6 +85,37 @@ describe("useLoadFlowForRoute", () => {
       expect(applyFlowToCanvas).toHaveBeenCalledWith(FLOW);
     });
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("does not restart a pending load when the parent rerenders", async () => {
+    const pending = deferred<FlowType>();
+    const getFlow = jest.fn().mockReturnValue(pending.promise);
+    const applyFlowToCanvas = jest.fn();
+    const flows: FlowType[] = [];
+    const types = { flow: "Flow" };
+
+    const { rerender } = renderHook(
+      () => {
+        const navigate = useCustomNavigate();
+        useLoadFlowForRoute({
+          id: FLOW.id,
+          flows,
+          currentFlowId: "",
+          types,
+          getFlow,
+          applyFlowToCanvas,
+          navigate,
+        });
+      },
+      { wrapper: RouterWrapper },
+    );
+
+    await waitFor(() => expect(getFlow).toHaveBeenCalledTimes(1));
+    Array.from({ length: 5 }).forEach(() => rerender());
+
+    expect(getFlow).toHaveBeenCalledTimes(1);
+    await act(async () => pending.resolve(FLOW));
+    expect(applyFlowToCanvas).toHaveBeenCalledWith(FLOW);
   });
 
   it("logs and redirects when the server cannot confirm the flow", async () => {
