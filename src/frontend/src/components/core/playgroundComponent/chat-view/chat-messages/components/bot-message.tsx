@@ -317,11 +317,11 @@ export const BotMessage = memo(
             </div>
 
             {!editMessage && (
-              <div className="invisible absolute bottom-full right-0 group-hover:visible">
+              <div className="pointer-events-none absolute bottom-full right-0 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
                 <EditMessageButton
                   onCopy={() => navigator.clipboard.writeText(chatMessage)}
                   onEdit={() => setEditMessage(true)}
-                  className="h-fit group-hover:visible"
+                  className="h-fit"
                   isBotMessage={true}
                   onEvaluate={handleEvaluateAnswer}
                   evaluation={chat.properties?.positive_feedback}
