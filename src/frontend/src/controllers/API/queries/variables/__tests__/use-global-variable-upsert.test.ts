@@ -2,8 +2,6 @@ const mockPostMutateAsync = jest.fn();
 const mockPostMutate = jest.fn();
 const mockPatchMutateAsync = jest.fn();
 const mockPatchMutate = jest.fn();
-const mockDeleteMutateAsync = jest.fn();
-const mockDeleteMutate = jest.fn();
 
 let mockGlobalVariables:
   | Array<{
@@ -14,9 +12,6 @@ let mockGlobalVariables:
       is_owner?: boolean;
     }>
   | undefined;
-let mockPostPending = false;
-let mockPatchPending = false;
-let mockDeletePending = false;
 
 jest.mock("../use-get-global-variables", () => ({
   useGetGlobalVariables: () => ({ data: mockGlobalVariables }),
@@ -26,7 +21,6 @@ jest.mock("../use-post-global-variables", () => ({
   usePostGlobalVariables: () => ({
     mutate: mockPostMutate,
     mutateAsync: mockPostMutateAsync,
-    isPending: mockPostPending,
   }),
 }));
 
@@ -34,15 +28,6 @@ jest.mock("../use-patch-global-variables", () => ({
   usePatchGlobalVariables: () => ({
     mutate: mockPatchMutate,
     mutateAsync: mockPatchMutateAsync,
-    isPending: mockPatchPending,
-  }),
-}));
-
-jest.mock("../use-delete-global-variables", () => ({
-  useDeleteGlobalVariables: () => ({
-    mutate: mockDeleteMutate,
-    mutateAsync: mockDeleteMutateAsync,
-    isPending: mockDeletePending,
   }),
 }));
 
@@ -53,9 +38,6 @@ describe("useGlobalVariableUpsert", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGlobalVariables = [];
-    mockPostPending = false;
-    mockPatchPending = false;
-    mockDeletePending = false;
   });
 
   describe("upsertGlobalVariable", () => {
@@ -272,30 +254,11 @@ describe("useGlobalVariableUpsert", () => {
     });
   });
 
-  describe("passthroughs and pending state", () => {
-    it("exposes the patch and delete mutations unchanged", () => {
+  describe("passthroughs", () => {
+    it("exposes the patch mutate as updateGlobalVariable for the edit path", () => {
       const { result } = renderHook(() => useGlobalVariableUpsert());
 
       expect(result.current.updateGlobalVariable).toBe(mockPatchMutate);
-      expect(result.current.updateGlobalVariableAsync).toBe(
-        mockPatchMutateAsync,
-      );
-      expect(result.current.deleteGlobalVariable).toBe(mockDeleteMutate);
-      expect(result.current.deleteGlobalVariableAsync).toBe(
-        mockDeleteMutateAsync,
-      );
-    });
-
-    it("combines isPending across the three mutations", () => {
-      const { result, rerender } = renderHook(() => useGlobalVariableUpsert());
-      expect(result.current.isPending).toBe(false);
-
-      mockPatchPending = true;
-      rerender();
-      expect(result.current.isPending).toBe(true);
-      expect(result.current.isUpdating).toBe(true);
-      expect(result.current.isCreating).toBe(false);
-      expect(result.current.isDeleting).toBe(false);
     });
   });
 });

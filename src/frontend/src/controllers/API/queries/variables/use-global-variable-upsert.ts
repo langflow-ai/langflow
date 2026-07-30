@@ -1,6 +1,5 @@
 import { VALID_CATEGORIES } from "@/constants/constants";
 import type { TAB_TYPES } from "@/types/global_variables";
-import { useDeleteGlobalVariables } from "./use-delete-global-variables";
 import { useGetGlobalVariables } from "./use-get-global-variables";
 import { usePatchGlobalVariables } from "./use-patch-global-variables";
 import { usePostGlobalVariables } from "./use-post-global-variables";
@@ -38,15 +37,16 @@ function withAction(
 }
 
 /**
- * Wraps the global-variable post/patch/delete mutations behind the shared
+ * Wraps the global-variable post/patch mutations behind the shared
  * upsert-by-name rule: an existing name is UPDATED, never duplicate-created
- * (the backend rejects duplicate names with a 400).
+ * (the backend rejects duplicate names with a 400). Deletion is intentionally
+ * not part of this façade — the settings page owns it via
+ * useDeleteGlobalVariables.
  */
 export function useGlobalVariableUpsert() {
   const { data: globalVariables } = useGetGlobalVariables();
   const postMutation = usePostGlobalVariables();
   const patchMutation = usePatchGlobalVariables();
-  const deleteMutation = useDeleteGlobalVariables();
 
   const upsertGlobalVariable = async (
     params: UpsertGlobalVariableParams,
@@ -114,15 +114,5 @@ export function useGlobalVariableUpsert() {
   return {
     upsertGlobalVariable,
     updateGlobalVariable: patchMutation.mutate,
-    updateGlobalVariableAsync: patchMutation.mutateAsync,
-    deleteGlobalVariable: deleteMutation.mutate,
-    deleteGlobalVariableAsync: deleteMutation.mutateAsync,
-    isCreating: postMutation.isPending,
-    isUpdating: patchMutation.isPending,
-    isDeleting: deleteMutation.isPending,
-    isPending:
-      postMutation.isPending ||
-      patchMutation.isPending ||
-      deleteMutation.isPending,
   };
 }
