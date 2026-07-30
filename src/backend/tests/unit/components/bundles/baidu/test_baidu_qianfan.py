@@ -3,6 +3,8 @@ import os
 import pytest
 from langchain_core.messages import HumanMessage
 
+pytest.importorskip("lfx_bundles")
+
 # Skip the entire module if the optional Qianfan stack cannot be imported.
 # qianfan's GlobalConfig is a pydantic.v1 BaseSettings model and has been
 # observed to fail at class-construction time in some environments

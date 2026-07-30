@@ -6,6 +6,7 @@ class ServiceType(str, Enum):
 
     AUTH_SERVICE = "auth_service"
     AUTHORIZATION_SERVICE = "authorization_service"
+    MODEL_PROVIDER_POLICY_SERVICE = "model_provider_policy_service"
     CACHE_SERVICE = "cache_service"
     SHARED_COMPONENT_CACHE_SERVICE = "shared_component_cache_service"
     SETTINGS_SERVICE = "settings_service"

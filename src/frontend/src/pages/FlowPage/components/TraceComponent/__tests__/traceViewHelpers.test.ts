@@ -1,4 +1,7 @@
+import type { TraceListItem } from "@/controllers/API/queries/traces/types";
+import type { PendingHumanRequest } from "@/controllers/API/queries/workflows/use-get-pending-workflows";
 import {
+  buildActivityRows,
   downloadJson,
   endOfDay,
   formatCost,
@@ -182,6 +185,9 @@ describe("traceViewHelpers", () => {
       expect(getSpanStatusLabel("ok")).toBe("success");
       expect(getSpanStatusLabel("error")).toBe("error");
       expect(getSpanStatusLabel("unset")).toBe("running");
+      expect(getSpanStatusLabel("awaiting_human")).toBe(
+        "awaiting human action",
+      );
     });
   });
 
@@ -333,6 +339,141 @@ describe("traceViewHelpers", () => {
         iconName: "Loader2",
         shouldSpin: true,
       });
+
+      expect(getStatusIconProps("awaiting_human")).toEqual({
+        colorClass: "text-accent-indigo-foreground",
+        iconName: "CirclePause",
+        shouldSpin: false,
+      });
     });
+  });
+});
+
+describe("buildActivityRows", () => {
+  const trace = (over: Partial<TraceListItem> = {}): TraceListItem => ({
+    id: "t1",
+    name: "Run",
+    status: "ok",
+    startTime: "2026-06-22T00:00:00Z",
+    totalLatencyMs: 10,
+    totalTokens: 0,
+    totalCost: 0,
+    flowId: "f1",
+    sessionId: "s1",
+    input: null,
+    output: null,
+    ...over,
+  });
+
+  const pending = (
+    over: Partial<PendingHumanRequest> = {},
+  ): PendingHumanRequest => ({
+    job_id: "job-1",
+    flow_id: "f1",
+    session_id: "s1",
+    created_at: "2026-06-22T00:00:00Z",
+    request_id: "job-1:run",
+    kind: "node_input",
+    prompt: "ok?",
+    options: [{ action_id: "approve" }],
+    allowed_decisions: ["approve"],
+    ...over,
+  });
+
+  it("synthesizes a row for a pending request with no matching trace", () => {
+    const rows = buildActivityRows({
+      baseRows: [],
+      pendingRequests: [pending({ session_id: "other", job_id: "job-x" })],
+      statusFilter: "all",
+      fallbackName: "My Flow",
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      id: "job-x",
+      status: "awaiting_human",
+      isPending: true,
+      name: "My Flow",
+    });
+  });
+
+  it("overlays awaiting_human onto a matching unset trace row instead of duplicating", () => {
+    const rows = buildActivityRows({
+      baseRows: [trace({ status: "unset", sessionId: "s1" })],
+      pendingRequests: [pending({ session_id: "s1" })],
+      statusFilter: "all",
+      fallbackName: "My Flow",
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("awaiting_human");
+    expect(rows[0].pendingRequest?.job_id).toBe("job-1");
+    expect(rows[0].isPending).toBeUndefined();
+  });
+
+  it("overlays the pending onto the run's real (ok) trace so the paused detail keeps its span tree", () => {
+    // The paused run's flushed snapshot is OK and newest for its session; overlay the pending
+    // onto it (real trace_id) so the detail shows the components + the injected HITL node.
+    const rows = buildActivityRows({
+      baseRows: [trace({ status: "ok", sessionId: "s1" })],
+      pendingRequests: [pending({ session_id: "s1", job_id: "job-1" })],
+      statusFilter: "all",
+      fallbackName: "My Flow",
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("awaiting_human");
+    expect(rows[0].pendingRequest?.job_id).toBe("job-1");
+    expect(rows[0].isPending).toBeUndefined();
+  });
+
+  it("overlays the pending onto the run's trace by job_id when the job has no session_id", () => {
+    // Durable HITL flushes the paused run's trace under an id equal to job_id, but a background job
+    // can have session_id: null — so session matching fails and a duplicate synthetic row appears,
+    // hiding the real trace. Match by id so there is exactly one row that keeps its span tree.
+    const rows = buildActivityRows({
+      baseRows: [trace({ id: "job-1", status: "ok", sessionId: "f1" })],
+      pendingRequests: [pending({ session_id: null, job_id: "job-1" })],
+      statusFilter: "all",
+      fallbackName: "My Flow",
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].id).toBe("job-1");
+    expect(rows[0].status).toBe("awaiting_human");
+    expect(rows[0].pendingRequest?.job_id).toBe("job-1");
+    expect(rows[0].isPending).toBeUndefined();
+  });
+
+  it("overlays only the NEWEST trace per session — older completed siblings keep their status", () => {
+    const rows = buildActivityRows({
+      baseRows: [
+        trace({ id: "newest", status: "ok", sessionId: "s1" }),
+        trace({ id: "older", status: "ok", sessionId: "s1" }),
+      ],
+      pendingRequests: [pending({ session_id: "s1", job_id: "job-1" })],
+      statusFilter: "all",
+      fallbackName: "My Flow",
+    });
+    expect(rows.find((r) => r.id === "newest")?.status).toBe("awaiting_human");
+    expect(rows.find((r) => r.id === "older")?.status).toBe("ok");
+  });
+
+  it("Paused filter returns only awaiting_human rows", () => {
+    const rows = buildActivityRows({
+      baseRows: [trace({ status: "ok", sessionId: "done" })],
+      pendingRequests: [pending({ session_id: "s1", job_id: "job-1" })],
+      statusFilter: "awaiting_human",
+      fallbackName: "My Flow",
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("awaiting_human");
+  });
+
+  it("Success/Error filters exclude synthetic paused rows", () => {
+    const rows = buildActivityRows({
+      baseRows: [trace({ status: "ok", sessionId: "done" })],
+      pendingRequests: [pending({ session_id: "s1", job_id: "job-1" })],
+      statusFilter: "ok",
+      fallbackName: "My Flow",
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].isPending).toBeUndefined();
   });
 });

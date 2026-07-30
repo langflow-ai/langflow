@@ -371,6 +371,66 @@ class TestMetadataWithDependencies:
     def test_build_component_metadata_includes_dependencies(self):
         """Test that build_component_metadata includes dependency analysis."""
 
+    @pytest.mark.parametrize(
+        ("base_class", "module_name", "display_name", "expected_provider_id"),
+        [
+            ("model", "_lfx_ext.official.openai.components.openai.chat", "OpenAI Embeddings", "openai"),
+            ("embedding", "lfx_ibm.components.ibm.watsonx_embeddings", "IBM watsonx.ai", "ibm-watsonx"),
+            ("model", "_lfx_ext.official.mistral.mistral", "Mistral AI Chat", "mistral"),
+        ],
+    )
+    def test_build_component_metadata_stamps_stable_model_provider(
+        self, base_class, module_name, display_name, expected_provider_id
+    ):
+        from lfx.base.embeddings.model import LCEmbeddingsModel
+        from lfx.base.models.model import LCModelComponent
+
+        component_base = LCModelComponent if base_class == "model" else LCEmbeddingsModel
+
+        class ProviderComponent(component_base):
+            pass
+
+        component = ProviderComponent()
+        component.display_name = display_name
+        component._code = "class ProviderComponent: pass"
+        frontend = Mock(metadata={}, display_name=display_name)
+
+        build_component_metadata(frontend, component, module_name, "ProviderComponent")
+
+        assert frontend.metadata["model_provider_id"] == expected_provider_id
+        assert frontend.metadata["model_provider_display_name"]
+
+    def test_build_component_metadata_does_not_classify_unrelated_component(self):
+        from lfx.custom.custom_component.component import Component
+
+        component = Component()
+        component._code = "class UtilityComponent: pass"
+        frontend = Mock(metadata={}, display_name="Utility")
+
+        build_component_metadata(frontend, component, "lfx_bundles.mistral.utility", "UtilityComponent")
+
+        assert "model_provider_id" not in frontend.metadata
+
+    def test_build_component_metadata_does_not_stamp_delegating_model_selector(self):
+        from lfx.base.models.model import LCModelComponent
+
+        class UnifiedSelectorComponent(LCModelComponent):
+            model_provider_policy_mode = "delegate"
+
+        component = UnifiedSelectorComponent()
+        component.display_name = "Language Model"
+        component._code = "class UnifiedSelectorComponent: pass"
+        frontend = Mock(metadata={}, display_name=component.display_name)
+
+        build_component_metadata(
+            frontend,
+            component,
+            "lfx.components.models_and_agents.language_model",
+            "UnifiedSelectorComponent",
+        )
+
+        assert "model_provider_id" not in frontend.metadata
+
     def test_build_from_inputs_without_module_generates_default(self):
         """Test that build_component_metadata includes dependency analysis results."""
         from lfx.custom.custom_component.component import Component

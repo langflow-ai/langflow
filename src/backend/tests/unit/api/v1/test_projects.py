@@ -1,7 +1,8 @@
 import io
 import json
 import zipfile
-from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -34,6 +35,76 @@ def basic_case():
         "flows_list": [],
         "components_list": [],
     }
+
+
+@pytest.mark.asyncio
+async def test_project_download_uses_resolved_owner_namespace():
+    from langflow.api.v1.projects_files import download_project_flows
+
+    actor_id = uuid4()
+    owner_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Shared Project", user_id=owner_id)
+    flow = Flow(id=uuid4(), name="Shared Flow", user_id=owner_id, folder_id=project_id, data={})
+
+    project_result = MagicMock()
+    project_result.first.return_value = project
+    flows_result = MagicMock()
+    flows_result.all.return_value = [flow]
+    session = AsyncMock()
+    session.exec.side_effect = [project_result, flows_result]
+
+    response = await download_project_flows(
+        session=session,
+        project_id=project_id,
+        current_user=SimpleNamespace(id=actor_id),
+        project_owner_id=owner_id,
+    )
+
+    assert response.status_code == 200
+    project_sql = str(session.exec.await_args_list[0].args[0].compile(compile_kwargs={"literal_binds": True}))
+    flows_sql = str(session.exec.await_args_list[1].args[0].compile(compile_kwargs={"literal_binds": True}))
+    assert owner_id.hex in project_sql
+    assert owner_id.hex in flows_sql
+    assert actor_id.hex not in project_sql
+
+
+async def test_shared_project_download_filters_flows_by_read_permission():
+    from langflow.api.v1.projects_files import download_project_flows
+
+    actor_id = uuid4()
+    owner_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Shared Project", user_id=owner_id)
+    allowed_flow = Flow(id=uuid4(), name="Allowed Flow", user_id=owner_id, folder_id=project_id, data={})
+    denied_flow = Flow(id=uuid4(), name="Denied Flow", user_id=owner_id, folder_id=project_id, data={})
+
+    project_result = MagicMock()
+    project_result.first.return_value = project
+    flows_result = MagicMock()
+    flows_result.all.return_value = [allowed_flow, denied_flow]
+    session = AsyncMock()
+    session.exec.side_effect = [project_result, flows_result]
+
+    with patch(
+        "langflow.api.v1.projects_files.filter_visible_resources",
+        new_callable=AsyncMock,
+        create=True,
+        return_value=[allowed_flow],
+    ) as filter_visible:
+        response = await download_project_flows(
+            session=session,
+            project_id=project_id,
+            current_user=SimpleNamespace(id=actor_id),
+            project_owner_id=owner_id,
+        )
+
+    body = b"".join([chunk async for chunk in response.body_iterator])
+    with zipfile.ZipFile(io.BytesIO(body), "r") as archive:
+        assert archive.namelist() == ["Allowed Flow.json"]
+
+    filter_visible.assert_awaited_once()
+    assert filter_visible.await_args.kwargs["candidates"] == [allowed_flow, denied_flow]
 
 
 async def test_create_project(client: AsyncClient, logged_in_headers, basic_case):

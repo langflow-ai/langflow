@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 from datetime import datetime, timezone
-from uuid import UUID
+from uuid import UUID, uuid4
 
+from lfx.graph.exceptions import GraphPausedException
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlmodel import col, func, select
 
@@ -21,18 +23,36 @@ from langflow.services.database.models.jobs.crud import (
 from langflow.services.database.models.jobs.model import (
     ExecutionSignal,
     Job,
+    JobCheckpoint,
     JobEvent,
     JobStatus,
     JobType,
     SignalType,
 )
 from langflow.services.deps import session_scope
-from langflow.services.jobs.exceptions import DuplicateJobError
+from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, DuplicateJobError, PauseRequested
 
-# Bounded retries for append_event's optimistic seq assignment. Real contention is
-# at most a couple of concurrent appenders per job (a worker plus the orphan sweep,
-# or multiple processes in the scaled backend), so this is comfortably generous.
+# Bounded retries for append_event's optimistic seq assignment — contention is at most a
+# couple of concurrent appenders per job (worker + orphan sweep, or scaled-out processes).
 _APPEND_EVENT_MAX_RETRIES = 50
+
+
+def _unwrap_pause_payload(payload: dict | None) -> dict | None:
+    """Return the raw pause request, unwrapping the wire adapter's envelope.
+
+    The pause event is persisted as the wire frame the runner saw: the langflow
+    adapter nests the raw request under ``data``, AG-UI under a ``CustomEvent``'s
+    ``value``. Consumers (resume single-use, timeout reroute, allowed-decision
+    gate) read ``request_id``/``timeout_seconds``/``allowed_decisions`` at the top
+    level, so peel one envelope layer when the payload is wrapped.
+    """
+    if not isinstance(payload, dict) or "request_id" in payload:
+        return payload
+    for key in ("value", "data"):
+        inner = payload.get(key)
+        if isinstance(inner, dict) and "request_id" in inner:
+            return inner
+    return payload
 
 
 class JobService(Service):
@@ -127,17 +147,20 @@ class JobService(Service):
 
         async with session_scope() as session:
             if dedupe_key is not None:
-                # Scope uniqueness to the owner: a client-controlled
-                # idempotency_key flows into dedupe_key, so a GLOBAL count would
-                # let user A collide with / DoS user B's key (and the error would
-                # leak that a job with that key exists for someone else). When
-                # user_id is None (single-tenant AUTO_LOGIN), the ownerless rows
-                # form their own dedupe space.
+                # Why: scope uniqueness to the owner — a client-controlled idempotency_key flows into
+                # dedupe_key, so a global count would let user A collide with / DoS user B's key (and leak
+                # its existence). Ownerless rows (single-tenant AUTO_LOGIN, user_id None) share one space.
                 stmt = (
                     select(func.count())
                     .select_from(Job)
                     .where(Job.dedupe_key == dedupe_key)
-                    .where(col(Job.status).in_([JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.COMPLETED]))
+                    # SUSPENDED included so retrying the same key while a run is paused at a HITL node
+                    # cannot bypass dedupe and launch a second concurrent execution that races the resume.
+                    .where(
+                        col(Job.status).in_(
+                            [JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED, JobStatus.COMPLETED]
+                        )
+                    )
                 )
                 stmt = (
                     stmt.where(Job.user_id == user_id)
@@ -256,6 +279,68 @@ class JobService(Service):
             session.add(job)
             await session.flush()
             return job
+
+    async def save_checkpoint(self, job_id: UUID, kind: str, blob: str) -> None:
+        """Upsert the durable checkpoint blob for ``(job_id, kind)``.
+
+        ``blob`` is already-serialized text persisted verbatim — the helper never
+        parses it, so the graph producer (JSON) and the agent saver (base64 of
+        msgpack, LE-1447) share one API. UNIQUE(job_id, kind) keeps a single live
+        checkpoint per kind: a second save replaces the first.
+        """
+        # Why: a single-statement dialect upsert is atomic, so two concurrent savers (two vertices at
+        # one pause boundary) never collide on UNIQUE(job_id, kind) — no read-then-insert race to log.
+        now = datetime.now(timezone.utc)
+        async with session_scope() as session:
+            if session.get_bind().dialect.name == "postgresql":
+                from sqlalchemy.dialects.postgresql import insert as _dialect_insert
+            else:
+                from sqlalchemy.dialects.sqlite import insert as _dialect_insert
+            stmt = (
+                _dialect_insert(JobCheckpoint)
+                .values(id=uuid4(), job_id=job_id, kind=kind, blob=blob, created_at=now, updated_at=now)
+                .on_conflict_do_update(index_elements=["job_id", "kind"], set_={"blob": blob, "updated_at": now})
+            )
+            await session.exec(stmt)
+
+    async def load_checkpoint(self, job_id: UUID, kind: str) -> str | None:
+        """Return the stored checkpoint blob for ``(job_id, kind)``, or None if absent."""
+        async with session_scope() as session:
+            stmt = select(JobCheckpoint).where(JobCheckpoint.job_id == job_id).where(JobCheckpoint.kind == kind)
+            row = (await session.exec(stmt)).first()
+            return row.blob if row is not None else None
+
+    async def delete_checkpoint(self, job_id: UUID, kind: str) -> None:
+        """Delete the checkpoint for ``(job_id, kind)``; no-op when none exists."""
+        async with session_scope() as session:
+            stmt = select(JobCheckpoint).where(JobCheckpoint.job_id == job_id).where(JobCheckpoint.kind == kind)
+            row = (await session.exec(stmt)).first()
+            if row is not None:
+                await session.delete(row)
+                await session.flush()
+
+    async def get_pending_human_request(self, job_id: UUID) -> dict | None:
+        async with session_scope() as session:
+            stmt = (
+                select(JobEvent)
+                .where(JobEvent.job_id == job_id)
+                .where(JobEvent.event_type == HUMAN_INPUT_REQUIRED_EVENT)
+                .order_by(col(JobEvent.seq).desc())
+            )
+            row = (await session.exec(stmt)).first()
+            return _unwrap_pause_payload(row.payload) if row is not None else None
+
+    async def all_checkpoints(self, kind: str) -> list[tuple[UUID, str]]:
+        """Return ``(job_id, blob)`` for every stored checkpoint of ``kind``.
+
+        Lets a checkpoint store resolve the cross-row ABC lookups (by checkpoint
+        id, run id, session id) it can't express through the job-keyed helper. The
+        set is bounded: one row per actively-suspended job, dropped on completion.
+        """
+        async with session_scope() as session:
+            stmt = select(JobCheckpoint).where(JobCheckpoint.kind == kind)
+            rows = (await session.exec(stmt)).all()
+            return [(row.job_id, row.blob) for row in rows]
 
     async def append_event(self, job_id: UUID, event_type: str, payload: dict) -> int:
         """Append a durable event for a job and return its per-job seq.
@@ -503,6 +588,53 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
+    async def claim_suspended_for_resume(self, job_id: UUID, *, owner: str | None = None) -> bool:
+        """Atomically flip SUSPENDED->IN_PROGRESS for resume; True iff this caller won.
+
+        The single conditional ``UPDATE ... WHERE status = SUSPENDED`` is the single-use
+        primitive: only one concurrent resume gets ``rowcount == 1``. Going straight to
+        IN_PROGRESS (with a fresh heartbeat) means a racing startup sweep sees a non-QUEUED,
+        live row and cannot double-enqueue it.
+        """
+        from sqlmodel import update
+
+        now = datetime.now(timezone.utc).isoformat()
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return False
+            merged = {**(job.job_metadata or {})}
+            if owner is not None:
+                merged.update({"owner": owner, "heartbeat_at": now})
+            stmt = (
+                update(Job)
+                .where(Job.job_id == job_id, Job.status == JobStatus.SUSPENDED)
+                .values(status=JobStatus.IN_PROGRESS, job_metadata=merged)
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
+    async def claim_suspended_for_cancel(self, job_id: UUID) -> bool:
+        """Atomically flip SUSPENDED->CANCELLED; True iff this caller won.
+
+        Mirror of ``claim_suspended_for_resume`` for the supersede/stop side of the
+        race: a resume that already flipped the row to IN_PROGRESS keeps its run —
+        an unconditional CANCELLED write here would clobber it and destroy its
+        checkpoint mid-flight.
+        """
+        from sqlmodel import update
+
+        async with session_scope() as session:
+            stmt = (
+                update(Job)
+                .where(Job.job_id == job_id, Job.status == JobStatus.SUSPENDED)
+                .values(status=JobStatus.CANCELLED, finished_timestamp=datetime.now(timezone.utc))
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
     async def queued_workflow_job_ids(self) -> list[UUID]:
         """Return the ids of every QUEUED workflow job (for strand recovery)."""
         async with session_scope() as session:
@@ -569,12 +701,53 @@ class JobService(Service):
                 session.add(job)
                 reconciled.append(job.job_id)
             await session.flush()
-        # Append the terminal milestone via append_event (its own session) so the
-        # IntegrityError/seq-collision retry applies: a seq collision with a
-        # concurrent appender can no longer roll back the whole sweep.
+        # Why: append the terminal milestone via append_event (own session) so its seq-collision retry
+        # applies — a collision with a concurrent appender can no longer roll back the whole sweep.
         for job_id in reconciled:
             await self.append_event(job_id, "run_failed", dict(error_payload))
         return reconciled
+
+    async def sweep_input_deadlines(self) -> list[UUID]:
+        """FAIL SUSPENDED runs whose human-input deadline has passed (LE-1452).
+
+        A separate pass from ``sweep_orphans`` (which only touches IN_PROGRESS): selects
+        SUSPENDED rows carrying an ``input_deadline_at`` in ``job_metadata`` that is now
+        in the past and writes a terminal FAILED status with an ``input_timed_out`` error
+        plus a durable terminal event, so a reattaching client sees a clean end. Rows
+        without a stamped deadline (the setting was off at suspend) are left untouched.
+
+        Returns the ids transitioned to FAILED.
+        """
+        error_payload = {"type": "input_timed_out"}
+        reconciled: list[UUID] = []
+        async with session_scope() as session:
+            result = await session.exec(select(Job).where(Job.status == JobStatus.SUSPENDED))
+            now = datetime.now(timezone.utc)
+            for job in result.all():
+                deadline = (job.job_metadata or {}).get("input_deadline_at")
+                if not deadline or self._parse_deadline(deadline) is None or self._parse_deadline(deadline) > now:
+                    continue
+                job.status = JobStatus.FAILED
+                job.error = dict(error_payload)
+                job.finished_timestamp = now
+                session.add(job)
+                reconciled.append(job.job_id)
+            await session.flush()
+        for job_id in reconciled:
+            await self.append_event(job_id, "input_timed_out", dict(error_payload))
+            # Why: a deadline timeout terminalizes the run, so its durable checkpoint is dead weight
+            # that _all() keeps full-scanning (expires_at is never set); drop it like the cancel path.
+            with contextlib.suppress(Exception):
+                await self.delete_checkpoint(job_id, "graph")
+        return reconciled
+
+    @staticmethod
+    def _parse_deadline(raw: str) -> datetime | None:
+        try:
+            parsed = datetime.fromisoformat(raw)
+        except (ValueError, TypeError):
+            return None
+        return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
 
     async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:
         """Get the latest job for each asset ID in a single batch query.
@@ -663,6 +836,12 @@ class JobService(Service):
             # Execute the wrapped function
             await logger.ainfo(f"Executing job function for job_id={job_id}")
             result = await run_coro_func(*args, **kwargs)
+
+        except (PauseRequested, GraphPausedException):
+            # A producer paused the run for human input. The runner suspends it
+            # (SUSPENDED); do NOT write a terminal status here.
+            await logger.adebug(f"Job {job_id} paused for human input")
+            raise
 
         except AssertionError as e:
             # Handle missing required arguments

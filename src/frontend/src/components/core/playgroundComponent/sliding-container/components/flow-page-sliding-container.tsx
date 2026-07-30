@@ -15,6 +15,7 @@ import { ChatInput } from "../../chat-view/chat-input";
 import useDragAndDrop from "../../chat-view/chat-input/hooks/use-drag-and-drop";
 import { Messages } from "../../chat-view/chat-messages";
 import { useChatHistory } from "../../chat-view/chat-messages/hooks/use-chat-history";
+import { shouldForceScrollOnNewMessage } from "../../chat-view/utils/should-force-scroll";
 import { useSessionManager } from "../../hooks/use-session-manager";
 
 type FlowPageSlidingContainerContentProps = {
@@ -60,6 +61,7 @@ export function FlowPageSlidingContainerContent({
   const [files, setFiles] = useState<FilePreviewType[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const logsModalTriggerRef = useRef<HTMLElement | null>(null);
 
   const { sendMessage } = useSendMessage({ sessionId: activeSessionId });
   const noInput = !hasChatInput;
@@ -89,7 +91,7 @@ export function FlowPageSlidingContainerContent({
       lastId &&
       prevLastMsgIdRef.current !== undefined &&
       lastId !== prevLastMsgIdRef.current &&
-      lastMsg.isSend
+      shouldForceScrollOnNewMessage(lastMsg)
     ) {
       window.dispatchEvent(new Event("langflow-scroll-to-bottom"));
       stickyInstance.scrollToBottom("smooth");
@@ -110,9 +112,16 @@ export function FlowPageSlidingContainerContent({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setOpen(false);
+      if (e.key !== "Escape") return;
+      const outerDialog = panelRef.current?.closest('[role="dialog"]');
+      const hasNestedOverlay = Array.from(
+        document.querySelectorAll('[role="dialog"], [role="listbox"]'),
+      ).some((el) => el !== outerDialog);
+      if (hasNestedOverlay) return;
+      if (e.target instanceof Node && !panelRef.current?.contains(e.target)) {
+        return;
       }
+      setOpen(false);
     };
 
     document.addEventListener("keydown", handleKeyDown);
@@ -148,8 +157,12 @@ export function FlowPageSlidingContainerContent({
     setIsFullscreen(true);
   };
 
-  const handleOpenLogs = (sessionId: string) => {
+  const handleOpenLogs = (
+    sessionId: string,
+    triggerElement: HTMLElement | null,
+  ) => {
     selectSession(sessionId);
+    logsModalTriggerRef.current = triggerElement;
     setOpenLogsModal(true);
   };
 
@@ -197,6 +210,7 @@ export function FlowPageSlidingContainerContent({
             onClose={handleClose}
             openLogsModal={openLogsModal}
             setOpenLogsModal={setOpenLogsModal}
+            logsModalTriggerRef={logsModalTriggerRef}
             onRenameSession={renameSession}
             onClearChat={clearDefaultSession}
           />

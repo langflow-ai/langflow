@@ -14,6 +14,7 @@ from lfx.base.models.unified_models import (
 )
 from lfx.base.models.unified_models.build_config import _resolve_dropdown_provider_values
 from lfx.base.models.unified_models.provider_queries import get_models_detailed
+from lfx.services.variable.request_scope import activate_no_env_fallback, reset_no_env_fallback
 
 
 @pytest.fixture(autouse=True)
@@ -410,6 +411,28 @@ def test_get_all_provider_mapped_fields_is_cached():
     assert fields1 is fields2
 
 
+def test_api_key_optional_provider_with_only_optional_variables_is_enabled_without_values():
+    from lfx.base.models.unified_models import credentials
+
+    optional_variables = [
+        {
+            "variable_key": "AMBIENT_ENDPOINT",
+            "required": False,
+            "is_secret": False,
+        }
+    ]
+    with (
+        patch.object(credentials, "get_provider_all_variables", return_value=optional_variables),
+        patch("lfx.base.models.provider_registry.is_api_key_optional", return_value=True),
+    ):
+        enabled = credentials._validate_and_get_enabled_providers(
+            {},
+            {"AmbientAuthCo": "AMBIENT_ENDPOINT"},
+        )
+
+    assert enabled == {"AmbientAuthCo"}
+
+
 # ---------------------------------------------------------------------------
 # get_embeddings tests
 # ---------------------------------------------------------------------------
@@ -592,6 +615,55 @@ def test_get_embeddings_populates_available_models_from_all_configured_providers
     assert result.available_models["models/text-embedding-004"] is google_embedding
 
 
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_skips_policy_denied_secondary_provider_before_lookup(
+    mock_get_class, mock_get_api_key, monkeypatch
+):
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    monkeypatch.setattr(
+        "lfx.base.models.unified_models.instantiation._get_configured_embedding_providers",
+        lambda _user_id, _selected_provider: ["OpenAI", "Google Generative AI"],
+    )
+    looked_up_providers = []
+
+    def _embedding_names_for_provider(provider, _user_id):
+        looked_up_providers.append(provider)
+        if provider == "Google Generative AI":
+            pytest.fail("policy-denied provider catalog must not be read")
+        return ["text-embedding-3-small"]
+
+    monkeypatch.setattr(
+        "lfx.base.models.unified_models.instantiation._get_provider_embedding_model_names",
+        _embedding_names_for_provider,
+    )
+    mock_get_api_key.return_value = "sk-test"
+    primary = MagicMock(name="primary")
+    mock_embedding_class = MagicMock(return_value=primary)
+    mock_get_class.return_value = mock_embedding_class
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({"openai", "google-generative-ai"}),
+        allowed_provider_ids=frozenset({"openai"}),
+    )
+
+    result = get_embeddings(
+        [_make_openai_embedding_model()],
+        api_key="sk-test",  # pragma: allowlist secret
+        provider_policy=policy,
+    )
+
+    assert result.available_models == {"text-embedding-3-small": primary}
+    assert looked_up_providers == ["OpenAI"]
+    assert all(call.args[1] != "Google Generative AI" for call in mock_get_api_key.call_args_list)
+
+
 @pytest.mark.parametrize(
     ("env_values", "expected_base_url"),
     [
@@ -627,6 +699,26 @@ def test_get_embeddings_openai_api_base_env_fallback(
 
     kwargs = mock_embedding_class.call_args.kwargs
     assert kwargs["base_url"] == expected_base_url
+
+
+@pytest.mark.parametrize("variable_name", ["OPENAI_EMBEDDINGS_API_BASE", "OPENAI_API_BASE"])
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_openai_api_base_env_fallback_can_be_disabled(
+    mock_get_class, mock_get_api_key, monkeypatch, variable_name
+):
+    mock_get_api_key.return_value = "sk-test"
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+    monkeypatch.setenv(variable_name, "http://openai-compatible.example/v1")
+    token = activate_no_env_fallback(disabled=True)
+
+    try:
+        get_embeddings([_make_openai_embedding_model()], api_key="sk-test")
+    finally:
+        reset_no_env_fallback(token)
+
+    assert "base_url" not in mock_embedding_class.call_args.kwargs
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
@@ -1012,6 +1104,59 @@ def test_handle_model_input_update_calls_apply_provider_config_when_model_select
         )
 
         mock_apply.assert_called_once_with(build_config, "OpenAI")
+
+
+def test_policy_refresh_clears_hidden_provider_fields_before_applying_allowed_default():
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    component = _make_mock_component()
+    watsonx = [{"name": "watsonx-test", "provider": "IBM WatsonX", "metadata": {}}]
+    openai = [{"name": "gpt-test", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=watsonx),
+        "api_key": {
+            "show": True,
+            "required": True,
+            "value": "WATSONX_APIKEY",
+            "load_from_db": True,
+        },
+        "project_id": {
+            "show": True,
+            "required": True,
+            "value": "WATSONX_PROJECT_ID",
+            "load_from_db": True,
+        },
+    }
+    snapshot = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(user_id=component.user_id),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({"openai", "ibm-watsonx"}),
+        allowed_provider_ids=frozenset({"openai"}),
+    )
+
+    with (
+        patch("lfx.services.model_provider_policy.resolve_model_provider_policy", return_value=snapshot),
+        patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply,
+    ):
+        mock_apply.side_effect = lambda config, _provider: config
+        result = handle_model_input_update(
+            component,
+            build_config,
+            field_value="WATSONX_APIKEY",
+            field_name="api_key",
+            get_options_func=lambda user_id=None: openai,  # noqa: ARG005
+        )
+
+    assert result["model"]["value"] == openai
+    assert result["api_key"]["value"] == ""
+    assert result["api_key"]["load_from_db"] is False
+    assert result["project_id"]["value"] == ""
+    assert result["project_id"]["load_from_db"] is False
+    mock_apply.assert_called_once_with(build_config, "OpenAI")
 
 
 def test_handle_model_input_update_watsonx_embedding_shows_special_fields():

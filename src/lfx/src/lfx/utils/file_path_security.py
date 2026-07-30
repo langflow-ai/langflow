@@ -5,31 +5,30 @@ path from a tenant-controlled input field. Without restriction a tenant can read
 server files (``/etc/passwd``, the SQLite DB, secrets) or other tenants' uploads.
 
 When ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is enabled, resolved local file paths must stay
-within the storage data directory (``settings.config_dir``), where uploads live. The check is
-a no-op when the setting is disabled (OSS default), so single-tenant deployments keep the
-existing "read any local file by absolute path" behavior.
+within the authenticated user's or executing flow's storage subdirectory under
+``settings.config_dir``. The check is a no-op when the setting is disabled (OSS default), so
+single-tenant deployments keep the existing "read any local file by absolute path" behavior.
 
 Reserved-secret denial: the storage data directory IS ``config_dir``, which also holds the
 server-managed secret files as siblings of the per-flow upload subdirectories — the Fernet
 master key (``secret_key``), the JWT signing keys (``private_key.pem`` / ``public_key.pem``),
-and the SQLite DB when ``save_db_in_config_dir`` is set. The storage-boundary check alone would
-permit reading those (e.g. ``<flow>/../secret_key`` resolves back inside ``config_dir``), which
-would defeat the control's purpose — reading ``secret_key`` discloses every tenant's stored
-credentials. So those exact files are denied explicitly even though they sit inside the boundary.
+and the SQLite DB when ``save_db_in_config_dir`` is set. Per-scope containment already rejects
+those paths, and exact-file denial is retained as defense in depth because reading ``secret_key``
+would disclose every tenant's stored credentials.
 
-KNOWN LIMITATION (tracked for follow-up, see ``.claude/security-audit-findings.md``): this does
-NOT scope reads per tenant — any ``<config_dir>/<other_flow_id>/<file>`` upload is still in
-bounds, so one tenant can read another tenant's uploaded files. Closing that requires
-per-user/per-flow scoping at the call sites and is deferred.
 """
 
 from __future__ import annotations
 
 import contextlib
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from lfx.logging import logger
 from lfx.services.deps import get_settings_service
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 class LocalFileAccessError(ValueError):
@@ -85,8 +84,58 @@ def _reserved_secret_paths(data_dir: Path) -> set[Path]:
     return reserved
 
 
-def enforce_local_file_access(resolved_path: str | Path) -> Path:
-    """Ensure a resolved local path is inside the storage data dir when restriction is on.
+def component_file_access_scopes(component: object) -> tuple[str, ...]:
+    """Return authenticated user and flow storage scopes without requiring component properties.
+
+    Components are instantiated without a graph while metadata is built. Reading ``user_id`` or
+    ``flow_id`` properties in that state raises, so this helper inspects their backing graph safely.
+    """
+    graph = getattr(getattr(component, "_vertex", None), "graph", None)
+    candidates = (
+        getattr(component, "_user_id", None) or getattr(graph, "user_id", None),
+        getattr(graph, "flow_id", None),
+    )
+    scopes: list[str] = []
+    for candidate in candidates:
+        if candidate is not None:
+            scope = str(candidate).strip()
+            if scope and scope not in scopes:
+                scopes.append(scope)
+    return tuple(scopes)
+
+
+def _scope_roots(data_dir: Path, scope_ids: Iterable[object] | None) -> tuple[Path, ...]:
+    """Build validated storage roots for the current authenticated user/flow."""
+    if isinstance(scope_ids, (str, bytes)):
+        scope_ids = (scope_ids,)
+    roots: list[Path] = []
+    for raw_scope in scope_ids or ():
+        scope = str(raw_scope).strip()
+        if not scope or scope in {".", ".."} or any(char in scope for char in ("/", "\\", "\x00")):
+            msg = "Invalid local-file access scope."
+            raise LocalFileAccessError(msg)
+        root = (data_dir / scope).resolve()
+        if not root.is_relative_to(data_dir):
+            msg = "Invalid local-file access scope."
+            raise LocalFileAccessError(msg)
+        if root not in roots:
+            roots.append(root)
+
+    if not roots:
+        msg = (
+            "Local-file access requires an authenticated user or flow scope "
+            "when LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true."
+        )
+        raise LocalFileAccessError(msg)
+    return tuple(roots)
+
+
+def enforce_local_file_access(
+    resolved_path: str | Path,
+    *,
+    scope_ids: Iterable[object] | None = None,
+) -> Path:
+    """Ensure a local path is inside the current user/flow storage scope when restricted.
 
     Symlinks are resolved before the containment check so a symlink inside the storage dir
     cannot point outside it.
@@ -94,35 +143,38 @@ def enforce_local_file_access(resolved_path: str | Path) -> Path:
     Args:
         resolved_path: A filesystem path. It is re-resolved here (``Path.resolve()``) so that
             symlinks are followed before the containment check; the caller need not pre-resolve it.
+        scope_ids: Authenticated user id and/or executing flow id. At least one valid scope is
+            required in restricted mode; paths under other storage subdirectories are denied.
 
     Returns:
-        The path as a ``Path`` object (unchanged) when allowed.
+        The resolved path as a ``Path`` object when allowed.
 
     Raises:
         LocalFileAccessError: If the restriction is enabled and the path escapes the
-            storage data directory.
+            authenticated user's or executing flow's storage scope.
     """
     path = Path(resolved_path)
     if not is_local_file_access_restricted():
         return path
 
     data_dir = Path(get_settings_service().settings.config_dir).resolve()
+    allowed_roots = _scope_roots(data_dir, scope_ids)
     try:
         candidate = path.resolve()
     except OSError as e:
         msg = f"Could not resolve file path '{resolved_path}': {e}"
         raise LocalFileAccessError(msg) from e
 
-    if not candidate.is_relative_to(data_dir):
+    if not any(candidate == root or candidate.is_relative_to(root) for root in allowed_roots):
         msg = (
-            "Access to local file paths outside the storage directory is disabled "
+            "Access to local file paths outside the authenticated user's storage scope is disabled "
             "(LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true). Use an uploaded file instead."
         )
         raise LocalFileAccessError(msg)
 
     # The storage dir is config_dir, which also holds server-managed secret/key/DB files as
-    # siblings of the upload subdirs; deny those explicitly (a traversal like "<flow>/../secret_key"
-    # resolves back inside the boundary but must not be readable).
+    # siblings of the upload subdirs. Scope containment rejects them; retain exact denial as
+    # defense in depth in case storage layout or scope handling changes later.
     if candidate in _reserved_secret_paths(data_dir):
         msg = "Access to this server-managed file is not permitted (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true)."
         raise LocalFileAccessError(msg)

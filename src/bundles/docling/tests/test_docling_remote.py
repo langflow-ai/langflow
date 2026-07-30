@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 import pytest
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 pytest.importorskip("docling_core")
 
@@ -18,6 +21,7 @@ from lfx_docling.components.docling.docling_remote import DoclingRemoteComponent
 
 from lfx.inputs import TableInput
 from lfx.schema import Data
+from lfx.utils.ssrf_transport import SSRFProtectedSyncTransport
 
 # isort: on
 
@@ -59,6 +63,14 @@ class _Client:
     def get(self, url: str) -> _Response:
         self.urls.append(url)
         return self.responses.pop(0)
+
+
+class _ContextClient:
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        return None
 
 
 def _input(name: str):
@@ -138,3 +150,100 @@ def test_poll_raises_later_4xx_before_json_parse(monkeypatch: pytest.MonkeyPatch
 
     assert pending_response.json_called is True
     assert not_found_response.json_called is False
+
+
+@pytest.mark.parametrize("request_path", ["task", "files"])
+def test_remote_request_paths_block_metadata_url_before_creating_client(
+    monkeypatch: pytest.MonkeyPatch, request_path: str
+) -> None:
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+
+    component = DoclingRemoteComponent()
+    component._attributes.update(
+        {
+            "api_url": "http://169.254.169.254/latest/meta-data",
+            "api_headers": [],
+            "docling_serve_opts": {},
+            "max_concurrency": 1,
+            "max_poll_timeout": 60,
+            "task_id": "task-1",
+        }
+    )
+
+    def fail_if_client_is_created(**_kwargs: Any) -> None:
+        msg = "HTTP client must not be created for a blocked URL"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(docling_remote.httpx, "Client", fail_if_client_is_created)
+
+    def invoke_request() -> None:
+        if request_path == "task":
+            component._process_task_id()
+        else:
+            component.process_files([])
+
+    with pytest.raises(ValueError, match=r"SSRF Protection: .*blocked IP address"):
+        invoke_request()
+
+
+def test_process_task_id_pins_public_docling_host_and_preserves_headers(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+    monkeypatch.setattr("lfx.utils.ssrf_protection.resolve_hostname", lambda _hostname: ["93.184.216.34"])
+
+    component = DoclingRemoteComponent()
+    component._attributes.update(
+        {
+            "api_url": "https://docling.example",
+            "api_headers": [{"key": "Authorization", "value": "Bearer token"}],
+            "max_poll_timeout": 60,
+            "task_id": "task-1",
+        }
+    )
+    client_kwargs: dict[str, Any] = {}
+
+    def capture_client(**kwargs: Any) -> _ContextClient:
+        client_kwargs.update(kwargs)
+        return _ContextClient()
+
+    expected = Data(data={"status": "success"})
+    monkeypatch.setattr(docling_remote.httpx, "Client", capture_client)
+    monkeypatch.setattr(component, "_poll_and_fetch_result", lambda *_args, **_kwargs: expected)
+
+    result = component._process_task_id()
+
+    assert result[0] is expected
+    assert client_kwargs["headers"] == {"Authorization": "Bearer token"}
+    assert client_kwargs["follow_redirects"] is False
+    assert isinstance(client_kwargs["transport"], SSRFProtectedSyncTransport)
+    assert client_kwargs["transport"].pinned_ips == {"docling.example": ["93.184.216.34"]}
+
+
+def test_process_task_id_allows_explicitly_allowlisted_internal_docling(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "10.0.0.7")
+
+    component = DoclingRemoteComponent()
+    component._attributes.update(
+        {
+            "api_url": "http://10.0.0.7:5001",
+            "api_headers": [],
+            "max_poll_timeout": 60,
+            "task_id": "task-1",
+        }
+    )
+    client_kwargs: dict[str, Any] = {}
+
+    def capture_client(**kwargs: Any) -> _ContextClient:
+        client_kwargs.update(kwargs)
+        return _ContextClient()
+
+    expected = Data(data={"status": "success"})
+    monkeypatch.setattr(docling_remote.httpx, "Client", capture_client)
+    monkeypatch.setattr(component, "_poll_and_fetch_result", lambda *_args, **_kwargs: expected)
+
+    result = component._process_task_id()
+
+    assert result[0] is expected
+    assert client_kwargs == {"headers": {}, "follow_redirects": False}

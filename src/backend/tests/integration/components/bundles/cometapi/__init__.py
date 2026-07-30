@@ -1,1 +1,0 @@
-# CometAPI integration tests

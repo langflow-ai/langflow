@@ -8,14 +8,15 @@ executor, the in-memory live bus, and the per-job runner. Methods:
 * ``status(job_id, user)`` / ``result(job_id, user)``
 * ``stop_job(job_id, user)``
 
-Backend selection follows ``settings.job_queue_type``: ``asyncio`` (default)
-uses the in-process executor + in-memory bus implemented here; ``redis``
-raises ``NotImplementedError`` until Phase 3 wires the scaled backend behind
-these same methods.
+This single-node slice always runs jobs on the in-process executor + in-memory
+bus implemented here. ``LANGFLOW_JOB_QUEUE_TYPE=redis`` still selects the v1
+``RedisJobQueueService`` elsewhere; this facade has no scaled backend on this
+branch and runs in-process regardless.
 """
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import os
@@ -75,22 +76,19 @@ class BackgroundExecutionService(Service):
         self._settings = settings_service.settings
         self._is_redis = self._settings.background_backend_is_scaled
         # Scaled backend: the redis claim queue + Streams live bus + DB replay.
-        # When configured (redis), the API process only enqueues — a separate
-        # ``langflow worker`` process drains the queue and runs the JobRunner.
-        # Injected in tests; otherwise built lazily here from settings when the
-        # scaled backend is configured. In the default (asyncio) path it stays
-        # None and the in-process executor below runs jobs inside the API.
+        # Injected in tests; otherwise built lazily from settings. In the default
+        # (asyncio) path it stays None and the in-process executor runs jobs here.
         if backend is None and self._is_redis:
             backend = self._build_scaled_backend()
         self._backend = backend
         self._executor = InProcessExecutor(max_concurrency=self._settings.background_max_concurrency)
         self._bus = InMemoryLiveBus()
         # Process-unique owner token stamped on the heartbeat of jobs this API
-        # process runs in the default backend. Lets a liveness-aware sweep tell a
-        # job this live process is running from a genuinely orphaned one.
+        # process runs. Lets a liveness-aware sweep tell a job this live process
+        # is running from a genuinely orphaned one.
         self._owner = f"api:{os.getpid()}:{uuid4().hex[:8]}"
-        # Injected in tests; defaulted to the real build loop by the route wiring.
         self._frame_source_factory = frame_source_factory
+        self._deadline_task: asyncio.Task | None = None
         self.set_ready()
 
     @property
@@ -101,39 +99,101 @@ class BackgroundExecutionService(Service):
     def _build_scaled_backend(self) -> Any:
         """Build the redis-backed scaled backend from settings.
 
-        Reuses the worker's redis-client resolution (URL → host/port/db with the
+        Reuses the worker's redis-client resolution (URL -> host/port/db with the
         cache-redis fallbacks) so the API enqueues to the exact redis a worker
         drains, and ``select_background_backend`` so selection follows
         ``background_backend_is_scaled``. Returns None in the default path.
         """
-        from langflow.services.background_execution.factory import select_background_backend
-        from langflow.services.background_execution.worker import _build_redis_client
+        try:
+            from langflow.services.background_execution.factory import select_background_backend
+            from langflow.services.background_execution.worker import _build_redis_client
+        except ImportError:
+            # The scaled modules (worker/redis_backend) are not shipped on this branch;
+            # degrade to the in-process executor instead of crashing the facade.
+            logger.warning(
+                "job_queue_type=redis requested but the scaled background backend is not "
+                "available; falling back to the in-process executor."
+            )
+            return None
         from langflow.services.deps import get_job_service
 
         client = _build_redis_client(self._settings)
         return select_background_backend(self._settings, client=client, job_service=get_job_service())
 
     async def start(self) -> None:
-        # Scaled mode: nothing to start in the API process — the worker process
-        # owns execution. (No NotImplementedError: the redis backend is wired.)
+        # Scaled mode: nothing to start in the API process - the worker owns execution.
         if self._scaled:
             return
         await self._executor.start()
+        self._start_deadline_watchdog()
 
     async def stop(self) -> None:
+        if self._deadline_task is not None:
+            self._deadline_task.cancel()
+            self._deadline_task = None
         await self._executor.stop()
+
+    def _start_deadline_watchdog(self) -> None:
+        """Run the input-deadline sweep on the watchdog interval (only when the budget is set).
+
+        Without this, a never-restarting process would enforce the deadline only on the
+        startup sweep. The loop is skipped entirely when ``background_input_deadline_s`` is
+        None, so default deployments spawn no extra task.
+        """
+        if self._settings.background_input_deadline_s is None or self._deadline_task is not None:
+            return
+        interval = self._settings.background_watchdog_interval_s
+
+        async def _loop() -> None:
+            while True:
+                await asyncio.sleep(interval)
+                with contextlib.suppress(Exception):
+                    await self.sweep_input_deadlines()
+
+        self._deadline_task = asyncio.create_task(_loop())
 
     async def teardown(self) -> None:
         await self.stop()
-        # Scaled mode: close the redis client this facade built for the backend so
-        # the API replica does not leak its background-execution connection pool on
-        # shutdown (the worker process closes its own client on teardown). Default
-        # mode has no backend, so this is a no-op.
+        # Scaled mode: close the redis client this facade built so the API replica
+        # does not leak its connection pool on shutdown. No-op in default mode.
         backend = self._backend
         if backend is not None and hasattr(backend, "teardown"):
             await backend.teardown()
 
     # ------------------------------------------------------------------ submit
+
+    async def supersede_suspended_runs(self, *, flow_id: UUID, user_id: UUID) -> list[UUID]:
+        """Cancel this user's SUSPENDED runs of the flow so a rerun replaces the stale pause.
+
+        A suspended run holds a pause nobody will answer once its owner reruns the flow;
+        left alive it piles up in every pending surface (badge, cards, trace bar). Scope is
+        flow + user: another user's pause on the same flow is never touched, and running
+        jobs are untouched so parallel runs stay supported.
+        """
+        from sqlmodel import select
+
+        from langflow.services.database.models.jobs.model import Job
+        from langflow.services.deps import session_scope
+
+        job_service = get_job_service()
+        async with session_scope() as session:
+            result = await session.exec(
+                select(Job.job_id).where(
+                    Job.flow_id == flow_id,
+                    Job.user_id == user_id,
+                    Job.status == JobStatus.SUSPENDED,
+                    Job.type == JobType.WORKFLOW,
+                )
+            )
+            stale_job_ids = list(result.all())
+        cancelled: list[UUID] = []
+        for stale_job_id in stale_job_ids:
+            if self._scaled:
+                await self._backend.stop(str(stale_job_id))
+                cancelled.append(stale_job_id)
+            elif await self._cancel_suspended(stale_job_id, job_service):
+                cancelled.append(stale_job_id)
+        return cancelled
 
     async def submit(self, *, flow_id: UUID, request: dict[str, Any], user: UserRead) -> UUID:
         # Lazy-start the executor so the facade works whether or not the app
@@ -172,10 +232,12 @@ class BackgroundExecutionService(Service):
         # variables by name for background runs rather than passing secrets inline.
         # The live in-memory run below still uses the full ``request``.
         await job_service.update_job_metadata(job_id, {"request": self._redact_request(request)})
+        # After create_job so an idempotent retry returns the existing job instead of
+        # cancelling it; the new job is QUEUED, so the suspended-only query skips it.
+        await self.supersede_suspended_runs(flow_id=flow_id, user_id=user.id)
         if self._scaled:
             # Scaled mode: hand the QUEUED job id to a worker via the redis claim
-            # queue. The DB row stays the system of record; the API does NOT run
-            # the flow. The worker hydrates the request from the job row.
+            # queue; the worker hydrates the request from the job row.
             await self._backend.enqueue(str(job_id))
         else:
             await self._enqueue(job_id=job_id, flow_id=flow_id, request=request, user=user)
@@ -215,7 +277,12 @@ class BackgroundExecutionService(Service):
             stmt = (
                 select(JobModel)
                 .where(JobModel.dedupe_key == dedupe_key)
-                .where(col(JobModel.status).in_([JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.COMPLETED]))
+                # Why: SUSPENDED included so a retry while paused at a HITL node can't bypass dedupe.
+                .where(
+                    col(JobModel.status).in_(
+                        [JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED, JobStatus.COMPLETED]
+                    )
+                )
             )
             if user_id is not None:
                 stmt = stmt.where(JobModel.user_id == user_id)
@@ -236,6 +303,7 @@ class BackgroundExecutionService(Service):
             job_timeout=self._settings.background_job_timeout,
             owner=self._owner,
             heartbeat_interval_s=self._settings.background_heartbeat_interval_s,
+            input_deadline_s=self._settings.background_input_deadline_s,
         )
 
         async def _coro() -> None:
@@ -270,30 +338,36 @@ class BackgroundExecutionService(Service):
         # is empty, so ``reattach`` would replay durable rows then block forever on
         # ``while True: queue.get()`` waiting for a live tail that will never come.
         # Decide "finished" off the persisted status (the cross-restart source of
-        # truth), replay, and return. The same holds cross-replica in scaled mode:
-        # a terminal job has nothing live left on the redis Stream.
-        if job.status in _TERMINAL_STATUSES:
+        # truth), replay, and return.
+        # SUSPENDED is parked awaiting human input: no live tail to wait on, so answer
+        # from the durable log alone (like a terminal status) instead of blocking.
+        if job.status in _TERMINAL_STATUSES or job.status == JobStatus.SUSPENDED:
             for frame in await read_durable(last_seq):
                 yield frame.data
             return
 
         # Scaled mode: any API replica serves reattach by replaying durable
-        # job_events (from the DB) then tailing the shared redis Stream. The
-        # backend yields durable event rows (carry .seq) and live _StreamFrames
-        # (payload is already SSE bytes the worker's RedisStreamLiveBus XADDed).
+        # job_events (from the DB) then tailing the shared redis Stream.
         if self._scaled:
             async for item in self._backend.events(str(job_id), last_event_id=last_seq):
                 seq = getattr(item, "seq", None)
                 if seq is not None:
-                    # Durable milestone row — re-frame through the SSE formatter
-                    # so replayed bytes match live frames (Last-Event-ID resume).
                     yield self._row_to_frame(item, protocol=protocol)
                 else:
-                    # Live ephemeral frame from the Stream tail — already framed.
                     yield item.payload
             return
 
-        async for frame in self._bus.reattach(str(job_id), last_seq=last_seq, read_durable=read_durable):
+        async def _is_terminal() -> bool:
+            # SUSPENDED ends the tail too: a run that connected while IN_PROGRESS and
+            # then suspended has no live tail to wait on (the pause isn't published live).
+            current = await job_service.get_job_by_job_id(job_id)
+            return current is not None and (
+                current.status in _TERMINAL_STATUSES or current.status == JobStatus.SUSPENDED
+            )
+
+        async for frame in self._bus.reattach(
+            str(job_id), last_seq=last_seq, read_durable=read_durable, is_done=_is_terminal
+        ):
             yield frame.data
 
     # ------------------------------------------------------------------ status
@@ -310,35 +384,86 @@ class BackgroundExecutionService(Service):
             payload["result"] = job.result
         if job.error is not None:
             payload["error"] = job.error
+        if job.status == JobStatus.SUSPENDED:
+            pending = await get_job_service().get_pending_human_request(job_id)
+            if pending is not None:
+                payload["pending_request"] = pending
         return payload
 
     async def result(self, job_id: UUID, user: UserRead) -> Any:
         job = await self._validate(job_id, user)
         return job.result
 
-    # -------------------------------------------------------------------- stop
-
     async def stop_job(self, job_id: UUID, user: UserRead) -> None:
-        # Enforces ownership (raises PermissionError on a cross-user/unknown job).
-        await self._validate(job_id, user)
+        job = await self._validate(job_id, user)
         if self._scaled:
-            # Scaled mode: the owning worker runs in another process. backend.stop
-            # writes the durable STOP signal — the single source of truth the
-            # worker's JobRunner polls at vertex boundaries. There is no pub/sub
-            # fast-path (nothing in the worker subscribes to one), so stop latency
-            # is one vertex-boundary poll, bounded by the run's durable cadence.
+            # Scaled mode: the owning worker runs in another process; backend.stop
+            # writes the durable STOP signal its JobRunner polls at vertex boundaries.
             await self._backend.stop(str(job_id))
             return
         job_service = get_job_service()
-        # Always write the durable STOP signal — even when the row currently
-        # reads a finished status. An in-flight runner can write its terminal
-        # status (COMPLETED/FAILED) in the tiny window after stop_workflow flips
-        # the row to CANCELLED but before this fetch; the runner's terminal
-        # reconcile keys off this signal to force CANCELLED back over that
-        # overwrite. Skipping the signal here is what let a racing FAILED win.
+        # A lost claim means a resume flipped it IN_PROGRESS mid-call — fall
+        # through to the running-job stop path instead of doing nothing.
+        if job.status == JobStatus.SUSPENDED and await self._cancel_suspended(job_id, job_service):
+            return
         await job_service.write_signal(job_id, SignalType.STOP)
-        # Cancel the in-flight task for promptness; a no-op if it already ended.
         await self._executor.cancel(str(job_id))
+
+    async def resume_job(self, job_id: UUID, user: UserRead, *, request_id: str, decision: Any) -> bool:  # noqa: ARG002
+        """Carry a human decision back into a SUSPENDED run and re-enqueue it.
+
+        Returns True when the run was accepted for resume, False on a conflict
+        (not suspended, stale request_id, or lost the single-flight flip) — the
+        route maps False to 409. Ownership (owner-or-superuser) is enforced at the
+        HTTP route, so this fetches by id alone and trusts the already-validated user.
+        """
+        job_service = get_job_service()
+        job = await job_service.get_job_by_job_id(job_id)
+        if job is None or job.type != JobType.WORKFLOW or job.status != JobStatus.SUSPENDED:
+            return False
+        pending = (job.job_metadata or {}).get("pending_request_id")
+        if pending is not None and request_id != pending:
+            return False
+        # Win the single-flight flip BEFORE writing the RESUME signal, so exactly one
+        # RESUME row exists per suspend and a loser never strands a stray decision.
+        if not await job_service.claim_suspended_for_resume(job_id, owner=self._owner):
+            return False
+        await job_service.write_signal(job_id, SignalType.RESUME, {"decision": decision, "request_id": request_id})
+        try:
+            await self._enqueue(
+                job_id=job_id,
+                flow_id=job.flow_id,
+                request=self._reconstruct_request(job),
+                user=self._user_stub(job.user_id),
+            )
+        except Exception:
+            # Why: claim already flipped SUSPENDED→IN_PROGRESS; a failed enqueue would strand the job
+            # and lose the decision — roll back to SUSPENDED (clearing RESUME) so it can be retried.
+            with contextlib.suppress(Exception):
+                await job_service.consume_signals(job_id, SignalType.RESUME)
+            await job_service.update_job_status(job_id, JobStatus.SUSPENDED)
+            raise
+        return True
+
+    async def _cancel_suspended(self, job_id: UUID, job_service) -> bool:
+        """Cancel a SUSPENDED job; False when a concurrent resume already claimed it.
+
+        The conditional claim is what makes supersede-vs-resume safe: cleanup
+        (checkpoint delete, metadata clear, terminal event) runs only for the row
+        this caller actually flipped, never for a run a resume just revived.
+        """
+        if not await job_service.claim_suspended_for_cancel(job_id):
+            return False
+        from langflow.api.v2.hitl import mark_card_superseded
+
+        await mark_card_superseded(job_id)
+        with contextlib.suppress(Exception):
+            await job_service.delete_checkpoint(job_id, "graph")
+        await job_service.update_job_metadata(job_id, {"pending_request_id": None})
+        await job_service.append_event(job_id, "run_cancelled", {"type": "cancelled"})
+        await job_service.consume_signals(job_id, SignalType.STOP)
+        await self._bus.close(str(job_id))
+        return True
 
     # ----------------------------------------------------------- startup sweep
 
@@ -397,6 +522,24 @@ class BackgroundExecutionService(Service):
                     request=request_dict,
                     user=user,
                 )
+        # Give up on runs that have sat suspended past their human-input deadline.
+        with contextlib.suppress(Exception):
+            await self.sweep_input_deadlines()
+
+    async def sweep_input_deadlines(self) -> list[UUID]:
+        """Enforce the input deadline (LE-1452): FAIL overdue SUSPENDED runs, close their bus.
+
+        The durable FAIL + terminal event is JobService's; this also closes any live bus
+        still held open for a same-process suspended run so a reattaching client ends
+        cleanly. A no-op (and never queries the DB) when the deadline is disabled.
+        """
+        if self._settings.background_input_deadline_s is None:
+            return []
+        failed = await get_job_service().sweep_input_deadlines()
+        for job_id in failed:
+            with contextlib.suppress(Exception):
+                await self._bus.close(str(job_id))
+        return failed
 
     @staticmethod
     async def _queued_workflow_jobs() -> list[Job]:

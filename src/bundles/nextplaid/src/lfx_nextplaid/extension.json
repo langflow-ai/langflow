@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.langflow.org/extension/v1.json",
   "id": "lfx-nextplaid",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "name": "NextPlaid",
   "description": "NextPlaid multi-vector (ColBERT/PLAID) vector store and its companion vLLM multivector embeddings as a standalone Langflow Extension Bundle.",
   "lfx": {

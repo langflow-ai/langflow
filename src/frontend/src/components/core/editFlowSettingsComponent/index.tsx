@@ -14,6 +14,7 @@ export const EditFlowSettings: React.FC<
     submitForm?: () => void;
     locked?: boolean;
     setLocked?: (v: boolean) => void;
+    readOnly?: boolean;
   }
 > = ({
   name,
@@ -27,10 +28,12 @@ export const EditFlowSettings: React.FC<
   submitForm,
   locked = false,
   setLocked,
+  readOnly = false,
 }: InputProps & {
   submitForm?: () => void;
   locked?: boolean;
   setLocked?: (v: boolean) => void;
+  readOnly?: boolean;
 }): JSX.Element => {
   const { t } = useTranslation();
   const [isMaxLength, setIsMaxLength] = useState(false);
@@ -129,7 +132,7 @@ export const EditFlowSettings: React.FC<
               onDoubleClickCapture={handleFocus}
               data-testid="input-flow-name"
               autoFocus
-              disabled={locked}
+              disabled={locked || readOnly}
             />
           </Form.Control>
         ) : (
@@ -173,7 +176,7 @@ export const EditFlowSettings: React.FC<
               maxLength={descriptionMaxLength}
               onDoubleClickCapture={handleFocus}
               onKeyDown={handleDescriptionKeyDown}
-              disabled={locked}
+              disabled={locked || readOnly}
             />
           </Form.Control>
         ) : (
@@ -211,6 +214,7 @@ export const EditFlowSettings: React.FC<
             <Switch
               checked={!!locked}
               onCheckedChange={(v) => setLocked?.(v)}
+              disabled={readOnly}
               className="data-[state=checked]:bg-primary ml-auto"
               data-testid="lock-flow-switch"
             />

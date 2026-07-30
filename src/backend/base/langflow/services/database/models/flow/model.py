@@ -10,8 +10,8 @@ import emoji
 from emoji import purely_emoji
 from lfx.log.logger import logger
 from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
+from sqlalchemy import Boolean, Text, UniqueConstraint, false, text
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import Text, UniqueConstraint, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema.data import Data
@@ -44,6 +44,13 @@ def _validate_endpoint_name_value(v: str | None) -> str | None:
 class AccessTypeEnum(str, Enum):
     PRIVATE = "PRIVATE"
     PUBLIC = "PUBLIC"
+
+
+class FlowType(str, Enum):
+    # Extensible: new kinds can be added without a breaking change. Lowercase
+    # values so the stored string matches the wire value (see values_callable).
+    WORKFLOW = "workflow"
+    AGENT = "agent"
 
 
 class FlowBase(SQLModel):
@@ -82,6 +89,29 @@ class FlowBase(SQLModel):
             nullable=False,
             server_default=text("'PRIVATE'"),
         ),
+    )
+    flow_type: FlowType = Field(
+        default=FlowType.WORKFLOW,
+        sa_column=Column(
+            SQLEnum(
+                FlowType,
+                name="flow_type_enum",
+                values_callable=lambda enum: [member.value for member in enum],
+            ),
+            nullable=False,
+            server_default=text("'workflow'"),
+        ),
+        description="Whether the flow is a plain workflow or an agent (publishable over A2A)",
+    )
+    a2a_enabled: bool | None = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=True, server_default=false()),
+        description="Can be exposed as an A2A agent (only meaningful when flow_type=agent)",
+    )
+    a2a_card_overrides: dict | None = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description="User overrides for the generated A2A agent card (skill description, examples, tags)",
     )
 
     @field_validator("endpoint_name")
@@ -256,6 +286,9 @@ class FlowHeader(BaseModel):
     access_type: AccessTypeEnum | None = Field(None, description="The access type of the flow")
     tags: list[str] | None = Field(None, description="The tags of the flow")
     mcp_enabled: bool | None = Field(None, description="Flag indicating whether the flow is exposed in the MCP server")
+    flow_type: FlowType | None = Field(None, description="Whether the flow is a plain workflow or an agent")
+    a2a_enabled: bool | None = Field(None, description="Flag indicating whether the flow is exposed as an A2A agent")
+    a2a_card_overrides: dict | None = Field(None, description="User overrides for the served A2A agent card")
     action_name: str | None = Field(None, description="The name of the action associated with the flow")
     action_description: str | None = Field(None, description="The description of the action associated with the flow")
 
@@ -279,6 +312,9 @@ class FlowUpdate(SQLModel):
     action_name: str | None = None
     action_description: str | None = None
     access_type: AccessTypeEnum | None = None
+    flow_type: FlowType | None = None
+    a2a_enabled: bool | None = None
+    a2a_card_overrides: dict | None = None
     fs_path: str | None = None
 
     @field_validator("endpoint_name")

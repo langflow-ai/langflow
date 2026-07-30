@@ -15,6 +15,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("lfx_bundles")
+
 METADATA_URL = "http://169.254.169.254"
 
 

@@ -68,10 +68,11 @@ class PublicFlowValidationError(CustomComponentValidationError):
 
 
 # Template field (input) names on CODE_EXECUTION_COMPONENT_TYPES nodes that carry
-# executable code or define the code sandbox boundary. These are plain-text inputs
+# executable code or define the code sandbox boundary. Most are plain-text inputs
 # (StrInput / MultilineInput → template type "str"), so the field-type=="code" guard
-# in apply_tweaks() does NOT catch them; the Tweaks API must additionally refuse to
-# override them by name on a code-execution node. Kept beside
+# in apply_tweaks() does NOT catch them; function_code is also included by name as
+# defense in depth for legacy or malformed templates. The Tweaks API must refuse to
+# override these fields by name on a code-execution node. Kept beside
 # CODE_EXECUTION_COMPONENT_TYPES so the two consumers stay in sync when a component
 # has tweakable code/sandbox inputs. Components that execute runtime/model-generated
 # code without such a template field still belong in CODE_EXECUTION_COMPONENT_TYPES,
@@ -80,6 +81,7 @@ class PublicFlowValidationError(CustomComponentValidationError):
 # The conventional "code" field name is blocked globally in apply_tweaks() and so
 # is intentionally omitted here.
 #   - python_code:        Python Interpreter (PythonREPLComponent) exec input
+#   - function_code:      Python Function (PythonFunctionComponent) exec input
 #   - tool_code:          removed PythonCodeStructuredTool exec input (type retained)
 #   - filter_instruction: Smart Transform instruction → LLM-generated, eval()'d lambda
 #   - global_imports:     import allow-list that populates the exec() namespace; the
@@ -89,12 +91,23 @@ class PublicFlowValidationError(CustomComponentValidationError):
 CODE_EXECUTION_FIELD_NAMES: frozenset[str] = frozenset(
     {
         "allow_dangerous_code",
+        "function_code",
         "python_code",
         "tool_code",
         "filter_instruction",
         "global_imports",
     }
 )
+
+# Component inputs that cross a privileged sink boundary and therefore must retain
+# the value stored by the flow author. SQLComponent uses these fields to select a
+# database and execute SQL with the server's filesystem access and database
+# credentials; allowing the Tweaks API to replace them would let a run caller
+# repoint that authority without editing the flow. Other SQLComponent options
+# remain tweakable.
+PROTECTED_TWEAK_FIELDS_BY_COMPONENT: Mapping[str, frozenset[str]] = {
+    "SQLComponent": frozenset({"database_url", "query"}),
+}
 
 # Component node ``type`` values that load and execute *another* saved flow by
 # id or name at build/run time. On the unauthenticated public path these are an

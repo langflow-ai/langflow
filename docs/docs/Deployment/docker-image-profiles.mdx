@@ -1,0 +1,93 @@
+---
+title: Choose a Langflow Docker image
+slug: /deployment/docker-image-profiles
+---
+
+Langflow publishes three application image profiles. They run the same Langflow
+service, but they contain different component and provider inventories. Choose
+the smallest profile that contains every component used by your flows.
+
+| Profile | Docker Hub image | GitHub Container Registry image | Included inventory |
+| --- | --- | --- | --- |
+| Core | `langflowai/langflow:core-VERSION` | `ghcr.io/langflow-ai/langflow:core-VERSION` | The Langflow service, UI, core components, and no provider bundle distributions |
+| Default | `langflowai/langflow:VERSION` | `ghcr.io/langflow-ai/langflow:VERSION` | Core plus the curated provider set used by the standard Langflow installation |
+| Full | `langflowai/langflow-all:VERSION` | `ghcr.io/langflow-ai/langflow-all:VERSION` | Default plus the long-tail `lfx-bundles` provider inventory |
+
+The full profile intentionally uses a separate `langflow-all` repository. The
+core and default profiles use different tags in the `langflow` repository.
+Core omits all provider distributions; default omits the long-tail
+`lfx-bundles` distribution. A flow that references an omitted component cannot
+run until you select a profile that provides it or build that provider into a
+derived image.
+
+## Pin a release
+
+Use a versioned tag in deployments:
+
+```yaml
+services:
+  langflow:
+    image: langflowai/langflow:core-1.12.0
+```
+
+The moving tags are `langflowai/langflow:core-latest`,
+`langflowai/langflow:latest`, and `langflowai/langflow-all:latest`,
+respectively. They are convenient for local evaluation, but they can select a
+new release without a configuration change. Production deployments should pin
+a version tag and, when reproducibility is required, the registry digest:
+
+```yaml
+services:
+  langflow:
+    image: langflowai/langflow:core-1.12.0@sha256:IMAGE_DIGEST
+```
+
+Record both the tag and digest in release records. A tag identifies the
+Langflow release; the digest identifies the exact multi-platform image selected
+by the deployment.
+
+## Change profiles or versions safely
+
+Changing a profile changes the installed component inventory. Changing a
+version can also run database migrations at application startup. Treat either
+change as a deployment migration:
+
+1. Inventory the components used by production flows and select a profile that
+   contains them. Test custom components and provider integrations explicitly.
+2. Record the current image digest, configuration, and persistent volume
+   layout. Back up the database before starting a newer Langflow version.
+3. Start the candidate image against a copy of production data and run smoke
+   tests for login, flow loading, flow execution, file access, and provider
+   credentials.
+4. Deploy the candidate with the same persistent database and data mounts. Do
+   not copy mutable application files out of the old container.
+5. Confirm health and component availability before removing the previous
+   image from the registry or deployment platform.
+
+Moving from full or default to core is safe only when no saved flow depends on
+a removed provider component. If you need a bounded provider set, derive an
+image from the versioned core image and install the reviewed provider packages
+at image-build time:
+
+```dockerfile
+FROM langflowai/langflow:core-1.12.0
+RUN uv pip install --python /app/.venv/bin/python \
+    "lfx-openai==COMPATIBLE_VERSION"
+```
+
+Build and test the derived image before deployment. Do not install or remove
+provider packages in a running container, because that makes replicas and
+rollbacks non-reproducible.
+
+## Roll back
+
+Keep the previous pinned image and database backup until the candidate passes
+production verification. To roll back a profile-only change on the same
+Langflow version, redeploy the previous digest with the unchanged persistent
+data. To roll back across Langflow versions after a database migration, stop
+the candidate, restore the pre-upgrade database backup, and redeploy the
+previous digest. Do not run an older application against a database that a
+newer version migrated unless that downgrade path is explicitly documented.
+
+For general Docker configuration, persistence, and source builds, see
+[Deploy Langflow on Docker](./deployment-docker.mdx).

@@ -18,6 +18,7 @@ from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession, build_content_disposition
 from langflow.services.authorization import FileAction, ensure_file_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
+from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope, visible_scope_prefilter
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
@@ -46,7 +47,7 @@ def is_permanent_storage_failure(error: Exception) -> bool:
     if isinstance(error, FileNotFoundError):
         return True
 
-    # Check for S3 error codes (boto3/aioboto3)
+    # Check for S3 error codes (boto3/aiobotocore)
     # S3 errors have a 'response' attribute with Error.Code
     if hasattr(error, "response"):
         response = error.response
@@ -69,7 +70,7 @@ async def get_mcp_file(current_user: CurrentActiveUser, *, extension: bool = Fal
     return f"{MCP_SERVERS_FILE}_{current_user.id!s}" + (".json" if extension else "")
 
 
-async def _validate_uploaded_mcp_config(file: UploadFile) -> None:
+async def _validate_uploaded_mcp_config(file: UploadFile) -> dict[str, dict]:
     """Validate an uploaded MCP servers config against MCPServerConfig.
 
     Security: the uploaded bytes become the user's MCP servers config, whose
@@ -99,6 +100,7 @@ async def _validate_uploaded_mcp_config(file: UploadFile) -> None:
             MCPServerConfig.model_validate(cfg)
         except ValidationError as exc:
             raise HTTPException(status_code=422, detail=f"Invalid MCP server '{name}': {exc}") from exc
+    return servers
 
 
 async def byte_stream_generator(file_input, chunk_size: int = 8192) -> AsyncGenerator[bytes, None]:
@@ -287,7 +289,7 @@ async def upload_user_file(
             # is on, but this branch writes the same _mcp_servers_<uid>.json that
             # get_server_list reads — so without the same guard a non-superuser could
             # replace their MCP config via the file-upload path while it's locked.
-            from langflow.api.v2.mcp import is_mcp_servers_locked
+            from langflow.api.v2.mcp import ensure_mcp_stdio_access, is_mcp_servers_locked
 
             if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
                 raise HTTPException(
@@ -299,7 +301,9 @@ async def upload_user_file(
             # path can't bypass the command allow-list enforced by the structured
             # /api/v2/mcp/servers endpoints (otherwise an attacker-supplied command
             # would later be spawned via the stdio transport -> RCE).
-            await _validate_uploaded_mcp_config(file)
+            servers = await _validate_uploaded_mcp_config(file)
+            for server_config in servers.values():
+                ensure_mcp_stdio_access(server_config, current_user, settings_service.settings)
             # Check if an existing record exists; if so, delete it to replace with the new one
             existing_mcp_file = await get_file_by_name(mcp_file, current_user, session)
             if existing_mcp_file:
@@ -483,15 +487,31 @@ async def list_files(
         # TODO: Pending further testing
         # await load_sample_files(current_user, session, get_storage_service())
         # Fetch from the UserFile table
-        stmt = select(UserFile).where(UserFile.user_id == current_user.id)
+        visibility = await visible_scope_prefilter(
+            current_user,
+            resource_type="file",
+            act=FileAction.READ,
+        )
+        stmt = select(UserFile)
+        if visibility is None:
+            stmt = stmt.where(UserFile.user_id == current_user.id)
+        else:
+            # UserFile has no canonical workspace/project columns. Omitting
+            # them intentionally keeps domain-only grants owner-scoped.
+            stmt = restrict_to_owned_or_visible_scope(
+                stmt,
+                id_column=UserFile.id,
+                owner_clause=UserFile.user_id == current_user.id,
+                visibility=visibility,
+            )
         results = await session.exec(stmt)
 
         full_list = list(results)
 
-        # Filter out the _mcp_servers file
-        mcp_file = await get_mcp_file(current_user)
-
-        return [file for file in full_list if file.name != mcp_file]
+        # Reserved MCP configuration files are internal implementation details.
+        # Derive the reserved name from each row's true owner because a widened
+        # visibility scope can return files owned by multiple users.
+        return [file for file in full_list if file.name != f"{MCP_SERVERS_FILE}_{file.user_id!s}"]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing files: {e}") from e
 

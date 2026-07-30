@@ -109,6 +109,9 @@ export function MetadataEditor({
 
         {pairs.map((pair, index) => {
           const rowError = validation.errors[index];
+          const errorId = rowError
+            ? `${testIdScope}-metadata-error-${index}`
+            : undefined;
           return (
             <div key={index} className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
@@ -119,6 +122,11 @@ export function MetadataEditor({
                   className={cn("h-8 flex-1", rowError && "border-destructive")}
                   data-testid={`${testIdScope}-metadata-key-${index}`}
                   disabled={disabled}
+                  aria-label={t("knowledge.metadataKeyLabel", {
+                    index: index + 1,
+                  })}
+                  aria-invalid={rowError ? true : undefined}
+                  aria-describedby={errorId}
                 />
                 <Input
                   placeholder={t("knowledge.metadataValuePlaceholder")}
@@ -128,6 +136,11 @@ export function MetadataEditor({
                   className={cn("h-8 flex-1", rowError && "border-destructive")}
                   data-testid={`${testIdScope}-metadata-value-${index}`}
                   disabled={disabled}
+                  aria-label={t("knowledge.metadataValueLabel", {
+                    index: index + 1,
+                  })}
+                  aria-invalid={rowError ? true : undefined}
+                  aria-describedby={errorId}
                 />
                 <Button
                   type="button"
@@ -145,6 +158,8 @@ export function MetadataEditor({
               </div>
               {rowError && (
                 <span
+                  id={errorId}
+                  role="alert"
                   className="text-xs text-destructive"
                   data-testid={`${testIdScope}-metadata-error-${index}`}
                 >
@@ -157,6 +172,7 @@ export function MetadataEditor({
 
         {validation.setError && (
           <span
+            role="alert"
             className="text-xs text-destructive"
             data-testid={`${testIdScope}-metadata-set-error`}
           >
@@ -171,7 +187,7 @@ export function MetadataEditor({
           onClick={addPair}
           disabled={disabled || pairs.length >= MAX_KEYS}
           data-testid={`${testIdScope}-metadata-add`}
-          className="w-fit"
+          className="w-fit focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         >
           <ForwardedIconComponent name="Plus" className="mr-1 h-3.5 w-3.5" />
           {t("knowledge.metadataAddField")}

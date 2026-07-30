@@ -357,36 +357,37 @@ describe("SidebarSegmentedNav", () => {
 
   it("renders a separator element before the memories nav item", () => {
     const { container } = render(<SidebarSegmentedNav />);
-    // The separator is a <li role="separator" aria-hidden="true"> injected before memories
-    const separator = container.querySelector('li[role="separator"]');
+    // The separator is a plain <li aria-hidden="true"> injected before memories.
+    // It must NOT carry role="separator" — that's an invalid ARIA role on <li>
+    // (IBM Equal Access aria_role_valid) and is unnecessary since the element
+    // is already fully hidden from the accessibility tree via aria-hidden.
+    const separator = container.querySelector("li[aria-hidden='true']");
     expect(separator).toBeInTheDocument();
-    expect(separator).toHaveAttribute("aria-hidden", "true");
+    expect(separator).not.toHaveAttribute("role");
   });
 
   it("separator renders only once", () => {
     const { container } = render(<SidebarSegmentedNav />);
-    const separators = container.querySelectorAll('li[role="separator"]');
+    const separators = container.querySelectorAll("li[aria-hidden='true']");
     expect(separators).toHaveLength(1);
   });
 
-  it("separator appears between versions and memories in the DOM order", () => {
+  it("separator appears immediately before the first feature tab in the DOM order", () => {
     const { container } = render(<SidebarSegmentedNav />);
     const menuItems = container.querySelectorAll(
-      '[data-testid="sidebar-menu-item"], li[role="separator"]',
+      "[data-testid='sidebar-menu-item'], li[aria-hidden='true']",
     );
     const nodes = Array.from(menuItems);
     const separatorIndex = nodes.findIndex(
-      (n) => n.getAttribute("role") === "separator",
+      (n) => n.tagName === "LI" && !n.hasAttribute("data-testid"),
     );
-    const memoriesButton = container.querySelector(
-      '[data-testid="sidebar-nav-memories"]',
+    const agentButton = container.querySelector(
+      '[data-testid="sidebar-nav-agent"]',
     );
-    const memoriesItem = memoriesButton?.closest(
-      '[data-testid="sidebar-menu-item"]',
-    );
-    const memoriesIndex = nodes.indexOf(memoriesItem as Element);
-    // Separator should appear immediately before memories
-    expect(separatorIndex).toBe(memoriesIndex - 1);
+    const agentItem = agentButton?.closest('[data-testid="sidebar-menu-item"]');
+    const agentIndex = nodes.indexOf(agentItem as Element);
+    // Agent is the first feature tab, so the separator sits immediately before it
+    expect(separatorIndex).toBe(agentIndex - 1);
   });
 
   it("sidebar-menu has no direct div children between it and menu items", () => {
@@ -400,7 +401,7 @@ describe("SidebarSegmentedNav", () => {
   });
 
   it("exports NAV_ITEMS correctly", () => {
-    expect(NAV_ITEMS).toHaveLength(6);
+    expect(NAV_ITEMS).toHaveLength(7);
     expect(NAV_ITEMS[0]).toEqual({
       id: "components",
       icon: "component",
@@ -426,17 +427,32 @@ describe("SidebarSegmentedNav", () => {
       tooltip: "sidebar.nav.versionHistory",
     });
     expect(NAV_ITEMS[4]).toEqual({
+      id: "agent",
+      icon: "Bot",
+      label: "sidebar.nav.agent",
+      tooltip: "sidebar.nav.agent",
+    });
+    expect(NAV_ITEMS[5]).toEqual({
       id: "memories",
       icon: "BrainCog",
       label: "memory.sidebarTitle",
       tooltip: "memory.sidebarTitle",
     });
-    expect(NAV_ITEMS[5]).toEqual({
+    expect(NAV_ITEMS[6]).toEqual({
       id: "traces",
       icon: "Activity",
       label: "sidebar.nav.traces",
       tooltip: "sidebar.nav.traces",
     });
+  });
+
+  it("always shows the agent tab", () => {
+    render(<SidebarSegmentedNav />);
+
+    // The tab renders for every flow; eligibility is handled inside the tab.
+    expect(screen.getByTestId("sidebar-nav-agent")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-nav-components")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-nav-memories")).toBeInTheDocument();
   });
 
   it("sets active section to traces when clicking traces", () => {

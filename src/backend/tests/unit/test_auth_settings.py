@@ -1,8 +1,13 @@
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from lfx.services.settings.auth import AuthSettings
-from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from lfx.services.settings.constants import (
+    DEFAULT_SUPERUSER,
+    DEFAULT_SUPERUSER_PASSWORD,
+    SHORT_SECRET_KEY_WARNING,
+)
 from pydantic import SecretStr, ValidationError
 
 
@@ -36,6 +41,21 @@ def test_default_superuser_password_is_empty(tmp_path: Path):
     settings = AuthSettings(CONFIG_DIR=cfg_dir)
     assert settings.SUPERUSER == DEFAULT_SUPERUSER
     assert settings.SUPERUSER_PASSWORD.get_secret_value() == DEFAULT_SUPERUSER_PASSWORD.get_secret_value() == ""
+
+
+def test_short_secret_key_logs_upgrade_warning(tmp_path: Path):
+    with patch("lfx.services.settings.auth.logger") as mock_logger:
+        AuthSettings(CONFIG_DIR=tmp_path.as_posix(), SECRET_KEY=SecretStr("shortkey123"))
+
+    mock_logger.warning.assert_called_once_with(SHORT_SECRET_KEY_WARNING)
+
+
+def test_generated_secret_key_does_not_log_upgrade_warning(tmp_path: Path):
+    with patch("lfx.services.settings.auth.logger") as mock_logger:
+        settings = AuthSettings(CONFIG_DIR=tmp_path.as_posix())
+
+    assert len(settings.SECRET_KEY.get_secret_value()) >= 32
+    mock_logger.warning.assert_not_called()
 
 
 def test_auto_login_false_preserves_username_and_scrubs_password_on_reset(tmp_path: Path):

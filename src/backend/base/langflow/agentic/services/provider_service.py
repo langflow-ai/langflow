@@ -6,12 +6,15 @@ from uuid import UUID
 
 from lfx.base.models.model_metadata import CONDITIONAL_LIVE_MODEL_PROVIDERS, LIVE_MODEL_PROVIDERS
 from lfx.base.models.model_utils import get_live_models_for_provider
+from lfx.base.models.provider_registry import is_api_key_optional
 from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
+    get_model_providers,
     get_provider_required_variable_keys,
     get_unified_models_detailed,
 )
 from lfx.log.logger import logger
+from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
 from lfx.utils.secrets import secret_value_to_str
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +23,26 @@ from langflow.services.variable.service import DatabaseVariableService, Variable
 
 # Preferred providers in order of priority
 PREFERRED_PROVIDERS = ["Anthropic", "OpenAI", "Google Generative AI", "Groq"]
+
+ASSISTANT_PREFERRED_MODELS: dict[str, tuple[str, ...]] = {
+    "OpenAI": ("gpt-5.4", "gpt-5.2", "gpt-5.1", "gpt-5", "gpt-4o"),
+    "Anthropic": ("claude-opus-4-6", "claude-sonnet-4-6", "claude-opus-4-5-20251101"),
+    "Google Generative AI": ("gemini-2.5-pro", "gemini-1.5-pro"),
+    "Azure AI Foundry": ("gpt-4o",),
+    "OpenRouter": ("anthropic/claude-opus-4.7", "openai/gpt-5.4"),
+}
+"""The model the assistant defaults to, per provider, in preference order.
+
+Curated rather than derived because the catalog's own default is "first entry in the
+provider's list" — it sorts by ``created``, which is 0 for every model, so the order is
+just however the list was written. First is not best: Google's first entry is
+``gemini-2.5-flash``, a small SKU the composer flags with "may underperform on agent
+tasks". The assistant drives a multi-step tool-calling loop, so its default must be the
+provider's strongest general agent model, not its fastest or its newest.
+
+The first name the provider actually offers wins. Providers absent here — and names that
+no longer exist — fall back to the catalog default.
+"""
 
 
 async def get_enabled_providers_for_user(
@@ -41,15 +64,36 @@ async def get_enabled_providers_for_user(
     all_variable_names = {var.name for var in all_variables}
 
     provider_variable_map = get_model_provider_variable_mapping()
+    registered_providers = get_model_providers()
+    provider_candidates = [
+        *provider_variable_map,
+        *(
+            provider
+            for provider in registered_providers
+            if provider not in provider_variable_map and is_api_key_optional(provider)
+        ),
+    ]
+    provider_policy = resolve_model_provider_policy(
+        user_id=user_id,
+        providers=[*registered_providers, *provider_candidates],
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
 
     enabled_providers = []
     provider_status = {}
 
-    for provider in provider_variable_map:
+    for provider in provider_candidates:
+        if not provider_policy.allows(provider):
+            continue
         # Check if ALL required variables for this provider are present
         # in either database variables or environment variables
         required_keys = get_provider_required_variable_keys(provider)
-        is_enabled = all(key in all_variable_names or os.getenv(key) for key in required_keys)
+        provider_has_variables = provider in provider_variable_map
+        is_enabled = (
+            is_api_key_optional(provider)
+            if not provider_has_variables
+            else all(key in all_variable_names or os.getenv(key) for key in required_keys)
+        )
 
         provider_status[provider] = is_enabled
         if is_enabled:
@@ -155,12 +199,35 @@ def list_installed_tool_calling_models(provider: str, user_id: UUID | str | None
     return sorted(names, key=_is_cloud_model)
 
 
+def _catalog_model_names(provider: str) -> list[str]:
+    """Every non-deprecated, supported LLM the catalog lists for ``provider``, in order."""
+    detailed = get_unified_models_detailed(
+        providers=[provider],
+        include_unsupported=False,
+        include_deprecated=False,
+        model_type="llm",
+    )
+    return [
+        name
+        for provider_dict in detailed
+        for model in provider_dict.get("models", [])
+        if (name := model.get("model_name"))
+    ]
+
+
+def _preferred_model(provider: str, available: list[str]) -> str | None:
+    """The strongest agent model this provider offers, per ``ASSISTANT_PREFERRED_MODELS``."""
+    offered = set(available)
+    return next((name for name in ASSISTANT_PREFERRED_MODELS.get(provider, ()) if name in offered), None)
+
+
 def get_default_model(provider: str, user_id: UUID | str | None = None) -> str | None:
     """Get the default model for a provider.
 
-    For live providers (Ollama, WatsonX, OpenRouter) with a ``user_id``,
-    the default must be a model that is actually installed/available —
-    the static catalog default may not exist on the user's server.
+    Prefers the provider's strongest agent model (``ASSISTANT_PREFERRED_MODELS``) so the
+    out-of-the-box pick is never one the composer flags as weak. For live providers
+    (Ollama, WatsonX, OpenRouter) with a ``user_id`` the choice is constrained to models
+    actually installed/available — the catalog default may not exist on the user's server.
     """
     catalog_default = None
     models_by_provider = get_unified_models_detailed(
@@ -177,8 +244,10 @@ def get_default_model(provider: str, user_id: UUID | str | None = None) -> str |
 
     installed = list_installed_tool_calling_models(provider, user_id)
     if installed:
-        return catalog_default if catalog_default in installed else installed[0]
-    return catalog_default
+        return _preferred_model(provider, installed) or (
+            catalog_default if catalog_default in installed else installed[0]
+        )
+    return _preferred_model(provider, _catalog_model_names(provider)) or catalog_default
 
 
 def get_provider_model_candidates(provider: str, user_id: UUID | str | None = None) -> list[str]:

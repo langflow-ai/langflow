@@ -68,6 +68,18 @@ def get_service(service_type: ServiceType, default=None):
         return None
 
 
+def get_model_provider_policy_service():
+    """Return the configured model-provider policy service or fail closed."""
+    from lfx.services.model_provider_policy.base import BaseModelProviderPolicyService
+    from lfx.services.model_provider_policy.service import ModelProviderPolicyService  # noqa: F401
+
+    service = get_service(ServiceType.MODEL_PROVIDER_POLICY_SERVICE)
+    if not isinstance(service, BaseModelProviderPolicyService) or not service.ready:
+        msg = "A valid, ready model_provider_policy_service is required"
+        raise TypeError(msg)
+    return service
+
+
 def get_db_service() -> DatabaseServiceProtocol:
     """Retrieves the database service instance.
 
@@ -130,6 +142,17 @@ def get_chat_service() -> ChatServiceProtocol | None:
     from lfx.services.schema import ServiceType
 
     return get_service(ServiceType.CHAT_SERVICE)
+
+
+def get_checkpoint_service():
+    """Checkpoint store: registered service, or the in-memory standalone fallback."""
+    from lfx.graph.checkpoint.store import default_checkpoint_store
+    from lfx.services.schema import ServiceType
+
+    service = get_service(ServiceType.CHECKPOINT_SERVICE)
+    if service is not None:
+        return service
+    return default_checkpoint_store()
 
 
 def get_tracing_service() -> TracingServiceProtocol | None:

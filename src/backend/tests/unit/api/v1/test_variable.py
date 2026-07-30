@@ -1,4 +1,7 @@
-from types import SimpleNamespace
+import importlib.util
+import socket
+import sys
+from types import ModuleType, SimpleNamespace
 from unittest import mock
 from uuid import uuid4
 
@@ -8,6 +11,24 @@ from httpx import AsyncClient
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 pytestmark = pytest.mark.no_blockbuster
+
+
+@pytest.fixture(autouse=True)
+def fake_langchain_google_genai(monkeypatch):
+    if importlib.util.find_spec("langchain_google_genai") is not None:
+        return
+
+    langchain_google_genai = ModuleType("langchain_google_genai")
+
+    class ChatGoogleGenerativeAI:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def invoke(self, *args, **kwargs):  # noqa: ARG002
+            return "test response"
+
+    langchain_google_genai.ChatGoogleGenerativeAI = ChatGoogleGenerativeAI
+    monkeypatch.setitem(sys.modules, "langchain_google_genai", langchain_google_genai)
 
 
 @pytest.fixture
@@ -40,6 +61,8 @@ async def test_create_variable(client: AsyncClient, generic_variable, logged_in_
     assert generic_variable["type"] == result["type"]
     assert generic_variable["default_fields"] == result["default_fields"]
     assert "id" in result
+    assert result["is_owner"] is True
+    assert result["can_manage_shares"] is True
     # GENERIC_TYPE variables should NOT be encrypted (stored as plaintext)
     assert generic_variable["value"] == result["value"]
 
@@ -403,17 +426,19 @@ async def test_create_variable__ollama_base_url_validation_failure(client: Async
         if var.get("name") == "OLLAMA_BASE_URL":
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
 
-    # A reachable-but-erroring local Ollama: loopback passes SSRF (allowed by default for
-    # connectors), so validation proceeds to the request, which returns a non-200 status.
     ollama_variable = {
         "name": "OLLAMA_BASE_URL",
-        "value": "http://localhost:11434",
+        "value": "http://invalid-url",
         "type": CREDENTIAL_TYPE,
         "default_fields": [],
     }
 
-    # Mock failed Ollama API call
-    with mock.patch("requests.get") as mock_get:
+    # Keep DNS deterministic so SSRF validation reaches the mocked Ollama API call.
+    public_address = [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("93.184.216.34", 0))]
+    with (
+        mock.patch("socket.getaddrinfo", return_value=public_address),
+        mock.patch("requests.get") as mock_get,
+    ):
         mock_get.return_value.status_code = 404
         response = await client.post("api/v1/variables/", json=ollama_variable, headers=logged_in_headers)
         result = response.json()
@@ -599,7 +624,7 @@ async def test_delete_provider_credential_cleans_up_enabled_models(client: Async
         enable_response = await client.post(
             "api/v1/models/enabled_models",
             json=[
-                {"provider": "OpenAI", "model_id": "gpt-4-turbo-preview", "enabled": True},
+                {"provider": "OpenAI", "model_id": "gpt-4.1-mini", "enabled": True},
             ],
             headers=logged_in_headers,
         )
@@ -620,7 +645,7 @@ async def test_delete_provider_credential_cleans_up_enabled_models(client: Async
         import json
 
         enabled_models = json.loads(enabled_models_var["value"])
-        assert "gpt-4-turbo-preview" not in enabled_models
+        assert "gpt-4.1-mini" not in enabled_models
 
 
 @pytest.mark.usefixtures("active_user")
@@ -837,6 +862,27 @@ async def test_update_variable_cross_user_allowed_with_plugin(
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["name"] == "shared_update"
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_update_shared_variable_metadata_never_returns_owner_value(
+    client: AsyncClient, generic_variable, logged_in_headers, patch_variable_authz
+):
+    generic_variable["value"] = "owner-plaintext"
+    saved = (await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)).json()
+    delegate_headers = await _create_user_and_headers(client, f"var_metadata_{uuid4().hex[:8]}")
+    patch_variable_authz(cross_user=True, enabled=True, allow=True)
+
+    response = await client.patch(
+        f"api/v1/variables/{saved['id']}",
+        json={"id": saved["id"], "name": "metadata_only"},
+        headers=delegate_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["value"] is None
+    assert response.json()["is_owner"] is False
+    assert response.json()["can_manage_shares"] is False
 
 
 @pytest.mark.usefixtures("active_user")

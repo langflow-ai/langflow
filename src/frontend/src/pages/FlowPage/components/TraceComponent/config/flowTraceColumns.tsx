@@ -65,7 +65,18 @@ export function createFlowTracesColumns({
       filter: false,
       sortable: false,
       editable: false,
-      valueGetter: (params) => formatObjectValue(params.data?.output),
+      cellRenderer: (params: {
+        data?: { status?: string | null; output?: unknown };
+      }) => {
+        if (params.data?.status === "awaiting_human") {
+          return (
+            <span className="italic text-accent-indigo-foreground">
+              Awaiting human action
+            </span>
+          );
+        }
+        return <span>{formatObjectValue(params.data?.output)}</span>;
+      },
     },
     {
       headerName: i18n.t("trace.token"),
