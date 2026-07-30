@@ -81,6 +81,10 @@ the curated standalone `lfx-*` extensions.
     includes both. Existing component class names and legacy Python import
     paths remain compatible. For a base-only environment, add the extensions
     with `pip install "lfx[cassandra,toolguard]"`.
+    Policies guard caches are now isolated under
+    `tmp_toolguard/{user}/{flow}/{component}/{project}`. Existing project-only
+    caches are not reused after upgrading; run **Generate** once before using
+    **Guard** in an upgraded flow.
 
 - The default `langflow` provider set is smaller
 

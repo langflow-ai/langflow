@@ -301,6 +301,22 @@ def test_work_dir_property():
     assert work_dir.name == "test_project"
 
 
+def test_work_dir_reuses_standalone_component_identity():
+    """Recreated standalone components with the same ID reuse generated guards."""
+
+    def _component() -> PoliciesComponent:
+        component = PoliciesComponent()
+        component.project = "shared project"
+        component._id = "policies-node"
+        return component
+
+    first = _component()
+    recreated = _component()
+
+    assert first.work_dir == recreated.work_dir
+    assert first.work_dir.parts[-4:] == ("anonymous", "standalone", "policies_node", "shared_project")
+
+
 def test_work_dir_isolates_flows_and_components_with_the_same_project():
     """Identical project names cannot share generated guards across runtime identities."""
 

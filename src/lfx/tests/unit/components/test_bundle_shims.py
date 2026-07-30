@@ -28,6 +28,7 @@ current environment is in.
 
 from __future__ import annotations
 
+import builtins
 import importlib
 import importlib.util
 import sys
@@ -208,20 +209,53 @@ def test_component_walk_skip_includes_compat_shims() -> None:
     assert "knowledge_bases" in detected
 
 
-def test_policies_compat_shim_preserves_transitive_import_errors(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A broken ToolGuard install must not be misreported as an absent extension."""
-    shim = COMPONENTS_DIR / "models_and_agents" / "policies" / "__init__.py"
+@pytest.mark.parametrize(
+    ("shim", "extension_package", "import_style"),
+    [
+        pytest.param(COMPONENTS_DIR / "cassandra" / "__init__.py", "lfx_datastax", "importlib", id="cassandra"),
+        pytest.param(
+            COMPONENTS_DIR / "models_and_agents" / "policies" / "__init__.py",
+            "lfx_toolguard",
+            "importlib",
+            id="policies-helpers",
+        ),
+        pytest.param(
+            COMPONENTS_DIR / "models_and_agents" / "policies_component.py",
+            "lfx_toolguard",
+            "builtin",
+            id="policies-component",
+        ),
+    ],
+)
+def test_compat_shims_preserve_transitive_import_errors(
+    shim: Path,
+    extension_package: str,
+    import_style: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A broken extension install must not be misreported as an absent extension."""
+    missing_dependency = "extension_runtime_dependency"
 
     def _raise_transitive_import_error(_name: str):
-        message = "No module named 'toolguard_runtime'"
-        raise ModuleNotFoundError(message, name="toolguard_runtime")
+        message = f"No module named '{missing_dependency}'"
+        raise ModuleNotFoundError(message, name=missing_dependency)
 
-    monkeypatch.setattr(importlib, "import_module", _raise_transitive_import_error)
+    if import_style == "importlib":
+        monkeypatch.setattr(importlib, "import_module", _raise_transitive_import_error)
+    else:
+        original_import = builtins.__import__
 
-    with pytest.raises(ModuleNotFoundError, match="toolguard_runtime") as exc_info:
-        _import_file_as("synthetic_shim_policies", shim)
+        def _import_with_transitive_error(name: str, *args, **kwargs):
+            if name.partition(".")[0] == extension_package:
+                _raise_transitive_import_error(name)
+            return original_import(name, *args, **kwargs)
 
-    assert exc_info.value.name == "toolguard_runtime"
+        monkeypatch.setattr(builtins, "__import__", _import_with_transitive_error)
+
+    with pytest.raises(ModuleNotFoundError, match=missing_dependency) as exc_info:
+        _import_file_as(f"synthetic_compat_{shim.parent.name}", shim)
+
+    assert exc_info.value.name == missing_dependency
 
 
 # ---------------------------------------------------------------------------

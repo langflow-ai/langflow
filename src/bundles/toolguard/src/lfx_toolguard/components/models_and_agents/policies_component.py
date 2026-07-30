@@ -197,14 +197,17 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
         vertex = getattr(self, "_vertex", None)
         component_id = getattr(self, "_id", None) or getattr(vertex, "id", None)
-        instance_id = getattr(self, "_toolguard_instance_id", None)
-        if instance_id is None:
-            instance_id = uuid4().hex
-            self._toolguard_instance_id = instance_id
 
-        user_namespace = self._to_snake_case(str(user_id)) if user_id else "anonymous"
-        flow_namespace = self._to_snake_case(str(flow_id)) if flow_id else f"standalone_{instance_id}"
-        component_namespace = self._to_snake_case(str(component_id)) if component_id else f"component_{instance_id}"
+        user_namespace = self._to_snake_case(str(user_id)) if user_id and str(user_id) != "None" else "anonymous"
+        flow_namespace = self._to_snake_case(str(flow_id)) if flow_id else "standalone"
+        if component_id:
+            component_namespace = self._to_snake_case(str(component_id))
+        else:
+            instance_id = getattr(self, "_toolguard_instance_id", None)
+            if instance_id is None:
+                instance_id = uuid4().hex
+                self._toolguard_instance_id = instance_id
+            component_namespace = f"component_{instance_id}"
         project_namespace = self._to_snake_case(self.project)
         return TOOLGUARD_WORK_DIR / user_namespace / flow_namespace / component_namespace / project_namespace
 
