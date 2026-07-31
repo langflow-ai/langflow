@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+from lfx.services.authorization import DirectoryMembershipIngestResult
 from lfx.services.authorization.base import (
     AuthorizationMutation,
     AuthorizationMutationKind,
@@ -175,7 +177,14 @@ async def test_identity_and_directory_contracts_are_default_noops(service: Autho
     assert await service.validate_identity_mutation(session=session, mutation=mutation) is None
     assert await service.stage_identity_mutation(session=session, event=mutation) is None
     assert await service.identity_mutation_committed(mutation) is None
-    assert await service.ingest_directory_membership_snapshot(session=session, snapshot=snapshot) is None
+    result = await service.ingest_directory_membership_snapshot(session=session, snapshot=snapshot)
+    assert result == DirectoryMembershipIngestResult()
+    assert result.changed is False
+    assert result.added == 0
+    assert result.removed == 0
+    assert not hasattr(result, "__dict__")
+    with pytest.raises(FrozenInstanceError):
+        result.changed = True  # type: ignore[misc]
 
 
 async def test_identity_committed_adapts_to_legacy_invalidation_hooks(

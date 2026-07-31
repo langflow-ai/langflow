@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import warnings
-from collections.abc import Coroutine
+from collections.abc import Awaitable, Callable, Coroutine, Mapping
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -53,6 +53,60 @@ from langflow.services.database.models.user.crud import (
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import session_scope
 from langflow.services.schema import ServiceType
+
+_MAX_EXTERNAL_AUTHORIZATION_GROUPS = 500
+_MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH = 256
+
+
+def _has_external_group_overage(claims: Mapping[str, object], claim_name: str) -> bool:
+    """Return whether an Entra-style overage pointer replaces the group claim."""
+    claim_names = claims.get("_claim_names")
+    return isinstance(claim_names, Mapping) and claim_name in claim_names
+
+
+def _audit_audience(claims: Mapping[str, object]) -> str | list[str] | None:
+    """Normalize a verified audience claim to a JSON-safe audit value."""
+    audience = claims.get("aud")
+    if isinstance(audience, str):
+        return audience
+    if isinstance(audience, (list, tuple)) and all(isinstance(value, str) for value in audience):
+        return list(audience)
+    return None
+
+
+async def _safe_audit_directory_reconciliation(
+    audit: Callable[..., Awaitable[None]],
+    *,
+    identity: ExternalIdentity,
+    user: User,
+    issuer: str | None,
+    result: str,
+    details: dict[str, object],
+) -> None:
+    """Record reconciliation without letting audit outages fail authentication."""
+    try:
+        await audit(
+            user_id=user.id,
+            action="directory_membership:reconcile",
+            obj=f"user:{user.id}",
+            result=result,
+            details={
+                "provider_id": identity.provider,
+                "issuer": issuer,
+                "subject": identity.subject,
+                "audience": _audit_audience(identity.claims),
+                "source": "external_bearer",
+                **details,
+            },
+        )
+    except Exception:  # noqa: BLE001
+        await logger.aexception(
+            "Authorization directory reconciliation audit failed for provider=%s user=%s result=%s",
+            identity.provider,
+            user.id,
+            result,
+        )
+
 
 if TYPE_CHECKING:
     from cryptography.fernet import Fernet, MultiFernet
@@ -292,7 +346,188 @@ class AuthService(BaseAuthService):
             AuthCredentialContext(method=AUTH_METHOD_EXTERNAL, external_provider=identity.provider)
         )
         set_current_external_access_context(access_context_from_identity(identity, self.settings.auth_settings))
-        return await self._materialize_external_user(identity, db)
+        user = await self._materialize_external_user(identity, db)
+        await self._reconcile_verified_external_groups(identity=identity, user=user, db=db)
+        return user
+
+    async def _reconcile_verified_external_groups(
+        self,
+        *,
+        identity: ExternalIdentity,
+        user: User,
+        db: AsyncSession,
+    ) -> None:
+        """Send a complete verified group claim through the authorization seam.
+
+        Missing, overage, or malformed claims are not authoritative zero-group
+        snapshots and therefore skip reconciliation. Provider configuration and
+        transactional ingest failures intentionally remain fail-closed; audit
+        enqueue and post-commit publication are isolated from authentication.
+        """
+        from lfx.services.authorization import DirectoryMembershipSnapshot
+
+        from langflow.services.authorization.audit import AUDIT_ALLOW, AUDIT_SKIP, audit_decision
+        from langflow.services.authorization.lifecycle import safe_directory_membership_committed
+        from langflow.services.deps import get_authorization_service
+
+        authorization_service = get_authorization_service()
+        issuer_value = identity.claims.get("iss")
+        issuer = issuer_value.strip() if isinstance(issuer_value, str) and issuer_value.strip() else None
+        claim_name = await authorization_service.external_groups_claim(
+            provider_id=identity.provider,
+            issuer=issuer,
+        )
+        if not claim_name:
+            return
+
+        async def audit_reconciliation(*, result: str, details: dict[str, object]) -> None:
+            await _safe_audit_directory_reconciliation(
+                audit_decision,
+                identity=identity,
+                user=user,
+                issuer=issuer,
+                result=result,
+                details=details,
+            )
+
+        async def audit_skip(reason: str) -> None:
+            # JIT user/profile and last-login updates share this transaction.
+            # Commit them before the independent audit writer resolves the
+            # audit row's user foreign key.
+            await db.commit()
+            await audit_reconciliation(
+                result=AUDIT_SKIP,
+                details={
+                    "claim_name": claim_name,
+                    "reason": reason,
+                    "authoritative": False,
+                    "complete": False,
+                },
+            )
+
+        if _has_external_group_overage(identity.claims, claim_name):
+            logger.warning(
+                "Skipping external group reconciliation for provider=%s user=%s: claim=%s uses an overage pointer",
+                identity.provider,
+                user.id,
+                claim_name,
+            )
+            await audit_skip("overage")
+            return
+        if claim_name not in identity.claims:
+            logger.warning(
+                "Skipping external group reconciliation for provider=%s user=%s: claim=%s is absent",
+                identity.provider,
+                user.id,
+                claim_name,
+            )
+            await audit_skip("absent")
+            return
+
+        raw_groups = identity.claims[claim_name]
+        if isinstance(raw_groups, str):
+            candidates = (raw_groups,)
+        elif isinstance(raw_groups, (list, tuple, set, frozenset)):
+            candidates = raw_groups
+        else:
+            logger.warning(
+                "Skipping external group reconciliation for provider=%s user=%s: claim=%s has an invalid type",
+                identity.provider,
+                user.id,
+                claim_name,
+            )
+            await audit_skip("malformed")
+            return
+
+        normalized_groups: set[str] = set()
+        for candidate in candidates:
+            if not isinstance(candidate, str):
+                logger.warning(
+                    "Skipping external group reconciliation for provider=%s user=%s: "
+                    "claim=%s contains a non-string entry",
+                    identity.provider,
+                    user.id,
+                    claim_name,
+                )
+                await audit_skip("malformed")
+                return
+            group = candidate.strip()
+            if not group or len(group) > _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH:
+                logger.warning(
+                    "Skipping external group reconciliation for provider=%s user=%s: "
+                    "claim=%s contains an invalid group identifier",
+                    identity.provider,
+                    user.id,
+                    claim_name,
+                )
+                await audit_skip("malformed")
+                return
+            normalized_groups.add(group)
+
+        groups = tuple(sorted(normalized_groups))
+        if len(groups) > _MAX_EXTERNAL_AUTHORIZATION_GROUPS:
+            logger.warning(
+                "Skipping external group reconciliation for provider=%s user=%s: claim=%s exceeds the %d-group limit",
+                identity.provider,
+                user.id,
+                claim_name,
+                _MAX_EXTERNAL_AUTHORIZATION_GROUPS,
+            )
+            await audit_skip("too_many")
+            return
+
+        result = await authorization_service.ingest_directory_membership_snapshot(
+            session=db,
+            snapshot=DirectoryMembershipSnapshot(
+                provider_id=identity.provider,
+                source="external_bearer",
+                observed_at=datetime.now(timezone.utc),
+                user_id=user.id,
+                provider_user_id=identity.subject,
+                memberships=groups,
+                authoritative=True,
+                complete=True,
+            ),
+        )
+        await db.commit()
+        if result is None:
+            # Compatibility with a plugin built against the initial untyped
+            # seam: an unknown result must invalidate, never preserve stale
+            # policy by assuming nothing changed.
+            logger.warning(
+                "Authorization plugin returned no directory ingest result for provider=%s user=%s; "
+                "invalidating conservatively",
+                identity.provider,
+                user.id,
+            )
+            changed = True
+            added = None
+            removed = None
+        else:
+            # The initial seam only documented ``changed`` through caller-side
+            # duck typing. Keep older plugin result objects safe after commit
+            # while the explicit result contract rolls out.
+            changed = bool(getattr(result, "changed", True))
+            added = getattr(result, "added", None)
+            removed = getattr(result, "removed", None)
+
+        await audit_reconciliation(
+            result=AUDIT_ALLOW,
+            details={
+                "membership_count": len(groups),
+                "membership_sha256": hashlib.sha256("\0".join(groups).encode()).hexdigest(),
+                "changed": changed,
+                "added": added,
+                "removed": removed,
+                "authoritative": True,
+                "complete": True,
+            },
+        )
+        await safe_directory_membership_committed(
+            authorization_service,
+            user_id=user.id,
+            changed=changed,
+        )
 
     async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
         """Internal method to authenticate with API key (raises generic exceptions).

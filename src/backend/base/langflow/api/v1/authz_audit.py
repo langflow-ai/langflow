@@ -80,7 +80,7 @@ async def list_audit_log(
     ] = None,
     result: Annotated[
         str | None,
-        Query(description="Filter by decision result (``allow`` / ``deny`` / ``owner_override``)."),
+        Query(description="Filter by audit result (``allow`` / ``deny`` / ``owner_override`` / ``skip``)."),
     ] = None,
     since: Annotated[datetime | None, Query(description="Inclusive lower bound on ``timestamp``.")] = None,
     until: Annotated[datetime | None, Query(description="Exclusive upper bound on ``timestamp``.")] = None,
