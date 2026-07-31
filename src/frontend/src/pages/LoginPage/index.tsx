@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { extractApiErrorMessage } from "@/controllers/API/helpers/extract-api-error-message";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
@@ -114,13 +113,12 @@ export default function LoginPage(): JSX.Element {
               title={t("common.langflowLogo")}
               className="h-12 w-12 text-foreground"
             />
-            <h1 className="pl-2 text-center text-4xl font-semibold tracking-tight">
-              {t("auth.loginTitle")}
+            <h1 className="pl-3 text-center text-5xl font-semibold tracking-tight">
+              Langflow
             </h1>
           </div>
           <section className="w-full rounded-xl border border-border bg-card p-8 shadow-2xl shadow-black/40 sm:p-10">
-            <CustomLoginSsoOptions />
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-5">
               <Form.Field name="username" className="pb-3">
                 <label
                   htmlFor="login-username"
@@ -214,22 +212,17 @@ export default function LoginPage(): JSX.Element {
                 </Button>
               </Form.Submit>
 
-              <CustomLink className="block w-full" to="/signup">
-                <ShadTooltip
-                  content={`${t("auth.noAccount")} ${t("auth.signUpLink")}`}
-                  styleClasses="z-50"
+              <CustomLoginSsoOptions />
+
+              <p className="text-center text-sm text-muted-foreground">
+                {t("auth.noAccount")}{" "}
+                <CustomLink
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                  to="/signup"
                 >
-                  <Button
-                    className="h-11 w-full overflow-hidden rounded-lg"
-                    variant="outline"
-                    type="button"
-                  >
-                    <span className="truncate">
-                      {t("auth.noAccount")}&nbsp;<b>{t("auth.signUpLink")}</b>
-                    </span>
-                  </Button>
-                </ShadTooltip>
-              </CustomLink>
+                  {t("auth.signUpLink")}
+                </CustomLink>
+              </p>
             </div>
           </section>
         </div>

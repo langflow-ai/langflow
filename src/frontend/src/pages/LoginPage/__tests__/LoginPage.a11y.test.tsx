@@ -91,14 +91,27 @@ describe("LoginPage accessibility", () => {
     expect(mockLoginMutate).not.toHaveBeenCalled();
   });
 
-  it("renders the downstream login options customization slot", () => {
+  it("renders downstream login options between password sign-in and sign-up", () => {
     mockCustomLoginSsoOptions.mockReturnValue(
       <div data-testid="custom-login-sso-options" />,
     );
 
     renderLoginPage();
 
-    expect(screen.getByTestId("custom-login-sso-options")).toBeInTheDocument();
+    const signInButton = screen.getByRole("button", { name: /sign in/i });
+    const loginOptions = screen.getByTestId("custom-login-sso-options");
+    const signUpLink = screen.getByRole("link", { name: /sign up/i });
+
+    expect(screen.getByText(/don't have an account\?/i)).toBeInTheDocument();
+    expect(
+      signInButton.compareDocumentPosition(loginOptions) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      loginOptions.compareDocumentPosition(signUpLink) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(signUpLink).toHaveAttribute("href", "/signup");
   });
 
   it("should_have_no_axe_violations", async () => {
