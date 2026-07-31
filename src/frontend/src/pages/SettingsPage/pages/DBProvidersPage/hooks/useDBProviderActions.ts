@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from "react";
+import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   type AvailableDBProviderId,
@@ -63,6 +63,43 @@ export function useDBProviderActions({
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  // pgVector is environment-driven, so instead of reading config fields we just
+  // ping it (via the existing test-connection route) when its panel opens to
+  // show a passive "configured / not configured" state — no dedicated endpoint.
+  const [postgresStatus, setPostgresStatus] = useState<{
+    ok: boolean;
+    message: string;
+  } | null>(null);
+  const [isCheckingPostgres, setIsCheckingPostgres] = useState(false);
+
+  useEffect(() => {
+    if (selectedProvider.id !== "postgres") {
+      setPostgresStatus(null);
+      return;
+    }
+    let cancelled = false;
+    setIsCheckingPostgres(true);
+    setPostgresStatus(null);
+    testProviderConnection({ backend_type: "postgres", backend_config: {} })
+      .then((response) => {
+        if (!cancelled) {
+          setPostgresStatus({ ok: response.ok, message: response.message });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setPostgresStatus({ ok: false, message: getErrorDetail(error) });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsCheckingPostgres(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // testProviderConnection is a stable react-query mutate fn; re-check only on selection change.
+  }, [selectedProvider.id]);
 
   // Returns ``true`` if the save fully succeeded so callers (the Test
   // Connection button) can chain a follow-up step. Errors are surfaced
@@ -212,6 +249,9 @@ export function useDBProviderActions({
         ),
         backend_config: backendConfig,
       });
+      if (selectedProvider.id === "postgres") {
+        setPostgresStatus({ ok: response.ok, message: response.message });
+      }
       if (response.ok) {
         // ``setSuccessData`` only takes a title; pack any backend
         // detail (cluster name, version) into the title so it shows.
@@ -231,6 +271,9 @@ export function useDBProviderActions({
         });
       }
     } catch (error: unknown) {
+      if (selectedProvider.id === "postgres") {
+        setPostgresStatus({ ok: false, message: getErrorDetail(error) });
+      }
       setErrorData({
         title: t("settings.dbProviders.errorTesting"),
         list: [getErrorDetail(error)],
@@ -253,5 +296,33 @@ export function useDBProviderActions({
     }
   };
 
-  return { handleSave, handleTestConnection, handleUseChroma, isTesting };
+  // pgVector has no UI fields. It becomes explicitly selectable only after the
+  // panel has successfully tested and activated it, exactly like Chroma Local.
+  const handleUsePostgres = async () => {
+    const postgresProvider = DB_PROVIDER_OPTIONS.find(
+      (provider) => provider.id === "postgres",
+    );
+    if (!postgresProvider) return;
+    try {
+      await activateProvider(postgresProvider);
+      setSelectedProviderId("postgres");
+      setHasManuallySelectedProvider(false);
+      setSuccessData({ title: t("settings.dbProviders.postgresSelected") });
+    } catch (error: unknown) {
+      setErrorData({
+        title: t("settings.dbProviders.errorSelectingPostgres"),
+        list: [getErrorDetail(error)],
+      });
+    }
+  };
+
+  return {
+    handleSave,
+    handleTestConnection,
+    handleUseChroma,
+    handleUsePostgres,
+    isTesting,
+    postgresStatus,
+    isCheckingPostgres,
+  };
 }

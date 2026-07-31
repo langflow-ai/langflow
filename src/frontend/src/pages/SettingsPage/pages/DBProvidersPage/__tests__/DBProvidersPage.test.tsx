@@ -86,6 +86,14 @@ const STRINGS: Record<string, string> = {
   "settings.dbProviders.savedAsGlobalVariable": "Saved as global variable",
   "settings.dbProviders.errorMissingConfig": "Missing required configuration",
   "settings.dbProviders.configSaved": "{{provider}} configuration saved",
+  "settings.dbProviders.postgresDescription":
+    "Postgres pgvector is set up automatically from your server's environment configuration.",
+  "settings.dbProviders.postgresChecking": "Checking connection…",
+  "settings.dbProviders.postgresConfigured": "Configured and reachable",
+  "settings.dbProviders.postgresNotConfigured":
+    "Not configured. Set PGVECTOR_CONNECTION_STRING in your server environment.",
+  "settings.dbProviders.usePostgres": "Use Postgres pgVector",
+  "settings.dbProviders.postgresSelected": "Postgres pgVector selected",
 };
 
 jest.mock("react-i18next", () => ({
@@ -165,9 +173,9 @@ describe("DBProvidersPage characterization", () => {
       ).not.toHaveTextContent("Active");
     });
 
-    it("shows a coming-soon badge for astra, mongodb and postgres", () => {
+    it("shows a coming-soon badge for astra and mongodb", () => {
       render(<DBProvidersPage />);
-      for (const id of ["astra", "mongodb", "postgres"]) {
+      for (const id of ["astra", "mongodb"]) {
         expect(screen.getByTestId(`db-provider-item-${id}`)).toHaveTextContent(
           "Coming soon",
         );
@@ -181,6 +189,24 @@ describe("DBProvidersPage characterization", () => {
       const button = getSaveButton(/chroma selected/i);
       expect(button).toBeDisabled();
       expect(screen.queryByTestId("db-provider-test-connection")).toBeNull();
+    });
+  });
+
+  describe("postgres pgvector panel", () => {
+    it("renders the environment-driven panel with test and use actions and no config fields", async () => {
+      const user = userEvent.setup();
+      render(<DBProvidersPage />);
+      await user.click(screen.getByTestId("db-provider-item-postgres"));
+
+      // Environment-driven: a passive connectivity ping (mocked ok) gates the
+      // Use action. The panel exposes Test connection + Use, not credential
+      // fields, and is no longer a coming-soon stub.
+      expect(
+        await screen.findByTestId("db-provider-test-connection"),
+      ).toBeInTheDocument();
+      const useButton = getSaveButton(/use postgres pgvector/i);
+      await waitFor(() => expect(useButton).toBeEnabled());
+      expect(screen.queryByRole("textbox")).toBeNull();
     });
   });
 

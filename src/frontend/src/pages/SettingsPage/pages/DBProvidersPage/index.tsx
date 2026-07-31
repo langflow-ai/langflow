@@ -49,19 +49,26 @@ export default function DBProvidersPage() {
   const { getFieldValue, hasConfiguredValue, isHydrated, canSave } =
     useDBProviderFields({ selectedProvider, globalVariables, variableValues });
 
-  const { handleSave, handleTestConnection, handleUseChroma, isTesting } =
-    useDBProviderActions({
-      selectedProvider,
-      canSave,
-      getFieldValue,
-      variableValues,
-      setVariable,
-      activateProvider,
-      setVariableValues,
-      setEditingSecret,
-      setHasManuallySelectedProvider,
-      setSelectedProviderId,
-    });
+  const {
+    handleSave,
+    handleTestConnection,
+    handleUseChroma,
+    handleUsePostgres,
+    isTesting,
+    postgresStatus,
+    isCheckingPostgres,
+  } = useDBProviderActions({
+    selectedProvider,
+    canSave,
+    getFieldValue,
+    variableValues,
+    setVariable,
+    activateProvider,
+    setVariableValues,
+    setEditingSecret,
+    setHasManuallySelectedProvider,
+    setSelectedProviderId,
+  });
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -134,9 +141,11 @@ export default function DBProvidersPage() {
               onSave={
                 selectedProvider.id === "chroma"
                   ? handleUseChroma
-                  : () => {
-                      void handleSave();
-                    }
+                  : selectedProvider.id === "postgres"
+                    ? handleUsePostgres
+                    : () => {
+                        void handleSave();
+                      }
               }
               onTestConnection={
                 selectedProvider.id === "chroma"
@@ -144,6 +153,8 @@ export default function DBProvidersPage() {
                   : handleTestConnection
               }
               isTesting={isTesting}
+              postgresStatus={postgresStatus}
+              isCheckingPostgres={isCheckingPostgres}
             />
           </div>
         </div>

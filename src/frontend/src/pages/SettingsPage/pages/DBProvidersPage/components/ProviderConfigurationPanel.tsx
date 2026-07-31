@@ -27,6 +27,8 @@ export function ProviderConfigurationPanel({
   onSave,
   onTestConnection,
   isTesting,
+  postgresStatus,
+  isCheckingPostgres,
 }: {
   provider: DBProviderOption;
   activeProviderId: AvailableDBProviderId;
@@ -42,6 +44,8 @@ export function ProviderConfigurationPanel({
   onSave: () => void;
   onTestConnection?: () => void;
   isTesting: boolean;
+  postgresStatus: { ok: boolean; message: string } | null;
+  isCheckingPostgres: boolean;
 }) {
   const { t } = useTranslation();
   const isComingSoon = provider.status === "coming_soon";
@@ -112,6 +116,57 @@ export function ProviderConfigurationPanel({
               {isActive
                 ? t("settings.dbProviders.chromaSelected")
                 : t("settings.dbProviders.useChroma")}
+            </Button>
+          </div>
+        </div>
+      ) : provider.id === "postgres" ? (
+        <div className="flex flex-col gap-3">
+          <div className="rounded-md border border-border bg-muted/30 p-3 text-[13px] text-muted-foreground">
+            {t("settings.dbProviders.postgresDescription")}
+          </div>
+          <div className="flex items-center gap-1.5 text-[13px]">
+            {isCheckingPostgres ? (
+              <span className="text-muted-foreground">
+                {t("settings.dbProviders.postgresChecking")}
+              </span>
+            ) : postgresStatus?.ok ? (
+              <span className="flex items-center gap-1.5 text-status-green">
+                <ForwardedIconComponent name="Check" className="h-4 w-4" />
+                {t("settings.dbProviders.postgresConfigured")}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <ForwardedIconComponent
+                  name="CircleAlert"
+                  className="h-4 w-4"
+                />
+                {postgresStatus?.message ||
+                  t("settings.dbProviders.postgresNotConfigured")}
+              </span>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            {onTestConnection && (
+              <Button
+                onClick={onTestConnection}
+                size="sm"
+                variant="outline"
+                loading={isTesting}
+                disabled={isPending || isTesting}
+                data-testid="db-provider-test-connection"
+              >
+                {t("settings.dbProviders.testConnection")}
+              </Button>
+            )}
+            <Button
+              onClick={onSave}
+              size="sm"
+              loading={isPending}
+              disabled={isPending || isActive || !postgresStatus?.ok}
+            >
+              {isActive
+                ? t("settings.dbProviders.postgresSelected")
+                : t("settings.dbProviders.usePostgres")}
             </Button>
           </div>
         </div>
