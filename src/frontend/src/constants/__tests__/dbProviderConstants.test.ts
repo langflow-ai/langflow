@@ -121,4 +121,13 @@ describe("dbProviderConstants", () => {
       ]),
     ).toBe(false);
   });
+
+  it("allows explicit Postgres selection only after it is active", () => {
+    expect(isDBProviderConfigured("postgres", [])).toBe(false);
+    expect(
+      isDBProviderConfigured("postgres", [
+        variable(ACTIVE_DB_PROVIDER_VARIABLE, "postgres"),
+      ]),
+    ).toBe(true);
+  });
 });

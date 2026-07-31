@@ -1,8 +1,9 @@
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from lfx.components.models_and_agents.policies_component import (
+from lfx_toolguard.components.models_and_agents.policies_component import (
     MODE_GENERATE,
     MODE_GUARD,
     STEP2,
@@ -57,6 +58,17 @@ def _make_fake_tg(**overrides):
     }
     fake.update(overrides)
     return fake
+
+
+@pytest.fixture
+def custom_component_execution_enabled(monkeypatch):
+    """Enable ToolGuard code execution for tests that exercise cache behavior."""
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True)),
+    )
 
 
 @pytest.mark.asyncio
@@ -114,6 +126,7 @@ async def test_guard_tools_allowed_when_custom_components_enabled(mock_component
     mock_import.assert_called()
 
 
+@pytest.mark.usefixtures("custom_component_execution_enabled")
 async def test_cache_mode_success(mock_component, mock_tool):
     """Test PoliciesComponent in cache mode with valid cached guards."""
     code_dir = mock_component.work_dir / STEP2
@@ -154,6 +167,7 @@ async def test_cache_mode_success(mock_component, mock_tool):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("custom_component_execution_enabled")
 async def test_cache_mode_directory_not_found(mock_component):
     """Test PoliciesComponent in cache mode when cache directory doesn't exist."""
     fake_tg = _make_fake_tg()
@@ -167,6 +181,7 @@ async def test_cache_mode_directory_not_found(mock_component):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("custom_component_execution_enabled")
 async def test_cache_mode_file_not_found(mock_component):
     """Test PoliciesComponent in cache mode when required files are missing."""
     fake_tg = _make_fake_tg()
@@ -181,6 +196,7 @@ async def test_cache_mode_file_not_found(mock_component):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("custom_component_execution_enabled")
 async def test_cache_mode_corrupted_cache(mock_component):
     """Test PoliciesComponent in cache mode when cached code is corrupted."""
     fake_tg = _make_fake_tg()
@@ -283,6 +299,47 @@ def test_work_dir_property():
 
     assert "test_project" in str(work_dir)
     assert work_dir.name == "test_project"
+
+
+def test_work_dir_reuses_standalone_component_identity():
+    """Recreated standalone components with the same ID reuse generated guards."""
+
+    def _component() -> PoliciesComponent:
+        component = PoliciesComponent()
+        component.project = "shared project"
+        component._id = "policies-node"
+        return component
+
+    first = _component()
+    recreated = _component()
+
+    assert first.work_dir == recreated.work_dir
+    assert first.work_dir.parts[-4:] == ("anonymous", "standalone", "policies_node", "shared_project")
+
+
+def test_work_dir_isolates_flows_and_components_with_the_same_project():
+    """Identical project names cannot share generated guards across runtime identities."""
+
+    def _component(flow_id: str, component_id: str) -> PoliciesComponent:
+        component = PoliciesComponent()
+        component.project = "shared project"
+        component._vertex = SimpleNamespace(
+            id=component_id,
+            graph=SimpleNamespace(flow_id=flow_id, user_id="shared-user"),
+        )
+        return component
+
+    flow_a_node_a = _component("flow-a", "policies-a")
+    flow_b_node_a = _component("flow-b", "policies-a")
+    flow_a_node_b = _component("flow-a", "policies-b")
+
+    work_dirs = {
+        flow_a_node_a.work_dir,
+        flow_b_node_a.work_dir,
+        flow_a_node_b.work_dir,
+    }
+    assert len(work_dirs) == 3
+    assert all(work_dir.name == "shared_project" for work_dir in work_dirs)
 
 
 def test_to_snake_case():

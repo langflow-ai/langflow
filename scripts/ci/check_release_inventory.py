@@ -82,7 +82,7 @@ def collect_inventory(entry_point_groups: list[str]) -> tuple[dict[str, Any], di
     managed_distributions = {
         name: version
         for name, version in sorted(distributions.items())
-        if name == "lfx" or name.startswith(("lfx-", "langflow"))
+        if name in {"lfx", "torch", "torchvision"} or name.startswith(("lfx-", "langflow"))
     }
     bundle_files = distribution_files.get("lfx-bundles", [])
     bundle_names = sorted(

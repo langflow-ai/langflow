@@ -3,32 +3,31 @@
   "artifacts": {
     "python": {
       "lfx": "standalone engine; intentionally not an application tier",
-      "langflow-base": "backend framework; intentionally not an application tier",
-      "langflow-core": "core application without provider bundle distributions",
+      "langflow-base": "runnable bundle-free application",
       "langflow": "default application with the curated provider set",
-      "langflow plus lfx-bundles[all-no-torch]": "full application provider inventory"
+      "langflow[bundles]": "full no-Torch application provider inventory"
     },
     "images": {
-      "base": "build foundation; not an application image",
+      "base": "runnable bundle-free application image",
       "main-backend": "backend-only derivative of the default application",
       "main-frontend": "frontend-only static image",
       "lfx": "standalone engine image",
-      "core": "core application image",
       "main": "default curated application image",
       "main-all": "full application image"
     }
   },
   "profiles": {
-    "python-core": {
+    "python-base": {
       "required_distributions": [
         "langflow-base",
-        "langflow-core",
         "langflow-sdk",
         "lfx"
       ],
       "forbidden_distributions": [
         "langflow",
-        "lfx-bundles"
+        "lfx-bundles",
+        "torch",
+        "torchvision"
       ],
       "forbidden_distribution_prefixes": [
         "lfx-"
@@ -46,37 +45,45 @@
       },
       "module_checks": [
         {
-          "module": "lfx.components.youtube",
+          "module": "lfx.components.cassandra",
           "expect": "error",
-          "contains": "pip install lfx-bundles"
+          "contains": "lfx[cassandra]"
+        },
+        {
+          "module": "lfx.components.models_and_agents.policies_component",
+          "expect": "error",
+          "contains": "lfx[toolguard]"
         }
       ]
     },
     "python-default": {
-      "extends": "python-core",
+      "extends": "python-base",
       "required_distributions_add": [
         "langflow",
         "lfx-amazon",
         "lfx-anthropic",
-        "lfx-arxiv",
         "lfx-azure",
         "lfx-cohere",
         "lfx-datastax",
         "lfx-docling",
-        "lfx-duckduckgo",
-        "lfx-empiriolabs",
-        "lfx-exa",
-        "lfx-firecrawl",
         "lfx-google",
         "lfx-ibm",
-        "lfx-nextplaid",
         "lfx-ollama",
         "lfx-openai",
         "lfx-openai-compatible",
         "lfx-oracle",
-        "lfx-paddle",
-        "lfx-valkey",
+        "lfx-toolguard",
         "lfx-vllm"
+      ],
+      "forbidden_distributions_add": [
+        "lfx-arxiv",
+        "lfx-duckduckgo",
+        "lfx-empiriolabs",
+        "lfx-exa",
+        "lfx-firecrawl",
+        "lfx-nextplaid",
+        "lfx-paddle",
+        "lfx-valkey"
       ],
       "forbidden_distributions_remove": [
         "langflow"
@@ -86,24 +93,17 @@
         "langflow.extensions": [
           "lfx-amazon",
           "lfx-anthropic",
-          "lfx-arxiv",
           "lfx-azure",
           "lfx-cohere",
           "lfx-datastax",
           "lfx-docling",
-          "lfx-duckduckgo",
-          "lfx-empiriolabs",
-          "lfx-exa",
-          "lfx-firecrawl",
           "lfx-google",
           "lfx-ibm",
-          "lfx-nextplaid",
           "lfx-ollama",
           "lfx-openai",
           "lfx-openai-compatible",
           "lfx-oracle",
-          "lfx-paddle",
-          "lfx-valkey",
+          "lfx-toolguard",
           "lfx-vllm"
         ],
         "lfx.bundles": []
@@ -129,9 +129,27 @@
           "lfx_ollama/extension.json",
           "lfx_ollama/components/ollama/ollama.py",
           "lfx_ollama/components/ollama/ollama_embeddings.py"
+        ],
+        "lfx-datastax": [
+          "lfx_datastax/extension.json",
+          "lfx_datastax/components/cassandra/cassandra.py"
+        ],
+        "lfx-toolguard": [
+          "lfx_toolguard/extension.json",
+          "lfx_toolguard/components/models_and_agents/policies_component.py"
         ]
       },
       "module_checks": [
+        {
+          "module": "lfx.components.cassandra",
+          "attribute": "CassandraVectorStoreComponent",
+          "expect": "success"
+        },
+        {
+          "module": "lfx.components.models_and_agents.policies_component",
+          "attribute": "PoliciesComponent",
+          "expect": "success"
+        },
         {
           "module": "lfx.components.google",
           "attribute": "GoogleGenerativeAIComponent",
@@ -162,10 +180,26 @@
     "python-full": {
       "extends": "python-default",
       "required_distributions_add": [
-        "lfx-bundles"
+        "lfx-arxiv",
+        "lfx-bundles",
+        "lfx-duckduckgo",
+        "lfx-empiriolabs",
+        "lfx-exa",
+        "lfx-firecrawl",
+        "lfx-nextplaid",
+        "lfx-paddle",
+        "lfx-valkey"
       ],
       "forbidden_distributions_remove": [
-        "lfx-bundles"
+        "lfx-arxiv",
+        "lfx-bundles",
+        "lfx-duckduckgo",
+        "lfx-empiriolabs",
+        "lfx-exa",
+        "lfx-firecrawl",
+        "lfx-nextplaid",
+        "lfx-paddle",
+        "lfx-valkey"
       ],
       "entry_points": {
         "langflow.extensions": [
@@ -188,6 +222,7 @@
           "lfx-openai-compatible",
           "lfx-oracle",
           "lfx-paddle",
+          "lfx-toolguard",
           "lfx-valkey",
           "lfx-vllm"
         ],
@@ -325,8 +360,8 @@
         }
       ]
     },
-    "image-core": {
-      "extends": "python-core"
+    "image-base": {
+      "extends": "python-base"
     },
     "image-default": {
       "extends": "python-default"

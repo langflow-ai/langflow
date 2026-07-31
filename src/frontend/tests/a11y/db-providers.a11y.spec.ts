@@ -312,11 +312,11 @@ test.describe("DB providers route accessibility", () => {
     async ({ page }) => {
       await openDbProvidersRoute(page, emptyVariables);
 
-      // All three stubbed providers share the same coming-soon render
+      // Both stubbed providers share the same coming-soon render
       // path; assert each of their list buttons individually so every
       // provider button in the list is exercised at least once, not just
       // the one whose panel we scan below.
-      for (const providerId of ["astra", "mongodb", "postgres"]) {
+      for (const providerId of ["astra", "mongodb"]) {
         await expect(
           page
             .getByTestId(`db-provider-item-${providerId}`)
