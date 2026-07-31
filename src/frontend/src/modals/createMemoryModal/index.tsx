@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { DBProviderInput } from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
 import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +42,10 @@ export default function CreateMemoryModal({
     setPreprocessingPrompt,
     embeddingModelOptions,
     llmModelOptions,
+    backendType,
+    handleBackendProviderChange,
+    globalVariables,
+    backendConfigured,
     createMemoryMutation,
     handleSubmit,
     handleClose,
@@ -110,6 +115,34 @@ export default function CreateMemoryModal({
                 })}
               </div>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              {t("memory.dbProviderLabel")}{" "}
+              <span className="text-destructive">*</span>
+            </Label>
+            <div
+              className={cn(
+                "rounded-md",
+                "[&_button]:h-10",
+                !backendConfigured && "[&_button]:border-destructive",
+              )}
+            >
+              <DBProviderInput
+                id="memory-db-provider"
+                value={backendType}
+                globalVariables={globalVariables}
+                onValueChange={handleBackendProviderChange}
+              />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {backendConfigured
+                ? t("memory.dbProviderDescription")
+                : t("memory.dbProviderNotConfigured", {
+                    provider: backendType,
+                  })}
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -250,6 +283,7 @@ export default function CreateMemoryModal({
           disabled:
             !name.trim() ||
             selectedEmbeddingModel.length === 0 ||
+            !backendConfigured ||
             (preprocessingEnabled && selectedPreprocessingModel.length === 0) ||
             (preprocessingEnabled && !preprocessingPrompt.trim()),
         }}

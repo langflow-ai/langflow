@@ -41,12 +41,9 @@ ENV BASH_ENV="" \
     PROMPT_COMMAND=""
 ENV VIRTUAL_ENV="/app/.venv"
 
-# Install langflow-base with all extras except dev (which includes Playwright).
-# This image ships the langflow-base core only.  Extension bundles
-# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling, lfx-oracle, lfx-firecrawl) are intentionally NOT
-# installed here -- they belong to the full ``langflow`` distribution, not
-# the lean core.  Use the ``langflow`` image, or ``pip install`` the bundle
-# alongside this image, to add those components.
+# Install the runnable base with PostgreSQL. ``complete`` is retained as an
+# empty 1.12 compatibility alias. Provider extensions are intentionally absent;
+# use a Langflow application image or install the required extension packages.
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install \
         ./src/sdk \
