@@ -24,8 +24,15 @@ export default defineConfig(({ mode }) => {
 
   const apiRoutes = API_ROUTES || ["^/api/v1/", "^/api/v2/", "/health"];
 
+  const langflowHost = envLangflow.LANGFLOW_HOST?.trim() || "localhost";
+  const langflowPort = envLangflow.LANGFLOW_PORT?.trim() || "7860";
+  const langflowProxyTarget = `http://${langflowHost}:${langflowPort}`;
+
   const target =
-    env.VITE_PROXY_TARGET || PROXY_TARGET || "http://localhost:7860";
+    env.VITE_PROXY_TARGET ||
+    langflowProxyTarget ||
+    PROXY_TARGET ||
+    "http://localhost:7860";
 
   const port = Number(env.VITE_PORT) || PORT || 3000;
 
@@ -49,7 +56,7 @@ export default defineConfig(({ mode }) => {
         envLangflow.ACCESS_TOKEN_EXPIRE_SECONDS,
       ),
       "import.meta.env.BACKEND_URL": JSON.stringify(
-        envLangflow.BACKEND_URL ?? "http://localhost:7860",
+        envLangflow.BACKEND_URL ?? langflowProxyTarget,
       ),
       "import.meta.env.CI": JSON.stringify(envLangflow.CI ?? false),
       __LANGFLOW_AUTO_LOGIN__: JSON.stringify(

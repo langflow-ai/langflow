@@ -9,7 +9,10 @@ import {
   TWITTER_URL,
 } from "@/constants/constants";
 import { useLogout } from "@/controllers/API/queries/auth";
-import { CustomAdminPageMenuItem } from "@/customization/components/custom-admin-page-menu-item";
+import {
+  CustomAdminPageMenuItem,
+  SHOW_LEGACY_ADMIN_PAGE,
+} from "@/customization/components/custom-admin-page-menu-item";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import {
   ENABLE_DATASTAX_LANGFLOW,
@@ -107,7 +110,7 @@ export const AccountMenu = () => {
               </span>
             </HeaderMenuItemButton>
 
-            {isAdmin && !autoLogin && (
+            {SHOW_LEGACY_ADMIN_PAGE && isAdmin && !autoLogin && (
               <div>
                 <HeaderMenuItemButton
                   onClick={() => {
