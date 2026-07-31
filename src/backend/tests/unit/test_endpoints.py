@@ -702,6 +702,30 @@ async def test_successful_run_no_payload(client, simple_api_test, created_api_ke
     assert all(result is not None for result in inner_results), (outputs_dict, output_results_has_results)
 
 
+async def test_run_by_id_maps_catalog_policy_validation_to_bad_request(
+    client, simple_api_test, created_api_key, monkeypatch
+):
+    from lfx.utils.flow_validation import CatalogPolicyValidationError
+
+    validation_message = "Flow build blocked: catalog policy blocks components: ChatInput"
+
+    def reject_catalog_component(_target, **_kwargs):
+        raise CatalogPolicyValidationError(validation_message)
+
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.validate_flow_for_current_settings",
+        reject_catalog_component,
+    )
+
+    response = await client.post(
+        f"/api/v1/run/{simple_api_test['id']}",
+        headers={"x-api-key": created_api_key.api_key},
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"].endswith("ChatInput")
+
+
 async def test_successful_run_with_output_type_text(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]

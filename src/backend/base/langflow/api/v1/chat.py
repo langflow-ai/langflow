@@ -16,6 +16,7 @@ from lfx.services.cache.utils import CacheMiss
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
     prepare_public_flow_build,
+    validate_catalog_policy_for_flow,
     validate_flow_for_current_settings,
     validate_public_flow_no_code_execution,
 )
@@ -850,6 +851,13 @@ async def build_public_tmp(
         async with session_scope() as session:
             flow = await session.get(Flow, flow_id)
             if flow and flow.data:
+                # The default anonymous build path sanitizes component code directly
+                # and therefore does not call validate_flow_for_current_settings.
+                # Enforce the exact catalog snapshot after the public-access check
+                # and before any graph is queued or built. The explicit public-custom
+                # opt-in already runs the unified validator inside prepare_public_flow_build.
+                if not settings.allow_public_custom_components:
+                    validate_catalog_policy_for_flow(flow.data)
                 # Block unauthenticated builds of flows that run arbitrary code
                 # (Python interpreter/REPL, legacy Python Code Structured tool,
                 # Smart Transform lambda) or invoke another saved flow (Run Flow,

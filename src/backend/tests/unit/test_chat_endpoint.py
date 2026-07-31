@@ -89,6 +89,32 @@ async def test_build_flow_validates_request_data_instead_of_stale_db_flow(
     assert "job_id" in response.json()
 
 
+async def test_build_flow_maps_catalog_policy_validation_to_bad_request(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    from lfx.utils.flow_validation import CatalogPolicyValidationError
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    validation_message = "Flow build blocked: catalog policy blocks components: Agent"
+
+    def reject_catalog_component(_target):
+        raise CatalogPolicyValidationError(validation_message)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.chat.validate_flow_for_current_settings",
+        reject_catalog_component,
+    )
+
+    response = await client.post(
+        f"api/v1/build/{flow_id}/flow",
+        json={},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"].endswith("Agent")
+
+
 async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Test building a flow with a frozen path."""
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
@@ -695,7 +721,7 @@ async def test_build_public_tmp_checks_public_access_before_validation(
         raise ValueError(public_access_validation_message)
 
     monkeypatch.setattr(
-        "langflow.api.v1.chat.validate_flow_for_current_settings",
+        "langflow.api.v1.chat.validate_catalog_policy_for_flow",
         fail_if_validation_runs,
     )
 
@@ -707,6 +733,40 @@ async def test_build_public_tmp_checks_public_access_before_validation(
 
     assert response.status_code == codes.FORBIDDEN
     assert response.json()["detail"] == "Flow is not public"
+
+
+async def test_build_public_tmp_maps_catalog_policy_validation_to_generic_bad_request(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    from lfx.utils.flow_validation import CatalogPolicyValidationError
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+    validation_message = "Flow build blocked: catalog policy blocks components: SecretComponent"
+
+    def reject_catalog_component(_target):
+        raise CatalogPolicyValidationError(validation_message)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.chat.validate_catalog_policy_for_flow",
+        reject_catalog_component,
+    )
+    client.cookies.set("client_id", "test-catalog-policy-client")
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+    assert "SecretComponent" not in response.text
 
 
 @pytest.mark.benchmark
