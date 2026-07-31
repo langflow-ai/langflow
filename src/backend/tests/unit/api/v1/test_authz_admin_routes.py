@@ -800,10 +800,11 @@ async def test_list_assignments_serializes_grant_sources(stub_authz):
     result = await authz_role_assignments.list_assignments(session=session, current_user=user)
 
     assert len(result) == 1
-    assert [source.source_kind for source in result[0].grant_sources] == ["manual", "idp"]
-    assert result[0].grant_sources[0].administrative_actor == user.id
-    assert result[0].grant_sources[1].provider_id == "entra"
-    assert result[0].grant_sources[1].external_group == "corp-dev"
+    sources = {source.source_kind: source for source in result[0].grant_sources}
+    assert sources.keys() == {"manual", "idp"}
+    assert sources["manual"].administrative_actor == user.id
+    assert sources["idp"].provider_id == "entra"
+    assert sources["idp"].external_group == "corp-dev"
 
 
 @pytest.mark.asyncio
@@ -1072,6 +1073,31 @@ async def test_delete_assignment_manual_only_returns_204(stub_authz):
 
     assert result.status_code == 204
     assert session.deleted == [assignment]
+    assert authz.staged_mutations == authz.committed_mutations
+
+
+@pytest.mark.asyncio
+async def test_delete_legacy_assignment_without_grant_rows_returns_204(stub_authz):
+    from langflow.api.v1 import authz_role_assignments
+    from langflow.services.database.models.auth import AuthzRoleAssignment
+
+    authz = stub_authz()
+    actor = _make_user(is_superuser=True)
+    assignment = AuthzRoleAssignment(user_id=uuid4(), role_id=uuid4())
+    session = _FakeAsyncSession(
+        {(AuthzRoleAssignment, assignment.id): assignment},
+        exec_results=[[]],
+    )
+
+    result = await authz_role_assignments.delete_assignment(
+        assignment_id=assignment.id,
+        current_user=actor,
+        session=session,
+    )
+
+    assert result.status_code == 204
+    assert session.deleted == [assignment]
+    assert session.committed == 1
     assert authz.staged_mutations == authz.committed_mutations
 
 

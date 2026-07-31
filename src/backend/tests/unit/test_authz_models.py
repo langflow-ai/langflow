@@ -680,6 +680,24 @@ async def test_authz_audit_log_persists(authz_async_session: AsyncSession):
     assert stored.timestamp is not None
 
 
+@pytest.mark.anyio
+async def test_authz_audit_log_accepts_skipped_reconciliation(authz_async_session: AsyncSession):
+    """Skipped reconciliation is a first-class, queryable audit outcome."""
+    entry = AuthzAuditLog(
+        action="directory_membership:reconcile",
+        resource_type="user",
+        result="skip",
+        details={"reason": "overage"},
+    )
+    authz_async_session.add(entry)
+    await authz_async_session.commit()
+
+    stored = (await authz_async_session.exec(select(AuthzAuditLog).where(AuthzAuditLog.id == entry.id))).first()
+    assert stored is not None
+    assert stored.result == "skip"
+    assert stored.details == {"reason": "overage"}
+
+
 def test_authz_audit_actor_identity_has_no_fk_and_composite_timestamp_index():
     """Credential attribution survives API-key deletion and supports actor history scans."""
     table = AuthzAuditLog.__table__

@@ -340,12 +340,11 @@ class AuthzAuditLog(SQLModel, table=True):  # type: ignore[call-arg]
         Index("ix_authz_audit_log_actor_timestamp", "actor_id", "timestamp"),
         Index("ix_authz_audit_log_actor_type_timestamp", "actor_type", "timestamp"),
         Index("ix_authz_audit_log_resource", "resource_type", "resource_id"),
-        # ``owner_override`` is the third value the framework writes (see
-        # ``_AUDIT_OWNER_OVERRIDE`` in services/authorization/utils.py); it
-        # must be in the CHECK set or owner-shortcut audit rows would
-        # silently fail the constraint.
+        # Keep this vocabulary aligned with ``services.authorization.audit``.
+        # ``skip`` records an operator-visible reconciliation attempt that did
+        # not apply an authoritative directory snapshot.
         CheckConstraint(
-            "result IN ('allow', 'deny', 'owner_override')",
+            "result IN ('allow', 'deny', 'owner_override', 'skip')",
             name="ck_authz_audit_log_result_enum",
         ),
     )

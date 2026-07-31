@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import warnings
-from collections.abc import Coroutine, Mapping
+from collections.abc import Awaitable, Callable, Coroutine, Mapping
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -72,6 +72,40 @@ def _audit_audience(claims: Mapping[str, object]) -> str | list[str] | None:
     if isinstance(audience, (list, tuple)) and all(isinstance(value, str) for value in audience):
         return list(audience)
     return None
+
+
+async def _safe_audit_directory_reconciliation(
+    audit: Callable[..., Awaitable[None]],
+    *,
+    identity: ExternalIdentity,
+    user: User,
+    issuer: str | None,
+    result: str,
+    details: dict[str, object],
+) -> None:
+    """Record reconciliation without letting audit outages fail authentication."""
+    try:
+        await audit(
+            user_id=user.id,
+            action="directory_membership:reconcile",
+            obj=f"user:{user.id}",
+            result=result,
+            details={
+                "provider_id": identity.provider,
+                "issuer": issuer,
+                "subject": identity.subject,
+                "audience": _audit_audience(identity.claims),
+                "source": "external_bearer",
+                **details,
+            },
+        )
+    except Exception:  # noqa: BLE001
+        await logger.aexception(
+            "Authorization directory reconciliation audit failed for provider=%s user=%s result=%s",
+            identity.provider,
+            user.id,
+            result,
+        )
 
 
 if TYPE_CHECKING:
@@ -327,13 +361,13 @@ class AuthService(BaseAuthService):
 
         Missing, overage, or malformed claims are not authoritative zero-group
         snapshots and therefore skip reconciliation. Provider configuration and
-        transactional ingest failures intentionally remain fail-closed; only the
-        post-commit publication hook is isolated from the authentication result.
+        transactional ingest failures intentionally remain fail-closed; audit
+        enqueue and post-commit publication are isolated from authentication.
         """
         from lfx.services.authorization import DirectoryMembershipSnapshot
 
+        from langflow.services.authorization.audit import AUDIT_ALLOW, AUDIT_SKIP, audit_decision
         from langflow.services.authorization.lifecycle import safe_directory_membership_committed
-        from langflow.services.authorization.utils import audit_decision
         from langflow.services.deps import get_authorization_service
 
         authorization_service = get_authorization_service()
@@ -346,6 +380,31 @@ class AuthService(BaseAuthService):
         if not claim_name:
             return
 
+        async def audit_reconciliation(*, result: str, details: dict[str, object]) -> None:
+            await _safe_audit_directory_reconciliation(
+                audit_decision,
+                identity=identity,
+                user=user,
+                issuer=issuer,
+                result=result,
+                details=details,
+            )
+
+        async def audit_skip(reason: str) -> None:
+            # JIT user/profile and last-login updates share this transaction.
+            # Commit them before the independent audit writer resolves the
+            # audit row's user foreign key.
+            await db.commit()
+            await audit_reconciliation(
+                result=AUDIT_SKIP,
+                details={
+                    "claim_name": claim_name,
+                    "reason": reason,
+                    "authoritative": False,
+                    "complete": False,
+                },
+            )
+
         if _has_external_group_overage(identity.claims, claim_name):
             logger.warning(
                 "Skipping external group reconciliation for provider=%s user=%s: claim=%s uses an overage pointer",
@@ -353,6 +412,7 @@ class AuthService(BaseAuthService):
                 user.id,
                 claim_name,
             )
+            await audit_skip("overage")
             return
         if claim_name not in identity.claims:
             logger.warning(
@@ -361,6 +421,7 @@ class AuthService(BaseAuthService):
                 user.id,
                 claim_name,
             )
+            await audit_skip("absent")
             return
 
         raw_groups = identity.claims[claim_name]
@@ -375,6 +436,7 @@ class AuthService(BaseAuthService):
                 user.id,
                 claim_name,
             )
+            await audit_skip("malformed")
             return
 
         normalized_groups: set[str] = set()
@@ -387,6 +449,7 @@ class AuthService(BaseAuthService):
                     user.id,
                     claim_name,
                 )
+                await audit_skip("malformed")
                 return
             group = candidate.strip()
             if not group or len(group) > _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH:
@@ -397,6 +460,7 @@ class AuthService(BaseAuthService):
                     user.id,
                     claim_name,
                 )
+                await audit_skip("malformed")
                 return
             normalized_groups.add(group)
 
@@ -409,6 +473,7 @@ class AuthService(BaseAuthService):
                 claim_name,
                 _MAX_EXTERNAL_AUTHORIZATION_GROUPS,
             )
+            await audit_skip("too_many")
             return
 
         result = await authorization_service.ingest_directory_membership_snapshot(
@@ -446,17 +511,9 @@ class AuthService(BaseAuthService):
             added = getattr(result, "added", None)
             removed = getattr(result, "removed", None)
 
-        await audit_decision(
-            user_id=user.id,
-            action="directory_membership:reconcile",
-            obj=f"user:{user.id}",
-            result="allow",
+        await audit_reconciliation(
+            result=AUDIT_ALLOW,
             details={
-                "provider_id": identity.provider,
-                "issuer": issuer,
-                "subject": identity.subject,
-                "audience": _audit_audience(identity.claims),
-                "source": "external_bearer",
                 "membership_count": len(groups),
                 "membership_sha256": hashlib.sha256("\0".join(groups).encode()).hexdigest(),
                 "changed": changed,

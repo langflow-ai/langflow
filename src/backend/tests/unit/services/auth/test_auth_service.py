@@ -1105,7 +1105,7 @@ async def test_external_group_reconciliation_normalizes_commits_and_audits(auth_
 
     with (
         patch("langflow.services.deps.get_authorization_service", return_value=authz),
-        patch("langflow.services.authorization.utils.audit_decision", new=audit),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
     ):
         await auth_service._reconcile_verified_external_groups(identity=identity, user=user, db=db)
 
@@ -1149,7 +1149,7 @@ async def test_external_group_reconciliation_accepts_present_empty_claim(auth_se
 
     with (
         patch("langflow.services.deps.get_authorization_service", return_value=authz),
-        patch("langflow.services.authorization.utils.audit_decision", new=AsyncMock()),
+        patch("langflow.services.authorization.audit.audit_decision", new=AsyncMock()),
     ):
         await auth_service._reconcile_verified_external_groups(
             identity=_external_identity({"groups": []}),
@@ -1164,32 +1164,39 @@ async def test_external_group_reconciliation_accepts_present_empty_claim(auth_se
 
 
 @pytest.mark.parametrize(
-    "claims",
+    ("claims", "expected_reason"),
     [
-        {"iss": "https://issuer.example"},
-        {"_claim_names": {"groups": "src1"}, "_claim_sources": {"src1": {"endpoint": "https://graph"}}},
-        {"groups": {"unexpected": "mapping"}},
-        {"groups": ["engineering", 7]},
-        {"groups": ["x" * 257]},
-        {"groups": [f"group-{index}" for index in range(501)]},
+        ({"iss": "https://issuer.example"}, "absent"),
+        (
+            {"_claim_names": {"groups": "src1"}, "_claim_sources": {"src1": {"endpoint": "https://graph"}}},
+            "overage",
+        ),
+        ({"groups": {"unexpected": "mapping"}}, "malformed"),
+        ({"groups": ["engineering", 7]}, "malformed"),
+        ({"groups": ["   "]}, "malformed"),
+        ({"groups": ["x" * 257]}, "malformed"),
+        ({"groups": [f"group-{index}" for index in range(501)]}, "too_many"),
     ],
-    ids=["absent", "entra-overage", "invalid-type", "non-string", "overlong", "too-many"],
+    ids=["absent", "entra-overage", "invalid-type", "non-string", "blank", "overlong", "too-many"],
 )
 @pytest.mark.anyio
 async def test_incomplete_external_group_claim_skips_authoritative_reconciliation(
     auth_service: AuthService,
     claims: dict,
+    expected_reason: str,
 ):
     from lfx.services.authorization import DirectoryMembershipIngestResult
 
     user = _dummy_user(uuid4())
     db = AsyncMock()
     authz = _DirectoryAuthorizationStub(result=DirectoryMembershipIngestResult(changed=True))
-    audit = AsyncMock()
+    events: list[str] = []
+    db.commit.side_effect = lambda: events.append("commit")
+    audit = AsyncMock(side_effect=lambda **_kwargs: events.append("audit"))
 
     with (
         patch("langflow.services.deps.get_authorization_service", return_value=authz),
-        patch("langflow.services.authorization.utils.audit_decision", new=audit),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
     ):
         await auth_service._reconcile_verified_external_groups(
             identity=_external_identity(claims),
@@ -1198,8 +1205,51 @@ async def test_incomplete_external_group_claim_skips_authoritative_reconciliatio
         )
 
     authz.ingest_directory_membership_snapshot.assert_not_awaited()
-    db.commit.assert_not_awaited()
+    db.commit.assert_awaited_once()
     authz.directory_membership_committed.assert_not_awaited()
+    audit.assert_awaited_once()
+    assert events == ["commit", "audit"]
+    audit_call = audit.await_args.kwargs
+    assert audit_call["action"] == "directory_membership:reconcile"
+    assert audit_call["obj"] == f"user:{user.id}"
+    assert audit_call["result"] == "skip"
+    assert audit_call["details"] == {
+        "provider_id": "customer-idp",
+        "issuer": claims.get("iss"),
+        "subject": "external-subject",
+        "audience": None,
+        "source": "external_bearer",
+        "claim_name": "groups",
+        "reason": expected_reason,
+        "authoritative": False,
+        "complete": False,
+    }
+
+
+@pytest.mark.anyio
+async def test_external_group_reconciliation_plugin_opt_out_is_not_a_skip(auth_service: AuthService):
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(
+        result=DirectoryMembershipIngestResult(changed=True),
+        claim_name=None,
+    )
+    audit = AsyncMock()
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
+    ):
+        await auth_service._reconcile_verified_external_groups(
+            identity=_external_identity({}),
+            user=user,
+            db=db,
+        )
+
+    authz.ingest_directory_membership_snapshot.assert_not_awaited()
+    db.commit.assert_not_awaited()
     audit.assert_not_awaited()
 
 
@@ -1219,7 +1269,7 @@ async def test_legacy_directory_ingest_result_invalidates_conservatively(
 
     with (
         patch("langflow.services.deps.get_authorization_service", return_value=authz),
-        patch("langflow.services.authorization.utils.audit_decision", new=AsyncMock()),
+        patch("langflow.services.authorization.audit.audit_decision", new=AsyncMock()),
     ):
         await auth_service._reconcile_verified_external_groups(
             identity=_external_identity({"groups": ["engineering"]}),
@@ -1242,7 +1292,7 @@ async def test_directory_post_commit_failure_does_not_fail_authentication(auth_s
 
     with (
         patch("langflow.services.deps.get_authorization_service", return_value=authz),
-        patch("langflow.services.authorization.utils.audit_decision", new=AsyncMock()),
+        patch("langflow.services.authorization.audit.audit_decision", new=AsyncMock()),
     ):
         await auth_service._reconcile_verified_external_groups(
             identity=_external_identity({"groups": ["engineering"]}),
@@ -1252,6 +1302,55 @@ async def test_directory_post_commit_failure_does_not_fail_authentication(auth_s
 
     db.commit.assert_awaited_once()
     authz.directory_membership_committed.assert_awaited_once_with(user_id=user.id, changed=True)
+
+
+@pytest.mark.anyio
+async def test_directory_post_commit_audit_failure_does_not_fail_authentication(auth_service: AuthService):
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(result=DirectoryMembershipIngestResult(changed=True, added=1))
+    audit = AsyncMock(side_effect=RuntimeError("audit settings unavailable"))
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
+    ):
+        await auth_service._reconcile_verified_external_groups(
+            identity=_external_identity({"groups": ["engineering"]}),
+            user=user,
+            db=db,
+        )
+
+    db.commit.assert_awaited_once()
+    audit.assert_awaited_once()
+    authz.directory_membership_committed.assert_awaited_once_with(user_id=user.id, changed=True)
+
+
+@pytest.mark.anyio
+async def test_directory_skip_audit_failure_does_not_fail_authentication(auth_service: AuthService):
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(result=DirectoryMembershipIngestResult(changed=True))
+    audit = AsyncMock(side_effect=RuntimeError("audit settings unavailable"))
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
+    ):
+        await auth_service._reconcile_verified_external_groups(
+            identity=_external_identity({}),
+            user=user,
+            db=db,
+        )
+
+    authz.ingest_directory_membership_snapshot.assert_not_awaited()
+    db.commit.assert_awaited_once()
+    audit.assert_awaited_once()
+    authz.directory_membership_committed.assert_not_awaited()
 
 
 # =============================================================================
