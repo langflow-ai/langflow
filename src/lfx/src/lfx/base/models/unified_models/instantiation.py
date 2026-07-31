@@ -122,7 +122,7 @@ def get_llm(
     provider = model.get("provider")
     metadata = model.get("metadata", {})
 
-    if not isinstance(provider, str) or not provider:
+    if not isinstance(provider, str) or not provider.strip():
         msg = (
             "The selected model is missing a provider. Please reselect a model from the dropdown "
             "so the component knows which provider to use."
@@ -146,10 +146,10 @@ def get_llm(
     # names: trusting it would let an allowed provider instantiate a denied
     # provider's client. Unknown legacy providers retain the historical
     # metadata fallback under the OSS allow-all policy.
-    from lfx.base.models.provider_registry import provider_id_for, provider_name_for_id
+    from lfx.base.models.provider_registry import provider_name_for_id, resolve_provider_id
 
-    provider_id = provider_id_for(provider)
-    canonical_provider = provider_name_for_id(provider_id) if provider_id is not None else None
+    provider_id = resolve_provider_id(provider)
+    canonical_provider = provider_name_for_id(provider_id)
     provider_is_known = canonical_provider is not None
     provider = canonical_provider or provider
 
@@ -588,13 +588,13 @@ def _compose_embedding_kwargs(
     from lfx.base.models.provider_registry import (
         is_api_key_optional,
         is_registered,
-        provider_id_for,
         provider_name_for_id,
+        resolve_provider_id,
     )
 
     metadata = metadata or {}
-    provider_id = provider_id_for(provider)
-    canonical_provider = provider_name_for_id(provider_id) if provider_id is not None else None
+    provider_id = resolve_provider_id(provider)
+    canonical_provider = provider_name_for_id(provider_id)
     provider_is_known = canonical_provider is not None
     provider = canonical_provider or provider
     api_key_override = component_api_key if provider == selected_provider else None
@@ -892,7 +892,7 @@ def get_embeddings(
     provider = model_dict.get("provider")
     metadata = model_dict.get("metadata", {})
 
-    if not isinstance(provider, str) or not provider:
+    if not isinstance(provider, str) or not provider.strip():
         msg = "The selected embedding model is missing a provider"
         raise ValueError(msg)
     if provider_policy is None:
@@ -907,10 +907,10 @@ def get_embeddings(
         )
     provider_policy.require(provider)
 
-    from lfx.base.models.provider_registry import provider_id_for, provider_name_for_id
+    from lfx.base.models.provider_registry import provider_name_for_id, resolve_provider_id
 
-    provider_id = provider_id_for(provider)
-    canonical_provider = provider_name_for_id(provider_id) if provider_id is not None else None
+    provider_id = resolve_provider_id(provider)
+    canonical_provider = provider_name_for_id(provider_id)
     provider_is_known = canonical_provider is not None
     provider = canonical_provider or provider
 
