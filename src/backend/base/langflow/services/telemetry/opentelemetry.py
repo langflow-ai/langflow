@@ -4,15 +4,50 @@ from enum import Enum
 from typing import Any
 from weakref import WeakValueDictionary
 
+from lfx.observability import (
+    APPLICATION_INSTRUMENTATION_SCOPES,
+    APPLICATION_METER_NAME,
+    APPLICATION_METRIC_SCOPES,
+    APPLICATION_TRACER_NAME,
+    DEFAULT_SERVICE_NAME,
+    PROCESS_METRICS_CONFIG,
+    SUPPORTED_OTLP_PROTOCOLS,
+    ApplicationOnlyMetricExporter,
+    ApplicationOnlySpanProcessor,
+    ApplicationTelemetry,
+    bootstrap_application_telemetry,
+)
 from opentelemetry import metrics
-from opentelemetry.exporter.prometheus import PrometheusMetricReader
 from opentelemetry.metrics import CallbackOptions, Observation
 from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDownCounter
+from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+
+# The provider bootstrap, the export filters and the runtime metrics now live in
+# lfx.observability, so that lfx serve and lfx run get the same application observability as
+# the full langflow app. They are re-exported above only so existing importers of this module
+# keep working. What stays here is the langflow-specific metric registry (the custom counters
+# and gauges below) and the singleton that installs them on the bootstrapped meter provider.
 
 # a default OpenTelemetry meter name
-langflow_meter_name = "langflow"
+langflow_meter_name = APPLICATION_METER_NAME
+
+# Re-exported for backwards compatibility; the definitions live in lfx.observability.
+__all__ = [
+    "APPLICATION_INSTRUMENTATION_SCOPES",
+    "APPLICATION_METRIC_SCOPES",
+    "APPLICATION_TRACER_NAME",
+    "DEFAULT_SERVICE_NAME",
+    "PROCESS_METRICS_CONFIG",
+    "SUPPORTED_OTLP_PROTOCOLS",
+    "ApplicationOnlyMetricExporter",
+    "ApplicationOnlySpanProcessor",
+    "MetricType",
+    "OpenTelemetry",
+    "langflow_meter_name",
+]
+
 
 """
 If the measurement values are non-additive, use an Asynchronous Gauge.
@@ -109,6 +144,8 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
     _metrics_registry: dict[str, Metric] = {}
     _metrics: dict[str, Counter | ObservableGaugeWrapper | Histogram | UpDownCounter] = {}
     _meter_provider: MeterProvider | None = None
+    _tracer_provider: TracerProvider | None = None
+    _logger_provider: LoggerProvider | None = None
     _initialized: bool = False  # Add initialization flag
     prometheus_enabled: bool = True
 
@@ -169,25 +206,20 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         if not self._metrics_registry:
             self._register_metric()
 
-        if self._meter_provider is None:
-            # Get existing meter provider if any
-            existing_provider = metrics.get_meter_provider()
+        # The whole provider bootstrap (meter, tracer and logger providers, the OTLP
+        # exporters, the export filters and the runtime metrics) lives in lfx now, so that
+        # lfx serve and lfx run get identical application observability. This installs it and
+        # hands back the meter provider our custom metrics register on.
+        telemetry: ApplicationTelemetry = bootstrap_application_telemetry(prometheus_enabled=prometheus_enabled)
+        self._meter_provider = telemetry.meter_provider
+        self._owns_meter_provider = telemetry.owns_meter_provider
+        self._tracer_provider = telemetry.tracer_provider
+        self._logger_provider = telemetry.logger_provider
 
-            # Reuse a concrete SDK provider installed by another integration. The
-            # default API proxy also returns meters, but it has no readers and must
-            # be replaced so Prometheus can collect Langflow metrics.
-            if isinstance(existing_provider, MeterProvider):
-                self._meter_provider = existing_provider
-            else:
-                resource = Resource.create({"service.name": "langflow"})
-                metric_readers = []
-                if self.prometheus_enabled:
-                    metric_readers.append(PrometheusMetricReader())
-
-                self._meter_provider = MeterProvider(resource=resource, metric_readers=metric_readers)
-                metrics.set_meter_provider(self._meter_provider)
-
-        self.meter = self._meter_provider.get_meter(langflow_meter_name)
+        # meter_provider is None when nothing is exported and Prometheus is off (the default):
+        # the bootstrap declines to install a reader-less provider. Fall back to the global API
+        # proxy so the custom metrics still register on a no-op meter rather than crashing here.
+        self.meter = (self._meter_provider or metrics.get_meter_provider()).get_meter(langflow_meter_name)
 
         for name, metric in self._metrics_registry.items():
             if name != metric.name:
@@ -273,14 +305,98 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             msg = f"Metric '{metric_name}' is not a histogram"
             raise TypeError(msg)
 
+    @property
+    def meter_provider(self):
+        """The meter provider the bootstrap installed, or None when nothing is exported."""
+        return self._meter_provider
+
     def shutdown(self):
         # Only shut down if initialized
         if not self._initialized:
             return
-        if self._meter_provider:
-            readers = getattr(self._meter_provider, "_metric_readers", [])
-            for reader in readers:
-                if hasattr(reader, "shutdown"):
-                    reader.shutdown()
+        if self._meter_provider and self._owns_meter_provider:
+            # Not the readers directly: only MeterProvider.shutdown unregisters the atexit
+            # handler, and without that the interpreter shuts the readers down a second time
+            # and Prometheus raises on the double unregister. Only when we own it: a provider
+            # adopted from another integration is theirs to shut down, not ours.
+            self._meter_provider.shutdown()
+        if self._tracer_provider:
+            self._tracer_provider.shutdown()
+        if self._logger_provider:
+            self._logger_provider.shutdown()
         self._metrics.clear()
         OpenTelemetry._initialized = False
+
+
+# Connection-pool saturation, read from SQLAlchemy at collection time rather than tracked.
+# Pool exhaustion is a textbook FastAPI outage: every endpoint hangs waiting for a checkout,
+# latency climbs uniformly, and CPU stays flat, so nothing in the process metrics points at
+# the cause. (name, pool method, description) — only pools that expose the method are
+# registered. Not every pool counts: SQLite ``:memory:`` uses StaticPool and NullPool counts
+# nothing either, while a file-backed SQLite with langflow's default pool settings does get a
+# counting queue pool, so this registers there too.
+DB_POOL_GAUGES = (
+    ("langflow_db_pool_connections_in_use", "checkedout", "Connections currently checked out of the pool."),
+    ("langflow_db_pool_connections_idle", "checkedin", "Connections sitting idle in the pool."),
+    ("langflow_db_pool_size", "size", "Configured pool size, excluding overflow."),
+    ("langflow_db_pool_overflow", "overflow", "Connections open beyond the configured pool size, 0 when within it."),
+)
+
+
+# The engine the pool gauges report on. Deliberately a module-level cell rather than a value
+# captured in each callback: OpenTelemetry de-duplicates observable gauges by name, so
+# instrumenting a replacement engine returns the *existing* instrument and silently discards the
+# new callbacks. A captured engine would leave the gauges reporting on an engine that is gone,
+# which reads as a permanently healthy pool. Re-instrumentation updates this instead.
+_instrumented_engine = None
+
+
+def _pool_observer(method_name: str):
+    """Read one pool counter, never raising into the collection cycle.
+
+    Resolves the engine and its pool per observation. ``dispose()`` swaps in a fresh pool
+    rather than resetting one, and a whole engine can be replaced, so nothing here may be
+    captured at registration time.
+    """
+
+    def observe(_options):
+        try:
+            # Clamp: SQLAlchemy's overflow() starts at -pool_size, so a healthy pool reports a
+            # negative 'overflow'. None of these counters are meaningful below zero.
+            return [Observation(max(getattr(_instrumented_engine.pool, method_name)(), 0))]
+        except Exception:  # noqa: BLE001 - a broken gauge must not stop the other metrics
+            return []
+
+    return observe
+
+
+def instrument_db_pool(meter_provider, engine) -> None:
+    """Expose SQLAlchemy connection-pool saturation as observable gauges.
+
+    No-op when nothing is exported, or when the engine's pool does not count connections
+    (SQLite ``:memory:`` uses StaticPool, and NullPool counts nothing either). File-backed
+    SQLite and Postgres both get a counting queue pool, so both are instrumented.
+
+    Carries no attributes: the numbers describe this process's pool, and identity on a metric
+    label is what makes cardinality explode.
+    """
+    global _instrumented_engine  # noqa: PLW0603
+
+    pool = getattr(engine, "pool", None)
+    if meter_provider is None or pool is None:
+        return
+
+    # Point the gauges at this engine before (re-)registering. On a second call the instruments
+    # already exist and the new callbacks are dropped, so this assignment is what actually
+    # re-targets them.
+    _instrumented_engine = engine
+
+    meter = meter_provider.get_meter(langflow_meter_name)
+    for name, method_name, description in DB_POOL_GAUGES:
+        if callable(getattr(pool, method_name, None)):
+            meter.create_observable_gauge(
+                name,
+                callbacks=[_pool_observer(method_name)],
+                unit="",
+                description=description,
+            )

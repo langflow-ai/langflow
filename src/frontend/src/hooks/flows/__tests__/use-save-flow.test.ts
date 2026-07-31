@@ -130,6 +130,29 @@ describe("useSaveFlow", () => {
     expect(mockSetCurrentFlow).toHaveBeenCalled();
   });
 
+  it("reports the backend detail before rejecting a failed save", async () => {
+    const error = {
+      response: {
+        data: {
+          detail: "You do not have permission to edit this flow",
+        },
+      },
+    };
+    mockMutate.mockImplementation((_payload, options) => {
+      options.onError(error);
+    });
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(result.current()).rejects.toBe(error);
+
+    expect(mockSetErrorData).toHaveBeenCalledTimes(1);
+    expect(mockSetErrorData).toHaveBeenCalledWith({
+      title: "Failed to save flow",
+      list: ["You do not have permission to edit this flow"],
+    });
+    expect(mockSetSaveLoading).toHaveBeenCalledWith(false);
+  });
+
   it("does not autosave hydrated data while the persisted flow is locked", async () => {
     const persistedFlow = {
       ...flowsManagerState.currentFlow,

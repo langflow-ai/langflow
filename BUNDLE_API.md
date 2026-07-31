@@ -69,7 +69,7 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | Symbol | Source |
 | --- | --- |
 | Manifest schema (`extension.json` / `[tool.langflow.extension]`) | `lfx.extension.manifest.ExtensionManifest` |
-| `BundleRef` (one entry in `bundles[]`; `bundles[]` is optional, 0-or-1) | `lfx.extension.manifest.BundleRef` |
+| `BundleRef` (one entry in optional `bundles[]`; bundle names must be unique) | `lfx.extension.manifest.BundleRef` |
 | `ProviderManifestEntry` (one entry in the optional `providers[]`) | `lfx.extension.manifest.ProviderManifestEntry` |
 | `LfxCompat` (declared as `manifest.lfx`) | `lfx.extension.manifest.LfxCompat` |
 | `BUNDLE_API_VERSION` (the integer this lfx ships) | `lfx.extension.manifest` |
@@ -83,7 +83,8 @@ Component IDs at runtime are `ext:<bundle>:<Class>@<slot>`.
 
 | Symbol | Source |
 | --- | --- |
-| `load_extension(root)` | `lfx.extension.loader` |
+| `load_extension(root, *, bundle_name=None)` | `lfx.extension.loader` |
+| `load_extension_bundles(root)` | `lfx.extension.loader` |
 | `load_installed_extensions()` | `lfx.extension.loader` |
 | `discover_inline_bundles()` | `lfx.extension.loader` |
 | `discover_installed_extensions()` / `discover_seed_extensions()` / `discover_all_extensions()` | `lfx.extension.discovery` |
@@ -189,6 +190,11 @@ the deserialize half is covered by
 ### v0 (this release)
 
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
+- Extension manifests may now declare multiple component bundles.  Startup
+  discovery loads every declared bundle through `load_extension_bundles()`;
+  direct callers may select one with `load_extension(..., bundle_name=...)`.
+  Single-bundle and provider-only manifests retain their existing behavior,
+  so this is additive and does not change `BUNDLE_API_VERSION`.
 - Inline bundle discovery now skips Langflow-owned component compatibility
   shims marked with `# lfx-bundles-shim` or `# lfx-compat-shim`.  These
   packages remain importable, but are not treated as user inline bundles

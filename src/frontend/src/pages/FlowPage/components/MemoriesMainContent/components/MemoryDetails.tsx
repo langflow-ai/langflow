@@ -6,6 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { getKnowledgeBaseBackendLabel } from "@/pages/MainPage/pages/knowledgePage/utils/backendMetadata";
 import { cn } from "@/utils/utils";
 import { formatDate } from "../helpers";
 import { ALL_SESSIONS_VALUE } from "../hooks/useMemorySessionResolver";
@@ -127,6 +128,19 @@ export function MemoryDetails({
                     </span>
                     <span className="text-foreground">
                       {memory.embedding_provider}
+                    </span>
+                  </div>
+                )}
+                {memory.backend_type && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium text-muted-foreground">
+                      {t("memory.backendLabel")}
+                    </span>
+                    <span className="text-foreground">
+                      {getKnowledgeBaseBackendLabel(
+                        memory.backend_type,
+                        memory.backend_config,
+                      )}
                     </span>
                   </div>
                 )}

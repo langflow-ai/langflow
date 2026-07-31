@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Union
 
@@ -248,10 +249,45 @@ def get_queue_service() -> JobQueueService:
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
 
 
+def _is_lfx_no_op_auth_service(service: object) -> bool:
+    """Report whether ``service`` is LFX's no-op auth stub.
+
+    Resolved through ``sys.modules`` rather than a direct import so that merely asking the
+    question cannot import ``lfx.services.auth.service`` -- that import is what registers
+    the stub for the ``auth_service`` slot in the first place. If the module was never
+    imported the stub cannot be the resolved service anyway.
+    """
+    lfx_auth_module = sys.modules.get("lfx.services.auth.service")
+    return lfx_auth_module is not None and isinstance(service, lfx_auth_module.AuthService)
+
+
 def get_auth_service() -> BaseAuthService:
-    """Retrieve the authentication service."""
+    """Retrieve the authentication service.
+
+    LFX's no-op ``AuthService`` claims the ``auth_service`` slot at import time via
+    ``@register_service(..., override=True)``, and a registered service class always wins
+    over the factory passed here as a fallback. That stub must never be the resolved
+    service in a Langflow process: it raises ``NotImplementedError`` for user/token
+    operations and answers API-key checks with ``None``. ``register_all_service_factories()``
+    overrides it during startup, so anything touching auth before (or without) that call
+    would otherwise get the stub -- swap it out for Langflow's implementation here.
+
+    A plugin-provided auth service (e.g. SSO, registered through ``lfx.toml``) is a
+    different class and is left untouched.
+    """
     from langflow.services.auth.factory import AuthServiceFactory
 
+    service = get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
+    if not _is_lfx_no_op_auth_service(service):
+        return service
+
+    from lfx.services.manager import get_service_manager
+
+    from langflow.services.auth.service import AuthService
+
+    service_manager = get_service_manager()
+    service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
+    service_manager.update(ServiceType.AUTH_SERVICE)
     return get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
 
 
