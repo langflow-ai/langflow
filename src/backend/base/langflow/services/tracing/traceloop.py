@@ -84,32 +84,38 @@ def _application_telemetry_withheld():
     attaches to, and its exporter then sees every span on it -- including the service's own
     HTTP and flow spans, which the operator pointed at their APM and not at Traceloop.
 
-    Wrapping ``add_span_processor`` for the duration of ``init`` rather than passing
-    ``processor=`` leaves the SDK's own pipeline alone. Supplying a processor also turns off
-    its metrics, drops the ``TRACELOOP_HEADERS`` auth the Instana integration depends on,
-    makes ``disable_batch`` inert and skips prompt sync, none of which this needs to touch.
-    It also fails the right way: a span can only reach the vendor via a processor added to
-    our provider, and that is the one call intercepted here.
+    When no OTLP endpoint is configured the bootstrap installs nothing and the global provider
+    is still a proxy, which does not make the problem go away: the SDK then creates a concrete
+    provider and registers it globally, the proxy resolves onto it, and the service's spans
+    reach the vendor by the same route. So the filter has to apply in both cases.
 
-    Serialised because flows run concurrently and the patch is on a process-wide object: two
+    It is applied to the SDK's own processor factory rather than to the provider. Patching the
+    provider's ``add_span_processor`` only covers the case where a provider already exists, and
+    it is a shared object -- a processor another integration registers while ``init`` is running
+    would be wrapped too, and would then have this filter's boundary applied backwards.
+
+    Passing ``processor=`` to ``init`` is the other obvious hook and is worse: it turns off the
+    SDK's metrics, drops the ``TRACELOOP_HEADERS`` auth the Instana integration depends on,
+    makes ``disable_batch`` inert and skips prompt sync. Wrapping the factory leaves all of
+    that alone, because from ``init``'s point of view no processor was supplied.
+
+    Serialised because flows run concurrently and the patch is on a module attribute: two
     tracers initialising at once would otherwise have the first one's restore run while the
     second is still inside init, leaving that run's processor unwrapped.
     """
+    from traceloop.sdk.tracing import tracing as traceloop_tracing
+
     with _INIT_LOCK:
-        provider = trace.get_tracer_provider()
-        if not hasattr(provider, "add_span_processor"):
-            # A proxy provider: the SDK builds its own, which carries nothing of ours.
-            yield
-            return
+        original = traceloop_tracing.get_default_span_processor
 
-        def add_span_processor(processor: SpanProcessor) -> None:
-            type(provider).add_span_processor(provider, _ApplicationScopeFilter(processor))
+        def get_default_span_processor(*args, **kwargs) -> SpanProcessor:
+            return _ApplicationScopeFilter(original(*args, **kwargs))
 
-        provider.add_span_processor = add_span_processor
+        traceloop_tracing.get_default_span_processor = get_default_span_processor
         try:
             yield
         finally:
-            del provider.add_span_processor
+            traceloop_tracing.get_default_span_processor = original
 
 
 class TraceloopTracer(BaseTracer):

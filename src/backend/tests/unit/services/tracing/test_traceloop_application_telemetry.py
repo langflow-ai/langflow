@@ -106,6 +106,33 @@ def test_application_spans_do_not_reach_the_llm_vendor():
     assert result["traceloop"] == [], "application telemetry leaked to the LLM vendor"
 
 
+def test_application_spans_do_not_reach_the_vendor_without_an_apm():
+    """The filter must also apply when no APM is configured, which is the common setup.
+
+    With no OTLP endpoint the bootstrap installs nothing and the global provider is still a
+    proxy. That does not mean there is nothing to filter: Traceloop then creates the concrete
+    provider and registers it globally, the proxy resolves onto it, and the service's own spans
+    reach the vendor by exactly the same route.
+    """
+    result = _run("""
+        from lfx.observability import bootstrap_application_telemetry, APPLICATION_TRACER_NAME
+        telemetry = bootstrap_application_telemetry(prometheus_enabled=False)
+
+        from langflow.services.tracing.traceloop import TraceloopTracer
+        tracer = TraceloopTracer(
+            trace_name="probe", trace_type="chain", project_name="probe", trace_id=uuid.uuid4()
+        )
+
+        from opentelemetry import trace
+        trace.get_tracer(APPLICATION_TRACER_NAME).start_span("flow.execute").end()
+        report(ready=tracer._ready, installed=telemetry.tracer_provider is not None)
+    """)
+
+    assert result["installed"] is False, "no OTLP endpoint means the bootstrap installs no provider"
+    assert result["ready"] is True, "the vendor integration must still initialise"
+    assert result["traceloop"] == [], "application telemetry leaked to the LLM vendor"
+
+
 def test_vendor_spans_still_reach_the_vendor():
     """Filtering our telemetry out must not cost Traceloop its own spans.
 
@@ -135,16 +162,19 @@ def test_vendor_spans_still_reach_the_vendor():
 
 
 def test_vendor_first_leaves_the_operator_without_application_telemetry():
-    """Characterises the reverse order, which this change does not fix.
+    """Characterises the reverse order: no leak, but no application telemetry either.
 
     When Traceloop initialises before the bootstrap it claims the global provider, and OTel's
     set_tracer_provider is one-shot, so enabling OTLP afterwards in the same process cannot
-    install ours. The filter goes on our provider, so with Traceloop owning the global one
-    there is nothing to put it on and application spans still reach the vendor.
+    install ours. The operator's APM therefore receives nothing, and that part is a real
+    limitation rather than something this change fixes.
+
+    What it does fix is the direction that matters: the filter is on Traceloop's own processor,
+    so it applies whichever provider Traceloop ended up with. The application span is dropped
+    rather than shipped to the vendor.
 
     In practice the bootstrap runs at app startup and Traceloop only on the first flow run, so
-    our provider wins. This pins the limitation rather than asserting it is acceptable: if the
-    ordering is ever made robust, traceloop becomes empty and this test should say so.
+    this ordering does not arise in a deployed process.
     """
     result = _run("""
         from langflow.services.tracing.traceloop import TraceloopTracer
@@ -162,4 +192,4 @@ def test_vendor_first_leaves_the_operator_without_application_telemetry():
 
     assert result["installed"] is False, "the bootstrap must decline rather than fight for the global"
     assert result["apm"] == [], "known limitation: the APM receives nothing when the vendor initialises first"
-    assert result["traceloop"] == ["flow.execute"], "known limitation: the vendor receives it instead"
+    assert result["traceloop"] == [], "but application telemetry must still not reach the vendor"
