@@ -447,6 +447,87 @@ async def test_message_send_runs_flow_and_returns_completed_task(client: AsyncCl
     assert result["artifacts"][0]["parts"][0]["text"] == "hello a2a"
 
 
+async def test_public_a2a_run_uses_server_sanitized_flow_data(active_user, echo_flow_data, monkeypatch):
+    """Anonymous A2A runs build from trusted server code, not stored component code."""
+    from langflow.api.v1 import a2a as a2a_module
+    from langflow.api.v2 import workflow as workflow_module
+
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    sanitized_data = {"nodes": [{"id": "server-sanitized"}], "edges": []}
+    captured = {}
+    expected_response = object()
+
+    def fake_validate(data):
+        captured["validated"] = data
+
+    async def fake_prepare(data):
+        captured["prepared"] = data
+        return sanitized_data
+
+    async def fake_execute(**kwargs):
+        captured["executed_flow_data"] = kwargs["flow"].data
+        return expected_response
+
+    monkeypatch.setattr(a2a_module, "validate_public_flow_no_code_execution", fake_validate)
+    monkeypatch.setattr(a2a_module, "prepare_public_flow_build", fake_prepare)
+    monkeypatch.setattr(workflow_module, "execute_sync_workflow_with_timeout", fake_execute)
+
+    response = await a2a_module._run_flow(flow_id, str(uuid.uuid4()), "hello", "context")
+
+    assert response is expected_response
+    assert captured["validated"] == echo_flow_data
+    assert captured["prepared"] == echo_flow_data
+    assert captured["executed_flow_data"] == sanitized_data
+
+
+async def test_public_a2a_resume_sanitizes_checkpoint_payload(active_user, echo_flow_data, monkeypatch):
+    """A public HITL continuation cannot restore stored component code around the initial-run gate."""
+    from langflow.api.v1 import a2a as a2a_module
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    task_id = str(uuid.uuid4())
+    sanitized_data = {"nodes": [{"id": "server-sanitized"}], "edges": []}
+    checkpoint = GraphCheckpoint(
+        run_id=task_id,
+        flow_id=str(flow_id),
+        flow_payload=echo_flow_data,
+        pause_context={"data": {"request_id": "node:run"}},
+    )
+    captured = {}
+
+    class StopAfterPolicyCheckError(Exception):
+        pass
+
+    class FakeStore:
+        async def load_by_run_id(self, run_id):
+            assert run_id == task_id
+            return checkpoint
+
+    def fake_validate(data):
+        captured["validated"] = data
+
+    async def fake_prepare(data):
+        captured["prepared"] = data
+        return sanitized_data
+
+    def fake_resume(sanitized_checkpoint, *_args):
+        captured["resumed_payload"] = sanitized_checkpoint.flow_payload
+        raise StopAfterPolicyCheckError
+
+    monkeypatch.setattr(a2a_module, "A2ACheckpointStore", FakeStore)
+    monkeypatch.setattr(a2a_module, "validate_public_flow_no_code_execution", fake_validate)
+    monkeypatch.setattr(a2a_module, "prepare_public_flow_build", fake_prepare)
+    monkeypatch.setattr(a2a_module, "resume_graph_with_decision", fake_resume)
+
+    with pytest.raises(StopAfterPolicyCheckError):
+        await a2a_module._resume_flow(flow_id, task_id, "Approve")
+
+    assert captured["validated"] == echo_flow_data
+    assert captured["prepared"] == echo_flow_data
+    assert captured["resumed_payload"] == sanitized_data
+
+
 # --- DataPart (structured application/json I/O) ----------------------------
 
 

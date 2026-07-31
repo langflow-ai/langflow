@@ -109,6 +109,17 @@ PROTECTED_TWEAK_FIELDS_BY_COMPONENT: Mapping[str, frozenset[str]] = {
     "SQLComponent": frozenset({"database_url", "query"}),
 }
 
+
+def is_protected_tweak_field(component_type: str | None, field_name: str, field_type: str = "") -> bool:
+    """Return whether a runtime tweak must preserve the flow author's value."""
+    return (
+        field_type == "code"
+        or field_name == "code"
+        or (component_type in CODE_EXECUTION_COMPONENT_TYPES and field_name in CODE_EXECUTION_FIELD_NAMES)
+        or field_name in PROTECTED_TWEAK_FIELDS_BY_COMPONENT.get(component_type or "", ())
+    )
+
+
 # Component node ``type`` values that load and execute *another* saved flow by
 # id or name at build/run time. On the unauthenticated public path these are an
 # indirect code-execution primitive: a public wrapper flow with none of the
