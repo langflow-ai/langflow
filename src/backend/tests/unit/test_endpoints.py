@@ -702,28 +702,37 @@ async def test_successful_run_no_payload(client, simple_api_test, created_api_ke
     assert all(result is not None for result in inner_results), (outputs_dict, output_results_has_results)
 
 
-async def test_run_by_id_maps_catalog_policy_validation_to_bad_request(
-    client, simple_api_test, created_api_key, monkeypatch
+async def test_run_by_id_enforces_current_catalog_policy_and_recovers_when_cleared(
+    client, json_simple_api_test, logged_in_headers, created_api_key
 ):
-    from lfx.utils.flow_validation import CatalogPolicyValidationError
+    from lfx.services.deps import get_catalog_policy_service
 
-    validation_message = "Flow build blocked: catalog policy blocks components: ChatInput"
-
-    def reject_catalog_component(_target, **_kwargs):
-        raise CatalogPolicyValidationError(validation_message)
-
-    monkeypatch.setattr(
-        "lfx.utils.flow_validation.validate_flow_for_current_settings",
-        reject_catalog_component,
+    catalog_policy_service = get_catalog_policy_service()
+    await catalog_policy_service.replace_blocked_component_keys([], actor_user_id=None)
+    flow_payload = orjson.loads(json_simple_api_test)
+    flow = FlowCreate(
+        name="Catalog Policy Run Test",
+        data=flow_payload["data"],
+        description="Catalog policy route test",
     )
+    create_response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+    await catalog_policy_service.replace_blocked_component_keys(["ChatInput"], actor_user_id=None)
 
-    response = await client.post(
-        f"/api/v1/run/{simple_api_test['id']}",
+    blocked_response = await client.post(
+        f"/api/v1/run/{flow_id}",
+        headers={"x-api-key": created_api_key.api_key},
+    )
+    await catalog_policy_service.replace_blocked_component_keys([], actor_user_id=None)
+    allowed_response = await client.post(
+        f"/api/v1/run/{flow_id}",
         headers={"x-api-key": created_api_key.api_key},
     )
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["detail"].endswith("ChatInput")
+    assert blocked_response.status_code == status.HTTP_400_BAD_REQUEST
+    assert blocked_response.json()["detail"].endswith("ChatInput")
+    assert allowed_response.status_code == status.HTTP_200_OK, allowed_response.text
 
 
 async def test_successful_run_with_output_type_text(client, simple_api_test, created_api_key):

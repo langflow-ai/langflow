@@ -54,6 +54,11 @@ class ComponentCache:
         Creates empty storage for all component types and tracking of fully loaded components.
         """
         self.all_types_dict: dict[str, Any] | None = None
+        # True only after the built-in, custom, and extension component maps
+        # have been merged. ``_determine_loading_strategy`` temporarily places
+        # partial values (including ``{}``) in ``all_types_dict`` while startup
+        # is still in flight, so presence alone is not a readiness signal.
+        self.all_types_ready = False
         self.fully_loaded_components: dict[str, bool] = {}
         # Precomputed code hashes for fast flow validation.
         # Populated by get_and_cache_all_types_dict() via _build_code_hash_lookups().
@@ -764,7 +769,7 @@ def _build_code_hash_lookups(cache: ComponentCache) -> None:
     - type_to_current_hash: {component_type: 12-char SHA256 prefix}
     - all_known_hashes: set of all known code hashes
     """
-    if not cache.all_types_dict:
+    if cache.all_types_dict is None or (not cache.all_types_dict and not cache.all_types_ready):
         return
 
     type_to_hash, all_hashes = collect_component_hash_lookups(cache.all_types_dict)
@@ -1256,6 +1261,7 @@ def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
         )
 
     component_cache.all_types_dict[record.bundle] = bundle_dict
+    component_cache.all_types_ready = True
 
     # Invalidate the precomputed code-hash lookups so flow validation
     # picks up the freshly-loaded class bodies instead of comparing
@@ -1284,6 +1290,7 @@ async def get_and_cache_all_types_dict(
         telemetry_service: Optional telemetry service for tracking component loading metrics
     """
     if component_cache.all_types_dict is None:
+        component_cache.all_types_ready = False
         await logger.adebug("Building components cache")
 
         langflow_components = await import_langflow_components(settings_service, telemetry_service)
@@ -1307,6 +1314,7 @@ async def get_and_cache_all_types_dict(
             **custom_flat,
             **extension_components,
         }
+        component_cache.all_types_ready = True
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
         await logger.adebug(f"Loaded {component_count} components")
 
