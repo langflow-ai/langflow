@@ -568,6 +568,71 @@ async def test_read_basic_examples(client: AsyncClient, logged_in_headers):
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, list), "The result must be a list"
     assert len(result) > 0, "The result must have at least one flow"
+    assert all(item["name_key"] for item in result)
+
+
+async def test_read_basic_examples_catalog_policy_preserves_public_cache_and_unblocks(
+    client: AsyncClient,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    class MutableCatalogPolicyService:
+        snapshot = CatalogPolicySnapshot(blocked_template_keys={"basic_prompting"})
+
+    service = MutableCatalogPolicyService()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+    flows._starter_flows_cache.clear()
+    flows._starter_flows_translated_cache.clear()
+
+    blocked_response = await client.get("api/v1/flows/basic_examples/")
+    assert blocked_response.status_code == status.HTTP_200_OK, blocked_response.text
+    blocked_keys = {flow["name_key"] for flow in blocked_response.json()}
+    assert "basic_prompting" not in blocked_keys
+
+    service.snapshot = CatalogPolicySnapshot()
+    unblocked_response = await client.get("api/v1/flows/basic_examples/")
+    assert unblocked_response.status_code == status.HTTP_200_OK, unblocked_response.text
+    unblocked_keys = {flow["name_key"] for flow in unblocked_response.json()}
+    assert "basic_prompting" in unblocked_keys
+
+
+async def test_read_basic_examples_include_blocked_requires_superuser(
+    client: AsyncClient,
+    logged_in_headers,
+):
+    anonymous_response = await client.get("api/v1/flows/basic_examples/?include_blocked=true")
+    assert anonymous_response.status_code == status.HTTP_403_FORBIDDEN
+
+    denied_response = await client.get(
+        "api/v1/flows/basic_examples/?include_blocked=true",
+        headers=logged_in_headers,
+    )
+    assert denied_response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_read_basic_examples_superuser_can_include_blocked(
+    client: AsyncClient,
+    logged_in_headers_super_user,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    service = type(
+        "CatalogPolicyService",
+        (),
+        {"snapshot": CatalogPolicySnapshot(blocked_template_keys={"basic_prompting"})},
+    )()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+
+    override_response = await client.get(
+        "api/v1/flows/basic_examples/?include_blocked=true",
+        headers=logged_in_headers_super_user,
+    )
+    assert override_response.status_code == status.HTTP_200_OK, override_response.text
+    assert "basic_prompting" in {flow["name_key"] for flow in override_response.json()}
 
 
 async def test_read_flows_user_isolation(client: AsyncClient, logged_in_headers, active_user):
