@@ -531,6 +531,9 @@ async def process_agent_events(
                     agent_message, _ = await tool_handler(
                         event, agent_message, tool_blocks_map, send_message_callback, tool_start_time
                     )
+                    # Start timing the next model round after terminal handling and result publication.
+                    # A fresh clock also avoids rewinding to tool_start_time when no ToolContent was bound.
+                    start_time = perf_counter()
             elif event["event"] in CHAIN_EVENT_HANDLERS:
                 chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
 
