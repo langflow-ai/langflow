@@ -27,7 +27,7 @@ from lfx.interface.components import _warm_circular_imports
 # metapackage is opt-in. While an optional bundle is absent its compatibility
 # shim stays in ``components.__all__`` but cannot be imported, so these tests
 # skip that category instead of failing.
-_OPTIONAL_PARTNER_BUNDLE_CATEGORIES = ("openai", "datastax", "oracle")
+_OPTIONAL_PARTNER_BUNDLE_CATEGORIES = ("openai", "datastax", "oracle", "exa")
 
 
 def _lfx_bundles_shim_categories() -> tuple[str, ...]:

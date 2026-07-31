@@ -1,3 +1,5 @@
+"""Cassandra graph-vector-store component."""
+
 from uuid import UUID
 
 from langchain_community.graph_vectorstores import CassandraGraphVectorStore

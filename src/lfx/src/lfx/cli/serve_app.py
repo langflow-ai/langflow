@@ -45,7 +45,12 @@ from lfx.cli.serve_identity import IdentityConfig, build_identity_verifier
 from lfx.cli.serve_workflow import ServeWorkflowHost
 from lfx.load import load_flow_from_json
 from lfx.log.logger import logger
-from lfx.observability import bootstrap_application_telemetry, instrument_fastapi_app
+from lfx.observability import (
+    bootstrap_application_telemetry,
+    instrument_fastapi_app,
+    start_event_loop_lag_monitor,
+    stop_event_loop_lag_monitor,
+)
 from lfx.utils.flow_validation import validate_flow_for_current_settings
 from lfx.workflow.router import create_workflow_router
 
@@ -675,10 +680,19 @@ def create_multi_serve_app(
 
     @asynccontextmanager
     async def _lifespan(_app: FastAPI):
+        # Started here rather than at app construction because it needs the running loop, and
+        # under ``--workers`` the app is built in the gunicorn master before the fork.
+        # Best-effort: optional instrumentation must never keep the server from starting.
+        lag_monitor = None
+        try:
+            lag_monitor = start_event_loop_lag_monitor(telemetry.meter_provider)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Event loop lag monitor failed to start: {e}")
         # Flush the OTLP buffers on shutdown. uvicorn dies by signal and never runs the SDK's
         # atexit flush, so without this the last batch of spans, metrics and logs drops on every
         # restart and pod eviction. Off the event loop: the final export can block on the network.
         yield
+        await stop_event_loop_lag_monitor(lag_monitor)
         await asyncio.to_thread(telemetry.shutdown)
 
     app = FastAPI(

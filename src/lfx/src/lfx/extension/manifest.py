@@ -1,10 +1,10 @@
 """Pydantic models for the v0 Extension manifest schema.
 
-A Langflow Extension is the distribution unit that gets pip-installed.  In v0
-it ships exactly one Bundle (a named group of components) plus a manifest at
-the distribution root.  The manifest tells Langflow:
+A Langflow Extension is the distribution unit that gets pip-installed. It
+ships Bundles (named groups of components) and/or model providers, plus a
+manifest at the distribution root. The manifest tells Langflow:
 
-    - which Bundle to register (``bundles[0]``),
+    - which Bundles to register (``bundles``),
     - what component-base-class API surface the Bundle was built against
       (``lfx.compat``),
     - what optional capabilities the Bundle declares
@@ -22,12 +22,8 @@ Deferred fields (``services``, ``routes``, ``hooks``, ``starter_projects``,
 presence and emit ``field-deferred-in-this-milestone`` rather than silently
 dropping them.
 
-Multi-bundle is similarly reserved: ``bundles`` is a list, but v0 rejects
-length > 1 with ``multi-bundle-deferred-in-this-milestone``.  This is enforced
-in two places:
-
-    - here, by :class:`ExtensionManifest` (validator-side).
-    - in the loader at install/discovery time.
+Each declared bundle is validated and loaded independently while sharing the
+extension's identity, compatibility declaration, and distribution.
 """
 
 from __future__ import annotations
@@ -448,12 +444,11 @@ class ExtensionManifest(BaseModel):
 
     bundles: list[BundleRef] = Field(
         default_factory=list,
-        max_length=1,
         description=(
-            "Bundles (component groups) shipped by this extension. At most one in "
-            "v0. May be empty for a provider-only extension that ships model "
-            "providers but no components; an extension must declare at least one "
-            "of ``bundles`` or ``providers``."
+            "Bundles (component groups) shipped by this extension. May be empty "
+            "for a provider-only extension that ships model providers but no "
+            "components; an extension must declare at least one of ``bundles`` "
+            "or ``providers``."
         ),
     )
 
@@ -524,11 +519,8 @@ class ExtensionManifest(BaseModel):
 
     @model_validator(mode="after")
     def _validate_bundle_uniqueness(self) -> ExtensionManifest:
-        # The list-length constraint (exactly one bundle in v0) is encoded on
-        # the field above so it lands in the JSON Schema.  This validator covers
-        # what Field constraints can't express: bundle names must be unique
-        # within an extension.  The check is cheap and forward-compatible -- the
-        # loader uses this list directly when multi-bundle ships.
+        # Bundle names are public registry and saved-flow namespaces, so they
+        # must be unique within one extension.
         names = [bundle.name for bundle in self.bundles]
         if len(set(names)) != len(names):
             msg = "Bundle names must be unique within an extension"

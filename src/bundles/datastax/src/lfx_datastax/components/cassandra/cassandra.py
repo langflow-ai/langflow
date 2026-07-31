@@ -1,3 +1,5 @@
+"""Cassandra vector-store component."""
+
 from langchain_community.vectorstores import Cassandra
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store

@@ -1,4 +1,4 @@
-"""Utility functions for module management in the policies component."""
+"""Module-management helpers for the ToolGuard Policies extension."""
 
 import sys
 

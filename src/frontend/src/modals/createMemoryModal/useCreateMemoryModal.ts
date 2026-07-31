@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent/types";
 import {
+  ACTIVE_DB_PROVIDER_VARIABLE,
   type AvailableDBProviderId,
   type DBProviderConfigValue,
   getDBProviderOption,
   getDefaultDBProviderConfig,
+  getGlobalVariableValue,
   isDBProviderConfigured,
   toAPIBackendType,
 } from "@/constants/dbProviderConstants";
@@ -225,6 +227,9 @@ export function useCreateMemoryModal({
 
     const parsedThreshold = Math.max(1, parseInt(batchSizeInput, 10) || 1);
     const embeddingSelection = selectedEmbeddingModel[0];
+    const hasExplicitActiveProvider = Boolean(
+      getGlobalVariableValue(globalVariables, ACTIVE_DB_PROVIDER_VARIABLE),
+    );
 
     createMemoryMutation.mutate({
       name: name.trim(),
@@ -241,7 +246,10 @@ export function useCreateMemoryModal({
         : undefined,
       // `chroma_cloud` collapses to `chroma` for the API; the server
       // discriminates local vs cloud via `backend_config.mode`.
-      backend_type: toAPIBackendType(backendType),
+      backend_type:
+        !hasExplicitActiveProvider && backendType === "chroma"
+          ? undefined
+          : toAPIBackendType(backendType),
       backend_config: backendConfig,
     });
   };
