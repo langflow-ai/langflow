@@ -318,6 +318,15 @@ Resolved snapshots are cached in each service process by principal attributes, p
 
 `aresolve()` remains the cache-owning async wrapper. Implement `aget_allowed_provider_ids()` when policy evaluation requires I/O instead of overriding `aresolve()`. Its default implementation calls the synchronous `get_allowed_provider_ids()` hook on the event loop, so synchronous implementations should keep that hook non-blocking and preload any remote policy state before model construction begins.
 
+The OSS backend persists one install-wide, versioned set of approved
+`provider_id` values. An empty set is deliberately unrestricted, so upgrades
+preserve historical allow-all behavior until a superuser narrows the policy.
+The `/api/v1/model-provider-policy` GET/POST/PUT contract reads or atomically
+replaces that singleton. Writes invalidate the handling process after commit;
+the other backend workers poll its durable version every second and invalidate
+their snapshots when it changes. External policy plugins continue to own their
+source and fleet-wide invalidation.
+
 `purpose` identifies the protected operation:
 
 - `discover` filters provider and model listings.

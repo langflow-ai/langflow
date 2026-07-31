@@ -28,6 +28,7 @@ from langflow.api.v1 import (
     mcp_router,
     memories_router,
     model_options_router,
+    model_provider_policy_router,
     models_router,
     monitor_router,
     openai_responses_router,
@@ -93,6 +94,7 @@ router_v1.include_router(a2a_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)
+router_v1.include_router(model_provider_policy_router)
 router_v1.include_router(authz_shares_router)
 router_v1.include_router(authz_audit_router)
 router_v1.include_router(authz_roles_router)

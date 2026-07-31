@@ -705,6 +705,11 @@ async def initialize_services(*, fix_migration: bool = False, skip_superuser_set
 
     # Setup the superuser
     await initialize_database(fix_migration=fix_migration)
+    from langflow.services.model_provider_policy import hydrate_model_provider_policy
+
+    async with session_scope() as session:
+        await hydrate_model_provider_policy(session)
+
     db_service = get_db_service()
     await db_service.initialize_alembic_log_file()
     settings_service = get_service(ServiceType.SETTINGS_SERVICE)
