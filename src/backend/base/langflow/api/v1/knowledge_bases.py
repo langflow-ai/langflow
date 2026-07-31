@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Reques
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
 from lfx.base.knowledge_bases.backends import BackendType, create_backend
+from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 from lfx.base.knowledge_bases.ingestion_sources import (
     FolderSource,
     SourceType,
@@ -33,7 +34,11 @@ from lfx.services.model_provider_policy import (
 from pydantic import BaseModel, Field
 
 from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
-from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper
+from langflow.api.utils.kb_helpers import (
+    KBAnalysisHelper,
+    KBIngestionHelper,
+    KBStorageHelper,
+)
 from langflow.api.utils.kb_metadata import parse_per_file_metadata, parse_user_metadata
 from langflow.api.v1.schemas import TaskResponse
 from langflow.schema.knowledge_base import (
@@ -751,6 +756,35 @@ async def test_backend_connection(
     )
 
 
+async def _validate_create_backend(
+    *,
+    backend_type: str,
+    backend_config: dict[str, Any],
+    kb_name: str,
+    kb_path: Path,
+    user_id: uuid.UUID,
+) -> None:
+    """Reject an unavailable pgvector backend before persisting a KB."""
+    if backend_type != BackendType.POSTGRES.value:
+        return
+
+    backend = create_backend(
+        backend_type,
+        kb_name=kb_name,
+        kb_path=kb_path,
+        backend_config=backend_config,
+        embedding_function=None,
+        user_id=user_id,
+    )
+    try:
+        result = await backend.test_connection()
+    finally:
+        with suppress(Exception):
+            await backend.teardown()
+    if not result.ok:
+        raise HTTPException(status_code=422, detail=result.message)
+
+
 @router.post("", status_code=HTTPStatus.CREATED)
 @router.post("/", status_code=HTTPStatus.CREATED)
 async def create_knowledge_base(
@@ -805,6 +839,19 @@ async def create_knowledge_base(
                 )
             raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists")
 
+        # Resolve the deployment default before creating any local state. An
+        # env-configured pgvector deployment therefore defaults on the server,
+        # while an explicit client selection continues to win.
+        backend_type_value = request.backend_type or resolve_default_kb_backend()
+        backend_config_value = request.backend_config or {}
+        await _validate_create_backend(
+            backend_type=backend_type_value,
+            backend_config=backend_config_value,
+            kb_name=kb_name,
+            kb_path=kb_path,
+            user_id=current_user.id,
+        )
+
         # Create KB directory.  Clear any leftover sentinel just in case
         # mkdir is racing with a sentinel write from a concurrent delete
         # of the same name; ``clear_deletion_sentinel`` is a no-op when
@@ -813,16 +860,18 @@ async def create_knowledge_base(
         KBStorageHelper.clear_deletion_sentinel(kb_path)
         kb_id = uuid.uuid4()
 
-        # Initialize Chroma storage and collection immediately
-        # This ensures files exist for read operations and avoids 'readonly' errors later
-        try:
-            client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-            client.create_collection(name=kb_name, **chroma_client_create_collection_kwargs())
-        except (OSError, ValueError, chromadb.errors.ChromaError) as e:
-            logger.warning("Initial Chroma setup for %s failed: %s", kb_name, e)
-        finally:
-            client = None
-            KBStorageHelper.release_chroma_resources(kb_path)
+        # Initialize only local Chroma immediately. Remote providers create
+        # their per-KB collection lazily on first write.
+        chroma_mode = str(backend_config_value.get("mode", "local")).lower()
+        if backend_type_value == BackendType.CHROMA.value and chroma_mode != "cloud":
+            try:
+                client = KBStorageHelper.get_fresh_chroma_client(kb_path)
+                client.create_collection(name=kb_name, **chroma_client_create_collection_kwargs())
+            except (OSError, ValueError, chromadb.errors.ChromaError) as e:
+                logger.warning("Initial Chroma setup for %s failed: %s", kb_name, e)
+            finally:
+                client = None
+                KBStorageHelper.release_chroma_resources(kb_path)
 
         # Serialize column_config for persistence
         column_config_dicts = None
@@ -835,8 +884,10 @@ async def create_knowledge_base(
         # backend routing even if the DB write below fails.
         # ``backend_config`` holds only *variable names* (never raw
         # secrets) per the credential-indirection contract.
-        backend_type_value = request.backend_type or "chroma"
-        backend_config_value = request.backend_config or {}
+        #
+        # ``backend_type`` may be ``None`` ("auto") — the deployment default is
+        # resolved server-side so an env-configured pgVector snap-configures as
+        # the default without the client specifying it. Explicit values win.
         embedding_metadata = {
             "id": str(kb_id),
             "embedding_provider": embedding_provider,

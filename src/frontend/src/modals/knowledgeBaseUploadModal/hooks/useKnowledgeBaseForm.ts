@@ -3,10 +3,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import {
+  ACTIVE_DB_PROVIDER_VARIABLE,
   type AvailableDBProviderId,
   type DBProviderConfigValue,
   getDBProviderOption,
   getDefaultDBProviderConfig,
+  getGlobalVariableValue,
   isDBProviderConfigured,
   resolveUIBackendType,
   toAPIBackendType,
@@ -46,9 +48,10 @@ import { formatFileSize } from "../utils";
  * server-side validation in each backend's ``_build_vector_store`` so
  * the user sees the problem inline before the request ever lands.
  *
- * Only the actively-registered providers (Chroma + OpenSearch) are
- * validated here — see ``DBProviderInput`` for the UI side. Stubbed
- * providers (mongodb / astra / postgres) are rejected up front by the
+ * Only providers with UI-entered config need validation here (OpenSearch's
+ * index name) — see ``DBProviderInput`` for the UI side. Postgres (pgvector)
+ * is environment-driven with no UI fields, so it needs no client validation;
+ * remaining stubbed providers (mongodb / astra) are rejected up front by the
  * server schema validator.
  */
 function validateBackendConfig(
@@ -466,13 +469,26 @@ export function useKnowledgeBaseForm({
     try {
       // Create the knowledge base (skip if adding to existing)
       if (!isAddSourcesMode) {
+        // When the user hasn't explicitly chosen a provider (no active-provider
+        // variable set, still on the Chroma default), send ``undefined`` so the
+        // server resolves the deployment default — this is what lets an
+        // env-configured pgVector auto-become the backend instead of Chroma.
+        // An explicit selection (active variable set, or any non-Chroma pick)
+        // is always sent through and honored.
+        const hasExplicitActiveProvider = Boolean(
+          getGlobalVariableValue(globalVariables, ACTIVE_DB_PROVIDER_VARIABLE),
+        );
+        const resolvedBackendType =
+          !hasExplicitActiveProvider && backendType === "chroma"
+            ? undefined
+            : toAPIBackendType(backendType);
         await createKnowledgeBase.mutateAsync({
           name: kbName,
           embedding_provider: selectedModel.provider || "Unknown",
           embedding_model: selectedModel.id || selectedModel.name,
           model_selection: selectedModel,
           column_config: columnConfig,
-          backend_type: toAPIBackendType(backendType),
+          backend_type: resolvedBackendType,
           backend_config: backendConfig,
         });
       }

@@ -13,6 +13,10 @@ Providers can graduate from `lfx-bundles` to a standalone `lfx-<provider>` packa
 ## Standalone packages
 
 These providers ship as their own pip packages, each on its own release cadence.
+The default `uv pip install langflow` includes the curated standalone packages
+except arXiv, DuckDuckGo, EmpirioLabs, Exa, Firecrawl, NextPlaid, Paddle, and
+Valkey. Install those eight together with every no-Torch long-tail bundle by
+using `uv pip install "langflow[bundles]"`.
 
 | Bundle | Install command |
 | --- | --- |
@@ -43,6 +47,7 @@ These providers ship as their own pip packages, each on its own release cadence.
 These providers ship inside the `lfx-bundles` metapackage.
 Install one provider (with its SDK dependencies) with `uv pip install "lfx-bundles[<bundle>]"`.
 Install every long-tail provider with `uv pip install "lfx[bundles]"` or `uv pip install "lfx-bundles[all]"`.
+Install every no-Torch long-tail provider plus the eight opt-in standalone packages listed above with `uv pip install "langflow[bundles]"`.
 Bare `uv pip install lfx-bundles` registers the provider code only; add a per-provider extra when you need that provider's third-party SDK.
 
 | Bundle | Install command |

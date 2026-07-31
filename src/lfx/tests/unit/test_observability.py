@@ -256,3 +256,84 @@ def test_shutdown_shuts_down_a_meter_provider_we_own():
     owned = MeterProvider()
     ApplicationTelemetry(meter_provider=owned, owns_meter_provider=True).shutdown()
     assert owned._shutdown is True
+
+
+def test_event_loop_lag_monitor_is_a_noop_without_a_provider():
+    """Nothing configured means nothing to record on, and no stray task."""
+    from lfx.observability import start_event_loop_lag_monitor
+
+    assert start_event_loop_lag_monitor(None) is None
+
+
+async def test_stop_event_loop_lag_monitor_preserves_caller_cancellation():
+    """Stopping the monitor must not consume cancellation of the lifespan task."""
+    import asyncio
+
+    from lfx.observability import stop_event_loop_lag_monitor
+
+    async def monitor():
+        await asyncio.Event().wait()
+
+    monitor_task = asyncio.create_task(monitor())
+    await asyncio.sleep(0)
+
+    async def stop_from_cancelled_caller():
+        asyncio.current_task().cancel()
+        await stop_event_loop_lag_monitor(monitor_task)
+
+    caller_task = asyncio.create_task(stop_from_cancelled_caller())
+    with pytest.raises(asyncio.CancelledError):
+        await caller_task
+
+    assert caller_task.cancelled()
+    assert monitor_task.cancelled()
+
+
+@requires_otel
+async def test_event_loop_lag_monitor_records_a_blocked_loop():
+    """The point of the metric: a blocked loop must show up as lag.
+
+    Blocks the loop thread with a synchronous sleep, which is exactly the failure this
+    exists to catch (a sync call in a component), and asserts the sampler noticed. Uses a
+    real MeterProvider and reader rather than a mock, so it fails if the instrument is
+    misconfigured, not just if the arithmetic is wrong.
+    """
+    import asyncio
+    import time as _time
+
+    from lfx.observability import EVENT_LOOP_LAG_METRIC, start_event_loop_lag_monitor, stop_event_loop_lag_monitor
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+
+    reader = InMemoryMetricReader()
+    provider = MeterProvider(metric_readers=[reader], shutdown_on_exit=False)
+
+    task = start_event_loop_lag_monitor(provider, interval=0.01)
+    assert task is not None
+    await asyncio.sleep(0.05)
+    # Blocking the loop is the whole point of this test: it is the failure the metric exists
+    # to catch, so the lint that forbids it in async code is exactly what we are simulating.
+    _time.sleep(0.3)  # noqa: ASYNC251
+    await asyncio.sleep(0.05)
+    await stop_event_loop_lag_monitor(task)
+
+    points = [
+        point
+        for rm in (reader.get_metrics_data().resource_metrics or [])
+        for sm in rm.scope_metrics
+        for metric in sm.metrics
+        if metric.name == EVENT_LOOP_LAG_METRIC
+        for point in metric.data.data_points
+    ]
+    assert points, f"{EVENT_LOOP_LAG_METRIC} was never recorded"
+    assert max(p.max for p in points) >= 0.2, "a 0.3s block should surface as at least 0.2s of lag"
+
+    # The buckets have to separate healthy from blocked, not just carry the right sum. The SDK
+    # default boundaries start at 5 and are shaped for milliseconds, so recording seconds
+    # against them files a 0.2ms loop and a 4s stall in the same bucket and the histogram
+    # cannot answer the p99 question it exists for.
+    occupied = {index for point in points for index, count in enumerate(point.bucket_counts) if count}
+    assert len(occupied) > 1, (
+        f"every sample landed in one bucket ({points[0].explicit_bounds}); healthy and blocked must be distinguishable"
+    )
+    provider.shutdown()
