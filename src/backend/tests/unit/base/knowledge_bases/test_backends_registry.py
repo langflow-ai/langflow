@@ -35,10 +35,10 @@ class _DummyBackend(BaseVectorStoreBackend):
 class TestBackendRegistry:
     """The registry is the swap point for the supported DB backends.
 
-    In this phase only Chroma and OpenSearch are registered. The Astra /
-    MongoDB / Postgres backends ship as stubs that exist for type and
-    enum compatibility but are intentionally not in the registry, so
-    ``create_backend('astra')`` (etc.) raises.
+    Chroma, OpenSearch, and Postgres (pgvector) are registered. The Astra /
+    MongoDB backends ship as stubs that exist for type and enum compatibility
+    but are intentionally not in the registry, so ``create_backend('astra')``
+    (etc.) raises.
     """
 
     def test_chroma_registered_by_default(self):
@@ -49,9 +49,13 @@ class TestBackendRegistry:
         # OpenSearch is the second supported backend in this phase.
         assert BackendType.OPENSEARCH in registered_backends()
 
+    def test_postgres_registered_by_default(self):
+        # pgVector is environment-driven and registered unconditionally.
+        assert BackendType.POSTGRES in registered_backends()
+
     def test_stubbed_backends_are_not_registered(self):
         registered = registered_backends()
-        for stubbed in (BackendType.ASTRA, BackendType.MONGODB, BackendType.POSTGRES):
+        for stubbed in (BackendType.ASTRA, BackendType.MONGODB):
             assert stubbed not in registered, f"{stubbed.value} is stubbed in this phase and must not be registered"
             with pytest.raises(ValueError, match="not registered"):
                 get_backend_class(stubbed)

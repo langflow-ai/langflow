@@ -104,11 +104,14 @@ async def run_graph_with_human_input(
     pauses = 0
     while True:
         try:
-            await graph.process(
-                fallback_to_env_vars=fallback_to_env_vars,
-                event_manager=event_manager,
-                start_component_id=start_component_id,
-            )
+            # Inside the loop on purpose: each pass between pauses is its own unit of work for the
+            # operator, so a run that pauses twice shows as three spans rather than one long one.
+            with graph.flow_execution_span():
+                await graph.process(
+                    fallback_to_env_vars=fallback_to_env_vars,
+                    event_manager=event_manager,
+                    start_component_id=start_component_id,
+                )
         except GraphPausedException as exc:
             pauses += 1
             if pauses > _MAX_PAUSES:
