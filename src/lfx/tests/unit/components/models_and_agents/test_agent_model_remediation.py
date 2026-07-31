@@ -27,10 +27,20 @@ class ChatOpenAI(FakeListChatModel):
     use_responses_api: bool = False
 
 
-def _attach_connected_model_source(agent, provider: str) -> None:
+def _attach_connected_model_source(
+    agent,
+    display_name: str | None = None,
+    *,
+    provider: str | None = None,
+    model: list[dict] | None = None,
+) -> None:
     """Attach minimal graph provenance for a model wired into the Agent input."""
     source = SimpleNamespace(
-        custom_component=SimpleNamespace(provider=None, model=[], display_name=provider),
+        custom_component=SimpleNamespace(
+            provider=provider,
+            model=model or [],
+            display_name=display_name,
+        ),
     )
     graph = MagicMock()
     graph.get_vertex.return_value = source
@@ -38,6 +48,29 @@ def _attach_connected_model_source(agent, provider: str) -> None:
     vertex.graph = graph
     vertex.get_incoming_edge_by_target_param.return_value = "model-source"
     agent.set_vertex(vertex)
+
+
+@pytest.mark.parametrize(
+    ("source_kwargs", "expected_provider"),
+    [
+        ({"provider": "OpenAI", "model": [{"provider": "OpenRouter"}], "display_name": "Language Model"}, "OpenAI"),
+        ({"model": [{"provider": "OpenAI"}], "display_name": "Language Model"}, "OpenAI"),
+        ({"display_name": "OpenAI"}, "OpenAI"),
+    ],
+)
+def test_connected_model_provider_uses_source_component_provenance(source_kwargs, expected_provider):
+    from lfx.components.models_and_agents.agent import AgentComponent
+
+    connected_model = ChatOpenAI(responses=["unused"])
+    agent = AgentComponent()
+    agent.model = connected_model
+    _attach_connected_model_source(agent, **source_kwargs)
+
+    assert agent._selected_model_remediation_context() == (
+        expected_provider,
+        "gpt-5.6-luna",
+        connected_model,
+    )
 
 
 def test_connected_model_provider_requires_matching_source_and_model_class():
@@ -49,6 +82,36 @@ def test_connected_model_provider_requires_matching_source_and_model_class():
     _attach_connected_model_source(agent, "OpenAI")
 
     assert agent._selected_model_remediation_context() == (None, None, connected_model)
+
+
+async def test_message_response_runs_when_connected_model_source_is_missing():
+    from lfx.components.models_and_agents.agent import AgentComponent
+
+    connected_model = ChatOpenAI(responses=["unused"])
+    agent = AgentComponent()
+    agent.model = connected_model
+    agent.input_value = "hi"
+    agent.system_prompt = ""
+    agent.tools = []
+    agent.add_current_date_tool = False
+    agent.add_calculator_tool = False
+    _attach_connected_model_source(agent, "OpenAI")
+    agent._vertex.graph.get_vertex.side_effect = ValueError("Vertex model-source not found")
+    mocked_run_agent = AsyncMock(return_value=Message(text="ok"))
+
+    with (
+        patch.object(
+            AgentComponent,
+            "get_memory_data",
+            new=AsyncMock(return_value=[]),
+        ),
+        patch.object(AgentComponent, "create_agent_runnable", return_value=MagicMock()),
+        patch.object(AgentComponent, "run_agent", new=mocked_run_agent),
+    ):
+        result = await agent.message_response()
+
+    assert result.text == "ok"
+    assert mocked_run_agent.await_count == 1
 
 
 async def test_message_response_remediates_responses_api_error_and_remembers():

@@ -760,7 +760,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                         model_name = value
                         break
                 return self._connected_model_provider(selected), model_name, selected
-        except (AttributeError, TypeError, KeyError, ImportError):
+        except (AttributeError, TypeError, ValueError, KeyError, ImportError):
             pass
         return None, None, None
 
