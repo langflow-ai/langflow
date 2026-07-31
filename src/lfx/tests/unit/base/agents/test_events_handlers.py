@@ -8,6 +8,7 @@ These pin focused event-loop behaviors:
   empty on_tool_start payload.
 - tool timing must exclude message-publication latency at both the start and
   end boundaries.
+- parallel tools must be timed from the matching run's own start event.
 
 The async callbacks are small in-memory harnesses. The timing regression test
 advances a deterministic clock while each callback runs.
@@ -16,7 +17,13 @@ advances a deterministic clock while each callback runs.
 from time import perf_counter
 
 import lfx.base.agents.events as agent_events
-from lfx.base.agents.events import handle_on_chain_stream, handle_on_tool_end, handle_on_tool_start
+import pytest
+from lfx.base.agents.events import (
+    handle_on_chain_stream,
+    handle_on_tool_end,
+    handle_on_tool_start,
+    process_agent_events,
+)
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.message import Message
 
@@ -128,3 +135,59 @@ async def test_tool_duration_excludes_message_callback_latency(monkeypatch):
     completed_tool = next(block for block in result.content_blocks if isinstance(block, ToolContent))
     assert completed_tool.duration == 25
     assert new_start == 110.025
+
+
+@pytest.mark.parametrize(
+    ("terminal_events", "expected_durations"),
+    [
+        ((("run-a", "on_tool_end"), ("run-b", "on_tool_end")), {"a": 3000, "b": 3000}),
+        ((("run-b", "on_tool_end"), ("run-a", "on_tool_end")), {"a": 4000, "b": 2000}),
+        ((("run-a", "on_tool_error"), ("run-b", "on_tool_end")), {"a": 3000, "b": 3000}),
+    ],
+)
+async def test_parallel_tool_durations_use_matching_run_start(monkeypatch, terminal_events, expected_durations):
+    """Each parallel tool must be timed from its own on_tool_start event."""
+    now = [0.0]
+    monkeypatch.setattr(agent_events, "perf_counter", lambda: now[0])
+
+    start_events = {
+        "run-a": {
+            "event": "on_tool_start",
+            "name": "search",
+            "run_id": "run-a",
+            "data": {"input": {"q": "a"}},
+        },
+        "run-b": {
+            "event": "on_tool_start",
+            "name": "search",
+            "run_id": "run-b",
+            "data": {"input": {"q": "b"}},
+        },
+    }
+
+    def _terminal_event(run_id, event_type):
+        data = {"error": f"error {run_id}"} if event_type == "on_tool_error" else {"output": f"result {run_id}"}
+        return {
+            "event": event_type,
+            "name": "search",
+            "run_id": run_id,
+            "data": data,
+        }
+
+    timed_events = [
+        (1.0, start_events["run-a"]),
+        (2.0, start_events["run-b"]),
+        (4.0, _terminal_event(*terminal_events[0])),
+        (5.0, _terminal_event(*terminal_events[1])),
+    ]
+
+    async def _event_iterator():
+        for event_time, event in timed_events:
+            now[0] = event_time
+            yield event
+
+    message = Message(content_blocks=[], sender="Machine", sender_name="AI")
+    result = await process_agent_events(_event_iterator(), message, _passthrough)
+
+    durations = {block.tool_input["q"]: block.duration for block in result.content_blocks}
+    assert durations == expected_durations
