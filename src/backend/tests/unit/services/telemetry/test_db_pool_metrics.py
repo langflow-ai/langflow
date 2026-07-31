@@ -7,6 +7,7 @@ would keep every assertion green even if ``AsyncEngine`` did not proxy the attri
 the feature were a no-op in production.
 """
 
+import os
 import tempfile
 from pathlib import Path
 
@@ -163,4 +164,31 @@ async def test_gauges_retarget_when_the_whole_engine_is_replaced():
     finally:
         await first.dispose()
         await second.dispose()
+        provider.shutdown()
+
+
+async def test_gauges_carry_the_worker_pid():
+    """Under --preload every worker inherits one Resource, so identity has to be on the metric.
+
+    Without it an idle worker and a saturated one write to the same series and the backend keeps
+    whichever arrived last, hiding the single-worker exhaustion these gauges exist to catch.
+    Read in the callback rather than at import, so it is the worker's pid and not the master's.
+    """
+    provider, reader = _provider_with_reader()
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=AsyncAdaptedQueuePool, pool_size=5)
+    try:
+        instrument_db_pool(provider, engine)
+        data = reader.get_metrics_data()
+        points = [
+            point
+            for rm in (data.resource_metrics or [])
+            for sm in rm.scope_metrics
+            for metric in sm.metrics
+            for point in metric.data.data_points
+        ]
+        assert points
+        for point in points:
+            assert dict(point.attributes) == {"process.pid": os.getpid()}
+    finally:
+        await engine.dispose()
         provider.shutdown()

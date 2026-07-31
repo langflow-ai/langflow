@@ -1,3 +1,4 @@
+import os
 import threading
 from collections.abc import Mapping
 from enum import Enum
@@ -360,13 +361,22 @@ _instrumented_engine = None
 
 DB_POOL_MAX_OVERFLOW_GAUGE = "langflow_db_pool_max_overflow"
 
+# Under gunicorn --preload the OTel Resource is built in the master and inherited identically by
+# every worker, so without a per-worker attribute an idle worker and a saturated one write to the
+# same series and the backend keeps whichever arrived last -- hiding exactly the single-worker
+# exhaustion these gauges exist to catch. Read inside the callback, never at import: the callback
+# runs in the worker, so this is the worker's own pid rather than the master's. Bounded by worker
+# count, which is the only unbounded-label rule that matters here.
+def _worker_attributes() -> dict[str, int]:
+    return {"process.pid": os.getpid()}
+
 
 def _max_overflow_observer():
     """Report the overflow ceiling, so saturation is derivable rather than guessed."""
 
     def observe(_options):
         try:
-            return [Observation(_instrumented_engine.pool._max_overflow)]  # noqa: SLF001
+            return [Observation(_instrumented_engine.pool._max_overflow, _worker_attributes())]  # noqa: SLF001
         except Exception:  # noqa: BLE001 - a broken gauge must not stop the other metrics
             return []
 
@@ -385,7 +395,7 @@ def _pool_observer(method_name: str):
         try:
             # Clamp: SQLAlchemy's overflow() starts at -pool_size, so a healthy pool reports a
             # negative 'overflow'. None of these counters are meaningful below zero.
-            return [Observation(max(getattr(_instrumented_engine.pool, method_name)(), 0))]
+            return [Observation(max(getattr(_instrumented_engine.pool, method_name)(), 0), _worker_attributes())]
         except Exception:  # noqa: BLE001 - a broken gauge must not stop the other metrics
             return []
 
