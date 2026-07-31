@@ -379,6 +379,27 @@ def test_no_phantom_migrations(db_url):
         )
 
 
+def test_create_all_then_upgrade_keeps_catalog_policy_empty(db_url):
+    """Exercise fresh-install ordering without migration-authored data writes."""
+    engine = create_engine(_engine_url(db_url))
+    try:
+        SQLModel.metadata.create_all(engine)
+    finally:
+        engine.dispose()
+
+    alembic_cfg = _make_alembic_cfg(db_url)
+    command.upgrade(alembic_cfg, "head")
+
+    engine = create_engine(_engine_url(db_url))
+    try:
+        with engine.connect() as connection:
+            row_count = connection.execute(text("SELECT count(*) FROM catalog_policy_rule")).scalar_one()
+    finally:
+        engine.dispose()
+
+    assert row_count == 0
+
+
 def test_message_ingestion_message_fk_repaired(db_url):
     """Repair the Postgres-only state left by concurrent startup migrations."""
     if not db_url.startswith("postgresql"):
