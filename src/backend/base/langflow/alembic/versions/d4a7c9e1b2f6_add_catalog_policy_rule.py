@@ -2,7 +2,7 @@
 
 Phase: EXPAND
 Revision ID: d4a7c9e1b2f6
-Revises: b7d5f9a3c2e4
+Revises: e8f1a2b3c4d5
 Create Date: 2026-07-29 00:00:00.000000
 
 The table is empty by default, preserving the existing default-allow catalog
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from sqlalchemy.engine.reflection import Inspector
 
 revision: str = "d4a7c9e1b2f6"  # pragma: allowlist secret
-down_revision: str | None = "b7d5f9a3c2e4"  # pragma: allowlist secret
+down_revision: str | None = "e8f1a2b3c4d5"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

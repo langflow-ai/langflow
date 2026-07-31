@@ -107,7 +107,7 @@ def test_catalog_policy_migration_upgrades_idempotently_and_downgrades(monkeypat
         foreign_keys = inspector.get_foreign_keys(_MIGRATION.TABLE_NAME)
 
         assert _MIGRATION.revision == "d4a7c9e1b2f6"  # pragma: allowlist secret
-        assert _MIGRATION.down_revision == "b7d5f9a3c2e4"  # pragma: allowlist secret
+        assert _MIGRATION.down_revision == "e8f1a2b3c4d5"  # pragma: allowlist secret
         assert set(columns) == {
             "id",
             "resource_kind",
