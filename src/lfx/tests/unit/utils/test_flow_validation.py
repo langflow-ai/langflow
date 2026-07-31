@@ -6,14 +6,17 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from lfx.services.catalog_policy import CatalogPolicySnapshot
 from lfx.utils.flow_validation import (
     CODE_EXECUTION_COMPONENT_TYPES,
     FLOW_REFERENCE_COMPONENT_TYPES,
+    CatalogPolicyValidationError,
     CustomComponentValidationError,
     PublicFlowValidationError,
     collect_component_code_lookups,
     ensure_component_hash_lookups_loaded,
     prepare_public_flow_build,
+    validate_catalog_policy_for_flow,
     validate_flow_for_current_settings,
     validate_public_flow_no_code_execution,
 )
@@ -77,6 +80,75 @@ def test_validate_flow_for_current_settings_requires_settings_service(monkeypatc
 
     with pytest.raises(RuntimeError, match="Settings service must be initialized"):
         validate_flow_for_current_settings(graph)
+
+
+def _catalog_flow(*component_types: str) -> dict:
+    return {
+        "nodes": [
+            {
+                "id": f"{component_type}-1",
+                "data": {
+                    "id": f"{component_type}-1",
+                    "type": component_type,
+                    "node": {"template": {}},
+                },
+            }
+            for component_type in component_types
+        ],
+        "edges": [],
+    }
+
+
+def test_catalog_policy_validation_blocks_top_level_components_deterministically():
+    snapshot = CatalogPolicySnapshot(blocked_component_keys=frozenset({"Zed", "Agent"}))
+
+    with pytest.raises(CatalogPolicyValidationError, match=r"Agent, Zed$"):
+        validate_catalog_policy_for_flow(_catalog_flow("Zed", "Agent", "Zed"), snapshot=snapshot)
+
+
+def test_catalog_policy_validation_blocks_nested_components():
+    flow = _catalog_flow("Group")
+    flow["nodes"][0]["data"]["node"]["flow"] = {"data": _catalog_flow("NestedBlocked")}
+    snapshot = CatalogPolicySnapshot(blocked_component_keys=frozenset({"NestedBlocked"}))
+
+    with pytest.raises(CatalogPolicyValidationError, match="NestedBlocked"):
+        validate_catalog_policy_for_flow(flow, snapshot=snapshot)
+
+
+def test_catalog_policy_validation_is_exact_case_sensitive_and_empty_snapshot_allows():
+    validate_catalog_policy_for_flow(
+        _catalog_flow("agent"),
+        snapshot=CatalogPolicySnapshot(blocked_component_keys=frozenset({"Agent"})),
+    )
+    validate_catalog_policy_for_flow(_catalog_flow("Agent"), snapshot=CatalogPolicySnapshot())
+
+
+def test_validate_flow_for_current_settings_captures_one_catalog_snapshot(monkeypatch):
+    class ChangingCatalogPolicyService:
+        def __init__(self):
+            self.snapshot_calls = 0
+
+        @property
+        def snapshot(self):
+            self.snapshot_calls += 1
+            if self.snapshot_calls == 1:
+                return CatalogPolicySnapshot(blocked_component_keys=frozenset({"Agent"}))
+            return CatalogPolicySnapshot()
+
+    service = ChangingCatalogPolicyService()
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=True,
+            block_code_interpreter_components=False,
+        )
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr("lfx.services.deps.get_catalog_policy_service", lambda: service)
+
+    with pytest.raises(CatalogPolicyValidationError, match="Agent"):
+        validate_flow_for_current_settings(_catalog_flow("Agent"))
+
+    assert service.snapshot_calls == 1
 
 
 # --- public-flow component sanitization (H1-3754930 follow-up) --------------------

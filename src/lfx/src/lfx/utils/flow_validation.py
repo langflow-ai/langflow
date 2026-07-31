@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
 from lfx.utils.component_aliases import get_component_type_aliases
+
+if TYPE_CHECKING:
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
 
 INITIALIZING_COMPONENT_TEMPLATES_MESSAGE = (
     "Flow build blocked: component templates are still initializing. Please try again in a few seconds."
@@ -57,6 +60,10 @@ class CustomComponentValidationError(ValueError):
     still catch it, but callers can catch this specifically to
     distinguish policy errors from other ValueErrors.
     """
+
+
+class CatalogPolicyValidationError(CustomComponentValidationError):
+    """Raised when a flow contains a component blocked by catalog policy."""
 
 
 class PublicFlowValidationError(CustomComponentValidationError):
@@ -166,6 +173,77 @@ def _extract_flow_data(target: Mapping[str, Any] | Any | None) -> dict[str, Any]
         return _normalize_flow_data(target)
 
     return _normalize_flow_data(_extract_graph_payload(target))
+
+
+def _collect_catalog_component_keys(nodes: Any) -> set[str]:
+    """Collect exact component keys from a graph and its inlined nested flows."""
+    component_keys: set[str] = set()
+    if not isinstance(nodes, list):
+        return component_keys
+
+    for node in nodes:
+        if not isinstance(node, Mapping):
+            continue
+        node_data = node.get("data")
+        if not isinstance(node_data, Mapping):
+            continue
+
+        component_type = node_data.get("type")
+        if isinstance(component_type, str):
+            component_keys.add(component_type)
+
+        node_info = node_data.get("node")
+        if not isinstance(node_info, Mapping):
+            continue
+        nested_flow = node_info.get("flow")
+        if not isinstance(nested_flow, Mapping):
+            continue
+        nested_data = nested_flow.get("data")
+        if not isinstance(nested_data, Mapping):
+            continue
+        component_keys.update(_collect_catalog_component_keys(nested_data.get("nodes")))
+
+    return component_keys
+
+
+def validate_catalog_policy_for_flow(
+    target: Mapping[str, Any] | Any | None,
+    *,
+    snapshot: CatalogPolicySnapshot | None = None,
+) -> None:
+    """Reject a flow containing component keys blocked by the current catalog snapshot.
+
+    Component identity is the exact, case-sensitive ``node.data.type`` value.
+    The immutable snapshot is captured once when the caller does not provide
+    one, so every node in a request is evaluated against the same policy view.
+    """
+    if snapshot is None:
+        from lfx.services.deps import get_catalog_policy_service
+
+        snapshot = get_catalog_policy_service().snapshot
+
+    if not snapshot.blocked_component_keys:
+        return
+
+    normalized_flow_data = _extract_flow_data(target)
+    if target is not None and normalized_flow_data is None:
+        msg = (
+            "Flow validation failed: could not extract graph data from the provided target. "
+            "Ensure the flow payload or Graph object contains valid graph data."
+        )
+        raise CatalogPolicyValidationError(msg)
+    if not normalized_flow_data:
+        return
+
+    component_keys = _collect_catalog_component_keys(normalized_flow_data.get("nodes"))
+    blocked = snapshot.blocked_components(component_keys)
+    if not blocked:
+        return
+
+    blocked_names = ", ".join(sorted(blocked))
+    logger.warning(f"Flow build blocked by catalog policy: {blocked_names}")
+    message = f"Flow build blocked: catalog policy blocks components: {blocked_names}"
+    raise CatalogPolicyValidationError(message)
 
 
 def collect_component_hash_lookups(
@@ -479,14 +557,20 @@ def get_component_hash_lookups_for_validation() -> dict[str, set[str]] | None:
     return component_cache.type_to_current_hash
 
 
-def validate_flow_for_current_settings(target: Mapping[str, Any] | Any | None) -> None:
-    """Enforce custom-component policy for a payload or graph-like object."""
-    from lfx.services.deps import get_settings_service
+def validate_flow_for_current_settings(
+    target: Mapping[str, Any] | Any | None,
+    *,
+    catalog_policy_snapshot: CatalogPolicySnapshot | None = None,
+) -> None:
+    """Enforce catalog and custom-component policy for a payload or graph-like object."""
+    from lfx.services.deps import get_catalog_policy_service, get_settings_service
 
     settings_service = get_settings_service()
     if settings_service is None:
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
+    if catalog_policy_snapshot is None:
+        catalog_policy_snapshot = get_catalog_policy_service().snapshot
     settings = settings_service.settings
     allow_custom_components = getattr(settings, "allow_custom_components", True)
     block_code_interpreter_components = getattr(settings, "block_code_interpreter_components", False)
@@ -495,14 +579,18 @@ def validate_flow_for_current_settings(target: Mapping[str, Any] | Any | None) -
     # If a blocking policy is active and we received a target but couldn't extract any flow
     # data from it, fail fast rather than silently skipping validation — the caller passed
     # something we can't verify.
-    if (not allow_custom_components or block_code_interpreter_components) and (
-        target is not None and normalized_flow_data is None
-    ):
+    if (
+        not allow_custom_components
+        or block_code_interpreter_components
+        or bool(catalog_policy_snapshot.blocked_component_keys)
+    ) and (target is not None and normalized_flow_data is None):
         msg = (
             "Flow validation failed: could not extract graph data from the provided target. "
             "Ensure the flow payload or Graph object contains valid graph data."
         )
         raise CustomComponentValidationError(msg)
+
+    validate_catalog_policy_for_flow(normalized_flow_data, snapshot=catalog_policy_snapshot)
 
     if block_code_interpreter_components:
         check_code_execution_components_and_raise(normalized_flow_data)

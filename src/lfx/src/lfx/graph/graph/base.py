@@ -1379,10 +1379,17 @@ class Graph:
             Graph: The created graph.
         """
         from lfx.extension.migration import migrate_flow_payload
-        from lfx.utils.flow_validation import validate_flow_for_current_settings
+        from lfx.services.deps import get_catalog_policy_service
+        from lfx.utils.flow_validation import validate_catalog_policy_for_flow, validate_flow_for_current_settings
 
         if "data" in payload:
             payload = payload["data"]
+        # Catalog identity is the exact, case-sensitive stored node.data.type.
+        # Validate it before extension migration rewrites legacy identifiers.
+        # Reuse this same immutable snapshot below so migrated executable types
+        # are checked against the identical policy view without a TOCTOU gap.
+        catalog_policy_snapshot = get_catalog_policy_service().snapshot
+        validate_catalog_policy_for_flow(payload, snapshot=catalog_policy_snapshot)
         # Rewrite legacy component references in place against the append-only
         # extension migration table.  Best-effort: a corrupt table or unmapped
         # reference produces typed errors on the report but never raises, so
@@ -1449,8 +1456,19 @@ class Graph:
         # boundary (middleware or endpoint dependency) so from_payload stays
         # pure deserialization, but a missed endpoint means arbitrary code
         # execution, so we keep this as a safety net.
-        validate_flow_for_current_settings(payload)
+        validate_flow_for_current_settings(payload, catalog_policy_snapshot=catalog_policy_snapshot)
         try:
+            # The extension migrator intentionally rewrites only the nodes at
+            # the payload level it receives, while process_flow later flattens
+            # inlined nested flows for execution. Build that executable view
+            # on a deep copy, migrate it, and enforce the same snapshot so a
+            # nested legacy alias cannot bypass a block on its canonical key.
+            # Migration errors on this policy-only copy remain best-effort and
+            # are not exposed. Skip the work for the default allow-all policy.
+            if catalog_policy_snapshot.blocked_component_keys:
+                effective_catalog_payload = process_flow(payload)
+                migrate_flow_payload(effective_catalog_payload)
+                validate_catalog_policy_for_flow(effective_catalog_payload, snapshot=catalog_policy_snapshot)
             vertices = payload["nodes"]
             edges = payload["edges"]
             graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id, context=context)
