@@ -875,6 +875,8 @@ def test_model_options_filter_denied_dynamic_sources(option_builder, model_type,
         },
     ]
     live_enabled_providers = []
+    policy = _restricted_snapshot("openai")
+    fetch_enabled = AsyncMock(return_value={"OpenAI", "Anthropic"})
 
     def _replace_with_live_models(groups, _user_id, enabled_providers, *_args, **_kwargs):
         live_enabled_providers.append(set(enabled_providers))
@@ -899,15 +901,19 @@ def test_model_options_filter_denied_dynamic_sources(option_builder, model_type,
         patch.object(
             model_catalog,
             "_fetch_enabled_providers_for_user",
-            new=AsyncMock(return_value={"OpenAI", "Anthropic"}),
+            new=fetch_enabled,
         ),
         patch.object(model_catalog, "replace_with_live_models", side_effect=_replace_with_live_models),
         patch.object(model_catalog, "inject_custom_enabled_models", side_effect=_inject_custom),
     ):
         options = getattr(model_catalog, option_builder)(
             user_id="00000000-0000-0000-0000-000000000001",
-            provider_policy=_restricted_snapshot("openai"),
+            provider_policy=policy,
         )
 
+    fetch_enabled.assert_awaited_once_with(
+        "00000000-0000-0000-0000-000000000001",
+        provider_policy=policy,
+    )
     assert live_enabled_providers == [{"OpenAI"}]
     assert {(option["provider"], option["name"]) for option in options} == {("OpenAI", openai_model)}
