@@ -79,9 +79,16 @@ class LangSmithTracer(BaseTracer):
         if os.getenv("LANGCHAIN_API_KEY") is None:
             return False
         try:
-            from langsmith import Client
+            from langsmith.run_trees import get_cached_client
+            from opentelemetry.sdk.trace import TracerProvider
 
-            self._client = Client()
+            # LANGSMITH_TRACING_MODE=otel|hybrid makes the client build an OpenTelemetry
+            # pipeline, and a bare Client() registers it as the *global* tracer provider.
+            # set_tracer_provider is one-shot, so whichever runs first wins: LangSmith then
+            # either swallows the service's own HTTP and flow spans or leaves application
+            # observability unable to install at all. Hand it an isolated provider instead,
+            # the same way langfuse.py does. Ignored in the default REST mode.
+            self._client = get_cached_client(otel_tracer_provider=TracerProvider())
         except ImportError:
             logger.exception("Could not import langsmith. Please install it with `pip install langsmith`.")
             return False

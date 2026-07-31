@@ -19,6 +19,7 @@ Each case runs in a subprocess: the global provider, and most of these vendors' 
 process-wide singletons that cannot be undone in-process.
 """
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -33,6 +34,7 @@ import pytest
 # global one rather than merely absent.
 _VENDORS = {
     "arize_phoenix": {
+        "requires": "phoenix",
         "module": "langflow.services.tracing.arize_phoenix",
         "cls": "ArizePhoenixTracer",
         "env": {
@@ -42,6 +44,7 @@ _VENDORS = {
         "provider_expr": "tracer.tracer_provider",
     },
     "langfuse": {
+        "requires": "langfuse",
         "module": "langflow.services.tracing.langfuse",
         "cls": "LangFuseTracer",
         "env": {
@@ -54,6 +57,7 @@ _VENDORS = {
         "provider_expr": None,
     },
     "langsmith": {
+        "requires": "langsmith",
         "module": "langflow.services.tracing.langsmith",
         "cls": "LangSmithTracer",
         "env": {
@@ -62,7 +66,30 @@ _VENDORS = {
         },
         "provider_expr": None,
     },
+    "langsmith_otel": {
+        "requires": "langsmith",
+        "module": "langflow.services.tracing.langsmith",
+        "cls": "LangSmithTracer",
+        "env": {
+            "LANGCHAIN_API_KEY": "probe-key",  # pragma: allowlist secret
+            "LANGCHAIN_ENDPOINT": "http://127.0.0.1:{vendor_port}",
+            "LANGSMITH_TRACING_MODE": "otel",
+        },
+        "provider_expr": None,
+    },
+    "langsmith_hybrid": {
+        "requires": "langsmith",
+        "module": "langflow.services.tracing.langsmith",
+        "cls": "LangSmithTracer",
+        "env": {
+            "LANGCHAIN_API_KEY": "probe-key",  # pragma: allowlist secret
+            "LANGCHAIN_ENDPOINT": "http://127.0.0.1:{vendor_port}",
+            "LANGSMITH_TRACING_MODE": "hybrid",
+        },
+        "provider_expr": None,
+    },
     "langwatch": {
+        "requires": "langwatch",
         "module": "langflow.services.tracing.langwatch",
         "cls": "LangWatchTracer",
         "env": {
@@ -72,6 +99,7 @@ _VENDORS = {
         "provider_expr": "type(tracer).tracer_provider",
     },
     "openlayer": {
+        "requires": "openlayer",
         "module": "langflow.services.tracing.openlayer",
         "cls": "OpenlayerTracer",
         "env": {
@@ -82,6 +110,7 @@ _VENDORS = {
         "provider_expr": None,
     },
     "opik": {
+        "requires": "opik",
         "module": "langflow.services.tracing.opik",
         "cls": "OpikTracer",
         "env": {
@@ -214,7 +243,19 @@ def _run(vendor: str, probe: str) -> dict:
     return json.loads(line.removeprefix("RESULT "))
 
 
-@pytest.mark.parametrize("vendor", sorted(_VENDORS))
+def _vendor_params():
+    """Skip a vendor whose SDK is not installed here rather than failing the ready guard.
+
+    ``langwatch`` is declared ``python_version < "3.14"``, so on 3.14 it is legitimately
+    absent and its tracer can never report ready.
+    """
+    for name in sorted(_VENDORS):
+        missing = importlib.util.find_spec(_VENDORS[name]["requires"]) is None
+        marks = [pytest.mark.skip(reason=f"{_VENDORS[name]['requires']} is not installed")] if missing else []
+        yield pytest.param(name, marks=marks)
+
+
+@pytest.mark.parametrize("vendor", _vendor_params())
 def test_vendor_does_not_claim_the_global_provider(vendor: str):
     """A vendor that initialises first must still leave the global slot for the bootstrap.
 
@@ -235,7 +276,7 @@ def test_vendor_does_not_claim_the_global_provider(vendor: str):
         assert result["vendor_provider_is_separate"] is True, f"{vendor} is exporting from the global provider"
 
 
-@pytest.mark.parametrize("vendor", sorted(_VENDORS))
+@pytest.mark.parametrize("vendor", _vendor_params())
 def test_application_spans_do_not_reach_the_vendor(vendor: str):
     """The operator's application telemetry must stay out of the vendor's backend.
 
