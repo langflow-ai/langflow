@@ -1,8 +1,8 @@
-ARG CORE_IMAGE
-FROM ${CORE_IMAGE}
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
 
 # Supported downstream contract: add a provider bundle while extending the
-# published core application image, then return to the non-root runtime user.
+# published base application image, then return to the non-root runtime user.
 USER root
 COPY bundles-dist /tmp/bundles-dist
 RUN uv pip install --python /app/.venv/bin/python \

@@ -182,6 +182,17 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
     uv pip install langflow
     ```
 
+    This installs the runnable Langflow application and its curated provider
+    extensions. To install the same UI and API without provider extensions,
+    install `langflow-base` instead:
+
+    ```bash
+    uv pip install langflow-base
+    ```
+
+    Both packages use the `langflow` command. In Langflow 1.12,
+    `langflow-base` does not provide a `langflow-base` executable.
+
 4. Start Langflow:
 
     ```bash
@@ -203,6 +214,13 @@ For more information, see [Prepare to upgrade](/release-notes#prepare-to-upgrade
 To install a specific version of the Langflow package, add the required version to the command, such as `uv pip install langflow==1.4.22`.
 
 To reinstall Langflow and all of its dependencies, run `uv pip install langflow --force-reinstall`.
+
+:::note Langflow 1.12 package migration
+The new runnable `langflow-base` package starts at version `1.12.0` and stays
+version-aligned with `langflow`. Requirements such as
+`langflow-base~=0.12` remain on the previous package line and don't select the
+1.12 application.
+:::
 
 ## Next steps
 

@@ -2003,15 +2003,21 @@ class TestMemoriesAPIHandlers:
 
         svc = MagicMock()
         svc.create = AsyncMock(return_value=mb)
-        with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
+            patch(
+                "langflow.api.v1.memories.knowledge_base_service.get_backends_for_names",
+                AsyncMock(return_value={mb.kb_name: ("chroma", {})}),
+            ),
+        ):
             result = await create_memory_base(current_user=mock_user, payload=payload)
 
         assert result.id == mb.id
         assert result.user_id == mock_user.id
 
     @pytest.mark.asyncio
-    async def test_create_surfaces_backend_from_payload(self, mock_user):
-        """create() response carries the payload's backend type + config."""
+    async def test_create_surfaces_effective_backend_from_kb_row(self, mock_user):
+        """create() response carries the server-persisted backend type + config."""
         from langflow.api.v1.memories import create_memory_base
 
         mb = _make_mb(user_id=mock_user.id)
@@ -2026,7 +2032,13 @@ class TestMemoriesAPIHandlers:
 
         svc = MagicMock()
         svc.create = AsyncMock(return_value=mb)
-        with patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc):
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
+            patch(
+                "langflow.api.v1.memories.knowledge_base_service.get_backends_for_names",
+                AsyncMock(return_value={mb.kb_name: ("chroma", {"mode": "cloud"})}),
+            ),
+        ):
             result = await create_memory_base(current_user=mock_user, payload=payload)
 
         assert result.backend_type == "chroma"

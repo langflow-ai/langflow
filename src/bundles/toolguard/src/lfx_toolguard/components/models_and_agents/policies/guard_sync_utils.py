@@ -1,11 +1,10 @@
-"""Utility functions for synchronizing generated guard code with component inputs."""
+"""Synchronize generated ToolGuard code with component inputs."""
 
 from pathlib import Path
 
-from toolguard.runtime.runtime import RESULTS_FILENAME
-
 from lfx.io import CodeInput
 from lfx.log.logger import logger
+from toolguard.runtime.runtime import RESULTS_FILENAME
 
 GENERATED_GUARD_INFO_PREFIX = "Auto-generated ToolGuard code for "
 
