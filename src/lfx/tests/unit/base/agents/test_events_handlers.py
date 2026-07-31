@@ -1,15 +1,16 @@
 """Regression tests for the agent event-loop handlers in lfx.base.agents.events.
 
-These pin two interleaving-preservation behaviors:
+These pin focused event-loop behaviors:
 - handle_on_chain_stream must not run the Message.text setter (which collapses
   interleaved text + tool_use blocks); it stashes the extracted answer in
   data["text"] instead.
 - handle_on_tool_start must not clobber a model-end tool_input snapshot with an
   empty on_tool_start payload.
+- tool timing must exclude message-publication latency at both the start and
+  end boundaries.
 
-The async ``send_message_callback`` here is a passthrough test harness for the
-handler's callback boundary, not a behavior mock; the code paths under test
-return before invoking it.
+The async callbacks are small in-memory harnesses. The timing regression test
+advances a deterministic clock while each callback runs.
 """
 
 from time import perf_counter
@@ -83,26 +84,47 @@ async def test_tool_start_overwrites_with_real_input_when_present():
     assert bound.tool_input == {"q": "streamed"}
 
 
-async def test_tool_end_duration_excludes_message_callback_latency(monkeypatch):
-    """Tool duration must stop before the result message is published."""
-    now = [100.025]
+async def test_tool_duration_excludes_message_callback_latency(monkeypatch):
+    """Tool timing must start after and stop before message publication."""
+    now = [100.0]
     monkeypatch.setattr(agent_events, "perf_counter", lambda: now[0])
 
-    tool = ToolContent(name="search", tool_input={"q": "latency"}, output=None)
-    msg = Message(content_blocks=[tool], sender="Machine", sender_name="AI")
-    tool_blocks_map = {"search_run-1": tool}
+    msg = Message(content_blocks=[], sender="Machine", sender_name="AI")
+    tool_blocks_map = {}
 
     async def _slow_message_callback(*, message: Message, **_kwargs) -> Message:
         now[0] += 5
         return message
 
-    event = {
+    start_event = {
+        "name": "search",
+        "run_id": "run-1",
+        "data": {"input": {"q": "latency"}},
+    }
+    end_event = {
         "name": "search",
         "run_id": "run-1",
         "data": {"output": "result"},
     }
 
-    result, _ = await handle_on_tool_end(event, msg, tool_blocks_map, _slow_message_callback, 100.0)
+    msg, tool_start = await handle_on_tool_start(
+        start_event,
+        msg,
+        tool_blocks_map,
+        _slow_message_callback,
+        100.0,
+    )
+    assert tool_start == 105.0
+
+    now[0] += 0.025
+    result, new_start = await handle_on_tool_end(
+        end_event,
+        msg,
+        tool_blocks_map,
+        _slow_message_callback,
+        tool_start,
+    )
 
     completed_tool = next(block for block in result.content_blocks if isinstance(block, ToolContent))
     assert completed_tool.duration == 25
+    assert new_start == 110.025

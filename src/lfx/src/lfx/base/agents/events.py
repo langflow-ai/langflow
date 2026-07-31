@@ -310,7 +310,6 @@ async def handle_on_tool_start(
 
     # Fallback path — append the ToolContent ourselves.
     duration = _calculate_duration(start_time)
-    new_start_time = perf_counter()
     tool_content = ToolContent(
         type="tool_use",
         name=tool_name,
@@ -325,7 +324,8 @@ async def handle_on_tool_start(
     agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
     if agent_message.content_blocks and isinstance(agent_message.content_blocks[-1], ToolContent):
         tool_blocks_map[tool_key] = agent_message.content_blocks[-1]
-    return agent_message, new_start_time
+    # The tool cannot run until this handler returns, so start timing after publication.
+    return agent_message, perf_counter()
 
 
 async def handle_on_tool_end(
