@@ -15,8 +15,8 @@ export const useGetFlowId = () => {
   if (!playgroundPage) return realFlowId;
 
   if (isAuthenticated && autoLogin === false && userData?.id) {
-    return uuidv5(`${userData.id}_${realFlowId}`, uuidv5.DNS);
+    return uuidv5(`user:${userData.id}_${realFlowId}`, uuidv5.DNS);
   }
 
-  return uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS);
+  return uuidv5(`client:${clientId}_${realFlowId}`, uuidv5.DNS);
 };

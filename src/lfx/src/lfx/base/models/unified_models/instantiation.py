@@ -11,6 +11,11 @@ from lfx.base.models.model_utils import _to_str, inject_custom_enabled_models, r
 from lfx.log.logger import logger
 from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.ssrf_httpx import (
+    ssrf_protected_httpx_client_kwargs_for_url,
+    ssrf_protected_openai_clients_for_url,
+    validate_url_for_ssrf_or_raise,
+)
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
 from .credentials import _fetch_enabled_providers_for_user, _get_model_status, model_status_contains
@@ -72,6 +77,38 @@ def _apply_registered_provider_connection(provider: str, user_id: UUID | str | N
         kwargs[langchain_param] = transform_localhost_url(value) if langchain_param == "base_url" else value
     if default_headers:
         kwargs.setdefault("default_headers", {}).update(default_headers)
+
+
+def _protect_model_connection(
+    kwargs: dict[str, Any],
+    *,
+    model_class_name: str,
+    url_param: str | None,
+) -> None:
+    """Enforce connector SSRF policy on the final provider endpoint.
+
+    OpenAI-compatible and Ollama clients expose HTTP-client hooks, so use the
+    repository's DNS-pinned transports for those classes. Other provider SDKs
+    do not expose a compatible transport seam; validate their effective URL
+    before constructing the SDK client.
+    """
+    effective_url = _to_str(kwargs.get(url_param)) if url_param else None
+    if not effective_url:
+        return
+
+    if model_class_name in {"ChatOpenAI", "OpenAIEmbeddings"}:
+        kwargs.update(ssrf_protected_openai_clients_for_url(effective_url))
+        return
+
+    if model_class_name in {"ChatOllama", "OllamaEmbeddings"}:
+        sync_client_kwargs, async_client_kwargs = ssrf_protected_httpx_client_kwargs_for_url(effective_url)
+        if sync_client_kwargs:
+            kwargs["sync_client_kwargs"] = sync_client_kwargs
+        if async_client_kwargs:
+            kwargs["async_client_kwargs"] = async_client_kwargs
+        return
+
+    validate_url_for_ssrf_or_raise(effective_url)
 
 
 def get_llm(
@@ -263,6 +300,7 @@ def get_llm(
         kwargs["stream_usage"] = True
 
     # Add provider-specific parameters
+    connection_url_param: str | None = None
     if provider in {"IBM WatsonX", "IBM watsonx.ai"}:
         # For watsonx, url and project_id are required parameters
         # Try database first, then component values, then environment variables
@@ -291,6 +329,7 @@ def get_llm(
             # Both provided - add them to kwargs
             kwargs[url_param] = watsonx_url_value
             kwargs[project_id_param] = watsonx_project_id_value
+            connection_url_param = url_param
         elif has_url or has_project_id:
             # Only one provided - this is a misconfiguration
             missing = "project ID (WATSONX_PROJECT_ID)" if has_url else "URL (WATSONX_URL)"
@@ -317,6 +356,7 @@ def get_llm(
         )
         if ollama_base_url_value:
             kwargs[base_url_param] = ollama_base_url_value
+            connection_url_param = base_url_param
     elif provider == "OpenAI":
         from lfx.utils.util import transform_localhost_url
 
@@ -324,6 +364,7 @@ def get_llm(
         openai_base_url_value = provider_vars.get("OPENAI_BASE_URL") or _env_if_allowed("OPENAI_BASE_URL")
         if openai_base_url_value:
             kwargs["base_url"] = transform_localhost_url(openai_base_url_value)
+            connection_url_param = "base_url"
     elif provider == "OpenRouter":
         # OpenRouter speaks the OpenAI wire format. Point ChatOpenAI at the
         # OpenRouter base URL (declared in MODEL_PROVIDER_METADATA) and forward
@@ -360,20 +401,34 @@ def get_llm(
             )
             raise ValueError(msg)
         kwargs["endpoint"] = endpoint_value
+        connection_url_param = "endpoint"
         # Bound hung/blackholed endpoints the same way live discovery does.
         kwargs["request_timeout"] = AZURE_AI_FOUNDRY_REQUEST_TIMEOUT
     elif is_registered(provider):
         # Bundle-contributed provider: apply its declared connection variables
         # (base_url, attribution headers, etc.) generically from its metadata.
         _apply_registered_provider_connection(provider, user_id, kwargs)
+        if kwargs.get("base_url"):
+            connection_url_param = "base_url"
 
     # Apply overrides discovered from a prior failed call to this model (cache)
     # plus any the caller passed for this attempt (error-driven remediation).
     from lfx.base.models.model_remediation import cached_overrides
 
-    kwargs.update(cached_overrides(provider, model_name))
+    remediation_overrides = cached_overrides(provider, model_name)
+    kwargs.update(remediation_overrides)
     if overrides:
         kwargs.update(overrides)
+    if model_class_name in {"ChatOpenAI", "ChatOllama"} and (
+        "base_url" in remediation_overrides or (overrides and "base_url" in overrides)
+    ):
+        connection_url_param = "base_url"
+
+    _protect_model_connection(
+        kwargs,
+        model_class_name=model_class_name,
+        url_param=connection_url_param,
+    )
 
     try:
         return model_class(**kwargs)
@@ -563,6 +618,7 @@ def _compose_embedding_kwargs(
             )
 
     kwargs: dict[str, Any] = {}
+    connection_url_param: str | None = None
     if "model" in param_mapping:
         kwargs[param_mapping["model"]] = model_name
     elif "model_id" in param_mapping:
@@ -605,7 +661,8 @@ def _compose_embedding_kwargs(
 
         if has_url and has_project_id:
             if "url" in param_mapping:
-                kwargs[param_mapping["url"]] = url_value
+                connection_url_param = param_mapping["url"]
+                kwargs[connection_url_param] = url_value
             if "project_id" in param_mapping:
                 kwargs[param_mapping["project_id"]] = pid_value
         elif has_url or has_project_id:
@@ -647,13 +704,16 @@ def _compose_embedding_kwargs(
             or _env_if_allowed("OLLAMA_BASE_URL")
             or "http://localhost:11434"
         )
-        kwargs[param_mapping["base_url"]] = base_url_value
+        connection_url_param = param_mapping["base_url"]
+        kwargs[connection_url_param] = base_url_value
 
     # Bundle-contributed provider: apply its declared connection variables
     # (e.g. an OpenAI-compatible base_url) generically from its metadata. Runs
     # before the optional-params loop so an explicit api_base still wins.
     if is_registered(provider):
         _apply_registered_provider_connection(provider, user_id, kwargs)
+        if kwargs.get("base_url"):
+            connection_url_param = "base_url"
 
     for param_name, param_value in optional_params.items():
         if param_value is None:
@@ -669,6 +729,8 @@ def _compose_embedding_kwargs(
             kwargs[param_mapping[param_name]] = {"timeout": param_value}
         elif param_name in param_mapping:
             kwargs[param_mapping[param_name]] = param_value
+            if param_name == "api_base":
+                connection_url_param = param_mapping[param_name]
 
     # Apply Foundry endpoint last so a blank component api_base cannot wipe it.
     if provider == "Azure AI Foundry" and "api_base" in param_mapping:
@@ -686,7 +748,14 @@ def _compose_embedding_kwargs(
                 )
                 raise ValueError(msg)
             return None
-        kwargs[param_mapping["api_base"]] = endpoint_value
+        connection_url_param = param_mapping["api_base"]
+        kwargs[connection_url_param] = endpoint_value
+
+    _protect_model_connection(
+        kwargs,
+        model_class_name=embedding_class_name,
+        url_param=connection_url_param,
+    )
 
     return embedding_class, kwargs
 

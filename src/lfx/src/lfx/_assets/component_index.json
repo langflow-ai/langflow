@@ -4885,7 +4885,7 @@
               "dependencies": [
                 {
                   "name": "json_repair",
-                  "version": "0.61.4"
+                  "version": "0.61.7"
                 },
                 {
                   "name": "lfx",
@@ -7012,7 +7012,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "pydantic",
@@ -7720,7 +7720,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "pydantic",
@@ -9701,7 +9701,7 @@
                 },
                 {
                   "name": "fastapi",
-                  "version": "0.139.0"
+                  "version": "0.139.2"
                 },
                 {
                   "name": "lfx",
@@ -12600,7 +12600,7 @@
                 },
                 {
                   "name": "fastapi",
-                  "version": "0.139.0"
+                  "version": "0.139.2"
                 },
                 {
                   "name": "lfx",
@@ -14023,7 +14023,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "lfx",
@@ -14677,7 +14677,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "lfx",
@@ -14685,7 +14685,7 @@
                 },
                 {
                   "name": "langchain",
-                  "version": "1.3.13"
+                  "version": "1.3.14"
                 }
               ],
               "total_dependencies": 3
@@ -15320,7 +15320,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "lfx",
@@ -17165,7 +17165,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "lfx",
@@ -17575,7 +17575,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "lfx",
@@ -17836,7 +17836,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "lfx",
@@ -18610,7 +18610,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "lfx",
@@ -19670,7 +19670,7 @@
               "dependencies": [
                 {
                   "name": "aiohttp",
-                  "version": "3.14.1"
+                  "version": "3.14.3"
                 },
                 {
                   "name": "lfx",
@@ -20504,7 +20504,7 @@
           "icon": "braces",
           "legacy": false,
           "metadata": {
-            "code_hash": "6df6b4102fcf",
+            "code_hash": "c87c265c9032",
             "dependencies": {
               "dependencies": [
                 {
@@ -20597,7 +20597,7 @@
               "show": true,
               "title_case": false,
               "type": "code",
-              "value": "from pydantic import BaseModel, Field, create_model\nfrom trustcall import create_extractor\n\nfrom lfx.base.agents.token_callback import TokenUsageCallbackHandler\nfrom lfx.base.models.chat_result import get_chat_result\nfrom lfx.base.models.unified_models import (\n    get_llm,\n    handle_model_input_update,\n)\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.helpers.base_model import build_model_from_schema\nfrom lfx.io import (\n    MessageTextInput,\n    ModelInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n    TableInput,\n)\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.table import EditMode\n\n\nclass StructuredOutputComponent(Component):\n    display_name = \"Structured Output\"\n    description = \"Uses an LLM to generate structured data. Ideal for extraction and consistency.\"\n    documentation: str = \"https://docs.langflow.org/structured-output\"\n    name = \"StructuredOutput\"\n    icon = \"braces\"\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Overrides global provider settings. Leave blank to use your pre-configured API Key.\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Message\",\n            info=\"The input message to the language model.\",\n            tool_mode=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Format Instructions\",\n            info=\"The instructions to the language model for formatting the output.\",\n            value=(\n                \"You are an AI that extracts structured JSON objects from unstructured text. \"\n                \"Use a predefined schema with expected types (str, int, float, bool, dict). \"\n                \"Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. \"\n                \"Fill missing or ambiguous values with defaults: null for missing values. \"\n                \"Remove exact duplicates but keep variations that have different field values. \"\n                \"Always return valid JSON in the expected format, never throw errors. \"\n                \"If multiple objects can be extracted, return them all in the structured format.\"\n            ),\n            required=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"schema_name\",\n            display_name=\"Schema Name\",\n            info=\"Provide a name for the output data schema.\",\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=\"Define the structure and data types for the model's output.\",\n            required=True,\n            # TODO: remove default value\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n            value=[\n                {\n                    \"name\": \"field\",\n                    \"description\": \"description of field\",\n                    \"type\": \"str\",\n                    \"multiple\": \"False\",\n                }\n            ],\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"structured_output\",\n            display_name=\"Structured Output\",\n            method=\"build_structured_output\",\n        ),\n        Output(\n            name=\"dataframe_output\",\n            display_name=\"Structured Output\",\n            method=\"build_structured_dataframe\",\n        ),\n    ]\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        return handle_model_input_update(self, build_config, field_value, field_name)\n\n    def build_structured_output_base(self):\n        schema_name = self.schema_name or \"OutputModel\"\n\n        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)\n\n        if not hasattr(llm, \"with_structured_output\"):\n            msg = \"Language model does not support structured output.\"\n            raise TypeError(msg)\n        if not self.output_schema:\n            msg = \"Output schema cannot be empty\"\n            raise ValueError(msg)\n\n        output_model_ = build_model_from_schema(self.output_schema)\n        output_model = create_model(\n            schema_name,\n            __doc__=f\"A list of {schema_name}.\",\n            objects=(\n                list[output_model_],\n                Field(\n                    description=f\"A list of {schema_name}.\",  # type: ignore[valid-type]\n                    min_length=1,  # help ensure non-empty output\n                ),\n            ),\n        )\n        # Tracing config with token usage handler injected into the callbacks chain.\n        # get_chat_result() reads \"get_langchain_callbacks\" as a callable, so we wrap\n        # the list in a lambda to match its expected interface.\n        token_handler = TokenUsageCallbackHandler()\n        base_callbacks = self.get_langchain_callbacks()\n        config_dict = {\n            \"display_name\": self.display_name,\n            \"get_project_name\": self.get_project_name,\n            \"get_langchain_callbacks\": lambda: [*base_callbacks, token_handler],\n        }\n        # Generate structured output using Trustcall first, then fallback to Langchain if it fails\n        result = self._extract_output_with_trustcall(llm, output_model, config_dict)\n        if result is None:\n            result = self._extract_output_with_langchain(llm, output_model, config_dict)\n        self._token_usage = token_handler.get_usage()\n\n        # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure\n        # Handle non-dict responses (shouldn't happen with trustcall, but defensive)\n        if not isinstance(result, dict):\n            return result\n\n        # Extract first response and convert BaseModel to dict\n        responses = result.get(\"responses\", [])\n        if not responses:\n            return result\n\n        # Convert BaseModel to dict (creates the \"objects\" key)\n        first_response = responses[0]\n        structured_data = first_response\n        if isinstance(first_response, BaseModel):\n            structured_data = first_response.model_dump()\n        # Extract the objects array (guaranteed to exist due to our Pydantic model structure)\n        return structured_data.get(\"objects\", structured_data)\n\n    def build_structured_output(self) -> Data:\n        output = self.build_structured_output_base()\n        if not isinstance(output, list) or not output:\n            # handle empty or unexpected type case\n            msg = \"No structured output returned\"\n            raise ValueError(msg)\n        if len(output) == 1:\n            return Data(data=output[0])\n        if len(output) > 1:\n            # Multiple outputs - wrap them in a results container\n            return Data(data={\"results\": output})\n        return Data()\n\n    def build_structured_dataframe(self) -> DataFrame:\n        output = self.build_structured_output_base()\n        if not isinstance(output, list) or not output:\n            # handle empty or unexpected type case\n            msg = \"No structured output returned\"\n            raise ValueError(msg)\n        if len(output) == 1:\n            # For single dictionary, wrap in a list to create DataFrame with one row\n            return DataFrame([output[0]])\n        if len(output) > 1:\n            # Multiple outputs - convert to DataFrame directly\n            return DataFrame(output)\n        return DataFrame()\n\n    def _extract_output_with_trustcall(self, llm, schema: BaseModel, config_dict: dict) -> list[BaseModel] | None:\n        try:\n            llm_with_structured_output = create_extractor(llm, tools=[schema], tool_choice=schema.__name__)\n            result = get_chat_result(\n                runnable=llm_with_structured_output,\n                system_message=self.system_prompt,\n                input_value=self.input_value,\n                config=config_dict,\n            )\n        except Exception as e:  # noqa: BLE001\n            logger.warning(\n                f\"Trustcall extraction failed, falling back to Langchain: {e} \"\n                \"(Note: This may not be an error—some models or configurations do not support tool calling. \"\n                \"Falling back is normal in such cases.)\"\n            )\n            return None\n        return result or None  # langchain fallback is used if error occurs or the result is empty\n\n    def _extract_output_with_langchain(self, llm, schema: BaseModel, config_dict: dict) -> list[BaseModel] | None:\n        try:\n            llm_with_structured_output = llm.with_structured_output(schema)\n            result = get_chat_result(\n                runnable=llm_with_structured_output,\n                system_message=self.system_prompt,\n                input_value=self.input_value,\n                config=config_dict,\n            )\n            if isinstance(result, BaseModel):\n                result = result.model_dump()\n                result = result.get(\"objects\", result)\n        except Exception as fallback_error:\n            msg = (\n                f\"Model does not support tool calling (trustcall failed) \"\n                f\"and fallback with_structured_output also failed: {fallback_error}\"\n            )\n            raise ValueError(msg) from fallback_error\n\n        return result or None\n"
+              "value": "from pydantic import BaseModel, Field, create_model\nfrom trustcall import create_extractor\n\nfrom lfx.base.agents.token_callback import TokenUsageCallbackHandler\nfrom lfx.base.models.chat_result import get_chat_result\nfrom lfx.base.models.unified_models import (\n    get_llm,\n    handle_model_input_update,\n)\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.helpers.base_model import build_model_from_schema\nfrom lfx.io import (\n    MessageTextInput,\n    ModelInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n    TableInput,\n)\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.table import EditMode\n\n\nclass StructuredOutputComponent(Component):\n    display_name = \"Structured Output\"\n    description = \"Uses an LLM to generate structured data. Ideal for extraction and consistency.\"\n    documentation: str = \"https://docs.langflow.org/structured-output\"\n    name = \"StructuredOutput\"\n    icon = \"braces\"\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Overrides global provider settings. Leave blank to use your pre-configured API Key.\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Message\",\n            info=\"The input message to the language model.\",\n            tool_mode=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Format Instructions\",\n            info=\"The instructions to the language model for formatting the output.\",\n            value=(\n                \"You are an AI that extracts structured JSON objects from unstructured text. \"\n                \"Use a predefined schema with expected types (str, int, float, bool, dict). \"\n                \"Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. \"\n                \"Fill missing or ambiguous values with defaults: null for missing values. \"\n                \"Remove exact duplicates but keep variations that have different field values. \"\n                \"Always return valid JSON in the expected format, never throw errors. \"\n                \"If multiple objects can be extracted, return them all in the structured format.\"\n            ),\n            required=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"schema_name\",\n            display_name=\"Schema Name\",\n            info=\"Provide a name for the output data schema.\",\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=\"Define the structure and data types for the model's output.\",\n            required=True,\n            # TODO: remove default value\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n            value=[\n                {\n                    \"name\": \"field\",\n                    \"description\": \"description of field\",\n                    \"type\": \"str\",\n                    \"multiple\": \"False\",\n                }\n            ],\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"structured_output\",\n            display_name=\"Structured Output\",\n            method=\"build_structured_output\",\n        ),\n        Output(\n            name=\"dataframe_output\",\n            display_name=\"Structured Output\",\n            method=\"build_structured_dataframe\",\n        ),\n    ]\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        return handle_model_input_update(self, build_config, field_value, field_name)\n\n    def build_structured_output_base(self):\n        schema_name = self.schema_name or \"OutputModel\"\n\n        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)\n\n        if not hasattr(llm, \"with_structured_output\"):\n            msg = \"Language model does not support structured output.\"\n            raise TypeError(msg)\n        if not self.output_schema:\n            msg = \"Output schema cannot be empty\"\n            raise ValueError(msg)\n\n        output_model_ = build_model_from_schema(self.output_schema)\n        output_model = create_model(\n            schema_name,\n            __doc__=f\"A list of {schema_name}.\",\n            objects=(\n                list[output_model_],\n                Field(\n                    description=f\"A list of {schema_name}.\",  # type: ignore[valid-type]\n                    min_length=1,  # help ensure non-empty output\n                ),\n            ),\n        )\n        # Tracing config with token usage handler injected into the callbacks chain.\n        # get_chat_result() reads \"get_langchain_callbacks\" as a callable, so we wrap\n        # the list in a lambda to match its expected interface.\n        token_handler = TokenUsageCallbackHandler()\n        base_callbacks = self.get_langchain_callbacks()\n        config_dict = {\n            \"display_name\": self.display_name,\n            \"get_project_name\": self.get_project_name,\n            \"get_langchain_callbacks\": lambda: [*base_callbacks, token_handler],\n        }\n        # Generate structured output using Trustcall first, then fallback to Langchain if it fails\n        result = self._extract_output_with_trustcall(llm, output_model, config_dict)\n        if result is None:\n            result = self._extract_output_with_langchain(llm, output_model, config_dict)\n        self._token_usage = token_handler.get_usage()\n\n        # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure\n        # Handle non-dict responses (shouldn't happen with trustcall, but defensive)\n        if not isinstance(result, dict):\n            return result\n\n        # Extract first response and convert BaseModel to dict\n        responses = result.get(\"responses\", [])\n        if not responses:\n            return result\n\n        # Convert BaseModel to dict (creates the \"objects\" key)\n        first_response = responses[0]\n        structured_data = first_response\n        if isinstance(first_response, BaseModel):\n            structured_data = first_response.model_dump()\n        # Extract the objects array (guaranteed to exist due to our Pydantic model structure)\n        return structured_data.get(\"objects\", structured_data)\n\n    def build_structured_output(self) -> Data:\n        output = self.build_structured_output_base()\n        if not isinstance(output, list) or not output:\n            # handle empty or unexpected type case\n            msg = \"No structured output returned\"\n            raise ValueError(msg)\n        if len(output) == 1:\n            return Data(data=output[0])\n        if len(output) > 1:\n            # Multiple outputs - wrap them in a results container\n            return Data(data={\"results\": output})\n        return Data()\n\n    def build_structured_dataframe(self) -> DataFrame:\n        output = self.build_structured_output_base()\n        if not isinstance(output, list) or not output:\n            # handle empty or unexpected type case\n            msg = \"No structured output returned\"\n            raise ValueError(msg)\n        if len(output) == 1:\n            # For single dictionary, wrap in a list to create DataFrame with one row\n            return DataFrame([output[0]])\n        if len(output) > 1:\n            # Multiple outputs - convert to DataFrame directly\n            return DataFrame(output)\n        return DataFrame()\n\n    def _extract_output_with_trustcall(self, llm, schema: BaseModel, config_dict: dict) -> list[BaseModel] | None:\n        try:\n            llm_with_structured_output = create_extractor(llm, tools=[schema], tool_choice=schema.__name__)\n            result = get_chat_result(\n                runnable=llm_with_structured_output,\n                remediation_target=llm,\n                system_message=self.system_prompt,\n                input_value=self.input_value,\n                config=config_dict,\n            )\n        except Exception as e:  # noqa: BLE001\n            logger.warning(\n                f\"Trustcall extraction failed, falling back to Langchain: {e} \"\n                \"(Note: This may not be an error—some models or configurations do not support tool calling. \"\n                \"Falling back is normal in such cases.)\"\n            )\n            return None\n        return result or None  # langchain fallback is used if error occurs or the result is empty\n\n    def _extract_output_with_langchain(self, llm, schema: BaseModel, config_dict: dict) -> list[BaseModel] | None:\n        try:\n            llm_with_structured_output = llm.with_structured_output(schema)\n            result = get_chat_result(\n                runnable=llm_with_structured_output,\n                remediation_target=llm,\n                system_message=self.system_prompt,\n                input_value=self.input_value,\n                config=config_dict,\n            )\n            if isinstance(result, BaseModel):\n                result = result.model_dump()\n                result = result.get(\"objects\", result)\n        except Exception as fallback_error:\n            msg = (\n                f\"Model does not support tool calling (trustcall failed) \"\n                f\"and fallback with_structured_output also failed: {fallback_error}\"\n            )\n            raise ValueError(msg) from fallback_error\n\n        return result or None\n"
             },
             "input_value": {
               "_input_type": "MultilineInput",
@@ -20844,11 +20844,11 @@
                 },
                 {
                   "name": "a2a",
-                  "version": "1.1.0"
+                  "version": "1.1.2"
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 }
               ],
               "total_dependencies": 4
@@ -21106,7 +21106,7 @@
               "dependencies": [
                 {
                   "name": "langchain",
-                  "version": "1.3.13"
+                  "version": "1.3.14"
                 },
                 {
                   "name": "langgraph",
@@ -21118,7 +21118,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 }
               ],
               "total_dependencies": 4
@@ -22580,7 +22580,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "pydantic",
@@ -24806,7 +24806,7 @@
               "dependencies": [
                 {
                   "name": "json_repair",
-                  "version": "0.61.4"
+                  "version": "0.61.7"
                 },
                 {
                   "name": "lfx",
@@ -25890,7 +25890,7 @@
                 },
                 {
                   "name": "json_repair",
-                  "version": "0.61.4"
+                  "version": "0.61.7"
                 }
               ],
               "total_dependencies": 2
@@ -26338,7 +26338,7 @@
                 },
                 {
                   "name": "json_repair",
-                  "version": "0.61.4"
+                  "version": "0.61.7"
                 },
                 {
                   "name": "lfx",
@@ -27606,7 +27606,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "lfx",
@@ -28059,7 +28059,7 @@
               "dependencies": [
                 {
                   "name": "json_repair",
-                  "version": "0.61.4"
+                  "version": "0.61.7"
                 },
                 {
                   "name": "lfx",
@@ -30097,7 +30097,7 @@
           "icon": "Python",
           "legacy": true,
           "metadata": {
-            "code_hash": "55dc87cf0979",
+            "code_hash": "d1fbbdc1ff53",
             "dependencies": {
               "dependencies": [
                 {
@@ -30175,7 +30175,7 @@
               "show": true,
               "title_case": false,
               "type": "code",
-              "value": "from collections.abc import Callable\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.custom.utils import get_function\nfrom lfx.io import CodeInput, Output\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dotdict import dotdict\nfrom lfx.schema.message import Message\n\n\nclass PythonFunctionComponent(Component):\n    display_name = \"Python Function\"\n    description = \"Define and execute a Python function that returns a Data object or a Message.\"\n    icon = \"Python\"\n    name = \"PythonFunction\"\n    legacy = True\n\n    inputs = [\n        CodeInput(\n            name=\"function_code\",\n            display_name=\"Function Code\",\n            info=\"The code for the function.\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"function_output\",\n            display_name=\"Function Callable\",\n            method=\"get_function_callable\",\n        ),\n        Output(\n            name=\"function_output_data\",\n            display_name=\"Function Output (JSON)\",\n            method=\"execute_function_data\",\n        ),\n        Output(\n            name=\"function_output_str\",\n            display_name=\"Function Output (Message)\",\n            method=\"execute_function_message\",\n        ),\n    ]\n\n    def get_function_callable(self) -> Callable:\n        function_code = self.function_code\n        self.status = function_code\n        return get_function(function_code)\n\n    def execute_function(self) -> list[dotdict | str] | dotdict | str:\n        function_code = self.function_code\n\n        if not function_code:\n            return \"No function code provided.\"\n\n        try:\n            func = get_function(function_code)\n            return func()\n        except Exception as e:  # noqa: BLE001\n            logger.debug(\"Error executing function\", exc_info=True)\n            return f\"Error executing function: {e}\"\n\n    def execute_function_data(self) -> list[Data]:\n        results = self.execute_function()\n        results = results if isinstance(results, list) else [results]\n        return [(Data(text=x) if isinstance(x, str) else Data(**x)) for x in results]\n\n    def execute_function_message(self) -> Message:\n        results = self.execute_function()\n        results = results if isinstance(results, list) else [results]\n        results_list = [str(x) for x in results]\n        results_str = \"\\n\".join(results_list)\n        return Message(text=results_str)\n"
+              "value": "from collections.abc import Callable\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.custom.utils import get_function\nfrom lfx.io import CodeInput, Output\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dotdict import dotdict\nfrom lfx.schema.message import Message\nfrom lfx.utils.python_repl_security import ensure_code_execution_enabled\n\n\nclass PythonFunctionComponent(Component):\n    display_name = \"Python Function\"\n    description = \"Define and execute a Python function that returns a Data object or a Message.\"\n    icon = \"Python\"\n    name = \"PythonFunction\"\n    legacy = True\n\n    inputs = [\n        CodeInput(\n            name=\"function_code\",\n            display_name=\"Function Code\",\n            info=\"The code for the function.\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"function_output\",\n            display_name=\"Function Callable\",\n            method=\"get_function_callable\",\n        ),\n        Output(\n            name=\"function_output_data\",\n            display_name=\"Function Output (JSON)\",\n            method=\"execute_function_data\",\n        ),\n        Output(\n            name=\"function_output_str\",\n            display_name=\"Function Output (Message)\",\n            method=\"execute_function_message\",\n        ),\n    ]\n\n    def get_function_callable(self) -> Callable:\n        function_code = self.function_code\n        self.status = function_code\n        ensure_code_execution_enabled()\n        return get_function(function_code)\n\n    def execute_function(self) -> list[dotdict | str] | dotdict | str:\n        function_code = self.function_code\n\n        if not function_code:\n            return \"No function code provided.\"\n\n        ensure_code_execution_enabled()\n        try:\n            func = get_function(function_code)\n            return func()\n        except Exception as e:  # noqa: BLE001\n            logger.debug(\"Error executing function\", exc_info=True)\n            return f\"Error executing function: {e}\"\n\n    def execute_function_data(self) -> list[Data]:\n        results = self.execute_function()\n        results = results if isinstance(results, list) else [results]\n        return [(Data(text=x) if isinstance(x, str) else Data(**x)) for x in results]\n\n    def execute_function_message(self) -> Message:\n        results = self.execute_function()\n        results = results if isinstance(results, list) else [results]\n        results_list = [str(x) for x in results]\n        results_str = \"\\n\".join(results_list)\n        return Message(text=results_str)\n"
             },
             "function_code": {
               "_input_type": "CodeInput",
@@ -30230,7 +30230,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "pydantic",
@@ -30358,7 +30358,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "lfx",
@@ -30553,7 +30553,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "pydantic",
@@ -30775,7 +30775,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "pydantic",
@@ -30949,7 +30949,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "pydantic",
@@ -31137,7 +31137,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "pydantic",
@@ -31383,7 +31383,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "pydantic",
@@ -31599,7 +31599,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "pydantic",
@@ -31948,7 +31948,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.9"
+                  "version": "1.5.1"
                 },
                 {
                   "name": "pydantic",
@@ -32569,6 +32569,6 @@
     "num_components": 131,
     "num_modules": 17
   },
-  "sha256": "64da0488bde9b75d0e7a2abd3e6832c86a94bdeb3f718f0eb9c13c41b879ceb1",
-  "version": "1.11.1"
+  "sha256": "c7fb51ce2214a5753b19daa0be8854b06b4896909d3f32d22db7b22d187e86d5",
+  "version": "1.11.2"
 }

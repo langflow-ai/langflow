@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log import logger
 from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.mcp_composer.service import (
@@ -131,6 +132,17 @@ async def verify_project_auth(
                     return project_user
             raise HTTPException(status_code=404, detail="Project owner not found")
 
+    # ``none`` intentionally publishes this project's MCP surface without a
+    # credential. Keep that behavior, but never represent the anonymous caller
+    # as the instance-wide superuser: tool execution must stay within the
+    # published project's owning principal.
+    if project_auth_type == "none":
+        if project.user_id:
+            project_user = await db.get(User, project.user_id)
+            if project_user:
+                return project_user
+        raise HTTPException(status_code=404, detail="Project owner not found")
+
     # OAuth projects must present a valid API key at the Langflow transport endpoint: network-level
     # trust (loopback / same-host proxy) is unsafe because it cannot distinguish the local MCP
     # Composer subprocess from another loopback peer behind a reverse proxy or sidecar. The
@@ -174,6 +186,9 @@ async def verify_project_auth(
 
         return user
 
+    # Legacy AUTO_LOGIN projects without explicit auth settings retain the
+    # existing single-user fallback. Explicit public projects returned their
+    # owner above and can never reach this system-superuser path.
     return await _superuser_fallback(db, settings_service)
 
 
@@ -880,6 +895,7 @@ async def install_mcp_config(
             settings = get_settings_service().settings
             command = "uvx"
             args = [
+                *mcp_sdk_constraint_args(),
                 f"mcp-composer{settings.mcp_composer_version}",
                 "--mode",
                 "http",
@@ -896,7 +912,7 @@ async def install_mcp_config(
             streamable_http_url = await get_project_streamable_http_url(project_id)
             legacy_sse_url = await get_project_sse_url(project_id)
             command = "uvx"
-            args = ["mcp-proxy"]
+            args = [*mcp_sdk_constraint_args(), "mcp-proxy"]
             # Check if we need to add Langflow API key headers
             # Necessary only when Project API Key Authentication is enabled
 

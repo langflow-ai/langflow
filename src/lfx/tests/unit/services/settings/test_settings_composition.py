@@ -106,6 +106,7 @@ EXPECTED_FIELDS = {
     "skip_mcp_auto_init",
     "mcp_composer_enabled",
     "mcp_composer_version",
+    "mcp_sdk_constraint",
     "a2a_enabled",
     "a2a_allow_private_webhooks",
     # TelemetrySettings
@@ -281,6 +282,7 @@ def test_critical_defaults_unchanged():
     assert settings.mcp_server_allowed_packages is None
     assert settings.mcp_server_enabled is True
     assert settings.mcp_composer_enabled is True
+    assert settings.mcp_sdk_constraint == "mcp~=1.28"
     assert settings.load_flows_preserve_variable_bindings is True
     assert settings.do_not_track is False
     assert settings.dev is False
@@ -408,6 +410,7 @@ def test_yaml_round_trip():
         ("LANGFLOW_PROMETHEUS_ENABLED", "true", "prometheus_enabled", True),
         ("LANGFLOW_PROMETHEUS_PORT", "9999", "prometheus_port", 9999),
         ("LANGFLOW_MCP_SERVER_ENABLED", "false", "mcp_server_enabled", False),
+        ("LANGFLOW_MCP_SDK_CONSTRAINT", "mcp~=1.30", "mcp_sdk_constraint", "mcp~=1.30"),
         ("LANGFLOW_SKIP_MCP_AUTO_INIT", "true", "skip_mcp_auto_init", True),
         ("LANGFLOW_DO_NOT_TRACK", "true", "do_not_track", True),
         ("LANGFLOW_DEV", "true", "dev", True),

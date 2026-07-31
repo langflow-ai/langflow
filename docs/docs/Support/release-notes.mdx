@@ -51,6 +51,10 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
+:::tip
+If Langflow fails to start with a `get_body_field` error after installing version 1.11.0, see [`get_body_field` error after installing Langflow](/troubleshoot#get_body_field-error-after-installing-langflow).
+:::
+
 ### Breaking changes
 
 - Short `LANGFLOW_SECRET_KEY` upgrade compatibility
@@ -99,6 +103,12 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     You must set `LANGFLOW_SUPERUSER_PASSWORD` (and optionally `LANGFLOW_SUPERUSER`) before the container can start, unless you explicitly set `LANGFLOW_AUTO_LOGIN=true`.
 
     For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
+
+- Docker runtime home moved to `/app/data`
+
+    Patched 1.11 Docker images set `HOME=/app/data` so the non-root runtime user has a writable home directory.
+    When `LANGFLOW_CONFIG_DIR` isn't set, the default config directory therefore changes from `/opt/app-root/src/.cache/langflow` to `/app/data/.cache/langflow`; SQLite follows that directory when `LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true`.
+    Persist `/app/data` or set `LANGFLOW_CONFIG_DIR` to your existing writable data directory before upgrading to preserve existing data.
 
 - Ongoing breaking changes: bundle separation
 

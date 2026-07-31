@@ -43,14 +43,19 @@ def _logical_instructions(dockerfile: Path) -> list[str]:
     return instructions
 
 
-def _final_stage_env(dockerfile: Path) -> dict[str, str]:
-    """Return active ENV assignments from the final image stage."""
+def _final_stage_instructions(dockerfile: Path) -> list[str]:
+    """Return the logical instructions from the final image stage."""
     instructions = _logical_instructions(dockerfile)
     final_stage_start = max(
         index for index, instruction in enumerate(instructions) if instruction.split(maxsplit=1)[0].upper() == "FROM"
     )
+    return instructions[final_stage_start + 1 :]
+
+
+def _final_stage_env(dockerfile: Path) -> dict[str, str]:
+    """Return active ENV assignments from the final image stage."""
     env: dict[str, str] = {}
-    for instruction in instructions[final_stage_start + 1 :]:
+    for instruction in _final_stage_instructions(dockerfile):
         parts = instruction.split(maxsplit=1)
         if len(parts) != 2 or parts[0].upper() != "ENV":
             continue
@@ -64,6 +69,37 @@ def _final_stage_env(dockerfile: Path) -> dict[str, str]:
             if has_value:
                 env[key] = value
     return env
+
+
+@pytest.mark.parametrize("dockerfile", PUBLISHED_DOCKERFILES)
+def test_published_images_use_writable_runtime_home(dockerfile: str) -> None:
+    dockerfile_path = REPO_ROOT / "docker" / dockerfile
+    runtime_env = _final_stage_env(dockerfile_path)
+    runtime_instructions = _final_stage_instructions(dockerfile_path)
+
+    assert runtime_env.get("HOME") == "/app/data"
+    assert any(
+        instruction.startswith("RUN ")
+        and "mkdir -p /app/data /app/langflow" in instruction
+        and "chown -R 1000:0 /app/data /app/langflow" in instruction
+        and "chmod -R g+rwX /app/data /app/langflow" in instruction
+        for instruction in runtime_instructions
+    )
+
+
+def test_lfx_image_uses_writable_runtime_home() -> None:
+    dockerfile_path = REPO_ROOT / "src" / "lfx" / "docker" / "Dockerfile"
+    runtime_env = _final_stage_env(dockerfile_path)
+    runtime_instructions = _final_stage_instructions(dockerfile_path)
+
+    assert runtime_env.get("HOME") == "/app/data"
+    assert any(
+        instruction.startswith("RUN ")
+        and "mkdir -p /app/data" in instruction
+        and "chown -R 1000:0 /app/data" in instruction
+        and "chmod -R g+rwX /app/data" in instruction
+        for instruction in runtime_instructions
+    )
 
 
 @pytest.mark.parametrize("dockerfile", PUBLISHED_DOCKERFILES)
