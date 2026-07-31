@@ -3,23 +3,28 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SearchBarComponent from "@/components/core/parameterRenderComponent/components/searchBarComponent";
 import type { InputProps } from "@/components/core/parameterRenderComponent/types";
 import { Button } from "@/components/ui/button";
-import { DialogFooter, DialogHeader } from "@/components/ui/dialog";
 import {
   Dialog,
   DialogContentPlain as DialogContent,
+  DialogFooter,
+  DialogHeader,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { cn, testIdCase } from "@/utils/utils";
+import { testIdCase } from "@/utils/utils";
 import ListItem from "./ListItem";
 
 // Update interface with better types
 interface ListSelectionComponentProps {
   open: boolean;
   onClose: () => void;
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   options: any[];
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   setSelectedList: (action: any[]) => void;
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   selectedList: any[];
   searchCategories?: string[];
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   onSelection?: (action: any) => void;
   limit?: number;
   headerSearchPlaceholder?: string;
@@ -40,9 +45,11 @@ const ListSelectionComponent = ({
   addButtonText,
   onAddButtonClick,
   ...baseInputProps
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
 }: InputProps<any, ListSelectionComponentProps>) => {
   const { nodeClass } = baseInputProps;
   const [search, setSearch] = useState("");
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [hoveredItem, setHoveredItem] = useState<any | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [isKeyboardNavActive, setIsKeyboardNavActive] = useState(false);
@@ -59,6 +66,7 @@ const ListSelectionComponent = ({
   }, [options, search]);
 
   const handleSelectAction = useCallback(
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     (action: any) => {
       if (limit !== 1) {
         // Multiple selection mode

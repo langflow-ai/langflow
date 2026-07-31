@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import GlobalVariableDeleteConfirmation from "@/components/core/globalVariableDeleteConfirmation";
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { cn } from "../../../../../utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { CommandItem } from "../../../../ui/command";
