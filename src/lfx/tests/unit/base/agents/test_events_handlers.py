@@ -14,7 +14,8 @@ return before invoking it.
 
 from time import perf_counter
 
-from lfx.base.agents.events import handle_on_chain_stream, handle_on_tool_start
+import lfx.base.agents.events as agent_events
+from lfx.base.agents.events import handle_on_chain_stream, handle_on_tool_end, handle_on_tool_start
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.message import Message
 
@@ -80,3 +81,28 @@ async def test_tool_start_overwrites_with_real_input_when_present():
 
     bound = next(b for b in result.content_blocks if isinstance(b, ToolContent))
     assert bound.tool_input == {"q": "streamed"}
+
+
+async def test_tool_end_duration_excludes_message_callback_latency(monkeypatch):
+    """Tool duration must stop before the result message is published."""
+    now = [100.025]
+    monkeypatch.setattr(agent_events, "perf_counter", lambda: now[0])
+
+    tool = ToolContent(name="search", tool_input={"q": "latency"}, output=None)
+    msg = Message(content_blocks=[tool], sender="Machine", sender_name="AI")
+    tool_blocks_map = {"search_run-1": tool}
+
+    async def _slow_message_callback(*, message: Message, **_kwargs) -> Message:
+        now[0] += 5
+        return message
+
+    event = {
+        "name": "search",
+        "run_id": "run-1",
+        "data": {"output": "result"},
+    }
+
+    result, _ = await handle_on_tool_end(event, msg, tool_blocks_map, _slow_message_callback, 100.0)
+
+    completed_tool = next(block for block in result.content_blocks if isinstance(block, ToolContent))
+    assert completed_tool.duration == 25

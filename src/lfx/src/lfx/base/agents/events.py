@@ -341,6 +341,11 @@ async def handle_on_tool_end(
     tool_content = tool_blocks_map.get(tool_key)
 
     if tool_content and isinstance(tool_content, ToolContent):
+        # Stop the tool timer before publishing the result. The callback can
+        # include transport or persistence work that is not part of the tool's
+        # execution time and must not inflate the duration shown to clients.
+        duration = _calculate_duration(start_time)
+
         # Call send_message_callback first to get the updated message structure
         agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
         new_start_time = perf_counter()
@@ -348,8 +353,6 @@ async def handle_on_tool_end(
         # Now find and update the tool content in the current message. With
         # flat content_blocks we walk the list directly instead of indexing
         # into a single group's .contents.
-        duration = _calculate_duration(start_time)
-
         updated_tool_content = None
         for content in agent_message.content_blocks or []:
             if (
