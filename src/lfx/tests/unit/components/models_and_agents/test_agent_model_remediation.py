@@ -6,7 +6,8 @@ rebuild the model with the remediation override, retry once, and remember the
 winning override for the model (discover-once).
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
@@ -19,11 +20,37 @@ GPT56_RESPONSES_API_ERROR = RuntimeError(
 )
 
 
-class ResponsesApiConnectedModel(FakeListChatModel):
+class ChatOpenAI(FakeListChatModel):
+    """Dependency-free ChatOpenAI stand-in for the isolated LFX test suite."""
+
+    model_name: str = "gpt-5.6-luna"
     use_responses_api: bool = False
 
 
-@pytest.mark.asyncio
+def _attach_connected_model_source(agent, provider: str) -> None:
+    """Attach minimal graph provenance for a model wired into the Agent input."""
+    source = SimpleNamespace(
+        custom_component=SimpleNamespace(provider=None, model=[], display_name=provider),
+    )
+    graph = MagicMock()
+    graph.get_vertex.return_value = source
+    vertex = MagicMock()
+    vertex.graph = graph
+    vertex.get_incoming_edge_by_target_param.return_value = "model-source"
+    agent.set_vertex(vertex)
+
+
+def test_connected_model_provider_requires_matching_source_and_model_class():
+    from lfx.components.models_and_agents.agent import AgentComponent
+
+    connected_model = FakeListChatModel(responses=["unused"])
+    agent = AgentComponent()
+    agent.model = connected_model
+    _attach_connected_model_source(agent, "OpenAI")
+
+    assert agent._selected_model_remediation_context() == (None, None, connected_model)
+
+
 async def test_message_response_remediates_responses_api_error_and_remembers():
     from lfx.base.models import model_remediation
     from lfx.components.models_and_agents.agent import AgentComponent
@@ -64,22 +91,31 @@ async def test_message_response_remediates_responses_api_error_and_remembers():
         model_remediation.reset_remediation_cache()
 
 
-@pytest.mark.asyncio
 async def test_message_response_remediates_a_connected_model_in_place_without_caching():
     from lfx.base.models import model_remediation
     from lfx.components.models_and_agents.agent import AgentComponent
 
     model_remediation.reset_remediation_cache()
     try:
-        connected_model = ResponsesApiConnectedModel(responses=["unused"])
+        connected_model = ChatOpenAI(responses=["unused"])
         agent = AgentComponent()
         agent.model = connected_model
         agent.input_value = "hi"
         agent.system_prompt = ""
         agent.tools = []
+        agent.add_current_date_tool = False
+        agent.add_calculator_tool = False
+        _attach_connected_model_source(agent, "OpenAI")
         seen_values: list[bool] = []
 
+        assert agent._selected_model_remediation_context() == (
+            "OpenAI",
+            "gpt-5.6-luna",
+            connected_model,
+        )
+
         async def run_agent(_agent):
+            assert agent.llm is connected_model
             seen_values.append(connected_model.use_responses_api)
             if not connected_model.use_responses_api:
                 raise GPT56_RESPONSES_API_ERROR
@@ -87,14 +123,13 @@ async def test_message_response_remediates_a_connected_model_in_place_without_ca
 
         mocked_run_agent = AsyncMock(side_effect=run_agent)
         with (
+            patch.object(model_remediation, "remember") as remember,
             patch.object(
                 AgentComponent,
-                "get_agent_requirements",
-                new=AsyncMock(return_value=(connected_model, [], [])),
+                "get_memory_data",
+                new=AsyncMock(return_value=[]),
             ),
             patch.object(AgentComponent, "create_agent_runnable", return_value=MagicMock()),
-            patch.object(AgentComponent, "_inject_dynamic_prompt_values", return_value=""),
-            patch.object(AgentComponent, "set", new=MagicMock()),
             patch.object(AgentComponent, "run_agent", new=mocked_run_agent),
         ):
             result = await agent.message_response()
@@ -103,47 +138,55 @@ async def test_message_response_remediates_a_connected_model_in_place_without_ca
         assert seen_values == [False, True]
         assert mocked_run_agent.await_count == 2
         assert connected_model.use_responses_api is True
-        assert model_remediation.cached_overrides(None, None) == {}
+        remember.assert_not_called()
+        assert model_remediation.cached_overrides("OpenAI", "gpt-5.6-luna") == {}
     finally:
         model_remediation.reset_remediation_cache()
 
 
-@pytest.mark.asyncio
-async def test_message_response_does_not_retry_when_connected_model_cannot_apply_remediation():
+async def test_message_response_does_not_retry_for_a_non_openai_connected_model():
     from lfx.base.models import model_remediation
     from lfx.components.models_and_agents.agent import AgentComponent
 
     model_remediation.reset_remediation_cache()
     try:
-        connected_model = FakeListChatModel(responses=["unused"])
+        # OpenRouter also uses ChatOpenAI, so the class name alone must not opt
+        # a connected model into an OpenAI-only remediation.
+        connected_model = ChatOpenAI(responses=["unused"])
         agent = AgentComponent()
         agent.model = connected_model
         agent.input_value = "hi"
         agent.system_prompt = ""
         agent.tools = []
+        agent.add_current_date_tool = False
+        agent.add_calculator_tool = False
+        _attach_connected_model_source(agent, "OpenRouter")
         mocked_run_agent = AsyncMock(side_effect=GPT56_RESPONSES_API_ERROR)
+
+        assert agent._selected_model_remediation_context() == (
+            "OpenRouter",
+            "gpt-5.6-luna",
+            connected_model,
+        )
 
         with (
             patch.object(
                 AgentComponent,
-                "get_agent_requirements",
-                new=AsyncMock(return_value=(connected_model, [], [])),
+                "get_memory_data",
+                new=AsyncMock(return_value=[]),
             ),
             patch.object(AgentComponent, "create_agent_runnable", return_value=MagicMock()),
-            patch.object(AgentComponent, "_inject_dynamic_prompt_values", return_value=""),
-            patch.object(AgentComponent, "set", new=MagicMock()),
             patch.object(AgentComponent, "run_agent", new=mocked_run_agent),
             pytest.raises(RuntimeError, match=r"gpt-5\.6-luna"),
         ):
             await agent.message_response()
 
         assert mocked_run_agent.await_count == 1
-        assert model_remediation.cached_overrides(None, None) == {}
+        assert model_remediation.cached_overrides("OpenAI", "gpt-5.6-luna") == {}
     finally:
         model_remediation.reset_remediation_cache()
 
 
-@pytest.mark.asyncio
 async def test_message_response_does_not_retry_unrelated_errors():
     from lfx.base.models import model_remediation
     from lfx.components.models_and_agents.agent import AgentComponent
@@ -177,6 +220,62 @@ async def test_message_response_does_not_retry_unrelated_errors():
             await agent.message_response()
 
         assert run_agent.await_count == 1
+        assert model_remediation.cached_overrides("OpenAI", "gpt-5.6-luna") == {}
+    finally:
+        model_remediation.reset_remediation_cache()
+
+
+async def test_json_response_remediates_a_connected_model_prompt_fallback():
+    from lfx.base.models import model_remediation
+    from lfx.components.models_and_agents.agent import AgentComponent
+
+    model_remediation.reset_remediation_cache()
+    try:
+        connected_model = ChatOpenAI(responses=["unused"])
+        agent = AgentComponent()
+        agent.model = connected_model
+        agent.input_value = "hi"
+        agent.system_prompt = ""
+        agent.tools = [MagicMock(name="tool")]
+        agent.add_current_date_tool = False
+        agent.add_calculator_tool = False
+        agent.output_schema = [{"name": "answer", "type": "str", "multiple": False}]
+        agent.format_instructions = ""
+        _attach_connected_model_source(agent, "OpenAI")
+        seen_values: list[bool] = []
+        tool_effects: list[str] = []
+
+        async def run_agent(_agent):
+            assert agent.llm is connected_model
+            seen_values.append(connected_model.use_responses_api)
+            if not connected_model.use_responses_api:
+                raise GPT56_RESPONSES_API_ERROR
+            tool_effects.append("executed")
+            return Message(text='{"answer": "ok"}')
+
+        mocked_run_agent = AsyncMock(side_effect=run_agent)
+        mocked_create_agent = MagicMock()
+        with (
+            patch.object(model_remediation, "remember") as remember,
+            patch.object(
+                AgentComponent,
+                "get_memory_data",
+                new=AsyncMock(return_value=[]),
+            ),
+            patch.object(AgentComponent, "create_agent_runnable", new=mocked_create_agent),
+            patch.object(AgentComponent, "run_agent", new=mocked_run_agent),
+        ):
+            result = await agent.json_response()
+
+        assert result.data == {"answer": "ok"}
+        assert seen_values == [False, True]
+        assert tool_effects == ["executed"]
+        assert mocked_run_agent.await_count == 2
+        assert mocked_create_agent.call_args_list == [
+            call(allow_interrupts=False),
+            call(allow_interrupts=False),
+        ]
+        remember.assert_not_called()
         assert model_remediation.cached_overrides("OpenAI", "gpt-5.6-luna") == {}
     finally:
         model_remediation.reset_remediation_cache()

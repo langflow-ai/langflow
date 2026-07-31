@@ -36,8 +36,13 @@ class TestFindRemediation:
         assert rem is not None
         assert rem.overrides == {"use_responses_api": True}
 
-    def test_should_match_openai_responses_api_constraint_when_provider_is_unknown(self):
+    def test_should_not_match_openai_responses_api_constraint_when_provider_is_unknown(self):
         rem = find_remediation(GPT56_ERROR, provider=None, already_applied=set())
+        assert rem is None
+
+    def test_should_match_alternate_openai_responses_api_wording(self):
+        error = "reasoning_effort is incompatible with function tools. To use function tools, use /v1/responses."
+        rem = find_remediation(error, provider="OpenAI", already_applied=set())
         assert rem is not None
         assert rem.overrides == {"use_responses_api": True}
 
