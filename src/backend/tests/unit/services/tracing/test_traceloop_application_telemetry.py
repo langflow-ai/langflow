@@ -133,6 +133,47 @@ def test_application_spans_do_not_reach_the_vendor_without_an_apm():
     assert result["traceloop"] == [], "application telemetry leaked to the LLM vendor"
 
 
+def test_the_integration_is_disabled_when_the_filter_cannot_be_installed():
+    """A future SDK that stops using the factory must break the integration, not the boundary.
+
+    ``traceloop-sdk`` is depended on across a wide range, and the filter is installed by wrapping
+    a function of theirs. If a release stops routing through it, nothing else changes: spans keep
+    flowing and the only difference is that the service's own telemetry is in them. So a run that
+    builds the SDK's pipeline without installing the filter has to fail loudly instead.
+
+    Simulated by making the factory unreachable under the name the wrapper replaces, which is
+    what any rename or inlining upstream would look like from here.
+    """
+    result = _run("""
+        os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = f"http://127.0.0.1:{apm_port}"
+        os.environ["OTEL_TRACES_EXPORTER"] = "otlp"
+
+        from lfx.observability import bootstrap_application_telemetry, APPLICATION_TRACER_NAME
+        telemetry = bootstrap_application_telemetry(prometheus_enabled=False)
+
+        # Stand in for an upstream release that builds its exporter some other way: the name the
+        # wrapper replaces is still there, but init no longer calls it.
+        from traceloop.sdk.tracing import tracing as traceloop_tracing
+        real = traceloop_tracing.get_default_span_processor
+        traceloop_tracing.TracerWrapper.__new__ = (
+            lambda cls, *a, **kw: object.__new__(cls) if not hasattr(cls, "instance") else cls.instance
+        )
+
+        from langflow.services.tracing.traceloop import TraceloopTracer
+        tracer = TraceloopTracer(
+            trace_name="probe", trace_type="chain", project_name="probe", trace_id=uuid.uuid4()
+        )
+
+        from opentelemetry import trace
+        trace.get_tracer(APPLICATION_TRACER_NAME).start_span("flow.execute").end()
+        telemetry.tracer_provider.force_flush(5000)
+        report(ready=tracer.ready)
+    """)
+
+    assert result["ready"] is False, "the integration must refuse to run without the filter"
+    assert result["traceloop"] == [], "application telemetry leaked to the LLM vendor"
+
+
 def test_vendor_spans_still_reach_the_vendor():
     """Filtering our telemetry out must not cost Traceloop its own spans.
 

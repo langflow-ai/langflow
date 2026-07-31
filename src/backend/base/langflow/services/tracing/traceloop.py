@@ -23,7 +23,7 @@ from typing_extensions import override
 from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
     from uuid import UUID
 
     from langchain_core.callbacks.base import BaseCallbackHandler
@@ -34,9 +34,23 @@ if TYPE_CHECKING:
     from langflow.services.tracing.schema import Log
 
 
-# Traceloop.init is not reentrant (TracerWrapper is a singleton built in __new__) and the patch
-# below is on a process-wide object, so concurrent flow runs are serialised through this.
+# ---------------------------------------------------------------------------------------------
+# Keeping the service's own telemetry out of Traceloop's exporter.
+#
+# The SDK takes no tracer provider. It adopts whichever provider is global and attaches its
+# exporter to that, so its exporter sees every span on that provider -- including the service's
+# own HTTP and flow spans. ``instrument_fastapi_app`` runs unconditionally at startup, so those
+# HTTP spans exist in every install, whether or not an APM is configured. Without a filter they
+# are shipped to the vendor along with the LLM traces the operator actually asked for.
+# ---------------------------------------------------------------------------------------------
+
+# Traceloop.init is not reentrant (TracerWrapper is a singleton built in __new__) and the hook
+# below is on a module attribute, so concurrent flow runs are serialised through this.
 _INIT_LOCK = threading.Lock()
+
+# Set once the filter has been observed to install. Only the init that actually builds the
+# SDK's pipeline runs the factory; later ones are no-ops and must not be read as a failure.
+_boundary_installed = False
 
 
 class _ApplicationScopeFilter(SpanProcessor):
@@ -46,6 +60,10 @@ class _ApplicationScopeFilter(SpanProcessor):
     its own LLM spans and anything else it instruments. The default falls towards the vendor
     deliberately: the allowlist is the set we know the APM exports, and dropping only that is
     what makes this safe to wrap around a pipeline whose contents we do not control.
+
+    Note that ``APPLICATION_INSTRUMENTATION_SCOPES`` is therefore load-bearing in two
+    directions. Adding a scope to it enriches the APM *and* removes that scope from every
+    Traceloop trace.
     """
 
     def __init__(self, wrapped: SpanProcessor) -> None:
@@ -76,46 +94,61 @@ class _ApplicationScopeFilter(SpanProcessor):
 
 
 @contextmanager
-def _application_telemetry_withheld():
-    """Keep the service's own telemetry out of whatever exporter Traceloop attaches.
+def _application_telemetry_withheld() -> Iterator[None]:
+    """Wrap the SDK's span processor factory for the duration of ``Traceloop.init``.
 
-    The SDK takes no tracer provider. It adopts whichever provider is global and adds its
-    exporter to that, so when application observability is enabled it is our provider it
-    attaches to, and its exporter then sees every span on it -- including the service's own
-    HTTP and flow spans, which the operator pointed at their APM and not at Traceloop.
-
-    When no OTLP endpoint is configured the bootstrap installs nothing and the global provider
-    is still a proxy, which does not make the problem go away: the SDK then creates a concrete
-    provider and registers it globally, the proxy resolves onto it, and the service's spans
-    reach the vendor by the same route. So the filter has to apply in both cases.
-
-    It is applied to the SDK's own processor factory rather than to the provider. Patching the
-    provider's ``add_span_processor`` only covers the case where a provider already exists, and
-    it is a shared object -- a processor another integration registers while ``init`` is running
-    would be wrapped too, and would then have this filter's boundary applied backwards.
+    The factory is the hook because it is the one place every export path goes through. The
+    provider is not: patching ``add_span_processor`` only covers the case where a provider
+    already exists, and misses the far more common one where no APM is configured, the global
+    provider is still a proxy, and the SDK creates and registers its own concrete provider that
+    the proxy then resolves onto. The provider is also shared, so a processor another
+    integration registered during ``init`` would be wrapped and have this boundary applied
+    backwards.
 
     Passing ``processor=`` to ``init`` is the other obvious hook and is worse: it turns off the
     SDK's metrics, drops the ``TRACELOOP_HEADERS`` auth the Instana integration depends on,
-    makes ``disable_batch`` inert and skips prompt sync. Wrapping the factory leaves all of
-    that alone, because from ``init``'s point of view no processor was supplied.
+    makes ``disable_batch`` inert and skips prompt sync. Wrapping the factory leaves all of that
+    alone, because from ``init``'s point of view no processor was supplied.
 
-    Serialised because flows run concurrently and the patch is on a module attribute: two
-    tracers initialising at once would otherwise have the first one's restore run while the
-    second is still inside init, leaving that run's processor unwrapped.
+    Fails closed. ``traceloop-sdk`` is depended on across a wide range, and if a release stops
+    routing through this factory the filter stops applying with no other symptom. A silent leak
+    is the one failure mode an export boundary must not have, so an init that builds the SDK's
+    pipeline without installing the filter raises instead of exporting unfiltered.
+
+    Serialised because flows run concurrently and the hook is on a module attribute: two tracers
+    initialising at once would otherwise have the first one's restore run while the second is
+    still inside init, leaving that run's processor unwrapped.
     """
+    global _boundary_installed  # noqa: PLW0603
     from traceloop.sdk.tracing import tracing as traceloop_tracing
 
     with _INIT_LOCK:
         original = traceloop_tracing.get_default_span_processor
+        installed: list[_ApplicationScopeFilter] = []
 
         def get_default_span_processor(*args, **kwargs) -> SpanProcessor:
-            return _ApplicationScopeFilter(original(*args, **kwargs))
+            span_processor = _ApplicationScopeFilter(original(*args, **kwargs))
+            installed.append(span_processor)
+            return span_processor
 
         traceloop_tracing.get_default_span_processor = get_default_span_processor
         try:
             yield
         finally:
             traceloop_tracing.get_default_span_processor = original
+
+        if installed:
+            _boundary_installed = True
+        elif not _boundary_installed:
+            msg = (
+                "Traceloop was initialised without the filter that keeps Langflow's own "
+                "telemetry out of its exporter, so the integration has been disabled rather "
+                "than shipping the service's HTTP and flow spans to the vendor. This means the "
+                "installed traceloop-sdk no longer builds its exporter through "
+                "get_default_span_processor; pin traceloop-sdk to a version that does."
+            )
+            logger.error(msg)
+            raise RuntimeError(msg)
 
 
 class TraceloopTracer(BaseTracer):
