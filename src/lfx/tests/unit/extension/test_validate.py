@@ -105,17 +105,22 @@ def test_deferred_field_emits_dedicated_code(tmp_path: Path) -> None:
     assert report.errors.errors[0].content == "services"
 
 
-def test_multi_bundle_emits_dedicated_code(tmp_path: Path) -> None:
-    bad = {
+def test_multi_bundle_validates_each_declared_path(tmp_path: Path) -> None:
+    manifest = {
         **_BASE_MANIFEST,
         "bundles": [
-            {"name": "a", "path": "a"},
-            {"name": "b", "path": "b"},
+            {"name": "alpha", "path": "alpha"},
+            {"name": "bravo", "path": "bravo"},
         ],
     }
-    (tmp_path / "extension.json").write_text(json.dumps(bad), encoding="utf-8")
+    (tmp_path / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
+    for name in ("alpha", "bravo"):
+        bundle = tmp_path / name
+        bundle.mkdir()
+        (bundle / "component.py").write_text(_component_source(), encoding="utf-8")
     report = validate_extension(tmp_path)
-    assert _codes(report) == ["multi-bundle-unsupported"]
+    assert report.ok
+    assert report.bundle_files_scanned == 2
 
 
 # ---------------------------------------------------------------------------
