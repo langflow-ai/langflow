@@ -26,6 +26,8 @@ down_revision: str | None = "cp01a2b3c4d5"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+_BATCH_SIZE = 1000
+
 
 def upgrade() -> None:
     conn = op.get_bind()
@@ -34,36 +36,42 @@ def upgrade() -> None:
     grant = sa.Table("authz_role_assignment_grant", metadata, autoload_with=conn)
 
     existing_source = sa.exists(sa.select(grant.c.id).where(grant.c.assignment_id == assignment.c.id))
-    rows = conn.execute(
-        sa.select(
-            assignment.c.id,
-            assignment.c.assigned_by,
-            assignment.c.assigned_at,
-        ).where(~existing_source)
-    ).all()
-    if not rows:
-        return
+    last_assignment_id = None
 
     def new_grant_id():
         value = uuid4()
         return value.hex if conn.dialect.name == "sqlite" else value
 
-    conn.execute(
-        grant.insert(),
-        [
-            {
-                "id": new_grant_id(),
-                "assignment_id": row.id,
-                "source_kind": "manual",
-                "provider_id": None,
-                "external_group": None,
-                "administrative_actor": row.assigned_by,
-                "created_at": row.assigned_at,
-                "updated_at": row.assigned_at,
-            }
-            for row in rows
-        ],
-    )
+    while True:
+        query = sa.select(
+            assignment.c.id,
+            assignment.c.assigned_by,
+            assignment.c.assigned_at,
+        ).where(~existing_source)
+        if last_assignment_id is not None:
+            query = query.where(assignment.c.id > last_assignment_id)
+
+        rows = conn.execute(query.order_by(assignment.c.id).limit(_BATCH_SIZE)).all()
+        if not rows:
+            return
+
+        conn.execute(
+            grant.insert(),
+            [
+                {
+                    "id": new_grant_id(),
+                    "assignment_id": row.id,
+                    "source_kind": "manual",
+                    "provider_id": None,
+                    "external_group": None,
+                    "administrative_actor": row.assigned_by,
+                    "created_at": row.assigned_at,
+                    "updated_at": row.assigned_at,
+                }
+                for row in rows
+            ],
+        )
+        last_assignment_id = rows[-1].id
 
 
 def downgrade() -> None:

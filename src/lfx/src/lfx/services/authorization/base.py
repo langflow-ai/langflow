@@ -146,6 +146,15 @@ class DirectoryMembershipSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class DirectoryMembershipIngestResult:
+    """Outcome of ingesting a provider directory-membership snapshot."""
+
+    changed: bool = False
+    added: int = 0
+    removed: int = 0
+
+
+@dataclass(frozen=True, slots=True)
 class ResourceVisibilityScope:
     """Compact SQL-prefilter contract for resource-list authorization.
 
@@ -441,13 +450,14 @@ class BaseAuthorizationService(Service, abc.ABC):
         *,
         session: Any,
         snapshot: DirectoryMembershipSnapshot,
-    ) -> None:
+    ) -> DirectoryMembershipIngestResult:
         """Ingest one complete provider snapshot in the caller's transaction.
 
         The base implementation is intentionally inert. Directory polling and
         provider-specific pagination remain plugin responsibilities.
         """
         _ = (session, snapshot)
+        return DirectoryMembershipIngestResult()
 
     async def external_groups_claim(
         self,

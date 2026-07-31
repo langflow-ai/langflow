@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from lfx.log.logger import logger
 from lfx.services.authorization import (
     AuthorizationMutation,
@@ -235,13 +235,18 @@ async def create_assignment(
     return (await _assignment_reads(session, [assignment]))[0]
 
 
-@router.delete("/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{assignment_id}",
+    response_model=RoleAssignmentRead,
+    status_code=status.HTTP_200_OK,
+    responses={status.HTTP_204_NO_CONTENT: {"description": "Manual assignment fully revoked."}},
+)
 async def delete_assignment(
     assignment_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
-) -> None:
-    """Revoke a role assignment. Superuser-only."""
+) -> RoleAssignmentRead | Response:
+    """Remove a manual grant, returning the assignment when another source preserves it."""
     _require_superuser(current_user)
     assignment = await session.get(AuthzRoleAssignment, assignment_id)
     if assignment is None:
@@ -258,6 +263,7 @@ async def delete_assignment(
             detail="IdP-derived assignments cannot be deleted through the manual assignment API",
         )
     if manual_grant is not None and len(grants) > 1:
+        surviving_grants = [grant for grant in grants if grant is not manual_grant]
         await session.delete(manual_grant)
         await session.commit()
         await audit_decision(
@@ -265,9 +271,25 @@ async def delete_assignment(
             action="role_assignment:delete_manual_source",
             obj=f"user:{assignment.user_id}",
             result="allow",
-            details={"assignment_id": str(assignment_id), "effective_assignment_preserved": True},
+            details={
+                "assignment_id": str(assignment_id),
+                "role_id": str(assignment.role_id),
+                "domain_type": assignment.domain_type,
+                "domain_id": str(assignment.domain_id) if assignment.domain_id else None,
+                "effective_assignment_preserved": True,
+                "surviving_grant_sources": [
+                    {
+                        "source_kind": grant.source_kind,
+                        "provider_id": grant.provider_id,
+                        "external_group": grant.external_group,
+                    }
+                    for grant in surviving_grants
+                ],
+            },
         )
-        return
+        return RoleAssignmentRead.model_validate(assignment).model_copy(
+            update={"grant_sources": [RoleAssignmentGrantSummary.model_validate(grant) for grant in surviving_grants]}
+        )
 
     user_id = assignment.user_id
     role_id = assignment.role_id
@@ -306,3 +328,4 @@ async def delete_assignment(
         },
     )
     logger.info("Revoked role assignment id=%s (user=%s)", assignment_id, user_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
