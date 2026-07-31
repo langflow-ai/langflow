@@ -2,7 +2,7 @@
 
 Phase: EXPAND
 Revision ID: e8f1a2b3c4d5
-Revises: b7d5f9a3c2e4
+Revises: cp03a2b3c4d5
 Create Date: 2026-07-29 00:00:00.000000
 
 The singleton starts with an empty approved-provider list. Empty deliberately
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 revision: str = "e8f1a2b3c4d5"  # pragma: allowlist secret
-down_revision: str | None = "b7d5f9a3c2e4"  # pragma: allowlist secret
+down_revision: str | None = "cp03a2b3c4d5"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

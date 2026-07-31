@@ -26,7 +26,7 @@ def test_model_provider_policy_migration_upgrades_and_downgrades_sqlite(monkeypa
         columns = {column["name"]: column for column in inspector.get_columns(_MIGRATION.TABLE_NAME)}
         primary_key = inspector.get_pk_constraint(_MIGRATION.TABLE_NAME)
 
-        assert _MIGRATION.down_revision == "b7d5f9a3c2e4"  # pragma: allowlist secret
+        assert _MIGRATION.down_revision == "cp03a2b3c4d5"  # pragma: allowlist secret
         assert set(columns) == {"id", "approved_provider_ids", "version"}
         assert all(column["nullable"] is False for column in columns.values())
         assert primary_key["constrained_columns"] == ["id"]
