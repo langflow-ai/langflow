@@ -17,7 +17,7 @@ from lfx.base.models.model_remediation import (
 
 GPT56_ERROR = (
     "Error building Component Agent: Error code: 400 - {'error': {'message': "
-    '"Function tools with reasoning_effort are not supported for gpt-5.6 in '
+    '"Function tools with reasoning_effort are not supported for gpt-5.6-luna in '
     "/v1/chat/completions. To use function tools, use /v1/responses or set "
     "reasoning_effort to 'none'.\", 'type': 'invalid_request_error'}}"
 )
@@ -36,11 +36,20 @@ class TestFindRemediation:
         assert rem is not None
         assert rem.overrides == {"use_responses_api": True}
 
+    def test_should_match_openai_responses_api_constraint_when_provider_is_unknown(self):
+        rem = find_remediation(GPT56_ERROR, provider=None, already_applied=set())
+        assert rem is not None
+        assert rem.overrides == {"use_responses_api": True}
+
     def test_should_not_match_for_a_different_provider(self):
         assert find_remediation(GPT56_ERROR, provider="Anthropic", already_applied=set()) is None
 
     def test_should_not_match_unrelated_errors(self):
         assert find_remediation("rate limit exceeded", provider="OpenAI", already_applied=set()) is None
+
+    def test_should_not_match_an_unrelated_responses_api_suggestion(self):
+        error = "This feature is only available through /v1/responses."
+        assert find_remediation(error, provider=None, already_applied=set()) is None
 
     def test_should_skip_a_remediation_already_applied(self):
         rem = find_remediation(GPT56_ERROR, provider="OpenAI", already_applied=set())

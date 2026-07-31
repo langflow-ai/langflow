@@ -741,20 +741,33 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             session_id=session_id or uuid.uuid4(),
         )
 
-    def _selected_provider_and_model(self) -> tuple[str | None, str | None]:
-        """Provider/name of the selected model, for error-driven remediation."""
+    def _selected_model_remediation_context(self) -> tuple[str | None, str | None, Any | None]:
+        """Return provider/name plus a connected model target, when present."""
         try:
             selected = self._resolve_selected_model()
             if isinstance(selected, list) and selected and isinstance(selected[0], dict):
-                return selected[0].get("provider"), selected[0].get("name")
+                return selected[0].get("provider"), selected[0].get("name"), None
+
+            from langchain_core.language_models import BaseLanguageModel
+
+            if isinstance(selected, BaseLanguageModel):
+                model_name = next(
+                    (
+                        getattr(selected, attr, None)
+                        for attr in ("model_name", "model", "model_id")
+                        if getattr(selected, attr, None)
+                    ),
+                    None,
+                )
+                return None, model_name if isinstance(model_name, str) else None, selected
         except (AttributeError, TypeError, KeyError, ImportError):
             pass
-        return None, None
+        return None, None, None
 
     async def message_response(self) -> Message:
-        from lfx.base.models.model_remediation import find_remediation, remember
+        from lfx.base.models.model_remediation import apply_overrides_to_model, find_remediation, remember
 
-        provider, model_name = self._selected_provider_and_model()
+        provider, model_name, connected_model = self._selected_model_remediation_context()
         applied: set[str] = set()
         while True:
             try:
@@ -782,14 +795,23 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                     label = type(e).__name__
                     await logger.aerror(f"{label}: {e!s}")
                     raise
+                if connected_model is not None and not apply_overrides_to_model(connected_model, remediation.overrides):
+                    await logger.aerror(
+                        f"model.remediation.unapplied name={remediation.name} provider={provider} model={model_name}"
+                    )
+                    raise
                 applied.add(remediation.name)
-                self._model_overrides = {**(getattr(self, "_model_overrides", None) or {}), **remediation.overrides}
+                if connected_model is None:
+                    self._model_overrides = {
+                        **(getattr(self, "_model_overrides", None) or {}),
+                        **remediation.overrides,
+                    }
                 await logger.awarning(
                     f"model.remediation.applied name={remediation.name} provider={provider} model={model_name}"
                 )
                 continue
             else:
-                if getattr(self, "_model_overrides", None):
+                if connected_model is None and getattr(self, "_model_overrides", None):
                     remember(provider, model_name, self._model_overrides)
                 return result
 
