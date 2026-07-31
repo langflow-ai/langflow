@@ -3,13 +3,17 @@ from __future__ import annotations
 import json
 import math
 import os
+import threading
 import types
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from lfx.log.logger import logger
+from lfx.observability import APPLICATION_INSTRUMENTATION_SCOPES
 from opentelemetry import trace
+from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.trace import Span, use_span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from traceloop.sdk import Traceloop
@@ -28,6 +32,84 @@ if TYPE_CHECKING:
 
     from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
+
+
+# Traceloop.init is not reentrant (TracerWrapper is a singleton built in __new__) and the patch
+# below is on a process-wide object, so concurrent flow runs are serialised through this.
+_INIT_LOCK = threading.Lock()
+
+
+class _ApplicationScopeFilter(SpanProcessor):
+    """Delegates to a Traceloop processor, minus the spans that belong to the operator's APM.
+
+    Everything the application allowlist does not claim is passed through, so the vendor keeps
+    its own LLM spans and anything else it instruments. The default falls towards the vendor
+    deliberately: the allowlist is the set we know the APM exports, and dropping only that is
+    what makes this safe to wrap around a pipeline whose contents we do not control.
+    """
+
+    def __init__(self, wrapped: SpanProcessor) -> None:
+        self._wrapped = wrapped
+        self._dropped_scopes: set[str] = set()
+
+    @override
+    def on_start(self, span, parent_context=None) -> None:
+        self._wrapped.on_start(span, parent_context)
+
+    @override
+    def on_end(self, span) -> None:
+        scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
+        if scope not in APPLICATION_INSTRUMENTATION_SCOPES:
+            self._wrapped.on_end(span)
+            return
+        if scope not in self._dropped_scopes:
+            self._dropped_scopes.add(scope)
+            logger.debug(f"Not sending {scope!r} spans to Traceloop; that is application telemetry.")
+
+    @override
+    def shutdown(self) -> None:
+        self._wrapped.shutdown()
+
+    @override
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        return self._wrapped.force_flush(timeout_millis)
+
+
+@contextmanager
+def _application_telemetry_withheld():
+    """Keep the service's own telemetry out of whatever exporter Traceloop attaches.
+
+    The SDK takes no tracer provider. It adopts whichever provider is global and adds its
+    exporter to that, so when application observability is enabled it is our provider it
+    attaches to, and its exporter then sees every span on it -- including the service's own
+    HTTP and flow spans, which the operator pointed at their APM and not at Traceloop.
+
+    Wrapping ``add_span_processor`` for the duration of ``init`` rather than passing
+    ``processor=`` leaves the SDK's own pipeline alone. Supplying a processor also turns off
+    its metrics, drops the ``TRACELOOP_HEADERS`` auth the Instana integration depends on,
+    makes ``disable_batch`` inert and skips prompt sync, none of which this needs to touch.
+    It also fails the right way: a span can only reach the vendor via a processor added to
+    our provider, and that is the one call intercepted here.
+
+    Serialised because flows run concurrently and the patch is on a process-wide object: two
+    tracers initialising at once would otherwise have the first one's restore run while the
+    second is still inside init, leaving that run's processor unwrapped.
+    """
+    with _INIT_LOCK:
+        provider = trace.get_tracer_provider()
+        if not hasattr(provider, "add_span_processor"):
+            # A proxy provider: the SDK builds its own, which carries nothing of ours.
+            yield
+            return
+
+        def add_span_processor(processor: SpanProcessor) -> None:
+            type(provider).add_span_processor(provider, _ApplicationScopeFilter(processor))
+
+        provider.add_span_processor = add_span_processor
+        try:
+            yield
+        finally:
+            del provider.add_span_processor
 
 
 class TraceloopTracer(BaseTracer):
@@ -55,14 +137,16 @@ class TraceloopTracer(BaseTracer):
             return
 
         api_key = os.getenv("TRACELOOP_API_KEY", "").strip()
+        api_endpoint = os.getenv("TRACELOOP_BASE_URL", "https://api.traceloop.com")
         try:
-            Traceloop.init(
-                block_instruments={Instruments.PYMYSQL},
-                app_name=project_name,
-                disable_batch=True,
-                api_key=api_key,
-                api_endpoint=os.getenv("TRACELOOP_BASE_URL", "https://api.traceloop.com"),
-            )
+            with _application_telemetry_withheld():
+                Traceloop.init(
+                    block_instruments={Instruments.PYMYSQL},
+                    app_name=project_name,
+                    disable_batch=True,
+                    api_key=api_key,
+                    api_endpoint=api_endpoint,
+                )
             self._ready = True
             self._tracer = trace.get_tracer("langflow")
             self.propagator = TraceContextTextMapPropagator()
