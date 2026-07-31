@@ -37,6 +37,7 @@ import {
 import MemoriesMainContent from "./components/MemoriesMainContent";
 import Page from "./components/PageComponent";
 import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
+import { saveBeforeLeaving } from "./save-before-leaving";
 
 function FlowPageMainContent({
   flowId,
@@ -90,7 +91,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -123,43 +123,17 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   useWebhookEvents();
 
   const handleSave = () => {
-    let saving = true;
-    let proceed = false;
-    setTimeout(() => {
-      saving = false;
-      if (proceed) {
-        blocker.proceed && blocker.proceed();
+    void saveBeforeLeaving({
+      saveFlow,
+      autoSaving,
+      proceed: () => blocker.proceed?.(),
+      reset: () => blocker.reset?.(),
+      onSaved: () => {
         setSuccessData({
           title: t("flow.savedSuccessfully"),
         });
-      }
-    }, 1200);
-    saveFlow()
-      .then(() => {
-        if (!autoSaving || saving === false) {
-          blocker.proceed && blocker.proceed();
-          setSuccessData({
-            title: t("flow.savedSuccessfully"),
-          });
-        }
-        proceed = true;
-      })
-      .catch(() => {
-        // A save can fail for reasons the user cannot resolve from this
-        // dialog — most notably a 403 when they only have read access to a
-        // flow shared with them. Without handling the rejection, the pending
-        // 1200ms timeout never proceeds and the navigation blocker keeps the
-        // SaveChangesModal spinning, trapping the user on the flow. Unblock
-        // navigation and surface why the changes were not persisted.
-        saving = false;
-        blocker.proceed && blocker.proceed();
-        setErrorData({
-          title: "Changes not saved",
-          list: [
-            "You do not have permission to edit this flow, so your changes were not saved.",
-          ],
-        });
-      });
+      },
+    });
   };
 
   const handleExit = () => {
