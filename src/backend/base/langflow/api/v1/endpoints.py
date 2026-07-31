@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Collection
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID, uuid4
@@ -80,6 +80,7 @@ from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
     get_auth_service,
+    get_catalog_policy_service,
     get_job_service,
     get_memory_base_service,
     get_session_service,
@@ -180,22 +181,34 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
 
 
 @router.get("/all")
-async def get_all(request: Request, current_user: CurrentActiveUser):
+async def get_all(request: Request, current_user: CurrentActiveUser, *, include_blocked: bool = False):
     """Retrieve all component types with compression for better performance.
 
     Returns a compressed response containing all available component types,
     with display_names translated to the locale indicated by Accept-Language.
     """
+    if include_blocked and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only superusers can include blocked catalog components.",
+        )
+
     from langflow.interface.components import get_and_cache_all_types_dict
     from langflow.utils.i18n import build_component_display_names, translate_component_dict
 
     try:
+        catalog_policy_snapshot = get_catalog_policy_service().snapshot
         all_types_en = await get_and_cache_all_types_dict(settings_service=get_settings_service())
         visible_types_en = _filter_component_palette_by_provider_policy(
             all_types_en,
             user_id=current_user.id,
             attributes={"is_superuser": bool(current_user.is_superuser)},
         )
+        if not include_blocked:
+            visible_types_en = _filter_component_palette_by_catalog_policy(
+                visible_types_en,
+                blocked_component_keys=catalog_policy_snapshot.blocked_component_keys,
+            )
 
         locale = getattr(request.state, "locale", "en")
         all_types = translate_component_dict(visible_types_en, locale) if locale != "en" else visible_types_en
@@ -243,6 +256,28 @@ def _filter_component_palette_by_provider_policy(
             or not isinstance(component.get("metadata"), dict)
             or not (provider_id := component["metadata"].get("model_provider_id"))
             or policy.allows(provider_id)
+        }
+        for category, components in all_types.items()
+    }
+
+
+def _filter_component_palette_by_catalog_policy(
+    all_types: dict[str, dict[str, dict]],
+    *,
+    blocked_component_keys: Collection[str],
+) -> dict[str, dict[str, dict]]:
+    """Return shallow category copies with exact blocked component keys removed.
+
+    Catalog policy keys match the inner component-registry keys exactly and
+    case-sensitively across every category. Category order, component order,
+    and empty categories are preserved. Component payloads remain shared with
+    the process-wide cache and are never mutated or deep-copied.
+    """
+    return {
+        category: {
+            component_key: component
+            for component_key, component in components.items()
+            if component_key not in blocked_component_keys
         }
         for category, components in all_types.items()
     }
@@ -1670,14 +1705,27 @@ async def get_config(
     """
     try:
         settings_service: SettingsService = get_settings_service()
+        try:
+            catalog_governance_enabled = get_catalog_policy_service().enabled
+        except Exception as exc:  # noqa: BLE001
+            # Catalog governance is explicitly fail-open. A broken custom
+            # policy implementation must not break the public config endpoint
+            # or expose its internal exception text.
+            await logger.aexception("Catalog policy status unavailable; reporting governance disabled", exception=exc)
+            catalog_governance_enabled = False
 
         if user is None:
             return PublicConfigResponse.from_settings(
                 settings_service.settings,
                 settings_service.auth_settings,
+                catalog_governance_enabled=catalog_governance_enabled,
             )
 
-        return ConfigResponse.from_settings(settings_service.settings, settings_service.auth_settings)
+        return ConfigResponse.from_settings(
+            settings_service.settings,
+            settings_service.auth_settings,
+            catalog_governance_enabled=catalog_governance_enabled,
+        )
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
