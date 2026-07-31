@@ -388,7 +388,7 @@ async def test_provider_read_purpose_can_narrow_but_never_widen_endpoint_policy(
 
     async def _divergent_policy(*, user_id, providers, purpose, attributes=None):
         _ = attributes
-        candidate_ids = frozenset(provider_id_for(provider) or provider for provider in providers)
+        candidate_ids = frozenset(resolve_provider_id(provider) for provider in providers)
         return ModelProviderPolicySnapshot(
             context=ModelProviderPolicyContext(user_id=user_id),
             purpose=purpose,
