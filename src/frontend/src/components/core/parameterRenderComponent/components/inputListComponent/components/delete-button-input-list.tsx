@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { cn } from "@/utils/utils";
@@ -16,10 +17,16 @@ export const DeleteButtonInputList = ({
   editNode: boolean;
   componentName: string;
 }) => {
+  const { t } = useTranslation();
+
   return (
+    // Without an explicit type this defaults to submit, so removing a row
+    // inside a modal form (e.g. Add MCP Server) submits the form.
     <button
+      type="button"
       disabled={disabled}
       onClick={removeInput}
+      aria-label={t("paramRender.removeItem", { index: index + 1 })}
       data-testid={getTestId("delete", index, editNode, componentName)}
       className={cn(
         "hit-area-icon delete-btn-group flex items-center justify-center",

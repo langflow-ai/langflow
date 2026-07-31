@@ -6,7 +6,6 @@ import MultiselectComponent from "@/components/core/parameterRenderComponent/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ProviderVariable } from "@/constants/providerConstants";
-import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
 import DisconnectWarning from "./DisconnectWarning";
 import type { Provider } from "./types";
@@ -148,18 +147,24 @@ const ProviderConfigurationForm = ({
         {requiresConfiguration ? (
           <>
             {t("modelProviders.configurePrefix")}{" "}
-            <span
-              className="underline cursor-pointer hover:text-primary"
-              onClick={() => {
-                if (selectedProvider.api_docs_url) {
-                  customOpenNewTab(selectedProvider.api_docs_url);
-                }
-              }}
-            >
-              {t("modelProviders.credentialsLink", {
-                provider: selectedProvider.provider,
-              })}
-            </span>{" "}
+            {selectedProvider.api_docs_url ? (
+              <a
+                href={selectedProvider.api_docs_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-primary rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {t("modelProviders.credentialsLink", {
+                  provider: selectedProvider.provider,
+                })}
+              </a>
+            ) : (
+              <span>
+                {t("modelProviders.credentialsLink", {
+                  provider: selectedProvider.provider,
+                })}
+              </span>
+            )}{" "}
             {t("modelProviders.toEnableModels")}
           </>
         ) : (
@@ -332,6 +337,7 @@ const ProviderConfigurationForm = ({
               <Button
                 variant="destructive"
                 size="sm"
+                data-testid="provider-disconnect-button"
                 onClick={() => setShowDisconnectWarning(true)}
                 loading={isDeleting || isFetchingAfterDisconnect}
                 disabled={isDeleting || isFetchingAfterDisconnect || isSaving}
@@ -371,6 +377,7 @@ const ProviderConfigurationForm = ({
           {selectedProvider.is_enabled && (
             <Button
               variant="destructive"
+              data-testid="provider-deactivate-button"
               onClick={() => setShowDisconnectWarning(true)}
               disabled={isDeleting || isPending}
             >
@@ -397,7 +404,6 @@ const ProviderConfigurationForm = ({
           setShowDisconnectWarning(false);
         }}
         isLoading={isDeleting}
-        className="absolute inset-0 m-4 bg-background z-50 border-destructive border h-[165px]"
       />
     </div>
   );

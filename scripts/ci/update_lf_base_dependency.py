@@ -11,7 +11,7 @@ ARGUMENT_NUMBER = 3
 
 
 def update_base_dep(pyproject_path: str, new_version: str) -> None:
-    """Pin every ``langflow-base`` requirement in a core pyproject."""
+    """Pin every ``langflow-base`` requirement in a consumer pyproject."""
     filepath = BASE_DIR / pyproject_path
     content = filepath.read_text(encoding="utf-8")
 
@@ -86,8 +86,8 @@ def main() -> None:
     verify_pep440(base_version)
     verify_pep440(lfx_version)
 
-    # Core owns the base dependency; main delegates to core.
-    update_base_dep("src/langflow-core/pyproject.toml", base_version)
+    # Main delegates directly to the product-aligned base distribution.
+    update_base_dep("pyproject.toml", base_version)
 
     # Update LFX dependency in langflow-base
     update_lfx_dep_in_base("src/backend/base/pyproject.toml", lfx_version)

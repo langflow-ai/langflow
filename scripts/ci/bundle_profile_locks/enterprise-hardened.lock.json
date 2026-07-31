@@ -33,14 +33,14 @@
       "resolved_version": "0.1.3"
     },
     {
-      "distribution": "lfx-arxiv",
+      "distribution": "lfx-azure",
       "extras": [],
       "providers": [
-        "lfx-arxiv"
+        "lfx-azure"
       ],
       "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-arxiv==0.1.3",
-      "resolved_version": "0.1.3"
+      "requirement": "lfx-azure==0.1.0",
+      "resolved_version": "0.1.0"
     },
     {
       "distribution": "lfx-cohere",
@@ -58,9 +58,9 @@
       "providers": [
         "lfx-datastax"
       ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-datastax==0.1.2",
-      "resolved_version": "0.1.2"
+      "requested": ">=0.1.3,<1.0.0",
+      "requirement": "lfx-datastax==0.1.3",
+      "resolved_version": "0.1.3"
     },
     {
       "distribution": "lfx-docling",
@@ -71,46 +71,6 @@
       "requested": ">=0.1.0,<1.0.0",
       "requirement": "lfx-docling==0.1.4",
       "resolved_version": "0.1.4"
-    },
-    {
-      "distribution": "lfx-duckduckgo",
-      "extras": [],
-      "providers": [
-        "lfx-duckduckgo"
-      ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-duckduckgo==0.1.3",
-      "resolved_version": "0.1.3"
-    },
-    {
-      "distribution": "lfx-empiriolabs",
-      "extras": [],
-      "providers": [
-        "lfx-empiriolabs"
-      ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-empiriolabs==0.1.1",
-      "resolved_version": "0.1.1"
-    },
-    {
-      "distribution": "lfx-exa",
-      "extras": [],
-      "providers": [
-        "lfx-exa"
-      ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-exa==0.1.1",
-      "resolved_version": "0.1.1"
-    },
-    {
-      "distribution": "lfx-firecrawl",
-      "extras": [],
-      "providers": [
-        "lfx-firecrawl"
-      ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-firecrawl==0.1.1",
-      "resolved_version": "0.1.1"
     },
     {
       "distribution": "lfx-google",
@@ -128,19 +88,19 @@
       "providers": [
         "lfx-ibm"
       ],
-      "requested": ">=0.1.4,<1.0.0",
-      "requirement": "lfx-ibm==0.1.4",
-      "resolved_version": "0.1.4"
+      "requested": ">=0.1.5,<1.0.0",
+      "requirement": "lfx-ibm==0.1.5",
+      "resolved_version": "0.1.5"
     },
     {
-      "distribution": "lfx-nextplaid",
+      "distribution": "lfx-ollama",
       "extras": [],
       "providers": [
-        "lfx-nextplaid"
+        "lfx-ollama"
       ],
       "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-nextplaid==0.1.1",
-      "resolved_version": "0.1.1"
+      "requirement": "lfx-ollama==0.1.0",
+      "resolved_version": "0.1.0"
     },
     {
       "distribution": "lfx-openai",
@@ -173,24 +133,14 @@
       "resolved_version": "0.1.1"
     },
     {
-      "distribution": "lfx-paddle",
+      "distribution": "lfx-toolguard",
       "extras": [],
       "providers": [
-        "lfx-paddle"
+        "lfx-toolguard"
       ],
       "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-paddle==0.1.1",
-      "resolved_version": "0.1.1"
-    },
-    {
-      "distribution": "lfx-valkey",
-      "extras": [],
-      "providers": [
-        "lfx-valkey"
-      ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-valkey==0.1.1",
-      "resolved_version": "0.1.1"
+      "requirement": "lfx-toolguard==0.1.0",
+      "resolved_version": "0.1.0"
     },
     {
       "distribution": "lfx-vllm",
@@ -210,26 +160,21 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:95f4c5899131fc3c",
+  "profile_digest": "sha256:aece55c6b65474ad",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
-    "lfx-arxiv",
+    "lfx-azure",
     "lfx-cohere",
     "lfx-datastax",
     "lfx-docling",
-    "lfx-duckduckgo",
-    "lfx-empiriolabs",
-    "lfx-exa",
-    "lfx-firecrawl",
     "lfx-google",
     "lfx-ibm",
-    "lfx-nextplaid",
+    "lfx-ollama",
     "lfx-openai",
     "lfx-openai-compatible",
     "lfx-oracle",
-    "lfx-paddle",
-    "lfx-valkey",
+    "lfx-toolguard",
     "lfx-vllm"
   ],
   "python": ">=3.10,<3.15",

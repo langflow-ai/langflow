@@ -29,25 +29,9 @@
       },
       "bundles": [
         {
-          "distribution": "lfx-duckduckgo",
-          "extras": [],
-          "version": ">=0.1.0,<1.0.0",
-          "providers": [
-            "lfx-duckduckgo"
-          ]
-        },
-        {
-          "distribution": "lfx-arxiv",
-          "extras": [],
-          "version": ">=0.1.0,<1.0.0",
-          "providers": [
-            "lfx-arxiv"
-          ]
-        },
-        {
           "distribution": "lfx-ibm",
           "extras": [],
-          "version": ">=0.1.4,<1.0.0",
+          "version": ">=0.1.5,<1.0.0",
           "providers": [
             "lfx-ibm"
           ]
@@ -63,9 +47,17 @@
         {
           "distribution": "lfx-datastax",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.3,<1.0.0",
           "providers": [
             "lfx-datastax"
+          ]
+        },
+        {
+          "distribution": "lfx-toolguard",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-toolguard"
           ]
         },
         {
@@ -82,6 +74,22 @@
           "version": ">=0.1.0,<1.0.0",
           "providers": [
             "lfx-anthropic"
+          ]
+        },
+        {
+          "distribution": "lfx-azure",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-azure"
+          ]
+        },
+        {
+          "distribution": "lfx-ollama",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-ollama"
           ]
         },
         {
@@ -109,43 +117,11 @@
           ]
         },
         {
-          "distribution": "lfx-firecrawl",
-          "extras": [],
-          "version": ">=0.1.0,<1.0.0",
-          "providers": [
-            "lfx-firecrawl"
-          ]
-        },
-        {
-          "distribution": "lfx-nextplaid",
-          "extras": [],
-          "version": ">=0.1.0,<1.0.0",
-          "providers": [
-            "lfx-nextplaid"
-          ]
-        },
-        {
-          "distribution": "lfx-paddle",
-          "extras": [],
-          "version": ">=0.1.0,<1.0.0",
-          "providers": [
-            "lfx-paddle"
-          ]
-        },
-        {
           "distribution": "lfx-vllm",
           "extras": [],
           "version": ">=0.1.0,<1.0.0",
           "providers": [
             "lfx-vllm"
-          ]
-        },
-        {
-          "distribution": "lfx-empiriolabs",
-          "extras": [],
-          "version": ">=0.1.0,<1.0.0",
-          "providers": [
-            "lfx-empiriolabs"
           ]
         },
         {
@@ -157,27 +133,11 @@
           ]
         },
         {
-          "distribution": "lfx-exa",
-          "extras": [],
-          "version": ">=0.1.0,<1.0.0",
-          "providers": [
-            "lfx-exa"
-          ]
-        },
-        {
           "distribution": "lfx-google",
           "extras": [],
           "version": ">=0.1.0,<1.0.0",
           "providers": [
             "lfx-google"
-          ]
-        },
-        {
-          "distribution": "lfx-valkey",
-          "extras": [],
-          "version": ">=0.1.0,<1.0.0",
-          "providers": [
-            "lfx-valkey"
           ]
         }
       ]
