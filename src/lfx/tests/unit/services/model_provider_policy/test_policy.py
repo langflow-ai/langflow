@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import builtins
 from dataclasses import FrozenInstanceError
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -142,6 +143,20 @@ def test_default_service_fails_closed_until_policy_source_recovers():
     assert service.policy_source_available is True
 
 
+def test_default_service_stays_available_when_unrestricted_policy_source_fails():
+    service = ModelProviderPolicyService()
+
+    assert service.fail_closed() is False
+    snapshot = service.resolve(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        candidate_provider_ids=frozenset({"openai", "anthropic"}),
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+
+    assert snapshot.allowed_provider_ids == frozenset({"openai", "anthropic"})
+    assert service.policy_source_available is True
+
+
 async def test_async_resolver_caches_until_invalidation():
     service = ModelProviderPolicyService()
     kwargs = {
@@ -208,7 +223,7 @@ def test_snapshot_cache_expires_after_ttl(monkeypatch):
     from lfx.services.model_provider_policy import base as policy_base
 
     now = [100.0]
-    monkeypatch.setattr(policy_base.time, "monotonic", lambda: now[0])
+    monkeypatch.setattr(policy_base, "time", SimpleNamespace(monotonic=lambda: now[0]))
     service = _CountingPolicy()
     service.SNAPSHOT_CACHE_TTL_SECONDS = 5.0
     kwargs = {

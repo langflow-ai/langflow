@@ -8,15 +8,27 @@ ones whose effects the user sees on the canvas immediately.
 from __future__ import annotations
 
 import json
-import re
 from types import SimpleNamespace
 
-from lfx.base.models.provider_registry import get_registry_snapshot, model_component_provider_id
+from lfx.base.models.provider_registry import get_registry_snapshot, model_component_provider_id, resolve_provider_id
 from lfx.custom import Component
-from lfx.graph.flow_builder.component import _coerce_model_value as fb_coerce_model_value
-from lfx.graph.flow_builder.component import add_component as fb_add_component
-from lfx.graph.flow_builder.component import configure_component as fb_configure
-from lfx.graph.flow_builder.component import remove_component as fb_remove_component
+from lfx.graph.flow_builder.component import (
+    CUSTOM_COMPONENT_CANVAS_TYPE,
+    FLOW_BUILDER_REGISTRY_TYPE_KEY,
+    FLOW_BUILDER_UNTRUSTED_CUSTOM_KEY,
+)
+from lfx.graph.flow_builder.component import (
+    _coerce_model_value as fb_coerce_model_value,
+)
+from lfx.graph.flow_builder.component import (
+    add_component as fb_add_component,
+)
+from lfx.graph.flow_builder.component import (
+    configure_component as fb_configure,
+)
+from lfx.graph.flow_builder.component import (
+    remove_component as fb_remove_component,
+)
 from lfx.graph.flow_builder.connect import add_connection as fb_add_connection
 from lfx.graph.flow_builder.layout import layout_flow
 from lfx.io import MessageTextInput, Output
@@ -233,12 +245,50 @@ def _model_providers_in_params(flow: dict, component_id: str, params: dict) -> s
     component = node_data.get("node", {})
     template = component.get("template", {}) if isinstance(component, dict) else {}
     providers = _model_providers_in_template(template, params) if isinstance(template, dict) else set()
-    component_type = node_data.get("type")
-    if isinstance(component_type, str) and isinstance(component, dict):
-        provider_id = _registry_component_provider_id({component_type: component}, component_type)
-        if provider_id:
-            providers.add(provider_id)
+    if provider_id := _stored_component_provider_id(node_data, _load_registry_user_aware()):
+        providers.add(provider_id)
     return providers
+
+
+def _stored_component_provider_id(node_data: dict, registry: dict[str, dict] | None = None) -> str | None:
+    """Return a stored node's standalone provider identity without losing custom provenance."""
+    component = node_data.get("node")
+    component_type = node_data.get("type")
+    if not isinstance(component, dict) or not isinstance(component_type, str):
+        return None
+
+    is_untrusted_custom = (
+        component_type == CUSTOM_COMPONENT_CANVAS_TYPE or node_data.get(FLOW_BUILDER_UNTRUSTED_CUSTOM_KEY) is True
+    )
+    if is_untrusted_custom:
+        registry_type = node_data.get(FLOW_BUILDER_REGISTRY_TYPE_KEY)
+        if not isinstance(registry_type, str) or not registry_type:
+            # Older stored CustomComponent nodes lack flow-builder provenance.
+            # Keep them in a denied-by-default custom namespace rather than
+            # trusting provider metadata serialized with the flow.
+            registry_type = CUSTOM_COMPONENT_CANVAS_TYPE
+        return _registry_component_provider_id(
+            {registry_type: {**component, "custom": True}},
+            registry_type,
+        )
+
+    if registry is not None and isinstance(registry.get(component_type), dict):
+        # Stored node metadata is editable flow data. When the type still
+        # exists, classify it from the current trusted registry entry.
+        return _registry_component_provider_id(registry, component_type)
+
+    # Registry-miss compatibility for older saved nodes: keep the stored
+    # component shape needed to derive its legacy identity, but never accept a
+    # serialized exemption or structural ModelInput delegation. The explicit
+    # standalone mode makes this path fail closed under a restrictive policy.
+    legacy_component = {**component, "model_provider_policy_mode": "standalone"}
+    legacy_component.pop("custom", None)
+    metadata = legacy_component.get("metadata")
+    if isinstance(metadata, dict):
+        legacy_component["metadata"] = {
+            key: value for key, value in metadata.items() if key != "model_provider_policy_mode"
+        }
+    return _registry_component_provider_id({component_type: legacy_component}, component_type)
 
 
 def _registry_component_provider_id(registry: dict[str, dict], component_type: str) -> str | None:
@@ -249,21 +299,40 @@ def _registry_component_provider_id(registry: dict[str, dict], component_type: s
     template = entry.get("template")
     metadata = entry.get("metadata")
     metadata = metadata if isinstance(metadata, dict) else {}
-    policy_mode = entry.get("model_provider_policy_mode") or metadata.get("model_provider_policy_mode")
-    code_field = template.get("code") if isinstance(template, dict) else None
-    source = code_field.get("value", "") if isinstance(code_field, dict) else ""
-    if policy_mode in {"delegate", "none"} or (
-        isinstance(source, str) and re.search(r"""model_provider_policy_mode\s*=\s*["'](?:delegate|none)["']""", source)
-    ):
+    is_user_overlay = entry.get("custom") is True
+    if "model_provider_policy_mode" in entry:
+        policy_mode = entry["model_provider_policy_mode"]
+        has_explicit_policy_mode = True
+    elif "model_provider_policy_mode" in metadata:
+        policy_mode = metadata["model_provider_policy_mode"]
+        has_explicit_policy_mode = True
+    else:
+        policy_mode = None
+        has_explicit_policy_mode = False
+
+    # Only static, platform-built entries may delegate or opt out. User
+    # overlays carry source and metadata authored by the user, so neither may
+    # create an authorization exemption.
+    if not is_user_overlay and policy_mode in {"delegate", "none"}:
         return None
-    if isinstance(template, dict) and any(
+
+    has_model_field = isinstance(template, dict) and any(
         isinstance(field, dict) and field.get("type") == "model" for field in template.values()
-    ):
-        # Unified selectors delegate policy to their explicit model value.
+    )
+    if not is_user_overlay and not has_explicit_policy_mode and has_model_field:
+        # Compatibility for legacy platform-built unified selectors that
+        # predate explicit policy-mode metadata. An explicit unknown mode
+        # fails closed to standalone instead of taking this structural path.
         return None
     base_classes = entry.get("base_classes")
     if not isinstance(base_classes, list) or not {"LanguageModel", "Embeddings"}.intersection(base_classes):
         return None
+    if is_user_overlay:
+        # Overlay metadata and class attributes are user-authored, including
+        # model_provider_id/display_name. Bind policy to the trusted registry
+        # key under a separate namespace instead of accepting a claimed core
+        # provider identity.
+        return f"custom-{resolve_provider_id(component_type)}"
     component = SimpleNamespace(
         display_name=entry.get("display_name"),
         model_provider_id=entry.get("model_provider_id") or metadata.get("model_provider_id"),
@@ -296,11 +365,8 @@ def _model_providers_in_flow(flow: dict, registry: dict[str, dict]) -> set[str]:
     providers: set[str] = set()
     for node in flow.get("data", {}).get("nodes", []):
         node_data = node.get("data", {})
-        component_type = node_data.get("type")
-        if isinstance(component_type, str):
-            provider_id = _registry_component_provider_id(registry, component_type)
-            if provider_id:
-                providers.add(provider_id)
+        if provider_id := _stored_component_provider_id(node_data, registry):
+            providers.add(provider_id)
         template = node_data.get("node", {}).get("template", {})
         if not isinstance(template, dict):
             continue

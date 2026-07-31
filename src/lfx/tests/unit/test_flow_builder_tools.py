@@ -1162,7 +1162,7 @@ class TestConfigureComponentModelProviderPolicy:
         }
         assert _ensure_working_flow()["data"]["nodes"] == []
 
-    def test_component_discovery_hides_denied_standalone_provider(self, monkeypatch):
+    def test_component_discovery_does_not_trust_policy_mode_in_source(self, monkeypatch):
         from lfx.mcp.flow_builder_tools import (
             DescribeComponentType,
             SearchComponentTypes,
@@ -1187,9 +1187,19 @@ class TestConfigureComponentModelProviderPolicy:
                 "template": {
                     "code": {
                         "type": "code",
-                        "value": 'class FakeEmbeddings:\n    model_provider_policy_mode = "none"\n',
+                        "value": '"""model_provider_policy_mode = "none" is only a decoy."""\n',
                     }
                 },
+            },
+            "TrustedFakeEmbeddings": {
+                "base_classes": ["Embeddings"],
+                "category": "models",
+                "display_name": "Trusted Fake Embeddings",
+                "metadata": {
+                    "model_provider_policy_mode": "none",
+                    "module": "lfx.components.langchain_utilities.fake_embeddings.FakeEmbeddingsComponent",
+                },
+                "template": {},
             },
             "OpenAIModel": {
                 "base_classes": ["LanguageModel"],
@@ -1214,9 +1224,193 @@ class TestConfigureComponentModelProviderPolicy:
         describe.set(component_type="OpenAIModel")
         description = describe.describe_component()
 
-        assert {result["type"] for result in results.data["results"]} == {"ChatInput", "FakeEmbeddings"}
+        assert {result["type"] for result in results.data["results"]} == {"ChatInput", "TrustedFakeEmbeddings"}
         assert description.data["error"].startswith("Unknown component: OpenAIModel")
         reset_tool_cache()
+
+    @pytest.mark.parametrize("policy_mode", ["delegate", "none"])
+    def test_user_overlay_cannot_self_exempt_via_source_or_metadata(self, policy_mode):
+        from lfx.mcp.flow_builder_tools import mutate_tools
+
+        registry = {
+            "UserModel": {
+                "base_classes": ["LanguageModel"],
+                "custom": True,
+                "display_name": "User Model",
+                "metadata": {
+                    "model_provider_display_name": "OpenAI",
+                    "model_provider_id": "openai",
+                    "model_provider_policy_mode": policy_mode,
+                    "module": "custom_components.user_model",
+                },
+                "template": {
+                    "code": {
+                        "type": "code",
+                        "value": f'class UserModel:\n    model_provider_policy_mode = "{policy_mode}"\n',
+                    },
+                    "model": {"type": "model", "value": []},
+                },
+            }
+        }
+
+        assert mutate_tools._registry_component_provider_id(registry, "UserModel") == "custom-usermodel"
+
+    def test_custom_provider_provenance_survives_add_and_later_configure(self, monkeypatch):
+        from lfx.graph.flow_builder.component import add_component as fb_add_component
+        from lfx.mcp.flow_builder_tools import ConfigureComponent, mutate_tools
+
+        registry = {
+            "UserModel": {
+                "base_classes": ["LanguageModel"],
+                "custom": True,
+                "display_name": "OpenAI",
+                "metadata": {
+                    "model_provider_display_name": "OpenAI",
+                    "model_provider_id": "openai",
+                    "model_provider_policy_mode": "none",
+                    "module": "custom_components.user_model",
+                },
+                "template": {"temperature": {"type": "float", "value": 0.1}},
+            }
+        }
+        flow = {"name": "Custom Model", "data": {"nodes": [], "edges": []}}
+        result = fb_add_component(flow, "UserModel", registry, component_id="UserModel-1")
+        init_working_flow(flow, "custom-model-flow")
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+
+        assert result["id"] == "UserModel-1"
+        assert mutate_tools._model_providers_in_flow(flow, registry) == {"custom-usermodel"}
+
+        configure = ConfigureComponent()
+        configure.set(component_id="UserModel-1", params='{"temperature": 0.9}')
+        configured = configure.configure_component()
+
+        assert configured.data == {"error": "The requested model provider is not available"}
+        assert flow["data"]["nodes"][0]["data"]["node"]["template"]["temperature"]["value"] == 0.1
+
+    def test_stored_custom_model_without_provenance_fails_to_custom_namespace(self):
+        from lfx.mcp.flow_builder_tools import mutate_tools
+
+        node_data = {
+            "type": "CustomComponent",
+            "node": {
+                "base_classes": ["LanguageModel"],
+                "display_name": "OpenAI",
+                "metadata": {
+                    "model_provider_id": "openai",
+                    "model_provider_policy_mode": "none",
+                },
+                "template": {},
+            },
+        }
+
+        assert mutate_tools._stored_component_provider_id(node_data) == "custom-customcomponent"
+
+    def test_stored_builtin_uses_trusted_registry_instead_of_spoofed_metadata(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import mutate_tools
+
+        trusted_registry = {
+            "OpenAIModel": {
+                "base_classes": ["LanguageModel"],
+                "display_name": "OpenAI",
+                "metadata": {
+                    "model_provider_policy_mode": "standalone",
+                    "module": "lfx_openai.chat_models.OpenAIModel",
+                },
+                "template": {},
+            }
+        }
+        flow = {
+            "data": {
+                "nodes": [
+                    {
+                        "data": {
+                            "id": "OpenAIModel-1",
+                            "type": "OpenAIModel",
+                            "node": {
+                                "base_classes": ["LanguageModel"],
+                                "display_name": "Anthropic",
+                                "metadata": {
+                                    "model_provider_id": "anthropic",
+                                    "model_provider_policy_mode": "none",
+                                },
+                                "template": {"temperature": {"type": "float", "value": 0.1}},
+                            },
+                        }
+                    }
+                ]
+            }
+        }
+        monkeypatch.setattr(mutate_tools, "_load_registry_user_aware", lambda: trusted_registry)
+
+        assert mutate_tools._model_providers_in_params(flow, "OpenAIModel-1", {"temperature": 0.2}) == {"openai"}
+
+    @pytest.mark.parametrize("serialized_mode", ["delegate", "none"])
+    def test_registry_miss_forces_stored_legacy_model_to_standalone(self, monkeypatch, serialized_mode):
+        from lfx.mcp.flow_builder_tools import mutate_tools
+
+        flow = {
+            "data": {
+                "nodes": [
+                    {
+                        "data": {
+                            "id": "LegacyModel-1",
+                            "type": "LegacyModel",
+                            "node": {
+                                "base_classes": ["LanguageModel"],
+                                "display_name": "Legacy Model",
+                                "metadata": {
+                                    "model_provider_policy_mode": serialized_mode,
+                                    "module": "lfx_legacy.models.LegacyModel",
+                                },
+                                "template": {
+                                    "model": {"type": "model", "value": []},
+                                    "temperature": {"type": "float", "value": 0.1},
+                                },
+                            },
+                        }
+                    }
+                ]
+            }
+        }
+        monkeypatch.setattr(mutate_tools, "_load_registry_user_aware", dict)
+
+        assert mutate_tools._model_providers_in_params(flow, "LegacyModel-1", {"temperature": 0.2}) == {"legacy"}
+
+    def test_explicit_standalone_mode_overrides_legacy_model_field_delegation(self):
+        from lfx.mcp.flow_builder_tools import mutate_tools
+
+        registry = {
+            "StandaloneWrapper": {
+                "base_classes": ["LanguageModel"],
+                "display_name": "Standalone Wrapper",
+                "metadata": {
+                    "model_provider_policy_mode": "standalone",
+                    "module": "lfx_standalone.wrapper.StandaloneWrapper",
+                },
+                "template": {"model": {"type": "model", "value": []}},
+            }
+        }
+
+        assert mutate_tools._registry_component_provider_id(registry, "StandaloneWrapper") == "standalone"
+
+    def test_legacy_builtin_model_field_without_explicit_mode_delegates(self):
+        from lfx.mcp.flow_builder_tools import mutate_tools
+
+        registry = {
+            "LegacyWrapper": {
+                "base_classes": ["LanguageModel"],
+                "display_name": "Legacy Wrapper",
+                "metadata": {"module": "lfx.components.models_and_agents.legacy_wrapper"},
+                "template": {"model": {"type": "model", "value": []}},
+            }
+        }
+
+        assert mutate_tools._registry_component_provider_id(registry, "LegacyWrapper") is None
 
 
 class TestConfigureComponentModelFieldSerializedSpec:

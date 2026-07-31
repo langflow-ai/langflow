@@ -302,6 +302,11 @@ async def list_models(
     selected_providers: list[str] | None = provider_policy.filter(provider) if provider is not None else None
     if provider is not None and not selected_providers:
         return []
+    configuration_policy = await _aresolve_read_policy(
+        current_user,
+        purpose,
+        default=ModelProviderPolicyPurpose.CONFIGURE,
+    )
     metadata_filters = {
         k: v
         for k, v in {
@@ -319,7 +324,7 @@ async def list_models(
     enabled_providers_result = await _get_enabled_providers_result(
         session=session,
         current_user=current_user,
-        provider_policy=provider_policy,
+        provider_policy=configuration_policy,
     )
     provider_configured_status = enabled_providers_result.get("provider_status", {})
 
@@ -327,7 +332,7 @@ async def list_models(
     enabled_models_result = await _get_enabled_models_result(
         session=session,
         current_user=current_user,
-        provider_policy=provider_policy,
+        provider_policy=configuration_policy,
     )
     enabled_models_map = enabled_models_result.get("enabled_models", {})
 
@@ -411,7 +416,6 @@ async def list_models(
     for provider_dict in filtered_models:
         prov_name = provider_dict.get("provider")
         provider_dict["provider_id"] = resolve_provider_id(prov_name) if isinstance(prov_name, str) else None
-        provider_dict["is_allowed"] = bool(isinstance(prov_name, str) and provider_policy.allows(prov_name))
         provider_dict["is_configured"] = provider_configured_status.get(prov_name, False)
         prov_models_status = enabled_models_map.get(prov_name, {})
         has_active_model = any(prov_models_status.values())
@@ -459,7 +463,7 @@ async def _get_enabled_providers_result(
     session: DbSession,
     current_user: CurrentActiveUser,
     provider_policy: ModelProviderPolicySnapshot,
-    providers: Annotated[list[str] | None, Query()] = None,
+    providers: list[str] | None = None,
 ):
     """Get enabled providers for the current user.
 
@@ -908,7 +912,7 @@ async def _get_enabled_models_result(
     session: DbSession,
     current_user: CurrentActiveUser,
     provider_policy: ModelProviderPolicySnapshot,
-    model_names: Annotated[list[str] | None, Query()] = None,
+    model_names: list[str] | None = None,
 ):
     """Get enabled models for the current user."""
     all_models_by_provider = get_unified_models_detailed(

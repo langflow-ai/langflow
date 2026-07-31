@@ -29,8 +29,16 @@ class PersistedModelProviderPolicy:
     version: int
 
 
+class ModelProviderPolicyNotInitializedError(RuntimeError):
+    """The singleton row required to evaluate the install-wide policy is missing."""
+
+
 def _policy_statement():
-    return select(ModelProviderPolicy).where(ModelProviderPolicy.id == MODEL_PROVIDER_POLICY_SINGLETON_ID)
+    return (
+        select(ModelProviderPolicy)
+        .where(ModelProviderPolicy.id == MODEL_PROVIDER_POLICY_SINGLETON_ID)
+        .execution_options(populate_existing=True)
+    )
 
 
 def _replace_policy_statement(provider_ids: Collection[str]):
@@ -46,10 +54,16 @@ def _replace_policy_statement(provider_ids: Collection[str]):
 
 
 async def get_model_provider_policy_state(session: AsyncSession) -> PersistedModelProviderPolicy:
-    """Read the persisted deployment ceiling; a missing row is unrestricted."""
+    """Read the persisted deployment ceiling.
+
+    The migration seeds the singleton. Treating a missing row as unrestricted
+    would silently remove a configured deployment ceiling, so surface a
+    dedicated initialization error instead.
+    """
     row = (await session.exec(_policy_statement())).one_or_none()
     if row is None:
-        return PersistedModelProviderPolicy(approved_provider_ids=frozenset(), version=0)
+        msg = "Model-provider policy singleton is missing; apply the latest database migrations"
+        raise ModelProviderPolicyNotInitializedError(msg)
     return PersistedModelProviderPolicy(
         approved_provider_ids=frozenset(row.approved_provider_ids),
         version=row.version,
@@ -70,8 +84,8 @@ async def replace_model_provider_policy_state(
     """
     result = await session.exec(_replace_policy_statement(provider_ids))
     if result.rowcount != 1:
-        msg = "Model-provider policy singleton is missing; rerun database migrations"
-        raise RuntimeError(msg)
+        msg = "Model-provider policy singleton is missing; apply the latest database migrations"
+        raise ModelProviderPolicyNotInitializedError(msg)
     state = await get_model_provider_policy_state(session)
     await session.commit()
     return state
@@ -104,6 +118,7 @@ async def hydrate_model_provider_policy(session: AsyncSession) -> PersistedModel
 
 
 __all__ = [
+    "ModelProviderPolicyNotInitializedError",
     "PersistedModelProviderPolicy",
     "apply_model_provider_policy_state",
     "get_model_provider_policy_state",

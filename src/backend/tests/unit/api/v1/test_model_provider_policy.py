@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 from fastapi import APIRouter, FastAPI, HTTPException, status
@@ -9,6 +10,7 @@ from fastapi.testclient import TestClient
 from langflow.api.v1 import model_provider_policy as policy_api
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.model_provider_policy import ModelProviderPolicy
+from langflow.services.model_provider_policy import ModelProviderPolicyNotInitializedError
 from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly
 from pydantic import ValidationError
 
@@ -87,25 +89,36 @@ def test_policy_routes_reject_non_superuser(method):
 
 def test_policy_write_validates_canonical_ids_and_deduplicates():
     payload = policy_api.ModelProviderPolicyWrite(
-        approved_provider_ids=["temporarily-missing.extension", "openai", "openai"]
+        approved_provider_ids=["temporarily-missing.extension", "OpenAI", "openai"]
     )
 
     assert payload.approved_provider_ids == ["openai", "temporarily-missing.extension"]
     with pytest.raises(ValidationError):
-        policy_api.ModelProviderPolicyWrite(approved_provider_ids=["OpenAI"])
+        policy_api.ModelProviderPolicyWrite(approved_provider_ids=[""])
+
+
+def test_trailing_slash_aliases_are_hidden_from_openapi():
+    routes = [route for route in policy_api.router.routes if isinstance(route, APIRoute)]
+
+    assert {route.path for route in routes if route.include_in_schema} == {"/model-provider-policy"}
 
 
 async def test_replace_policy_commits_before_runtime_invalidation(monkeypatch):
     session = _WriteSession()
+    admin_id = uuid4()
 
     def apply(state):
         session.events.append(("apply", sorted(state.approved_provider_ids), state.version))
 
+    async def audit(**kwargs):
+        session.events.append(("audit", kwargs))
+
     monkeypatch.setattr(policy_api, "apply_model_provider_policy_state", apply)
+    monkeypatch.setattr(policy_api, "audit_decision", audit)
 
     response = await policy_api.replace_model_provider_policy(
         policy_api.ModelProviderPolicyWrite(approved_provider_ids=["openai", "temporarily-missing.extension"]),
-        _admin=SimpleNamespace(is_superuser=True),
+        admin=SimpleNamespace(id=admin_id, is_superuser=True),
         session=session,
     )
 
@@ -113,10 +126,111 @@ async def test_replace_policy_commits_before_runtime_invalidation(monkeypatch):
         "atomic_update",
         "read_updated_state",
         "commit",
+        (
+            "audit",
+            {
+                "user_id": admin_id,
+                "action": "model_provider_policy:replace",
+                "obj": "model_provider_policy:1",
+                "result": "allow",
+                "details": {
+                    "approved_provider_ids": ["openai", "temporarily-missing.extension"],
+                    "version": 3,
+                },
+            },
+        ),
         ("apply", ["openai", "temporarily-missing.extension"], 3),
     ]
     assert response.approved_provider_ids == ["openai", "temporarily-missing.extension"]
     assert any(provider.provider_id == "openai" for provider in response.registered_providers)
+
+
+async def test_replace_policy_audits_committed_state_when_runtime_apply_fails(monkeypatch):
+    session = _WriteSession()
+    admin_id = uuid4()
+
+    async def audit(**kwargs):
+        session.events.append(("audit", kwargs["details"]["version"]))
+
+    def apply(state):
+        session.events.append(("apply", state.version))
+        msg = "runtime invalidation failed"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(policy_api, "audit_decision", audit)
+    monkeypatch.setattr(policy_api, "apply_model_provider_policy_state", apply)
+
+    with pytest.raises(RuntimeError, match="runtime invalidation failed"):
+        await policy_api.replace_model_provider_policy(
+            policy_api.ModelProviderPolicyWrite(approved_provider_ids=["openai"]),
+            admin=SimpleNamespace(id=admin_id, is_superuser=True),
+            session=session,
+        )
+
+    assert session.events == [
+        "atomic_update",
+        "read_updated_state",
+        "commit",
+        ("audit", 3),
+        ("apply", 3),
+    ]
+
+
+async def test_replace_policy_applies_committed_state_when_audit_enqueue_fails(monkeypatch):
+    session = _WriteSession()
+
+    async def audit(**_kwargs):
+        session.events.append("audit")
+        msg = "audit enqueue failed"
+        raise RuntimeError(msg)
+
+    def apply(state):
+        session.events.append(("apply", state.version))
+
+    monkeypatch.setattr(policy_api, "audit_decision", audit)
+    monkeypatch.setattr(policy_api, "apply_model_provider_policy_state", apply)
+
+    with pytest.raises(RuntimeError, match="audit enqueue failed"):
+        await policy_api.replace_model_provider_policy(
+            policy_api.ModelProviderPolicyWrite(approved_provider_ids=["openai"]),
+            admin=SimpleNamespace(id=uuid4(), is_superuser=True),
+            session=session,
+        )
+
+    assert session.events == [
+        "atomic_update",
+        "read_updated_state",
+        "commit",
+        "audit",
+        ("apply", 3),
+    ]
+
+
+@pytest.mark.parametrize("operation", ["read", "replace"])
+async def test_missing_policy_singleton_returns_actionable_service_unavailable(monkeypatch, operation):
+    async def missing(*_args, **_kwargs):
+        msg = "singleton missing"
+        raise ModelProviderPolicyNotInitializedError(msg)
+
+    if operation == "read":
+        monkeypatch.setattr(policy_api, "get_model_provider_policy_state", missing)
+        call = policy_api.read_model_provider_policy(
+            _admin=SimpleNamespace(id=uuid4(), is_superuser=True),
+            session=SimpleNamespace(),
+        )
+    else:
+        monkeypatch.setattr(policy_api, "replace_model_provider_policy_state", missing)
+        call = policy_api.replace_model_provider_policy(
+            policy_api.ModelProviderPolicyWrite(approved_provider_ids=["openai"]),
+            admin=SimpleNamespace(id=uuid4(), is_superuser=True),
+            session=SimpleNamespace(),
+        )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await call
+
+    assert exc_info.value.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert "migrations" in exc_info.value.detail
 
 
 def test_model_provider_policy_model_is_a_global_versioned_singleton():

@@ -418,47 +418,51 @@ async def _fetch_enabled_providers_for_user(
     *,
     provider_policy: ModelProviderPolicySnapshot | None = None,
 ) -> set[str]:
-    """Return credential-enabled providers within one resolved policy snapshot."""
+    """Return credential-enabled providers allowed for configuration and by the caller."""
+    variable_service = get_variable_service()
+    if variable_service is None:
+        return set()
+
+    from langflow.services.variable.service import DatabaseVariableService
+
+    if not isinstance(variable_service, DatabaseVariableService):
+        return set()
+
+    provider_variable_map = get_model_provider_variable_mapping()
+    providers = get_model_providers()
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
+
+    configuration_policy = await aresolve_model_provider_policy(
+        user_id=user_id,
+        providers=providers,
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        attributes=provider_policy.context.attributes if provider_policy is not None else None,
+    )
+    from lfx.base.models.provider_registry import is_api_key_optional
+
+    provider_candidates = {
+        **provider_variable_map,
+        **{
+            provider: ""
+            for provider in providers
+            if provider not in provider_variable_map and is_api_key_optional(provider)
+        },
+    }
+    provider_candidates = {
+        provider: variable
+        for provider, variable in provider_candidates.items()
+        if configuration_policy.allows(provider) and (provider_policy is None or provider_policy.allows(provider))
+    }
+    if not provider_candidates:
+        return set()
+
     async with session_scope() as session:
-        variable_service = get_variable_service()
-        if variable_service is None:
-            return set()
-
-        from langflow.services.variable.service import DatabaseVariableService
-
-        if not isinstance(variable_service, DatabaseVariableService):
-            return set()
-
         # Get all variable names (VariableRead has value=None for credentials)
         all_vars = await variable_service.get_all(
             user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
             session=session,
         )
         all_var_names = {var.name for var in all_vars}
-
-        provider_variable_map = get_model_provider_variable_mapping()
-        providers = get_model_providers()
-        if provider_policy is None:
-            from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
-
-            provider_policy = resolve_model_provider_policy(
-                user_id=user_id,
-                providers=providers,
-                purpose=ModelProviderPolicyPurpose.USE,
-            )
-        from lfx.base.models.provider_registry import is_api_key_optional
-
-        provider_candidates = {
-            **provider_variable_map,
-            **{
-                provider: ""
-                for provider in providers
-                if provider not in provider_variable_map and is_api_key_optional(provider)
-            },
-        }
-        provider_candidates = {
-            provider: variable for provider, variable in provider_candidates.items() if provider_policy.allows(provider)
-        }
 
         # Build dict with raw Variable values (encrypted for secrets, plaintext for others)
         # We need to fetch raw Variable objects because VariableRead has value=None for credentials

@@ -61,7 +61,6 @@ def _annotate_options(
             {
                 **option,
                 "provider_id": resolve_provider_id(provider),
-                "is_allowed": True,
             }
         )
     return annotated_options

@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
+import pytest
 from langflow.services import model_provider_policy as policy_store
 from langflow.services.database.models.model_provider_policy import ModelProviderPolicy
 from langflow.services.task import model_provider_policy_refresh as refresh_module
@@ -110,6 +111,47 @@ async def test_concurrent_sqlite_replacements_keep_complete_sets_and_distinct_ve
             frozenset({"openai"}),
             frozenset({"anthropic"}),
         )
+    finally:
+        await engine.dispose()
+
+
+async def test_missing_sqlite_singleton_is_never_treated_as_unrestricted(tmp_path):
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'missing-model-provider-policy.db'}")
+    session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(ModelProviderPolicy.__table__.create)
+
+        async with session_maker() as session:
+            with pytest.raises(policy_store.ModelProviderPolicyNotInitializedError, match="migrations"):
+                await policy_store.get_model_provider_policy_state(session)
+            with pytest.raises(policy_store.ModelProviderPolicyNotInitializedError, match="migrations"):
+                await policy_store.replace_model_provider_policy_state(session, {"openai"})
+    finally:
+        await engine.dispose()
+
+
+async def test_replace_refreshes_a_row_already_loaded_in_the_identity_map(tmp_path):
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'fresh-model-provider-policy.db'}")
+    session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(ModelProviderPolicy.__table__.create)
+
+        async with session_maker() as session:
+            session.add(ModelProviderPolicy())
+            await session.commit()
+            cached = await session.get(ModelProviderPolicy, 1)
+            assert cached is not None
+
+            state = await policy_store.replace_model_provider_policy_state(session, {"openai"})
+
+            assert state == policy_store.PersistedModelProviderPolicy(
+                approved_provider_ids=frozenset({"openai"}),
+                version=1,
+            )
+            assert cached.approved_provider_ids == ["openai"]
+            assert cached.version == 1
     finally:
         await engine.dispose()
 

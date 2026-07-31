@@ -61,9 +61,20 @@ class ModelProviderPolicyService(BaseModelProviderPolicyService):
         """Return whether the durable ceiling was available on the last refresh."""
         return self._policy_source_available
 
-    def fail_closed(self) -> bool:
-        """Deny every provider until a durable policy refresh succeeds."""
+    def fail_closed(self, *, deny_all_required: bool = False) -> bool:
+        """Deny providers after a refresh failure only when a ceiling is active.
+
+        An empty approved-provider set is the explicit OSS allow-all default. A
+        transient refresh failure must not turn an unconfigured installation
+        into deny-all, while an installation with a restrictive ceiling must
+        keep failing closed until the durable source recovers. A caller sets
+        ``deny_all_required`` when a newly read restrictive state failed during
+        application or durable-source corruption makes the ceiling impossible
+        to evaluate safely.
+        """
         with self._snapshot_cache_lock:
+            if not self._approved_provider_ids and not deny_all_required:
+                return False
             if not self._policy_source_available:
                 return False
             self._policy_source_available = False

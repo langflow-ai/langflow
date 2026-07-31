@@ -78,7 +78,7 @@ async def test_provider_reads_hide_denied_providers(client: AsyncClient, logged_
     model_groups = models_response.json()
     assert {group["provider"] for group in model_groups} == {"OpenAI"}
     assert {group["provider_id"] for group in model_groups} == {"openai"}
-    assert {group["is_allowed"] for group in model_groups} == {True}
+    assert all("is_allowed" not in group for group in model_groups)
 
     assert mapping_response.status_code == status.HTTP_200_OK
     assert set(mapping_response.json()) == {"OpenAI"}
@@ -346,7 +346,10 @@ async def test_provider_read_purpose_defaults_and_overrides(client: AsyncClient,
 
     default_paths = [
         ("api/v1/models/providers", ModelProviderPolicyPurpose.DISCOVER),
-        ("api/v1/models", ModelProviderPolicyPurpose.DISCOVER),
+        (
+            "api/v1/models",
+            [ModelProviderPolicyPurpose.DISCOVER, ModelProviderPolicyPurpose.CONFIGURE],
+        ),
         ("api/v1/models/provider-variable-mapping", ModelProviderPolicyPurpose.CONFIGURE),
         ("api/v1/models/enabled_providers", ModelProviderPolicyPurpose.CONFIGURE),
         ("api/v1/models/enabled_models", ModelProviderPolicyPurpose.CONFIGURE),
@@ -357,7 +360,8 @@ async def test_provider_read_purpose_defaults_and_overrides(client: AsyncClient,
         captured_purposes.clear()
         response = await client.get(path, headers=logged_in_headers)
         assert response.status_code == status.HTTP_200_OK
-        assert captured_purposes == [expected_purpose]
+        expected_purposes = expected_purpose if isinstance(expected_purpose, list) else [expected_purpose]
+        assert captured_purposes == expected_purposes
 
     captured_purposes.clear()
     response = await client.get(
@@ -463,9 +467,48 @@ async def test_model_options_add_provider_identity_and_filter_defensively(
                 "provider": "OpenAI",
                 "metadata": {},
                 "provider_id": "openai",
-                "is_allowed": True,
             }
         ]
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_model_catalog_uses_configure_policy_for_configuration_status(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import models as models_module
+
+    allowed_by_purpose = {
+        ModelProviderPolicyPurpose.DISCOVER: {"openai", "anthropic"},
+        ModelProviderPolicyPurpose.CONFIGURE: {"openai"},
+        ModelProviderPolicyPurpose.USE: {"openai", "anthropic"},
+    }
+
+    async def _divergent_policy(*, user_id, providers, purpose, attributes=None):
+        _ = attributes
+        candidate_ids = frozenset(resolve_provider_id(provider) for provider in providers)
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id),
+            purpose=purpose,
+            candidate_provider_ids=candidate_ids,
+            allowed_provider_ids=frozenset(allowed_by_purpose[purpose]) & candidate_ids,
+        )
+
+    enabled_providers = AsyncMock(return_value={"enabled_providers": [], "provider_status": {}})
+    enabled_models = AsyncMock(return_value={"enabled_models": {}, "enabled_models_by_type": {}})
+    monkeypatch.setattr(models_module, "aresolve_model_provider_policy", _divergent_policy)
+    monkeypatch.setattr(models_module, "_get_enabled_providers_result", enabled_providers)
+    monkeypatch.setattr(models_module, "_get_enabled_models_result", enabled_models)
+
+    response = await client.get("api/v1/models", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert {group["provider"] for group in response.json()} >= {"OpenAI", "Anthropic"}
+    for helper in (enabled_providers, enabled_models):
+        snapshot = helper.await_args.kwargs["provider_policy"]
+        assert snapshot.purpose is ModelProviderPolicyPurpose.CONFIGURE
+        assert snapshot.allowed_provider_ids == frozenset({"openai"})
 
 
 @pytest.mark.usefixtures("active_user")
