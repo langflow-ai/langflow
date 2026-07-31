@@ -1,5 +1,6 @@
 """Unit tests for LFX flow validation helpers."""
 
+import hashlib
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -16,6 +17,8 @@ from lfx.utils.flow_validation import (
     collect_component_code_lookups,
     ensure_component_hash_lookups_loaded,
     prepare_public_flow_build,
+    validate_catalog_policy_for_component_code,
+    validate_catalog_policy_for_component_type,
     validate_catalog_policy_for_flow,
     validate_flow_for_current_settings,
     validate_public_flow_no_code_execution,
@@ -121,6 +124,76 @@ def test_catalog_policy_validation_is_exact_case_sensitive_and_empty_snapshot_al
         snapshot=CatalogPolicySnapshot(blocked_component_keys=frozenset({"Agent"})),
     )
     validate_catalog_policy_for_flow(_catalog_flow("Agent"), snapshot=CatalogPolicySnapshot())
+
+
+def test_catalog_policy_component_code_blocks_known_alias_before_execution(monkeypatch):
+    code = "# trusted Agent component"
+    code_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_hash_lookups_for_validation",
+        lambda: {"Agent": {code_hash}, "AgentComponent": {code_hash}},
+    )
+
+    with pytest.raises(CatalogPolicyValidationError, match="AgentComponent"):
+        validate_catalog_policy_for_component_code(
+            code,
+            snapshot=CatalogPolicySnapshot(blocked_component_keys={"AgentComponent"}),
+        )
+
+
+def test_catalog_policy_component_code_empty_snapshot_does_not_require_template_identities(monkeypatch):
+    def fail_if_called():
+        msg = "empty policy should not load component identities"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_hash_lookups_for_validation",
+        fail_if_called,
+    )
+
+    validate_catalog_policy_for_component_code("arbitrary code", snapshot=CatalogPolicySnapshot())
+
+
+def test_catalog_policy_component_code_fails_closed_while_identities_initialize(monkeypatch):
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_hash_lookups_for_validation",
+        lambda: None,
+    )
+
+    with pytest.raises(RuntimeError, match="identities are still initializing"):
+        validate_catalog_policy_for_component_code(
+            "arbitrary code",
+            snapshot=CatalogPolicySnapshot(blocked_component_keys={"Agent"}),
+        )
+
+
+def test_catalog_policy_component_code_does_not_build_from_transient_component_cache(monkeypatch):
+    from lfx.interface.components import component_cache
+
+    monkeypatch.setattr(component_cache, "all_types_dict", {})
+    monkeypatch.setattr(component_cache, "all_types_ready", False)
+    monkeypatch.setattr(component_cache, "type_to_current_hash", None)
+    monkeypatch.setattr(component_cache, "all_known_hashes", None)
+    monkeypatch.setattr(component_cache, "code_by_hash", None)
+
+    with pytest.raises(RuntimeError, match="identities are still initializing"):
+        validate_catalog_policy_for_component_code(
+            "arbitrary code",
+            snapshot=CatalogPolicySnapshot(blocked_component_keys={"Agent"}),
+        )
+
+    assert component_cache.type_to_current_hash is None
+    assert component_cache.all_known_hashes is None
+    assert component_cache.code_by_hash is None
+
+
+def test_catalog_policy_component_type_is_exact_and_empty_snapshot_allows():
+    snapshot = CatalogPolicySnapshot(blocked_component_keys={"Agent"})
+
+    validate_catalog_policy_for_component_type("agent", snapshot=snapshot)
+    validate_catalog_policy_for_component_type("Agent", snapshot=CatalogPolicySnapshot())
+    with pytest.raises(CatalogPolicyValidationError, match="Agent"):
+        validate_catalog_policy_for_component_type("Agent", snapshot=snapshot)
 
 
 def test_validate_flow_for_current_settings_captures_one_catalog_snapshot(monkeypatch):
