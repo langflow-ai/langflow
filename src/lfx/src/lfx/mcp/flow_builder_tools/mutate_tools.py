@@ -8,7 +8,10 @@ ones whose effects the user sees on the canvas immediately.
 from __future__ import annotations
 
 import json
+import re
+from types import SimpleNamespace
 
+from lfx.base.models.provider_registry import get_registry_snapshot, model_component_provider_id
 from lfx.custom import Component
 from lfx.graph.flow_builder.component import _coerce_model_value as fb_coerce_model_value
 from lfx.graph.flow_builder.component import add_component as fb_add_component
@@ -61,11 +64,16 @@ class AddComponent(Component):
         registry = _load_registry_user_aware()
         flow = _ensure_working_flow()
         try:
+            provider_id = _registry_component_provider_id(registry, self.component_type)
+            _require_allowed_model_providers({provider_id} if provider_id else set())
             result = fb_add_component(flow, self.component_type, registry)
             layout_flow(flow)
             _emit("add_component", node=flow["data"]["nodes"][-1])
             text = f"Added {self.component_type} ({result['id']})"
             return Data(data={"id": result["id"], "type": self.component_type, "text": text})
+        except ModelProviderPolicyError as e:
+            logger.warning("add_component blocked by model-provider policy: %s", e)
+            return Data(data={"error": str(e)})
         except (ValueError, KeyError) as e:
             logger.warning("add_component failed: %s", e)
             return Data(data={"error": str(e)})
@@ -184,17 +192,15 @@ def _current_policy_user_id() -> str | None:
     return current_user_id()
 
 
-def _model_providers_in_params(flow: dict, component_id: str, params: dict) -> set[str]:
-    """Extract provider names from model-typed fields without mutating the flow."""
-    node = _find_node(flow, component_id)
-    if node is None:
-        return set()
-    template = node.get("data", {}).get("node", {}).get("template", {})
+def _model_providers_in_template(template: dict, params: dict | None = None) -> set[str]:
+    """Extract providers from model selections and their scalar provider override."""
     providers: set[str] = set()
-    for field_name, value in params.items():
-        field = template.get(field_name)
+    has_model_field = False
+    for field_name, field in template.items():
         if not isinstance(field, dict) or field.get("type") != "model":
             continue
+        has_model_field = True
+        value = params.get(field_name, field.get("value")) if params is not None else field.get("value")
         normalized = fb_coerce_model_value(value)
         if not isinstance(normalized, list):
             continue
@@ -204,18 +210,132 @@ def _model_providers_in_params(flow: dict, component_id: str, params: dict) -> s
             provider = entry.get("provider")
             if isinstance(provider, str) and provider.strip():
                 providers.add(provider.strip())
+
+    # Unified LanguageModel/EmbeddingModel wrappers can replace the provider
+    # selected in their ModelInput at runtime through a scalar `provider`
+    # field. Treat that override as part of the model configuration too.
+    provider_field = template.get("provider")
+    if has_model_field and isinstance(provider_field, dict):
+        provider = (
+            params.get("provider", provider_field.get("value")) if params is not None else provider_field.get("value")
+        )
+        if isinstance(provider, str) and provider.strip():
+            providers.add(provider.strip())
     return providers
+
+
+def _model_providers_in_params(flow: dict, component_id: str, params: dict) -> set[str]:
+    """Extract provider names from model configuration without mutating the flow."""
+    node = _find_node(flow, component_id)
+    if node is None:
+        return set()
+    node_data = node.get("data", {})
+    component = node_data.get("node", {})
+    template = component.get("template", {}) if isinstance(component, dict) else {}
+    providers = _model_providers_in_template(template, params) if isinstance(template, dict) else set()
+    component_type = node_data.get("type")
+    if isinstance(component_type, str) and isinstance(component, dict):
+        provider_id = _registry_component_provider_id({component_type: component}, component_type)
+        if provider_id:
+            providers.add(provider_id)
+    return providers
+
+
+def _registry_component_provider_id(registry: dict[str, dict], component_type: str) -> str | None:
+    """Return the provider ID for a standalone model component registry entry."""
+    entry = registry.get(component_type)
+    if not isinstance(entry, dict):
+        return None
+    template = entry.get("template")
+    metadata = entry.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    policy_mode = entry.get("model_provider_policy_mode") or metadata.get("model_provider_policy_mode")
+    code_field = template.get("code") if isinstance(template, dict) else None
+    source = code_field.get("value", "") if isinstance(code_field, dict) else ""
+    if policy_mode in {"delegate", "none"} or (
+        isinstance(source, str) and re.search(r"""model_provider_policy_mode\s*=\s*["'](?:delegate|none)["']""", source)
+    ):
+        return None
+    if isinstance(template, dict) and any(
+        isinstance(field, dict) and field.get("type") == "model" for field in template.values()
+    ):
+        # Unified selectors delegate policy to their explicit model value.
+        return None
+    base_classes = entry.get("base_classes")
+    if not isinstance(base_classes, list) or not {"LanguageModel", "Embeddings"}.intersection(base_classes):
+        return None
+    component = SimpleNamespace(
+        display_name=entry.get("display_name"),
+        model_provider_id=entry.get("model_provider_id") or metadata.get("model_provider_id"),
+    )
+    return model_component_provider_id(component, module_name=entry.get("module") or metadata.get("module"))
+
+
+def _model_providers_in_flow_spec(spec: str, registry: dict[str, dict]) -> set[str]:
+    """Extract every provider a full-flow spec would configure, without building it."""
+    from lfx.graph.flow_builder.spec import parse_flow_spec
+
+    parsed = parse_flow_spec(spec)
+    node_types = {node["id"]: node["type"] for node in parsed["nodes"]}
+    providers = {
+        provider_id
+        for component_type in node_types.values()
+        if (provider_id := _registry_component_provider_id(registry, component_type))
+    }
+    for node_id, params in parsed.get("config", {}).items():
+        entry = registry.get(node_types.get(node_id, ""))
+        template = entry.get("template") if isinstance(entry, dict) else None
+        if not isinstance(template, dict):
+            continue
+        providers.update(_model_providers_in_template(template, params))
+    return providers
+
+
+def _model_providers_in_flow(flow: dict, registry: dict[str, dict]) -> set[str]:
+    """Extract configured providers from a built flow before it is persisted."""
+    providers: set[str] = set()
+    for node in flow.get("data", {}).get("nodes", []):
+        node_data = node.get("data", {})
+        component_type = node_data.get("type")
+        if isinstance(component_type, str):
+            provider_id = _registry_component_provider_id(registry, component_type)
+            if provider_id:
+                providers.add(provider_id)
+        template = node_data.get("node", {}).get("template", {})
+        if not isinstance(template, dict):
+            continue
+        providers.update(_model_providers_in_template(template))
+    return providers
+
+
+def _filter_registry_by_model_provider_policy(registry: dict[str, dict]) -> dict[str, dict]:
+    """Hide standalone provider components denied for configuration."""
+    providers_by_type = {
+        component_type: provider_id
+        for component_type in registry
+        if (provider_id := _registry_component_provider_id(registry, component_type))
+    }
+    if not providers_by_type:
+        return registry
+    policy = resolve_model_provider_policy(
+        user_id=_current_policy_user_id(),
+        providers=[*get_registry_snapshot().provider_ids, *providers_by_type.values()],
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+    )
+    return {
+        component_type: entry
+        for component_type, entry in registry.items()
+        if (provider_id := providers_by_type.get(component_type)) is None or policy.allows(provider_id)
+    }
 
 
 def _require_allowed_model_providers(providers: set[str]) -> None:
     """Require CONFIGURE policy before model values reach configuration or catalogs."""
     if not providers:
         return
-    from lfx.base.models.unified_models import get_model_providers
-
     policy = resolve_model_provider_policy(
         user_id=_current_policy_user_id(),
-        providers=[*get_model_providers(), *providers],
+        providers=[*get_registry_snapshot().provider_ids, *providers],
         purpose=ModelProviderPolicyPurpose.CONFIGURE,
     )
     for provider in providers:

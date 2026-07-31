@@ -5,6 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 from fastapi import status
@@ -147,6 +148,7 @@ async def test_denied_provider_mutations_return_non_enumerating_not_found(
         provider_validation_called = True
 
     monkeypatch.setattr("langflow.api.v1.variable.validate_model_provider_key", _provider_validation)
+    monkeypatch.setattr("lfx.base.models.unified_models.validate_model_provider_key", _provider_validation)
     validate_response = await client.post(
         "api/v1/models/validate-provider",
         headers=logged_in_headers,
@@ -218,6 +220,48 @@ async def test_non_sluggable_provider_mutations_return_generic_not_found(
         assert response.json() == {"detail": "Model provider not found"}
         assert provider not in response.text
     assert provider_validation_called is False
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_credential_rename_cannot_bypass_provider_policy(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    validation_called = False
+
+    def _provider_validation(*_args, **_kwargs):
+        nonlocal validation_called
+        validation_called = True
+
+    created = await client.post(
+        "api/v1/variables/",
+        headers=logged_in_headers,
+        json={
+            "name": f"POLICY_TEST_{uuid4().hex}",
+            "value": "generic",
+            "type": "Generic",
+            "default_fields": [],
+        },
+    )
+    assert created.status_code == status.HTTP_201_CREATED
+
+    monkeypatch.setattr("langflow.api.v1.variable.validate_model_provider_key", _provider_validation)
+    variable_id = created.json()["id"]
+    response = await client.patch(
+        f"api/v1/variables/{variable_id}",
+        headers=logged_in_headers,
+        json={
+            "id": variable_id,
+            "name": "ANTHROPIC_API_KEY",
+            "value": "test",  # pragma: allowlist secret
+            "type": "Credential",
+            "default_fields": [],
+        },
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert validation_called is False
 
 
 @pytest.mark.usefixtures("active_user")
