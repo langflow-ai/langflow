@@ -90,6 +90,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -133,15 +134,32 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         });
       }
     }, 1200);
-    saveFlow().then(() => {
-      if (!autoSaving || saving === false) {
+    saveFlow()
+      .then(() => {
+        if (!autoSaving || saving === false) {
+          blocker.proceed && blocker.proceed();
+          setSuccessData({
+            title: t("flow.savedSuccessfully"),
+          });
+        }
+        proceed = true;
+      })
+      .catch(() => {
+        // A save can fail for reasons the user cannot resolve from this
+        // dialog — most notably a 403 when they only have read access to a
+        // flow shared with them. Without handling the rejection, the pending
+        // 1200ms timeout never proceeds and the navigation blocker keeps the
+        // SaveChangesModal spinning, trapping the user on the flow. Unblock
+        // navigation and surface why the changes were not persisted.
+        saving = false;
         blocker.proceed && blocker.proceed();
-        setSuccessData({
-          title: t("flow.savedSuccessfully"),
+        setErrorData({
+          title: "Changes not saved",
+          list: [
+            "You do not have permission to edit this flow, so your changes were not saved.",
+          ],
         });
-      }
-      proceed = true;
-    });
+      });
   };
 
   const handleExit = () => {
