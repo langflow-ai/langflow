@@ -1,26 +1,37 @@
 # Architecture Boundaries
 
-Langflow is three Python packages and one frontend, layered with one-way dependencies. Most "off-narrative" code is a boundary violation. Read this before adding a new file.
+Langflow is a runnable base application, a curated distribution, an executor
+SDK, standalone extensions, and one frontend. Dependencies point in one
+direction. Most "off-narrative" code is a boundary violation. Read this before
+adding a new file.
 
 ## Package dependency graph (one-way only)
 
-```
-frontend (TS)  ──HTTP──▶  langflow (api routers, integrations, distribution)
-                              │
-                              ▼ may import
-                          langflow-base (services, graph, db, alembic)
-                              │
-                              ▼ may import
-                          lfx (executor core, base primitives, components)
-                              │
-                              ▼ may import
-                          langchain-core, pydantic, third-party SDKs
+```text
+frontend (TS)  ──HTTP──▶  langflow-base (UI/API, services, graph, db, alembic)
+                                   │
+                                   ▼ may import
+                               lfx (executor, primitives, built-in components)
+                                   │
+                                   ▼ may import
+                               langchain-core, pydantic
+
+langflow (curated distribution) ──depends on──▶ langflow-base
+             │
+             └──depends on──▶ standalone lfx-* extensions ──depends on──▶ lfx
 ```
 
 ### Dependency rules
 
-- **`lfx` MUST NOT import `langflow.*` or `langflow-base.*`.** If lfx code needs a service (auth, db, flow lookup), define an interface inside `lfx` and inject the implementation from `langflow`. The repo currently has ~13 upward `from langflow.*` imports inside `src/lfx/src/lfx/components/...` (auth, db, helpers) — these are **known violations**. Do not add more; prefer fixing them.
+- **`lfx` MUST NOT import `langflow.*`.** (`langflow-base` installs the
+  `langflow` import package.) If LFX code needs a service, define an interface
+  inside `lfx` and inject the implementation from the application. Existing
+  upward imports are known violations; do not add more.
 - **`langflow-base` MAY import `lfx`.** It MUST NOT import vendor-specific component modules from `langflow.components.<vendor>`.
+- **Standalone `lfx-*` extensions MAY import the public LFX bundle API.** They
+  MUST NOT import application services from `langflow-base`.
+- **`langflow` is dependency metadata, not another application layer.** It adds
+  the curated extension set to the same `langflow-base` executable and runtime.
 - **`frontend` talks to `langflow` only via HTTP/WebSocket.** No shared filesystem state.
 
 ## "Where does this code go?" decision tree
@@ -32,7 +43,7 @@ Walk top-down. Stop at the first match.
 2. Is it a FastAPI route, auth, db model, alembic migration, or a lifecycle-managed singleton?
    → `src/backend/base/langflow/` (`api/`, `services/X/`, `alembic/versions/`).
 3. Is it a vendor integration (OpenAI, Pinecone, Notion, …) — a `Component` subclass that wraps a third-party SDK?
-   → `src/lfx/src/lfx/components/<category>/` and update its `__init__.py` alphabetically. Never rename the class.
+   → a standalone package under `src/bundles/<provider>/`, with an `extension.json` manifest. Add it to the curated `langflow` dependencies only when it belongs in the default distribution. Never rename the component class.
 4. Is it UI, state, or icons?
    → `src/frontend/src/`. If it consumes a new API field, also update `src/frontend/src/types/`.
 5. Is it CLI behavior for `lfx run` / `lfx serve`?

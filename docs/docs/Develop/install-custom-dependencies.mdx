@@ -5,10 +5,10 @@ slug: /install-custom-dependencies
 
 Langflow provides optional dependency groups and support for custom dependencies to extend Langflow functionality. This guide covers how to add dependencies for different Langflow installations, including Langflow Desktop and Langflow OSS.
 
-The Langflow codebase uses three packages, each with its own `pyproject.toml` file:
+The Langflow codebase uses three package layers:
 
-* The `main` package (`langflow`) is managed by the root level `pyproject.toml`, and it includes end-user features and main application code, such as Langchain and OpenAI. The `main` package depends on the `base` package.
-* The `base` package (`langflow-base`) is managed at `src/backend/base/pyproject.toml`, and it includes core infrastructure, such as the FastAPI web framework. The `base` package depends on the `lfx` package.
+* The full package (`langflow`) is managed by the root-level `pyproject.toml`. It depends on `langflow-base` and adds the curated standalone `lfx-*` provider extensions.
+* The runnable base package (`langflow-base`) is managed at `src/backend/base/pyproject.toml`. It provides the UI, API, platform services, and built-in components without provider extension distributions. It depends on `lfx`.
 * The `lfx` package is managed at `src/lfx/pyproject.toml`. LFX is a lightweight CLI tool for executing and serving Langflow flows. The `lfx` package does not provide optional dependency groups for end users.
 
 ## Install custom dependencies in Langflow Desktop {#langflow-desktop}
@@ -51,13 +51,24 @@ uv pip install "langflow[postgresql]"
 To install multiple extras, use commas to separate each dependency group:
 
 ```bash
-uv pip install "langflow[postgresql,openai]"
+uv pip install "langflow[postgresql,audio]"
+```
+
+Use the `bundles` extra to install every no-Torch long-tail bundle plus the
+arXiv, DuckDuckGo, EmpirioLabs, Exa, Firecrawl, NextPlaid, Paddle, and Valkey
+standalone extensions:
+
+```bash
+uv pip install "langflow[bundles]"
 ```
 
 ### Install optional dependency groups for `langflow-base`
 
-`langflow-base` is recommended when you want to deploy Langflow with specific dependencies only.
-It contains the same codebase as `langflow`, but `langflow` includes `langflow-base` as a dependency and adds many additional dependencies on top of it.
+`langflow-base` is recommended when you want the runnable Langflow UI and API
+without provider extensions. It includes platform services such as Redis,
+Chroma, MCP, Kubernetes, object storage, and tracing support. The `langflow`
+package depends on this same version of `langflow-base` and adds curated
+standalone extensions.
 
 The `langflow-base` package provides its own optional dependency groups that are separate from those in the `langflow` package. The `langflow-base` package can be installed as a standalone package with these optional dependency groups.
 
@@ -73,14 +84,18 @@ uv pip install "langflow-base[postgresql]"
 To install multiple extras, use commas to separate each dependency group:
 
 ```bash
-uv pip install "langflow-base[postgresql,openai]"
+uv pip install "langflow-base[postgresql,cassandra]"
 ```
 
-To install all optional dependencies for `langflow-base`, use the `complete` extra:
+Provider components are installed as extensions. For example, install
+`lfx-openai` beside `langflow-base`, or use `langflow` to install the curated
+provider set:
 
 ```bash
-uv pip install "langflow-base[complete]"
+uv pip install langflow-base lfx-openai
 ```
+
+The base executable is `langflow`; there is no `langflow-base` command.
 
 ### Use a virtual environment to test custom dependencies
 
@@ -100,8 +115,8 @@ uv pip install langflow matplotlib
 You can also install `langflow-base` with specific optional dependency groups in your virtual environment:
 
 ```bash
-# Install langflow-base with only the dependencies you need
-uv pip install "langflow-base[postgresql,openai]" matplotlib
+# Install runnable base with selected compatibility extras
+uv pip install "langflow-base[postgresql,cassandra]" matplotlib
 ```
 
 If you're working within a cloned Langflow repository, add dependencies with `uv add` to reference the existing `pyproject.toml` files:
