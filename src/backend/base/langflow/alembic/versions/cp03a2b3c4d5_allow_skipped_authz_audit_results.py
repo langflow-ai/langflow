@@ -27,20 +27,25 @@ depends_on: str | Sequence[str] | None = None
 
 _TABLE_NAME = "authz_audit_log"
 _CONSTRAINT_NAME = "ck_authz_audit_log_result_enum"
+_RENDERED_CONSTRAINT_NAME = f"ck_{_TABLE_NAME}_{_CONSTRAINT_NAME}"
 _RESULT_CHECK = "result IN ('allow', 'deny', 'owner_override', 'skip')"
 
 
 def upgrade() -> None:
     conn = op.get_bind()
     checks = sa.inspect(conn).get_check_constraints(_TABLE_NAME)
-    existing = next((check for check in checks if check["name"] == _CONSTRAINT_NAME), None)
+    constraint_names = {_CONSTRAINT_NAME, _RENDERED_CONSTRAINT_NAME}
+    existing = next((check for check in checks if check.get("name") in constraint_names), None)
     if existing is not None and "'skip'" in (existing.get("sqltext") or ""):
         return
 
     with op.batch_alter_table(_TABLE_NAME, schema=None) as batch_op:
         if existing is not None:
-            batch_op.drop_constraint(_CONSTRAINT_NAME, type_="check")
-        batch_op.create_check_constraint(_CONSTRAINT_NAME, _RESULT_CHECK)
+            constraint_name = batch_op.f(existing["name"])
+            batch_op.drop_constraint(constraint_name, type_="check")
+        else:
+            constraint_name = _CONSTRAINT_NAME
+        batch_op.create_check_constraint(constraint_name, _RESULT_CHECK)
 
 
 def downgrade() -> None:
