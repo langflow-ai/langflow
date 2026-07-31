@@ -105,7 +105,7 @@ ENV BASH_ENV="" \
 # Note: .venv is already owned by 1000:0 via COPY --chown above, so no recursive chown needed
 RUN mkdir -p /app/data /app/langflow \
     && chown -R 1000:0 /app/data /app/langflow \
-    && chmod -R g+rwX /app/langflow \
+    && chmod -R g+rwX /app/data /app/langflow \
     && chown 1000:0 /app
 
 LABEL org.opencontainers.image.title=langflow-backend
