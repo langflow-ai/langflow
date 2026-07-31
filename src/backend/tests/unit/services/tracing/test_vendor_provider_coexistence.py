@@ -8,12 +8,16 @@ the global provider and FastAPIInstrumentor's HTTP spans started landing in Lang
 The vendors that are OpenTelemetry-based avoid this by building their own isolated provider
 (``langfuse.py`` passes ``tracer_provider=``, ``langwatch.py`` sets
 ``skip_open_telemetry_setup=True``, ``arize_phoenix.py`` hands its provider to the
-instrumentors). The four that are not OpenTelemetry-based have no provider at all. Either way
-the property is the same and is what this pins: after constructing the vendor's tracer, the
-global provider is still the object the bootstrap installed.
+instrumentors), and ``langsmith.py`` does the same for its OpenTelemetry transports. The three
+that are not OpenTelemetry-based in the mode covered here (langsmith over REST, openlayer, opik)
+have no provider at all. Either way the property is the same and is what this pins: after
+constructing the vendor's tracer, the global provider is still the object the bootstrap
+installed, and the vendor is still receiving its own traces.
 
-Traceloop is deliberately absent. It is the one vendor that does *not* hold this property -- it
-adopts whichever provider is global -- and it has its own test file.
+Two of the eight registered tracers are absent. Traceloop is the one vendor that does *not* hold
+this property, since it adopts whichever provider is global, and it has its own test file.
+``native`` writes to Langflow's own database and imports no OpenTelemetry at all, so a case for
+it would pass without exercising anything.
 
 Each case runs in a subprocess: the global provider, and most of these vendors' clients, are
 process-wide singletons that cannot be undone in-process.
@@ -24,14 +28,11 @@ import json
 import os
 import subprocess
 import sys
-import textwrap
 
 import pytest
 
 # Each vendor's endpoint is pointed at the loopback stub so nothing leaves the machine and no
-# real credential is needed. ``provider_expr`` is evaluated against the constructed tracer for
-# the vendors that expose their own provider, to pin that it is a *different* object from the
-# global one rather than merely absent.
+# real credential is needed.
 _VENDORS = {
     "arize_phoenix": {
         "requires": "phoenix",
@@ -41,7 +42,6 @@ _VENDORS = {
             "PHOENIX_API_KEY": "probe-key",  # pragma: allowlist secret
             "PHOENIX_COLLECTOR_ENDPOINT": "http://127.0.0.1:{vendor_port}",
         },
-        "provider_expr": "tracer.tracer_provider",
     },
     "langfuse": {
         "requires": "langfuse",
@@ -52,9 +52,6 @@ _VENDORS = {
             "LANGFUSE_PUBLIC_KEY": "pk-probe",  # pragma: allowlist secret
             "LANGFUSE_BASE_URL": "http://127.0.0.1:{vendor_port}",
         },
-        # The isolated provider is held inside the shared Langfuse client, so there is no
-        # accessor on the tracer. "the global provider is untouched" is the #13319 property.
-        "provider_expr": None,
     },
     "langsmith": {
         "requires": "langsmith",
@@ -64,7 +61,6 @@ _VENDORS = {
             "LANGCHAIN_API_KEY": "probe-key",  # pragma: allowlist secret
             "LANGCHAIN_ENDPOINT": "http://127.0.0.1:{vendor_port}",
         },
-        "provider_expr": None,
     },
     "langsmith_otel": {
         "requires": "langsmith",
@@ -75,7 +71,6 @@ _VENDORS = {
             "LANGCHAIN_ENDPOINT": "http://127.0.0.1:{vendor_port}",
             "LANGSMITH_TRACING_MODE": "otel",
         },
-        "provider_expr": None,
     },
     "langsmith_hybrid": {
         "requires": "langsmith",
@@ -86,7 +81,6 @@ _VENDORS = {
             "LANGCHAIN_ENDPOINT": "http://127.0.0.1:{vendor_port}",
             "LANGSMITH_TRACING_MODE": "hybrid",
         },
-        "provider_expr": None,
     },
     "langwatch": {
         "requires": "langwatch",
@@ -96,7 +90,6 @@ _VENDORS = {
             "LANGWATCH_API_KEY": "probe-key",  # pragma: allowlist secret
             "LANGWATCH_ENDPOINT": "http://127.0.0.1:{vendor_port}",
         },
-        "provider_expr": "type(tracer).tracer_provider",
     },
     "openlayer": {
         "requires": "openlayer",
@@ -107,7 +100,6 @@ _VENDORS = {
             "OPENLAYER_INFERENCE_PIPELINE_ID": "probe-pipeline",
             "OPENLAYER_BASE_URL": "http://127.0.0.1:{vendor_port}",
         },
-        "provider_expr": None,
     },
     "opik": {
         "requires": "opik",
@@ -118,7 +110,6 @@ _VENDORS = {
             "OPIK_WORKSPACE": "probe-workspace",
             "OPIK_URL_OVERRIDE": "http://127.0.0.1:{vendor_port}/api",
         },
-        "provider_expr": None,
     },
 }
 
@@ -131,12 +122,19 @@ import json, os, threading, time, uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 bodies = {"apm": [], "vendor": []}
+posted_bytes = {"apm": 0, "vendor": 0}
+
+# Batch processors default to a 5s schedule. A negative assertion that reads the collectors
+# before that has passed for the wrong reason, so shorten the cycle and wait for quiescence.
+os.environ["OTEL_BSP_SCHEDULE_DELAY"] = "500"
 
 def _collector(which):
     class Handler(BaseHTTPRequestHandler):
         def _respond(self):
             length = int(self.headers.get("Content-Length", 0) or 0)
             bodies[which].append(self.rfile.read(length))
+            if self.command == "POST":
+                posted_bytes[which] += length
             if "/api/public/projects" in self.path:
                 payload = json.dumps({"data": [{
                     "id": "probe", "name": "probe", "metadata": {},
@@ -158,11 +156,29 @@ def _collector(which):
 
 apm_port, vendor_port = _collector("apm"), _collector("vendor")
 
+def drain(idle=1.5, cap=30.0):
+    # Return once no collector has seen anything new for `idle` seconds.
+    start = last_change = time.monotonic()
+    seen = (len(bodies["apm"]), len(bodies["vendor"]))
+    while time.monotonic() - start < cap:
+        time.sleep(0.1)
+        now = (len(bodies["apm"]), len(bodies["vendor"]))
+        if now != seen:
+            seen, last_change = now, time.monotonic()
+        elif time.monotonic() - last_change > idle:
+            return
+
+
+def report_no_wait(**extra):
+    print("RESULT " + json.dumps({"vendor_posted_bytes": posted_bytes["vendor"], **extra}))
+
+
 def report(**extra):
-    time.sleep(1)
+    drain()
     print("RESULT " + json.dumps({
         "vendor_saw_application_span": any(b"flow.execute" in body for body in bodies["vendor"]),
         "apm_saw_application_span": any(b"flow.execute" in body for body in bodies["apm"]),
+        "vendor_posted_bytes": posted_bytes["vendor"],
         **extra,
     }))
 """
@@ -192,16 +208,10 @@ _PROBE_VENDOR_FIRST = """
 tracer = build_vendor_tracer()
 telemetry = bootstrap_application_telemetry(prometheus_enabled=False)
 
-vendor_provider = {provider_expr}
-
-report(
+report_no_wait(
     ready=bool(tracer.ready),
     bootstrap_installed=telemetry.tracer_provider is not None,
     bootstrap_owns_global=trace.get_tracer_provider() is telemetry.tracer_provider,
-    vendor_provider_is_separate=(vendor_provider is not trace.get_tracer_provider())
-    if vendor_provider is not None
-    else None,
-    has_vendor_provider=vendor_provider is not None,
 )
 """
 
@@ -210,6 +220,23 @@ report(
 _PROBE_BOOTSTRAP_FIRST = """
 telemetry = bootstrap_application_telemetry(prometheus_enabled=False)
 tracer = build_vendor_tracer()
+
+# Drive a real trace through the vendor so the run below can tell "correctly isolated" apart
+# from "disconnected entirely". Constructing the tracer is not enough: most of these SDKs send
+# nothing until a span closes. The lifecycle calls are best-effort because several vendors
+# validate their stub's responses and raise on the way out; the bytes are what matter here.
+try:
+    tracer.add_trace("step-1", "step", "chain", {"question": "probe"})
+except Exception as exc:
+    print("add_trace:", type(exc).__name__)
+try:
+    tracer.end_trace("step-1", "step")
+except Exception as exc:
+    print("end_trace:", type(exc).__name__)
+try:
+    tracer.end({}, {}, None, {})
+except Exception as exc:
+    print("end:", type(exc).__name__)
 
 trace.get_tracer(APPLICATION_TRACER_NAME).start_span("flow.execute").end()
 telemetry.tracer_provider.force_flush(5000)
@@ -220,17 +247,18 @@ report(ready=bool(tracer.ready))
 
 def _run(vendor: str, probe: str) -> dict:
     spec = _VENDORS[vendor]
-    body = _SETUP.format(env=spec["env"], module=spec["module"], cls=spec["cls"]) + probe.format(
-        provider_expr=spec["provider_expr"] or "None"
-    )
+    body = _SETUP.format(env=spec["env"], module=spec["module"], cls=spec["cls"]) + probe
     # The probe sets every variable it depends on. Inherited OTEL_ or vendor variables from the
     # developer's shell (OTEL_TRACES_EXPORTER=none, a real LANGFUSE_HOST) would route exporters
     # away from the loopback stubs or point a client at a real backend.
     prefixes = ("OTEL_", "LANGFUSE_", "LANGCHAIN_", "LANGSMITH_", "LANGWATCH_", "PHOENIX_", "ARIZE_")
     prefixes += ("OPENLAYER_", "OPIK_", "COMET_", "TRACELOOP_")
     env = {k: v for k, v in os.environ.items() if not k.startswith(prefixes)}
+    # A developer's proxy would swallow the loopback traffic these assertions read.
+    env = {k: v for k, v in env.items() if k.upper() not in {"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"}}
+    env["NO_PROXY"] = "127.0.0.1,localhost"
     completed = subprocess.run(  # noqa: S603
-        [sys.executable, "-c", _HARNESS + textwrap.dedent(body)],
+        [sys.executable, "-c", _HARNESS + body],
         capture_output=True,
         text=True,
         timeout=300,
@@ -272,8 +300,6 @@ def test_vendor_does_not_claim_the_global_provider(vendor: str):
     assert result["ready"] is True, f"{vendor} did not initialise, so this case pins nothing"
     assert result["bootstrap_installed"] is True, f"{vendor} claimed the global provider, leaving the APM with none"
     assert result["bootstrap_owns_global"] is True, f"the global provider is not the bootstrap's after {vendor}"
-    if result["has_vendor_provider"]:
-        assert result["vendor_provider_is_separate"] is True, f"{vendor} is exporting from the global provider"
 
 
 @pytest.mark.parametrize("vendor", _vendor_params())
@@ -290,3 +316,6 @@ def test_application_spans_do_not_reach_the_vendor(vendor: str):
     assert result["ready"] is True, f"{vendor} did not initialise, so this case pins nothing"
     assert result["apm_saw_application_span"] is True, "the APM must receive the application span"
     assert result["vendor_saw_application_span"] is False, f"application telemetry leaked to {vendor}"
+    # Without this, a vendor that was disconnected outright passes exactly like one that is
+    # correctly isolated: bodies["vendor"] is empty either way.
+    assert result["vendor_posted_bytes"] > 0, f"{vendor} received no traces at all, so isolation is not what passed"
