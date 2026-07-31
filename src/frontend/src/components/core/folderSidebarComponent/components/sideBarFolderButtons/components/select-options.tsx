@@ -7,7 +7,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-} from "@/components/ui/select-custom";
+} from "@/components/ui/select";
 import { usePermissions } from "@/contexts/permissionsContext";
 import type { FolderType } from "@/pages/MainPage/entities";
 import { cn } from "@/utils/utils";
@@ -52,6 +52,7 @@ export const SelectOptions = ({
           styleClasses="z-50"
         >
           <SelectTrigger
+            variant="plain"
             className="h-6 w-6 min-h-[24px] min-w-[24px]"
             id={`options-trigger-${item.name}`}
             data-testid={
@@ -68,8 +69,14 @@ export const SelectOptions = ({
             />
           </SelectTrigger>
         </ShadTooltip>
-        <SelectContent align="end" alignOffset={-16} position="popper">
+        <SelectContent
+          align="end"
+          alignOffset={-16}
+          position="popper"
+          className="min-w-[11.5rem]"
+        >
           <SelectItem
+            variant="plain"
             id="rename-button"
             value="rename"
             data-testid="btn-rename-project"
@@ -79,6 +86,7 @@ export const SelectOptions = ({
             <FolderSelectItem name={t("folder.rename")} iconName="SquarePen" />
           </SelectItem>
           <SelectItem
+            variant="plain"
             value="download"
             data-testid="btn-download-project"
             className="text-xs"
@@ -87,6 +95,7 @@ export const SelectOptions = ({
             <FolderSelectItem name={t("folder.download")} iconName="Download" />
           </SelectItem>
           <SelectItem
+            variant="plain"
             value="delete"
             data-testid="btn-delete-project"
             className="text-xs"

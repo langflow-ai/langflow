@@ -159,7 +159,9 @@ async def test_memory_base_list_forwards_structured_visibility(monkeypatch):
         params=MagicMock(),
     )
 
-    assert result is page
+    # The endpoint re-materializes the paginated page via ``model_copy`` after
+    # eager-loading each item's backend, so the return value is the copy.
+    assert result is page.model_copy.return_value
     service.list_for_user_stmt.assert_called_once_with(
         user_id=actor.id,
         flow_id=None,
