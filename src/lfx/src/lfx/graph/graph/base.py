@@ -992,9 +992,10 @@ class Graph:
         event_manager: EventManager | None = None,
     ) -> list[RunOutputs]:
         """Runs the graph with the given inputs via the configured executor."""
-        from lfx.execution import get_default_coordinator
+        from lfx.execution import aget_default_coordinator
 
-        return await get_default_coordinator().run_to_completion(
+        coordinator = await aget_default_coordinator()
+        return await coordinator.run_to_completion(
             self,
             inputs=inputs,
             inputs_components=inputs_components,

@@ -22,9 +22,8 @@ class CatalogResourceKind(str, Enum):
 class CatalogPolicyMode(str, Enum):
     """Catalog policy modes.
 
-    ``ALLOW`` is reserved for a future allowlist phase. P1 only writes block
-    rules, but the schema can accept the future value without another enum
-    migration.
+    P1 reads and writes only ``BLOCK`` rules. ``ALLOW`` is a schema reservation
+    for a future allowlist phase and has no P1 resolution semantics.
     """
 
     BLOCK = "block"
@@ -34,8 +33,9 @@ class CatalogPolicyMode(str, Enum):
 class CatalogPolicyScope(str, Enum):
     """Policy scopes.
 
-    P1 uses only ``GLOBAL``. Organization and workspace values reserve the
-    existing authorization domain shape for a later scoped-policy phase.
+    P1 reads and writes only ``GLOBAL`` rules. Organization and workspace
+    values reserve the existing authorization domain shape for a later
+    scoped-policy phase and have no P1 resolution semantics.
     """
 
     GLOBAL = "global"
@@ -43,29 +43,51 @@ class CatalogPolicyScope(str, Enum):
     WORKSPACE = "workspace"
 
 
+def _enum_values_sql(enum_type: type[Enum]) -> str:
+    """Return safely quoted SQL literals for a closed internal string enum."""
+    return ", ".join(f"'{member.value}'" for member in enum_type)
+
+
+_RESOURCE_KIND_CHECK = f"resource_kind IN ({_enum_values_sql(CatalogResourceKind)})"
+_MODE_CHECK = f"mode IN ({_enum_values_sql(CatalogPolicyMode)})"
+_SCOPE_CHECK = f"scope IN ({_enum_values_sql(CatalogPolicyScope)})"
+_SCOPED_VALUES_SQL = ", ".join(f"'{scope.value}'" for scope in (CatalogPolicyScope.ORG, CatalogPolicyScope.WORKSPACE))
+_SCOPE_DOMAIN_CHECK = (
+    f"(scope = '{CatalogPolicyScope.GLOBAL.value}' AND domain_id IS NULL) "
+    f"OR (scope IN ({_SCOPED_VALUES_SQL}) AND domain_id IS NOT NULL)"
+)
+
+
 def _tz_aware_now() -> datetime:
+    """Return the current UTC timestamp for in-memory model defaults."""
     return datetime.now(timezone.utc)
 
 
 class CatalogPolicyRule(SQLModel, table=True):  # type: ignore[call-arg]
-    """A block or allow rule for a component type or template id."""
+    """A catalog rule keyed by an exact, case-sensitive resource identifier.
+
+    The P1 service considers only global block rules; reserved allow/scoped rows
+    are ignored until a future phase defines their resolution semantics. The
+    unique indexes prevent contradictory modes for the same resource and
+    domain, while intentionally allowing distinct resources in one scope.
+    """
 
     __tablename__ = "catalog_policy_rule"
     __table_args__ = (
         CheckConstraint(
-            "resource_kind IN ('component', 'template')",
+            _RESOURCE_KIND_CHECK,
             name="ck_catalog_policy_rule_resource_kind",
         ),
         CheckConstraint(
-            "mode IN ('block', 'allow')",
+            _MODE_CHECK,
             name="ck_catalog_policy_rule_mode",
         ),
         CheckConstraint(
-            "scope IN ('global', 'org', 'workspace')",
+            _SCOPE_CHECK,
             name="ck_catalog_policy_rule_scope",
         ),
         CheckConstraint(
-            "(scope = 'global' AND domain_id IS NULL) OR (scope IN ('org', 'workspace') AND domain_id IS NOT NULL)",
+            _SCOPE_DOMAIN_CHECK,
             name="ck_catalog_policy_rule_scope_domain_consistency",
         ),
         Index(
