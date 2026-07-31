@@ -27,7 +27,8 @@ class Remediation:
 
     ``markers`` are lowercase substrings; the error matches when ANY is present
     (they are alternate phrasings of the same constraint). ``providers`` empty
-    means the remediation applies to any provider.
+    means the remediation applies to any provider. Provider allowlists are
+    strict: a missing provider does not satisfy a provider-scoped remediation.
     """
 
     name: str
@@ -36,7 +37,7 @@ class Remediation:
     providers: tuple[str, ...] = field(default_factory=tuple)
 
     def matches(self, error_msg: str | None, provider: str | None) -> bool:
-        if self.providers and (provider or "") not in self.providers:
+        if self.providers and provider not in self.providers:
             return False
         lowered = (error_msg or "").lower()
         return any(marker in lowered for marker in self.markers)
@@ -49,7 +50,10 @@ REMEDIATIONS: tuple[Remediation, ...] = (
         name="openai-responses-api-for-tools",
         # gpt-5.6+ reasoning models reject tools + reasoning_effort on
         # chat/completions and point at the Responses API in the 400 body.
-        markers=("/v1/responses",),
+        markers=(
+            "function tools with reasoning_effort are not supported",
+            "use function tools, use /v1/responses",
+        ),
         overrides={"use_responses_api": True},
         providers=("OpenAI",),
     ),
