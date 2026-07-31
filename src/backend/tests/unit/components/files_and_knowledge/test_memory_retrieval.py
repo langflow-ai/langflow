@@ -184,7 +184,7 @@ class TestToolSurface:
 class TestBuildWhereClause:
     def test_session_filter_on_returns_session_predicate(self):
         component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session=True)
-        assert component._build_where_clause(session_id="s1") == {"session_id": {"$eq": "s1"}}
+        assert component._build_where_clause(session_id="s1") == {"session_id": "s1"}
 
     def test_session_filter_off_returns_none(self):
         component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session=False)
@@ -200,7 +200,7 @@ class TestBuildWhereClause:
         # cross-session retrieval. Confirm bool() coerces properly.
         component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session=True)
         component.filter_by_session = "false"  # non-bool value
-        assert component._build_where_clause(session_id="s1") == {"session_id": {"$eq": "s1"}}
+        assert component._build_where_clause(session_id="s1") == {"session_id": "s1"}
 
     def test_session_filter_falsy_value_disables_toggle(self):
         component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session=False)
@@ -337,21 +337,21 @@ class TestMemoryBaseRetrievalInvariants:
         mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
         owner = SimpleNamespace(id=owner_id, username="alice")
 
-        fake_chroma = MagicMock()
-        fake_chroma.similarity_search_with_score.return_value = []
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = []
 
         with contextlib.ExitStack() as stack:
             TestMemoryBaseRetrievalBehavior._enter_full_chain(
                 stack,
                 db=_exec_returning(mb_row),
-                fake_chroma=fake_chroma,
+                fake_backend=fake_backend,
                 owner=owner,
                 metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
             )
             result = await component.retrieve_memory()
 
         assert len(result) == 0
-        kwargs = fake_chroma.similarity_search_with_score.call_args.kwargs
+        kwargs = fake_backend.similarity_search.call_args.kwargs
         assert kwargs["filter"] is None
 
     async def test_missing_flow_id_raises(self):
@@ -386,34 +386,36 @@ class TestMemoryBaseRetrievalInvariants:
         ):
             await component.retrieve_memory()
 
-    async def test_missing_metadata_raises(self):
+    async def test_retrieval_works_without_on_disk_sidecar(self):
+        """A missing on-disk sidecar must NOT block retrieval.
+
+        Embedding + backend resolve from the knowledge_base row, so a remote-backed
+        Memory Base is queryable on a replica whose local disk never held the KB
+        directory. This is the regression guard for the old hard-fail
+        ("has no embedding metadata on disk").
+        """
         flow_id = uuid.uuid4()
         owner_id = uuid.uuid4()
         component = _make_component(flow_id=flow_id, session_id="s1")
         mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
         owner = SimpleNamespace(id=owner_id, username="alice")
-        db = _exec_returning(mb_row)
-        with (
-            _patched_session_scope(db),
-            patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.get_user_by_id",
-                new=AsyncMock(return_value=owner),
-            ),
-            patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.get_knowledge_bases_root_path",
-                return_value=Path(),
-            ),
-            patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.validate_kb_path",
-                return_value=None,
-            ),
-            patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.load_kb_metadata",
-                return_value={},
-            ),
-            pytest.raises(ValueError, match="no embedding metadata"),
-        ):
-            await component.retrieve_memory()
+
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = []
+
+        with contextlib.ExitStack() as stack:
+            TestMemoryBaseRetrievalBehavior._enter_full_chain(
+                stack,
+                db=_exec_returning(mb_row),
+                fake_backend=fake_backend,
+                owner=owner,
+                # No sidecar on disk — resolver falls back to the default model.
+                metadata={},
+            )
+            result = await component.retrieve_memory()
+
+        assert len(result) == 0
+        fake_backend.similarity_search.assert_awaited_once()
 
     async def test_kb_path_traversal_raises(self):
         flow_id = uuid.uuid4()
@@ -443,7 +445,13 @@ class TestMemoryBaseRetrievalInvariants:
 
 class TestMemoryBaseRetrievalBehavior:
     @staticmethod
-    def _enter_full_chain(stack: contextlib.ExitStack, *, db, fake_chroma, owner, metadata):
+    def _enter_full_chain(stack: contextlib.ExitStack, *, db, fake_backend, owner, metadata):
+        # Embedding provider/model now come from the DB row via
+        # resolve_embedding_selection (no on-disk sidecar), so patch that instead
+        # of the removed load_kb_metadata read. The ``metadata`` dict is reused as
+        # the source of the provider/model the resolver returns.
+        provider = metadata.get("embedding_provider", "OpenAI")
+        model = metadata.get("embedding_model", "x")
         for cm in (
             _patched_session_scope(db),
             patch(
@@ -459,16 +467,20 @@ class TestMemoryBaseRetrievalBehavior:
                 return_value=None,
             ),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.load_kb_metadata",
-                return_value=metadata,
+                "lfx.components.files_and_knowledge.memory_retrieval.resolve_embedding_selection",
+                new=AsyncMock(return_value=(provider, model)),
             ),
             patch(
                 "lfx.components.files_and_knowledge.memory_retrieval.KBIngestionHelper.build_embeddings",
                 new=AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.Chroma",
-                return_value=fake_chroma,
+                "lfx.components.files_and_knowledge.memory_retrieval.resolve_backend_selection",
+                new=AsyncMock(return_value=("chroma", {})),
+            ),
+            patch(
+                "lfx.components.files_and_knowledge.memory_retrieval.create_backend",
+                return_value=fake_backend,
             ),
         ):
             stack.enter_context(cm)
@@ -480,22 +492,22 @@ class TestMemoryBaseRetrievalBehavior:
         mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
         owner = SimpleNamespace(id=owner_id, username="alice")
 
-        fake_chroma = MagicMock()
-        fake_chroma.similarity_search_with_score.return_value = []
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = []
 
         with contextlib.ExitStack() as stack:
             self._enter_full_chain(
                 stack,
                 db=_exec_returning(mb_row),
-                fake_chroma=fake_chroma,
+                fake_backend=fake_backend,
                 owner=owner,
                 metadata={"embedding_provider": "OpenAI", "embedding_model": "x", "api_key": "k"},
             )
             await component.retrieve_memory()
 
-        kwargs = fake_chroma.similarity_search_with_score.call_args.kwargs
+        kwargs = fake_backend.similarity_search.call_args.kwargs
         assert kwargs["k"] == 5
-        assert kwargs["filter"] == {"session_id": {"$eq": "s1"}}
+        assert kwargs["filter"] == {"session_id": "s1"}
 
     async def test_similarity_search_no_filter_when_disabled(self):
         flow_id = uuid.uuid4()
@@ -504,20 +516,20 @@ class TestMemoryBaseRetrievalBehavior:
         mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
         owner = SimpleNamespace(id=owner_id, username="alice")
 
-        fake_chroma = MagicMock()
-        fake_chroma.similarity_search_with_score.return_value = []
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = []
 
         with contextlib.ExitStack() as stack:
             self._enter_full_chain(
                 stack,
                 db=_exec_returning(mb_row),
-                fake_chroma=fake_chroma,
+                fake_backend=fake_backend,
                 owner=owner,
                 metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
             )
             await component.retrieve_memory()
 
-        kwargs = fake_chroma.similarity_search_with_score.call_args.kwargs
+        kwargs = fake_backend.similarity_search.call_args.kwargs
         assert kwargs["filter"] is None
 
     async def test_empty_search_query_returns_empty_dataframe_without_embedding(self):
@@ -531,21 +543,21 @@ class TestMemoryBaseRetrievalBehavior:
         mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
         owner = SimpleNamespace(id=owner_id, username="alice")
 
-        fake_chroma = MagicMock()
+        fake_backend = AsyncMock()
 
         with contextlib.ExitStack() as stack:
             self._enter_full_chain(
                 stack,
                 db=_exec_returning(mb_row),
-                fake_chroma=fake_chroma,
+                fake_backend=fake_backend,
                 owner=owner,
                 metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
             )
             result = await component.retrieve_memory()
 
         assert len(result) == 0
-        fake_chroma.similarity_search_with_score.assert_not_called()
-        fake_chroma.similarity_search.assert_not_called()
+        fake_backend.similarity_search.assert_not_called()
+        fake_backend.similarity_search.assert_not_called()
 
     async def test_include_metadata_false_drops_metadata_keys(self):
         flow_id = uuid.uuid4()
@@ -559,14 +571,14 @@ class TestMemoryBaseRetrievalBehavior:
         owner = SimpleNamespace(id=owner_id, username="alice")
 
         doc = SimpleNamespace(page_content="hello world", metadata={"session_id": "s1", "sender": "user"})
-        fake_chroma = MagicMock()
-        fake_chroma.similarity_search_with_score.return_value = [(doc, 0.25)]
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = [(doc, 0.25)]
 
         with contextlib.ExitStack() as stack:
             self._enter_full_chain(
                 stack,
                 db=_exec_returning(mb_row),
-                fake_chroma=fake_chroma,
+                fake_backend=fake_backend,
                 owner=owner,
                 metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
             )
@@ -587,14 +599,14 @@ class TestMemoryBaseRetrievalBehavior:
         owner = SimpleNamespace(id=owner_id, username="alice")
 
         doc = SimpleNamespace(page_content="hi", metadata={"session_id": "s1", "sender": "ai"})
-        fake_chroma = MagicMock()
-        fake_chroma.similarity_search_with_score.return_value = [(doc, 0.1)]
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = [(doc, 0.1)]
 
         with contextlib.ExitStack() as stack:
             self._enter_full_chain(
                 stack,
                 db=_exec_returning(mb_row),
-                fake_chroma=fake_chroma,
+                fake_backend=fake_backend,
                 owner=owner,
                 metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
             )
@@ -628,14 +640,14 @@ class TestMemoryBaseRetrievalBehavior:
                 "is_summary": np.bool_(True),  # noqa: FBT003
             },
         )
-        fake_chroma = MagicMock()
-        fake_chroma.similarity_search_with_score.return_value = [(doc, np.float64(0.25))]
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = [(doc, np.float64(0.25))]
 
         with contextlib.ExitStack() as stack:
             self._enter_full_chain(
                 stack,
                 db=_exec_returning(mb_row),
-                fake_chroma=fake_chroma,
+                fake_backend=fake_backend,
                 owner=owner,
                 metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
             )
