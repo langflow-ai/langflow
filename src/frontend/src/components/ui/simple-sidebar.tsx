@@ -439,6 +439,7 @@ const SimpleSidebar = React.forwardRef<
     const handleSidebarKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
         if (!open || !fullscreen || event.key !== "Tab") return;
+        if (!event.currentTarget.contains(document.activeElement)) return;
 
         const focusableElements = getFocusableElements(event.currentTarget);
 
