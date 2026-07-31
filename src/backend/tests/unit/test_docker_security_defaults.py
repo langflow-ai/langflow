@@ -67,6 +67,21 @@ def _final_stage_env(dockerfile: Path) -> dict[str, str]:
 
 
 @pytest.mark.parametrize("dockerfile", PUBLISHED_DOCKERFILES)
+def test_published_images_use_writable_runtime_home(dockerfile: str) -> None:
+    dockerfile_path = REPO_ROOT / "docker" / dockerfile
+    runtime_env = _final_stage_env(dockerfile_path)
+    instructions = _logical_instructions(dockerfile_path)
+
+    assert runtime_env["HOME"] == "/app/data"
+    assert any(
+        instruction.startswith("RUN ")
+        and "mkdir -p /app/data /app/langflow" in instruction
+        and "chown -R 1000:0 /app/data /app/langflow" in instruction
+        for instruction in instructions
+    )
+
+
+@pytest.mark.parametrize("dockerfile", PUBLISHED_DOCKERFILES)
 def test_published_images_do_not_force_restrictive_runtime_defaults(dockerfile: str) -> None:
     runtime_env = _final_stage_env(REPO_ROOT / "docker" / dockerfile)
 

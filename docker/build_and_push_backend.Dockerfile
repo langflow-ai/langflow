@@ -89,6 +89,7 @@ RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
 # Copy only the virtual environment
 COPY --from=builder --chown=1000:0 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
+ENV HOME=/app/data
 ENV BASH_ENV="" \
     ENV="" \
     PROMPT_COMMAND=""
