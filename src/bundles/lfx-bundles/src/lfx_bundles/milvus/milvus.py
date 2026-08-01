@@ -13,6 +13,8 @@ from lfx.io import (
 from lfx.schema.data import Data
 from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
+_SCHEMA_FREE_METADATA_TYPES = (str, bool, int, float, dict)
+
 
 class MilvusVectorStoreComponent(LCVectorStoreComponent):
     """Milvus vector store with search capabilities."""
@@ -99,6 +101,14 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input)
 
         if documents:
+            # Milvus infers scalar and JSON fields without field configuration;
+            # other metadata requires an explicit schema.
+            for document in documents:
+                document.metadata = {
+                    key: value
+                    for key, value in document.metadata.items()
+                    if isinstance(value, _SCHEMA_FREE_METADATA_TYPES)
+                }
             milvus_store.add_documents(documents)
 
         return milvus_store
