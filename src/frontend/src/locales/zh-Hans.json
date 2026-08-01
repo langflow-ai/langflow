@@ -164,6 +164,8 @@
   "assistant.noModels": "未配置任何模型",
   "assistant.noModelsConfigured": "未配置模型提供程序",
   "assistant.noModelsDescription": "要使用该助手，请在设置中配置至少一个模型提供商。",
+  "assistant.disabledTitle": "助手已禁用",
+  "assistant.disabledDescription": "此服务器上的 Langflow Assistant 已被禁用。请让管理员设置以下环境变量并重启 Langflow 以启用它。",
   "assistant.noPreviousSessions": "没有之前的会话",
   "assistant.placeholder.0": "创建一个代理组件...",
   "assistant.placeholder.1": "构建一个 RAG 管道……",

@@ -164,6 +164,8 @@
   "assistant.noModels": "No hay modelos configurados",
   "assistant.noModelsConfigured": "No hay ningún proveedor de modelos configurado",
   "assistant.noModelsDescription": "Para utilizar el asistente, configura al menos un proveedor de modelos en tus ajustes.",
+  "assistant.disabledTitle": "Asistente Desactivado",
+  "assistant.disabledDescription": "El Langflow Assistant está desactivado en este servidor. Pida a su administrador que lo active configurando la variable de entorno siguiente y reiniciando Langflow.",
   "assistant.noPreviousSessions": "No hay sesiones anteriores",
   "assistant.placeholder.0": "Crear un componente de agente...",
   "assistant.placeholder.1": "Crear un proceso RAG...",

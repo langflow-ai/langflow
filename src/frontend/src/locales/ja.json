@@ -164,6 +164,8 @@
   "assistant.noModels": "設定済みのモデルはありません",
   "assistant.noModelsConfigured": "モデルプロバイダーが設定されていません",
   "assistant.noModelsDescription": "アシスタントをご利用いただくには、設定で少なくとも1つのモデルプロバイダーを設定してください。",
+  "assistant.disabledTitle": "アシスタントは無効です",
+  "assistant.disabledDescription": "このサーバーでは Langflow Assistant が無効になっています。以下の環境変数を設定して Langflow を再起動するよう管理者に依頼してください。",
   "assistant.noPreviousSessions": "過去のセッションはありません",
   "assistant.placeholder.0": "エージェントコンポーネントを作成する...",
   "assistant.placeholder.1": "RAGパイプラインを構築する...",
