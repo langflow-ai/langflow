@@ -15,6 +15,8 @@ import anyio
 import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
+from filelock import FileLock
+from filelock import Timeout as FileLockTimeout
 from lfx.log.logger import logger
 from lfx.services.deps import session_scope
 from sqlalchemy import event, inspect
@@ -129,6 +131,50 @@ def _normalize_sync_postgres_url(database_url: str) -> str:
 
 
 @contextmanager
+def _sqlite_migration_lock(database_url: str):
+    """Hold a cross-process file lock for the duration of a SQLite migration.
+
+    When Langflow runs with multiple Gunicorn/Uvicorn workers all sharing the
+    same SQLite file, each worker calls ``alembic upgrade`` independently.
+    Because SQLite only permits one exclusive writer at a time (``BEGIN
+    EXCLUSIVE``), concurrent workers race on that lock and the losers receive
+    ``OperationalError: database is locked`` before busy_timeout can even
+    retry.
+
+    A ``filelock.FileLock`` placed alongside the ``.db`` file serialises the
+    workers at the Python level before any of them even open SQLite, so at
+    most one worker runs migrations at a time and the others wait (up to
+    ``LANGFLOW_MIGRATION_LOCK_TIMEOUT_S`` seconds, default 300).
+
+    No-op for non-SQLite URLs and for in-memory SQLite (no file, no lock).
+    """
+    db_path = get_sqlite_database_file_path(database_url)
+    if db_path is None:
+        yield
+        return
+
+    lock_path = db_path.with_suffix(".migration.lock")
+    timeout = _migration_lock_timeout_s()
+    lock = FileLock(str(lock_path), timeout=timeout)
+    try:
+        logger.debug("Acquiring SQLite migration file lock %s", lock_path)
+        lock.acquire()
+    except FileLockTimeout:
+        msg = (
+            f"Could not acquire SQLite migration file lock '{lock_path}' within "
+            f"{timeout:.0f}s. Another worker is likely hung mid-migration. "
+            "Investigate the worker holding the lock or restart the deployment. "
+            "Override the wait via LANGFLOW_MIGRATION_LOCK_TIMEOUT_S (seconds)."
+        )
+        raise RuntimeError(msg) from None
+    try:
+        yield
+    finally:
+        logger.debug("Releasing SQLite migration file lock %s", lock_path)
+        lock.release()
+
+
+@contextmanager
 def _postgres_migration_lock(database_url: str):
     """Hold a Postgres session-level advisory lock for the duration of the block.
 
@@ -140,8 +186,7 @@ def _postgres_migration_lock(database_url: str):
     here (bounded, with progress logging) and then find the schema already at
     head.
 
-    No-op for non-PostgreSQL URLs. SQLite has no advisory locks (and Langflow
-    runs single-process on it anyway).
+    No-op for non-PostgreSQL URLs.
     """
     if not database_url.startswith(("postgresql", "postgres")):
         yield
@@ -633,9 +678,13 @@ class DatabaseService(Service):
         # I don't want to output anything
         # subprocess.DEVNULL is an int
         buffer_context = self._open_alembic_log_buffer()
-        # The advisory lock serialises concurrent migration runs across workers
-        # so they do not race on CREATE TYPE / CREATE TABLE against a fresh PG.
-        with _postgres_migration_lock(self.database_url), buffer_context as buffer:
+        # The file/advisory lock serialises concurrent migration runs across workers
+        # so they do not race on CREATE TYPE / CREATE TABLE against a fresh DB.
+        with (
+            _sqlite_migration_lock(self.database_url),
+            _postgres_migration_lock(self.database_url),
+            buffer_context as buffer,
+        ):
             alembic_cfg = Config(stdout=buffer)
             # alembic_cfg.attributes["connection"] = session
             alembic_cfg.set_main_option("script_location", str(self.script_location))
@@ -809,7 +858,7 @@ class DatabaseService(Service):
         Opens its own sync engine so the DDL runs on the same driver the lock
         uses; the application's async engine is unaffected.
         """
-        with _postgres_migration_lock(self.database_url):
+        with _sqlite_migration_lock(self.database_url), _postgres_migration_lock(self.database_url):
             sync_engine = sa.create_engine(_normalize_sync_postgres_url(self.database_url))
             try:
                 with sync_engine.begin() as conn:
