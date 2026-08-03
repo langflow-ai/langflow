@@ -9,8 +9,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.api_keys import has_api_key
 
-@pytest.fixture(autouse=True)
+
+@pytest.fixture
 def langfuse_env_vars():
     with patch.dict(
         os.environ,
@@ -103,6 +105,73 @@ class TestLangfuseV4Api:
         assert callable(propagate_attributes)
 
 
+@pytest.mark.api_key_required
+@pytest.mark.skipif(
+    not has_api_key("LANGFUSE_SECRET_KEY")
+    or not has_api_key("LANGFUSE_PUBLIC_KEY")
+    or not (has_api_key("LANGFUSE_HOST") or has_api_key("LANGFUSE_BASE_URL")),
+    reason="Langfuse credentials and host are not set",
+)
+def test_langfuse_tracer_uses_real_v4_sdk_without_a_langfuse_server():
+    """Exercise LangFuseTracer against the installed SDK without network I/O."""
+    pytest.importorskip("langfuse")
+    import langflow.services.tracing.langfuse as langfuse_module
+    from langflow.services.tracing.langfuse import LangFuseTracer
+    from langfuse import Langfuse
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor, SpanExportResult
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+
+    class _NoopOtlpExporter:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def export(self, spans):  # noqa: ARG002
+            return SpanExportResult.SUCCESS
+
+        def shutdown(self):
+            pass
+
+        def force_flush(self, timeout_millis=30000):  # noqa: ARG002
+            return True
+
+    secret_key = os.environ["LANGFUSE_SECRET_KEY"]
+    public_key = os.environ["LANGFUSE_PUBLIC_KEY"]
+    with patch("langfuse._client.span_processor.OTLPSpanExporter", _NoopOtlpExporter):
+        client = Langfuse(
+            public_key=public_key,
+            secret_key=secret_key,  # pragma: allowlist secret
+            host=os.environ.get("LANGFUSE_BASE_URL") or os.environ["LANGFUSE_HOST"],
+            tracer_provider=provider,
+            tracing_enabled=True,
+        )
+
+    client.auth_check = lambda: True
+    with patch.object(langfuse_module, "_get_or_create_shared_client", lambda _config: client):
+        try:
+            tracer = LangFuseTracer(
+                trace_name="contract - flow-v4",
+                trace_type="chain",
+                project_name="contract-project",
+                trace_id=uuid.uuid4(),
+            )
+            assert tracer.ready
+
+            tracer.add_trace("component-1", "Component (component-1)", "chain", {"input": "hello"})
+            tracer.end_trace("component-1", "Component", outputs={"output": "world"})
+            tracer.end(inputs={"input": "hello"}, outputs={"output": "world"})
+        finally:
+            client.shutdown()
+
+    spans = {span.name: span for span in exporter.get_finished_spans()}
+    assert {"flow-v4", "Component"} <= spans.keys()
+
+
+@pytest.mark.usefixtures("langfuse_env_vars")
 class TestLangfuseTracerV4:
     def test_initializes_root_observation_with_propagated_attributes(self, mock_langfuse):
         from langflow.services.tracing.langfuse import LangFuseTracer
