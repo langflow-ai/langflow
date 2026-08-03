@@ -1,6 +1,36 @@
 """Utility functions for module management in the policies component."""
 
 import sys
+from pathlib import Path
+from types import ModuleType
+
+
+def ensure_toolguard_module_path_compat(runtime_module: ModuleType) -> None:
+    """Backport Windows module-path handling for ToolGuard's in-memory loader.
+
+    ToolGuard 0.2.21 converts forward slashes in generated ``FileTwin`` paths to
+    Python module dots but leaves Windows backslashes untouched. Runtime methods
+    resolve this module-global helper when guards are entered, so replacing it
+    once is enough to make Windows-generated guards importable. The behavior
+    probe leaves future fixed ToolGuard releases unchanged.
+    """
+    converter = getattr(runtime_module, "_file_to_module_name", None)
+    if not callable(converter):
+        return
+
+    probe = r"policies\guard.py"
+    try:
+        if converter(probe) == "policies.guard":
+            return
+    except (TypeError, ValueError):
+        # A future ToolGuard may change the private helper's contract. In that
+        # case, do not replace behavior we no longer understand.
+        return
+
+    def file_to_module_name(file_path: str | Path) -> str:
+        return str(file_path).removesuffix(".py").replace("\\", ".").replace("/", ".")
+
+    runtime_module.__dict__["_file_to_module_name"] = file_to_module_name
 
 
 def unload_module(name: str) -> None:

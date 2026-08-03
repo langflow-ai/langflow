@@ -1,7 +1,9 @@
 from pathlib import Path
+from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
+from lfx.components.models_and_agents.policies.module_utils import ensure_toolguard_module_path_compat
 from lfx.components.models_and_agents.policies_component import (
     MODE_GENERATE,
     MODE_GUARD,
@@ -391,6 +393,30 @@ def _fake_file_twin(file_name):
     from types import SimpleNamespace
 
     return SimpleNamespace(file_name=file_name, content=None)
+
+
+def test_toolguard_module_path_compat_normalizes_windows_separators():
+    """Patch the ToolGuard 0.2.21 converter without changing FileTwin types."""
+    runtime_module = ModuleType("fake_toolguard_runtime")
+    runtime_module._file_to_module_name = lambda path: str(path).removesuffix(".py").replace("/", ".")
+
+    ensure_toolguard_module_path_compat(runtime_module)
+
+    assert runtime_module._file_to_module_name(r"proj\fetch_content\guard.py") == "proj.fetch_content.guard"
+
+
+def test_toolguard_module_path_compat_preserves_fixed_converter():
+    """Do not replace the converter after a fixed ToolGuard release is installed."""
+    runtime_module = ModuleType("fixed_toolguard_runtime")
+
+    def fixed_converter(path):
+        return str(path).removesuffix(".py").replace("\\", ".").replace("/", ".")
+
+    runtime_module._file_to_module_name = fixed_converter
+
+    ensure_toolguard_module_path_compat(runtime_module)
+
+    assert runtime_module._file_to_module_name is fixed_converter
 
 
 def test_make_toolguard_result_reads_posix_keyed_fields(mock_component):

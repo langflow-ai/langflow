@@ -12,7 +12,7 @@ from lfx.base.models.unified_models import (
     get_llm,
     update_model_options_in_build_config,
 )
-from lfx.components.models_and_agents.policies.module_utils import unload_module
+from lfx.components.models_and_agents.policies.module_utils import ensure_toolguard_module_path_compat, unload_module
 from lfx.field_typing import LanguageModel, Tool
 from lfx.io import (
     BoolInput,
@@ -150,6 +150,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         module-level statements such as `try/except` import guards.
         """
         try:
+            import toolguard.runtime.runtime as toolguard_runtime
             from toolguard.buildtime import (
                 PolicySpecOptions,
                 ToolGuardsCodeGenerationResult,
@@ -165,6 +166,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             from lfx.components.models_and_agents.policies.llm_wrapper import LangchainModelWrapper
         except ModuleNotFoundError as e:
             raise ImportError(_TOOLGUARD_INSTALL_HINT) from e
+        ensure_toolguard_module_path_compat(toolguard_runtime)
         return {
             "PolicySpecOptions": PolicySpecOptions,
             "ToolGuardsCodeGenerationResult": ToolGuardsCodeGenerationResult,
