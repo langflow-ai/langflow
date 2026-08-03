@@ -9,6 +9,16 @@ from langflow.services.task import model_provider_policy_refresh as refresh_modu
 from lfx.services.model_provider_policy import ModelProviderPolicyService
 
 
+class _ExternalBuiltinPolicyService(ModelProviderPolicyService):
+    def __init__(self) -> None:
+        super().__init__()
+        self.set_approved_provider_ids({"openai"}, version=2)
+
+    @property
+    def external_approved_provider_ids(self) -> frozenset[str]:
+        return frozenset({"openai"})
+
+
 async def test_refresh_failure_preserves_unrestricted_policy_availability(monkeypatch):
     service = ModelProviderPolicyService()
     error_message = "policy store unavailable"
@@ -153,6 +163,41 @@ async def test_start_uses_configured_interval_and_stop_clears_task(monkeypatch):
     await worker.stop()
 
     assert worker._task is None
+
+
+async def test_start_skips_explicitly_external_builtin_subclass(monkeypatch):
+    service = _ExternalBuiltinPolicyService()
+    worker = refresh_module.ModelProviderPolicyRefreshWorker()
+    debug = AsyncMock()
+    monkeypatch.setattr(refresh_module, "get_model_provider_policy_service", lambda: service)
+    monkeypatch.setattr(refresh_module.logger, "adebug", debug)
+
+    await worker.start()
+
+    assert worker._task is None
+    debug.assert_awaited_once_with("Model-provider policy refresh worker not started: external policy service active")
+
+
+async def test_refresh_failure_does_not_fail_close_explicitly_external_builtin_subclass(monkeypatch):
+    service = _ExternalBuiltinPolicyService()
+    error_message = "policy store unavailable"
+
+    @asynccontextmanager
+    async def failing_session_scope():
+        raise ConnectionError(error_message)
+        yield
+
+    fail_closed = Mock(wraps=service.fail_closed)
+    monkeypatch.setattr(service, "fail_closed", fail_closed)
+    monkeypatch.setattr(refresh_module, "session_scope", failing_session_scope)
+    monkeypatch.setattr(refresh_module, "get_model_provider_policy_service", lambda: service)
+    monkeypatch.setattr(refresh_module.logger, "aerror", AsyncMock())
+
+    changed = await refresh_module.ModelProviderPolicyRefreshWorker()._run_once()
+
+    assert changed is False
+    assert service.approved_provider_ids == frozenset({"openai"})
+    fail_closed.assert_not_called()
 
 
 async def test_start_replaces_a_completed_refresh_task(monkeypatch):

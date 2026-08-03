@@ -11,6 +11,7 @@ def test_empty_default_is_fail_open_for_single_and_batch_decisions():
     service = CatalogPolicyService()
 
     assert service.ready is True
+    assert service.external_policy_snapshot is None
     assert service.enabled is False
     assert service.is_component_blocked("OpenAIModel") is False
     assert service.is_template_blocked("starter-template") is False

@@ -26,7 +26,11 @@ from langflow.api.v1.schemas.authz_teams import (
     TeamRead,
     TeamUpdate,
 )
-from langflow.services.authorization.lifecycle import safe_identity_mutation_committed, stage_identity_mutation
+from langflow.services.authorization.lifecycle import (
+    acquire_identity_mutation_lock,
+    safe_identity_mutation_committed,
+    stage_identity_mutation,
+)
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzTeam, AuthzTeamMember
 from langflow.services.database.models.user.model import User
@@ -98,6 +102,12 @@ async def create_team(
     session: DbSession,
 ) -> TeamRead:
     _require_superuser(current_user)
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(
+        authorization_service,
+        session,
+        kind=AuthorizationMutationKind.TEAM_CREATED,
+    )
     team = AuthzTeam(
         team_name=payload.team_name,
         adom_name=payload.adom_name,
@@ -105,7 +115,6 @@ async def create_team(
         is_active=payload.is_active,
     )
     session.add(team)
-    authorization_service = get_authorization_service()
     mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.TEAM_CREATED,
         entity_id=team.id,
@@ -144,6 +153,13 @@ async def update_team(
     session: DbSession,
 ) -> TeamRead:
     _require_superuser(current_user)
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(
+        authorization_service,
+        session,
+        kind=AuthorizationMutationKind.TEAM_UPDATED,
+        entity_id=team_id,
+    )
     team = await session.get(AuthzTeam, team_id)
     if team is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
@@ -174,8 +190,6 @@ async def update_team(
         policy_relevant_fields=tuple(sorted(set(changed_fields) & {"adom_name", "is_active"})),
         previous_identifier=previous_adom_name if team.adom_name != previous_adom_name else None,
     )
-    authorization_service = get_authorization_service()
-
     try:
         await session.flush()
         await stage_identity_mutation(authorization_service, session, mutation)
@@ -206,6 +220,13 @@ async def delete_team(
     session: DbSession,
 ) -> None:
     _require_superuser(current_user)
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(
+        authorization_service,
+        session,
+        kind=AuthorizationMutationKind.TEAM_DELETED,
+        entity_id=team_id,
+    )
     team = await session.get(AuthzTeam, team_id)
     if team is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
@@ -218,7 +239,6 @@ async def delete_team(
         policy_relevant_fields=("adom_name", "is_active"),
         previous_identifier=team.adom_name,
     )
-    authorization_service = get_authorization_service()
     # Cascade on team_members handles cleanup; share rows targeting this team
     # are left in place (caller may want to migrate them before deleting).
     await session.delete(team)
@@ -278,6 +298,13 @@ async def add_member(
     session: DbSession,
 ) -> TeamMemberRead:
     _require_superuser(current_user)
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(
+        authorization_service,
+        session,
+        kind=AuthorizationMutationKind.TEAM_MEMBER_ADDED,
+        affected_user_ids=(payload.user_id,),
+    )
     team = await session.get(AuthzTeam, team_id)
     if team is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
@@ -291,7 +318,6 @@ async def add_member(
         source=payload.source,
     )
     session.add(member)
-    authorization_service = get_authorization_service()
     mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.TEAM_MEMBER_ADDED,
         entity_id=member.id,
@@ -338,6 +364,13 @@ async def remove_member(
     session: DbSession,
 ) -> None:
     _require_superuser(current_user)
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(
+        authorization_service,
+        session,
+        kind=AuthorizationMutationKind.TEAM_MEMBER_REMOVED,
+        affected_user_ids=(user_id,),
+    )
     member = (
         await session.exec(
             select(AuthzTeamMember).where(
@@ -359,7 +392,6 @@ async def remove_member(
         team_id=team_id,
         policy_relevant_fields=("team_id", "user_id", "source"),
     )
-    authorization_service = get_authorization_service()
     await session.delete(member)
     await session.flush()
     await stage_identity_mutation(authorization_service, session, mutation)

@@ -25,3 +25,9 @@ class CatalogPolicyBlockedSet(BaseModel):
                 raise ValueError(msg)
             normalized.add(key)
         return sorted(normalized)
+
+
+class CatalogPolicyRead(CatalogPolicyBlockedSet):
+    """Current catalog block policy and its ownership source."""
+
+    managed_externally: bool
