@@ -1,7 +1,7 @@
 import pytest
 from lfx.components.input_output.chat import ChatInput
 from lfx.custom.custom_component.component import Component
-from lfx.inputs.inputs import StrInput
+from lfx.inputs.inputs import BoolInput, IntInput, StrInput
 from lfx.schema.message import Message
 
 
@@ -33,7 +33,22 @@ def test_constructor_parameters_are_applied_to_declared_inputs():
 
     component = TestComponent(custom_value="from-ui")
 
-    assert component.custom_value == "from-ui"
+    assert component.get_input("custom_value").value == "from-ui"
+
+
+def test_declared_falsy_input_defaults_are_preserved():
+    class TestComponent(Component):
+        inputs = [
+            BoolInput(name="false_value", value=False),
+            IntInput(name="zero_value", value=0),
+            StrInput(name="empty_value", value=""),
+        ]
+
+    component = TestComponent()
+
+    assert component.get_input("false_value").value is False
+    assert component.get_input("zero_value").value == 0
+    assert component.get_input("empty_value").value == ""
 
 
 def test_sender_name_independence(chat_input_instances):
