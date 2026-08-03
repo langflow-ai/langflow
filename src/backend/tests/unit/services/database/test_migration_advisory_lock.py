@@ -213,34 +213,20 @@ async def test_create_db_and_tables_uses_lock_on_postgres():
 
 
 @pytest.mark.asyncio
-async def test_create_db_and_tables_skips_lock_on_sqlite():
-    """SQLite preserves the original async path; the lock helper is never invoked."""
+async def test_create_db_and_tables_takes_lock_on_sqlite():
+    """SQLite runs the DDL under the lock too.
+
+    Workers booting concurrently against one SQLite file race on
+    ``table.create(checkfirst=True)`` and the losers fail with
+    ``database is locked``, so the file lock has to cover this path as well
+    and not just ``run_migrations``.
+    """
     from langflow.services.database.service import DatabaseService
 
     service = DatabaseService.__new__(DatabaseService)
     service.database_url = _SQLITE_URL
 
-    async_engine = MagicMock()
-    async_conn = MagicMock()
-
-    class _AsyncCM:
-        async def __aenter__(self):
-            return async_conn
-
-        async def __aexit__(self, *exc):
-            return False
-
-    async_engine.begin.return_value = _AsyncCM()
-    async_conn.run_sync = MagicMock(return_value=None)
-
-    async def _await_none(*_a, **_kw):
-        return None
-
-    async_conn.run_sync = _await_none  # awaited inside create_db_and_tables
-    service.engine = async_engine
-
     with patch.object(DatabaseService, "_create_db_and_tables_with_lock") as locked_mock:
         await service.create_db_and_tables()
 
-    locked_mock.assert_not_called()
-    async_engine.begin.assert_called_once()
+    locked_mock.assert_called_once()

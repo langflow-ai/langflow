@@ -837,23 +837,17 @@ class DatabaseService(Service):
         await self.create_db_and_tables()
 
     async def create_db_and_tables(self) -> None:
-        if not self.database_url.startswith(("postgresql", "postgres")):
-            # SQLite / non-PG: original async path; advisory lock does not apply.
-            async with self.engine.begin() as conn:
-                await conn.run_sync(self._create_db_and_tables)
-            return
-
-        # Postgres: serialise CREATE TYPE / CREATE TABLE across workers under
-        # the same advisory lock that protects run_migrations. Without this,
-        # concurrent workers booting against a fresh database race on
-        # ``table.create(checkfirst=True)`` and the losers fail with
-        # ``UniqueViolation`` on ``pg_type_typname_nsp_index``. The lock is
-        # acquired synchronously; run in a worker thread so a contended-lock
-        # poll does not block the event loop.
+        # Serialise CREATE TYPE / CREATE TABLE across workers under the same
+        # lock that protects run_migrations. Without this, concurrent workers
+        # booting against a fresh database race on ``table.create(checkfirst=True)``:
+        # on Postgres the losers fail with ``UniqueViolation`` on
+        # ``pg_type_typname_nsp_index``, on SQLite with ``database is locked``.
+        # The lock is acquired synchronously; run in a worker thread so a
+        # contended-lock poll does not block the event loop.
         await asyncio.to_thread(self._create_db_and_tables_with_lock)
 
     def _create_db_and_tables_with_lock(self) -> None:
-        """Postgres path: hold the migration advisory lock for the DDL.
+        """Hold the migration file/advisory lock for the DDL.
 
         Opens its own sync engine so the DDL runs on the same driver the lock
         uses; the application's async engine is unaffected.
