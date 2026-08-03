@@ -5,9 +5,10 @@ from __future__ import annotations
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
+from lfx.services.catalog_policy import BaseCatalogPolicyService, CatalogPolicySnapshot
 
-from langflow.api.v1.schemas.catalog_policy import CatalogPolicyBlockedSet
+from langflow.api.v1.schemas.catalog_policy import CatalogPolicyBlockedSet, CatalogPolicyRead
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.authorization.audit import audit_decision
 from langflow.services.database.models.user.model import User
@@ -16,8 +17,26 @@ from langflow.services.deps import get_catalog_policy_service
 router = APIRouter(prefix="/catalog-policy", tags=["Catalog Policy"])
 
 
-def _response(blocked: frozenset[str]) -> CatalogPolicyBlockedSet:
-    return CatalogPolicyBlockedSet(blocked=sorted(blocked))
+def _active_snapshot(service: BaseCatalogPolicyService) -> tuple[CatalogPolicySnapshot, bool]:
+    external_snapshot = service.external_policy_snapshot
+    if external_snapshot is not None:
+        return external_snapshot, True
+    return service.snapshot, False
+
+
+def _response(blocked: frozenset[str], *, managed_externally: bool) -> CatalogPolicyRead:
+    return CatalogPolicyRead(
+        blocked=sorted(blocked),
+        managed_externally=managed_externally,
+    )
+
+
+def _raise_if_externally_managed(service: BaseCatalogPolicyService) -> None:
+    if service.external_policy_snapshot is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Catalog policy is externally managed and cannot be changed through this API.",
+        )
 
 
 async def _audit_update(
@@ -52,22 +71,24 @@ async def _audit_update(
         )
 
 
-@router.get("/components", response_model=CatalogPolicyBlockedSet)
+@router.get("/components", response_model=CatalogPolicyRead)
 async def get_component_policy(
     _admin: Annotated[User, Depends(get_current_active_superuser)],
-) -> CatalogPolicyBlockedSet:
+) -> CatalogPolicyRead:
     """Return the complete global component block set."""
     service = get_catalog_policy_service()
-    return _response(service.snapshot.blocked_component_keys)
+    snapshot, managed_externally = _active_snapshot(service)
+    return _response(snapshot.blocked_component_keys, managed_externally=managed_externally)
 
 
-@router.put("/components", response_model=CatalogPolicyBlockedSet)
+@router.put("/components", response_model=CatalogPolicyRead)
 async def replace_component_policy(
     payload: CatalogPolicyBlockedSet,
     admin: Annotated[User, Depends(get_current_active_superuser)],
-) -> CatalogPolicyBlockedSet:
+) -> CatalogPolicyRead:
     """Replace the complete global component block set."""
     service = get_catalog_policy_service()
+    _raise_if_externally_managed(service)
     update = await service.replace_blocked_component_keys(
         payload.blocked,
         actor_user_id=admin.id,
@@ -78,25 +99,27 @@ async def replace_component_policy(
         added=update.added,
         removed=update.removed,
     )
-    return _response(update.snapshot.blocked_component_keys)
+    return _response(update.snapshot.blocked_component_keys, managed_externally=False)
 
 
-@router.get("/templates", response_model=CatalogPolicyBlockedSet)
+@router.get("/templates", response_model=CatalogPolicyRead)
 async def get_template_policy(
     _admin: Annotated[User, Depends(get_current_active_superuser)],
-) -> CatalogPolicyBlockedSet:
+) -> CatalogPolicyRead:
     """Return the complete global template block set."""
     service = get_catalog_policy_service()
-    return _response(service.snapshot.blocked_template_keys)
+    snapshot, managed_externally = _active_snapshot(service)
+    return _response(snapshot.blocked_template_keys, managed_externally=managed_externally)
 
 
-@router.put("/templates", response_model=CatalogPolicyBlockedSet)
+@router.put("/templates", response_model=CatalogPolicyRead)
 async def replace_template_policy(
     payload: CatalogPolicyBlockedSet,
     admin: Annotated[User, Depends(get_current_active_superuser)],
-) -> CatalogPolicyBlockedSet:
+) -> CatalogPolicyRead:
     """Replace the complete global template block set."""
     service = get_catalog_policy_service()
+    _raise_if_externally_managed(service)
     update = await service.replace_blocked_template_keys(
         payload.blocked,
         actor_user_id=admin.id,
@@ -107,7 +130,7 @@ async def replace_template_policy(
         added=update.added,
         removed=update.removed,
     )
-    return _response(update.snapshot.blocked_template_keys)
+    return _response(update.snapshot.blocked_template_keys, managed_externally=False)
 
 
 __all__ = ["router"]

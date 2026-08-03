@@ -23,6 +23,10 @@ class _StubCatalogPolicy:
         self.component_calls = []
         self.template_calls = []
 
+    @property
+    def external_policy_snapshot(self):
+        return None
+
     async def replace_blocked_component_keys(self, keys, *, actor_user_id):
         desired = frozenset(keys)
         current = self.snapshot.blocked_component_keys
@@ -50,6 +54,23 @@ class _StubCatalogPolicy:
             added=desired - current,
             removed=current - desired,
         )
+
+
+class _ExternalCatalogPolicy(_StubCatalogPolicy):
+    def __init__(self, *, external_snapshot: CatalogPolicySnapshot | None = None) -> None:
+        super().__init__()
+        self.snapshot = (
+            external_snapshot
+            if external_snapshot is not None
+            else CatalogPolicySnapshot(
+                blocked_component_keys={"ExternalComponent"},
+                blocked_template_keys={"ExternalTemplate"},
+            )
+        )
+
+    @property
+    def external_policy_snapshot(self):
+        return self.snapshot
 
 
 def _client(monkeypatch, *, service=None, superuser=True):
@@ -84,9 +105,39 @@ def test_get_whole_sets_are_sorted_and_superuser_only(monkeypatch):
     templates = client.get("/api/v1/catalog-policy/templates")
 
     assert components.status_code == 200
-    assert components.json() == {"blocked": ["OldComponent"]}
+    assert components.json() == {"blocked": ["OldComponent"], "managed_externally": False}
     assert templates.status_code == 200
-    assert templates.json() == {"blocked": ["OldTemplate"]}
+    assert templates.json() == {"blocked": ["OldTemplate"], "managed_externally": False}
+    audit.assert_not_awaited()
+
+
+def test_external_gets_return_the_active_external_snapshot(monkeypatch):
+    client, service, _admin, audit = _client(monkeypatch, service=_ExternalCatalogPolicy())
+
+    components = client.get("/api/v1/catalog-policy/components")
+    templates = client.get("/api/v1/catalog-policy/templates")
+
+    assert components.status_code == 200
+    assert components.json() == {"blocked": ["ExternalComponent"], "managed_externally": True}
+    assert templates.status_code == 200
+    assert templates.json() == {"blocked": ["ExternalTemplate"], "managed_externally": True}
+    assert service.external_policy_snapshot is service.snapshot
+    audit.assert_not_awaited()
+
+
+def test_empty_external_snapshot_still_reports_external_ownership(monkeypatch):
+    client, _service, _admin, audit = _client(
+        monkeypatch,
+        service=_ExternalCatalogPolicy(external_snapshot=CatalogPolicySnapshot()),
+    )
+
+    components = client.get("/api/v1/catalog-policy/components")
+    templates = client.get("/api/v1/catalog-policy/templates")
+
+    assert components.status_code == 200
+    assert templates.status_code == 200
+    assert components.json() == {"blocked": [], "managed_externally": True}
+    assert templates.json() == {"blocked": [], "managed_externally": True}
     audit.assert_not_awaited()
 
 
@@ -119,7 +170,7 @@ def test_put_components_normalizes_whole_set_and_audits_each_delta(monkeypatch):
     )
 
     assert response.status_code == 200
-    assert response.json() == {"blocked": ["Alpha", "zeta"]}
+    assert response.json() == {"blocked": ["Alpha", "zeta"], "managed_externally": False}
     assert service.component_calls == [(["Alpha", "zeta"], admin.id)]
     assert [call.kwargs for call in audit.await_args_list] == [
         {
@@ -155,7 +206,7 @@ def test_put_templates_preserves_case_and_accepts_unknown_keys(monkeypatch):
     )
 
     assert response.status_code == 200
-    assert response.json() == {"blocked": ["Unknown-ID", "unknown-id"]}
+    assert response.json() == {"blocked": ["Unknown-ID", "unknown-id"], "managed_externally": False}
     assert service.template_calls == [(["Unknown-ID", "unknown-id"], admin.id)]
     assert audit.await_count == 3
 
@@ -181,3 +232,24 @@ def test_put_requires_explicit_whole_set_without_writing_or_auditing(monkeypatch
     assert response.status_code == 422
     assert service.component_calls == []
     audit.assert_not_awaited()
+
+
+@pytest.mark.parametrize("resource_kind", ["components", "templates"])
+def test_external_policy_rejects_valid_puts_without_writing_or_auditing(monkeypatch, resource_kind):
+    client, service, _admin, audit = _client(monkeypatch, service=_ExternalCatalogPolicy())
+
+    response = client.put(
+        f"/api/v1/catalog-policy/{resource_kind}",
+        json={"blocked": ["ValidKey"]},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json() == {"detail": "Catalog policy is externally managed and cannot be changed through this API."}
+    assert service.component_calls == []
+    assert service.template_calls == []
+    audit.assert_not_awaited()
+
+
+def test_managed_marker_is_response_only():
+    assert "managed_externally" not in catalog_policy.CatalogPolicyBlockedSet.model_fields
+    assert "managed_externally" in catalog_policy.CatalogPolicyRead.model_fields

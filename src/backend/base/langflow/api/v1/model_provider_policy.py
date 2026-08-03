@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from lfx.base.models.provider_registry import get_registry_snapshot, resolve_provider_id
+from lfx.services.deps import get_model_provider_policy_service
 from pydantic import BaseModel, Field, StringConstraints, field_validator
 
 from langflow.api.utils import DbSession, DbSessionReadOnly
@@ -58,9 +59,14 @@ class ModelProviderPolicyRead(BaseModel):
 
     approved_provider_ids: list[str]
     registered_providers: list[RegisteredModelProviderRead]
+    managed_externally: bool
 
 
-def _build_policy_response(approved_provider_ids: set[str] | frozenset[str]) -> ModelProviderPolicyRead:
+def _build_policy_response(
+    approved_provider_ids: set[str] | frozenset[str],
+    *,
+    managed_externally: bool = False,
+) -> ModelProviderPolicyRead:
     snapshot = get_registry_snapshot()
     registered_providers = [
         RegisteredModelProviderRead(
@@ -74,6 +80,7 @@ def _build_policy_response(approved_provider_ids: set[str] | frozenset[str]) -> 
     return ModelProviderPolicyRead(
         approved_provider_ids=sorted(approved_provider_ids),
         registered_providers=registered_providers,
+        managed_externally=managed_externally,
     )
 
 
@@ -84,6 +91,13 @@ def _policy_unavailable() -> HTTPException:
     )
 
 
+def _externally_managed() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Model-provider policy is externally managed and cannot be changed through this API.",
+    )
+
+
 @router.get("", response_model=ModelProviderPolicyRead)
 @router.get("/", response_model=ModelProviderPolicyRead, include_in_schema=False)
 async def read_model_provider_policy(
@@ -91,6 +105,10 @@ async def read_model_provider_policy(
     session: DbSessionReadOnly,
 ) -> ModelProviderPolicyRead:
     """Read the global provider policy. An empty approved list is unrestricted."""
+    external_provider_ids = get_model_provider_policy_service().external_approved_provider_ids
+    if external_provider_ids is not None:
+        return _build_policy_response(external_provider_ids, managed_externally=True)
+
     try:
         state = await get_model_provider_policy_state(session)
     except ModelProviderPolicyNotInitializedError as exc:
@@ -108,6 +126,9 @@ async def replace_model_provider_policy(
     session: DbSession,
 ) -> ModelProviderPolicyRead:
     """Atomically replace the global provider policy and invalidate snapshots."""
+    if get_model_provider_policy_service().external_approved_provider_ids is not None:
+        raise _externally_managed()
+
     try:
         state = await replace_model_provider_policy_state(session, payload.approved_provider_ids)
     except ModelProviderPolicyNotInitializedError as exc:

@@ -40,8 +40,9 @@ class _FakeAsyncSession:
         self.flushed = 0
         self.committed = 0
         self.rolled_back = 0
+        self.events: list[str] = []
 
-    async def get(self, model: type, key: UUID) -> Any:
+    async def get(self, model: type, key: UUID, **_kwargs: Any) -> Any:
         return self._get_by_type.get((model, key))
 
     def add(self, obj: Any) -> None:
@@ -51,9 +52,11 @@ class _FakeAsyncSession:
         self.deleted.append(obj)
 
     async def flush(self) -> None:
+        self.events.append("flush")
         self.flushed += 1
 
     async def commit(self) -> None:
+        self.events.append("commit")
         self.committed += 1
         if self._commit_raises is not None:
             raise self._commit_raises
@@ -65,6 +68,7 @@ class _FakeAsyncSession:
         return None
 
     async def exec(self, _stmt: Any):
+        self.events.append("exec")
         if not self._exec_results:
             return _ExecResult([])
         return _ExecResult(self._exec_results.pop(0))
@@ -96,6 +100,7 @@ class _StubAuthz:
         self.staged_mutations: list[Any] = []
         self.committed_mutations: list[Any] = []
         self.validated_mutations: list[Any] = []
+        self.lock_requests: list[dict[str, Any]] = []
         self._staged_session: _FakeAsyncSession | None = None
 
     async def supports_cross_user_fetch(self) -> bool:
@@ -122,11 +127,18 @@ class _StubAuthz:
     async def get_effective_permissions(self, **_kwargs) -> dict[UUID, list[str]]:
         return self.effective_perms_payload or {}
 
+    async def acquire_identity_mutation_lock(self, *, session, **request) -> None:
+        session.events.append("lock")
+        self.lock_requests.append(request)
+        assert session.committed == 0
+
     async def validate_identity_mutation(self, *, session, mutation) -> None:
+        session.events.append("validate")
         self.validated_mutations.append(mutation)
         assert session.committed == 0
 
     async def stage_identity_mutation(self, *, session, event) -> None:
+        session.events.append("stage")
         assert session.committed == 0
         self._staged_session = session
         self.staged_mutations.append(event)
@@ -853,9 +865,15 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz):
     assert session.added[1].assignment_id == session.added[0].id
     assert session.committed == 1
     assert authz.staged_mutations == authz.committed_mutations
+    assert authz.validated_mutations == []
+    assert len(authz.lock_requests) == 1
+    assert authz.lock_requests[0]["affected_user_ids"] == (target_user.id,)
     assert authz.staged_mutations[0].affected_user_ids == (target_user.id,)
+    assert authz.staged_mutations[0].entity_id == session.added[0].id
     assert authz.staged_mutations[0].domain_type == "global"
     assert authz.staged_mutations[0].domain_id is None
+    assert session.events.index("lock") < session.events.index("exec")
+    assert session.events.index("lock") < session.events.index("flush")
 
 
 @pytest.mark.asyncio
@@ -891,6 +909,8 @@ async def test_create_assignment_duplicate_manual_source_is_409(stub_authz):
     assert "Manual assignment already exists" in excinfo.value.detail
     assert session.added == []
     assert session.committed == 0
+    assert authz.validated_mutations == []
+    assert len(authz.lock_requests) == 1
     assert authz.staged_mutations == []
 
 
@@ -937,8 +957,11 @@ async def test_create_assignment_adds_manual_source_to_idp_assignment_without_li
     assert session.added[0].source_kind == "manual"
     assert session.added[0].assignment_id == assignment.id
     assert session.committed == 1
+    assert authz.validated_mutations == []
+    assert len(authz.lock_requests) == 1
     assert authz.staged_mutations == []
     assert authz.committed_mutations == []
+    assert session.events.index("lock") < session.events.index("exec")
     assert result.id == assignment.id
     assert result.assigned_by == original_actor_id
     assert {source.source_kind for source in result.grant_sources} == {"idp", "manual"}
@@ -974,6 +997,8 @@ async def test_delete_assignment_rejects_idp_only_source(stub_authz):
     assert "IdP-derived assignments" in excinfo.value.detail
     assert session.deleted == []
     assert session.committed == 0
+    assert len(authz.lock_requests) == 1
+    assert authz.validated_mutations == []
     assert authz.staged_mutations == []
 
 
@@ -1029,6 +1054,8 @@ async def test_delete_assignment_returns_surviving_idp_assignment(stub_authz, mo
     assert result.grant_sources[0].external_group == "corp-dev"
     assert session.deleted == [manual_grant]
     assert session.committed == 1
+    assert len(authz.lock_requests) == 1
+    assert authz.validated_mutations == []
     assert authz.staged_mutations == []
     assert audit_calls[0]["action"] == "role_assignment:delete_manual_source"
     assert audit_calls[0]["details"] == {
@@ -1073,6 +1100,8 @@ async def test_delete_assignment_manual_only_returns_204(stub_authz):
 
     assert result.status_code == 204
     assert session.deleted == [assignment]
+    assert len(authz.lock_requests) == 1
+    assert len(authz.validated_mutations) == 1
     assert authz.staged_mutations == authz.committed_mutations
 
 
@@ -1098,6 +1127,8 @@ async def test_delete_legacy_assignment_without_grant_rows_returns_204(stub_auth
     assert result.status_code == 204
     assert session.deleted == [assignment]
     assert session.committed == 1
+    assert len(authz.lock_requests) == 1
+    assert len(authz.validated_mutations) == 1
     assert authz.staged_mutations == authz.committed_mutations
 
 
