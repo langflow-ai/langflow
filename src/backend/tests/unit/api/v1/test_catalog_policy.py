@@ -291,6 +291,8 @@ async def test_x_api_key_puts_complete_and_persist_on_file_backed_sqlite(client,
     assert persisted_key is not None
     assert persisted_key.total_uses == 2
     assert persisted_key.last_used_at is not None
+
+
 @pytest.mark.parametrize("resource_kind", ["components", "templates"])
 def test_external_policy_rejects_valid_puts_without_writing_or_auditing(monkeypatch, resource_kind):
     client, service, _admin, audit = _client(monkeypatch, service=_ExternalCatalogPolicy())
