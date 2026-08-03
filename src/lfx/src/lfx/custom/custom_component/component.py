@@ -1234,7 +1234,9 @@ class Component(CustomComponent):
             if key not in attributes and key not in self._attributes:
                 if secret_text := _get_secret_text(input_obj, input_obj.value):
                     self._secret_values.add(secret_text)
-                attributes[key] = _wrap_if_secret(input_obj, input_obj.value or None)
+                # No `or None`: that would drop declared falsy defaults ("" / 0 / False / []),
+                # which the params branch above preserves.
+                attributes[key] = _wrap_if_secret(input_obj, input_obj.value)
 
         self._attributes.update(attributes)
 
