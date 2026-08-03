@@ -6,8 +6,15 @@ import type { AllNodeType } from "@/types/flow";
 const mockSetSuccessData = jest.fn();
 const mockSetErrorData = jest.fn();
 const mockSetNode = jest.fn();
+let mockModelProviders: Array<{
+  provider: string;
+  is_enabled: boolean;
+  is_configured: boolean;
+  models?: Array<{ model_name: string }>;
+}> = [];
 const mockQueryClient = {
   invalidateQueries: jest.fn().mockResolvedValue(undefined),
+  fetchQuery: jest.fn().mockImplementation(async () => mockModelProviders),
 };
 let mockNodes: AllNodeType[] = [];
 let mockComponentsToUpdate: Array<{
@@ -313,6 +320,7 @@ describe("refreshAllModelInputs", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNodes = [];
+    mockModelProviders = [];
     mockComponentsToUpdate = [];
     mockAllowCustomComponents = true;
     mockTemplates = {};
@@ -358,6 +366,7 @@ describe("refreshAllModelInputs", () => {
     await refreshAllModelInputs(undefined);
 
     expect(mockQueryClient.invalidateQueries).not.toHaveBeenCalled();
+    expect(mockQueryClient.fetchQuery).not.toHaveBeenCalled();
   });
 
   it("should refresh model nodes and show success message", async () => {
@@ -513,6 +522,7 @@ describe("refreshAllModelInputs — outdated component guard", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNodes = [];
+    mockModelProviders = [];
     mockComponentsToUpdate = [];
     mockAllowCustomComponents = true;
     mockTemplates = {};
@@ -750,6 +760,18 @@ describe("refreshAllModelInputs — disconnected provider", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNodes = [];
+    mockModelProviders = [
+      {
+        provider: "Anthropic",
+        is_enabled: false,
+        is_configured: false,
+      },
+      {
+        provider: "OpenAI",
+        is_enabled: true,
+        is_configured: true,
+      },
+    ];
     mockComponentsToUpdate = [];
     mockAllowCustomComponents = true;
     mockTemplates = {};
@@ -868,6 +890,179 @@ describe("refreshAllModelInputs — disconnected provider", () => {
 
     expect(getRefreshedModelValue()).toEqual(savedValue);
   });
+
+  it("should preserve a sticky saved model when its provider is configured", async () => {
+    mockModelProviders = [
+      {
+        provider: "Anthropic",
+        is_enabled: true,
+        is_configured: true,
+        models: [{ model_name: "claude-sonnet-5" }],
+      },
+      {
+        provider: "OpenAI",
+        is_enabled: true,
+        is_configured: true,
+      },
+    ];
+    mockNodes = [createMockModelNodeWithValue("node-1", ANTHROPIC_SAVED_VALUE)];
+
+    (api.post as jest.Mock).mockResolvedValue({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: ANTHROPIC_SAVED_VALUE,
+            options: [OPENAI_OPTION, STICKY_ANTHROPIC_OPTION],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+
+    // biome-ignore lint/suspicious/noExplicitAny: test query-client double
+    await refreshAllModelInputs(mockQueryClient as any, { silent: true });
+
+    expect(getRefreshedModelValue()).toEqual(ANTHROPIC_SAVED_VALUE);
+    expect(mockQueryClient.fetchQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ["useGetModelProviders", undefined, undefined],
+      }),
+    );
+    expect(
+      mockQueryClient.invalidateQueries.mock.invocationCallOrder[0],
+    ).toBeLessThan(mockQueryClient.fetchQuery.mock.invocationCallOrder[0]);
+  });
+
+  it("should preserve a sticky saved model when provider status cannot be refreshed", async () => {
+    mockNodes = [createMockModelNodeWithValue("node-1", ANTHROPIC_SAVED_VALUE)];
+    mockQueryClient.fetchQuery.mockRejectedValueOnce(
+      new Error("provider catalog unavailable"),
+    );
+
+    (api.post as jest.Mock).mockResolvedValue({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: ANTHROPIC_SAVED_VALUE,
+            options: [OPENAI_OPTION, STICKY_ANTHROPIC_OPTION],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+
+    // biome-ignore lint/suspicious/noExplicitAny: test query-client double
+    await refreshAllModelInputs(mockQueryClient as any, { silent: true });
+
+    expect(getRefreshedModelValue()).toEqual(ANTHROPIC_SAVED_VALUE);
+  });
+
+  it("should match provider and model name when replacing a disconnected selection", async () => {
+    const azureSavedValue = [
+      {
+        name: "gpt-4o",
+        provider: "Azure AI Foundry",
+        icon: "Azure",
+      },
+    ];
+    mockModelProviders = [
+      {
+        provider: "Azure AI Foundry",
+        is_enabled: false,
+        is_configured: false,
+      },
+      {
+        provider: "OpenAI",
+        is_enabled: true,
+        is_configured: true,
+      },
+    ];
+    mockNodes = [createMockModelNodeWithValue("node-1", azureSavedValue)];
+
+    (api.post as jest.Mock).mockResolvedValue({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: azureSavedValue,
+            options: [
+              {
+                name: "gpt-4o",
+                provider: "OpenAI",
+                icon: "OpenAI",
+                metadata: {},
+              },
+              {
+                name: "gpt-4o",
+                provider: "Azure AI Foundry",
+                icon: "Azure",
+                metadata: { not_enabled_locally: true },
+              },
+            ],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+
+    // biome-ignore lint/suspicious/noExplicitAny: test query-client double
+    await refreshAllModelInputs(mockQueryClient as any, { silent: true });
+
+    expect(getRefreshedModelValue()).toEqual([
+      expect.objectContaining({ name: "gpt-4o", provider: "OpenAI" }),
+    ]);
+  });
+
+  it("should retain name-only matching for legacy saved values without a provider", async () => {
+    const legacySavedValue = [{ name: "gpt-4o", icon: "Bot" }];
+    mockModelProviders = [
+      {
+        provider: "OpenAI",
+        is_enabled: true,
+        is_configured: true,
+      },
+    ];
+    mockNodes = [createMockModelNodeWithValue("node-1", legacySavedValue)];
+
+    (api.post as jest.Mock).mockResolvedValue({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: legacySavedValue,
+            options: [
+              {
+                name: "gpt-4o",
+                provider: "OpenAI",
+                icon: "OpenAI",
+                metadata: {},
+              },
+            ],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+
+    // biome-ignore lint/suspicious/noExplicitAny: test query-client double
+    await refreshAllModelInputs(mockQueryClient as any, { silent: true });
+
+    expect(getRefreshedModelValue()).toEqual(legacySavedValue);
+  });
 });
 
 // ============================================================================
@@ -878,6 +1073,7 @@ describe("useRefreshModelInputs", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNodes = [];
+    mockModelProviders = [];
     mockComponentsToUpdate = [];
     mockAllowCustomComponents = true;
     mockTemplates = {};

@@ -2,6 +2,10 @@ import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
+import {
+  getModelProvidersQueryOptions,
+  type ModelProviderWithStatus,
+} from "@/controllers/API/queries/models/use-get-model-providers";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore, { syncNodeTranslations } from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -21,6 +25,8 @@ import i18n from "../i18n";
 export interface RefreshOptions {
   silent?: boolean;
 }
+
+type ProviderConfiguration = ReadonlyMap<string, boolean>;
 
 // Prevents concurrent refresh operations; queues the latest request if busy
 let isRefreshInProgress = false;
@@ -120,8 +126,23 @@ export async function refreshAllModelInputs(
       return;
     }
 
+    let providerConfiguration: ProviderConfiguration | undefined;
+    if (queryClient) {
+      try {
+        const providers = await queryClient.fetchQuery(
+          getModelProvidersQueryOptions({}),
+        );
+        providerConfiguration = buildProviderConfiguration(providers);
+      } catch {
+        // A failed refetch may leave stale catalog data in React Query. Treat
+        // provider status as unknown so refresh never overwrites a saved model
+        // based on stale configuration state.
+        providerConfiguration = undefined;
+      }
+    }
+
     const refreshTasks = nodesWithModelFields.map((node) =>
-      refreshSingleNode(node, flowId, folderId, setNode),
+      refreshSingleNode(node, flowId, folderId, setNode, providerConfiguration),
     );
     await Promise.all(refreshTasks);
 
@@ -155,10 +176,23 @@ export async function refreshAllModelInputs(
   }
 }
 
+function buildProviderConfiguration(
+  providers: ModelProviderWithStatus[],
+): ProviderConfiguration {
+  return new Map(
+    providers.flatMap((provider) =>
+      typeof provider.is_configured === "boolean"
+        ? [[provider.provider, provider.is_configured] as const]
+        : [],
+    ),
+  );
+}
+
 /** Validates and corrects model value against available options */
 function validateModelValue(
   template: APITemplateType,
   modelFieldKey: string,
+  providerConfiguration?: ProviderConfiguration,
 ): APITemplateType {
   const modelField = template[modelFieldKey];
   if (!modelField) return template;
@@ -171,22 +205,34 @@ function validateModelValue(
     (opt: ModelOptionType) => !opt?.metadata?.is_disabled_provider,
   );
 
-  // Sticky-defaults are the backend re-injecting the saved selection, so they
-  // must not validate a disconnected provider unless nothing else is selectable.
+  const currentModel = Array.isArray(currentValue)
+    ? currentValue[0]
+    : currentValue;
+  const currentModelName = currentModel?.name;
+  const currentProvider = currentModel?.provider;
+  const currentProviderConfiguration = currentProvider
+    ? providerConfiguration?.get(currentProvider)
+    : undefined;
+
+  // Sticky-defaults can mean either a disconnected provider or a configured
+  // provider whose valid model is not locally enabled. Only reject them when
+  // the refreshed provider catalog explicitly says the provider is disconnected.
   const selectableOptions = availableOptions.filter(
-    (opt: ModelOptionType) => opt?.metadata?.not_enabled_locally !== true,
+    (opt: ModelOptionType) =>
+      opt?.metadata?.not_enabled_locally !== true &&
+      (!opt.provider || providerConfiguration?.get(opt.provider) !== false),
   );
   const optionsForValidation =
-    selectableOptions.length > 0 ? selectableOptions : availableOptions;
-
-  const currentModelName = Array.isArray(currentValue)
-    ? currentValue[0]?.name
-    : currentValue?.name;
+    currentProviderConfiguration === false && selectableOptions.length > 0
+      ? selectableOptions
+      : availableOptions;
 
   const isCurrentModelValid =
     currentModelName &&
     optionsForValidation.some(
-      (opt: ModelOptionType) => opt.name === currentModelName,
+      (opt: ModelOptionType) =>
+        opt.name === currentModelName &&
+        (!currentProvider || opt.provider === currentProvider),
     );
 
   if (isCurrentModelValid) {
@@ -231,6 +277,7 @@ async function refreshSingleNode(
   flowId: string | undefined,
   folderId: string | undefined,
   setNode: ReturnType<typeof useFlowStore.getState>["setNode"],
+  providerConfiguration?: ProviderConfiguration,
 ): Promise<void> {
   const nodeData = node.data?.node as APIClassType | undefined;
   if (!nodeData?.template) return;
@@ -292,6 +339,7 @@ async function refreshSingleNode(
     const validatedTemplate = validateModelValue(
       responseData.template,
       modelFieldKey,
+      providerConfiguration,
     );
 
     setNode(
