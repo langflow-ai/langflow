@@ -183,10 +183,23 @@ class AuthService(BaseAuthService):
                 # Token auth failed for an unexpected reason; try the distinct
                 # external credential first, then fall back to API key if provided.
                 if external_token and external_token != token:
+                    # Token authentication can delegate to external JIT
+                    # provisioning, which may flush user/profile state before a
+                    # later step fails. Give the distinct external credential a
+                    # clean transaction and authentication context.
+                    await db.rollback()
+                    clear_current_auth_context()
+                    clear_current_external_access_context()
                     external_user = await self._authenticate_with_external_token(external_token, db)
                     if external_user is not None:
                         return external_user
                 if api_key:
+                    # API-key authentication commits its usage bookkeeping. Roll
+                    # back both prior credential attempts immediately before it so
+                    # that commit cannot persist state they left in the session.
+                    await db.rollback()
+                    clear_current_auth_context()
+                    clear_current_external_access_context()
                     try:
                         user = await self._authenticate_with_api_key(api_key, db)
                         if user:

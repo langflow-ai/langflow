@@ -14,8 +14,12 @@ from fastapi import HTTPException, WebSocketException, status
 from langflow.services.auth.constants import AUTO_LOGIN_WARNING
 from langflow.services.auth.context import (
     AUTH_METHOD_API_KEY,
+    AUTH_METHOD_EXTERNAL,
+    AUTH_METHOD_JWT,
+    AuthCredentialContext,
     clear_current_auth_context,
     get_current_auth_context,
+    set_current_auth_context,
 )
 from langflow.services.auth.exceptions import (
     InactiveUserError,
@@ -24,7 +28,8 @@ from langflow.services.auth.exceptions import (
     TokenExpiredError,
 )
 from langflow.services.auth.service import AuthService
-from langflow.services.database.models.api_key.crud import ApiKeyAuthResult
+from langflow.services.database.models.api_key.crud import ApiKeyAuthResult, hash_api_key
+from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.user.model import User
 from lfx.services.settings.auth import AuthSettings
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
@@ -157,6 +162,75 @@ async def test_authenticate_with_api_key_sets_auth_context(auth_service: AuthSer
     assert context.method == AUTH_METHOD_API_KEY
     assert context.api_key_id == api_key_id
     assert context.api_key_source == "db"  # pragma: allowlist secret
+
+
+@pytest.mark.anyio
+async def test_api_key_fallback_rolls_back_failed_token_and_external_state(
+    auth_service: AuthService,
+    async_session,
+    monkeypatch,
+):
+    """The API-key usage commit must not persist state flushed by failed token auth."""
+    from sqlmodel import select
+
+    api_user = _dummy_user(uuid4())
+    api_user.username = "api-key-user"
+    plaintext = "sk-valid-fallback-key"  # pragma: allowlist secret
+    api_key = ApiKey(
+        api_key="encrypted-value",  # pragma: allowlist secret
+        api_key_hash=hash_api_key(plaintext),
+        name="fallback",
+        user_id=api_user.id,
+        created_at=datetime.now(timezone.utc),
+    )
+    async_session.add(api_user)
+    async_session.add(api_key)
+    await async_session.commit()
+
+    auth_service.settings.settings.disable_track_apikey_usage = False
+    monkeypatch.setattr(
+        "langflow.services.database.models.api_key.crud.get_settings_service",
+        lambda: auth_service.settings,
+    )
+
+    failed_token_user = _dummy_user(uuid4())
+    failed_token_user.username = "failed-token-user"
+    failed_external_user = _dummy_user(uuid4())
+    failed_external_user.username = "failed-external-user"
+
+    async def stage_user_then_fail(_token: str, db) -> None:
+        db.add(failed_token_user)
+        await db.flush()
+        msg = "external reconciliation failed"
+        raise RuntimeError(msg)
+
+    async def stage_user_then_decline(_token: str, db) -> None:
+        db.add(failed_external_user)
+        await db.flush()
+
+    with (
+        patch.object(auth_service, "_authenticate_with_token", new=stage_user_then_fail),
+        patch.object(auth_service, "_authenticate_with_external_token", new=stage_user_then_decline),
+    ):
+        result = await auth_service.authenticate_with_credentials(
+            token="native-token",  # noqa: S106
+            api_key=plaintext,
+            db=async_session,
+            external_token="external-token",  # noqa: S106
+        )
+
+    persisted_failed_token_user = (
+        await async_session.exec(select(User).where(User.id == failed_token_user.id))
+    ).first()
+    persisted_failed_external_user = (
+        await async_session.exec(select(User).where(User.id == failed_external_user.id))
+    ).first()
+    await async_session.refresh(api_key)
+
+    assert result.id == api_user.id
+    assert persisted_failed_token_user is None
+    assert persisted_failed_external_user is None
+    assert api_key.total_uses == 1
 
 
 @pytest.mark.anyio
@@ -1396,6 +1470,93 @@ async def test_invalid_native_token_falls_back_to_external_credential(
         clear_current_auth_context()
 
     assert result.id == user.id
+
+
+@pytest.mark.anyio
+async def test_external_fallback_rolls_back_and_replaces_failed_native_state(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    async_session,
+):
+    """A successful distinct external fallback starts after a clean native-auth boundary."""
+    from langflow.services.auth.external import (
+        ExternalAccessContext,
+        get_current_external_access_context,
+        identity_from_claims,
+        set_current_external_access_context,
+    )
+    from sqlmodel import select
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+    auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM = "access"
+
+    external_claims = {
+        "sub": "external-boundary-subject",
+        "preferred_username": "external-boundary-user",
+        "access": "editor",
+    }
+    identity = identity_from_claims(external_claims, auth_settings)
+    external_user = await auth_service._materialize_external_user(identity, async_session)
+    await async_session.commit()
+
+    failed_native_user = _dummy_user(uuid4())
+    failed_native_user.username = "failed-native-boundary-user"
+
+    async def stage_native_state_then_fail(_token: str, db) -> None:
+        db.add(failed_native_user)
+        await db.flush()
+        set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_JWT))
+        set_current_external_access_context(
+            ExternalAccessContext(provider="stale-native", subject="stale-subject", level="viewer")
+        )
+        msg = "native authentication failed after staging state"
+        raise RuntimeError(msg)
+
+    real_external_auth = auth_service._authenticate_with_external_token
+
+    async def authenticate_external_from_clean_boundary(token: str, db):
+        assert get_current_auth_context() is None
+        assert get_current_external_access_context() is None
+        return await real_external_auth(token, db)
+
+    external_token = _external_jwt(auth_service, external_claims)
+
+    try:
+        with (
+            patch.object(auth_service, "_authenticate_with_token", new=stage_native_state_then_fail),
+            patch.object(
+                auth_service,
+                "_authenticate_with_external_token",
+                new=authenticate_external_from_clean_boundary,
+            ),
+        ):
+            result = await auth_service.authenticate_with_credentials(
+                token="native-token",  # noqa: S106
+                api_key=None,
+                db=async_session,
+                external_token=external_token,
+            )
+
+        await async_session.commit()
+        persisted_failed_native_user = (
+            await async_session.exec(select(User).where(User.id == failed_native_user.id))
+        ).first()
+        auth_context = get_current_auth_context()
+        external_context = get_current_external_access_context()
+
+        assert result.id == external_user.id
+        assert persisted_failed_native_user is None
+        assert auth_context == AuthCredentialContext(method=AUTH_METHOD_EXTERNAL, external_provider="external")
+        assert external_context is not None
+        assert external_context.provider == "external"
+        assert external_context.subject == "external-boundary-subject"
+        assert external_context.level == "editor"
+    finally:
+        clear_current_auth_context()
+        set_current_external_access_context(None)
 
 
 @pytest.mark.anyio

@@ -225,7 +225,9 @@ async def _check_key_from_db_with_context(
             api_key_obj.total_uses += 1
             api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
-            await session.flush()
+            # API-key auth owns this mutation; finish it before a downstream handler
+            # opens a separate SQLite write transaction in the same request.
+            await session.commit()
         return ApiKeyAuthResult(user=user, api_key_source="db", api_key_id=api_key_obj.id)  # pragma: allowlist secret
 
     if len(matches) > 1:
@@ -272,7 +274,9 @@ async def _check_key_from_db_with_context(
                 api_key_obj.total_uses += 1
                 api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
-            await session.flush()
+            # The auth-owned hash backfill must release SQLite's write lock even
+            # when usage tracking itself is disabled.
+            await session.commit()
             return ApiKeyAuthResult(
                 user=user,
                 api_key_source="db",  # pragma: allowlist secret

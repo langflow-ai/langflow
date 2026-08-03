@@ -6,7 +6,7 @@ import hashlib
 import secrets
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -643,3 +643,105 @@ async def test_allowed_user_key_still_increments_usage(async_session, mock_setti
     assert row is not None
     assert row.total_uses == 1
     assert row.last_used_at is not None
+
+
+# =============================================================================
+# LE-2097: successful API-key writes must finish their transaction
+# =============================================================================
+
+
+async def _seed_key_for_transaction_test(async_session, *, plaintext: str, hashed: bool) -> ApiKey:
+    user = _make_user(username=f"transaction-{uuid4().hex[:8]}")
+    async_session.add(user)
+    await async_session.flush()
+
+    api_key = ApiKey(
+        api_key=plaintext,
+        api_key_hash=hash_api_key(plaintext) if hashed else None,
+        name="transaction-test",
+        user_id=user.id,
+        created_at=datetime.now(timezone.utc),
+    )
+    async_session.add(api_key)
+    await async_session.commit()
+    return api_key
+
+
+def _spy_on_session_writes(async_session, monkeypatch):
+    commit = AsyncMock(wraps=async_session.commit)
+    flush = AsyncMock(wraps=async_session.flush)
+    monkeypatch.setattr(async_session, "commit", commit)
+    monkeypatch.setattr(async_session, "flush", flush)
+    return commit, flush
+
+
+@pytest.mark.anyio
+async def test_hashed_key_tracking_commits_usage_transaction(async_session, mock_settings, monkeypatch):
+    """Tracked hash-path usage must commit so SQLite releases its write lock."""
+    plaintext = "sk-hashed-tracked"  # pragma: allowlist secret
+    api_key = await _seed_key_for_transaction_test(async_session, plaintext=plaintext, hashed=True)
+    commit, flush = _spy_on_session_writes(async_session, monkeypatch)
+
+    result = await _check_key_from_db(async_session, plaintext, mock_settings)
+
+    assert result is not None
+    commit.assert_awaited_once_with()
+    flush.assert_not_awaited()
+    assert api_key.total_uses == 1
+    assert api_key.last_used_at is not None
+
+
+@pytest.mark.anyio
+async def test_hashed_key_with_tracking_disabled_does_not_write(async_session, mock_settings, monkeypatch):
+    """The hash fast path remains read-only when usage tracking is disabled."""
+    mock_settings.settings.disable_track_apikey_usage = True
+    plaintext = "sk-hashed-untracked"  # pragma: allowlist secret
+    api_key = await _seed_key_for_transaction_test(async_session, plaintext=plaintext, hashed=True)
+    commit, flush = _spy_on_session_writes(async_session, monkeypatch)
+
+    result = await _check_key_from_db(async_session, plaintext, mock_settings)
+
+    assert result is not None
+    commit.assert_not_awaited()
+    flush.assert_not_awaited()
+    assert api_key.total_uses == 0
+    assert api_key.last_used_at is None
+
+
+@pytest.mark.anyio
+async def test_legacy_hashless_key_tracking_commits_usage_and_backfill(async_session, mock_settings, monkeypatch):
+    """Tracked legacy-key usage and its hash backfill commit together."""
+    plaintext = "sk-legacy-tracked"  # pragma: allowlist secret
+    api_key = await _seed_key_for_transaction_test(async_session, plaintext=plaintext, hashed=False)
+    commit, flush = _spy_on_session_writes(async_session, monkeypatch)
+
+    result = await _check_key_from_db(async_session, plaintext, mock_settings)
+
+    assert result is not None
+    commit.assert_awaited_once_with()
+    flush.assert_not_awaited()
+    assert api_key.api_key_hash == hash_api_key(plaintext)
+    assert api_key.total_uses == 1
+    assert api_key.last_used_at is not None
+
+
+@pytest.mark.anyio
+async def test_legacy_hashless_key_with_tracking_disabled_commits_backfill(
+    async_session,
+    mock_settings,
+    monkeypatch,
+):
+    """A legacy hash backfill still commits when usage tracking is disabled."""
+    mock_settings.settings.disable_track_apikey_usage = True
+    plaintext = "sk-legacy-untracked"  # pragma: allowlist secret
+    api_key = await _seed_key_for_transaction_test(async_session, plaintext=plaintext, hashed=False)
+    commit, flush = _spy_on_session_writes(async_session, monkeypatch)
+
+    result = await _check_key_from_db(async_session, plaintext, mock_settings)
+
+    assert result is not None
+    commit.assert_awaited_once_with()
+    flush.assert_not_awaited()
+    assert api_key.api_key_hash == hash_api_key(plaintext)
+    assert api_key.total_uses == 0
+    assert api_key.last_used_at is None
