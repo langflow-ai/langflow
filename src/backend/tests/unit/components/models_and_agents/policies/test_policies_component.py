@@ -1,5 +1,5 @@
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -150,38 +150,109 @@ class TestPoliciesComponent(ComponentTestBaseWithoutClient):
         assert result["template"]["mode"]["value"] == MODE_GUARD
         assert result["template"]["model"]["required"] is False
 
-
-@pytest.mark.parametrize(
-    ("stored_mode", "field_name", "field_value", "expected_required"),
-    [
-        (MODE_GUARD, "mode", MODE_GENERATE, True),
-        (MODE_GENERATE, "mode", MODE_GUARD, False),
-        (MODE_GUARD, "model", [], False),
-    ],
-)
-def test_update_build_config_syncs_model_requirement(
-    mock_component, stored_mode, field_name, field_value, expected_required
-):
-    """Activity controls the model gate, including model refreshes on flow load."""
-    mock_component.mode = stored_mode
-    build_config = {
-        "mode": {"value": stored_mode},
-        "model": {"required": not expected_required},
-    }
-    sync_guard_inputs = MagicMock(side_effect=lambda **kwargs: kwargs["build_config"])
-    fake_tg = _make_fake_tg(sync_generated_guard_code_inputs=sync_guard_inputs)
-
-    with (
-        patch(
-            "lfx.components.models_and_agents.policies_component.update_model_options_in_build_config",
-            side_effect=lambda **kwargs: kwargs["build_config"],
-        ),
-        patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
+    @pytest.mark.parametrize(
+        ("stored_mode", "field_name", "field_value", "expected_required"),
+        [
+            (MODE_GUARD, "mode", MODE_GENERATE, True),
+            (MODE_GENERATE, "mode", MODE_GUARD, False),
+            (MODE_GUARD, "model", [], False),
+        ],
+    )
+    def test_update_build_config_syncs_model_requirement(
+        self, mock_component, stored_mode, field_name, field_value, expected_required
     ):
-        result = mock_component.update_build_config(build_config, field_value, field_name)
+        """Activity controls the model gate, including model refreshes on flow load."""
+        mock_component.mode = stored_mode
+        build_config = {
+            "mode": {"value": stored_mode},
+            "model": {"required": not expected_required},
+        }
+        sync_guard_inputs = MagicMock(side_effect=lambda **kwargs: kwargs["build_config"])
+        fake_tg = _make_fake_tg(sync_generated_guard_code_inputs=sync_guard_inputs)
 
-    assert result["model"]["required"] is expected_required
-    sync_guard_inputs.assert_called_once()
+        with (
+            patch(
+                "lfx.components.models_and_agents.policies_component.update_model_options_in_build_config",
+                side_effect=lambda **kwargs: kwargs["build_config"],
+            ),
+            patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
+        ):
+            result = mock_component.update_build_config(build_config, field_value, field_name)
+
+        assert result["model"]["required"] is expected_required
+        sync_guard_inputs.assert_called_once()
+
+    @pytest.mark.parametrize("unsupported_mode", [None, "", "unsupported"])
+    def test_update_build_config_rejects_unsupported_mode(self, mock_component, unsupported_mode):
+        """An invalid Activity value must not relax the model requirement."""
+        build_config = {
+            "mode": {"value": MODE_GENERATE},
+            "model": {"required": True},
+        }
+
+        with (
+            patch(
+                "lfx.components.models_and_agents.policies_component.update_model_options_in_build_config",
+                side_effect=lambda **kwargs: kwargs["build_config"],
+            ),
+            patch.object(PoliciesComponent, "_import_toolguard") as mock_import,
+            pytest.raises(ValueError, match="unsupported activity mode"),
+        ):
+            mock_component.update_build_config(build_config, unsupported_mode, "mode")
+
+        assert build_config["model"]["required"] is True
+        mock_import.assert_not_called()
+
+    @pytest.mark.parametrize("unsupported_mode", [None, "", "unsupported"])
+    async def test_guard_tools_rejects_unsupported_mode(self, mock_component, unsupported_mode):
+        """Guard execution must reject malformed Activity values before loading ToolGuard."""
+        mock_component.mode = unsupported_mode
+
+        with (
+            patch.object(PoliciesComponent, "_code_execution_allowed", return_value=True),
+            patch.object(PoliciesComponent, "_import_toolguard") as mock_import,
+            patch.object(mock_component, "generate") as mock_generate,
+            patch.object(mock_component, "make_toolguard_result") as mock_make_result,
+            pytest.raises(ValueError, match="unsupported activity mode"),
+        ):
+            await mock_component.guard_tools()
+
+        mock_import.assert_not_called()
+        mock_generate.assert_not_called()
+        mock_make_result.assert_not_called()
+
+    @pytest.mark.parametrize("missing_settings_module", ["lfx.services", "lfx.services.deps"])
+    def test_code_execution_allowed_for_standalone_missing_settings_layer(self, missing_settings_module):
+        """Standalone lfx stays allowed when its settings layer is absent."""
+        standalone_error = ModuleNotFoundError(
+            f"No module named '{missing_settings_module}'", name=missing_settings_module
+        )
+        with patch("builtins.__import__", side_effect=standalone_error):
+            assert PoliciesComponent._code_execution_allowed() is True
+
+    def test_code_execution_allowed_propagates_nested_import_failure(self):
+        """A dependency failure inside the settings layer must not enable code execution."""
+        dependency_error = ModuleNotFoundError("No module named 'dependency'", name="dependency")
+        with (
+            patch("builtins.__import__", side_effect=dependency_error),
+            pytest.raises(ModuleNotFoundError, match="dependency"),
+        ):
+            PoliciesComponent._code_execution_allowed()
+
+    @pytest.mark.parametrize(
+        "settings_service",
+        [
+            None,
+            SimpleNamespace(),
+            SimpleNamespace(settings=None),
+            SimpleNamespace(settings=SimpleNamespace()),
+        ],
+    )
+    def test_code_execution_allowed_denies_incomplete_settings(self, monkeypatch, settings_service):
+        """Only an explicit allow_custom_components setting permits guard-code execution."""
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+
+        assert PoliciesComponent._code_execution_allowed() is False
 
 
 @pytest.mark.asyncio
