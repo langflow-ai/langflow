@@ -98,12 +98,19 @@ def apply_model_provider_policy_state(
 ) -> bool:
     """Publish committed state locally, returning whether this worker changed."""
     service = get_model_provider_policy_service()
+    # Explicitly external services own both their state and invalidation. This
+    # check is intentionally based on ``is not None`` because an empty external
+    # ceiling still establishes external ownership. Check ownership before the
+    # concrete OSS type so subclasses cannot opt in and still receive DB state.
+    if getattr(service, "external_approved_provider_ids", None) is not None:
+        return False
+
     if isinstance(service, ModelProviderPolicyService):
         return service.set_approved_provider_ids(state.approved_provider_ids, version=state.version)
 
-    # Enterprise services own their policy source. An administrative write can
-    # still invalidate their local snapshot, while the OSS polling worker must
-    # not repeatedly disturb a separately managed policy implementation.
+    # Legacy third-party services predate the explicit ownership contract. An
+    # administrative write still invalidates their local snapshot, while the
+    # OSS polling worker must not repeatedly disturb them.
     if invalidate_external:
         service.invalidate()
         return True

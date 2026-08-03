@@ -20,6 +20,11 @@ class _LifecycleService:
         self.validated = []
         self.staged = []
         self.committed = []
+        self.lock_requests = []
+
+    async def acquire_identity_mutation_lock(self, *, session, **request) -> None:  # noqa: ARG002
+        self.events.append("lock")
+        self.lock_requests.append(request)
 
     async def validate_identity_mutation(self, *, session, mutation) -> None:  # noqa: ARG002
         self.events.append("validate")
@@ -75,7 +80,7 @@ async def test_user_create_stages_default_folder_and_identity_in_one_transaction
         current_user=None,
     )
 
-    assert events == ["mutate", "flush", "folder", "stage", "commit", "committed", "audit"]
+    assert events == ["lock", "mutate", "flush", "folder", "stage", "commit", "committed", "audit"]
     assert service.staged == service.committed
     mutation = service.staged[0]
     assert mutation.kind is AuthorizationMutationKind.USER_CREATED
@@ -124,7 +129,7 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
     )
 
     assert result is target
-    assert events == ["validate", "mutate", "stage", "commit", "committed"]
+    assert events == ["lock", "validate", "mutate", "stage", "commit", "committed"]
     assert service.validated == service.staged == service.committed
     mutation = service.staged[0]
     assert mutation.kind is AuthorizationMutationKind.USER_DISABLED
@@ -164,7 +169,7 @@ async def test_user_lifecycle_stage_failure_prevents_commit(monkeypatch):
             session=session,
         )
 
-    assert events == ["validate", "mutate", "stage"]
+    assert events == ["lock", "validate", "mutate", "stage"]
     session.commit.assert_not_awaited()
     assert service.committed == []
 
@@ -205,7 +210,7 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypat
 
     assert exc_info.value.status_code == 409
     assert exc_info.value.detail == _RECOVERY_DETAIL
-    assert events == ["validate"]
+    assert events == ["lock", "validate"]
     update.assert_not_awaited()
     session.commit.assert_not_awaited()
 
@@ -354,10 +359,14 @@ async def test_assignment_delete_validates_live_row_before_mutation_and_stage(mo
         session=session,
     )
 
-    assert events == ["validate", "mutate", "flush", "stage", "commit", "committed", "audit"]
+    assert events == ["lock", "validate", "mutate", "flush", "stage", "commit", "committed", "audit"]
     assert service.validated == service.staged == service.committed
-    mutation = service.validated[0]
+    assert len(service.staged) == 1
+    assert len(service.lock_requests) == 1
+    mutation = service.staged[0]
     assert mutation.kind is AuthorizationMutationKind.ROLE_ASSIGNMENT_DELETED
+    assert mutation.entity_id == assignment.id
+    assert mutation.affected_user_ids == (assignment.user_id,)
     assert mutation.domain_type == "global"
     assert mutation.domain_id is None
 
@@ -400,7 +409,7 @@ async def test_assignment_delete_policy_rejection_is_409_without_mutation(monkey
 
     assert exc_info.value.status_code == 409
     assert exc_info.value.detail == _RECOVERY_DETAIL
-    assert events == ["validate"]
+    assert events == ["lock", "validate"]
     session.delete.assert_not_awaited()
     session.flush.assert_not_awaited()
     session.commit.assert_not_awaited()

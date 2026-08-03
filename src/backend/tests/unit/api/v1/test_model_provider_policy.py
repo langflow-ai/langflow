@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
@@ -12,6 +13,7 @@ from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.model_provider_policy import ModelProviderPolicy
 from langflow.services.model_provider_policy import ModelProviderPolicyNotInitializedError
 from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly
+from lfx.services.model_provider_policy import BaseModelProviderPolicyService, ModelProviderPolicyService
 from pydantic import ValidationError
 
 
@@ -47,6 +49,21 @@ class _WriteSession:
         self.events.append("commit")
 
 
+class _ExternalModelProviderPolicy(BaseModelProviderPolicyService):
+    def __init__(self, provider_ids: set[str]) -> None:
+        super().__init__()
+        self._provider_ids = frozenset(provider_ids)
+        self.set_ready()
+
+    @property
+    def external_approved_provider_ids(self) -> frozenset[str]:
+        return self._provider_ids
+
+    def get_allowed_provider_ids(self, *, context, candidate_provider_ids, purpose):
+        _ = (context, purpose)
+        return candidate_provider_ids & self._provider_ids
+
+
 async def _unused_session():
     yield SimpleNamespace()
 
@@ -62,6 +79,18 @@ def _client_with_rejected_superuser(router: APIRouter) -> TestClient:
         )
 
     app.dependency_overrides[get_current_active_superuser] = reject_superuser
+    app.dependency_overrides[injectable_session_scope] = _unused_session
+    app.dependency_overrides[injectable_session_scope_readonly] = _unused_session
+    return TestClient(app)
+
+
+def _client_with_superuser(router: APIRouter) -> TestClient:
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[get_current_active_superuser] = lambda: SimpleNamespace(
+        id=uuid4(),
+        is_superuser=True,
+    )
     app.dependency_overrides[injectable_session_scope] = _unused_session
     app.dependency_overrides[injectable_session_scope_readonly] = _unused_session
     return TestClient(app)
@@ -103,6 +132,70 @@ def test_trailing_slash_aliases_are_hidden_from_openapi():
     assert {route.path for route in routes if route.include_in_schema} == {"/model-provider-policy"}
 
 
+async def test_read_internal_policy_reports_database_state_as_unmanaged(monkeypatch):
+    state = SimpleNamespace(approved_provider_ids=frozenset({"openai"}), version=4)
+    read_state = AsyncMock(return_value=state)
+    monkeypatch.setattr(
+        policy_api, "get_model_provider_policy_service", lambda: ModelProviderPolicyService(), raising=False
+    )
+    monkeypatch.setattr(policy_api, "get_model_provider_policy_state", read_state)
+
+    response = await policy_api.read_model_provider_policy(
+        _admin=SimpleNamespace(id=uuid4(), is_superuser=True),
+        session=SimpleNamespace(),
+    )
+
+    assert response.approved_provider_ids == ["openai"]
+    assert response.managed_externally is False
+    read_state.assert_awaited_once()
+
+
+@pytest.mark.parametrize("external_ids", [{"anthropic", "openai"}, set()])
+async def test_read_external_policy_uses_active_service_state_without_database_access(monkeypatch, external_ids):
+    service = _ExternalModelProviderPolicy(external_ids)
+    read_state = AsyncMock()
+    monkeypatch.setattr(policy_api, "get_model_provider_policy_service", lambda: service, raising=False)
+    monkeypatch.setattr(policy_api, "get_model_provider_policy_state", read_state)
+
+    response = await policy_api.read_model_provider_policy(
+        _admin=SimpleNamespace(id=uuid4(), is_superuser=True),
+        session=SimpleNamespace(),
+    )
+
+    assert response.approved_provider_ids == sorted(external_ids)
+    assert response.managed_externally is True
+    read_state.assert_not_awaited()
+
+
+@pytest.mark.parametrize("method", ["post", "put"])
+def test_external_policy_rejects_valid_writes_without_side_effects(monkeypatch, method):
+    service = _ExternalModelProviderPolicy({"openai"})
+    invalidate = Mock(wraps=service.invalidate)
+    replace_state = AsyncMock()
+    audit = AsyncMock()
+    apply = Mock()
+    monkeypatch.setattr(service, "invalidate", invalidate)
+    monkeypatch.setattr(policy_api, "get_model_provider_policy_service", lambda: service, raising=False)
+    monkeypatch.setattr(policy_api, "replace_model_provider_policy_state", replace_state)
+    monkeypatch.setattr(policy_api, "audit_decision", audit)
+    monkeypatch.setattr(policy_api, "apply_model_provider_policy_state", apply)
+    client = _client_with_superuser(policy_api.router)
+
+    response = getattr(client, method)(
+        "/model-provider-policy",
+        json={"approved_provider_ids": ["openai"]},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json() == {
+        "detail": "Model-provider policy is externally managed and cannot be changed through this API."
+    }
+    replace_state.assert_not_awaited()
+    audit.assert_not_awaited()
+    apply.assert_not_called()
+    invalidate.assert_not_called()
+
+
 async def test_replace_policy_commits_before_runtime_invalidation(monkeypatch):
     session = _WriteSession()
     admin_id = uuid4()
@@ -142,6 +235,7 @@ async def test_replace_policy_commits_before_runtime_invalidation(monkeypatch):
         ("apply", ["openai", "temporarily-missing.extension"], 3),
     ]
     assert response.approved_provider_ids == ["openai", "temporarily-missing.extension"]
+    assert response.managed_externally is False
     assert any(provider.provider_id == "openai" for provider in response.registered_providers)
 
 

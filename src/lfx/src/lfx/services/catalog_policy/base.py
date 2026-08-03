@@ -71,6 +71,15 @@ class BaseCatalogPolicyService(Service, abc.ABC):
     name = ServiceType.CATALOG_POLICY_SERVICE.value
 
     @property
+    def external_policy_snapshot(self) -> CatalogPolicySnapshot | None:
+        """Return the externally owned active snapshot, if one is configured.
+
+        ``None`` means Langflow owns the durable catalog policy. An empty
+        snapshot still represents externally managed policy.
+        """
+        return None
+
+    @property
     @abc.abstractmethod
     def snapshot(self) -> CatalogPolicySnapshot:
         """Return the current immutable process-local snapshot."""

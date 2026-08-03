@@ -61,6 +61,12 @@ def test_default_service_allows_every_candidate():
     assert snapshot.allows("Anthropic")
 
 
+def test_default_service_does_not_claim_an_external_policy_source():
+    service = ModelProviderPolicyService()
+
+    assert service.external_approved_provider_ids is None
+
+
 def test_default_service_allows_every_registered_provider():
     from lfx.base.models.provider_registry import get_registry_snapshot
 
@@ -264,6 +270,23 @@ def test_snapshot_cache_evicts_least_recently_used_entry():
     _resolve("second")
 
     assert service.evaluations == 4
+
+
+def test_zero_sized_snapshot_cache_reevaluates_every_resolution():
+    service = _CountingPolicy()
+    service.SNAPSHOT_CACHE_MAX_SIZE = 0
+    kwargs = {
+        "context": ModelProviderPolicyContext(user_id="user-1"),
+        "candidate_provider_ids": frozenset({"openai"}),
+        "purpose": ModelProviderPolicyPurpose.USE,
+    }
+
+    first = service.resolve(**kwargs)
+    second = service.resolve(**kwargs)
+
+    assert second == first
+    assert second is not first
+    assert service.evaluations == 2
 
 
 def test_unhashable_policy_attributes_bypass_snapshot_cache():

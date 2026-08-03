@@ -29,6 +29,7 @@ from langflow.api.v1.schemas.authz_role_assignments import (
     RoleAssignmentRead,
 )
 from langflow.services.authorization.lifecycle import (
+    acquire_identity_mutation_lock,
     safe_identity_mutation_committed,
     stage_identity_mutation,
     validate_identity_mutation,
@@ -144,6 +145,13 @@ async def create_assignment(
 ) -> RoleAssignmentRead:
     """Assign a role to a user. Superuser-only."""
     _require_superuser(current_user)
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(
+        authorization_service,
+        session,
+        kind=AuthorizationMutationKind.ROLE_ASSIGNMENT_CREATED,
+        affected_user_ids=(payload.user_id,),
+    )
 
     user = await session.get(User, payload.user_id)
     if user is None:
@@ -152,17 +160,23 @@ async def create_assignment(
     if role is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="role_id not found")
 
+    # Let authorization plugins acquire their transaction-scoped policy-write
+    # lock before the first assignment read or write. In particular, an
+    # Enterprise compiler may need the same global lock later while staging
+    # derived policy; taking it here prevents a concurrent writer from holding
+    # that lock while waiting on this transaction's unique assignment row.
+    candidate = AuthzRoleAssignment(
+        user_id=payload.user_id,
+        role_id=payload.role_id,
+        domain_type=payload.domain_type,
+        domain_id=payload.domain_id,
+        assigned_at=datetime.now(timezone.utc),
+        assigned_by=current_user.id,
+    )
     assignment = (await session.exec(select(AuthzRoleAssignment).where(*_assignment_match(payload)))).first()
     effective_assignment_created = assignment is None
     if assignment is None:
-        assignment = AuthzRoleAssignment(
-            user_id=payload.user_id,
-            role_id=payload.role_id,
-            domain_type=payload.domain_type,
-            domain_id=payload.domain_id,
-            assigned_at=datetime.now(timezone.utc),
-            assigned_by=current_user.id,
-        )
+        assignment = candidate
         session.add(assignment)
         await session.flush()
     else:
@@ -187,7 +201,6 @@ async def create_assignment(
             administrative_actor=current_user.id,
         )
     )
-    authorization_service = get_authorization_service()
     mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.ROLE_ASSIGNMENT_CREATED,
         entity_id=assignment.id,
@@ -248,12 +261,33 @@ async def delete_assignment(
 ) -> RoleAssignmentRead | Response:
     """Remove a manual grant, returning the assignment when another source preserves it."""
     _require_superuser(current_user)
-    assignment = await session.get(AuthzRoleAssignment, assignment_id)
+
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(
+        authorization_service,
+        session,
+        kind=AuthorizationMutationKind.ROLE_ASSIGNMENT_DELETED,
+        entity_id=assignment_id,
+    )
+
+    # Re-read the assignment and all provenance under row locks after the
+    # plugin's lock-only preflight. Validation remains reserved for an actual
+    # effective-row deletion, preserving the existing third-party hook
+    # semantics when only a manual source is removed.
+    assignment = await session.get(
+        AuthzRoleAssignment,
+        assignment_id,
+        populate_existing=True,
+        with_for_update=True,
+    )
     if assignment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
     grants = (
         await session.exec(
-            select(AuthzRoleAssignmentGrant).where(AuthzRoleAssignmentGrant.assignment_id == assignment_id)
+            select(AuthzRoleAssignmentGrant)
+            .where(AuthzRoleAssignmentGrant.assignment_id == assignment_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
     ).all()
     manual_grant = next((grant for grant in grants if grant.source_kind == "manual"), None)
@@ -305,11 +339,11 @@ async def delete_assignment(
         domain_id=domain_id,
         policy_relevant_fields=("user_id", "role_id", "domain_type", "domain_id"),
     )
-    authorization_service = get_authorization_service()
     try:
         await validate_identity_mutation(authorization_service, session, mutation)
     except AuthorizationMutationRejected as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.public_detail) from exc
+
     await session.delete(assignment)
     await session.flush()
     await stage_identity_mutation(authorization_service, session, mutation)

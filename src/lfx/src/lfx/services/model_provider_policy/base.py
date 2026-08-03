@@ -140,6 +140,16 @@ class BaseModelProviderPolicyService(Service, abc.ABC):
         super().__init__()
         self._ensure_snapshot_cache_state()
 
+    @property
+    def external_approved_provider_ids(self) -> frozenset[str] | None:
+        """Return the externally owned deployment ceiling, if one is active.
+
+        ``None`` means Langflow owns the persisted policy. An empty frozenset
+        still marks the policy as externally managed and must not be treated
+        as the OSS unrestricted-policy sentinel.
+        """
+        return None
+
     def _ensure_snapshot_cache_state(self) -> None:
         """Initialize cache state, including for legacy subclasses that skipped ``super()``."""
         if "_snapshot_cache_lock" in self.__dict__:

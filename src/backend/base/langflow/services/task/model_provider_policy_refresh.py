@@ -41,7 +41,10 @@ class ModelProviderPolicyRefreshWorker:
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 self._task.result()
             self._task = None
-        if not isinstance(get_model_provider_policy_service(), ModelProviderPolicyService):
+        service = get_model_provider_policy_service()
+        if getattr(service, "external_approved_provider_ids", None) is not None or not isinstance(
+            service, ModelProviderPolicyService
+        ):
             await logger.adebug("Model-provider policy refresh worker not started: external policy service active")
             return
 
@@ -97,7 +100,10 @@ class ModelProviderPolicyRefreshWorker:
             deny_all_required = deny_all_required or isinstance(exc, ModelProviderPolicyNotInitializedError)
             service = get_model_provider_policy_service()
             changed = False
-            if isinstance(service, ModelProviderPolicyService):
+            if (
+                isinstance(service, ModelProviderPolicyService)
+                and getattr(service, "external_approved_provider_ids", None) is None
+            ):
                 # Install deny-all synchronously before any logging await: a
                 # broken async sink must never preserve broader stale policy.
                 changed = service.fail_closed(deny_all_required=deny_all_required)

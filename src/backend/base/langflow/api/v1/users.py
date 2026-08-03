@@ -19,6 +19,7 @@ from langflow.api.v1.schemas import PasswordResetRequest, UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import get_current_active_superuser, get_current_user_optional
 from langflow.services.authorization.lifecycle import (
+    acquire_identity_mutation_lock,
     safe_identity_mutation_committed,
     stage_identity_mutation,
     validate_identity_mutation,
@@ -66,6 +67,13 @@ async def add_user(
     try:
         new_user.password = get_auth_service().get_password_hash(user.password)
         new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE
+        await acquire_identity_mutation_lock(
+            authorization_service,
+            session,
+            kind=AuthorizationMutationKind.USER_CREATED,
+            entity_id=new_user.id,
+            affected_user_ids=(new_user.id,),
+        )
         session.add(new_user)
         await session.flush()
         await session.refresh(new_user)
@@ -165,8 +173,22 @@ async def patch_user(
             raise HTTPException(status_code=400, detail="You can't change your password here")
         user_update.password = get_auth_service().get_password_hash(user_update.password)
 
+    authorization_service = get_authorization_service()
+    possible_lifecycle_kind: AuthorizationMutationKind | None = None
+    if user_update.is_active is False:
+        possible_lifecycle_kind = AuthorizationMutationKind.USER_DISABLED
+    elif user_update.is_superuser is False:
+        possible_lifecycle_kind = AuthorizationMutationKind.USER_SUPERUSER_DEMOTED
+    if possible_lifecycle_kind is not None:
+        await acquire_identity_mutation_lock(
+            authorization_service,
+            session,
+            kind=possible_lifecycle_kind,
+            entity_id=user_id,
+            affected_user_ids=(user_id,),
+        )
+
     if user_db := await get_user_by_id(session, user_id):
-        authorization_service = get_authorization_service()
         lifecycle_mutation: AuthorizationMutation | None = None
         next_is_active = user_db.is_active if user_update.is_active is None else user_update.is_active
         next_is_superuser = user_db.is_superuser if user_update.is_superuser is None else user_update.is_superuser
@@ -266,6 +288,14 @@ async def delete_user(
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Permission denied")
 
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(
+        authorization_service,
+        session,
+        kind=AuthorizationMutationKind.USER_DELETED,
+        entity_id=user_id,
+        affected_user_ids=(user_id,),
+    )
     stmt = select(User).where(User.id == user_id)
     user_db = (await session.exec(stmt)).first()
     if not user_db:
@@ -283,7 +313,6 @@ async def delete_user(
         ),
         user_after=None,
     )
-    authorization_service = get_authorization_service()
     try:
         await validate_identity_mutation(authorization_service, session, lifecycle_mutation)
     except AuthorizationMutationRejected as exc:
