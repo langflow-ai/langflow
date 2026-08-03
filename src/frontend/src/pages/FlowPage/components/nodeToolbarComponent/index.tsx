@@ -20,7 +20,7 @@ import {
   SelectContentWithoutPortal,
   SelectItem,
   SelectTrigger,
-} from "../../../../components/ui/select-custom";
+} from "../../../../components/ui/select";
 import useAlertStore from "../../../../stores/alertStore";
 import { useDarkStore } from "../../../../stores/darkStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -613,6 +613,7 @@ const NodeToolbarComponent = memo(
               open={dropdownOpen}
             >
               <SelectTrigger
+                variant="plain"
                 className="w-62"
                 aria-label={t("nodeToolbar.showMore")}
               >
@@ -636,7 +637,7 @@ const NodeToolbarComponent = memo(
               <SelectContentWithoutPortal
                 className={"relative top-1 w-56 bg-background"}
               >
-                <SelectItem value={"save"}>
+                <SelectItem variant="plain" value={"save"}>
                   <ToolbarSelectItem
                     shortcut={
                       shortcuts.find((obj) => obj.name === "Save Component")
@@ -647,7 +648,7 @@ const NodeToolbarComponent = memo(
                     dataTestId="save-button-modal"
                   />
                 </SelectItem>
-                <SelectItem value={"duplicate"}>
+                <SelectItem variant="plain" value={"duplicate"}>
                   <ToolbarSelectItem
                     shortcut={
                       shortcuts.find((obj) => obj.name === "Duplicate")
@@ -658,7 +659,7 @@ const NodeToolbarComponent = memo(
                     dataTestId="copy-button-modal"
                   />
                 </SelectItem>
-                <SelectItem value={"copy"}>
+                <SelectItem variant="plain" value={"copy"}>
                   <ToolbarSelectItem
                     shortcut={
                       shortcuts.find((obj) => obj.name === "Copy")?.shortcut!
@@ -669,7 +670,7 @@ const NodeToolbarComponent = memo(
                   />
                 </SelectItem>
                 {isOutdated && (
-                  <SelectItem value={"update"}>
+                  <SelectItem variant="plain" value={"update"}>
                     <ToolbarSelectItem
                       shortcut={
                         shortcuts.find((obj) => obj.name === "Update")
@@ -690,6 +691,7 @@ const NodeToolbarComponent = memo(
                 )}
                 {hasStore && (
                   <SelectItem
+                    variant="plain"
                     value={"Share"}
                     disabled={!hasApiKey || !validApiKey}
                   >
@@ -706,6 +708,7 @@ const NodeToolbarComponent = memo(
                 )}
 
                 <SelectItem
+                  variant="plain"
                   value={"documentation"}
                   disabled={data.node?.documentation === ""}
                 >
@@ -720,6 +723,7 @@ const NodeToolbarComponent = memo(
                 </SelectItem>
 
                 <SelectItem
+                  variant="plain"
                   value={"show"}
                   data-testid={`${
                     showNode ? "minimize" : "expand"
@@ -739,7 +743,7 @@ const NodeToolbarComponent = memo(
                   />
                 </SelectItem>
                 {isGroup && (
-                  <SelectItem value="ungroup">
+                  <SelectItem variant="plain" value="ungroup">
                     <ToolbarSelectItem
                       shortcut={
                         shortcuts.find((obj) => obj.name === "Group")?.shortcut!
@@ -752,6 +756,7 @@ const NodeToolbarComponent = memo(
                 )}
                 {hasToolMode && (
                   <SelectItem
+                    variant="plain"
                     value="freezeAll"
                     data-testid="freeze-all-button-modal"
                   >
@@ -768,7 +773,7 @@ const NodeToolbarComponent = memo(
                     />
                   </SelectItem>
                 )}
-                <SelectItem value="Download">
+                <SelectItem variant="plain" value="Download">
                   <ToolbarSelectItem
                     shortcut={
                       shortcuts.find((obj) => obj.name === "Download")
@@ -780,6 +785,7 @@ const NodeToolbarComponent = memo(
                   />
                 </SelectItem>
                 <SelectItem
+                  variant="plain"
                   value={"delete"}
                   className="focus:bg-destructive/[.20]"
                 >

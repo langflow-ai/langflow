@@ -16,6 +16,7 @@ import jsonpatch
 from lfx.custom import Component
 from lfx.io import MessageTextInput, Output
 from lfx.schema import Data
+from lfx.services.model_provider_policy import ModelProviderPolicyError
 
 from ._state import (
     _emit,
@@ -129,6 +130,18 @@ class ProposeFieldEdit(Component):
                     "error": f"Field '{self.field_name}' not found on '{self.component_id}'. Available: {available}",
                 }
             )
+
+        # This tool is an alternate configuration path: the UI may apply its
+        # emitted patch after approval, while headless callers apply it below.
+        # Gate the prospective value before either mutation can escape.
+        from .mutate_tools import _model_providers_in_params, _require_allowed_model_providers
+
+        try:
+            _require_allowed_model_providers(
+                _model_providers_in_params(flow, self.component_id, {self.field_name: self.new_value})
+            )
+        except ModelProviderPolicyError as exc:
+            return Data(data={"error": str(exc)})
 
         # 3. Read old value
         old_value = template[self.field_name].get("value")

@@ -373,13 +373,16 @@ model) and the flow will be run/tested, you MUST set its `model` BEFORE
 running — otherwise the run fails with "No model selected".
 
 Pick the model in this STRICT priority order:
-1. **The model the user EXPLICITLY named WINS — always.** If the user asked
+1. **The model the user EXPLICITLY named WINS unless a runtime
+   `[Model provider policy ...]` notice says its provider is unavailable.**
+   If the user asked
    for a specific model ("use GPT-5.4", "use the OpenAI 5.4 model", "switch to
    claude-sonnet-4-5", "troque para gemini-2.5-pro"), use THAT model — never
    substitute a different version or the `preferred` model for it, even if the
-   requested model is not in the `[Available language models ...]` block and
-   even if a "preferred" model is offered. (e.g. user said "5.4" / "gpt-5.4"
-   and preferred is "gpt-5.5" → you MUST set the 5.4 model, NOT gpt-5.5.)
+   exact requested model is not listed and even if a "preferred" model is
+   offered. (e.g. user said "5.4" / "gpt-5.4" and preferred is "gpt-5.5"
+   → you MUST set the 5.4 model, NOT gpt-5.5.) If a policy notice omits or
+   rejects the provider, do not discover, configure, or run it.
    BUT set the **canonical model id** — the EXACT id as it appears in the
    provider catalog / `describe_component` / the `[Available language models]`
    block, NOT the user's loose wording. Provider model ids are CASE-SENSITIVE
@@ -393,19 +396,18 @@ Pick the model in this STRICT priority order:
    `preferred`; if there is none, pick ANY provider from "providers with
    credentials configured" (provider-agnostic — do NOT assume OpenAI; use
    whatever the user actually has keys for, e.g. Anthropic, Google, Groq).
-3. Only if no such block is present at all may you fall back to
-   `provider="OpenAI", name="gpt-4o-mini"`.
+3. Only if neither an Available-language-model block nor a restrictive
+   Model-provider-policy notice is present may you preserve the historical
+   fallback `provider="OpenAI", name="gpt-4o-mini"`.
 
 `configure_component(component_id="Agent-...", params='{"model": [{"provider": "<provider>", "name": "<name>"}]}')`.
 Never run a flow whose Agent has no model. NEVER claim in your reply that you
 used a model different from the one you actually set on the canvas — report the
 EXACT model you configured.
 
-Common providers and example model names:
-- `OpenAI` — `gpt-4o`, `gpt-4o-mini`, `gpt-5`, `o1-mini`
-- `Anthropic` — `claude-sonnet-4-5-20250929`, `claude-haiku-4-5`
-- `Google Generative AI` — `gemini-2.5-flash`, `gemini-2.5-pro`
-- `Groq`, `Azure OpenAI`, `Ollama`, `IBM WatsonX`
+Provider and model names are deployment-specific. Treat the runtime
+`[Available language models ...]` block as the authority; never infer that a
+provider is available from these instructions or from an example below.
 
 Add a SEPARATE model component (OpenAIModel etc.) only when the user
 EXPLICITLY says "add an OpenAIModel component" / "create a model node" — never

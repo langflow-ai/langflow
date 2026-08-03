@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-core~=1.12.0",
+    "langflow-base~=1.12.0",
     # langflow-extensions:bundle-deps-start
     # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
     # curated lfx-* package, never exact pins -- exact pins in reusable library
@@ -28,24 +28,19 @@ dependencies = [
     # default langflow dependency.
     # The cross-bundle CI matrix verifies these ranges resolve together across
     # the supported lfx axis.
-    "lfx-duckduckgo>=0.1.0,<1.0.0",
-    "lfx-arxiv>=0.1.0,<1.0.0",
-    "lfx-ibm>=0.1.4,<1.0.0",
+    "lfx-ibm>=0.1.5,<1.0.0",
     "lfx-docling>=0.1.0,<1.0.0",
-    "lfx-datastax>=0.1.0,<1.0.0",
+    "lfx-datastax>=0.1.3,<1.0.0",
+    "lfx-toolguard>=0.1.0,<1.0.0",
     "lfx-openai>=0.1.0,<1.0.0",
     "lfx-anthropic>=0.1.0,<1.0.0",
+    "lfx-azure>=0.1.0,<1.0.0",
+    "lfx-ollama>=0.1.0,<1.0.0",
     "lfx-amazon>=0.1.0,<1.0.0",
     "lfx-cohere>=0.1.0,<1.0.0",
     "lfx-oracle>=0.1.0,<1.0.0",
-    "lfx-firecrawl>=0.1.0,<1.0.0",
-    "lfx-nextplaid>=0.1.0,<1.0.0",
-    "lfx-paddle>=0.1.0,<1.0.0",
     "lfx-vllm>=0.1.0,<1.0.0",
-    "lfx-empiriolabs>=0.1.0,<1.0.0",
     "lfx-openai-compatible>=0.1.0,<1.0.0",
-    "lfx-exa>=0.1.0,<1.0.0",
-    "lfx-valkey>=0.1.0,<1.0.0",
     "lfx-google>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
@@ -100,7 +95,6 @@ explicit = true
 
 [tool.uv.sources]
 langflow-base = { workspace = true }
-langflow-core = { workspace = true }
 langflow = { workspace = true }
 lfx = { workspace = true }
 langflow-sdk = { workspace = true }
@@ -111,8 +105,11 @@ lfx-ibm = { workspace = true }
 lfx-docling = { workspace = true }
 lfx-bundles = { workspace = true }
 lfx-datastax = { workspace = true }
+lfx-toolguard = { workspace = true }
 lfx-openai = { workspace = true }
 lfx-anthropic = { workspace = true }
+lfx-azure = { workspace = true }
+lfx-ollama = { workspace = true }
 lfx-amazon = { workspace = true }
 lfx-cohere = { workspace = true }
 lfx-oracle = { workspace = true }
@@ -134,7 +131,6 @@ members = [
     "src/backend/base",
     ".",
     "src/lfx",
-    "src/langflow-core",
     "src/langflow-stepflow",
     "src/sdk",
     # langflow-extensions:bundle-members-start
@@ -144,8 +140,11 @@ members = [
     "src/bundles/docling",
     "src/bundles/lfx-bundles",
     "src/bundles/datastax",
+    "src/bundles/toolguard",
     "src/bundles/openai",
     "src/bundles/anthropic",
+    "src/bundles/azure",
+    "src/bundles/ollama",
     "src/bundles/amazon",
     "src/bundles/cohere",
     "src/bundles/oracle",
@@ -170,7 +169,15 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.4,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.6,<2.0",
+    "lfx-arxiv>=0.1.0,<1.0.0",
+    "lfx-duckduckgo>=0.1.0,<1.0.0",
+    "lfx-empiriolabs>=0.1.0,<1.0.0",
+    "lfx-exa>=0.1.0,<1.0.0",
+    "lfx-firecrawl>=0.1.0,<1.0.0",
+    "lfx-nextplaid>=0.1.0,<1.0.0",
+    "lfx-paddle>=0.1.0,<1.0.0",
+    "lfx-valkey>=0.1.0,<1.0.0",
 ]
 
 docling = [
@@ -186,7 +193,7 @@ docling-image-description = [
 ]
 
 audio = [
-    "langflow-core[audio]~=1.12.0",
+    "langflow-base[audio]~=1.12.0",
 ]
 
 
@@ -210,7 +217,15 @@ nv-ingest = [
 ]
 
 postgresql = [
-    "langflow-core[postgresql]~=1.12.0",
+    "langflow-base[postgresql]~=1.12.0",
+]
+
+pgvector = [
+    "langflow-base[pgvector]~=1.12.0",
+]
+
+opensearch = [
+    "langflow-base[opensearch]~=1.12.0",
 ]
 
 [tool.uv]

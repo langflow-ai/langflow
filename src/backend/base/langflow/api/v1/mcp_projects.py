@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log import logger
 from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.mcp_composer.service import (
@@ -880,6 +881,7 @@ async def install_mcp_config(
             settings = get_settings_service().settings
             command = "uvx"
             args = [
+                *mcp_sdk_constraint_args(),
                 f"mcp-composer{settings.mcp_composer_version}",
                 "--mode",
                 "http",
@@ -896,7 +898,7 @@ async def install_mcp_config(
             streamable_http_url = await get_project_streamable_http_url(project_id)
             legacy_sse_url = await get_project_sse_url(project_id)
             command = "uvx"
-            args = ["mcp-proxy"]
+            args = [*mcp_sdk_constraint_args(), "mcp-proxy"]
             # Check if we need to add Langflow API key headers
             # Necessary only when Project API Key Authentication is enabled
 

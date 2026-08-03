@@ -1,6 +1,4 @@
-import os
-
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ValidationInfo, field_validator
 
 from lfx.services.settings.constants import AGENTIC_VARIABLES, VARIABLES_TO_GET_FROM_ENVIRONMENT
 
@@ -18,9 +16,7 @@ class VariablesSettings(BaseModel):
     store_environment_variables: bool = True
     """Whether to store environment variables as Global Variables in the database."""
 
-    variables_to_get_from_environment: list[str] = VARIABLES_TO_GET_FROM_ENVIRONMENT
-    """List of environment variables to get from the environment and store in the database."""
-
+    # Agentic Experience
     agentic_experience: bool = True
     """Whether the Langflow Assistant is available. On by default: it is the primary way into
     the product, so requiring opt-in would hide the main entry point behind an env var.
@@ -35,20 +31,22 @@ class VariablesSettings(BaseModel):
     hand-written custom components alike.
     """
 
+    variables_to_get_from_environment: list[str] = VARIABLES_TO_GET_FROM_ENVIRONMENT
+    """List of environment variables to get from the environment and store in the database."""
+
+    # Developer API
     developer_api_enabled: bool = False
     """If set to True, Langflow will enable developer API endpoints for advanced debugging and introspection."""
 
     @field_validator("variables_to_get_from_environment", mode="before")
     @classmethod
-    def set_variables_to_get_from_environment(cls, value):
+    def set_variables_to_get_from_environment(cls, value, info: ValidationInfo):
         if isinstance(value, str):
             value = value.split(",")
 
         result = list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
 
-        # A field validator cannot read the sibling `agentic_experience`, so the gate is re-read
-        # from the env; this default must track that field's, or the vars disagree with it.
-        if os.getenv("LANGFLOW_AGENTIC_EXPERIENCE", "true").lower() == "true":
+        if info.data.get("agentic_experience", True):
             result.extend(AGENTIC_VARIABLES)
 
         return list(set(result))

@@ -309,7 +309,9 @@ function normalizeDBProviderValue(
         ? "opensearch"
         : value === "chroma_cloud"
           ? "chroma_cloud"
-          : "chroma";
+          : value === "postgres"
+            ? "postgres"
+            : "chroma";
     return {
       backend_type: backendType,
       backend_config: getDBProviderConfig(backendType, globalVariables),

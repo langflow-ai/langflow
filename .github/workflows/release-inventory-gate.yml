@@ -11,8 +11,8 @@ on:
         description: Version to embed in application images
         required: true
         type: string
-      core-version:
-        description: Version to embed in core application images
+      base-version:
+        description: Version shared by base and full application images
         required: true
         type: string
       sdk-artifact-name:
@@ -24,10 +24,6 @@ on:
         type: string
         default: ""
       base-artifact-name:
-        required: false
-        type: string
-        default: ""
-      core-artifact-name:
         required: false
         type: string
         default: ""
@@ -51,6 +47,7 @@ jobs:
       - name: Check out release profiles
         uses: actions/checkout@v6
         with:
+          persist-credentials: false
           ref: ${{ inputs.ref }}
 
       - name: Set up Python
@@ -76,6 +73,109 @@ jobs:
           path: bundle-profile-inventories/*.lock.json
           if-no-files-found: error
 
+  python-base-inventory:
+    name: Python ${{ matrix.python-version }} / python-base
+    if: ${{ inputs.base-artifact-name != '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: Check out release contract
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+
+      - name: Download SDK wheel
+        if: ${{ inputs.sdk-artifact-name != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.sdk-artifact-name }}
+          path: sdk-dist
+
+      - name: Download LFX wheel
+        if: ${{ inputs.lfx-artifact-name != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.lfx-artifact-name }}
+          path: lfx-dist
+
+      - name: Download base wheel
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.base-artifact-name }}
+          path: base-dist
+
+      - name: Install base release shape from wheels
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          uv venv inventory-env --seed --python "${{ matrix.python-version }}"
+
+          LOCAL_WHEELS=()
+          for wheel_dir in sdk-dist lfx-dist base-dist; do
+            if [ ! -d "$wheel_dir" ]; then
+              continue
+            fi
+            WHEELS=("$wheel_dir"/*.whl)
+            if [ ${#WHEELS[@]} -ne 1 ]; then
+              echo "Expected exactly one wheel in $wheel_dir, found ${#WHEELS[@]}"
+              exit 1
+            fi
+            LOCAL_WHEELS+=("${WHEELS[0]}")
+          done
+
+          uv pip install --python inventory-env/bin/python \
+            --prerelease=if-necessary-or-explicit "${LOCAL_WHEELS[@]}"
+          uv pip check --python inventory-env/bin/python
+
+      - name: Validate base distribution and component inventory
+        run: |
+          inventory-env/bin/python scripts/ci/check_release_inventory.py \
+            --contract scripts/ci/release_inventory_contract.json \
+            --profile python-base \
+            --output "inventory-reports/python-base-py${{ matrix.python-version }}.json"
+
+      - name: Verify base application startup and health
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          inventory-env/bin/langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          server_pid=$!
+          trap 'kill "$server_pid" >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:7860/health_check >/dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              echo "Langflow base exited before becoming healthy"
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "Langflow base did not become healthy"
+          exit 1
+
+      - name: Upload base Python inventory report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: inventory-python-base-py${{ matrix.python-version }}
+          path: inventory-reports/*.json
+          if-no-files-found: warn
+
   python-inventory:
     name: Python ${{ matrix.python-version }} / ${{ matrix.profile }}
     if: ${{ inputs.main-artifact-name != '' }}
@@ -89,6 +189,7 @@ jobs:
       - name: Check out release contract
         uses: actions/checkout@v6
         with:
+          persist-credentials: false
           ref: ${{ inputs.ref }}
 
       - name: Set up Python
@@ -122,13 +223,6 @@ jobs:
           name: ${{ inputs.base-artifact-name }}
           path: base-dist
 
-      - name: Download core wheel
-        if: ${{ inputs.core-artifact-name != '' }}
-        uses: actions/download-artifact@v7
-        with:
-          name: ${{ inputs.core-artifact-name }}
-          path: core-dist
-
       - name: Download main wheel
         if: ${{ inputs.main-artifact-name != '' }}
         uses: actions/download-artifact@v7
@@ -153,7 +247,7 @@ jobs:
           [ ${#MAIN_WHEELS[@]} -eq 1 ]
 
           LOCAL_WHEELS=()
-          for wheel_dir in sdk-dist lfx-dist base-dist core-dist; do
+          for wheel_dir in sdk-dist lfx-dist base-dist; do
             if [ -d "$wheel_dir" ]; then
               while IFS= read -r wheel; do
                 LOCAL_WHEELS+=("$wheel")
@@ -228,6 +322,7 @@ jobs:
       - name: Check out release contract
         uses: actions/checkout@v6
         with:
+          persist-credentials: false
           ref: ${{ inputs.ref }}
 
       - name: Download bundle wheels for downstream-image test
@@ -240,15 +335,18 @@ jobs:
       - name: Prepare optional bundle-wheel directory
         run: mkdir -p bundles-dist
 
-      - name: Build core, default, and full application images
+      - name: Build base, default, and full application images
+        env:
+          BASE_VERSION: ${{ inputs.base-version }}
+          MAIN_VERSION: ${{ inputs.main-version }}
         run: |
           set -euo pipefail
           common_args=(
-            --build-arg "MAIN_VERSION=${{ inputs.main-version }}"
-            --build-arg "CORE_VERSION=${{ inputs.core-version }}"
+            --build-arg "MAIN_VERSION=$MAIN_VERSION"
+            --build-arg "BASE_VERSION=$BASE_VERSION"
             -f docker/build_and_push.Dockerfile
           )
-          docker build "${common_args[@]}" --target core -t "langflow-inventory:core-${{ matrix.arch }}" .
+          docker build "${common_args[@]}" --target base -t "langflow-inventory:base-${{ matrix.arch }}" .
           docker build "${common_args[@]}" --target full -t "langflow-inventory:default-${{ matrix.arch }}" .
           docker build "${common_args[@]}" --target full-bundles -t "langflow-inventory:full-${{ matrix.arch }}" .
 
@@ -256,7 +354,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p inventory-reports
-          for profile in core default full; do
+          for profile in base default full; do
             docker run --rm --entrypoint python \
               -v "$PWD/scripts/ci:/inventory:ro" \
               -v "$PWD/inventory-reports:/reports" \
@@ -272,7 +370,7 @@ jobs:
         run: |
           set -euo pipefail
           credential="inventory-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${RANDOM}"
-          for profile in core default full; do
+          for profile in base default full; do
             image="langflow-inventory:${profile}-${{ matrix.arch }}"
             container_id=$(docker run -d -e "LANGFLOW_SUPERUSER_PASSWORD=$credential" "$image")
             healthy=false
@@ -295,15 +393,15 @@ jobs:
             docker rm -f "$container_id"
           done
 
-      - name: Verify downstream extension of the core image
+      - name: Verify downstream extension of the base image
         run: |
           set -euo pipefail
           docker build \
-            --build-arg "CORE_IMAGE=langflow-inventory:core-${{ matrix.arch }}" \
-            -f scripts/ci/core_extension.Dockerfile \
-            -t "langflow-inventory:core-extended-${{ matrix.arch }}" .
+            --build-arg "BASE_IMAGE=langflow-inventory:base-${{ matrix.arch }}" \
+            -f scripts/ci/base_extension.Dockerfile \
+            -t "langflow-inventory:base-extended-${{ matrix.arch }}" .
           docker run --rm --entrypoint python \
-            "langflow-inventory:core-extended-${{ matrix.arch }}" \
+            "langflow-inventory:base-extended-${{ matrix.arch }}" \
             -c 'from importlib.metadata import version; print(version("lfx-openai"))'
 
       - name: Upload image inventory reports

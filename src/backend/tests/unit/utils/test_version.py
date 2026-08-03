@@ -85,26 +85,6 @@ class TestGetVersionInfo:
         assert result["package"] == "Langflow"
 
     @patch("langflow.utils.version.metadata")
-    def test_get_version_info_langflow_core_package(self, mock_metadata):
-        """Test getting product version info from a core-only install."""
-        from importlib import metadata as real_metadata
-
-        mock_metadata.PackageNotFoundError = real_metadata.PackageNotFoundError
-
-        def mock_version(pkg_name):
-            if pkg_name == "langflow-core":
-                return "1.11.0"
-            raise mock_metadata.PackageNotFoundError
-
-        mock_metadata.version.side_effect = mock_version
-
-        result = _get_version_info()
-
-        assert result["version"] == "1.11.0"
-        assert result["main_version"] == "1.11.0"
-        assert result["package"] == "Langflow Core"
-
-    @patch("langflow.utils.version.metadata")
     def test_get_version_info_langflow_base_package(self, mock_metadata):
         """Test getting version info for langflow-base package."""
         from importlib import metadata as real_metadata
@@ -125,7 +105,7 @@ class TestGetVersionInfo:
         assert result["version"] == "1.0.0.dev123"
         assert result["main_version"] == "1.0.0"
         # A `.dev` version is labeled a nightly regardless of which package name resolved it.
-        assert result["package"] == "Langflow Base Nightly"
+        assert result["package"] == "Langflow Nightly"
 
     @patch("langflow.utils.version.metadata")
     def test_get_version_info_nightly_package(self, mock_metadata):
@@ -169,7 +149,7 @@ class TestGetVersionInfo:
 
         assert result["version"] == "1.0.0.a1"
         assert result["main_version"] == "1.0.0"
-        assert result["package"] == "Langflow Base Nightly"
+        assert result["package"] == "Langflow Nightly"
 
     @patch("langflow.utils.version.metadata")
     def test_get_version_info_canonical_dev_is_nightly(self, mock_metadata):

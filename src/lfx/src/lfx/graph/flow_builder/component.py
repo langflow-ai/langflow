@@ -19,9 +19,14 @@ import yaml
 
 from lfx.graph.flow_builder._utils import node_id as _node_id
 
-# Assistant-generated code components must wear this canvas type so the frontend
-# exempts them from the "Update available" check (componentsToIgnoreUpdate).
-_CUSTOM_COMPONENT_TYPE = "CustomComponent"
+# Canvas type for user-authored code components. The frontend resolves this in
+# its global template list and exempts it from the "Update available" check
+# (componentsToIgnoreUpdate). User overlay entries are keyed by class name in
+# the registry so the agent can reference them, but their canvas node must wear
+# this type or the frontend flags them as a missing/outdated component.
+CUSTOM_COMPONENT_CANVAS_TYPE = "CustomComponent"
+FLOW_BUILDER_REGISTRY_TYPE_KEY = "_flow_builder_registry_type"
+FLOW_BUILDER_UNTRUSTED_CUSTOM_KEY = "_flow_builder_untrusted_custom"
 
 
 def _generate_id(component_type: str) -> str:
@@ -80,22 +85,31 @@ def _make_node(
     node_data = copy.deepcopy(registry[component_type])
     _normalize_outputs(node_data)
 
-    # Assistant-generated entries are tagged ``custom`` and relabeled
-    # CustomComponent so the frontend skips the "Update available" badge.
-    is_custom = bool(node_data.pop("custom", False))
-    node_type = _CUSTOM_COMPONENT_TYPE if is_custom else component_type
+    # User-overlay (assistant-generated) entries are tagged ``custom``. Strip
+    # the internal marker and label the canvas node as CustomComponent so the
+    # frontend treats it like any user-authored component (no spurious
+    # "Update available" badge). Built-ins keep their own type.
+    is_custom = node_data.pop("custom", False) is True
+    node_type = CUSTOM_COMPONENT_CANVAS_TYPE if is_custom else component_type
+    data = {
+        "id": cid,
+        "type": node_type,
+        "node": node_data,
+        "showNode": True,
+    }
+    if is_custom:
+        # Keep provenance outside the user-authored component template. The
+        # canvas type must remain CustomComponent, but policy checks also need
+        # the original registry key after this node is stored and revisited.
+        data[FLOW_BUILDER_REGISTRY_TYPE_KEY] = component_type
+        data[FLOW_BUILDER_UNTRUSTED_CUSTOM_KEY] = True
 
     return {
         "id": cid,
         "type": "genericNode",
         "position": {"x": 0, "y": 0},
         "selected": False,
-        "data": {
-            "id": cid,
-            "type": node_type,
-            "node": node_data,
-            "showNode": True,
-        },
+        "data": data,
     }
 
 

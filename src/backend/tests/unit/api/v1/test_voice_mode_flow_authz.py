@@ -187,7 +187,7 @@ async def test_missing_voice_flow_uses_same_generic_404(monkeypatch):
     ensure_permission.assert_not_awaited()
 
 
-async def test_denied_cross_user_websocket_reaches_no_description_connection_or_message_sink(monkeypatch):
+async def test_denied_cross_user_websocket_reaches_no_secret_description_config_provider_or_sink(monkeypatch):
     user = SimpleNamespace(id=uuid4())
     foreign_flow = _DescriptionProbe(owner_id=uuid4())
     websocket = SimpleNamespace(accept=AsyncMock(), send_json=AsyncMock())
@@ -223,7 +223,7 @@ async def test_denied_cross_user_websocket_reaches_no_description_connection_or_
     )
 
     websocket.accept.assert_awaited_once()
-    authenticate.assert_awaited_once_with(session, user, websocket)
+    authenticate.assert_not_awaited()
     websocket.send_json.assert_awaited_once_with({"error": "Failed to load flow: 404: Flow not found"})
     assert foreign_flow.description_reads == 0
     legacy_description_sink.assert_not_awaited()
@@ -238,6 +238,7 @@ async def test_tts_websocket_passes_client_websocket_to_authentication(monkeypat
     session = SimpleNamespace()
     authenticate = AsyncMock(return_value=(None, None))
     monkeypatch.setattr(voice_mode, "get_current_user_for_websocket", AsyncMock(return_value=user))
+    monkeypatch.setattr(voice_mode, "_get_authorized_voice_flow", AsyncMock(return_value=_flow(owner_id=user.id)))
     monkeypatch.setattr(voice_mode, "authenticate_and_get_openai_key", authenticate)
 
     await voice_mode.flow_tts_websocket(
@@ -250,3 +251,42 @@ async def test_tts_websocket_passes_client_websocket_to_authentication(monkeypat
 
     websocket.accept.assert_awaited_once()
     authenticate.assert_awaited_once_with(session, user, websocket)
+
+
+async def test_denied_tts_websocket_reaches_no_secret_config_provider_or_flow_sink(monkeypatch):
+    user = SimpleNamespace(id=uuid4())
+    foreign_flow = _DescriptionProbe(owner_id=uuid4())
+    websocket = SimpleNamespace(accept=AsyncMock(), send_json=AsyncMock())
+    session = SimpleNamespace()
+    authenticate = AsyncMock(return_value=(user, "test-openai-key"))
+    get_tts_config = Mock()
+    connect = Mock(side_effect=AssertionError("external connection reached before authorization"))
+    build_flow = AsyncMock(side_effect=AssertionError("flow execution reached before authorization"))
+
+    monkeypatch.setattr(voice_mode, "get_current_user_for_websocket", AsyncMock(return_value=user))
+    monkeypatch.setattr(voice_mode, "authenticate_and_get_openai_key", authenticate)
+    monkeypatch.setattr(voice_mode, "_read_flow", AsyncMock(return_value=foreign_flow))
+    monkeypatch.setattr(
+        voice_mode,
+        "ensure_flow_permission",
+        AsyncMock(side_effect=HTTPException(status_code=403, detail="denied")),
+    )
+    monkeypatch.setattr(voice_mode, "get_tts_config", get_tts_config)
+    monkeypatch.setattr(voice_mode.websockets, "connect", connect)
+    monkeypatch.setattr(voice_mode, "build_flow_and_stream", build_flow)
+
+    await voice_mode.flow_tts_websocket(
+        client_websocket=websocket,
+        flow_id=str(foreign_flow.id),
+        background_tasks=BackgroundTasks(),
+        session=session,
+        session_id="voice-session",
+    )
+
+    websocket.accept.assert_awaited_once()
+    websocket.send_json.assert_awaited_once_with({"error": "Failed to load flow: 404: Flow not found"})
+    authenticate.assert_not_awaited()
+    assert foreign_flow.description_reads == 0
+    get_tts_config.assert_not_called()
+    connect.assert_not_called()
+    build_flow.assert_not_awaited()
