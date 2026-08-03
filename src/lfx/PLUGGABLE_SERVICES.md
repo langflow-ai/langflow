@@ -260,6 +260,7 @@ Service keys **must** match `ServiceType` enum values exactly:
 
 - `database_service`
 - `auth_service`
+- `authorization_service`
 - `catalog_policy_service`
 - `model_provider_policy_service`
 - `storage_service`
@@ -278,6 +279,12 @@ Service keys **must** match `ServiceType` enum values exactly:
 - `transaction_service`
 
 **Important:** `settings_service` is **not pluggable** and cannot be overridden. It is always created using the built-in factory and provides the foundational configuration for all other services.
+
+### Authorization identity-mutation lock
+
+Authorization plugins can override `acquire_identity_mutation_lock()` to establish transaction ordering before canonical identity reads and writes. The hook is lock-only: it must not persist policy, commit or roll back the caller's transaction, emit audit events, or reject a mutation. Because it runs before canonical state is loaded, `kind` and the other request metadata are advisory estimates and may differ from the mutation eventually staged. Implementations must acquire a lock broad enough for every possible result and must not narrow its scope by `kind`.
+
+The hook can run for unauthenticated public-signup attempts, including requests later rejected by uniqueness checks, so acquisition must remain bounded and deployments should rate-limit public signup. Canonical `SELECT ... FOR UPDATE` locks are dialect-dependent: they serialize row access on PostgreSQL but are ignored by SQLite. Plugins that require cross-writer serialization must use and test a locking mechanism supported by their deployment database.
 
 ### Model-provider policy service
 
@@ -335,7 +342,9 @@ outside Langflow returns its active set from `external_approved_provider_ids`.
 Any non-`None` value, including an empty frozenset, marks external ownership:
 GET returns that set with `managed_externally: true`, and POST/PUT return `409`
 without changing the database, emitting an audit event, applying OSS state, or
-invalidating the external service.
+invalidating the external service. An empty external set is unrestricted; every
+resolution must treat a non-empty set as the deployment ceiling, while
+principal-, attribute-, or purpose-specific policy may narrow it further.
 
 `purpose` identifies the protected operation:
 
@@ -369,7 +378,10 @@ ownership even when both blocked sets are empty. The superuser catalog-policy
 GET endpoints return that external snapshot with `managed_externally: true`;
 their PUT endpoints return `409` without invoking the writable service methods
 or emitting audit events. The default `None` marker keeps the database-backed
-Langflow read/write behavior unchanged.
+Langflow read/write behavior unchanged. External implementations must expose
+value-equivalent active state through both `snapshot` and
+`external_policy_snapshot`: administration reads use the latter while runtime
+enforcement uses the former.
 
 ```toml
 # $LANGFLOW_CONFIG_DIR/lfx.toml

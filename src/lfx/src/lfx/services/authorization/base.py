@@ -377,6 +377,14 @@ class BaseAuthorizationService(Service, abc.ABC):
         Callers can invoke it before they know whether a write will create a
         row, attach provenance, or return a conflict. The default is a no-op
         for OSS and existing third-party plugins.
+
+        Because this hook runs before canonical reads, ``kind`` and the other
+        request metadata are advisory, best-effort descriptions and may differ
+        from the mutation ultimately staged. Implementations must acquire a lock
+        broad enough for every possible result and must not narrow its scope by
+        ``kind``. The hook can run for unauthenticated public-signup attempts and
+        requests later rejected as conflicts, so acquisition must remain bounded
+        and safe under untrusted contention.
         """
         _ = (session, kind, entity_id, affected_user_ids)
 

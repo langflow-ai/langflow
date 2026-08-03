@@ -115,8 +115,12 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
     async def commit():
         events.append("commit")
 
+    async def get_user_by_id(_session, _user_id):
+        events.append("read")
+        return target
+
     session.commit.side_effect = commit
-    monkeypatch.setattr(users, "get_user_by_id", AsyncMock(return_value=target))
+    monkeypatch.setattr(users, "get_user_by_id", get_user_by_id)
     monkeypatch.setattr(users, "update_user", update_user)
     monkeypatch.setattr(users, "get_authorization_service", lambda: service)
     monkeypatch.setattr(users, "audit_decision", AsyncMock())
@@ -129,12 +133,59 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
     )
 
     assert result is target
-    assert events == ["lock", "validate", "mutate", "stage", "commit", "committed"]
+    assert events == ["lock", "read", "validate", "mutate", "stage", "commit", "committed"]
     assert service.validated == service.staged == service.committed
     mutation = service.staged[0]
     assert mutation.kind is AuthorizationMutationKind.USER_DISABLED
     assert mutation.user_before.is_active is True
     assert mutation.user_after.is_active is False
+
+
+@pytest.mark.asyncio
+async def test_user_patch_lock_kind_is_advisory_before_state_read(monkeypatch):
+    from langflow.api.v1 import users
+    from langflow.services.database.models.user.model import UserUpdate
+
+    events: list[str] = []
+    service = _LifecycleService(events)
+    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    target = SimpleNamespace(
+        id=uuid4(),
+        is_active=False,
+        is_superuser=True,
+        password="hashed",  # noqa: S106  # pragma: allowlist secret
+    )
+    session = AsyncMock()
+
+    async def update_user(_target, _update, _session):
+        events.append("mutate")
+        target.is_superuser = False
+        return target
+
+    async def commit():
+        events.append("commit")
+
+    async def get_user_by_id(_session, _user_id):
+        events.append("read")
+        return target
+
+    session.commit.side_effect = commit
+    monkeypatch.setattr(users, "get_user_by_id", get_user_by_id)
+    monkeypatch.setattr(users, "update_user", update_user)
+    monkeypatch.setattr(users, "get_authorization_service", lambda: service)
+    monkeypatch.setattr(users, "audit_decision", AsyncMock())
+
+    result = await users.patch_user(
+        user_id=target.id,
+        user_update=UserUpdate(is_active=False, is_superuser=False),
+        user=actor,
+        session=session,
+    )
+
+    assert result is target
+    assert events == ["lock", "read", "validate", "mutate", "stage", "commit", "committed"]
+    assert service.lock_requests[0]["kind"] is AuthorizationMutationKind.USER_DISABLED
+    assert service.staged[0].kind is AuthorizationMutationKind.USER_SUPERUSER_DEMOTED
 
 
 @pytest.mark.asyncio

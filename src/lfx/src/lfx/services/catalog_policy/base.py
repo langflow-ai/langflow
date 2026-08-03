@@ -75,7 +75,9 @@ class BaseCatalogPolicyService(Service, abc.ABC):
         """Return the externally owned active snapshot, if one is configured.
 
         ``None`` means Langflow owns the durable catalog policy. An empty
-        snapshot still represents externally managed policy.
+        snapshot still represents externally managed policy. A non-``None``
+        value must be value-equivalent to ``snapshot`` because administration
+        reads use this property while runtime enforcement uses ``snapshot``.
         """
         return None
 

@@ -174,6 +174,7 @@ async def patch_user(
         user_update.password = get_auth_service().get_password_hash(user_update.password)
 
     authorization_service = get_authorization_service()
+    # Pre-read lock hint; canonical user state may produce a different staged kind.
     possible_lifecycle_kind: AuthorizationMutationKind | None = None
     if user_update.is_active is False:
         possible_lifecycle_kind = AuthorizationMutationKind.USER_DISABLED

@@ -102,7 +102,7 @@ def apply_model_provider_policy_state(
     # check is intentionally based on ``is not None`` because an empty external
     # ceiling still establishes external ownership. Check ownership before the
     # concrete OSS type so subclasses cannot opt in and still receive DB state.
-    if getattr(service, "external_approved_provider_ids", None) is not None:
+    if service.external_approved_provider_ids is not None:
         return False
 
     if isinstance(service, ModelProviderPolicyService):

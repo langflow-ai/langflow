@@ -59,11 +59,7 @@ class _StubCatalogPolicy:
 class _ExternalCatalogPolicy(_StubCatalogPolicy):
     def __init__(self, *, external_snapshot: CatalogPolicySnapshot | None = None) -> None:
         super().__init__()
-        self.snapshot = CatalogPolicySnapshot(
-            blocked_component_keys=frozenset({"StaleInternalComponent"}),
-            blocked_template_keys=frozenset({"StaleInternalTemplate"}),
-        )
-        self._external_snapshot = (
+        self.snapshot = (
             external_snapshot
             if external_snapshot is not None
             else CatalogPolicySnapshot(
@@ -74,7 +70,7 @@ class _ExternalCatalogPolicy(_StubCatalogPolicy):
 
     @property
     def external_policy_snapshot(self):
-        return self._external_snapshot
+        return self.snapshot
 
 
 def _client(monkeypatch, *, service=None, superuser=True):
@@ -116,7 +112,7 @@ def test_get_whole_sets_are_sorted_and_superuser_only(monkeypatch):
 
 
 def test_external_gets_return_the_active_external_snapshot(monkeypatch):
-    client, _service, _admin, audit = _client(monkeypatch, service=_ExternalCatalogPolicy())
+    client, service, _admin, audit = _client(monkeypatch, service=_ExternalCatalogPolicy())
 
     components = client.get("/api/v1/catalog-policy/components")
     templates = client.get("/api/v1/catalog-policy/templates")
@@ -125,6 +121,7 @@ def test_external_gets_return_the_active_external_snapshot(monkeypatch):
     assert components.json() == {"blocked": ["ExternalComponent"], "managed_externally": True}
     assert templates.status_code == 200
     assert templates.json() == {"blocked": ["ExternalTemplate"], "managed_externally": True}
+    assert service.external_policy_snapshot is service.snapshot
     audit.assert_not_awaited()
 
 
@@ -137,6 +134,8 @@ def test_empty_external_snapshot_still_reports_external_ownership(monkeypatch):
     components = client.get("/api/v1/catalog-policy/components")
     templates = client.get("/api/v1/catalog-policy/templates")
 
+    assert components.status_code == 200
+    assert templates.status_code == 200
     assert components.json() == {"blocked": [], "managed_externally": True}
     assert templates.json() == {"blocked": [], "managed_externally": True}
     audit.assert_not_awaited()

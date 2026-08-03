@@ -146,6 +146,9 @@ async def create_assignment(
     """Assign a role to a user. Superuser-only."""
     _require_superuser(current_user)
     authorization_service = get_authorization_service()
+    # Let authorization plugins acquire their transaction-scoped policy-write
+    # lock before the first canonical identity read or write. An external
+    # compiler may need the same global lock later while staging derived policy.
     await acquire_identity_mutation_lock(
         authorization_service,
         session,
@@ -160,11 +163,6 @@ async def create_assignment(
     if role is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="role_id not found")
 
-    # Let authorization plugins acquire their transaction-scoped policy-write
-    # lock before the first assignment read or write. In particular, an
-    # Enterprise compiler may need the same global lock later while staging
-    # derived policy; taking it here prevents a concurrent writer from holding
-    # that lock while waiting on this transaction's unique assignment row.
     candidate = AuthzRoleAssignment(
         user_id=payload.user_id,
         role_id=payload.role_id,
@@ -270,10 +268,10 @@ async def delete_assignment(
         entity_id=assignment_id,
     )
 
-    # Re-read the assignment and all provenance under row locks after the
-    # plugin's lock-only preflight. Validation remains reserved for an actual
-    # effective-row deletion, preserving the existing third-party hook
-    # semantics when only a manual source is removed.
+    # Re-read the assignment and all provenance under row locks on dialects
+    # that support SELECT FOR UPDATE after the plugin's lock-only preflight.
+    # Validation remains reserved for an actual effective-row deletion,
+    # preserving existing hook semantics when only a manual source is removed.
     assignment = await session.get(
         AuthzRoleAssignment,
         assignment_id,
