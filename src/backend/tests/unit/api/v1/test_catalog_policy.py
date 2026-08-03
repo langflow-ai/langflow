@@ -4,14 +4,19 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
+import anyio
 import pytest
 from fastapi import FastAPI, HTTPException, status
 from fastapi.testclient import TestClient
 from langflow.api.v1 import catalog_policy
 from langflow.services.auth.utils import get_current_active_superuser
+from langflow.services.database.models.api_key.model import ApiKey
+from langflow.services.database.models.catalog_policy import CatalogPolicyRule
 from lfx.services.catalog_policy import CatalogPolicySnapshot, CatalogPolicyUpdate
+from lfx.services.deps import session_scope_readonly
+from sqlmodel import select
 
 
 class _StubCatalogPolicy:
@@ -232,6 +237,60 @@ def test_put_requires_explicit_whole_set_without_writing_or_auditing(monkeypatch
     assert response.status_code == 422
     assert service.component_calls == []
     audit.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_x_api_key_puts_complete_and_persist_on_file_backed_sqlite(client, logged_in_headers_super_user):
+    """API-key usage writes must not lock the policy service's separate SQLite transaction."""
+    component_key = f"LE2097Component-{uuid4().hex}"
+    template_key = f"LE2097Template-{uuid4().hex}"
+    create_key = await client.post(
+        "/api/v1/api_key/",
+        headers=logged_in_headers_super_user,
+        json={"name": "le-2097-sqlite-lock-regression"},
+    )
+    assert create_key.status_code == 200
+    created_key = create_key.json()
+    plaintext = created_key["api_key"]
+    api_key_id = UUID(created_key["id"])
+
+    # The login fixture sets an access-token cookie. Remove it so the policy
+    # requests authenticate exclusively through the API-key path under test.
+    client.cookies.clear()
+
+    with anyio.fail_after(10):
+        components = await client.put(
+            "/api/v1/catalog-policy/components",
+            headers={"x-api-key": plaintext},
+            json={"blocked": [component_key]},
+        )
+    assert components.status_code == 200
+    assert components.json() == {"blocked": [component_key], "managed_externally": False}
+
+    with anyio.fail_after(10):
+        templates = await client.put(
+            "/api/v1/catalog-policy/templates",
+            headers={"x-api-key": plaintext},
+            json={"blocked": [template_key]},
+        )
+    assert templates.status_code == 200
+    assert templates.json() == {"blocked": [template_key], "managed_externally": False}
+
+    async with session_scope_readonly() as session:
+        rows = (
+            await session.exec(
+                select(CatalogPolicyRule).where(CatalogPolicyRule.resource_key.in_([component_key, template_key]))
+            )
+        ).all()
+        persisted_key = await session.get(ApiKey, api_key_id)
+
+    assert {(row.resource_kind, row.resource_key) for row in rows} == {
+        ("component", component_key),
+        ("template", template_key),
+    }
+    assert persisted_key is not None
+    assert persisted_key.total_uses == 2
+    assert persisted_key.last_used_at is not None
 
 
 @pytest.mark.parametrize("resource_kind", ["components", "templates"])
