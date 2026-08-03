@@ -305,6 +305,11 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             msg = f"Metric '{metric_name}' is not a histogram"
             raise TypeError(msg)
 
+    @property
+    def meter_provider(self):
+        """The meter provider the bootstrap installed, or None when nothing is exported."""
+        return self._meter_provider
+
     def shutdown(self):
         # Only shut down if initialized
         if not self._initialized:
@@ -321,3 +326,77 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             self._logger_provider.shutdown()
         self._metrics.clear()
         OpenTelemetry._initialized = False
+
+
+# Connection-pool saturation, read from SQLAlchemy at collection time rather than tracked.
+# Pool exhaustion is a textbook FastAPI outage: every endpoint hangs waiting for a checkout,
+# latency climbs uniformly, and CPU stays flat, so nothing in the process metrics points at
+# the cause. (name, pool method, description) — only pools that expose the method are
+# registered. Not every pool counts: SQLite ``:memory:`` uses StaticPool and NullPool counts
+# nothing either, while a file-backed SQLite with langflow's default pool settings does get a
+# counting queue pool, so this registers there too.
+DB_POOL_GAUGES = (
+    ("langflow_db_pool_connections_in_use", "checkedout", "Connections currently checked out of the pool."),
+    ("langflow_db_pool_connections_idle", "checkedin", "Connections sitting idle in the pool."),
+    ("langflow_db_pool_size", "size", "Configured pool size, excluding overflow."),
+    ("langflow_db_pool_overflow", "overflow", "Connections open beyond the configured pool size, 0 when within it."),
+)
+
+
+# The engine the pool gauges report on. Deliberately a module-level cell rather than a value
+# captured in each callback: OpenTelemetry de-duplicates observable gauges by name, so
+# instrumenting a replacement engine returns the *existing* instrument and silently discards the
+# new callbacks. A captured engine would leave the gauges reporting on an engine that is gone,
+# which reads as a permanently healthy pool. Re-instrumentation updates this instead.
+_instrumented_engine = None
+
+
+def _pool_observer(method_name: str):
+    """Read one pool counter, never raising into the collection cycle.
+
+    Resolves the engine and its pool per observation. ``dispose()`` swaps in a fresh pool
+    rather than resetting one, and a whole engine can be replaced, so nothing here may be
+    captured at registration time.
+    """
+
+    def observe(_options):
+        try:
+            # Clamp: SQLAlchemy's overflow() starts at -pool_size, so a healthy pool reports a
+            # negative 'overflow'. None of these counters are meaningful below zero.
+            return [Observation(max(getattr(_instrumented_engine.pool, method_name)(), 0))]
+        except Exception:  # noqa: BLE001 - a broken gauge must not stop the other metrics
+            return []
+
+    return observe
+
+
+def instrument_db_pool(meter_provider, engine) -> None:
+    """Expose SQLAlchemy connection-pool saturation as observable gauges.
+
+    No-op when nothing is exported, or when the engine's pool does not count connections
+    (SQLite ``:memory:`` uses StaticPool, and NullPool counts nothing either). File-backed
+    SQLite and Postgres both get a counting queue pool, so both are instrumented.
+
+    Carries no attributes: the numbers describe this process's pool, and identity on a metric
+    label is what makes cardinality explode.
+    """
+    global _instrumented_engine  # noqa: PLW0603
+
+    pool = getattr(engine, "pool", None)
+    if meter_provider is None or pool is None:
+        return
+
+    # Point the gauges at this engine before (re-)registering. On a second call the instruments
+    # already exist and the new callbacks are dropped, so this assignment is what actually
+    # re-targets them.
+    _instrumented_engine = engine
+
+    meter = meter_provider.get_meter(langflow_meter_name)
+    for name, method_name, description in DB_POOL_GAUGES:
+        if callable(getattr(pool, method_name, None)):
+            meter.create_observable_gauge(
+                name,
+                callbacks=[_pool_observer(method_name)],
+                unit="",
+                description=description,
+            )

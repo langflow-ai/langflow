@@ -389,6 +389,37 @@ async def test_public_endpoint_sanitizes_component_validation_error(client: Asyn
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_public_endpoint_sanitizes_catalog_identity_unavailable_response(
+    client: AsyncClient, public_flow_id, monkeypatch
+):
+    from lfx.utils.flow_validation import (
+        PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+        CatalogPolicyIdentityUnavailableError,
+    )
+
+    raw_message = "Catalog identities unavailable: internal generation 42"
+
+    def _raise(*_args, **_kwargs):
+        raise CatalogPolicyIdentityUnavailableError(raw_message)
+
+    import langflow.api.v2.workflow_public as workflow_public_module
+
+    monkeypatch.setattr(workflow_public_module, "validate_flow_for_current_settings", _raise)
+
+    _send_unauthenticated(client, "catalog-identity-unavailable-client")
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={"flow_id": str(public_flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.SERVICE_UNAVAILABLE
+    assert response.json()["detail"] == PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE
+    assert raw_message not in response.text
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_public_endpoint_rejects_code_execution_components(
     client: AsyncClient, json_memory_chatbot_no_llm, logged_in_headers
 ):

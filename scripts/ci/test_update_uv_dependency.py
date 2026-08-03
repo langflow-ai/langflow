@@ -1,4 +1,4 @@
-"""Regression tests for the nightly full -> core dependency rewrite."""
+"""Regression tests for the nightly full -> base dependency rewrite."""
 
 import sys
 from pathlib import Path
@@ -10,31 +10,31 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import update_uv_dependency as mod
 
 
-def test_pins_root_core_and_optional_extras(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pins_root_base_and_optional_extras(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     path = tmp_path / "pyproject.toml"
     path.write_text(
         "[project]\n"
-        'dependencies = ["langflow-core~=1.11.0", "lfx-bundles>=1.1,<2.0"]\n'
+        'dependencies = ["langflow-base~=1.12.0", "lfx-bundles>=1.1,<2.0"]\n'
         "[project.optional-dependencies]\n"
-        'audio = ["langflow-core[audio]~=1.11.0"]\n'
-        'postgresql = ["langflow-core[postgresql]>=1.11.0,<1.12.dev0"]\n',
+        'audio = ["langflow-base[audio]~=1.12.0"]\n'
+        'postgresql = ["langflow-base[postgresql]>=1.12.0,<1.13.dev0"]\n',
         encoding="utf-8",
     )
     monkeypatch.setattr(mod, "BASE_DIR", tmp_path)
 
-    mod.update_uv_dep("1.11.0.dev26")
+    mod.update_uv_dep("1.12.0.dev26")
 
     result = path.read_text(encoding="utf-8")
-    assert '"langflow-core==1.11.0.dev26"' in result
-    assert '"langflow-core[audio]==1.11.0.dev26"' in result
-    assert '"langflow-core[postgresql]==1.11.0.dev26"' in result
+    assert '"langflow-base==1.12.0.dev26"' in result
+    assert '"langflow-base[audio]==1.12.0.dev26"' in result
+    assert '"langflow-base[postgresql]==1.12.0.dev26"' in result
     assert '"lfx-bundles>=1.1,<2.0"' in result
 
 
-def test_raises_without_core_dependency(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_raises_without_base_dependency(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     path = tmp_path / "pyproject.toml"
-    path.write_text('[project]\ndependencies = ["langflow-base~=0.11.0"]\n', encoding="utf-8")
+    path.write_text('[project]\ndependencies = ["lfx~=1.12.0"]\n', encoding="utf-8")
     monkeypatch.setattr(mod, "BASE_DIR", tmp_path)
 
     with pytest.raises(ValueError, match="UV dependency not found"):
-        mod.update_uv_dep("1.11.0.dev26")
+        mod.update_uv_dep("1.12.0.dev26")

@@ -226,7 +226,7 @@ class TestExecuteRealFlows:
                 return_value=settings_service,
             ),
             patch(
-                "lfx.utils.flow_validation.ensure_component_hash_lookups_loaded",
+                "lfx.load.load.ensure_component_hash_lookups_loaded",
                 new=AsyncMock(return_value=_builtin_hashes_from_flow(flow)),
             ),
             patch.object(component_cache, "type_to_current_hash", _builtin_hashes_from_flow(flow)),

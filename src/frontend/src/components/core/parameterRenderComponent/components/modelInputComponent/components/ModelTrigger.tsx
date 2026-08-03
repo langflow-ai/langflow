@@ -6,6 +6,20 @@ import { PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
 import { ModelOption, SelectedModel } from "../types";
 
+/**
+ * The trigger collapses into a single "Setup Provider" call to action — which
+ * already opens the provider manager, so no extra affordance belongs next to it.
+ */
+export const isSetupProviderState = ({
+  hasEnabledProviders,
+  showEmptyState,
+  optionCount,
+}: {
+  hasEnabledProviders: boolean;
+  showEmptyState: boolean;
+  optionCount: number;
+}) => !hasEnabledProviders && !showEmptyState && optionCount === 0;
+
 interface ModelTriggerProps {
   open: boolean;
   disabled: boolean;
@@ -50,7 +64,13 @@ const ModelTrigger = ({
   // Check if we're in empty state mode (showEmptyState=true and no options)
   const isEmptyStateMode = showEmptyState && options.length === 0;
 
-  if (!hasEnabledProviders && !showEmptyState && options.length === 0) {
+  if (
+    isSetupProviderState({
+      hasEnabledProviders,
+      showEmptyState,
+      optionCount: options.length,
+    })
+  ) {
     return (
       <Button
         variant="outline"

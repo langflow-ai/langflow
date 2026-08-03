@@ -35,6 +35,9 @@ from langflow.services.authorization.audit import (
 from langflow.services.authorization.audit import (
     AUDIT_OWNER_OVERRIDE as _AUDIT_OWNER_OVERRIDE,
 )
+from langflow.services.authorization.audit import (
+    AUDIT_SKIP as _AUDIT_SKIP,
+)
 from langflow.services.authorization.guards import (
     _ACTION_ENUMS,
     _OWNER_CONTEXT_KEYS,
@@ -81,6 +84,7 @@ __all__ = [
     "_AUDIT_DENY",
     "_AUDIT_OWNER_OVERRIDE",
     "_AUDIT_QUEUE_MAX",
+    "_AUDIT_SKIP",
     "_OWNER_CONTEXT_KEYS",
     "_AuditEntry",
     "_audit_writer_loop",

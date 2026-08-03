@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
@@ -13,21 +14,30 @@ from fastapi import HTTPException, WebSocketException, status
 from langflow.services.auth.constants import AUTO_LOGIN_WARNING
 from langflow.services.auth.context import (
     AUTH_METHOD_API_KEY,
+    AUTH_METHOD_EXTERNAL,
+    AUTH_METHOD_JWT,
+    AuthCredentialContext,
     clear_current_auth_context,
     get_current_auth_context,
+    set_current_auth_context,
 )
 from langflow.services.auth.exceptions import (
     InactiveUserError,
+    InvalidCredentialsError,
     InvalidTokenError,
     MissingCredentialsError,
     TokenExpiredError,
 )
 from langflow.services.auth.service import AuthService
-from langflow.services.database.models.api_key.crud import ApiKeyAuthResult
+from langflow.services.database.models.api_key.crud import ApiKeyAuthResult, hash_api_key
+from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.user.model import User
 from lfx.services.settings.auth import AuthSettings
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
 from pydantic import SecretStr
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlmodel import SQLModel
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 @pytest.fixture
@@ -156,6 +166,165 @@ async def test_authenticate_with_api_key_sets_auth_context(auth_service: AuthSer
     assert context.method == AUTH_METHOD_API_KEY
     assert context.api_key_id == api_key_id
     assert context.api_key_source == "db"  # pragma: allowlist secret
+
+
+@pytest.mark.anyio
+async def test_inactive_user_api_key_rejection_does_not_persist_usage(
+    auth_service: AuthService,
+    tmp_path,
+    monkeypatch,
+):
+    """A rejected inactive-user credential must not record a successful API-key use."""
+    plaintext = "sk-inactive-user"  # pragma: allowlist secret
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'inactive-user-api-key.db'}")
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(
+                lambda sync_connection: SQLModel.metadata.create_all(
+                    sync_connection,
+                    tables=[User.__table__, ApiKey.__table__],
+                )
+            )
+
+        inactive_user = _dummy_user(uuid4(), active=False)
+        inactive_user.username = "inactive-api-key-user"
+        api_key = ApiKey(
+            api_key="encrypted-inactive-user",  # pragma: allowlist secret
+            api_key_hash=hash_api_key(plaintext),
+            name="inactive-user",
+            user_id=inactive_user.id,
+            created_at=datetime.now(timezone.utc),
+        )
+        async with AsyncSession(engine, expire_on_commit=False) as seed_session:
+            seed_session.add(inactive_user)
+            seed_session.add(api_key)
+            await seed_session.commit()
+            api_key_id = api_key.id
+
+        auth_service.settings.settings.disable_track_apikey_usage = False
+        monkeypatch.setattr(
+            "langflow.services.database.models.api_key.crud.get_settings_service",
+            lambda: auth_service.settings,
+        )
+
+        @asynccontextmanager
+        async def owned_auth_scope():
+            async with AsyncSession(engine, expire_on_commit=False) as auth_session:
+                try:
+                    yield auth_session
+                    await auth_session.commit()
+                except Exception:
+                    await auth_session.rollback()
+                    raise
+
+        monkeypatch.setattr(
+            "langflow.services.database.models.api_key.crud.session_scope",
+            owned_auth_scope,
+        )
+        async with AsyncSession(engine, expire_on_commit=False) as caller_session:
+            with pytest.raises(InvalidCredentialsError):
+                await auth_service.authenticate_with_credentials(
+                    token=None,
+                    api_key=plaintext,
+                    db=caller_session,
+                )
+            await caller_session.rollback()
+
+        async with AsyncSession(engine, expire_on_commit=False) as verification_session:
+            persisted_api_key = await verification_session.get(ApiKey, api_key_id)
+    finally:
+        await engine.dispose()
+
+    assert persisted_api_key is not None
+    assert persisted_api_key.total_uses == 0
+    assert persisted_api_key.last_used_at is None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("token", [None, "native-token"], ids=["external-only", "native-and-external"])
+async def test_api_key_fallback_rolls_back_failed_token_and_external_state(
+    auth_service: AuthService,
+    async_session,
+    monkeypatch,
+    token,
+):
+    """API-key fallback discards state flushed by every earlier credential attempt."""
+    from sqlmodel import select
+
+    api_user = _dummy_user(uuid4())
+    api_user.username = "api-key-user"
+    plaintext = "sk-valid-fallback-key"  # pragma: allowlist secret
+    api_key = ApiKey(
+        api_key="encrypted-value",  # pragma: allowlist secret
+        api_key_hash=hash_api_key(plaintext),
+        name="fallback",
+        user_id=api_user.id,
+        created_at=datetime.now(timezone.utc),
+    )
+    async_session.add(api_user)
+    async_session.add(api_key)
+    await async_session.commit()
+    api_user_id = api_user.id
+
+    auth_service.settings.settings.disable_track_apikey_usage = False
+    monkeypatch.setattr(
+        "langflow.services.database.models.api_key.crud.get_settings_service",
+        lambda: auth_service.settings,
+    )
+
+    @asynccontextmanager
+    async def owned_auth_scope():
+        async with AsyncSession(bind=async_session.bind, expire_on_commit=False) as auth_session:
+            try:
+                yield auth_session
+                await auth_session.commit()
+            except Exception:
+                await auth_session.rollback()
+                raise
+
+    monkeypatch.setattr(
+        "langflow.services.database.models.api_key.crud.session_scope",
+        owned_auth_scope,
+    )
+
+    failed_token_user = _dummy_user(uuid4())
+    failed_token_user.username = "failed-token-user"
+    failed_external_user = _dummy_user(uuid4())
+    failed_external_user.username = "failed-external-user"
+
+    async def stage_user_then_fail(_token: str, db) -> None:
+        db.add(failed_token_user)
+        await db.flush()
+        msg = "external reconciliation failed"
+        raise RuntimeError(msg)
+
+    async def stage_user_then_decline(_token: str, db) -> None:
+        db.add(failed_external_user)
+        await db.flush()
+
+    with (
+        patch.object(auth_service, "_authenticate_with_token", new=stage_user_then_fail),
+        patch.object(auth_service, "_authenticate_with_external_token", new=stage_user_then_decline),
+    ):
+        result = await auth_service.authenticate_with_credentials(
+            token=token,
+            api_key=plaintext,
+            db=async_session,
+            external_token="external-token",  # noqa: S106
+        )
+
+    persisted_failed_token_user = (
+        await async_session.exec(select(User).where(User.id == failed_token_user.id))
+    ).first()
+    persisted_failed_external_user = (
+        await async_session.exec(select(User).where(User.id == failed_external_user.id))
+    ).first()
+    await async_session.refresh(api_key)
+
+    assert result.id == api_user_id
+    assert persisted_failed_token_user is None
+    assert persisted_failed_external_user is None
+    assert api_key.total_uses == 1
 
 
 @pytest.mark.anyio
@@ -1062,6 +1231,297 @@ async def test_materialize_external_user_preserves_email_when_token_omits_it(
 
 
 # =============================================================================
+# Verified external-group reconciliation
+# =============================================================================
+
+
+class _DirectoryAuthorizationStub:
+    """Authorization seam double for verified external-group reconciliation."""
+
+    def __init__(self, *, result, claim_name: str | None = "groups") -> None:
+        self.external_groups_claim = AsyncMock(return_value=claim_name)
+        self.ingest_directory_membership_snapshot = AsyncMock(return_value=result)
+        self.directory_membership_committed = AsyncMock()
+
+
+def _external_identity(claims: dict):
+    from langflow.services.auth.external import ExternalIdentity
+
+    return ExternalIdentity(
+        provider="customer-idp",
+        subject="external-subject",
+        username="external-user",
+        claims=claims,
+    )
+
+
+@pytest.mark.anyio
+async def test_external_group_reconciliation_normalizes_commits_and_audits(auth_service: AuthService):
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(result=DirectoryMembershipIngestResult(changed=True, added=2, removed=1))
+    audit = AsyncMock()
+    identity = _external_identity(
+        {
+            "iss": " https://issuer.example ",
+            "aud": ["langflow-api"],
+            "groups": [" reviewers ", "engineering", "reviewers"],
+        }
+    )
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
+    ):
+        await auth_service._reconcile_verified_external_groups(identity=identity, user=user, db=db)
+
+    snapshot = authz.ingest_directory_membership_snapshot.await_args.kwargs["snapshot"]
+    assert snapshot.provider_id == "customer-idp"
+    assert snapshot.provider_user_id == "external-subject"
+    assert snapshot.user_id == user.id
+    assert snapshot.memberships == ("engineering", "reviewers")
+    assert snapshot.authoritative is True
+    assert snapshot.complete is True
+    db.commit.assert_awaited_once()
+    authz.directory_membership_committed.assert_awaited_once_with(user_id=user.id, changed=True)
+
+    audit_details = audit.await_args.kwargs
+    assert audit_details["action"] == "directory_membership:reconcile"
+    assert audit_details["obj"] == f"user:{user.id}"
+    assert audit_details["result"] == "allow"
+    assert audit_details["details"] == {
+        "provider_id": "customer-idp",
+        "issuer": "https://issuer.example",
+        "subject": "external-subject",
+        "audience": ["langflow-api"],
+        "source": "external_bearer",
+        "membership_count": 2,
+        "membership_sha256": hashlib.sha256(b"engineering\0reviewers").hexdigest(),
+        "changed": True,
+        "added": 2,
+        "removed": 1,
+        "authoritative": True,
+        "complete": True,
+    }
+
+
+@pytest.mark.anyio
+async def test_external_group_reconciliation_accepts_present_empty_claim(auth_service: AuthService):
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(result=DirectoryMembershipIngestResult())
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=AsyncMock()),
+    ):
+        await auth_service._reconcile_verified_external_groups(
+            identity=_external_identity({"groups": []}),
+            user=user,
+            db=db,
+        )
+
+    snapshot = authz.ingest_directory_membership_snapshot.await_args.kwargs["snapshot"]
+    assert snapshot.memberships == ()
+    db.commit.assert_awaited_once()
+    authz.directory_membership_committed.assert_awaited_once_with(user_id=user.id, changed=False)
+
+
+@pytest.mark.parametrize(
+    ("claims", "expected_reason"),
+    [
+        ({"iss": "https://issuer.example"}, "absent"),
+        (
+            {"_claim_names": {"groups": "src1"}, "_claim_sources": {"src1": {"endpoint": "https://graph"}}},
+            "overage",
+        ),
+        ({"groups": {"unexpected": "mapping"}}, "malformed"),
+        ({"groups": ["engineering", 7]}, "malformed"),
+        ({"groups": ["   "]}, "malformed"),
+        ({"groups": ["x" * 257]}, "malformed"),
+        ({"groups": [f"group-{index}" for index in range(501)]}, "too_many"),
+    ],
+    ids=["absent", "entra-overage", "invalid-type", "non-string", "blank", "overlong", "too-many"],
+)
+@pytest.mark.anyio
+async def test_incomplete_external_group_claim_skips_authoritative_reconciliation(
+    auth_service: AuthService,
+    claims: dict,
+    expected_reason: str,
+):
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(result=DirectoryMembershipIngestResult(changed=True))
+    events: list[str] = []
+    db.commit.side_effect = lambda: events.append("commit")
+    audit = AsyncMock(side_effect=lambda **_kwargs: events.append("audit"))
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
+    ):
+        await auth_service._reconcile_verified_external_groups(
+            identity=_external_identity(claims),
+            user=user,
+            db=db,
+        )
+
+    authz.ingest_directory_membership_snapshot.assert_not_awaited()
+    db.commit.assert_awaited_once()
+    authz.directory_membership_committed.assert_not_awaited()
+    audit.assert_awaited_once()
+    assert events == ["commit", "audit"]
+    audit_call = audit.await_args.kwargs
+    assert audit_call["action"] == "directory_membership:reconcile"
+    assert audit_call["obj"] == f"user:{user.id}"
+    assert audit_call["result"] == "skip"
+    assert audit_call["details"] == {
+        "provider_id": "customer-idp",
+        "issuer": claims.get("iss"),
+        "subject": "external-subject",
+        "audience": None,
+        "source": "external_bearer",
+        "claim_name": "groups",
+        "reason": expected_reason,
+        "authoritative": False,
+        "complete": False,
+    }
+
+
+@pytest.mark.anyio
+async def test_external_group_reconciliation_plugin_opt_out_is_not_a_skip(auth_service: AuthService):
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(
+        result=DirectoryMembershipIngestResult(changed=True),
+        claim_name=None,
+    )
+    audit = AsyncMock()
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
+    ):
+        await auth_service._reconcile_verified_external_groups(
+            identity=_external_identity({}),
+            user=user,
+            db=db,
+        )
+
+    authz.ingest_directory_membership_snapshot.assert_not_awaited()
+    db.commit.assert_not_awaited()
+    audit.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "legacy_result",
+    [None, SimpleNamespace(changed=True)],
+    ids=["none", "changed-only"],
+)
+@pytest.mark.anyio
+async def test_legacy_directory_ingest_result_invalidates_conservatively(
+    auth_service: AuthService,
+    legacy_result,
+):
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(result=legacy_result)
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=AsyncMock()),
+    ):
+        await auth_service._reconcile_verified_external_groups(
+            identity=_external_identity({"groups": ["engineering"]}),
+            user=user,
+            db=db,
+        )
+
+    db.commit.assert_awaited_once()
+    authz.directory_membership_committed.assert_awaited_once_with(user_id=user.id, changed=True)
+
+
+@pytest.mark.anyio
+async def test_directory_post_commit_failure_does_not_fail_authentication(auth_service: AuthService):
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(result=DirectoryMembershipIngestResult(changed=True, added=1))
+    authz.directory_membership_committed.side_effect = RuntimeError("replica unavailable")
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=AsyncMock()),
+    ):
+        await auth_service._reconcile_verified_external_groups(
+            identity=_external_identity({"groups": ["engineering"]}),
+            user=user,
+            db=db,
+        )
+
+    db.commit.assert_awaited_once()
+    authz.directory_membership_committed.assert_awaited_once_with(user_id=user.id, changed=True)
+
+
+@pytest.mark.anyio
+async def test_directory_post_commit_audit_failure_does_not_fail_authentication(auth_service: AuthService):
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(result=DirectoryMembershipIngestResult(changed=True, added=1))
+    audit = AsyncMock(side_effect=RuntimeError("audit settings unavailable"))
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
+    ):
+        await auth_service._reconcile_verified_external_groups(
+            identity=_external_identity({"groups": ["engineering"]}),
+            user=user,
+            db=db,
+        )
+
+    db.commit.assert_awaited_once()
+    audit.assert_awaited_once()
+    authz.directory_membership_committed.assert_awaited_once_with(user_id=user.id, changed=True)
+
+
+@pytest.mark.anyio
+async def test_directory_skip_audit_failure_does_not_fail_authentication(auth_service: AuthService):
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(result=DirectoryMembershipIngestResult(changed=True))
+    audit = AsyncMock(side_effect=RuntimeError("audit settings unavailable"))
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
+    ):
+        await auth_service._reconcile_verified_external_groups(
+            identity=_external_identity({}),
+            user=user,
+            db=db,
+        )
+
+    authz.ingest_directory_membership_snapshot.assert_not_awaited()
+    db.commit.assert_awaited_once()
+    audit.assert_awaited_once()
+    authz.directory_membership_committed.assert_not_awaited()
+
+
+# =============================================================================
 # External fallback (F2/F14): a valid external credential is tried when native fails
 # =============================================================================
 
@@ -1104,6 +1564,93 @@ async def test_invalid_native_token_falls_back_to_external_credential(
         clear_current_auth_context()
 
     assert result.id == user.id
+
+
+@pytest.mark.anyio
+async def test_external_fallback_rolls_back_and_replaces_failed_native_state(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    async_session,
+):
+    """A successful distinct external fallback starts after a clean native-auth boundary."""
+    from langflow.services.auth.external import (
+        ExternalAccessContext,
+        get_current_external_access_context,
+        identity_from_claims,
+        set_current_external_access_context,
+    )
+    from sqlmodel import select
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+    auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM = "access"
+
+    external_claims = {
+        "sub": "external-boundary-subject",
+        "preferred_username": "external-boundary-user",
+        "access": "editor",
+    }
+    identity = identity_from_claims(external_claims, auth_settings)
+    external_user = await auth_service._materialize_external_user(identity, async_session)
+    await async_session.commit()
+
+    failed_native_user = _dummy_user(uuid4())
+    failed_native_user.username = "failed-native-boundary-user"
+
+    async def stage_native_state_then_fail(_token: str, db) -> None:
+        db.add(failed_native_user)
+        await db.flush()
+        set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_JWT))
+        set_current_external_access_context(
+            ExternalAccessContext(provider="stale-native", subject="stale-subject", level="viewer")
+        )
+        msg = "native authentication failed after staging state"
+        raise RuntimeError(msg)
+
+    real_external_auth = auth_service._authenticate_with_external_token
+
+    async def authenticate_external_from_clean_boundary(token: str, db):
+        assert get_current_auth_context() is None
+        assert get_current_external_access_context() is None
+        return await real_external_auth(token, db)
+
+    external_token = _external_jwt(auth_service, external_claims)
+
+    try:
+        with (
+            patch.object(auth_service, "_authenticate_with_token", new=stage_native_state_then_fail),
+            patch.object(
+                auth_service,
+                "_authenticate_with_external_token",
+                new=authenticate_external_from_clean_boundary,
+            ),
+        ):
+            result = await auth_service.authenticate_with_credentials(
+                token="native-token",  # noqa: S106
+                api_key=None,
+                db=async_session,
+                external_token=external_token,
+            )
+
+        await async_session.commit()
+        persisted_failed_native_user = (
+            await async_session.exec(select(User).where(User.id == failed_native_user.id))
+        ).first()
+        auth_context = get_current_auth_context()
+        external_context = get_current_external_access_context()
+
+        assert result.id == external_user.id
+        assert persisted_failed_native_user is None
+        assert auth_context == AuthCredentialContext(method=AUTH_METHOD_EXTERNAL, external_provider="external")
+        assert external_context is not None
+        assert external_context.provider == "external"
+        assert external_context.subject == "external-boundary-subject"
+        assert external_context.level == "editor"
+    finally:
+        clear_current_auth_context()
+        set_current_external_access_context(None)
 
 
 @pytest.mark.anyio
