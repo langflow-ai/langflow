@@ -430,7 +430,6 @@ export default function ModelInputComponent({
 
   useEffect(() => {
     if (flatOptions.length === 0 || isConnectionMode) return;
-    if (hasProcessedEmptyRef.current) return;
 
     const isEmpty = !value || value.length === 0;
 
@@ -452,6 +451,10 @@ export default function ModelInputComponent({
           providersData?.some((p) => p.provider === saved.provider) ?? false;
       }
     }
+
+    // The ref debounces the empty-value auto-select only; a value that goes
+    // stale mid-session (provider disconnected) must still be replaced.
+    if (hasProcessedEmptyRef.current && !isSavedValueStale) return;
 
     // Sticky-default: if the component has a saved value, keep it as-is. The
     // backend injects any selection that isn't in the user's enabled list

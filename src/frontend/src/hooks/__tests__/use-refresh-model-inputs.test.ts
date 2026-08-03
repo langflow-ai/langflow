@@ -746,6 +746,130 @@ describe("refreshAllModelInputs — outdated component guard", () => {
   });
 });
 
+describe("refreshAllModelInputs — disconnected provider", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockNodes = [];
+    mockComponentsToUpdate = [];
+    mockAllowCustomComponents = true;
+    mockTemplates = {};
+  });
+
+  function getRefreshedModelValue() {
+    const [, updater] = mockSetNode.mock.calls[0];
+    const updated = updater(mockNodes[0]);
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
+    return (updated as any).data.node.template.model.value;
+  }
+
+  it("should replace the saved model when its provider was disconnected", async () => {
+    mockNodes = [createMockModelNodeWithValue("node-1", ANTHROPIC_SAVED_VALUE)];
+
+    (api.post as jest.Mock).mockResolvedValue({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: ANTHROPIC_SAVED_VALUE,
+            options: [OPENAI_OPTION, STICKY_ANTHROPIC_OPTION],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
+    await refreshAllModelInputs(mockQueryClient as any, { silent: true });
+
+    expect(getRefreshedModelValue()).toEqual([
+      expect.objectContaining({ name: "gpt-5.6", provider: "OpenAI" }),
+    ]);
+  });
+
+  it("should not fall back to a sticky option that is listed first", async () => {
+    mockNodes = [createMockModelNodeWithValue("node-1", ANTHROPIC_SAVED_VALUE)];
+
+    (api.post as jest.Mock).mockResolvedValue({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: ANTHROPIC_SAVED_VALUE,
+            options: [STICKY_ANTHROPIC_OPTION, OPENAI_OPTION],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
+    await refreshAllModelInputs(mockQueryClient as any, { silent: true });
+
+    expect(getRefreshedModelValue()).toEqual([
+      expect.objectContaining({ name: "gpt-5.6", provider: "OpenAI" }),
+    ]);
+  });
+
+  it("should keep the saved model when no selectable option remains", async () => {
+    mockNodes = [createMockModelNodeWithValue("node-1", ANTHROPIC_SAVED_VALUE)];
+
+    (api.post as jest.Mock).mockResolvedValue({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: ANTHROPIC_SAVED_VALUE,
+            options: [STICKY_ANTHROPIC_OPTION],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
+    await refreshAllModelInputs(mockQueryClient as any, { silent: true });
+
+    expect(getRefreshedModelValue()).toEqual(ANTHROPIC_SAVED_VALUE);
+  });
+
+  it("should keep the saved model when it is still enabled", async () => {
+    const savedValue = [
+      { name: "gpt-5.6", provider: "OpenAI", icon: "OpenAI" },
+    ];
+    mockNodes = [createMockModelNodeWithValue("node-1", savedValue)];
+
+    (api.post as jest.Mock).mockResolvedValue({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: savedValue,
+            options: [OPENAI_OPTION, STICKY_ANTHROPIC_OPTION],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
+    await refreshAllModelInputs(mockQueryClient as any, { silent: true });
+
+    expect(getRefreshedModelValue()).toEqual(savedValue);
+  });
+});
+
 // ============================================================================
 // Hook Tests
 // ============================================================================
@@ -795,6 +919,37 @@ describe("useRefreshModelInputs", () => {
 // ============================================================================
 // Test Helpers
 // ============================================================================
+
+const OPENAI_OPTION = {
+  name: "gpt-5.6",
+  provider: "OpenAI",
+  icon: "OpenAI",
+  metadata: {},
+};
+
+// The backend re-injects a saved selection missing from the enabled catalog as
+// a sticky-default option, so its presence must not make the value look valid.
+const STICKY_ANTHROPIC_OPTION = {
+  name: "claude-sonnet-5",
+  provider: "Anthropic",
+  icon: "Anthropic",
+  metadata: { not_enabled_locally: true },
+};
+
+const ANTHROPIC_SAVED_VALUE = [
+  { name: "claude-sonnet-5", provider: "Anthropic", icon: "Anthropic" },
+];
+
+function createMockModelNodeWithValue(
+  id: string,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
+  value: any,
+): AllNodeType {
+  const node = createMockModelNode(id);
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
+  (node.data as any).node.template.model.value = value;
+  return node;
+}
 
 function createMockModelNode(id: string): AllNodeType {
   return {

@@ -171,15 +171,21 @@ function validateModelValue(
     (opt: ModelOptionType) => !opt?.metadata?.is_disabled_provider,
   );
 
-  // Get current model name from value
+  // Sticky-defaults are the backend re-injecting the saved selection, so they
+  // must not validate a disconnected provider unless nothing else is selectable.
+  const selectableOptions = availableOptions.filter(
+    (opt: ModelOptionType) => opt?.metadata?.not_enabled_locally !== true,
+  );
+  const optionsForValidation =
+    selectableOptions.length > 0 ? selectableOptions : availableOptions;
+
   const currentModelName = Array.isArray(currentValue)
     ? currentValue[0]?.name
     : currentValue?.name;
 
-  // Check if current model is still available
   const isCurrentModelValid =
     currentModelName &&
-    availableOptions.some(
+    optionsForValidation.some(
       (opt: ModelOptionType) => opt.name === currentModelName,
     );
 
@@ -189,9 +195,8 @@ function validateModelValue(
   }
 
   // Current value is invalid - need to update it
-  if (availableOptions.length > 0) {
-    // Select the first available model
-    const firstOption = availableOptions[0];
+  if (optionsForValidation.length > 0) {
+    const firstOption = optionsForValidation[0];
     const newValue = [
       {
         ...(firstOption.id && { id: firstOption.id }),
