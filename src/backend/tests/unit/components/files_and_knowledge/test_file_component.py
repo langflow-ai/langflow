@@ -1,6 +1,7 @@
 import json
 import subprocess
 import tempfile
+import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -535,6 +536,32 @@ class TestFileComponentToolMode:
         result = await tool.coroutine()
 
         assert test_content in result
+
+    @pytest.mark.parametrize(
+        ("advanced_mode", "loader_name"),
+        [(False, "load_files_message"), (True, "load_files_markdown")],
+    )
+    @pytest.mark.asyncio
+    async def test_tool_execution_offloads_sync_loader(self, monkeypatch, advanced_mode, loader_name):
+        """Both synchronous loaders must run outside the event-loop thread (issue #14380)."""
+        component = FileComponent()
+        component.advanced_mode = advanced_mode
+        event_loop_thread = threading.current_thread()
+        loader_thread = None
+
+        def fake_loader(_component):
+            nonlocal loader_thread
+            loader_thread = threading.current_thread()
+            return "file contents"
+
+        monkeypatch.setattr(FileComponent, loader_name, fake_loader)
+
+        tool = (await component._get_tools())[0]
+        result = await tool.coroutine()
+
+        assert result == "file contents"
+        assert loader_thread is not None
+        assert loader_thread is not event_loop_thread
 
     # ==================== Error Handling Tests ====================
 
