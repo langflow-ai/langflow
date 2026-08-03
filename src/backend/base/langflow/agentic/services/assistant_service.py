@@ -471,6 +471,7 @@ def _flow_shape(flow: dict | None) -> tuple[int, int]:
     data = (flow or {}).get("data", {})
     return len(data.get("nodes") or []), len(data.get("edges") or [])
 
+
 def _append_verification_rebuild_notice(result: dict, before: tuple[int, int], after: tuple[int, int]) -> dict:
     """Disclose that verification changed the flow the summary describes.
 
@@ -497,6 +498,7 @@ def _append_verification_rebuild_notice(result: dict, before: tuple[int, int], a
         "verification_rebuilt": True,
     }
 
+
 def _append_component_failure_caveat(result: dict, failures: list[str]) -> dict:
     """Append an honest caveat when a flow was delivered despite a failed component.
 
@@ -520,6 +522,7 @@ def _append_component_failure_caveat(result: dict, failures: list[str]) -> dict:
         "component_generation_failed": True,
         "component_failure_caveat": caveat,
     }
+
 
 def _reconcile_flow_updates(
     updates: list[dict],
