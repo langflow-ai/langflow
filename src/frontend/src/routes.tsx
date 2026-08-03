@@ -19,6 +19,7 @@ import {
   ENABLE_FILE_MANAGEMENT,
   ENABLE_KNOWLEDGE_BASES,
 } from "./customization/feature-flags";
+import { CustomAuthRoutesStore } from "./customization/utils/custom-auth-routes-store";
 import { CustomRoutesStore } from "./customization/utils/custom-routes-store";
 import { CustomRoutesStorePages } from "./customization/utils/custom-routes-store-pages";
 import { AppAuthenticatedPage } from "./pages/AppAuthenticatedPage";
@@ -213,6 +214,7 @@ const router = createBrowserRouter(
               </ProtectedLoginRoute>
             }
           />
+          {CustomAuthRoutesStore()}
         </Route>
       </Route>
       <Route path="*" element={<CustomNavigate replace to="/" />} />

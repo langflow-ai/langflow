@@ -6,7 +6,11 @@ import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { extractApiErrorMessage } from "@/controllers/API/helpers/extract-api-error-message";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
+import CustomLoginBrandTitle from "@/customization/components/custom-login-brand-title";
+import CustomLoginFormGate from "@/customization/components/custom-login-form-gate";
+import CustomLoginSignupPrompt from "@/customization/components/custom-login-signup-prompt";
 import CustomLoginSsoOptions from "@/customization/components/custom-login-sso-options";
+import useTheme from "@/customization/hooks/use-custom-theme";
 import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
 import {
   appendErrorSuggestion,
@@ -33,6 +37,7 @@ export default function LoginPage(): JSX.Element {
   const { password, username } = inputState;
 
   useSanitizeRedirectUrl();
+  useTheme();
 
   const { t } = useTranslation();
   const { login, clearAuthSession } = useContext(AuthContext);
@@ -103,7 +108,7 @@ export default function LoginPage(): JSX.Element {
         const _data = Object.fromEntries(new FormData(event.currentTarget));
         event.preventDefault();
       }}
-      className="dark min-h-svh w-full overflow-auto bg-canvas text-foreground"
+      className="min-h-svh w-full overflow-auto bg-canvas text-foreground"
     >
       <DotGridBackground />
       <main className="relative z-10 flex min-h-svh w-full flex-col items-center justify-center px-6 py-10">
@@ -114,115 +119,119 @@ export default function LoginPage(): JSX.Element {
               className="h-12 w-12 text-foreground"
             />
             <h1 className="pl-3 text-center text-5xl font-semibold tracking-tight">
-              Langflow
+              <CustomLoginBrandTitle />
             </h1>
           </div>
-          <section className="w-full rounded-xl border border-border bg-card p-8 shadow-2xl shadow-black/40 sm:p-10">
+          <section className="w-full rounded-xl border border-border bg-card p-8 shadow-2xl shadow-black/10 dark:shadow-black/40 sm:p-10">
             <div className="flex flex-col gap-5">
-              <Form.Field name="username" className="pb-3">
-                <label
-                  htmlFor="login-username"
-                  className={`mb-2 flex items-center gap-1 overflow-hidden text-sm font-medium ${
-                    usernameError ? "label-invalid" : ""
-                  }`}
-                >
-                  <span className="truncate">{t("auth.usernameLabel")}</span>
-                  <span className="shrink-0 font-medium text-destructive">
-                    *
-                  </span>
-                </label>
-
-                <Input
-                  id="login-username"
-                  name="username"
-                  type="text"
-                  allowAutofill
-                  autoComplete="username"
-                  onChange={({ target: { value } }) => {
-                    handleInput({ target: { name: "username", value } });
-                  }}
-                  value={username}
-                  className="h-11 w-full rounded-lg bg-muted"
-                  required
-                  aria-describedby={
-                    usernameError ? "login-username-error" : undefined
-                  }
-                  aria-invalid={Boolean(usernameError)}
-                  placeholder={t("auth.usernamePlaceholder")}
-                />
-
-                {usernameError && (
-                  <p
-                    id="login-username-error"
-                    role="alert"
-                    className="field-invalid"
+              <CustomLoginFormGate>
+                <Form.Field name="username" className="pb-3">
+                  <label
+                    htmlFor="login-username"
+                    className={`mb-2 flex items-center gap-1 overflow-hidden text-sm font-medium ${
+                      usernameError ? "label-invalid" : ""
+                    }`}
                   >
-                    {usernameError}
-                  </p>
-                )}
-              </Form.Field>
+                    <span className="truncate">{t("auth.usernameLabel")}</span>
+                    <span className="shrink-0 font-medium text-destructive">
+                      *
+                    </span>
+                  </label>
 
-              <Form.Field name="password" className="pb-3">
-                <label
-                  htmlFor="form-login-password"
-                  className={`mb-2 flex items-center gap-1 overflow-hidden text-sm font-medium ${
-                    passwordError ? "label-invalid" : ""
-                  }`}
-                >
-                  <span className="truncate">{t("auth.passwordLabel")}</span>
-                  <span className="shrink-0 font-medium text-destructive">
-                    *
-                  </span>
-                </label>
+                  <Input
+                    id="login-username"
+                    name="username"
+                    type="text"
+                    allowAutofill
+                    autoComplete="username"
+                    onChange={({ target: { value } }) => {
+                      handleInput({ target: { name: "username", value } });
+                    }}
+                    value={username}
+                    className="h-11 w-full rounded-lg bg-muted"
+                    required
+                    aria-describedby={
+                      usernameError ? "login-username-error" : undefined
+                    }
+                    aria-invalid={Boolean(usernameError)}
+                    placeholder={t("auth.usernamePlaceholder")}
+                  />
 
-                <InputComponent
-                  onChange={(value) => {
-                    handleInput({ target: { name: "password", value } });
-                  }}
-                  value={password}
-                  isForm
-                  allowAutofill
-                  password={true}
-                  required
-                  id="login-password"
-                  inputProps={{
-                    "aria-describedby": passwordError
-                      ? "login-password-error"
-                      : undefined,
-                    "aria-invalid": Boolean(passwordError) || undefined,
-                  }}
-                  placeholder={t("auth.passwordPlaceholder")}
-                  className="h-11 w-full rounded-lg bg-muted"
-                />
+                  {usernameError && (
+                    <p
+                      id="login-username-error"
+                      role="alert"
+                      className="field-invalid"
+                    >
+                      {usernameError}
+                    </p>
+                  )}
+                </Form.Field>
 
-                {passwordError && (
-                  <p
-                    id="login-password-error"
-                    role="alert"
-                    className="field-invalid"
+                <Form.Field name="password" className="pb-3">
+                  <label
+                    htmlFor="form-login-password"
+                    className={`mb-2 flex items-center gap-1 overflow-hidden text-sm font-medium ${
+                      passwordError ? "label-invalid" : ""
+                    }`}
                   >
-                    {passwordError}
-                  </p>
-                )}
-              </Form.Field>
+                    <span className="truncate">{t("auth.passwordLabel")}</span>
+                    <span className="shrink-0 font-medium text-destructive">
+                      *
+                    </span>
+                  </label>
 
-              <Form.Submit asChild>
-                <Button className="h-11 w-full rounded-lg" type="submit">
-                  {t("auth.signInButton")}
-                </Button>
-              </Form.Submit>
+                  <InputComponent
+                    onChange={(value) => {
+                      handleInput({ target: { name: "password", value } });
+                    }}
+                    value={password}
+                    isForm
+                    allowAutofill
+                    password={true}
+                    required
+                    id="login-password"
+                    inputProps={{
+                      "aria-describedby": passwordError
+                        ? "login-password-error"
+                        : undefined,
+                      "aria-invalid": Boolean(passwordError) || undefined,
+                    }}
+                    placeholder={t("auth.passwordPlaceholder")}
+                    className="h-11 w-full rounded-lg bg-muted"
+                  />
+
+                  {passwordError && (
+                    <p
+                      id="login-password-error"
+                      role="alert"
+                      className="field-invalid"
+                    >
+                      {passwordError}
+                    </p>
+                  )}
+                </Form.Field>
+
+                <Form.Submit asChild>
+                  <Button className="h-11 w-full rounded-lg" type="submit">
+                    {t("auth.signInButton")}
+                  </Button>
+                </Form.Submit>
+              </CustomLoginFormGate>
 
               <CustomLoginSsoOptions />
 
-              <p className="text-center text-sm text-muted-foreground">
-                {t("auth.noAccount")}{" "}
-                <CustomLink
-                  className="font-medium text-primary underline-offset-4 hover:underline"
-                  to="/signup"
-                >
-                  {t("auth.signUpLink")}
-                </CustomLink>
-              </p>
+              <CustomLoginSignupPrompt>
+                <p className="text-center text-sm text-muted-foreground">
+                  {t("auth.noAccount")}{" "}
+                  <CustomLink
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                    to="/signup"
+                  >
+                    {t("auth.signUpLink")}
+                  </CustomLink>
+                </p>
+              </CustomLoginSignupPrompt>
             </div>
           </section>
         </div>

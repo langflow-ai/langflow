@@ -8,6 +8,7 @@ import { extractApiErrorMessage } from "@/controllers/API/helpers/extract-api-er
 import { useAddUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import useTheme from "@/customization/hooks/use-custom-theme";
 import { track } from "@/customization/utils/analytics";
 import {
   appendErrorSuggestion,
@@ -31,6 +32,7 @@ export default function SignUp(): JSX.Element {
   const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
 
   const { t } = useTranslation();
+  useTheme();
   const { password, cnfPassword, username } = inputState;
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -127,7 +129,7 @@ export default function SignUp(): JSX.Element {
         event.preventDefault();
         handleSignup();
       }}
-      className="dark min-h-svh w-full overflow-auto bg-canvas text-foreground"
+      className="min-h-svh w-full overflow-auto bg-canvas text-foreground"
     >
       <DotGridBackground />
       <main className="relative z-10 flex min-h-svh w-full flex-col items-center justify-center px-6 py-10">
@@ -142,7 +144,7 @@ export default function SignUp(): JSX.Element {
             </h1>
           </div>
 
-          <section className="w-full rounded-xl border border-border bg-card p-8 shadow-2xl shadow-black/40 sm:p-10">
+          <section className="w-full rounded-xl border border-border bg-card p-8 shadow-2xl shadow-black/10 dark:shadow-black/40 sm:p-10">
             <div className="flex flex-col gap-6">
               <Form.Field name="username" className="pb-3">
                 <label

@@ -73,7 +73,13 @@ export default function DotGridBackground() {
         dot.radius += (targetRadius - dot.radius) * 0.15;
 
         const intensity = Math.min(1, (dot.radius - 1) / 2);
-        const shade = Math.round(51 + (200 - 51) * intensity);
+        const isDark =
+          document.getElementById("body")?.classList.contains("dark") ??
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        // Light dots on dark canvas; darker dots on light canvas.
+        const shade = isDark
+          ? Math.round(51 + (200 - 51) * intensity)
+          : Math.round(200 - (200 - 110) * intensity);
         context.beginPath();
         context.arc(dot.x, dot.y, dot.radius, 0, Math.PI * 2);
         context.fillStyle = `rgb(${shade} ${shade} ${shade})`;
