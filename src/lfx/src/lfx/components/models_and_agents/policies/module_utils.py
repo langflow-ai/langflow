@@ -18,13 +18,19 @@ def ensure_toolguard_module_path_compat(runtime_module: ModuleType) -> None:
     if not callable(converter):
         return
 
-    probe = r"policies\guard.py"
+    windows_probe = r"policies\guard.py"
+    posix_probe = "policies/guard.py"
     try:
-        if converter(probe) == "policies.guard":
-            return
-    except (TypeError, ValueError):
-        # A future ToolGuard may change the private helper's contract. In that
-        # case, do not replace behavior we no longer understand.
+        windows_result = converter(windows_probe)
+        posix_result = converter(posix_probe)
+    except Exception:  # noqa: BLE001
+        # This is a private third-party helper; an unsupported future contract
+        # must not prevent ToolGuard itself from importing.
+        return
+
+    if (windows_result, posix_result) != (r"policies\guard", "policies.guard"):
+        # Patch only the exact ToolGuard 0.2.21 behavior. Fixed and unknown
+        # future implementations keep their own converter.
         return
 
     def file_to_module_name(file_path: str | Path) -> str:
