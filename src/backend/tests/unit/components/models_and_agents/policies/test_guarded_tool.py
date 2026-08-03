@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from langchain_core.tools import StructuredTool
+from langflow.api.v1.schemas import ResultDataResponse, VertexBuildResponse
 from lfx.components.models_and_agents.policies.guarded_tool import GuardedTool
 from pydantic import BaseModel
 from toolguard.runtime import PolicyViolationException
@@ -38,7 +39,7 @@ async def test_guarded_tool_successful_execution():
     guarded_tool = GuardedTool(lc_tool, [lc_tool], mock_toolguard)
 
     # Test with dict input
-    result = await guarded_tool.arun({"person": {"name": "Alice", "age": 30}})
+    result = await guarded_tool.ainvoke({"person": {"name": "Alice", "age": 30}})
 
     # Verify guard_toolcall was called
     mock_toolguard.guard_toolcall.assert_called_once()
@@ -128,3 +129,19 @@ def test_guarded_tool_run_not_implemented():
 
     with pytest.raises(NotImplementedError):
         guarded_tool.run({"person": {"name": "Test", "age": 20}})
+
+
+def test_guarded_tool_can_be_serialized_in_vertex_response():
+    """GuardedTool's bound callables must not create a recursive representation."""
+    lc_tool = StructuredTool.from_function(my_function)
+    guarded_tool = GuardedTool(lc_tool, [lc_tool], MagicMock())
+
+    for representation in (repr(guarded_tool), str(guarded_tool)):
+        assert "func=" not in representation
+        assert "coroutine=" not in representation
+
+    response = VertexBuildResponse(valid=True, data=ResultDataResponse(results={"tool": guarded_tool}))
+    serialized_response = response.model_dump_json()
+
+    assert '"valid":true' in serialized_response
+    assert '"name":"my_function"' in serialized_response
