@@ -196,8 +196,16 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             raise ValueError(msg)
         return llm_model
 
+    @staticmethod
+    def _sync_model_requirement(build_config: dict, mode: str | None = None) -> None:
+        """Require a model only when the selected activity generates guard code."""
+        selected_mode = mode or build_config.get("mode", {}).get("value", MODE_GENERATE)
+        model_config = build_config.get("model")
+        if isinstance(model_config, dict):
+            model_config["required"] = selected_mode == MODE_GENERATE
+
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        """Dynamically update build config with user-filtered model options."""
+        """Dynamically update model options and the activity-specific requirement."""
         updated_build_config = update_model_options_in_build_config(
             component=self,
             build_config=build_config,
@@ -206,6 +214,8 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             field_name=field_name,
             field_value=field_value,
         )
+        selected_mode = field_value if field_name == "mode" else None
+        self._sync_model_requirement(updated_build_config, selected_mode)
         tg = self._import_toolguard()
         py_module = self._to_snake_case(self.project)
         return tg["sync_generated_guard_code_inputs"](
@@ -235,6 +245,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             for field_name, field in current_template.items():
                 if self._is_generated_guard_field(field):
                     updated_template[field_name] = field
+            self._sync_model_requirement(updated_template)
         return updated_frontend_node
 
     async def _generate_guard_specs(self) -> list[ToolGuardSpec]:

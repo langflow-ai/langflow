@@ -125,6 +125,64 @@ class TestPoliciesComponent(ComponentTestBaseWithoutClient):
         assert "dynamic_lookalike" not in result["template"]
         assert result["template"]["new_input"]["value"] == "new default"
 
+    async def test_component_update_makes_model_optional_for_guard_mode(self, component_class, default_kwargs):
+        """Updating an imported Guard node must normalize its static model requirement."""
+        component = await self.component_setup(component_class, default_kwargs)
+        current_frontend_node = {
+            "display_name": "Policies",
+            "template": {
+                "code": {"type": "code", "value": "old component code"},
+                "mode": {"type": "tab", "value": MODE_GUARD},
+                "model": {"type": "model", "value": [], "required": True},
+            },
+        }
+        new_frontend_node = {
+            "display_name": "Policies",
+            "template": {
+                "code": {"type": "code", "value": "new component code"},
+                "mode": {"type": "tab", "value": MODE_GENERATE},
+                "model": {"type": "model", "value": [], "required": True},
+            },
+        }
+
+        result = await component.update_frontend_node(new_frontend_node, current_frontend_node)
+
+        assert result["template"]["mode"]["value"] == MODE_GUARD
+        assert result["template"]["model"]["required"] is False
+
+
+@pytest.mark.parametrize(
+    ("stored_mode", "field_name", "field_value", "expected_required"),
+    [
+        (MODE_GUARD, "mode", MODE_GENERATE, True),
+        (MODE_GENERATE, "mode", MODE_GUARD, False),
+        (MODE_GUARD, "model", [], False),
+    ],
+)
+def test_update_build_config_syncs_model_requirement(
+    mock_component, stored_mode, field_name, field_value, expected_required
+):
+    """Activity controls the model gate, including model refreshes on flow load."""
+    mock_component.mode = stored_mode
+    build_config = {
+        "mode": {"value": stored_mode},
+        "model": {"required": not expected_required},
+    }
+    sync_guard_inputs = MagicMock(side_effect=lambda **kwargs: kwargs["build_config"])
+    fake_tg = _make_fake_tg(sync_generated_guard_code_inputs=sync_guard_inputs)
+
+    with (
+        patch(
+            "lfx.components.models_and_agents.policies_component.update_model_options_in_build_config",
+            side_effect=lambda **kwargs: kwargs["build_config"],
+        ),
+        patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
+    ):
+        result = mock_component.update_build_config(build_config, field_value, field_name)
+
+    assert result["model"]["required"] is expected_required
+    sync_guard_inputs.assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_guard_tools_blocked_when_custom_components_disabled(mock_component, monkeypatch):
@@ -460,10 +518,14 @@ async def test_guard_mode_loads_persisted_template_without_cache_directory(mock_
     fake_tg["GuardedTool"].return_value = mock_guarded_instance
 
     mock_component.get_vertex = MagicMock(return_value=SimpleNamespace(data={"node": {"template": attrs}}))
+    mock_component.model = None
+    mock_component.policies = []
 
     with (
         patch("lfx.components.models_and_agents.policies_component.TOOLGUARD_WORK_DIR", tmp_path),
         patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
+        patch.object(mock_component, "validate_before_generate") as mock_validate,
+        patch.object(mock_component, "build_model") as mock_build_model,
     ):
         assert not (mock_component.work_dir / STEP2).exists()
         result = await mock_component.guard_tools()
@@ -476,6 +538,8 @@ async def test_guard_mode_loads_persisted_template_without_cache_directory(mock_
     disk_loader.assert_not_called()
     fake_tg["load_toolguards_from_memory"].assert_called_once_with(fake_result)
     fake_tg["GuardedTool"].assert_called_once_with(mock_tool, mock_component.in_tools, mock_tg_runtime)
+    mock_validate.assert_not_called()
+    mock_build_model.assert_not_called()
     assert result == [mock_guarded_instance]
 
 
