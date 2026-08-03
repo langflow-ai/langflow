@@ -188,14 +188,11 @@ class CodeExecutionDisabledError(ValueError):
 
 
 def ensure_code_execution_enabled() -> None:
-    """Refuse to run user code when ``allow_custom_components`` is disabled.
+    """Refuse to run Python code when either server code-execution policy disables it.
 
-    Code-execution components (the Python Interpreter and the legacy Python REPL
-    tool) run arbitrary user-supplied Python. They honor the same
-    ``allow_custom_components`` switch as custom components: when an operator
-    locks a deployment down with ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``,
-    running arbitrary Python must be refused too — otherwise an authenticated
-    user can still execute code despite the policy (GHSA-8qpj-27x8-pwpq).
+    Registered code-execution components run user- or model-supplied Python. They honor
+    both ``allow_custom_components`` and ``block_code_interpreter_components`` so a
+    component cannot bypass either policy through direct or tool-mode execution.
 
     Failure handling is deliberately asymmetric so the gate can never be
     silently bypassed:
@@ -212,14 +209,12 @@ def ensure_code_execution_enabled() -> None:
     """
     try:
         from lfx.services.deps import get_settings_service
-
-        settings_service = get_settings_service()
     except ImportError:
         # Services layer absent (e.g. stripped-down lfx embed) -> local/trusted, allow.
-        # Only ImportError is treated as "no settings layer"; any other exception from
-        # get_settings_service() propagates rather than silently failing open and
-        # bypassing the allow_custom_components gate (GHSA-8qpj-27x8-pwpq).
         return
+    # Resolver failures, including ImportError from inside the settings stack, must
+    # propagate rather than masquerade as an absent services layer and fail open.
+    settings_service = get_settings_service()
     if settings_service is None:
         # Registered-but-failed settings stack (get_service swallows init errors into
         # None). Fail closed rather than bypass the gate (GHSA-8qpj-27x8-pwpq).
@@ -232,6 +227,12 @@ def ensure_code_execution_enabled() -> None:
         msg = (
             "Python code execution is disabled because allow_custom_components is False. "
             "Set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true to enable this component."
+        )
+        raise CodeExecutionDisabledError(msg)
+    if getattr(settings_service.settings, "block_code_interpreter_components", False):
+        msg = (
+            "Python code execution is disabled because block_code_interpreter_components is True. "
+            "Set LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=false to enable this component."
         )
         raise CodeExecutionDisabledError(msg)
 
