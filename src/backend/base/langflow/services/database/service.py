@@ -136,10 +136,13 @@ def _sqlite_migration_lock(database_url: str):
 
     When Langflow runs with multiple Gunicorn/Uvicorn workers all sharing the
     same SQLite file, each worker calls ``alembic upgrade`` independently.
-    Because SQLite only permits one exclusive writer at a time (``BEGIN
-    EXCLUSIVE``), concurrent workers race on that lock and the losers receive
-    ``OperationalError: database is locked`` before busy_timeout can even
-    retry.
+    SQLite allows only one writer at a time, so the losers block on the write
+    lock and then fail once their busy timeout expires (60s inside alembic, see
+    ``_sqlite_do_begin`` in ``alembic/env.py``; 30s on the table-creation
+    engine). Workers that do get through can still interleave badly enough to
+    corrupt the bookkeeping: two of them read the same ``alembic_version`` row,
+    both apply the same revision, and the second one dies with "Online
+    migration expected to match one row when updating ...; 0 found".
 
     A ``filelock.FileLock`` placed alongside the ``.db`` file serialises the
     workers at the Python level before any of them even open SQLite, so at

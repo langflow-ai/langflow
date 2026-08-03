@@ -1,16 +1,19 @@
-"""Tests for the schema-migration advisory lock.
+"""Tests for the schema-migration locks.
 
-Workers booting concurrently against a fresh Postgres race on
-``CREATE TYPE`` / ``CREATE TABLE`` because each calls ``alembic upgrade``
-independently. ``_postgres_migration_lock`` holds a session-level
-``pg_advisory_lock`` for the duration of the upgrade so only one worker
-mutates the schema at a time. The lock is acquired via ``pg_try_advisory_lock``
-in a bounded polling loop so a hung holder can't block every other worker
-forever; the wait emits a log line and times out with an actionable error.
+Workers booting concurrently race on ``CREATE TYPE`` / ``CREATE TABLE`` and on
+``alembic upgrade`` because each one runs them independently. Two locks keep
+that serialised: ``_postgres_migration_lock`` holds a session-level
+``pg_advisory_lock``, and ``_sqlite_migration_lock`` holds a
+``filelock.FileLock`` next to the ``.db`` file.
 
-Mocking ``sa.create_engine`` here so the test runs without a real Postgres
-instance. The unit under test is the orchestration: which SQL gets executed,
-in what order, on which kinds of URLs.
+The Postgres lock is acquired via ``pg_try_advisory_lock`` in a bounded polling
+loop so a hung holder can't block every other worker forever; the wait emits a
+log line and times out with an actionable error.
+
+Mocking ``sa.create_engine`` for the Postgres cases so they run without a real
+Postgres instance. The unit under test there is the orchestration: which SQL
+gets executed, in what order, on which kinds of URLs. The SQLite lock needs no
+mocking - it is a real file lock on a tmp_path.
 """
 
 from __future__ import annotations
@@ -21,6 +24,7 @@ import pytest
 from langflow.services.database.service import (
     _MIGRATION_ADVISORY_LOCK_ID,
     _postgres_migration_lock,
+    _sqlite_migration_lock,
 )
 
 _PG_URL = "postgresql+psycopg://host/db"
@@ -230,3 +234,48 @@ async def test_create_db_and_tables_takes_lock_on_sqlite():
         await service.create_db_and_tables()
 
     locked_mock.assert_called_once()
+
+
+def test_sqlite_migration_lock_is_a_noop_without_a_file(tmp_path):
+    """In-memory SQLite has no file to lock, so the lock must not create one."""
+    with _sqlite_migration_lock("sqlite:///:memory:"):
+        pass
+
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_sqlite_migration_lock_serialises_and_releases(tmp_path, monkeypatch):
+    """A real file lock: held for the block, refused while held, reusable after.
+
+    This is the whole point of the lock, so it uses a real ``FileLock`` on a
+    real path rather than mocks. The timeout is dialled down so the contended
+    case fails fast instead of waiting the 300s default.
+    """
+    monkeypatch.setenv("LANGFLOW_MIGRATION_LOCK_TIMEOUT_S", "0.1")
+    url = f"sqlite:///{tmp_path}/langflow.db"
+    lock_file = tmp_path / "langflow.migration.lock"
+
+    with _sqlite_migration_lock(url):
+        assert lock_file.exists()
+        # A second holder cannot get in while the first is inside the block.
+        with (
+            pytest.raises(RuntimeError, match="Could not acquire SQLite migration file lock"),
+            _sqlite_migration_lock(url),
+        ):
+            pytest.fail("second holder must not enter while the lock is held")
+
+    # Released on exit, so the next worker gets through.
+    with _sqlite_migration_lock(url):
+        pass
+
+
+def test_sqlite_migration_lock_releases_when_block_raises(tmp_path, monkeypatch):
+    """A migration that blows up must not leave the lock held for everyone else."""
+    monkeypatch.setenv("LANGFLOW_MIGRATION_LOCK_TIMEOUT_S", "0.1")
+    url = f"sqlite:///{tmp_path}/langflow.db"
+
+    with pytest.raises(_BoomError), _sqlite_migration_lock(url):
+        raise _BoomError(_BOOM_MESSAGE)
+
+    with _sqlite_migration_lock(url):
+        pass
