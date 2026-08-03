@@ -158,7 +158,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 generate_guards_code,
             )
             from toolguard.extra.langchain_to_oas import langchain_tools_to_openapi
-            from toolguard.runtime import load_toolguards, load_toolguards_from_memory
+            from toolguard.runtime import load_toolguards_from_memory
             from toolguard.runtime.runtime import RESULTS_FILENAME
 
             from lfx.components.models_and_agents.policies.guard_sync_utils import sync_generated_guard_code_inputs
@@ -173,7 +173,6 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             "generate_guard_specs": generate_guard_specs,
             "generate_guards_code": generate_guards_code,
             "langchain_tools_to_openapi": langchain_tools_to_openapi,
-            "load_toolguards": load_toolguards,
             "load_toolguards_from_memory": load_toolguards_from_memory,
             "RESULTS_FILENAME": RESULTS_FILENAME,
             "sync_generated_guard_code_inputs": sync_generated_guard_code_inputs,
@@ -311,41 +310,6 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         # if there was a previous version of the guard, remove it from python cache
         unload_module(res.domain.app_name)
 
-    def _verify_cached_guards(self, code_dir: Path) -> None:
-        tg = self._import_toolguard()
-        # Validate cache exists before attempting to load
-        if not code_dir.exists():
-            msg = (
-                f"Policies: Cache directory not found at '{code_dir}'. "
-                f"Please run in 'Generate' mode first to create the guard code, "
-                f"or verify the project name is correct."
-            )
-            raise ValueError(msg)
-
-        try:
-            tg["load_toolguards"](code_dir)
-        except FileNotFoundError as exc:
-            msg = (
-                f"Policies: Required guard code files missing in '{code_dir}'. "
-                f"Please run in 'Generate' mode to create the guard code."
-            )
-            raise ValueError(msg) from exc
-        except Exception as exc:
-            msg = (
-                f"Policies: Failed to load guard code from '{code_dir}'. "
-                f"The cached code may be invalid or corrupted. "
-                f"Try running in 'Generate' mode to rebuild the guard code. "
-                f"Error: {exc!s}"
-            )
-            raise ValueError(msg) from exc
-
-    def _validate_before_using_cache(self, code_dir: Path) -> None:
-        if not self.in_tools:
-            msg = "Policies: in_tools cannot be empty!"
-            raise ValueError(msg)
-
-        self._verify_cached_guards(code_dir)
-
     @staticmethod
     def _template_field_key(file_name: str | Path) -> str:
         r"""Normalize a generated file name to its node-template field key.
@@ -458,9 +422,10 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 self.log("Review the generated files in the details panel on the right.", name="info")
 
             else:  # mode == "guard"
-                self.log(f"using cache from {self.work_dir}", name="info")
-                code_dir = self.work_dir / STEP2
-                self._validate_before_using_cache(code_dir)
+                if not self.in_tools:
+                    msg = "Policies: in_tools cannot be empty!"
+                    raise ValueError(msg)
+                self.log("Using guard code stored in the component template", name="info")
                 try:
                     tg_result = self.make_toolguard_result()
                     tg_runtime = tg["load_toolguards_from_memory"](tg_result)
