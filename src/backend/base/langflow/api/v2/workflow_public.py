@@ -31,6 +31,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import EventSourceResponse
+from lfx.log.logger import logger
 from lfx.schema.workflow import (
     WORKFLOW_EXECUTION_RESPONSES,
     PublicWorkflowRunRequest,
@@ -168,6 +169,7 @@ async def execute_public_workflow(
                 validate_public_flow_no_code_execution(flow.data)
             flow_name = flow.name if flow else None
     except CatalogPolicyIdentityUnavailableError as exc:
+        await logger.awarning("Public workflow component identities are temporarily unavailable: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,

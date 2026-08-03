@@ -179,6 +179,33 @@ async def test_standalone_warmup_loads_catalog_identities_when_custom_components
         validate_catalog_policy_for_flow(_catalog_flow("PromptComponent"), snapshot=snapshot)
 
 
+@pytest.mark.asyncio
+async def test_standalone_warmup_fails_closed_when_published_registry_is_empty(monkeypatch):
+    """An empty published registry cannot satisfy active alias-aware catalog policy."""
+    from lfx.interface.components import component_cache
+
+    snapshot = CatalogPolicySnapshot(blocked_component_keys={"Prompt Template"})
+    settings_service = SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True))
+    catalog_service = SimpleNamespace(snapshot=snapshot)
+
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr("lfx.services.deps.get_catalog_policy_service", lambda: catalog_service)
+    monkeypatch.setattr(component_cache, "all_types_dict", {})
+    monkeypatch.setattr(component_cache, "all_types_ready", True)
+    monkeypatch.setattr(component_cache, "type_to_current_hash", {})
+    monkeypatch.setattr(component_cache, "all_known_hashes", set())
+    monkeypatch.setattr(component_cache, "code_by_hash", {})
+    monkeypatch.setattr(component_cache, "component_identity_index", None)
+
+    with (
+        patch("lfx.interface.components.get_and_cache_all_types_dict", new=AsyncMock()) as loader,
+        pytest.raises(CatalogPolicyIdentityUnavailableError, match="identities are still initializing"),
+    ):
+        await ensure_component_hash_lookups_loaded()
+
+    loader.assert_not_awaited()
+
+
 def test_catalog_policy_validation_blocks_top_level_components_deterministically():
     snapshot = CatalogPolicySnapshot(blocked_component_keys=frozenset({"Zed", "Agent"}))
 
@@ -251,6 +278,21 @@ def test_catalog_policy_alias_validation_fails_closed_without_component_identity
 
     # A non-exact decision needs the canonical alias index and fails closed
     # under the same initialization contract as component-code validation.
+    with pytest.raises(CatalogPolicyIdentityUnavailableError, match="identities are still initializing"):
+        validate_catalog_policy_for_flow(
+            _catalog_flow("Prompt"),
+            snapshot=CatalogPolicySnapshot(blocked_component_keys={"Prompt Template"}),
+        )
+
+
+def test_catalog_policy_alias_validation_fails_closed_with_empty_published_registry(monkeypatch):
+    """A ready-but-empty registry cannot satisfy alias-aware catalog policy."""
+    from lfx.interface.components import component_cache
+
+    monkeypatch.setattr(component_cache, "all_types_dict", {})
+    monkeypatch.setattr(component_cache, "all_types_ready", True)
+    monkeypatch.setattr(component_cache, "component_identity_index", None)
+
     with pytest.raises(CatalogPolicyIdentityUnavailableError, match="identities are still initializing"):
         validate_catalog_policy_for_flow(
             _catalog_flow("Prompt"),

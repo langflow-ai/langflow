@@ -942,9 +942,9 @@ def test_identity_index_read_cannot_publish_stale_state_after_reload(tmp_path: P
 
     old_id = "ext:delta:OldThing@official"
     new_id = "ext:delta:DeltaThing@official"
-    component_cache = components_module.component_cache
-    with component_cache.state_lock:
-        component_cache.all_types_dict = {
+    cache = components_module.ComponentCache()
+    with cache.state_lock:
+        cache.all_types_dict = {
             "delta": {
                 old_id: {
                     "name": "OldThing",
@@ -953,8 +953,8 @@ def test_identity_index_read_cannot_publish_stale_state_after_reload(tmp_path: P
                 }
             }
         }
-        component_cache.all_types_ready = True
-        component_cache.component_identity_index = None
+        cache.all_types_ready = True
+        cache.component_identity_index = None
 
     class _DeltaThing:
         display_name = "Delta"
@@ -1014,6 +1014,7 @@ def test_identity_index_read_cannot_publish_stale_state_after_reload(tmp_path: P
             refresh_finished.set()
 
     with (
+        patch.object(components_module, "component_cache", cache),
         patch.object(components_module, "build_component_identity_index", side_effect=delayed_build),
         patch.object(components_module, "create_component_template", side_effect=_stub_template),
     ):
@@ -1032,14 +1033,14 @@ def test_identity_index_read_cannot_publish_stale_state_after_reload(tmp_path: P
         assert not reader.is_alive()
         assert not refresher.is_alive()
 
-    assert not thread_errors
-    assert reader_results[0].resolve("OldThing") == frozenset({old_id})
-    assert component_cache.component_identity_index is None
+        assert not thread_errors
+        assert reader_results[0].resolve("OldThing") == frozenset({old_id})
+        assert cache.component_identity_index is None
 
-    current_index = components_module.get_component_identity_index()
-    assert current_index is not None
-    assert current_index.resolve("DeltaThing") == frozenset({new_id})
-    assert old_id not in current_index.canonical_keys
+        current_index = components_module.get_component_identity_index()
+        assert current_index is not None
+        assert current_index.resolve("DeltaThing") == frozenset({new_id})
+        assert old_id not in current_index.canonical_keys
 
 
 def test_trusted_code_read_cannot_republish_stale_state_after_reload(tmp_path: Path) -> None:

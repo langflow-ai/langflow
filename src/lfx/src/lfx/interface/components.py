@@ -823,12 +823,12 @@ def get_component_identity_index(
     The process-wide component registry reuses the precomputed cache. A
     request-local or synthetic mapping receives its own index so it can never
     accidentally resolve against stale identities from another registry.
-    When no mapping is supplied, an incompletely initialized component cache
-    returns ``None`` so active catalog policy can fail closed.
+    When no mapping is supplied, an incompletely initialized or empty process
+    registry returns ``None`` so active catalog policy can fail closed.
     """
     with component_cache.state_lock:
         if all_types_dict is None:
-            if not component_cache.all_types_ready or component_cache.all_types_dict is None:
+            if not component_cache.all_types_ready or not component_cache.all_types_dict:
                 return None
             all_types_dict = component_cache.all_types_dict
 
@@ -1251,6 +1251,12 @@ def _publish_bundle_cache(bundle: str, bundle_dict: dict[str, Any]) -> bool:
         if current_types is None or not component_cache.all_types_ready:
             if component_cache.initialization_future is not None:
                 component_cache.pending_bundle_updates[bundle] = bundle_dict
+                logger.debug("Queued reloaded bundle %r for the in-flight cache initialization", bundle)
+            else:
+                logger.debug(
+                    "Skipped publishing reloaded bundle %r: no component cache is published and none is initializing",
+                    bundle,
+                )
             return False
 
         # Copy-on-write keeps any reader that already holds the previous
