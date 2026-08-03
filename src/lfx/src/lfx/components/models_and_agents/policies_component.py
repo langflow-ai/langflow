@@ -216,6 +216,28 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             project_name=py_module,
         )
 
+    @staticmethod
+    def _is_generated_guard_field(field: dict) -> bool:
+        """Return whether a template field contains generated ToolGuard code."""
+        return (
+            isinstance(field, dict)
+            and field.get("type") == "code"
+            and field.get("dynamic") is True
+            and isinstance(field.get("info"), str)
+            and field["info"].startswith(GENERATED_GUARD_INFO_PREFIX)
+        )
+
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict) -> dict:
+        """Update the static component template without dropping persisted guard code."""
+        updated_frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
+        updated_template = updated_frontend_node.get("template")
+        current_template = current_frontend_node.get("template")
+        if isinstance(updated_template, dict) and isinstance(current_template, dict):
+            for field_name, field in current_template.items():
+                if self._is_generated_guard_field(field):
+                    updated_template[field_name] = field
+        return updated_frontend_node
+
     async def _generate_guard_specs(self) -> list[ToolGuardSpec]:
         tg = self._import_toolguard()
         logger.debug("Starting step 1")

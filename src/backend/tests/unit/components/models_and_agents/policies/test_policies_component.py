@@ -3,6 +3,7 @@ from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
+from lfx.components.models_and_agents.policies.guard_sync_utils import GENERATED_GUARD_INFO_PREFIX
 from lfx.components.models_and_agents.policies.module_utils import ensure_toolguard_module_path_compat
 from lfx.components.models_and_agents.policies_component import (
     MODE_GENERATE,
@@ -10,6 +11,8 @@ from lfx.components.models_and_agents.policies_component import (
     STEP2,
     PoliciesComponent,
 )
+
+from tests.base import ComponentTestBaseWithoutClient
 
 
 @pytest.fixture
@@ -59,6 +62,69 @@ def _make_fake_tg(**overrides):
     }
     fake.update(overrides)
     return fake
+
+
+def _generated_guard_field(name: str, value: str) -> dict:
+    return {
+        "type": "code",
+        "dynamic": True,
+        "info": f"{GENERATED_GUARD_INFO_PREFIX}{name}",
+        "value": value,
+    }
+
+
+class TestPoliciesComponent(ComponentTestBaseWithoutClient):
+    @pytest.fixture
+    def component_class(self):
+        return PoliciesComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        return {"enabled": False, "in_tools": []}
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        return []
+
+    async def test_component_update_preserves_only_generated_guard_fields(self, component_class, default_kwargs):
+        """A Breaking component update must retain guard code stored in the flow."""
+        component = await self.component_setup(component_class, default_kwargs)
+        result_field = _generated_guard_field("result.json", "persisted result")
+        guard_field = _generated_guard_field("test_project/guard.py", "persisted guard")
+        current_frontend_node = {
+            "display_name": "Policies",
+            "template": {
+                "code": {"type": "code", "value": "old component code"},
+                "project": {"type": "str", "value": "test_project"},
+                "removed_input": {"type": "str", "value": "do not preserve"},
+                "dynamic_lookalike": {
+                    "type": "code",
+                    "dynamic": True,
+                    "info": "User-defined dynamic code",
+                    "value": "do not preserve",
+                },
+                "result.json": result_field,
+                "test_project/guard.py": guard_field,
+            },
+        }
+        new_frontend_node = {
+            "display_name": "Policies",
+            "template": {
+                "code": {"type": "code", "value": "new component code"},
+                "project": {"type": "str", "value": "my_project"},
+                "new_input": {"type": "str", "value": "new default"},
+            },
+        }
+
+        with patch.object(PoliciesComponent, "_import_toolguard", side_effect=ImportError) as mock_import:
+            result = await component.update_frontend_node(new_frontend_node, current_frontend_node)
+
+        mock_import.assert_not_called()
+        assert result["template"]["result.json"] == result_field
+        assert result["template"]["test_project/guard.py"] == guard_field
+        assert "removed_input" not in result["template"]
+        assert "dynamic_lookalike" not in result["template"]
+        assert result["template"]["new_input"]["value"] == "new default"
 
 
 @pytest.mark.asyncio
