@@ -11,6 +11,7 @@ fix are injected so this decision logic stays pure and unit-testable.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -114,12 +115,33 @@ async def verify_loop_structure(
         fixed = await fix_fn("; ".join(issues))
         if not fixed:
             break
+        # Unchanged means the agent declined (it cannot repair this, or the user
+        # asked for the gap — the retry prompt offers that opt-out): stop re-asking.
+        if _flow_fingerprint(fixed) == _flow_fingerprint(current):
+            break
         current = fixed
         issues = validate_fn(current)
 
     if not issues:
         return FlowVerificationResult(FlowVerificationStatus.PASSED, attempt, None, current)
     return FlowVerificationResult(FlowVerificationStatus.NEEDS_CAVEAT, attempt, loop_structural_caveat(issues), current)
+
+
+def _flow_fingerprint(flow: dict) -> str:
+    """Content fingerprint, blind to layout so a re-layout does not read as progress.
+
+    Compares everything else — wiring AND field values — because an agent that
+    only retunes a template value has still made a real attempt worth re-running.
+    """
+
+    def _strip_layout(obj):
+        if isinstance(obj, dict):
+            return {k: _strip_layout(v) for k, v in obj.items() if k != "position"}
+        if isinstance(obj, list):
+            return [_strip_layout(v) for v in obj]
+        return obj
+
+    return json.dumps(_strip_layout(flow or {}), sort_keys=True, default=str)
 
 
 def _external_caveat(error: str) -> str:
@@ -175,6 +197,10 @@ async def verify_built_flow(
             break
         fixed = await fix_fn(last_error)
         if not fixed:
+            break
+        # Same no-progress guard as the structural loop: never spend another real
+        # run on a flow the fix turn returned untouched.
+        if _flow_fingerprint(fixed) == _flow_fingerprint(current):
             break
         current = fixed
 

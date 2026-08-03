@@ -94,6 +94,7 @@ from langflow.agentic.services.flow_types import (
     FlowExecutionError,
 )
 from langflow.agentic.services.flow_verification import (
+    FlowVerificationResult,
     FlowVerificationStatus,
     flow_has_loop_edge,
     verify_built_flow,
@@ -128,21 +129,26 @@ async def _verify_flow_before_delivery(
     provider: str | None,
     model_name: str | None,
     api_key_var: str | None,
-):
+) -> tuple[FlowVerificationResult | None, tuple[int, int] | None]:
     """Run the just-built flow for real; loop-fix fixable failures.
 
-    Returns a ``FlowVerificationResult`` or ``None`` when verification was
-    skipped (kill switch off, no FLOW_ID, empty canvas) or itself failed —
-    in which case the caller delivers the flow unverified (never broken
-    silently, never broken-by-our-bug either).
+    Returns ``(result, shape_before)``, where the result is ``None`` when
+    verification was skipped (kill switch off, no FLOW_ID, empty canvas) or
+    itself failed — in which case the caller delivers the flow unverified
+    (never broken silently, never broken-by-our-bug either). ``shape_before``
+    is the pre-verification node/edge count, so the caller can detect a fix
+    turn that rebuilt the canvas.
     """
     if not _flow_verification_enabled():
-        return None
+        return None, None
     flow_id = global_variables.get("FLOW_ID")
     working = get_working_flow()
     has_nodes = bool((working or {}).get("data", {}).get("nodes"))
     if not flow_id or not has_nodes:
-        return None
+        return None, None
+    # Returned alongside the result so the caller can tell whether a fix turn
+    # rebuilt the canvas, without re-reading (and racing) the working flow.
+    shape_before = _flow_shape(working)
 
     async def _run(flow: dict) -> dict:
         return await run_working_flow(flow_data=flow, flow_id=flow_id, user_id=user_id)
@@ -176,19 +182,21 @@ async def _verify_flow_before_delivery(
         # A cyclic loop flow can't be run to completion safely (it may hang),
         # so gate it on STRUCTURAL soundness instead of a real run.
         if flow_has_loop_edge(working):
-            return await verify_loop_structure(
+            verified = await verify_loop_structure(
                 flow=copy.deepcopy(working),
                 validate_fn=structural_failures,
                 fix_fn=_fix_structure,
             )
-        return await verify_built_flow(
-            flow=copy.deepcopy(working),
-            run_fn=_run,
-            fix_fn=_fix,
-        )
+        else:
+            verified = await verify_built_flow(
+                flow=copy.deepcopy(working),
+                run_fn=_run,
+                fix_fn=_fix,
+            )
     except Exception as exc:  # noqa: BLE001 — verification must never break the build
         logger.warning("assistant.flow_verification.skipped_on_error flow_id=%s: %s", flow_id, exc)
-        return None
+        return None, None
+    return verified, shape_before
 
 
 def inject_conversation_history(
@@ -458,6 +466,37 @@ async def execute_flow_with_validation(
     }
 
 
+def _flow_shape(flow: dict | None) -> tuple[int, int]:
+    """Node and edge counts — the coarse signature used to detect a rebuild."""
+    data = (flow or {}).get("data", {})
+    return len(data.get("nodes") or []), len(data.get("edges") or [])
+
+def _append_verification_rebuild_notice(result: dict, before: tuple[int, int], after: tuple[int, int]) -> dict:
+    """Disclose that verification changed the flow the summary describes.
+
+    The agent writes its summary before verification runs, and a fix turn can
+    rebuild the canvas. Staying silent puts a confident description of the
+    original flow directly above a destructive Replace-canvas action for a
+    different one. Appends rather than replaces: the agent's account of what it
+    attempted stays readable next to what was actually delivered.
+
+    No-op when verification left the flow alone (input unchanged).
+    """
+    if before == after:
+        return result
+    nodes, edges = after
+    notice = (
+        f"I changed the flow while verifying it, so it no longer matches the description above: "
+        f"it now has {nodes} component{'s' if nodes != 1 else ''} and "
+        f"{edges} connection{'s' if edges != 1 else ''}. Review the card below before applying it."
+    )
+    base_text = (result.get("result") or "").rstrip()
+    return {
+        **result,
+        "result": f"{base_text}\n\n⚠️ {notice}".strip(),
+        "verification_rebuilt": True,
+    }
+
 def _append_component_failure_caveat(result: dict, failures: list[str]) -> dict:
     """Append an honest caveat when a flow was delivered despite a failed component.
 
@@ -481,7 +520,6 @@ def _append_component_failure_caveat(result: dict, failures: list[str]) -> dict:
         "component_generation_failed": True,
         "component_failure_caveat": caveat,
     }
-
 
 def _reconcile_flow_updates(
     updates: list[dict],
@@ -1324,7 +1362,7 @@ async def execute_flow_with_validation_streaming(
                 # success. Skipped (returns None) when the kill switch is
                 # off / no FLOW_ID / empty canvas → unchanged behavior.
                 if is_flow_request and saw_set_flow:
-                    verification = await _verify_flow_before_delivery(
+                    verification, shape_before = await _verify_flow_before_delivery(
                         flow_filename=flow_filename,
                         global_variables=global_variables,
                         user_id=user_id,
@@ -1344,6 +1382,10 @@ async def execute_flow_with_validation_streaming(
                         }
                     elif verification is not None:
                         result = {**result, "verified": True}
+                    if verification is not None and shape_before is not None:
+                        result = _append_verification_rebuild_notice(
+                            result, shape_before, _flow_shape(verification.flow)
+                        )
                     # A fix turn rebuilds the canvas in place — surface it.
                     for update in drain_flow_events():
                         if update.get("action") == "set_flow" and is_compound:

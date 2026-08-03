@@ -180,7 +180,21 @@
 > `_verify_flow_before_delivery`: failures are fed back to the agent to repair
 > (bounded by `MAX_FLOW_VERIFICATION_ATTEMPTS`, budget unchanged), and an
 > unfixable flow is delivered with an explicit "incomplete — connect X" caveat
-> and `verified: False`, never as ready. The loop recipe in `FLOW_BUILDER_PROMPT`
+> and `verified: False`, never as ready. A repair that SUCCEEDS is disclosed too:
+> the agent writes its summary before verification runs, so a fix turn that
+> rebuilds the canvas would otherwise leave a confident description of the
+> original flow directly above a destructive Replace-canvas action for a
+> different one. `_append_verification_rebuild_notice` compares the node/edge
+> counts before and after and appends a ⚠️ line naming the delivered shape,
+> plus `verification_rebuilt: True` on the `complete` event. The original
+> summary is preserved, not replaced, and an untouched flow is byte-identical
+> (LE-1776). The repair is also no longer unconditional: the retry prompt
+> lets the agent decline when the user explicitly asked for an incomplete or
+> unconnected flow (the model decides, so it holds in any language — no keyword
+> matching), and a fix turn that returns the flow unchanged short-circuits the
+> loop via a layout-blind content fingerprint instead of re-asking until the
+> attempt budget is gone. The user's instruction wins over completeness; the
+> flow is still delivered with the honest "incomplete — connect X" caveat. The loop recipe in `FLOW_BUILDER_PROMPT`
 > now mandates a ChatInput data source. The eval harness validates the applied
 > structure via the SAME `structural_failures` (closing the "validated the
 > proposal JSON, not the runnable canvas" gap that let this through). A loop is

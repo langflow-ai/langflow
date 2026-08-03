@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Any
 
 from lfx.graph.edge.base import types_compatible
+from lfx.graph.flow_builder.component import sync_dropdown_selected_outputs
 
 # Langflow uses oe (U+0153) as a quote replacement in ReactFlow handle strings
 _Q = "\u0153"
@@ -359,6 +360,9 @@ def add_connection(
         "targetHandle": target_handle_s,
     }
     flow["data"]["edges"].append(edge)
+    # Pinned here, not per-caller: the incremental edit tools and the external MCP
+    # tools reach this function directly and never run the spec builder (LE-1776).
+    sync_dropdown_selected_outputs(flow)
     return edge
 
 

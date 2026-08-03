@@ -113,8 +113,10 @@ class TestVerifyBuiltFlow:
             runs.append(flow)
             return {"error": "ValidationError: still broken"}
 
+        # A distinct attempt each time: repeating the SAME flow is a no-op the
+        # loop now short-circuits, which would test the guard, not the budget.
         async def fix_fn(_err):
-            return _flow_with_chat_input("attempted fix")
+            return _flow_with_chat_input(f"attempted fix {len(runs)}")
 
         result = await verify_built_flow(flow=_flow_with_chat_input(), run_fn=run_fn, fix_fn=fix_fn, max_attempts=3)
 
