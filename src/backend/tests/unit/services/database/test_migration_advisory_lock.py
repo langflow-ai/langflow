@@ -253,7 +253,9 @@ def test_sqlite_migration_lock_serialises_and_releases(tmp_path, monkeypatch):
     """
     monkeypatch.setenv("LANGFLOW_MIGRATION_LOCK_TIMEOUT_S", "0.1")
     url = f"sqlite:///{tmp_path}/langflow.db"
-    lock_file = tmp_path / "langflow.migration.lock"
+    # Suffix appended, not replaced, so the existing ``*.db*`` gitignore rule
+    # keeps the lock file out of commits.
+    lock_file = tmp_path / "langflow.db.migration.lock"
 
     with _sqlite_migration_lock(url):
         assert lock_file.exists()

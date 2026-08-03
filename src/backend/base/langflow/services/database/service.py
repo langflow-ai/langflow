@@ -156,7 +156,13 @@ def _sqlite_migration_lock(database_url: str):
         yield
         return
 
-    lock_path = db_path.with_suffix(".migration.lock")
+    # Append rather than replace the suffix: ``langflow.db`` ->
+    # ``langflow.db.migration.lock``. with_suffix() would drop the ``.db`` and
+    # give ``langflow.migration.lock``, which (a) escapes the ``*.db*``
+    # gitignore rule that already covers the -wal/-shm sidecars, so the file
+    # gets committed by accident, and (b) collides when one directory holds
+    # both ``foo.db`` and ``foo.sqlite``.
+    lock_path = db_path.with_name(db_path.name + ".migration.lock")
     timeout = _migration_lock_timeout_s()
     lock = FileLock(str(lock_path), timeout=timeout)
     try:
