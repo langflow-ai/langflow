@@ -6,6 +6,7 @@ This module tests the check_key function behavior when:
 """
 
 import secrets
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -17,6 +18,16 @@ from langflow.services.database.models.api_key.crud import (
     check_key,
 )
 from langflow.services.database.models.user.model import User
+
+
+def _scope_for_session(session):
+    """Return an owned-session scope backed by the supplied test session."""
+
+    @asynccontextmanager
+    async def scope():
+        yield session
+
+    return scope
 
 
 @pytest.fixture
@@ -97,7 +108,11 @@ class TestCheckKeyRouting:
                 return_value=mock_settings_service_db,
             ),
             patch(
-                "langflow.services.database.models.api_key.crud._check_key_from_db_in_isolated_session",
+                "langflow.services.database.models.api_key.crud.session_scope",
+                new=_scope_for_session(mock_session),
+            ),
+            patch(
+                "langflow.services.database.models.api_key.crud._check_key_from_db_with_context",
                 new_callable=AsyncMock,
             ) as mock_db_check,
             patch(
@@ -107,9 +122,9 @@ class TestCheckKeyRouting:
         ):
             mock_db_check.return_value = None
 
-            await check_key(mock_session, "sk-test-key")
+            await check_key("sk-test-key")
 
-            mock_db_check.assert_called_once()
+            mock_db_check.assert_awaited_once_with(mock_session, "sk-test-key", mock_settings_service_db)
             mock_env_check.assert_not_called()
 
     @pytest.mark.asyncio
@@ -122,7 +137,11 @@ class TestCheckKeyRouting:
                 return_value=mock_settings_service_env,
             ),
             patch(
-                "langflow.services.database.models.api_key.crud._check_key_from_db_in_isolated_session",
+                "langflow.services.database.models.api_key.crud.session_scope",
+                new=_scope_for_session(mock_session),
+            ),
+            patch(
+                "langflow.services.database.models.api_key.crud._check_key_from_db_with_context",
                 new_callable=AsyncMock,
             ) as mock_db_check,
             patch(
@@ -132,9 +151,9 @@ class TestCheckKeyRouting:
         ):
             mock_env_check.return_value = mock_user
 
-            result = await check_key(mock_session, "sk-test-key")
+            result = await check_key("sk-test-key")
 
-            mock_env_check.assert_called_once()
+            mock_env_check.assert_awaited_once_with(mock_session, "sk-test-key", mock_settings_service_env)
             mock_db_check.assert_not_called()
             assert result == mock_user
 
@@ -148,7 +167,11 @@ class TestCheckKeyRouting:
                 return_value=mock_settings_service_env,
             ),
             patch(
-                "langflow.services.database.models.api_key.crud._check_key_from_db_in_isolated_session",
+                "langflow.services.database.models.api_key.crud.session_scope",
+                new=_scope_for_session(mock_session),
+            ),
+            patch(
+                "langflow.services.database.models.api_key.crud._check_key_from_db_with_context",
                 new_callable=AsyncMock,
             ) as mock_db_check,
             patch(
@@ -159,10 +182,10 @@ class TestCheckKeyRouting:
             mock_env_check.return_value = None  # env validation fails
             mock_db_check.return_value = ApiKeyAuthResult(user=mock_user, api_key_source="db")
 
-            result = await check_key(mock_session, "sk-test-key")
+            result = await check_key("sk-test-key")
 
-            mock_env_check.assert_called_once()
-            mock_db_check.assert_called_once()  # Should fallback to db
+            mock_env_check.assert_awaited_once_with(mock_session, "sk-test-key", mock_settings_service_env)
+            mock_db_check.assert_awaited_once_with(mock_session, "sk-test-key", mock_settings_service_env)
             assert result == mock_user
 
     @pytest.mark.asyncio
@@ -174,7 +197,11 @@ class TestCheckKeyRouting:
                 return_value=mock_settings_service_env,
             ),
             patch(
-                "langflow.services.database.models.api_key.crud._check_key_from_db_in_isolated_session",
+                "langflow.services.database.models.api_key.crud.session_scope",
+                new=_scope_for_session(mock_session),
+            ),
+            patch(
+                "langflow.services.database.models.api_key.crud._check_key_from_db_with_context",
                 new_callable=AsyncMock,
             ) as mock_db_check,
             patch(
@@ -185,10 +212,10 @@ class TestCheckKeyRouting:
             mock_env_check.return_value = None  # env validation fails
             mock_db_check.return_value = None  # db validation also fails
 
-            result = await check_key(mock_session, "sk-test-key")
+            result = await check_key("sk-test-key")
 
-            mock_env_check.assert_called_once()
-            mock_db_check.assert_called_once()
+            mock_env_check.assert_awaited_once_with(mock_session, "sk-test-key", mock_settings_service_env)
+            mock_db_check.assert_awaited_once_with(mock_session, "sk-test-key", mock_settings_service_env)
             assert result is None
 
 
@@ -436,10 +463,14 @@ class TestCheckKeyIntegration:
                 "langflow.services.database.models.user.crud.get_user_by_username",
                 new_callable=AsyncMock,
             ) as mock_get_user,
+            patch(
+                "langflow.services.database.models.api_key.crud.session_scope",
+                new=_scope_for_session(mock_session),
+            ),
         ):
             mock_get_user.return_value = mock_superuser
 
-            result = await check_key(mock_session, "sk-env-secret")
+            result = await check_key("sk-env-secret")
 
             assert result == mock_superuser
 
@@ -460,12 +491,16 @@ class TestCheckKeyIntegration:
                 return_value=mock_settings,
             ),
             patch(
-                "langflow.services.database.models.api_key.crud._check_key_from_db_in_isolated_session",
+                "langflow.services.database.models.api_key.crud.session_scope",
+                new=_scope_for_session(mock_session),
+            ),
+            patch(
+                "langflow.services.database.models.api_key.crud._check_key_from_db_with_context",
                 new=AsyncMock(return_value=None),
             ),
         ):
             # Key doesn't match env AND not in db
-            result = await check_key(mock_session, "sk-wrong-key")
+            result = await check_key("sk-wrong-key")
 
             # Should return None since both failed
             assert result is None

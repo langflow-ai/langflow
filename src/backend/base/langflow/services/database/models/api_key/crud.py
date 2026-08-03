@@ -3,21 +3,21 @@ import datetime
 import hashlib
 import os
 import secrets
+from collections.abc import Callable
+from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cryptography.fernet import InvalidToken
 from lfx.log.logger import logger
-from sqlalchemy.ext.asyncio import AsyncConnection
-from sqlalchemy.pool import StaticPool
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from sqlmodel.sql.expression import SelectOfScalar
@@ -30,6 +30,9 @@ class ApiKeyAuthResult:
     user: User
     api_key_source: str
     api_key_id: UUID | None = None
+
+
+SessionScopeFactory = Callable[[], AbstractAsyncContextManager[AsyncSession]]
 
 
 def hash_api_key(api_key: str) -> str:
@@ -127,7 +130,7 @@ async def delete_api_key(session: AsyncSession, api_key_id: UUID, user_id: UUID)
     await session.delete(api_key)
 
 
-async def check_key(session: AsyncSession, api_key: str) -> User | None:
+async def check_key(api_key: str) -> User | None:
     """Check if the API key is valid.
 
     Validates API keys based on the LANGFLOW_API_KEY_SOURCE setting:
@@ -135,21 +138,36 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
     - 'env': Validates against the LANGFLOW_API_KEY environment variable,
              falls back to database if env validation fails
     """
-    settings_service = get_settings_service()
-    api_key_source = settings_service.auth_settings.API_KEY_SOURCE
-
-    if api_key_source == "env":
-        user = await _check_key_from_env(session, api_key, settings_service)
-        if user is not None:
-            return user
-        # Fallback to database if env validation fails
-    result = await _check_key_from_db_in_isolated_session(session, api_key, settings_service)
+    result = await authenticate_api_key(api_key)
     return result.user if result is not None else None
 
 
-async def authenticate_api_key(session: AsyncSession, api_key: str) -> ApiKeyAuthResult | None:
-    """Validate an API key and return the user plus non-secret key metadata."""
+async def authenticate_api_key(api_key: str) -> ApiKeyAuthResult | None:
+    """Validate an API key in an owned transaction and return non-secret metadata."""
+    return await _authenticate_api_key_in_owned_scope(api_key, session_scope)
+
+
+async def _authenticate_api_key_in_owned_scope(
+    api_key: str,
+    scope_factory: SessionScopeFactory,
+) -> ApiKeyAuthResult | None:
+    """Authenticate and durably persist bookkeeping in a top-level transaction."""
     settings_service = get_settings_service()
+    async with scope_factory() as auth_session:
+        result = await _authenticate_api_key_with_session(auth_session, api_key, settings_service)
+        if result is not None and result.user in auth_session:
+            # Keep scalar user fields available after the owned scope commits and
+            # closes, independent of the session maker's expire_on_commit value.
+            auth_session.expunge(result.user)
+        return result
+
+
+async def _authenticate_api_key_with_session(
+    session: AsyncSession,
+    api_key: str,
+    settings_service,
+) -> ApiKeyAuthResult | None:
+    """Transaction-local API-key authentication implementation."""
     api_key_source = settings_service.auth_settings.API_KEY_SOURCE
 
     if api_key_source == "env":
@@ -157,41 +175,7 @@ async def authenticate_api_key(session: AsyncSession, api_key: str) -> ApiKeyAut
         if user is not None:
             return ApiKeyAuthResult(user=user, api_key_source="env")
         # Fallback to database if env validation fails
-    return await _check_key_from_db_in_isolated_session(session, api_key, settings_service)
-
-
-async def _check_key_from_db_in_isolated_session(
-    caller_session: AsyncSession,
-    api_key: str,
-    settings_service,
-) -> ApiKeyAuthResult | None:
-    """Authenticate a database API key without committing the caller's session."""
-    bind = caller_session.bind
-    if bind is None:
-        msg = "API key authentication requires a bound database session"
-        raise RuntimeError(msg)
-
-    if isinstance(bind, AsyncConnection) or isinstance(bind.sync_engine.pool, StaticPool):
-        # A single physical connection cannot provide an independent transaction.
-        # Keep bookkeeping in the caller's transaction, but never commit it here.
-        return await _check_key_from_db_with_context(caller_session, api_key, settings_service)
-
-    async with AsyncSession(bind=bind, expire_on_commit=False) as auth_session:
-        result = await _check_key_from_db_with_context(auth_session, api_key, settings_service)
-        if result is None:
-            return None
-        user_id = result.user.id
-        api_key_source = result.api_key_source
-        api_key_id = result.api_key_id
-        await auth_session.commit()
-
-    # Preserve the existing contract that the returned User belongs to the
-    # caller's session without flushing or committing any caller-owned state.
-    with caller_session.no_autoflush:
-        user = await caller_session.get(User, user_id)
-    if user is None:
-        return None
-    return ApiKeyAuthResult(user=user, api_key_source=api_key_source, api_key_id=api_key_id)
+    return await _check_key_from_db_with_context(session, api_key, settings_service)
 
 
 async def _external_access_ceiling_blocks_user(session: AsyncSession, user: User, settings_service) -> bool:
@@ -253,7 +237,7 @@ async def _check_key_from_db_with_context(
         # authentication (missing user or blocked external user) does not bump
         # total_uses / last_used_at.
         user = await session.get(User, api_key_obj.user_id)
-        if user is None:
+        if user is None or not user.is_active:
             return None
         if await _external_access_ceiling_blocks_user(session, user, settings_service):
             logger.info("API key rejected for externally managed user while external access ceiling is enabled")
@@ -298,7 +282,7 @@ async def _check_key_from_db_with_context(
             # backfill so a denied authentication (missing user or blocked
             # external user) does not bump total_uses / last_used_at.
             user = await session.get(User, api_key_obj.user_id)
-            if user is None:
+            if user is None or not user.is_active:
                 return None
             if await _external_access_ceiling_blocks_user(session, user, settings_service):
                 logger.info("API key rejected for externally managed user while external access ceiling is enabled")
