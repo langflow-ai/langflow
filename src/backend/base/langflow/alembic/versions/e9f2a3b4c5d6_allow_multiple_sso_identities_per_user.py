@@ -1,6 +1,6 @@
 """update SSO identity, connection, and protocol contracts
 
-Revision ID: e8f1a2b3c4d5
+Revision ID: e9f2a3b4c5d6
 Revises: b7d5f9a3c2e4
 Create Date: 2026-07-29
 
@@ -17,8 +17,8 @@ from alembic import op
 from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
-revision: str = "e8f1a2b3c4d5"
-down_revision: str | None = "b7d5f9a3c2e4"
+revision: str = "e9f2a3b4c5d6"  # pragma: allowlist secret
+down_revision: str | None = "b7d5f9a3c2e4"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

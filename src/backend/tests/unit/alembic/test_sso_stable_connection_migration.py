@@ -11,9 +11,9 @@ from alembic import command
 from .test_migration_execution import _engine_url, _make_alembic_cfg, db_url  # noqa: F401
 
 _PRIOR_REVISION = "b7d5f9a3c2e4"  # pragma: allowlist secret
-_REVISION = "e8f1a2b3c4d5"  # pragma: allowlist secret
+_REVISION = "e9f2a3b4c5d6"  # pragma: allowlist secret
 _SLUG_INDEX = "uq_sso_config_slug"
-_TEST_PASSWORD = "hashed"  # noqa: S105
+_TEST_PASSWORD = "hashed"  # noqa: S105  # pragma: allowlist secret
 
 
 def test_sso_connection_identity_upgrade_and_downgrade_preserve_seeded_rows(db_url):  # noqa: F811

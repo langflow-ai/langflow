@@ -11,12 +11,12 @@ from alembic import command
 from .test_migration_execution import _engine_url, _make_alembic_cfg, db_url  # noqa: F401
 
 _PRIOR_REVISION = "b7d5f9a3c2e4"  # pragma: allowlist secret
-_REVISION = "e8f1a2b3c4d5"  # pragma: allowlist secret
-_TEST_PASSWORD = "hashed"  # noqa: S105
+_REVISION = "e9f2a3b4c5d6"  # pragma: allowlist secret
+_TEST_PASSWORD = "hashed"  # noqa: S105  # pragma: allowlist secret
 # Must be a structurally valid client-secret envelope. The revision clears any
 # value that is not one: pre-encryption rows held plaintext, and the model now
 # rejects non-envelope values. See _sanitize_legacy_client_secrets.
-_TEST_ENCRYPTED_SECRET = "lf-sso:v1:hkdf-sha256-v1:aes-256-gcm:AAAAAAAAAAAAAAAA:BBBBBBBBBBBBBBBBBBBBBBBB"  # noqa: S105
+_TEST_ENCRYPTED_SECRET = "lf-sso:v1:hkdf-sha256-v1:aes-256-gcm:AAAAAAAAAAAAAAAA:BBBBBBBBBBBBBBBBBBBBBBBB"  # noqa: S105  # pragma: allowlist secret
 _PROVIDER_SETTING_COLUMNS = {
     "discovery_url",
     "redirect_uri",

@@ -13,11 +13,11 @@ from sqlalchemy.exc import IntegrityError
 from .test_migration_execution import _engine_url, _make_alembic_cfg, db_url  # noqa: F401
 
 _PRIOR_REVISION = "b7d5f9a3c2e4"  # pragma: allowlist secret
-_REVISION = "e8f1a2b3c4d5"  # pragma: allowlist secret
+_REVISION = "e9f2a3b4c5d6"  # pragma: allowlist secret
 _USER_ID_INDEX = "ix_sso_user_profile_user_id"
 _USER_PROVIDER_INDEX = "uq_sso_user_profile_user_provider"
 _PROVIDER_IDENTITY_INDEX = "uq_sso_user_profile_provider_user"
-_TEST_PASSWORD = "hashed"  # noqa: S105
+_TEST_PASSWORD = "hashed"  # noqa: S105  # pragma: allowlist secret
 
 
 def _profile_values(
