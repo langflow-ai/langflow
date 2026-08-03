@@ -1,13 +1,21 @@
 import pytest
 from lfx.custom.custom_component.component import Component
 from lfx.graph.graph.base import Graph
-from lfx.inputs.inputs import BoolInput, FloatInput, IntInput, MessageTextInput, StrInput
+from lfx.inputs.inputs import (
+    BoolInput,
+    DataFrameInput,
+    FloatInput,
+    HandleInput,
+    IntInput,
+    MessageTextInput,
+    StrInput,
+)
 from lfx.schema.data import Data
 from lfx.template import Output
 
 PROBE_CODE = """
 from lfx.custom.custom_component.component import Component
-from lfx.inputs.inputs import BoolInput, IntInput, MessageTextInput
+from lfx.inputs.inputs import BoolInput, DataFrameInput, HandleInput, IntInput, MessageTextInput
 from lfx.schema.data import Data
 from lfx.template import Output
 
@@ -21,6 +29,8 @@ class DefaultsProbe(Component):
         IntInput(name="retries", display_name="Retries", value=0, required=False),
         BoolInput(name="dry_run", display_name="Dry run", value=False, required=False),
         MessageTextInput(name="kept", display_name="Kept", value="keep-me", required=False),
+        HandleInput(name="signal", display_name="Signal", input_types=["Data"], required=False),
+        DataFrameInput(name="right_dataframe", display_name="Right dataframe", required=False),
     ]
     outputs = [Output(display_name="Seen", name="seen", method="build")]
 
@@ -31,6 +41,8 @@ class DefaultsProbe(Component):
                 "retries": self.retries,
                 "dry_run": self.dry_run,
                 "kept": self.kept,
+                "signal": self.signal,
+                "right_dataframe": self.right_dataframe,
             }
         )
 """
@@ -49,6 +61,7 @@ class FalsyDefaultsComponent(Component):
         FloatInput(name="zero_float", display_name="Zero float", value=0.0),
         BoolInput(name="false_bool", display_name="False bool", value=False),
         BoolInput(name="true_bool", display_name="True bool", value=True),
+        StrInput(name="empty_list", display_name="Empty list", is_list=True, value=[]),
     ]
     outputs = [Output(display_name="Out", name="out", method="build")]
 
@@ -67,6 +80,7 @@ class FalsyDefaultsComponent(Component):
         ("zero_float", 0.0),
         ("false_bool", False),
         ("true_bool", True),
+        ("empty_list", []),
     ],
 )
 def test_should_keep_declared_default_when_field_missing_from_params(field_name, expected):
@@ -78,6 +92,44 @@ def test_should_keep_declared_default_when_field_missing_from_params(field_name,
     value = getattr(component, field_name)
     assert value == expected
     assert type(value) is type(expected)
+
+
+class ConnectionInputsComponent(Component):
+    display_name = "Connection Inputs"
+    name = "ConnectionInputsComponent"
+
+    inputs = [
+        HandleInput(name="signal", display_name="Signal", input_types=["Data"], required=False),
+        DataFrameInput(name="right_dataframe", display_name="Right dataframe", required=False),
+        IntInput(name="undeclared_int", display_name="Undeclared int", required=False),
+    ]
+    outputs = [Output(display_name="Out", name="out", method="build")]
+
+    def build(self) -> Data:
+        return Data(data={})
+
+
+@pytest.mark.parametrize("field_name", ["signal", "right_dataframe", "undeclared_int"])
+def test_should_keep_none_for_inputs_without_a_declared_default(field_name):
+    """`BaseInputMixin.value = ""` is a placeholder, not a default: nothing supplied stays None."""
+    component = ConnectionInputsComponent()
+    component.map_inputs(ConnectionInputsComponent.inputs)
+
+    component.set_attributes({})
+
+    assert getattr(component, field_name) is None
+
+
+def test_should_not_break_consumers_that_branch_on_a_missing_dataframe():
+    """Regression: `right_dataframe == ""` made merge_dataframes raise on `str.copy()`."""
+    from lfx.components.processing.dataframe_operations import DataFrameOperationsComponent
+    from lfx.schema.dataframe import DataFrame
+
+    component = DataFrameOperationsComponent()
+    component.set_attributes({"left_dataframe": DataFrame({"a": [1, 2]}), "operation": "Merge"})
+
+    assert component.right_dataframe is None
+    assert component.merge_dataframes().to_dict("records") == [{"a": 1}, {"a": 2}]
 
 
 def test_should_not_override_supplied_param_with_declared_default():
@@ -114,3 +166,5 @@ async def test_should_keep_falsy_defaults_when_stored_template_omits_fields():
     assert seen["retries"] == 0
     assert seen["dry_run"] is False
     assert seen["kept"] == "keep-me"
+    assert seen["signal"] is None
+    assert seen["right_dataframe"] is None
