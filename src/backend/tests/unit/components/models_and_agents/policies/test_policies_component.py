@@ -12,6 +12,8 @@ from lfx.components.models_and_agents.policies_component import (
     PoliciesComponent,
 )
 
+from tests.base import ComponentTestBaseWithoutClient
+
 
 @pytest.fixture
 def mock_tool():
@@ -71,45 +73,58 @@ def _generated_guard_field(name: str, value: str) -> dict:
     }
 
 
-@pytest.mark.asyncio
-async def test_component_update_preserves_only_generated_guard_fields(mock_component):
-    """A Breaking component update must retain guard code stored in the flow."""
-    result_field = _generated_guard_field("result.json", "persisted result")
-    guard_field = _generated_guard_field("test_project/guard.py", "persisted guard")
-    current_frontend_node = {
-        "display_name": "Policies",
-        "template": {
-            "code": {"type": "code", "value": "old component code"},
-            "project": {"type": "str", "value": "test_project"},
-            "removed_input": {"type": "str", "value": "do not preserve"},
-            "dynamic_lookalike": {
-                "type": "code",
-                "dynamic": True,
-                "info": "User-defined dynamic code",
-                "value": "do not preserve",
+class TestPoliciesComponent(ComponentTestBaseWithoutClient):
+    @pytest.fixture
+    def component_class(self):
+        return PoliciesComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        return {"enabled": False, "in_tools": []}
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        return []
+
+    async def test_component_update_preserves_only_generated_guard_fields(self, component_class, default_kwargs):
+        """A Breaking component update must retain guard code stored in the flow."""
+        component = await self.component_setup(component_class, default_kwargs)
+        result_field = _generated_guard_field("result.json", "persisted result")
+        guard_field = _generated_guard_field("test_project/guard.py", "persisted guard")
+        current_frontend_node = {
+            "display_name": "Policies",
+            "template": {
+                "code": {"type": "code", "value": "old component code"},
+                "project": {"type": "str", "value": "test_project"},
+                "removed_input": {"type": "str", "value": "do not preserve"},
+                "dynamic_lookalike": {
+                    "type": "code",
+                    "dynamic": True,
+                    "info": "User-defined dynamic code",
+                    "value": "do not preserve",
+                },
+                "result.json": result_field,
+                "test_project/guard.py": guard_field,
             },
-            "result.json": result_field,
-            "test_project/guard.py": guard_field,
-        },
-    }
-    new_frontend_node = {
-        "display_name": "Policies",
-        "template": {
-            "code": {"type": "code", "value": "new component code"},
-            "project": {"type": "str", "value": "my_project"},
-            "new_input": {"type": "str", "value": "new default"},
-        },
-    }
+        }
+        new_frontend_node = {
+            "display_name": "Policies",
+            "template": {
+                "code": {"type": "code", "value": "new component code"},
+                "project": {"type": "str", "value": "my_project"},
+                "new_input": {"type": "str", "value": "new default"},
+            },
+        }
 
-    with patch.object(PoliciesComponent, "_import_toolguard", side_effect=ImportError) as mock_import:
-        result = await mock_component.update_frontend_node(new_frontend_node, current_frontend_node)
+        with patch.object(PoliciesComponent, "_import_toolguard", side_effect=ImportError) as mock_import:
+            result = await component.update_frontend_node(new_frontend_node, current_frontend_node)
 
-    mock_import.assert_not_called()
-    assert result["template"]["result.json"] == result_field
-    assert result["template"]["test_project/guard.py"] == guard_field
-    assert "removed_input" not in result["template"]
-    assert "dynamic_lookalike" not in result["template"]
-    assert result["template"]["new_input"]["value"] == "new default"
+        mock_import.assert_not_called()
+        assert result["template"]["result.json"] == result_field
+        assert result["template"]["test_project/guard.py"] == guard_field
+        assert "removed_input" not in result["template"]
+        assert "dynamic_lookalike" not in result["template"]
+        assert result["template"]["new_input"]["value"] == "new default"
 
 
 @pytest.mark.asyncio
