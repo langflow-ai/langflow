@@ -1314,6 +1314,7 @@ class Component(CustomComponent):
     async def _build_results(self) -> tuple[dict, dict]:
         results, artifacts = {}, {}
 
+        self._ensure_code_execution_policy()
         self._pre_run_setup_if_needed()
         self._handle_tool_mode()
 
@@ -1326,6 +1327,16 @@ class Component(CustomComponent):
 
         self._finalize_results(results, artifacts)
         return results, artifacts
+
+    def _ensure_code_execution_policy(self) -> None:
+        """Enforce server policy before a registered code-execution component runs."""
+        # Keep these imports local because Component is foundational and flow validation
+        # imports component-loading helpers that eventually depend on this module.
+        from lfx.utils.flow_validation import is_code_execution_component
+        from lfx.utils.python_repl_security import ensure_code_execution_enabled
+
+        if is_code_execution_component(type(self).__name__, self.name, self.display_name):
+            ensure_code_execution_enabled()
 
     def _pre_run_setup_if_needed(self):
         if hasattr(self, "_pre_run_setup"):
