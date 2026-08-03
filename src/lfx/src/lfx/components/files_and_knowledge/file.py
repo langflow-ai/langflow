@@ -16,7 +16,9 @@ import json
 import subprocess
 import sys
 import textwrap
+import threading
 import time
+from contextvars import ContextVar
 from copy import deepcopy
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -28,12 +30,80 @@ from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_
 from lfx.inputs import SortableListInput
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
 from lfx.io import BoolInput, FileInput, IntInput, Output, SecretStrInput
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame  # noqa: TC001
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.validate_cloud import is_astra_cloud_environment
+
+_FILE_TOOL_CANCEL_EVENT: ContextVar[threading.Event | None] = ContextVar("file_tool_cancel_event", default=None)
+_FILE_TOOL_CANCEL_WAIT_SECONDS = 6
+_FILE_TOOL_MAX_CONCURRENT_LOADS = 4
+_FILE_TOOL_LIMITER_ATTRIBUTE = "_lfx_file_tool_load_limiter"
+_FILE_TOOL_PROCESS_REAP_SECONDS = 2
+
+
+class _FileToolCancelledError(RuntimeError):
+    """Stop synchronous file loading after its async tool call is cancelled."""
+
+
+def _raise_if_file_tool_cancelled(cancel_event: threading.Event | None = None) -> None:
+    event = cancel_event or _FILE_TOOL_CANCEL_EVENT.get()
+    if event is not None and event.is_set():
+        raise _FileToolCancelledError
+
+
+def _kill_and_reap_process(proc: subprocess.Popen) -> None:
+    try:
+        proc.kill()
+    except ProcessLookupError:
+        pass
+    except OSError:
+        logger.exception("Failed to kill cancelled Docling subprocess")
+    except Exception:  # noqa: BLE001 - cleanup must not mask the caller's cancellation
+        logger.exception("Unexpected error while killing cancelled Docling subprocess")
+
+    try:
+        proc.communicate(timeout=_FILE_TOOL_PROCESS_REAP_SECONDS)
+    except subprocess.TimeoutExpired:
+        logger.warning("Timed out draining cancelled Docling subprocess; waiting for process exit")
+    except OSError:
+        logger.exception("Failed to drain cancelled Docling subprocess")
+    except Exception:  # noqa: BLE001 - cleanup must not mask the caller's cancellation
+        logger.exception("Unexpected error while draining cancelled Docling subprocess")
+    else:
+        return
+
+    try:
+        proc.wait(timeout=_FILE_TOOL_PROCESS_REAP_SECONDS)
+    except subprocess.TimeoutExpired:
+        logger.exception("Cancelled Docling subprocess could not be reaped within the cleanup timeout")
+    except OSError:
+        logger.exception("Failed to reap cancelled Docling subprocess")
+    except Exception:  # noqa: BLE001 - cleanup must not mask the caller's cancellation
+        logger.exception("Unexpected error while reaping cancelled Docling subprocess")
+
+
+def _get_file_tool_limiter() -> asyncio.Semaphore:
+    """Return the bounded loader admission gate for the current event loop."""
+    loop = asyncio.get_running_loop()
+    limiter = getattr(loop, _FILE_TOOL_LIMITER_ATTRIBUTE, None)
+    if limiter is None:
+        limiter = asyncio.Semaphore(_FILE_TOOL_MAX_CONCURRENT_LOADS)
+        setattr(loop, _FILE_TOOL_LIMITER_ATTRIBUTE, limiter)
+    return limiter
+
+
+def _log_abandoned_file_tool_result(task: asyncio.Task) -> None:
+    """Observe unexpected failures from a synchronous loader that outlived its caller."""
+    try:
+        error = task.exception()
+    except asyncio.CancelledError:
+        return
+    if error is not None and not isinstance(error, _FileToolCancelledError):
+        logger.error("Abandoned file loader failed after its tool call was cancelled", exc_info=error)
 
 
 def _get_storage_location_options():
@@ -317,6 +387,8 @@ class FileComponent(BaseFileComponent):
 
         async def read_files_tool() -> str:
             """Read the content of uploaded files."""
+            cancel_event = threading.Event()
+            cancel_token = _FILE_TOOL_CANCEL_EVENT.set(cancel_event)
             try:
                 if getattr(self, "advanced_mode", False):
                     # In advanced mode, use the markdown output path so that the
@@ -329,8 +401,38 @@ class FileComponent(BaseFileComponent):
                     loader = self.load_files_message
                 # Both loaders are blocking (file IO plus, in advanced mode, a Docling
                 # subprocess). Run them off the event loop so streaming/heartbeats on
-                # the same loop keep flowing while the agent waits for this tool.
-                result = await asyncio.to_thread(loader)
+                # the same loop keep flowing while the agent waits for this tool. Keep
+                # admission bounded until the real worker exits so cancelled standard
+                # parsers cannot build an unbounded default-executor backlog.
+                load_limiter = _get_file_tool_limiter()
+                await load_limiter.acquire()
+                try:
+                    loader_task = asyncio.create_task(asyncio.to_thread(loader))
+                except BaseException:
+                    load_limiter.release()
+                    raise
+                loader_task.add_done_callback(lambda _task: load_limiter.release())
+                try:
+                    result = await asyncio.shield(loader_task)
+                except asyncio.CancelledError:
+                    cancel_event.set()
+                    # Give cooperative cleanup time to kill/reap Docling and remove
+                    # temporary files before releasing this tool invocation.
+                    try:
+                        await asyncio.wait_for(
+                            asyncio.shield(loader_task),
+                            timeout=_FILE_TOOL_CANCEL_WAIT_SECONDS,
+                        )
+                    except _FileToolCancelledError:
+                        pass
+                    except asyncio.TimeoutError:
+                        pass
+                    except Exception:  # noqa: BLE001 - cancellation stays dominant over loader cleanup
+                        logger.exception("File loader failed while cleaning up a cancelled tool call")
+                    finally:
+                        if not loader_task.done():
+                            loader_task.add_done_callback(_log_abandoned_file_tool_result)
+                    raise
                 if hasattr(result, "get_text"):
                     return result.get_text()
                 if hasattr(result, "text"):
@@ -338,6 +440,8 @@ class FileComponent(BaseFileComponent):
                 return str(result)
             except (FileNotFoundError, ValueError, OSError, RuntimeError) as e:
                 return f"Error reading files: {e}"
+            finally:
+                _FILE_TOOL_CANCEL_EVENT.reset(cancel_token)
 
         description = self.get_tool_description()
 
@@ -807,6 +911,8 @@ class FileComponent(BaseFileComponent):
         if not file_path:
             return None
 
+        cancel_event = _FILE_TOOL_CANCEL_EVENT.get()
+        _raise_if_file_tool_cancelled(cancel_event)
         settings = get_settings_service().settings
         if settings.storage_type == "s3":
             local_path, should_delete = run_until_complete(self._get_local_file_for_docling(file_path))
@@ -815,6 +921,7 @@ class FileComponent(BaseFileComponent):
             should_delete = False
 
         try:
+            _raise_if_file_tool_cancelled(cancel_event)
             return self._process_docling_subprocess_impl(local_path, file_path)
         finally:
             # Clean up temp file if we created one
@@ -1051,32 +1158,39 @@ class FileComponent(BaseFileComponent):
 
         start = time.monotonic()
         input_bytes: bytes | None = json.dumps(args).encode("utf-8")
-        while True:
-            elapsed = time.monotonic() - start
-            if elapsed >= docling_timeout:
-                proc.kill()
-                proc.communicate()
-                return Data(
-                    data={
-                        "error": (
-                            f"Docling processing timed out after {docling_timeout}s. "
-                            "Consider using the standalone Docling component for large documents."
-                        ),
-                        "file_path": original_file_path,
-                    },
-                )
-            try:
-                stdout_bytes, stderr_bytes = proc.communicate(
-                    input=input_bytes,
-                    timeout=min(poll_interval, docling_timeout - elapsed),
-                )
-                break
-            except subprocess.TimeoutExpired:
-                # communicate() retains partially written input and collected output across
-                # retries, so subsequent calls continue draining without resending stdin.
-                input_bytes = None
+        cancel_event = _FILE_TOOL_CANCEL_EVENT.get()
+        try:
+            while True:
+                _raise_if_file_tool_cancelled(cancel_event)
                 elapsed = time.monotonic() - start
-                self.log(f"Docling processing in progress ({int(elapsed)}s elapsed)...")
+                if elapsed >= docling_timeout:
+                    proc.kill()
+                    proc.communicate()
+                    return Data(
+                        data={
+                            "error": (
+                                f"Docling processing timed out after {docling_timeout}s. "
+                                "Consider using the standalone Docling component for large documents."
+                            ),
+                            "file_path": original_file_path,
+                        },
+                    )
+                try:
+                    stdout_bytes, stderr_bytes = proc.communicate(
+                        input=input_bytes,
+                        timeout=min(poll_interval, docling_timeout - elapsed),
+                    )
+                    _raise_if_file_tool_cancelled(cancel_event)
+                    break
+                except subprocess.TimeoutExpired:
+                    # communicate() retains partially written input and collected output across
+                    # retries, so subsequent calls continue draining without resending stdin.
+                    input_bytes = None
+                    elapsed = time.monotonic() - start
+                    self.log(f"Docling processing in progress ({int(elapsed)}s elapsed)...")
+        finally:
+            if (cancel_event is not None and cancel_event.is_set()) or proc.poll() is None:
+                _kill_and_reap_process(proc)
 
         if not stdout_bytes:
             err_msg = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else "no output from child process"
@@ -1123,6 +1237,8 @@ class FileComponent(BaseFileComponent):
         - advanced_mode => Docling in a separate process.
         - Otherwise => standard parsing in current process (optionally threaded).
         """
+        cancel_event = _FILE_TOOL_CANCEL_EVENT.get()
+        _raise_if_file_tool_cancelled(cancel_event)
         if not file_list:
             msg = "No files to process."
             raise ValueError(msg)
@@ -1132,6 +1248,7 @@ class FileComponent(BaseFileComponent):
         image_extensions = {"jpeg", "jpg", "png", "gif", "webp", "bmp", "tiff"}
         settings = get_settings_service().settings
         for file in file_list:
+            _raise_if_file_tool_cancelled(cancel_event)
             extension = file.path.suffix[1:].lower()
             if extension in image_extensions:
                 # Read bytes based on storage type
@@ -1159,6 +1276,7 @@ class FileComponent(BaseFileComponent):
         # Validate that files requiring Docling are only processed when advanced mode is enabled
         if not self.advanced_mode:
             for file in file_list:
+                _raise_if_file_tool_cancelled(cancel_event)
                 extension = file.path.suffix[1:].lower()
                 if extension in self.DOCLING_ONLY_EXTENSIONS:
                     if is_astra_cloud_environment():
@@ -1176,7 +1294,11 @@ class FileComponent(BaseFileComponent):
 
         def process_file_standard(file_path: str, *, silent_errors: bool = False) -> Data | None:
             try:
-                return parse_text_file_to_data(file_path, silent_errors=silent_errors)
+                _raise_if_file_tool_cancelled(cancel_event)
+                result = parse_text_file_to_data(file_path, silent_errors=silent_errors)
+                _raise_if_file_tool_cancelled(cancel_event)
+            except _FileToolCancelledError:
+                raise
             except FileNotFoundError as e:
                 self.log(f"File not found: {file_path}. Error: {e}")
                 if not silent_errors:
@@ -1187,6 +1309,8 @@ class FileComponent(BaseFileComponent):
                 if not silent_errors:
                     raise
                 return None
+            else:
+                return result
 
         docling_compatible = all(self._is_docling_compatible(str(f.path)) for f in file_list)
 
@@ -1194,8 +1318,10 @@ class FileComponent(BaseFileComponent):
         if self.advanced_mode and docling_compatible:
             final_return: list[BaseFileComponent.BaseFile] = []
             for file in file_list:
+                _raise_if_file_tool_cancelled(cancel_event)
                 file_path = str(file.path)
                 advanced_data: Data | None = self._process_docling_in_subprocess(file_path)
+                _raise_if_file_tool_cancelled(cancel_event)
 
                 # Handle None case - Docling processing failed or returned None
                 if advanced_data is None:
@@ -1274,6 +1400,7 @@ class FileComponent(BaseFileComponent):
             load_function=process_file_standard,
             max_concurrency=concurrency,
         )
+        _raise_if_file_tool_cancelled(cancel_event)
         return self.rollup_data(file_list, my_data)
 
     # ------------------------------ Output helpers -----------------------------------
