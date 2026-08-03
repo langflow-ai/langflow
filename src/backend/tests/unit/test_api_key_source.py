@@ -11,6 +11,7 @@ from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.api_key.crud import (
+    ApiKeyAuthResult,
     _check_key_from_db,
     _check_key_from_env,
     check_key,
@@ -96,7 +97,7 @@ class TestCheckKeyRouting:
                 return_value=mock_settings_service_db,
             ),
             patch(
-                "langflow.services.database.models.api_key.crud._check_key_from_db",
+                "langflow.services.database.models.api_key.crud._check_key_from_db_in_isolated_session",
                 new_callable=AsyncMock,
             ) as mock_db_check,
             patch(
@@ -121,7 +122,7 @@ class TestCheckKeyRouting:
                 return_value=mock_settings_service_env,
             ),
             patch(
-                "langflow.services.database.models.api_key.crud._check_key_from_db",
+                "langflow.services.database.models.api_key.crud._check_key_from_db_in_isolated_session",
                 new_callable=AsyncMock,
             ) as mock_db_check,
             patch(
@@ -147,7 +148,7 @@ class TestCheckKeyRouting:
                 return_value=mock_settings_service_env,
             ),
             patch(
-                "langflow.services.database.models.api_key.crud._check_key_from_db",
+                "langflow.services.database.models.api_key.crud._check_key_from_db_in_isolated_session",
                 new_callable=AsyncMock,
             ) as mock_db_check,
             patch(
@@ -156,7 +157,7 @@ class TestCheckKeyRouting:
             ) as mock_env_check,
         ):
             mock_env_check.return_value = None  # env validation fails
-            mock_db_check.return_value = mock_user  # db has the key
+            mock_db_check.return_value = ApiKeyAuthResult(user=mock_user, api_key_source="db")
 
             result = await check_key(mock_session, "sk-test-key")
 
@@ -173,7 +174,7 @@ class TestCheckKeyRouting:
                 return_value=mock_settings_service_env,
             ),
             patch(
-                "langflow.services.database.models.api_key.crud._check_key_from_db",
+                "langflow.services.database.models.api_key.crud._check_key_from_db_in_isolated_session",
                 new_callable=AsyncMock,
             ) as mock_db_check,
             patch(
@@ -447,20 +448,21 @@ class TestCheckKeyIntegration:
         """Full flow test: env mode with invalid key that's also not in db returns None."""
         monkeypatch.setenv("LANGFLOW_API_KEY", "sk-correct-key")
 
-        # Setup mock for db - key not found
-        mock_result = MagicMock()
-        mock_result.all.return_value = []
-        mock_session.exec = AsyncMock(return_value=mock_result)
-
         mock_settings = MagicMock()
         mock_settings.auth_settings.API_KEY_SOURCE = "env"
         mock_settings.auth_settings.SUPERUSER = "langflow"
         mock_settings.auth_settings.SECRET_KEY.get_secret_value.return_value = "test-secret-key-for-unit-tests"
         mock_settings.settings.disable_track_apikey_usage = False
 
-        with patch(
-            "langflow.services.database.models.api_key.crud.get_settings_service",
-            return_value=mock_settings,
+        with (
+            patch(
+                "langflow.services.database.models.api_key.crud.get_settings_service",
+                return_value=mock_settings,
+            ),
+            patch(
+                "langflow.services.database.models.api_key.crud._check_key_from_db_in_isolated_session",
+                new=AsyncMock(return_value=None),
+            ),
         ):
             # Key doesn't match env AND not in db
             result = await check_key(mock_session, "sk-wrong-key")

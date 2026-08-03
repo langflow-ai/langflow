@@ -186,6 +186,7 @@ async def test_api_key_fallback_rolls_back_failed_token_and_external_state(
     async_session.add(api_user)
     async_session.add(api_key)
     await async_session.commit()
+    api_user_id = api_user.id
 
     auth_service.settings.settings.disable_track_apikey_usage = False
     monkeypatch.setattr(
@@ -227,7 +228,7 @@ async def test_api_key_fallback_rolls_back_failed_token_and_external_state(
     ).first()
     await async_session.refresh(api_key)
 
-    assert result.id == api_user.id
+    assert result.id == api_user_id
     assert persisted_failed_token_user is None
     assert persisted_failed_external_user is None
     assert api_key.total_uses == 1

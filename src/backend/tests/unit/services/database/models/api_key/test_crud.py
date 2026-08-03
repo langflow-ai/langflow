@@ -6,7 +6,7 @@ import hashlib
 import secrets
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -18,6 +18,9 @@ from langflow.services.database.models.api_key.crud import (
 )
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 from langflow.services.database.models.user.model import User
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlmodel import SQLModel
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 _TEST_PASSWORD = "hashed"  # noqa: S105  # pragma: allowlist secret
 
@@ -113,7 +116,7 @@ async def test_check_key_finds_by_hash(async_session, mock_settings):
         created_at=datetime.now(timezone.utc),
     )
     async_session.add(api_key)
-    await async_session.flush()
+    await async_session.commit()
 
     result = await _check_key_from_db(async_session, plaintext, mock_settings)
     assert result is not None
@@ -136,7 +139,7 @@ async def test_authenticate_api_key_returns_db_key_metadata(async_session, mock_
         created_at=datetime.now(timezone.utc),
     )
     async_session.add(api_key)
-    await async_session.flush()
+    await async_session.commit()
 
     result = await authenticate_api_key(async_session, plaintext)
 
@@ -463,7 +466,7 @@ async def _seed_external_user_with_key(async_session, *, provider: str = "extern
             created_at=datetime.now(timezone.utc),
         )
     )
-    await async_session.flush()
+    await async_session.commit()
     return user, plaintext
 
 
@@ -524,7 +527,7 @@ async def test_authenticate_api_key_allows_non_external_user_when_ceiling_enable
             created_at=datetime.now(timezone.utc),
         )
     )
-    await async_session.flush()
+    await async_session.commit()
 
     result = await authenticate_api_key(async_session, plaintext)
     assert result is not None
@@ -599,7 +602,7 @@ async def test_blocked_external_user_legacy_key_does_not_increment_usage(async_s
         created_at=datetime.now(timezone.utc),
     )
     async_session.add(legacy)
-    await async_session.flush()
+    await async_session.commit()
 
     monkeypatch.setattr(
         "langflow.services.database.models.api_key.crud.auth_utils.decrypt_api_key",
@@ -634,11 +637,12 @@ async def test_allowed_user_key_still_increments_usage(async_session, mock_setti
             created_at=datetime.now(timezone.utc),
         )
     )
-    await async_session.flush()
+    await async_session.commit()
 
     result = await authenticate_api_key(async_session, plaintext)
     assert result is not None
 
+    async_session.expire_all()
     row = (await async_session.exec(select(ApiKey).where(ApiKey.api_key_hash == hash_api_key(plaintext)))).first()
     assert row is not None
     assert row.total_uses == 1
@@ -667,81 +671,134 @@ async def _seed_key_for_transaction_test(async_session, *, plaintext: str, hashe
     return api_key
 
 
-def _spy_on_session_writes(async_session, monkeypatch):
-    commit = AsyncMock(wraps=async_session.commit)
-    flush = AsyncMock(wraps=async_session.flush)
-    monkeypatch.setattr(async_session, "commit", commit)
-    monkeypatch.setattr(async_session, "flush", flush)
-    return commit, flush
-
-
+@pytest.mark.parametrize(
+    ("hashed", "disable_tracking", "expected_uses"),
+    [(True, False, 1), (False, True, 0)],
+)
 @pytest.mark.anyio
-async def test_hashed_key_tracking_commits_usage_transaction(async_session, mock_settings, monkeypatch):
-    """Tracked hash-path usage must commit so SQLite releases its write lock."""
-    plaintext = "sk-hashed-tracked"  # pragma: allowlist secret
-    api_key = await _seed_key_for_transaction_test(async_session, plaintext=plaintext, hashed=True)
-    commit, flush = _spy_on_session_writes(async_session, monkeypatch)
+async def test_api_key_bookkeeping_commits_only_its_isolated_session(
+    mock_settings,
+    tmp_path,
+    *,
+    hashed,
+    disable_tracking,
+    expected_uses,
+):
+    """Usage writes and legacy backfills persist without committing caller state."""
+    mock_settings.settings.disable_track_apikey_usage = disable_tracking
+    plaintext = f"sk-isolated-{'hashed' if hashed else 'legacy'}"  # pragma: allowlist secret
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'api-key-isolation.db'}")
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(
+                lambda sync_connection: SQLModel.metadata.create_all(
+                    sync_connection,
+                    tables=[User.__table__, ApiKey.__table__],
+                )
+            )
 
-    result = await _check_key_from_db(async_session, plaintext, mock_settings)
+        async with AsyncSession(engine, expire_on_commit=False) as caller_session:
+            api_key = await _seed_key_for_transaction_test(caller_session, plaintext=plaintext, hashed=hashed)
+            api_key_id = api_key.id
 
-    assert result is not None
-    commit.assert_awaited_once_with()
-    flush.assert_not_awaited()
-    assert api_key.total_uses == 1
-    assert api_key.last_used_at is not None
+            caller_owned_user = _make_user(username=f"caller-owned-{uuid4().hex[:8]}")
+            caller_owned_user_id = caller_owned_user.id
+            caller_session.add(caller_owned_user)
+
+            result = await authenticate_api_key(caller_session, plaintext)
+            assert result is not None
+            assert caller_owned_user in caller_session
+            assert result.user in caller_session
+
+            await caller_session.rollback()
+
+        async with AsyncSession(engine, expire_on_commit=False) as verification_session:
+            persisted_caller_user = await verification_session.get(User, caller_owned_user_id)
+            persisted_api_key = await verification_session.get(ApiKey, api_key_id)
+    finally:
+        await engine.dispose()
+
+    assert persisted_caller_user is None
+    assert persisted_api_key is not None
+    assert persisted_api_key.api_key_hash == hash_api_key(plaintext)
+    assert persisted_api_key.total_uses == expected_uses
+    assert (persisted_api_key.last_used_at is not None) is (expected_uses == 1)
 
 
+@pytest.mark.parametrize(("hashed", "disable_tracking"), [(True, False), (False, True)])
 @pytest.mark.anyio
-async def test_hashed_key_with_tracking_disabled_does_not_write(async_session, mock_settings, monkeypatch):
-    """The hash fast path remains read-only when usage tracking is disabled."""
-    mock_settings.settings.disable_track_apikey_usage = True
-    plaintext = "sk-hashed-untracked"  # pragma: allowlist secret
-    api_key = await _seed_key_for_transaction_test(async_session, plaintext=plaintext, hashed=True)
-    commit, flush = _spy_on_session_writes(async_session, monkeypatch)
-
-    result = await _check_key_from_db(async_session, plaintext, mock_settings)
-
-    assert result is not None
-    commit.assert_not_awaited()
-    flush.assert_not_awaited()
-    assert api_key.total_uses == 0
-    assert api_key.last_used_at is None
-
-
-@pytest.mark.anyio
-async def test_legacy_hashless_key_tracking_commits_usage_and_backfill(async_session, mock_settings, monkeypatch):
-    """Tracked legacy-key usage and its hash backfill commit together."""
-    plaintext = "sk-legacy-tracked"  # pragma: allowlist secret
-    api_key = await _seed_key_for_transaction_test(async_session, plaintext=plaintext, hashed=False)
-    commit, flush = _spy_on_session_writes(async_session, monkeypatch)
-
-    result = await _check_key_from_db(async_session, plaintext, mock_settings)
-
-    assert result is not None
-    commit.assert_awaited_once_with()
-    flush.assert_not_awaited()
-    assert api_key.api_key_hash == hash_api_key(plaintext)
-    assert api_key.total_uses == 1
-    assert api_key.last_used_at is not None
-
-
-@pytest.mark.anyio
-async def test_legacy_hashless_key_with_tracking_disabled_commits_backfill(
+async def test_single_connection_bookkeeping_never_commits_flushed_caller_state(
     async_session,
     mock_settings,
-    monkeypatch,
+    *,
+    hashed,
+    disable_tracking,
 ):
-    """A legacy hash backfill still commits when usage tracking is disabled."""
-    mock_settings.settings.disable_track_apikey_usage = True
-    plaintext = "sk-legacy-untracked"  # pragma: allowlist secret
-    api_key = await _seed_key_for_transaction_test(async_session, plaintext=plaintext, hashed=False)
-    commit, flush = _spy_on_session_writes(async_session, monkeypatch)
+    """StaticPool bookkeeping stays inside the caller-owned transaction."""
+    mock_settings.settings.disable_track_apikey_usage = disable_tracking
+    plaintext = f"sk-single-connection-{'hashed' if hashed else 'legacy'}"  # pragma: allowlist secret
+    api_key = await _seed_key_for_transaction_test(async_session, plaintext=plaintext, hashed=hashed)
+    api_key_id = api_key.id
 
-    result = await _check_key_from_db(async_session, plaintext, mock_settings)
+    caller_owned_user = _make_user(username=f"flushed-caller-{uuid4().hex[:8]}")
+    caller_owned_user_id = caller_owned_user.id
+    async_session.add(caller_owned_user)
+    await async_session.flush()
 
+    result = await authenticate_api_key(async_session, plaintext)
     assert result is not None
-    commit.assert_awaited_once_with()
-    flush.assert_not_awaited()
-    assert api_key.api_key_hash == hash_api_key(plaintext)
-    assert api_key.total_uses == 0
-    assert api_key.last_used_at is None
+
+    await async_session.rollback()
+    async with AsyncSession(bind=async_session.bind, expire_on_commit=False) as verification_session:
+        persisted_caller_user = await verification_session.get(User, caller_owned_user_id)
+        persisted_api_key = await verification_session.get(ApiKey, api_key_id)
+
+    assert persisted_caller_user is None
+    assert persisted_api_key is not None
+    assert persisted_api_key.api_key_hash == (hash_api_key(plaintext) if hashed else None)
+    assert persisted_api_key.total_uses == 0
+    assert persisted_api_key.last_used_at is None
+
+
+@pytest.mark.anyio
+async def test_connection_bound_bookkeeping_never_commits_flushed_caller_state(mock_settings, tmp_path):  # noqa: ARG001
+    """A session bound to one connection keeps bookkeeping caller-owned."""
+    plaintext = "sk-connection-bound"  # pragma: allowlist secret
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'connection-bound.db'}")
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(
+                lambda sync_connection: SQLModel.metadata.create_all(
+                    sync_connection,
+                    tables=[User.__table__, ApiKey.__table__],
+                )
+            )
+
+        async with AsyncSession(engine, expire_on_commit=False) as seed_session:
+            api_key = await _seed_key_for_transaction_test(seed_session, plaintext=plaintext, hashed=True)
+            api_key_id = api_key.id
+
+        async with (
+            engine.connect() as connection,
+            AsyncSession(bind=connection, expire_on_commit=False) as caller_session,
+        ):
+            caller_owned_user = _make_user(username=f"connection-caller-{uuid4().hex[:8]}")
+            caller_owned_user_id = caller_owned_user.id
+            caller_session.add(caller_owned_user)
+            await caller_session.flush()
+
+            result = await authenticate_api_key(caller_session, plaintext)
+            assert result is not None
+
+            await caller_session.rollback()
+
+        async with AsyncSession(engine, expire_on_commit=False) as verification_session:
+            persisted_caller_user = await verification_session.get(User, caller_owned_user_id)
+            persisted_api_key = await verification_session.get(ApiKey, api_key_id)
+    finally:
+        await engine.dispose()
+
+    assert persisted_caller_user is None
+    assert persisted_api_key is not None
+    assert persisted_api_key.total_uses == 0
+    assert persisted_api_key.last_used_at is None

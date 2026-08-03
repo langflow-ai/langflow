@@ -9,6 +9,8 @@ from uuid import UUID
 
 from cryptography.fernet import InvalidToken
 from lfx.log.logger import logger
+from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy.pool import StaticPool
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -141,7 +143,8 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
         if user is not None:
             return user
         # Fallback to database if env validation fails
-    return await _check_key_from_db(session, api_key, settings_service)
+    result = await _check_key_from_db_in_isolated_session(session, api_key, settings_service)
+    return result.user if result is not None else None
 
 
 async def authenticate_api_key(session: AsyncSession, api_key: str) -> ApiKeyAuthResult | None:
@@ -154,7 +157,41 @@ async def authenticate_api_key(session: AsyncSession, api_key: str) -> ApiKeyAut
         if user is not None:
             return ApiKeyAuthResult(user=user, api_key_source="env")
         # Fallback to database if env validation fails
-    return await _check_key_from_db_with_context(session, api_key, settings_service)
+    return await _check_key_from_db_in_isolated_session(session, api_key, settings_service)
+
+
+async def _check_key_from_db_in_isolated_session(
+    caller_session: AsyncSession,
+    api_key: str,
+    settings_service,
+) -> ApiKeyAuthResult | None:
+    """Authenticate a database API key without committing the caller's session."""
+    bind = caller_session.bind
+    if bind is None:
+        msg = "API key authentication requires a bound database session"
+        raise RuntimeError(msg)
+
+    if isinstance(bind, AsyncConnection) or isinstance(bind.sync_engine.pool, StaticPool):
+        # A single physical connection cannot provide an independent transaction.
+        # Keep bookkeeping in the caller's transaction, but never commit it here.
+        return await _check_key_from_db_with_context(caller_session, api_key, settings_service)
+
+    async with AsyncSession(bind=bind, expire_on_commit=False) as auth_session:
+        result = await _check_key_from_db_with_context(auth_session, api_key, settings_service)
+        if result is None:
+            return None
+        user_id = result.user.id
+        api_key_source = result.api_key_source
+        api_key_id = result.api_key_id
+        await auth_session.commit()
+
+    # Preserve the existing contract that the returned User belongs to the
+    # caller's session without flushing or committing any caller-owned state.
+    with caller_session.no_autoflush:
+        user = await caller_session.get(User, user_id)
+    if user is None:
+        return None
+    return ApiKeyAuthResult(user=user, api_key_source=api_key_source, api_key_id=api_key_id)
 
 
 async def _external_access_ceiling_blocks_user(session: AsyncSession, user: User, settings_service) -> bool:
@@ -225,9 +262,7 @@ async def _check_key_from_db_with_context(
             api_key_obj.total_uses += 1
             api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
-            # API-key auth owns this mutation; finish it before a downstream handler
-            # opens a separate SQLite write transaction in the same request.
-            await session.commit()
+            await session.flush()
         return ApiKeyAuthResult(user=user, api_key_source="db", api_key_id=api_key_obj.id)  # pragma: allowlist secret
 
     if len(matches) > 1:
@@ -274,9 +309,7 @@ async def _check_key_from_db_with_context(
                 api_key_obj.total_uses += 1
                 api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
-            # The auth-owned hash backfill must release SQLite's write lock even
-            # when usage tracking itself is disabled.
-            await session.commit()
+            await session.flush()
             return ApiKeyAuthResult(
                 user=user,
                 api_key_source="db",  # pragma: allowlist secret

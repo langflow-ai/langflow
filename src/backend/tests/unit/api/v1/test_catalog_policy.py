@@ -265,7 +265,7 @@ async def test_x_api_key_puts_complete_and_persist_on_file_backed_sqlite(client,
             json={"blocked": [component_key]},
         )
     assert components.status_code == 200
-    assert components.json() == {"blocked": [component_key]}
+    assert components.json() == {"blocked": [component_key], "managed_externally": False}
 
     with anyio.fail_after(10):
         templates = await client.put(
@@ -274,7 +274,7 @@ async def test_x_api_key_puts_complete_and_persist_on_file_backed_sqlite(client,
             json={"blocked": [template_key]},
         )
     assert templates.status_code == 200
-    assert templates.json() == {"blocked": [template_key]}
+    assert templates.json() == {"blocked": [template_key], "managed_externally": False}
 
     async with session_scope_readonly() as session:
         rows = (
