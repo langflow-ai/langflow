@@ -10,6 +10,7 @@ Notes:
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import subprocess
@@ -323,9 +324,13 @@ class FileComponent(BaseFileComponent):
                     # outputs rather than triggering a second subprocess via
                     # load_files_message.
                     self.markdown = True
-                    result = self.load_files_markdown()
+                    loader = self.load_files_markdown
                 else:
-                    result = self.load_files_message()
+                    loader = self.load_files_message
+                # Both loaders are blocking (file IO plus, in advanced mode, a Docling
+                # subprocess). Run them off the event loop so streaming/heartbeats on
+                # the same loop keep flowing while the agent waits for this tool.
+                result = await asyncio.to_thread(loader)
                 if hasattr(result, "get_text"):
                     return result.get_text()
                 if hasattr(result, "text"):

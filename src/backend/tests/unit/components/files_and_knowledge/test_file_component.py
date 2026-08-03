@@ -1,11 +1,14 @@
+import asyncio
 import json
 import subprocess
 import tempfile
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.io import Output
 from lfx.components.files_and_knowledge.file import FileComponent
+from lfx.schema.message import Message
 
 
 class TestFileComponentFrontendMetadata:
@@ -535,6 +538,42 @@ class TestFileComponentToolMode:
         result = await tool.coroutine()
 
         assert test_content in result
+
+    @pytest.mark.asyncio
+    async def test_tool_execution_does_not_block_event_loop(self):
+        """The blocking loader must run off the event loop (issue #14380).
+
+        Reading many/large files kept the loop busy for the whole call, which
+        starved SSE heartbeats and tripped API gateway timeouts.
+        """
+
+        class SlowFileComponent(FileComponent):
+            def load_files_message(self) -> Message:
+                time.sleep(0.3)
+                return Message(text="slow read finished")
+
+        component = SlowFileComponent()
+        component._attributes["path"] = []
+        component.path = []
+
+        tools = await component._get_tools()
+
+        ticks = 0
+
+        async def ticker():
+            nonlocal ticks
+            while True:
+                await asyncio.sleep(0.01)
+                ticks += 1
+
+        tick_task = asyncio.create_task(ticker())
+        try:
+            result = await tools[0].coroutine()
+        finally:
+            tick_task.cancel()
+
+        assert result == "slow read finished"
+        assert ticks > 5, f"event loop was blocked while the tool read files (ticks={ticks})"
 
     # ==================== Error Handling Tests ====================
 
