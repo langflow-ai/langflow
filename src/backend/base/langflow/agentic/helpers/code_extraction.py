@@ -97,7 +97,7 @@ def _contains_component_class(code: str) -> bool:
     """Return True when code defines a class inheriting from Component."""
     try:
         tree = ast.parse(code)
-    except SyntaxError:
+    except (SyntaxError, TypeError, ValueError, UnicodeError):
         return _contains_component_class_header(code)
 
     return any(
