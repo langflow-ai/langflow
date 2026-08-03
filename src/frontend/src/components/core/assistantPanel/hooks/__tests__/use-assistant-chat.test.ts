@@ -1147,6 +1147,7 @@ describe("useAssistantChat", () => {
         result.current.handleApplyFlowProposal(msg.id, "add");
       });
 
+      // Merge path applies atomically via setNodesAndEdges(nodes, edges).
       expect(mockSetNodesAndEdges).toHaveBeenCalled();
       const [nodesArg, edgesArg] = mockSetNodesAndEdges.mock.calls[0] as [
         Array<{ id: string; data?: { type?: string } }>,
@@ -1156,7 +1157,6 @@ describe("useAssistantChat", () => {
         1,
       );
       expect(nodesArg.map((n) => n.id)).toContain("ChatInput-old");
-
       expect(edgesArg).toHaveLength(0);
     });
   });

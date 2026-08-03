@@ -70,4 +70,21 @@ describe("serializeMessages", () => {
     expect(restored[0].inProgressTask).toBeUndefined();
     expect(restored[0].status).toBe("cancelled");
   });
+
+  it("should strip the flowProposalSnapshot canvas clone from applied proposals", () => {
+    const serialized = serializeMessages([
+      makeMessage({
+        status: "complete",
+        flowProposalStatus: "applied",
+        flowProposalSnapshot: {
+          nodes: [{ id: "node-1" }],
+          edges: [{ id: "edge-1" }],
+        },
+      }),
+    ]);
+
+    expect(serialized[0]).not.toHaveProperty("flowProposalSnapshot");
+    // The proposal state itself still persists so the card renders on restore.
+    expect(serialized[0].flowProposalStatus).toBe("applied");
+  });
 });

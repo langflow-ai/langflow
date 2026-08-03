@@ -407,6 +407,42 @@ config:
         assert feedback[0]["target"] == loop_id
         assert feedback[0]["data"]["sourceHandle"]["name"] == "data_output"
 
+    _LOOP_DEFAULT_TAB_SPEC = """\
+name: Loop Data Flow
+
+nodes:
+  I: ChatInput
+  L: LoopComponent
+  P: ParserComponent
+  TC: TypeConverterComponent
+  O: ChatOutput
+
+edges:
+  I.message -> L.data
+  L.item -> P.input_data
+  P.parsed_text -> TC.input_data
+  TC.data_output -> L.item
+  L.done -> O.input_value
+"""
+
+    def _tc_output_type_tab(self, result):
+        tc_id = result["node_id_map"]["TC"]
+        tc_node = next(n for n in result["flow"]["data"]["nodes"] if n["id"] == tc_id)
+        return tc_node["data"]["node"]["template"]["output_type"]
+
+    def test_output_type_tab_follows_wired_output(self):
+        # Unconfigured tab stays on "Message", whose hydration path deletes
+        # data_output and dangles the feedback edge — the sync must flip it.
+        result = build_flow_from_spec(self._LOOP_DEFAULT_TAB_SPEC)
+        assert "flow" in result, f"Expected flow, got: {result}"
+        assert self._tc_output_type_tab(result)["value"] == "JSON"
+
+    def test_spec_configured_output_type_alias_is_preserved(self):
+        # "Data" is not an output type but update_outputs accepts it; the sync
+        # must not clobber a value it cannot prove selects another output.
+        result = build_flow_from_spec(self._LOOP_DATA_SPEC)
+        assert self._tc_output_type_tab(result)["value"] == "Data"
+
     def test_single_output_node_gets_no_selected_output(self):
         # ChatInput has a single output — nothing to disambiguate, so the
         # builder must not stamp a selected_output on it.

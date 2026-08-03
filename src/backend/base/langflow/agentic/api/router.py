@@ -5,6 +5,7 @@ All business logic is delegated to service modules.
 """
 
 import asyncio
+import contextlib
 import json
 import uuid
 from collections.abc import AsyncIterator
@@ -408,20 +409,28 @@ async def assist_headless(
                 await queue.put(None)
 
         task = asyncio.create_task(_drive())
-        while True:
-            event = await queue.get()
-            if event is None:
-                break
-            # Re-emit the assistant's own progress event verbatim: it already carries
-            # the step/attempt shape the SSE formatter would rebuild.
-            yield f"data: {json.dumps(event)}\n\n"
         try:
-            result = await task
-        except Exception as exc:  # noqa: BLE001
-            logger.exception("Headless assistant run failed")
-            yield format_error_event(str(exc))
-            return
-        yield format_complete_event(result)
+            while True:
+                event = await queue.get()
+                if event is None:
+                    break
+                # Re-emit the assistant's own progress event verbatim: it already carries
+                # the step/attempt shape the SSE formatter would rebuild.
+                yield f"data: {json.dumps(event)}\n\n"
+            try:
+                result = await task
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("Headless assistant run failed")
+                yield format_error_event(str(exc))
+                return
+            yield format_complete_event(result)
+        finally:
+            # Client disconnect cancels this generator mid-yield; without this the
+            # orphaned task keeps writing to the DB on a tearing-down session.
+            if not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
 
     return StreamingResponse(
         _stream(),

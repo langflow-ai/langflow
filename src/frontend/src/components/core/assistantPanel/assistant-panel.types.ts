@@ -220,7 +220,7 @@ export interface AssistantPanelProps {
 /** AssistantMessage with Date serialized as ISO string and progress stripped. */
 export type SerializedAssistantMessage = Omit<
   AssistantMessage,
-  "timestamp" | "progress"
+  "timestamp" | "progress" | "flowProposalSnapshot"
 > & {
   timestamp: string;
 };

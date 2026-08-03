@@ -97,6 +97,27 @@ describe("AssistantRevertAction", () => {
     expect(revertMock).not.toHaveBeenCalled();
   });
 
+  it("should_keep_the_dialog_open_and_not_mark_reverted_when_revert_fails", async () => {
+    revertMock.mockRejectedValue(new Error("restore failed"));
+    const onReverted = jest.fn();
+    render(
+      <AssistantRevertAction
+        restoreVersionId="ver-1"
+        reverted={false}
+        onReverted={onReverted}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("assistant-revert-button"));
+    fireEvent.click(screen.getByTestId("assistant-revert-confirm-button"));
+
+    await waitFor(() => {
+      expect(revertMock).toHaveBeenCalled();
+    });
+    expect(onReverted).not.toHaveBeenCalled();
+    expect(screen.getByTestId("assistant-revert-confirm")).toBeInTheDocument();
+  });
+
   it("should_render_the_disabled_reverted_marker_when_reverted", () => {
     render(
       <AssistantRevertAction

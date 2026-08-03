@@ -37,7 +37,16 @@ export function serializeMessages(
   messages: AssistantMessage[],
 ): SerializedAssistantMessage[] {
   return messages.map((msg) => {
-    const { timestamp, progress, result, inProgressTask, ...rest } = msg;
+    // flowProposalSnapshot is a full canvas clone that can blow the storage
+    // quota; cross-reload revert is covered by the restore-point path instead.
+    const {
+      timestamp,
+      progress,
+      result,
+      inProgressTask,
+      flowProposalSnapshot,
+      ...rest
+    } = msg;
     const serialized: SerializedAssistantMessage = {
       ...rest,
       timestamp: timestamp.toISOString(),
