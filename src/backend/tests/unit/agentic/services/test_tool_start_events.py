@@ -238,7 +238,11 @@ class TestListenerLifecycle:
 
         coordinator = MagicMock()
         coordinator.stream = empty_stream
-        with patch.object(flow_executor, "get_default_coordinator", return_value=coordinator):
+
+        async def fake_aget_default_coordinator(*_a, **_kw):
+            return coordinator
+
+        with patch.object(flow_executor, "aget_default_coordinator", fake_aget_default_coordinator):
             await _run_graph_with_events(
                 graph=graph,
                 input_value=None,
