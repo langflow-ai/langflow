@@ -9,8 +9,29 @@ from lfx.log.logger import logger
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from lfx.services.authorization.base import AuthorizationMutation, BaseAuthorizationService
+    from lfx.services.authorization.base import (
+        AuthorizationMutation,
+        AuthorizationMutationKind,
+        BaseAuthorizationService,
+    )
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+async def acquire_identity_mutation_lock(
+    service: BaseAuthorizationService,
+    session: AsyncSession,
+    *,
+    kind: AuthorizationMutationKind,
+    entity_id: UUID | None = None,
+    affected_user_ids: tuple[UUID, ...] = (),
+) -> None:
+    """Run the plugin's lock-only preflight before canonical identity reads."""
+    await service.acquire_identity_mutation_lock(
+        session=session,
+        kind=kind,
+        entity_id=entity_id,
+        affected_user_ids=affected_user_ids,
+    )
 
 
 async def validate_identity_mutation(

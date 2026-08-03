@@ -9,7 +9,7 @@ import pytest
 from langflow.services import model_provider_policy as policy_store
 from langflow.services.database.models.model_provider_policy import ModelProviderPolicy
 from langflow.services.task import model_provider_policy_refresh as refresh_module
-from lfx.services.model_provider_policy import ModelProviderPolicyService
+from lfx.services.model_provider_policy import BaseModelProviderPolicyService, ModelProviderPolicyService
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -57,8 +57,15 @@ async def test_hydrate_empty_store_preserves_allow_all(monkeypatch):
     assert service.policy_version == 2
 
 
-def test_enterprise_policy_service_is_invalidated_without_replacing_its_source(monkeypatch):
-    service = SimpleNamespace(invalidate=Mock())
+def test_legacy_third_party_policy_service_is_invalidated_without_replacing_its_source(monkeypatch):
+    class LegacyPolicyService(BaseModelProviderPolicyService):
+        def get_allowed_provider_ids(self, *, context, candidate_provider_ids, purpose):
+            _ = (context, purpose)
+            return candidate_provider_ids
+
+    service = LegacyPolicyService()
+    invalidate = Mock(wraps=service.invalidate)
+    monkeypatch.setattr(service, "invalidate", invalidate)
     monkeypatch.setattr(policy_store, "get_model_provider_policy_service", lambda: service)
     state = policy_store.PersistedModelProviderPolicy(
         approved_provider_ids=frozenset({"openai"}),
@@ -66,7 +73,54 @@ def test_enterprise_policy_service_is_invalidated_without_replacing_its_source(m
     )
 
     assert policy_store.apply_model_provider_policy_state(state)
-    service.invalidate.assert_called_once_with()
+    invalidate.assert_called_once_with()
+
+
+@pytest.mark.parametrize("external_ids", [frozenset({"openai"}), frozenset()])
+def test_explicitly_external_policy_service_is_not_invalidated(monkeypatch, external_ids):
+    class ExternalPolicyService(BaseModelProviderPolicyService):
+        def __init__(self) -> None:
+            super().__init__()
+            self.set_ready()
+
+        @property
+        def external_approved_provider_ids(self) -> frozenset[str]:
+            return external_ids
+
+        def get_allowed_provider_ids(self, *, context, candidate_provider_ids, purpose):
+            _ = (context, purpose)
+            return candidate_provider_ids & external_ids
+
+    service = ExternalPolicyService()
+    invalidate = Mock(wraps=service.invalidate)
+    monkeypatch.setattr(service, "invalidate", invalidate)
+    monkeypatch.setattr(policy_store, "get_model_provider_policy_service", lambda: service)
+    state = policy_store.PersistedModelProviderPolicy(
+        approved_provider_ids=frozenset({"anthropic"}),
+        version=3,
+    )
+
+    assert policy_store.apply_model_provider_policy_state(state) is False
+    invalidate.assert_not_called()
+
+
+def test_explicitly_external_builtin_subclass_does_not_receive_database_state(monkeypatch):
+    class ExternalBuiltinPolicyService(ModelProviderPolicyService):
+        @property
+        def external_approved_provider_ids(self) -> frozenset[str]:
+            return frozenset({"openai"})
+
+    service = ExternalBuiltinPolicyService()
+    service.set_approved_provider_ids({"openai"}, version=2)
+    monkeypatch.setattr(policy_store, "get_model_provider_policy_service", lambda: service)
+    state = policy_store.PersistedModelProviderPolicy(
+        approved_provider_ids=frozenset(),
+        version=3,
+    )
+
+    assert policy_store.apply_model_provider_policy_state(state) is False
+    assert service.approved_provider_ids == frozenset({"openai"})
+    assert service.policy_version == 2
 
 
 def test_replacement_is_one_atomic_versioned_update():
