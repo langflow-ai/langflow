@@ -196,8 +196,18 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             raise ValueError(msg)
         return llm_model
 
+    @staticmethod
+    def _sync_model_requirement(build_config: dict, mode: str) -> None:
+        """Require a model only when the selected activity generates guard code."""
+        if mode not in (MODE_GENERATE, MODE_GUARD):
+            msg = f"Policies: unsupported activity mode: {mode!r}"
+            raise ValueError(msg)
+        model_config = build_config.get("model")
+        if isinstance(model_config, dict):
+            model_config["required"] = mode == MODE_GENERATE
+
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        """Dynamically update build config with user-filtered model options."""
+        """Dynamically update model options and the activity-specific requirement."""
         updated_build_config = update_model_options_in_build_config(
             component=self,
             build_config=build_config,
@@ -206,6 +216,10 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             field_name=field_name,
             field_value=field_value,
         )
+        selected_mode = (
+            field_value if field_name == "mode" else updated_build_config.get("mode", {}).get("value", MODE_GENERATE)
+        )
+        self._sync_model_requirement(updated_build_config, selected_mode)
         tg = self._import_toolguard()
         py_module = self._to_snake_case(self.project)
         return tg["sync_generated_guard_code_inputs"](
@@ -235,6 +249,8 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             for field_name, field in current_template.items():
                 if self._is_generated_guard_field(field):
                     updated_template[field_name] = field
+            selected_mode = updated_template.get("mode", {}).get("value", MODE_GENERATE)
+            self._sync_model_requirement(updated_template, selected_mode)
         return updated_frontend_node
 
     async def _generate_guard_specs(self) -> list[ToolGuardSpec]:
@@ -389,19 +405,24 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         """
         try:
             from lfx.services.deps import get_settings_service
-        except ImportError:
-            # No settings layer at all (lfx used as a bare library) -> local/trusted.
+        except ModuleNotFoundError as exc:
+            if exc.name not in {"lfx.services", "lfx.services.deps"}:
+                raise
             return True
 
         settings_service = get_settings_service()
-        if settings_service is None:
-            # Settings layer present but service unavailable: fail closed, matching
-            # validate_flow_for_current_settings (which raises in this case).
+        settings = getattr(settings_service, "settings", None) if settings_service else None
+        if settings is None:
             return False
-        return bool(getattr(settings_service.settings, "allow_custom_components", True))
+        return bool(getattr(settings, "allow_custom_components", False))
 
     async def guard_tools(self) -> list[Tool]:
         if self.enabled:
+            mode = getattr(self, "mode", MODE_GENERATE)
+            if mode not in (MODE_GENERATE, MODE_GUARD):
+                msg = f"Policies: unsupported activity mode: {mode!r}"
+                raise ValueError(msg)
+
             # Refuse to execute guard code when allow_custom_components is disabled.
             # Checked before importing/loading any toolguard runtime so
             # the client-supplied CodeInput guard values are never exec'd.
@@ -413,7 +434,6 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 )
                 raise ValueError(msg)
             tg = self._import_toolguard()
-            mode = getattr(self, "mode", MODE_GENERATE)
             if mode == MODE_GENERATE:
                 self.log(f"Start generating guard code at {self.work_dir}", name="info")
                 self.validate_before_generate()
@@ -421,7 +441,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 self.log(f"Policies code generation saved to {self.work_dir}", name="info")
                 self.log("Review the generated files in the details panel on the right.", name="info")
 
-            else:  # mode == "guard"
+            else:  # mode == MODE_GUARD
                 if not self.in_tools:
                     msg = "Policies: in_tools cannot be empty!"
                     raise ValueError(msg)
