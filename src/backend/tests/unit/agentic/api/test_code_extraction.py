@@ -441,28 +441,16 @@ Let me know if you need any modifications!"""
 class TestBugsAndEdgeCases:
     """Tests that challenge the code — exposing real bugs and untested edge cases."""
 
-    @pytest.mark.xfail(
-        reason="BUG: extract_component_code overwritten by extract_python_code alias at L96",
-        strict=True,
-    )
     def test_extract_component_code_should_reject_non_component(self):
         """extract_component_code should return None for non-component code."""
         result = extract_component_code("```python\nx = 1\n```")
         assert result is None
 
-    @pytest.mark.xfail(
-        reason="BUG: empty code block returns '' instead of None (L60 matches[0].strip())",
-        strict=True,
-    )
     def test_should_return_none_for_empty_code_block(self):
         """extract_python_code should return None for empty code blocks."""
         result = extract_python_code("```python\n\n```")
         assert result is None
 
-    @pytest.mark.xfail(
-        reason="BUG: rstrip('`') at L81 strips ALL trailing backticks, corrupting code",
-        strict=True,
-    )
     def test_rstrip_should_not_corrupt_code_with_backticks(self):
         """Unclosed blocks should not strip backticks that are part of the code."""
         text = '```python\nmarkdown_var = "```"'
@@ -470,23 +458,18 @@ class TestBugsAndEdgeCases:
         assert result is not None
         assert '```"' in result
 
-    @pytest.mark.xfail(
-        reason="BUG: L90 'Component' in match matches ComponentFactory, not just inheritance",
-        strict=True,
-    )
     def test_find_component_code_false_positive_substring(self):
         """_find_component_code should not match non-Component classes."""
         non_component = "class ComponentFactory:\n    pass"
         result = _find_component_code([non_component])
         assert result is None
 
-    def test_nested_code_blocks_truncate_content(self):
-        """Non-greedy regex truncates code with embedded triple backticks."""
+    def test_nested_code_blocks_preserve_content(self):
+        """Line-aware fences preserve embedded triple backticks in code strings."""
         text = '```python\ncode = """Example:\n```python\ninner\n```\n"""\n```'
         result = extract_python_code(text)
         assert result is not None
-        # Documents: non-greedy regex stops at first ```, truncating inner content
-        assert "inner" not in result
+        assert "inner" in result
 
     def test_extract_python_code_whitespace_only_block(self):
         """Whitespace-only code block should be falsy."""
