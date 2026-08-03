@@ -1,16 +1,23 @@
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, field_validator
 
 from lfx.log.logger import logger
 
+DeploymentProfile = Literal["dev", "prod"]
+
 
 class ServerSettings(BaseModel):
     """ASGI server, process, and logging settings."""
 
+    deployment_profile: DeploymentProfile = "dev"
+    """Deployment profile for this boot. 'prod' signals a production deployment and runs
+    fail-loud infrastructure preflight checks before the server starts (aborting on missing
+    required services). 'dev' (the default) skips those checks. Set via the
+    LANGFLOW_DEPLOYMENT_PROFILE environment variable or the --deployment-profile CLI option."""
     host: str = "localhost"
     """The host on which Langflow will run."""
     port: int = 7860
@@ -46,6 +53,21 @@ class ServerSettings(BaseModel):
     Can also be set via the LANGFLOW_ROOT_PATH environment variable."""
     user_agent: str = "langflow"
     """User agent for the API calls."""
+
+    @field_validator("deployment_profile", mode="before")
+    @classmethod
+    def validate_deployment_profile(cls, value: Any) -> str:
+        """Normalize the deployment profile so 'PROD', ' prod ' etc. resolve to the literal set."""
+        if value is None:
+            return "dev"
+        if not isinstance(value, str):
+            msg = "deployment_profile must be a string"
+            raise TypeError(msg)
+        normalized = value.strip().lower()
+        if normalized not in {"dev", "prod"}:
+            msg = f"deployment_profile must be one of 'dev' or 'prod', got {value!r}"
+            raise ValueError(msg)
+        return normalized
 
     @field_validator("root_path", mode="before")
     @classmethod

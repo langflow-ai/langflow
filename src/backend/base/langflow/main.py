@@ -29,6 +29,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from langflow.api import health_check_router, log_router
 from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
+from langflow.cli.preflight import PreflightAbortError, ensure_production_preflight
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
     create_or_update_starter_projects,
@@ -211,6 +212,18 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await logger.adebug("Sentry SDK initialized in worker")
                     except Exception as e:  # noqa: BLE001
                         await logger.awarning(f"Failed to initialize Sentry SDK (check LANGFLOW_SENTRY_DSN): {e}")
+
+            # Production preflight safety net and universal enforcement point.
+            # On the `langflow run` route the CLI parent already ran this before
+            # forking (the LANGFLOW_PREFLIGHT_COMPLETED sentinel makes it a no-op
+            # here); for entrypoints that bypass the CLI (make backend, uvicorn
+            # --factory, raw gunicorn) this is where the checks actually execute.
+            # Placed before initialize_services so a missing required dependency
+            # aborts before we open the database or apply migrations. No-op in dev.
+            await ensure_production_preflight(
+                get_settings_service(),
+                verbose=os.getenv("LANGFLOW_LOG_LEVEL", "info").lower() == "debug",
+            )
 
             await logger.adebug("Initializing services")
             # Even when preload state is inherited via fork, initialize_services() must run
@@ -570,6 +583,20 @@ def get_lifespan(*, fix_migration=False, version=None):
         except UnsupportedPostgreSQLVersionError:
             # Normally caught by the pre-flight check in __main__.py; on direct uvicorn
             # invocation exit immediately and tell the parent (reloader) to stop.
+            import signal
+
+            sys.stdout.flush()
+            sys.stderr.flush()
+            with suppress(ProcessLookupError, PermissionError):
+                os.kill(os.getppid(), signal.SIGTERM)
+            os._exit(3)
+        except PreflightAbortError:
+            # Same rationale as UnsupportedPostgreSQLVersionError above: on the
+            # `langflow run` route this is caught before the server starts. If we
+            # reach here, boot came via a CLI-bypassing entrypoint (make backend,
+            # uvicorn --factory) with deployment_profile=prod and a required
+            # dependency missing. The summary has already been printed — exit
+            # immediately and tell the parent (reloader) to stop.
             import signal
 
             sys.stdout.flush()
