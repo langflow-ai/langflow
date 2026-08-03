@@ -9,7 +9,11 @@ route handlers can surface a structured error without running the graph.
 from __future__ import annotations
 
 from fastapi import HTTPException, status
-from lfx.utils.flow_validation import CustomComponentValidationError, validate_flow_for_current_settings
+from lfx.utils.flow_validation import (
+    CatalogPolicyIdentityUnavailableError,
+    CustomComponentValidationError,
+    validate_flow_for_current_settings,
+)
 from lfx.workflow.converters import ParsedWorkflowRun
 
 from langflow.services.authorization.fetch import deny_to_404
@@ -94,7 +98,7 @@ def _validate_flow_data_for_execution(parsed: ParsedWorkflowRun, flow: FlowRead)
             validate_flow_for_current_settings(flow.data)
     except CustomComponentValidationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    except RuntimeError as exc:
+    except CatalogPolicyIdentityUnavailableError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
 
 

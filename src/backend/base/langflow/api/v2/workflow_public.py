@@ -36,6 +36,8 @@ from lfx.schema.workflow import (
     PublicWorkflowRunRequest,
 )
 from lfx.utils.flow_validation import (
+    PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+    CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
     validate_flow_for_current_settings,
     validate_public_flow_no_code_execution,
@@ -165,6 +167,11 @@ async def execute_public_workflow(
                 # such a component is an unauthenticated code-execution primitive.
                 validate_public_flow_no_code_execution(flow.data)
             flow_name = flow.name if flow else None
+    except CatalogPolicyIdentityUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+        ) from exc
     except CustomComponentValidationError as exc:
         # The raw message embeds the blocked component class names; do
         # not leak it to an anonymous visitor.

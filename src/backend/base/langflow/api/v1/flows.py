@@ -15,7 +15,11 @@ from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.services.cache.utils import CACHE_MISS
 from lfx.services.catalog_policy import CatalogPolicySnapshot
-from lfx.utils.flow_validation import CatalogPolicyValidationError, validate_catalog_policy_for_flow
+from lfx.utils.flow_validation import (
+    CatalogPolicyIdentityUnavailableError,
+    CatalogPolicyValidationError,
+    validate_catalog_policy_for_flow,
+)
 from pydantic import ValidationError
 from sqlalchemy import case
 from sqlmodel import and_, col, select
@@ -117,6 +121,8 @@ def _validate_catalog_policy_for_write(
         validate_catalog_policy_for_flow(flow_data, snapshot=snapshot)
     except CatalogPolicyValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except CatalogPolicyIdentityUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 # build router

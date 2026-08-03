@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
-from lfx.utils.component_aliases import get_component_type_aliases
+from lfx.utils.component_aliases import ComponentIdentityIndex, get_component_type_aliases
 
 if TYPE_CHECKING:
     from lfx.services.catalog_policy import CatalogPolicySnapshot
@@ -19,6 +19,7 @@ SETTINGS_SERVICE_REQUIRED_MESSAGE = "Settings service must be initialized before
 CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE = (
     "Catalog policy component identities are still initializing. Please try again in a few seconds."
 )
+PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE = "This flow is temporarily unavailable. Please try again."
 
 # Built-in components that execute user- or model-supplied Python from input fields or during
 # runtime, rather than from the validated class ``code`` field. Their class-code hash is valid,
@@ -67,6 +68,10 @@ class CustomComponentValidationError(ValueError):
 
 class CatalogPolicyValidationError(CustomComponentValidationError):
     """Raised when a flow contains a component blocked by catalog policy."""
+
+
+class CatalogPolicyIdentityUnavailableError(RuntimeError):
+    """Raised when an active catalog rule needs an identity index that is not ready."""
 
 
 class PublicFlowValidationError(CustomComponentValidationError):
@@ -209,6 +214,28 @@ def _collect_catalog_component_keys(nodes: Any) -> set[str]:
     return component_keys
 
 
+def get_component_identity_index_for_validation() -> ComponentIdentityIndex | None:
+    """Return the cached canonical identity index when the registry is ready."""
+    from lfx.interface.components import get_component_identity_index
+
+    return get_component_identity_index()
+
+
+def _resolve_catalog_policy_matches(
+    component_keys: set[str],
+    blocked_component_keys: frozenset[str],
+    identity_index: ComponentIdentityIndex,
+) -> frozenset[str]:
+    """Return canonical identities shared by observed and blocked keys."""
+    blocked_identities = identity_index.resolve_many(blocked_component_keys)
+    return frozenset(
+        canonical_identity
+        for component_key in component_keys
+        for canonical_identity in identity_index.resolve(component_key)
+        if canonical_identity in blocked_identities
+    )
+
+
 def validate_catalog_policy_for_flow(
     target: Mapping[str, Any] | Any | None,
     *,
@@ -216,9 +243,10 @@ def validate_catalog_policy_for_flow(
 ) -> None:
     """Reject a flow containing component keys blocked by the current catalog snapshot.
 
-    Component identity is the exact, case-sensitive ``node.data.type`` value.
-    The immutable snapshot is captured once when the caller does not provide
-    one, so every node in a request is evaluated against the same policy view.
+    Exact, case-sensitive keys are enforced before the current registry's
+    canonical alias index is consulted. The immutable policy snapshot is
+    captured once when the caller does not provide one, so every node in a
+    request is evaluated against the same policy view.
     """
     if snapshot is None:
         from lfx.services.deps import get_catalog_policy_service
@@ -239,7 +267,22 @@ def validate_catalog_policy_for_flow(
         return
 
     component_keys = _collect_catalog_component_keys(normalized_flow_data.get("nodes"))
+    if not component_keys:
+        return
+
+    # Preserve exact matching even when the registry cache is still loading.
+    # This keeps synthetic/custom identities backward-compatible and lets an
+    # exact policy denial fail closed without waiting for alias data.
     blocked = snapshot.blocked_components(component_keys)
+    if not blocked:
+        identity_index = get_component_identity_index_for_validation()
+        if identity_index is None:
+            raise CatalogPolicyIdentityUnavailableError(CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE)
+        blocked = _resolve_catalog_policy_matches(
+            component_keys,
+            snapshot.blocked_component_keys,
+            identity_index,
+        )
     if not blocked:
         return
 
@@ -467,20 +510,23 @@ def get_trusted_code_for_validation(code: str) -> str | None:
     """
     from lfx.interface.components import component_cache
 
-    # Self-heal: build the lookup lazily if the cache hasn't populated it yet
-    # (e.g. the eager warm-up path didn't run before the first request).
-    if (
-        component_cache.code_by_hash is None
-        and component_cache.all_types_ready
-        and component_cache.all_types_dict is not None
-    ):
-        component_cache.code_by_hash = collect_code_by_hash(component_cache.all_types_dict)
+    code_hash = _compute_code_hash(code)
+    with component_cache.state_lock:
+        # Self-heal lazily when eager warm-up did not run. Building and
+        # publishing under the same lock as reload prevents an old registry
+        # snapshot from being published after reload invalidates it.
+        if (
+            component_cache.code_by_hash is None
+            and component_cache.all_types_ready
+            and component_cache.all_types_dict is not None
+        ):
+            component_cache.code_by_hash = collect_code_by_hash(component_cache.all_types_dict)
 
-    code_by_hash = component_cache.code_by_hash
-    if not code_by_hash:
-        return None
+        code_by_hash = component_cache.code_by_hash
+        if not code_by_hash:
+            return None
 
-    return code_by_hash.get(_compute_code_hash(code))
+        return code_by_hash.get(code_hash)
 
 
 def resolve_trusted_code_for_build(code: str) -> str:
@@ -553,19 +599,17 @@ def check_flow_and_raise(
 
 def get_component_hash_lookups_for_validation() -> dict[str, set[str]] | None:
     """Return the cached component hashes, building them synchronously if possible."""
-    from lfx.interface.components import component_cache
+    from lfx.interface.components import _build_code_hash_lookups, component_cache
 
-    if (
-        component_cache.type_to_current_hash is None
-        and component_cache.all_types_ready
-        and component_cache.all_types_dict is not None
-    ):
-        type_to_hash, all_hashes = collect_component_hash_lookups(component_cache.all_types_dict)
-        component_cache.type_to_current_hash = type_to_hash
-        component_cache.all_known_hashes = all_hashes
-        component_cache.code_by_hash = collect_code_by_hash(component_cache.all_types_dict)
+    with component_cache.state_lock:
+        if (
+            component_cache.type_to_current_hash is None
+            and component_cache.all_types_ready
+            and component_cache.all_types_dict is not None
+        ):
+            _build_code_hash_lookups(component_cache)
 
-    return component_cache.type_to_current_hash
+        return component_cache.type_to_current_hash
 
 
 def validate_catalog_policy_for_component_code(
@@ -590,14 +634,25 @@ def validate_catalog_policy_for_component_code(
 
     type_to_current_hash = get_component_hash_lookups_for_validation()
     if type_to_current_hash is None:
-        raise RuntimeError(CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE)
+        raise CatalogPolicyIdentityUnavailableError(CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE)
 
     code_hash = _compute_code_hash(code)
+    # Preserve exact lookup behavior for synthetic/custom identities and
+    # callers that provide a focused hash map in tests.
     blocked = frozenset(
         component_type
         for component_type in snapshot.blocked_component_keys
         if code_hash in type_to_current_hash.get(component_type, set())
     )
+    if not blocked:
+        identity_index = get_component_identity_index_for_validation()
+        if identity_index is None:
+            raise CatalogPolicyIdentityUnavailableError(CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE)
+        blocked = frozenset(
+            component_type
+            for component_type in identity_index.resolve_many(snapshot.blocked_component_keys)
+            if code_hash in type_to_current_hash.get(component_type, set())
+        )
     if not blocked:
         return
 
@@ -612,17 +667,33 @@ def validate_catalog_policy_for_component_type(
     *,
     snapshot: CatalogPolicySnapshot | None = None,
 ) -> None:
-    """Reject a materialized component whose exact runtime type is blocked."""
+    """Reject a materialized component whose canonical identity is blocked."""
     if snapshot is None:
         from lfx.services.deps import get_catalog_policy_service
 
         snapshot = get_catalog_policy_service().snapshot
 
-    if not snapshot.is_component_blocked(component_type):
+    if not snapshot.blocked_component_keys:
         return
 
-    logger.warning(f"Component action blocked by catalog policy: {component_type}")
-    message = f"Catalog policy blocks components: {component_type}"
+    # Exact identities remain independently enforceable even before component
+    # template initialization completes.
+    if snapshot.is_component_blocked(component_type):
+        blocked = frozenset({component_type})
+    else:
+        identity_index = get_component_identity_index_for_validation()
+        if identity_index is None:
+            raise CatalogPolicyIdentityUnavailableError(CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE)
+        blocked = identity_index.resolve(component_type).intersection(
+            identity_index.resolve_many(snapshot.blocked_component_keys)
+        )
+
+    if not blocked:
+        return
+
+    blocked_names = ", ".join(sorted(blocked))
+    logger.warning(f"Component action blocked by catalog policy: {blocked_names}")
+    message = f"Catalog policy blocks components: {blocked_names}"
     raise CatalogPolicyValidationError(message)
 
 
@@ -1002,19 +1073,31 @@ def validate_public_flow_no_code_execution(target: Mapping[str, Any] | Any | Non
 
 
 async def ensure_component_hash_lookups_loaded() -> dict[str, set[str]] | None:
-    """Ensure component hash lookups are available for CLI/runtime validation."""
-    from lfx.interface.components import component_cache, get_and_cache_all_types_dict
-    from lfx.services.deps import get_settings_service
+    """Ensure component lookups required by active CLI/runtime policy are available."""
+    from lfx.interface.components import (
+        component_cache,
+        get_and_cache_all_types_dict,
+        get_component_identity_index,
+    )
+    from lfx.services.deps import get_catalog_policy_service, get_settings_service
 
     settings_service = get_settings_service()
     if settings_service is None:
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
-    if not settings_service.settings.allow_custom_components and component_cache.type_to_current_hash is None:
+    catalog_policy_active = bool(get_catalog_policy_service().snapshot.blocked_component_keys)
+    policy_lookups_required = not settings_service.settings.allow_custom_components or catalog_policy_active
+    with component_cache.state_lock:
+        registry_unavailable = component_cache.all_types_dict is None or not component_cache.all_types_ready
+
+    if policy_lookups_required and registry_unavailable:
         try:
             await get_and_cache_all_types_dict(settings_service)
         except Exception as exc:
             logger.warning("Failed to populate component template hash lookups", exc_info=exc)
             raise
 
-    return component_cache.type_to_current_hash
+    if catalog_policy_active and get_component_identity_index() is None:
+        raise CatalogPolicyIdentityUnavailableError(CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE)
+
+    return get_component_hash_lookups_for_validation()

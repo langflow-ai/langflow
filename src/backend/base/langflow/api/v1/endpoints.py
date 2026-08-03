@@ -32,6 +32,7 @@ from lfx.services.model_provider_policy import (
     set_current_model_provider_policy_context,
 )
 from lfx.services.settings.service import SettingsService
+from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
 from lfx.utils.flow_validation import CustomComponentValidationError
 from sqlmodel import select
 
@@ -184,12 +185,13 @@ async def get_all(request: Request, current_user: CurrentActiveUser, *, include_
             detail="Only superusers can include blocked catalog components.",
         )
 
-    from langflow.interface.components import get_and_cache_all_types_dict
+    from langflow.interface.components import get_and_cache_all_types_dict, get_component_identity_index
     from langflow.utils.i18n import build_component_display_names, translate_component_dict
 
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         all_types_en = await get_and_cache_all_types_dict(settings_service=get_settings_service())
+        component_identity_index = get_component_identity_index(all_types_en)
         visible_types_en = _filter_component_palette_by_provider_policy(
             all_types_en,
             user_id=current_user.id,
@@ -199,6 +201,7 @@ async def get_all(request: Request, current_user: CurrentActiveUser, *, include_
             visible_types_en = _filter_component_palette_by_catalog_policy(
                 visible_types_en,
                 blocked_component_keys=catalog_policy_snapshot.blocked_component_keys,
+                component_identity_index=component_identity_index,
             )
 
         locale = getattr(request.state, "locale", "en")
@@ -256,19 +259,22 @@ def _filter_component_palette_by_catalog_policy(
     all_types: dict[str, dict[str, dict]],
     *,
     blocked_component_keys: Collection[str],
+    component_identity_index: ComponentIdentityIndex | None = None,
 ) -> dict[str, dict[str, dict]]:
-    """Return shallow category copies with exact blocked component keys removed.
+    """Return shallow category copies with canonically blocked components removed.
 
-    Catalog policy keys match the inner component-registry keys exactly and
-    case-sensitively across every category. Category order, component order,
-    and empty categories are preserved. Component payloads remain shared with
-    the process-wide cache and are never mutated or deep-copied.
+    Policy keys and component-registry keys use the same collision-aware
+    identity resolver as flow/runtime validation. Category order, component
+    order, and empty categories are preserved. Component payloads remain
+    shared with the process-wide cache and are never mutated or deep-copied.
     """
+    identity_index = component_identity_index or build_component_identity_index(all_types)
+    blocked_identities = identity_index.resolve_many(blocked_component_keys)
     return {
         category: {
             component_key: component
             for component_key, component in components.items()
-            if component_key not in blocked_component_keys
+            if identity_index.resolve(component_key).isdisjoint(blocked_identities)
         }
         for category, components in all_types.items()
     }

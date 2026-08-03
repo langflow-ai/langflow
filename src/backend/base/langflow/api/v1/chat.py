@@ -14,6 +14,8 @@ from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest, OutputValue
 from lfx.services.cache.utils import CacheMiss
 from lfx.utils.flow_validation import (
+    PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+    CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
     prepare_public_flow_build,
     validate_catalog_policy_for_flow,
@@ -312,6 +314,8 @@ async def build_flow(
             validate_flow_for_current_settings(data.model_dump())
         elif flow and flow.data:
             validate_flow_for_current_settings(flow.data)
+    except CatalogPolicyIdentityUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except CustomComponentValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
@@ -903,6 +907,9 @@ async def build_public_tmp(
         # started through this public build path, preventing unauthenticated
         # callers from reading or cancelling private-flow builds by job_id.
         await queue_service.register_public_job(job_id)
+    except CatalogPolicyIdentityUnavailableError as exc:
+        await logger.awarning("Public flow component identities are temporarily unavailable")
+        raise HTTPException(status_code=503, detail=PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE) from exc
     except CustomComponentValidationError as exc:
         await logger.awarning(f"Public flow validation failed: {exc}")
         raise HTTPException(status_code=400, detail="This flow cannot be executed.") from exc

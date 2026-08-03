@@ -6,7 +6,9 @@ import inspect
 import json
 import os
 import pkgutil
+import threading
 import time
+from concurrent.futures import Future
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -27,6 +29,7 @@ from lfx.extension import (
 from lfx.extension.bundle_registry import BundleRecord, get_default_registry
 from lfx.extension.reload import register_post_swap_hook
 from lfx.log.logger import logger
+from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
 from lfx.utils.flow_validation import collect_code_by_hash, collect_component_hash_lookups
 from lfx.utils.validate_cloud import (
     filter_disabled_components_from_dict,
@@ -55,9 +58,7 @@ class ComponentCache:
         """
         self.all_types_dict: dict[str, Any] | None = None
         # True only after the built-in, custom, and extension component maps
-        # have been merged. ``_determine_loading_strategy`` temporarily places
-        # partial values (including ``{}``) in ``all_types_dict`` while startup
-        # is still in flight, so presence alone is not a readiness signal.
+        # and every derived lookup have been published atomically.
         self.all_types_ready = False
         self.fully_loaded_components: dict[str, bool] = {}
         # Precomputed code hashes for fast flow validation.
@@ -69,6 +70,24 @@ class ComponentCache:
         # substitute the trusted copy for client bytes once the hash gate
         # passes, so a truncated-hash collision can't run attacker code.
         self.code_by_hash: dict[str, str] | None = None
+        # Collision-aware canonical registry identity lookup used by catalog
+        # palette and runtime policy enforcement.
+        self.component_identity_index: ComponentIdentityIndex | None = None
+        # Registry publication and every process-wide derived lookup share one
+        # lock. Hot reload builds templates outside the lock, then swaps the
+        # registry and invalidates its derived indexes atomically.
+        self.state_lock = threading.RLock()
+        # Cross-event-loop single-flight primitive for async initialization.
+        # ``concurrent.futures.Future`` is not bound to the first caller's loop;
+        # each follower awaits its own shielded ``asyncio.wrap_future`` view.
+        self.initialization_future: Future[dict[str, Any]] | None = None
+        # The elected caller starts cache construction in this independently
+        # owned task. Keeping a strong reference prevents cancellation of that
+        # caller from cancelling or garbage-collecting shared initialization.
+        self.initialization_task: asyncio.Task[None] | None = None
+        # Reloads that complete while initial discovery is in flight are folded
+        # into the local registry before its one atomic publication.
+        self.pending_bundle_updates: dict[str, dict[str, Any]] = {}
 
 
 # Singleton instance
@@ -740,26 +759,39 @@ async def _determine_loading_strategy(settings_service: "SettingsService") -> di
     Returns:
         Dictionary containing loaded component types and templates
     """
-    component_cache.all_types_dict = {}
+    all_types_dict: dict[str, Any] = {}
     if settings_service.settings.lazy_load_components:
         # Partial loading mode - just load component metadata
         await logger.adebug("Using partial component loading")
-        component_cache.all_types_dict = await aget_component_metadata(settings_service.settings.components_path)
+        all_types_dict = await aget_component_metadata(settings_service.settings.components_path)
     elif settings_service.settings.components_path:
         # Traditional full loading - filter out base components path to only load custom components
         custom_paths = [p for p in settings_service.settings.components_path if p != BASE_COMPONENTS_PATH]
         if custom_paths:
-            component_cache.all_types_dict = await aget_all_types_dict(custom_paths)
+            all_types_dict = await aget_all_types_dict(custom_paths)
 
     # Log custom component loading stats
-    components_dict = component_cache.all_types_dict or {}
+    components_dict = all_types_dict or {}
     component_count = sum(len(comps) for comps in components_dict.get("components", {}).values())
     if component_count > 0 and settings_service.settings.components_path:
         await logger.adebug(
             f"Built {component_count} custom components from {settings_service.settings.components_path}"
         )
 
-    return component_cache.all_types_dict or {}
+    return all_types_dict
+
+
+def _collect_component_cache_lookups(
+    all_types_dict: dict[str, Any],
+) -> tuple[dict[str, set[str]], set[str], dict[str, str], ComponentIdentityIndex]:
+    """Build every derived component lookup without mutating shared cache state."""
+    type_to_hash, all_hashes = collect_component_hash_lookups(all_types_dict)
+    return (
+        type_to_hash,
+        all_hashes,
+        collect_code_by_hash(all_types_dict),
+        build_component_identity_index(all_types_dict),
+    )
 
 
 def _build_code_hash_lookups(cache: ComponentCache) -> None:
@@ -769,15 +801,43 @@ def _build_code_hash_lookups(cache: ComponentCache) -> None:
     - type_to_current_hash: {component_type: 12-char SHA256 prefix}
     - all_known_hashes: set of all known code hashes
     """
-    if cache.all_types_dict is None or (not cache.all_types_dict and not cache.all_types_ready):
-        return
+    with cache.state_lock:
+        all_types_dict = cache.all_types_dict
+        if all_types_dict is None or (not all_types_dict and not cache.all_types_ready):
+            return
 
-    type_to_hash, all_hashes = collect_component_hash_lookups(cache.all_types_dict)
+        type_to_hash, all_hashes, code_by_hash, identity_index = _collect_component_cache_lookups(all_types_dict)
 
-    cache.type_to_current_hash = type_to_hash
-    cache.all_known_hashes = all_hashes
-    cache.code_by_hash = collect_code_by_hash(cache.all_types_dict)
-    logger.debug(f"Built code hash lookups: {len(type_to_hash)} types, {len(all_hashes)} unique hashes")
+        cache.type_to_current_hash = type_to_hash
+        cache.all_known_hashes = all_hashes
+        cache.code_by_hash = code_by_hash
+        cache.component_identity_index = identity_index
+        logger.debug(f"Built code hash lookups: {len(type_to_hash)} types, {len(all_hashes)} unique hashes")
+
+
+def get_component_identity_index(
+    all_types_dict: dict[str, Any] | None = None,
+) -> ComponentIdentityIndex | None:
+    """Return a collision-aware identity index for a registry mapping.
+
+    The process-wide component registry reuses the precomputed cache. A
+    request-local or synthetic mapping receives its own index so it can never
+    accidentally resolve against stale identities from another registry.
+    When no mapping is supplied, an incompletely initialized component cache
+    returns ``None`` so active catalog policy can fail closed.
+    """
+    with component_cache.state_lock:
+        if all_types_dict is None:
+            if not component_cache.all_types_ready or component_cache.all_types_dict is None:
+                return None
+            all_types_dict = component_cache.all_types_dict
+
+        if all_types_dict is component_cache.all_types_dict:
+            if component_cache.component_identity_index is None:
+                component_cache.component_identity_index = build_component_identity_index(all_types_dict)
+            return component_cache.component_identity_index
+
+    return build_component_identity_index(all_types_dict)
 
 
 def _components_path_extension_paths(settings_service: "SettingsService") -> list[Path]:
@@ -1184,6 +1244,26 @@ async def import_extension_components(
     return components_dict
 
 
+def _publish_bundle_cache(bundle: str, bundle_dict: dict[str, Any]) -> bool:
+    """Atomically publish one reloaded bundle and invalidate derived lookups."""
+    with component_cache.state_lock:
+        current_types = component_cache.all_types_dict
+        if current_types is None or not component_cache.all_types_ready:
+            if component_cache.initialization_future is not None:
+                component_cache.pending_bundle_updates[bundle] = bundle_dict
+            return False
+
+        # Copy-on-write keeps any reader that already holds the previous
+        # registry paired with its previous immutable identity index.
+        component_cache.all_types_dict = {**current_types, bundle: bundle_dict}
+        component_cache.all_types_ready = True
+        component_cache.type_to_current_hash = None
+        component_cache.all_known_hashes = None
+        component_cache.code_by_hash = None
+        component_cache.component_identity_index = None
+        return True
+
+
 def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
     """Rebuild ``component_cache.all_types_dict`` for a single bundle after reload.
 
@@ -1197,7 +1277,10 @@ def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
     Components whose class fails to instantiate or template are skipped
     with a logged warning, mirroring :func:`import_extension_components`.
     """
-    if component_cache.all_types_dict is None:
+    with component_cache.state_lock:
+        cache_ready = component_cache.all_types_dict is not None and component_cache.all_types_ready
+        initialization_in_progress = component_cache.initialization_future is not None
+    if not cache_ready and not initialization_in_progress:
         # Cache hasn't been built yet; nothing to refresh.  The first
         # ``get_and_cache_all_types_dict`` call will see the fresh registry
         # entry and pick up the post-reload class set.
@@ -1260,37 +1343,62 @@ def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
             failures,
         )
 
-    component_cache.all_types_dict[record.bundle] = bundle_dict
-    component_cache.all_types_ready = True
-
-    # Invalidate the precomputed code-hash lookups so flow validation
-    # picks up the freshly-loaded class bodies instead of comparing
-    # against the pre-reload hashes.  ``get_component_hash_lookups_for_validation``
-    # rebuilds them lazily on the next call when the fields are None.  The
-    # trusted-source map is invalidated too so the endpoint never substitutes
-    # stale source after a bundle reload.
-    component_cache.type_to_current_hash = None
-    component_cache.all_known_hashes = None
-    component_cache.code_by_hash = None
+    # Publish the new registry and invalidate every derived view in one
+    # critical section. Readers therefore observe either the complete old
+    # state or the complete new state, never a new registry with a stale index.
+    _publish_bundle_cache(record.bundle, bundle_dict)
 
 
-async def get_and_cache_all_types_dict(
+def _consume_wrapped_initialization_result(wrapped_future: asyncio.Future[dict[str, Any]]) -> None:
+    """Retrieve a per-loop wrapper exception even if its caller was cancelled."""
+    if not wrapped_future.cancelled():
+        wrapped_future.exception()
+
+
+async def _await_component_cache_initialization(
+    initialization_future: Future[dict[str, Any]],
+) -> dict[str, Any]:
+    """Await process-wide initialization without coupling it to caller cancellation."""
+    wrapped_future = asyncio.wrap_future(initialization_future)
+    wrapped_future.add_done_callback(_consume_wrapped_initialization_result)
+    return await asyncio.shield(wrapped_future)
+
+
+def _finish_component_initialization_task(
+    cache: ComponentCache,
+    initialization_future: Future[dict[str, Any]],
+    initialization_task: asyncio.Task[None],
+) -> None:
+    """Clean up if the background initializer is cancelled or exits unexpectedly."""
+    task_exception = None if initialization_task.cancelled() else initialization_task.exception()
+    with cache.state_lock:
+        if cache.initialization_task is not initialization_task:
+            return
+
+        cache.initialization_task = None
+        if cache.initialization_future is not initialization_future:
+            return
+
+        cache.initialization_future = None
+        cache.pending_bundle_updates.clear()
+        if initialization_future.done():
+            return
+        if initialization_task.cancelled():
+            initialization_future.cancel()
+        elif task_exception is not None:
+            initialization_future.set_exception(task_exception)
+        else:
+            initialization_future.set_exception(RuntimeError("Component cache initialization ended without a result"))
+
+
+async def _initialize_component_cache(
+    cache: ComponentCache,
     settings_service: "SettingsService",
-    telemetry_service: Any | None = None,
-):
-    """Retrieves and caches the complete dictionary of component types and templates.
-
-    Supports both full and partial (lazy) loading. If the cache is empty, loads built-in Langflow
-    components and either fully loads all components or loads only their metadata, depending on the
-    lazy loading setting. Merges built-in, custom, and Extension-System components into the cache
-    and returns the resulting dictionary.
-
-    Args:
-        settings_service: Settings service instance
-        telemetry_service: Optional telemetry service for tracking component loading metrics
-    """
-    if component_cache.all_types_dict is None:
-        component_cache.all_types_ready = False
+    telemetry_service: Any | None,
+    initialization_future: Future[dict[str, Any]],
+) -> None:
+    """Build and atomically publish component state independently of any caller."""
+    try:
         await logger.adebug("Building components cache")
 
         langflow_components = await import_langflow_components(settings_service, telemetry_service)
@@ -1309,19 +1417,100 @@ async def get_and_cache_all_types_dict(
         # Merge built-in, custom, and extension components (no wrapper at cache level).
         # Extension components win on collision so a manifest-shipping bundle
         # supersedes any same-named legacy entry.
-        component_cache.all_types_dict = {
+        merged_types = {
             **langflow_components["components"],
             **custom_flat,
             **extension_components,
         }
-        component_cache.all_types_ready = True
-        component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
+        component_count = sum(len(comps) for comps in merged_types.values())
         await logger.adebug(f"Loaded {component_count} components")
 
-        # Precompute code hash lookups for fast flow validation
-        _build_code_hash_lookups(component_cache)
+        while True:
+            lookups = _collect_component_cache_lookups(merged_types)
+            with cache.state_lock:
+                if cache.pending_bundle_updates:
+                    pending_updates = dict(cache.pending_bundle_updates)
+                    cache.pending_bundle_updates.clear()
+                else:
+                    type_to_hash, all_hashes, code_by_hash, identity_index = lookups
+                    cache.all_types_dict = merged_types
+                    cache.all_types_ready = True
+                    cache.type_to_current_hash = type_to_hash
+                    cache.all_known_hashes = all_hashes
+                    cache.code_by_hash = code_by_hash
+                    cache.component_identity_index = identity_index
+                    cache.initialization_future = None
+                    cache.initialization_task = None
+                    initialization_future.set_result(merged_types)
+                    return
 
-    return component_cache.all_types_dict
+            # A reload completed while local discovery or lookup construction
+            # was in flight. Its bundle wins over the stale discovered copy;
+            # rebuild all derived maps locally before trying publication again.
+            merged_types = {**merged_types, **pending_updates}
+    except asyncio.CancelledError:
+        with cache.state_lock:
+            if cache.initialization_future is initialization_future:
+                cache.initialization_future = None
+                cache.initialization_task = None
+                cache.pending_bundle_updates.clear()
+            if not initialization_future.done():
+                initialization_future.cancel()
+        raise
+    except Exception as exc:  # noqa: BLE001
+        with cache.state_lock:
+            if cache.initialization_future is initialization_future:
+                cache.initialization_future = None
+                cache.initialization_task = None
+                cache.pending_bundle_updates.clear()
+            if not initialization_future.done():
+                initialization_future.set_exception(exc)
+
+
+async def get_and_cache_all_types_dict(
+    settings_service: "SettingsService",
+    telemetry_service: Any | None = None,
+) -> dict[str, Any]:
+    """Retrieves and caches the complete dictionary of component types and templates.
+
+    Supports both full and partial (lazy) loading. If the cache is empty, loads built-in Langflow
+    components and either fully loads all components or loads only their metadata, depending on the
+    lazy loading setting. Merges built-in, custom, and Extension-System components into the cache
+    and returns the resulting dictionary.
+
+    Args:
+        settings_service: Settings service instance
+        telemetry_service: Optional telemetry service for tracking component loading metrics
+    """
+    cache = component_cache
+    with cache.state_lock:
+        if cache.all_types_ready and cache.all_types_dict is not None:
+            return cache.all_types_dict
+
+        initialization_future = cache.initialization_future
+        if initialization_future is None:
+            initialization_future = Future()
+            cache.initialization_future = initialization_future
+            # Discard any legacy/failed partial state. The initializer keeps all
+            # new registry and lookup data in locals until atomic publication.
+            cache.all_types_dict = None
+            cache.all_types_ready = False
+            cache.type_to_current_hash = None
+            cache.all_known_hashes = None
+            cache.code_by_hash = None
+            cache.component_identity_index = None
+            initialization_task = asyncio.create_task(
+                _initialize_component_cache(cache, settings_service, telemetry_service, initialization_future),
+                name="lfx-component-cache-initialization",
+            )
+            cache.initialization_task = initialization_task
+            initialization_task.add_done_callback(
+                lambda task: _finish_component_initialization_task(cache, initialization_future, task)
+            )
+
+    # Every caller receives a loop-local wrapper. Shielding that wrapper keeps
+    # caller cancellation from reaching either the shared future or its task.
+    return await _await_component_cache_initialization(initialization_future)
 
 
 async def aget_all_types_dict(components_paths: list[str]):

@@ -773,6 +773,43 @@ async def test_build_public_tmp_enforces_current_catalog_policy_with_generic_err
     assert "job_id" in allowed_response.json()
 
 
+async def test_build_public_tmp_sanitizes_catalog_identity_unavailable_response(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    from lfx.utils.flow_validation import (
+        PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+        CatalogPolicyIdentityUnavailableError,
+    )
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+    client.cookies.set("client_id", "test-catalog-identity-unavailable-client")
+    raw_message = "Catalog identities unavailable: internal generation 42"
+
+    def identities_unavailable(_target):
+        raise CatalogPolicyIdentityUnavailableError(raw_message)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.chat.validate_catalog_policy_for_flow",
+        identities_unavailable,
+    )
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.SERVICE_UNAVAILABLE
+    assert response.json()["detail"] == PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE
+    assert raw_message not in response.text
+
+
 @pytest.mark.benchmark
 @pytest.mark.security
 async def test_build_public_tmp_rejects_code_execution_components(
