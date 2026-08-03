@@ -205,7 +205,6 @@ class Component(CustomComponent):
                 inputs[key] = value
 
         self._parameters = inputs or {}
-        self.set_attributes(self._parameters)
 
         # Store original inputs and config for reference
         self.__inputs = inputs
@@ -228,6 +227,7 @@ class Component(CustomComponent):
         self.reset_all_output_values()
         if self.inputs is not None:
             self.map_inputs(self.inputs)
+            self.set_attributes(self._parameters)
         self.map_outputs()
 
         # Final setup

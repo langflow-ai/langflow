@@ -1,5 +1,7 @@
 import pytest
 from lfx.components.input_output.chat import ChatInput
+from lfx.custom.custom_component.component import Component
+from lfx.inputs.inputs import StrInput
 from lfx.schema.message import Message
 
 
@@ -23,6 +25,15 @@ def test_input_value_independence(chat_input_instances):
     assert chat1.input_value != chat2.input_value
     assert chat1.input_value == "Hello from chat1"
     assert chat2.input_value == "Hello from chat2"
+
+
+def test_constructor_parameters_are_applied_to_declared_inputs():
+    class TestComponent(Component):
+        inputs = [StrInput(name="custom_value", value="default")]
+
+    component = TestComponent(custom_value="from-ui")
+
+    assert component.custom_value == "from-ui"
 
 
 def test_sender_name_independence(chat_input_instances):
