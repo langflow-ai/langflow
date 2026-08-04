@@ -9,6 +9,7 @@ from lfx.inputs.inputs import StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.utils.python_repl_security import ensure_code_execution_enabled, safe_builtins, validate_code_safety
+from lfx.utils.sandbox import is_sandbox_enabled, run_code_in_sandbox, sanitize_code
 
 
 class PythonREPLToolComponent(LCToolComponent):
@@ -80,6 +81,22 @@ class PythonREPLToolComponent(LCToolComponent):
                 # Refuse to run user code when allow_custom_components is disabled
                 # (GHSA-8qpj-27x8-pwpq).
                 ensure_code_execution_enabled()
+
+                # Opt-in microVM isolation (LANGFLOW_SANDBOX_BACKEND, issue
+                # #12029): the VM boundary replaces the in-process import
+                # allow-list / AST mitigations below. Sandbox errors
+                # (including configured-but-unavailable) surface as
+                # ToolException — never fall back to in-process exec.
+                if is_sandbox_enabled():
+                    result = run_code_in_sandbox(sanitize_code(code), global_imports=self.global_imports)
+                    if not result.success:
+                        # Parity with the in-process path: PythonREPL.run()
+                        # RETURNS user-code errors as the observation string
+                        # (so agents can read the traceback and self-correct)
+                        # rather than raising. Only sandbox infrastructure
+                        # errors raise (via run_code_in_sandbox above).
+                        return result.error_message()
+                    return result.stdout
                 # Validate the exact (sanitized) code that will run, rejecting inline
                 # imports and escape gadgets; combined with the restricted builtins in
                 # get_globals(). A fresh globals namespace is built per invocation so

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class SecuritySettings(BaseModel):
@@ -123,6 +123,46 @@ class SecuritySettings(BaseModel):
     ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``) so these code-execution primitives cannot be
     used to break out of the component allow-list."""
 
+    sandbox_backend: str = "none"
+    """Execution backend for user-authored code in the code-execution components
+    (Python Interpreter and the legacy Python REPL tool).
+
+    - "none" (default): code runs in-process via ``exec`` with the best-effort
+      Python-level hardening (restricted builtins + AST checks). Preserves existing
+      behavior; nothing extra to install.
+    - "exec-sandbox": each execution runs in a dedicated QEMU microVM via the
+      optional ``exec-sandbox`` package (``pip install 'langflow[sandbox]'``;
+      requires Python >= 3.12 and QEMU 8+ with KVM/HVF hardware acceleration, or
+      slower TCG emulation). The VM has a read-only rootfs, no host filesystem
+      access, and no network unless ``sandbox_allow_network`` is enabled. In this
+      mode the Python-level import allow-list and AST escape-gadget restrictions
+      are not applied — the VM boundary replaces them — so sandboxed code may
+      import any module available in the guest image. If the backend is
+      configured but unusable, execution fails closed with an error instead of
+      silently running in-process.
+
+    See https://github.com/langflow-ai/langflow/issues/12029."""
+
+    sandbox_timeout_seconds: int = Field(default=30, ge=1, le=300)
+    """Wall-clock limit for one sandboxed execution, in seconds (1-300).
+    Only used when sandbox_backend is not "none"."""
+
+    sandbox_memory_mb: int = Field(default=192, ge=128)
+    """Guest VM memory for sandboxed executions, in MB (minimum 128).
+    Only used when sandbox_backend is not "none"."""
+
+    sandbox_allow_network: bool = False
+    """Whether sandboxed code may access the network. Default False: the microVM
+    runs fully offline, which is the strongest isolation. Note the in-process
+    backend has full server-side network access, so enabling the sandbox with the
+    default here is a behavior change for code that fetches URLs.
+    Only used when sandbox_backend is not "none"."""
+
+    sandbox_warm_pool_size: int = Field(default=0, ge=0, le=32)
+    """Number of pre-booted VMs kept warm per language to cut execution latency
+    (0 disables pre-booting). Warm VMs consume memory while idle.
+    Only used when sandbox_backend is not "none"."""
+
     restrict_local_file_access: bool = False
     """If set to True, the built-in file-reading components (File, Directory, JSON/CSV-to-Data)
     may only read paths that resolve inside the authenticated user's or executing flow's storage
@@ -169,6 +209,17 @@ class SecuritySettings(BaseModel):
     """Public-flow runs allowed per minute per IP on the unauthenticated v1 build and v2 workflow endpoints.
     V1 uses one bucket per flow; v2 uses its public-workflow bucket. Each run executes as the flow owner, so
     anonymous callers are throttled separately from and more generously than login. Gated by rate_limit_enabled."""
+
+    @field_validator("sandbox_backend", mode="before")
+    @classmethod
+    def validate_sandbox_backend(cls, value):
+        """Reject unknown backends at startup so a typo cannot silently disable sandboxing."""
+        normalized = str(value).strip().lower() if value is not None else "none"
+        allowed = {"none", "exec-sandbox"}
+        if normalized not in allowed:
+            msg = f"sandbox_backend must be one of {sorted(allowed)}, got {value!r}"
+            raise ValueError(msg)
+        return normalized
 
     @field_validator("cors_origins", mode="before")
     @classmethod
