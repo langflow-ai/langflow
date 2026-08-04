@@ -95,7 +95,7 @@ class PublicFlowValidationError(CustomComponentValidationError):
 # test_every_code_execution_type_has_registered_code_fields in test_process.py.
 # The conventional "code" field name is blocked globally in apply_tweaks() and so
 # is intentionally omitted here.
-#   - python_code:        Python Interpreter (PythonREPLComponent) exec input
+#   - python_code:        Python Interpreter (PythonREPLComponent) and Python REPL Tool exec input
 #   - function_code:      Python Function (PythonFunctionComponent) exec input
 #   - tool_code:          removed PythonCodeStructuredTool exec input (type retained)
 #   - filter_instruction: Smart Transform instruction → LLM-generated, eval()'d lambda

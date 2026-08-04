@@ -41,12 +41,29 @@ class PythonREPLToolComponent(LCToolComponent):
             value="math",
         ),
         StrInput(
-            name="code",
+            name="python_code",
             display_name="Python Code",
             info="The Python code to execute.",
             value="print('Hello, World!')",
         ),
     ]
+
+    @staticmethod
+    def _normalize_legacy_code_input(params: dict) -> dict:
+        # `code` is reserved for the component's source. Preserve programmatic
+        # callers that used the old input name while serializing the value separately.
+        if "code" in params:
+            params.setdefault("python_code", params.pop("code"))
+        return params
+
+    def set(self, **kwargs):
+        return super().set(**self._normalize_legacy_code_input(kwargs))
+
+    def set_attributes(self, params: dict) -> None:
+        super().set_attributes(self._normalize_legacy_code_input(params))
+
+    def set_input_value(self, name: str, value) -> None:
+        super().set_input_value("python_code" if name == "code" else name, value)
 
     class PythonREPLSchema(BaseModel):
         code: str = Field(..., description="The Python code to execute.")
@@ -106,5 +123,6 @@ class PythonREPLToolComponent(LCToolComponent):
 
     def run_model(self) -> list[Data]:
         tool = self.build_tool()
-        result = tool.run(self.code)
+        code_input = "" if self.python_code is None else self.python_code
+        result = tool.run({"code": code_input})
         return [Data(data={"result": result})]

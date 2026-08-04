@@ -2,6 +2,7 @@ import pytest
 from langchain_core.tools import ToolException
 from lfx.components.tools.python_repl import PythonREPLToolComponent
 from lfx.components.utilities.python_repl_core import PythonREPLComponent
+from lfx.graph import Graph
 
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
@@ -190,6 +191,57 @@ class TestPythonREPLComponentSecurity:
         assert "allow_custom_components" in data["error"]
         # The code must never have executed.
         assert "SHOULD_NOT_RUN" not in str(data)
+
+
+class TestPythonREPLToolComponentRunModel:
+    """run_model must execute the Python Code input, not the component's own source.
+
+    `BaseComponent.code` is a class-level property returning the component's source;
+    it shadowed the former StrInput named "code". The runtime field now serializes as
+    "python_code", while "code" remains accepted as a programmatic compatibility alias.
+    """
+
+    def test_run_model_executes_code_input(self):
+        component = PythonREPLToolComponent(
+            name="python_repl",
+            description="run code",
+            global_imports="math",
+            code="print(math.sqrt(16))",
+        )
+        results = component.run_model()
+        assert len(results) == 1
+        assert "4.0" in results[0].data["result"]
+
+    def test_run_model_uses_default_code_when_unset(self):
+        results = PythonREPLToolComponent().run_model()
+        assert "Hello, World!" in results[0].data["result"]
+
+    def test_run_model_does_not_execute_component_source(self):
+        """The input must win over the component's own source.
+
+        The component source starts with imports, so passing it to the tool would
+        raise ToolException("Imports are not allowed...").
+        """
+        component = PythonREPLToolComponent(code="print('input wins')")
+        results = component.run_model()
+        assert "input wins" in results[0].data["result"]
+
+    def test_run_model_accepts_legacy_code_setter(self):
+        component = PythonREPLToolComponent()
+        component.set(code="print('legacy setter input')")
+        results = component.run_model()
+        assert "legacy setter input" in results[0].data["result"]
+
+    @pytest.mark.asyncio
+    async def test_run_model_executes_python_code_after_frontend_round_trip(self):
+        component = PythonREPLToolComponent(python_code="print('round trip input')", _id="python-repl")
+        node = component.to_frontend_node()
+        graph = Graph.from_payload({"nodes": [node], "edges": []})
+
+        _ = [result async for result in graph.async_start()]
+
+        output = graph.get_vertex("python-repl").built_object["api_run_model"]
+        assert output[0].data["result"].strip() == "round trip input"
 
 
 class TestPythonREPLToolComponentSecurity:
