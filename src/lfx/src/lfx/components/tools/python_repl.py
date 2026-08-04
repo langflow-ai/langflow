@@ -106,5 +106,11 @@ class PythonREPLToolComponent(LCToolComponent):
 
     def run_model(self) -> list[Data]:
         tool = self.build_tool()
-        result = tool.run(self.code)
+        # `self.code` resolves to BaseComponent's class-level `code` property (the
+        # component's own source), which shadows the StrInput named "code" — read the
+        # input value explicitly so the user's code runs, not the component source.
+        code_input = self._attributes.get("code")
+        if code_input is None and "code" in self._inputs:
+            code_input = self._inputs["code"].value
+        result = tool.run(code_input or "")
         return [Data(data={"result": result})]

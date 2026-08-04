@@ -192,6 +192,40 @@ class TestPythonREPLComponentSecurity:
         assert "SHOULD_NOT_RUN" not in str(data)
 
 
+class TestPythonREPLToolComponentRunModel:
+    """run_model must execute the *code input*, not the component's own source.
+
+    `BaseComponent.code` is a class-level property returning the component's source,
+    which shadows the StrInput named "code". run_model previously passed that source
+    to the tool, so every direct run failed validate_code_safety's import check.
+    """
+
+    def test_run_model_executes_code_input(self):
+        component = PythonREPLToolComponent(
+            name="python_repl",
+            description="run code",
+            global_imports="math",
+            code="print(math.sqrt(16))",
+        )
+        results = component.run_model()
+        assert len(results) == 1
+        assert "4.0" in results[0].data["result"]
+
+    def test_run_model_uses_default_code_when_unset(self):
+        results = PythonREPLToolComponent().run_model()
+        assert "Hello, World!" in results[0].data["result"]
+
+    def test_run_model_does_not_execute_component_source(self):
+        """The input must win over the component's own source.
+
+        The component source starts with imports, so passing it to the tool would
+        raise ToolException("Imports are not allowed...").
+        """
+        component = PythonREPLToolComponent(code="print('input wins')")
+        results = component.run_model()
+        assert "input wins" in results[0].data["result"]
+
+
 class TestPythonREPLToolComponentSecurity:
     """The same hardening applies to the legacy Python REPL *tool* component."""
 
