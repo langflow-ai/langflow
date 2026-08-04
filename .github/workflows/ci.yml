@@ -61,7 +61,9 @@ on:
           - '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
         default: ubuntu-latest
   pull_request:
-    types: [opened, synchronize, labeled]
+    # ready_for_review matters: every job below is gated on the PR not being a draft, so a PR
+    # opened as a draft and later marked ready has no run where that gate was ever true.
+    types: [opened, synchronize, labeled, ready_for_review]
   merge_group:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -490,8 +492,13 @@ jobs:
       RESULTS_JSON: ${{ toJSON(needs.*.result) }}
       # Skip nightly build check if only docs files changed
       DOCS_ONLY: ${{ needs.path-filter.outputs.docs-only }}
+      # A skipped need is not counted as a failure, which is correct when path-filter ran and
+      # decided nothing relevant changed. It is not correct when path-filter itself never
+      # produced a decision: every dependent job is then skipped for want of its outputs, and
+      # this gate would report success over a job set that never ran. Require the decision.
       EXIT_CODE: ${{ (contains(needs.*.result, 'failure') ||
         contains(needs.*.result, 'cancelled') ||
+        (needs.set-ci-condition.outputs.should-run-ci == 'true' && !inputs.run-all-tests && needs.path-filter.result != 'success') ||
         (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && github.event_name != 'merge_group' && needs.path-filter.outputs.docs-only != 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-nightly-check')))
         && '1' || '0' }}
     steps:
@@ -503,6 +510,7 @@ jobs:
           echo "Nightly build status: ${{ needs.check-nightly-status.outputs.should-proceed }}"
           echo "Event type: ${{ github.event_name }}"
           echo "Docs only changes: $DOCS_ONLY"
+          echo "Path filter decision: ${{ needs.path-filter.result }}"
           echo "Python changes: ${{ needs.path-filter.outputs.python }}"
           echo "Frontend changes: ${{ needs.path-filter.outputs.frontend }}"
           echo "Docs changes: ${{ needs.path-filter.outputs.docs }}"
