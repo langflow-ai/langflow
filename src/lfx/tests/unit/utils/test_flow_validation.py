@@ -1,6 +1,7 @@
 """Unit tests for LFX flow validation helpers."""
 
 import json
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -8,7 +9,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from lfx.utils.flow_validation import (
     CODE_EXECUTION_COMPONENT_TYPES,
+    CODE_EXECUTION_FIELD_NAMES,
     FLOW_REFERENCE_COMPONENT_TYPES,
+    PROTECTED_TWEAK_FIELDS_BY_COMPONENT,
     CustomComponentValidationError,
     PublicFlowValidationError,
     collect_component_code_lookups,
@@ -626,3 +629,54 @@ def test_block_code_interpreter_components_detects_nested_flow(monkeypatch):
 
     with pytest.raises(CustomComponentValidationError, match="code-execution components are not allowed"):
         validate_flow_for_current_settings(graph)
+
+
+# --- Frontend mirror parity -------------------------------------------------
+# The parameters panel must not offer an "API" toggle on a field that
+# apply_tweaks would refuse, so the refusal rules are mirrored in
+# src/frontend/src/modals/apiModal/utils/api-exposure-rules.ts. The mirror is
+# UX only — the backend stays the enforcement point — but a mirror that drifts
+# silently brings the bug back, so parity is asserted here.
+
+_FRONTEND_MIRROR = Path(__file__).parents[4] / "frontend/src/modals/apiModal/utils/api-exposure-rules.ts"
+
+
+def _strip_line_comments(source: str) -> str:
+    return "\n".join(line.split("//")[0] for line in source.splitlines())
+
+
+def _parse_ts_string_set(source: str, const_name: str) -> set[str]:
+    """Extract the string literals of `export const <const_name> ... new Set([...])`."""
+    marker = f"export const {const_name}"
+    start = source.index(marker)
+    open_bracket = source.index("[", start)
+    close_bracket = source.index("]", open_bracket)
+    return set(re.findall(r'"([^"]+)"', source[open_bracket:close_bracket]))
+
+
+def _parse_ts_protected_fields(source: str) -> dict[str, set[str]]:
+    """Extract `{ Component: new Set([...]) }` from the protected-fields record."""
+    start = source.index("export const PROTECTED_TWEAK_FIELDS_BY_COMPONENT")
+    body = source[source.index("{", source.index("=", start)) : source.index("};", start)]
+    return {
+        component: set(re.findall(r'"([^"]+)"', fields))
+        for component, fields in re.findall(r"(\w+):\s*new Set\(\[([^\]]*)\]\)", body)
+    }
+
+
+@pytest.mark.skipif(not _FRONTEND_MIRROR.exists(), reason="frontend package not present (standalone lfx checkout)")
+def test_frontend_mirrors_tweak_refusal_rules():
+    """The frontend mirror of the tweak-refusal rules must match this module exactly.
+
+    Failing here means the UI and the backend disagree about which fields can be
+    exposed as API inputs: either the UI is about to offer a field apply_tweaks
+    refuses, or it hides one that is legitimately tweakable. Update
+    api-exposure-rules.ts (and this test's expectations stay automatic).
+    """
+    source = _strip_line_comments(_FRONTEND_MIRROR.read_text(encoding="utf-8"))
+
+    assert _parse_ts_string_set(source, "CODE_EXECUTION_COMPONENT_TYPES") == set(CODE_EXECUTION_COMPONENT_TYPES)
+    assert _parse_ts_string_set(source, "CODE_EXECUTION_FIELD_NAMES") == set(CODE_EXECUTION_FIELD_NAMES)
+    assert _parse_ts_protected_fields(source) == {
+        component: set(fields) for component, fields in PROTECTED_TWEAK_FIELDS_BY_COMPONENT.items()
+    }

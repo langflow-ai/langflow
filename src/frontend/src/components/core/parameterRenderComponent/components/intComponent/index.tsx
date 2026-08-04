@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { cn } from "@/utils/utils";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
+import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
 import type { InputProps, IntComponentType } from "../../types";
 
 export default function IntComponent({
@@ -21,6 +22,7 @@ export default function IntComponent({
   disabled,
   editNode = false,
   id = "",
+  nodeId,
   readonly,
   showParameter = true,
 }: InputProps<number, IntComponentType>): JSX.Element | null {
@@ -150,7 +152,7 @@ export default function IntComponent({
   return (
     <div className="w-full">
       <NumberInput
-        id={id}
+        id={getNodeScopedDomId(id, nodeId)}
         step={getStepValue()}
         min={getMinValue()}
         max={getMaxValue()}

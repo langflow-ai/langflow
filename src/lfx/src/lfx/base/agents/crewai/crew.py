@@ -52,7 +52,7 @@ def convert_llm(llm: Any, excluded_keys=None):
         A CrewAI-compatible LLM object
     """
     try:
-        from crewai import LLM
+        from crewai import LLM, BaseLLM
     except ImportError as e:
         msg = "CrewAI is not installed. Please install it with `uv pip install crewai`."
         raise ImportError(msg) from e
@@ -60,8 +60,8 @@ def convert_llm(llm: Any, excluded_keys=None):
     if not llm:
         return None
 
-    # Check if this is already an LLM object
-    if isinstance(llm, LLM):
+    # From crewai 1.0 `LLM(...)` returns provider-specific BaseLLM subclasses, not LLM instances.
+    if isinstance(llm, BaseLLM):
         return llm
 
     # Check if we should use model_name model, or something else
