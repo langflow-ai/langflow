@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import Dropdown from "@/components/core/dropdownComponent";
 import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVariableModal";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
+import Loading from "@/components/ui/loading";
 import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 import {
   PermissionsProvider,
@@ -429,33 +430,44 @@ function GlobalVariablesPageContent({
       </div>
 
       <div className="flex h-full w-full flex-col justify-between">
-        <TableComponent
-          ref={gridRef}
-          key={"globalVariables"}
-          overlayNoRowsTemplate={t("globalVars.noDataAvailable")}
-          onSelectionChanged={(event: SelectionChangedEvent) => {
-            setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
-          }}
-          rowSelection="multiple"
-          isRowSelectable={(row) =>
-            Boolean(canMutateVariable(row.data, "delete", permissionState, can))
-          }
-          onRowClicked={updateVariables}
-          onCellKeyDown={handleCellKeyDown}
-          onCellFocused={(event) => {
-            if (event.rowIndex == null) return;
-            const colId =
-              typeof event.column === "string"
-                ? event.column
-                : event.column?.getColId();
-            rememberFocusedCell(event.rowIndex, colId);
-          }}
-          suppressRowClickSelection={true}
-          pagination={true}
-          columnDefs={colDefs}
-          rowData={validGlobalVariables ?? []}
-          onDelete={removeVariables}
-        />
+        {permissionsLoading ? (
+          <div className="flex h-full min-h-72 w-full items-center justify-center rounded-md border">
+            <Loading
+              aria-label={t("common.loading", "Loading")}
+              className="h-6 w-6 text-primary"
+            />
+          </div>
+        ) : (
+          <TableComponent
+            ref={gridRef}
+            key={"globalVariables"}
+            overlayNoRowsTemplate={t("globalVars.noDataAvailable")}
+            onSelectionChanged={(event: SelectionChangedEvent) => {
+              setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
+            }}
+            rowSelection="multiple"
+            isRowSelectable={(row) =>
+              Boolean(
+                canMutateVariable(row.data, "delete", permissionState, can),
+              )
+            }
+            onRowClicked={updateVariables}
+            onCellKeyDown={handleCellKeyDown}
+            onCellFocused={(event) => {
+              if (event.rowIndex == null) return;
+              const colId =
+                typeof event.column === "string"
+                  ? event.column
+                  : event.column?.getColId();
+              rememberFocusedCell(event.rowIndex, colId);
+            }}
+            suppressRowClickSelection={true}
+            pagination={true}
+            columnDefs={colDefs}
+            rowData={validGlobalVariables ?? []}
+            onDelete={removeVariables}
+          />
+        )}
         {initialData.current && (
           <GlobalVariableModal
             key={initialData.current.id}
