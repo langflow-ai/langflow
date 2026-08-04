@@ -49,7 +49,7 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildError
-from langflow.services.auth.utils import get_current_active_user, get_current_user_optional
+from langflow.services.auth.utils import get_current_user_optional
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.chat.service import ChatService
@@ -695,12 +695,12 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
     "/build/{flow_id}/{vertex_id}/stream",
     response_class=StreamingResponse,
     deprecated=True,
-    dependencies=[Depends(get_current_active_user)],
     include_in_schema=False,
 )
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
+    current_user: CurrentActiveUser,
 ):
     """Build a vertex instead of the entire graph.
 
@@ -727,6 +727,28 @@ async def build_vertex_stream(
     Raises:
         HTTPException: If an error occurs while building the vertex.
     """
+    # The cache is keyed only by flow UUID and may contain another user's
+    # in-memory graph. Authorize before constructing the streaming response so
+    # an authenticated non-owner cannot read a built result or invoke
+    # ``vertex.stream()`` on that cached graph.
+    async with session_scope() as session:
+        stmt = (
+            select(Flow)
+            .where(Flow.id == flow_id)
+            .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
+        )
+        flow = (await session.exec(stmt)).first()
+    if not flow:
+        raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.EXECUTE,
+        flow_id=flow_id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
+
     try:
         return StreamingResponse(
             _stream_vertex(str(flow_id), vertex_id, get_chat_service()),

@@ -233,6 +233,7 @@ class StructuredOutputComponent(Component):
             llm_with_structured_output = create_extractor(llm, tools=[schema], tool_choice=schema.__name__)
             result = get_chat_result(
                 runnable=llm_with_structured_output,
+                remediation_target=llm,
                 system_message=self.system_prompt,
                 input_value=self.input_value,
                 config=config_dict,
@@ -251,6 +252,7 @@ class StructuredOutputComponent(Component):
             llm_with_structured_output = llm.with_structured_output(schema)
             result = get_chat_result(
                 runnable=llm_with_structured_output,
+                remediation_target=llm,
                 system_message=self.system_prompt,
                 input_value=self.input_value,
                 config=config_dict,

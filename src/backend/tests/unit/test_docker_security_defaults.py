@@ -88,6 +88,22 @@ def _target_env(dockerfile: Path, target: str | None = None) -> dict[str, str]:
 
 
 @pytest.mark.parametrize(("dockerfile", "target"), PUBLISHED_IMAGES)
+def test_published_images_use_writable_runtime_home(dockerfile: str, target: str | None) -> None:
+    assert _target_env(REPO_ROOT / "docker" / dockerfile, target).get("HOME") == "/app/data"
+
+
+def test_consolidated_and_lfx_images_create_writable_runtime_home() -> None:
+    sources = (
+        (REPO_ROOT / "docker" / "build_and_push.Dockerfile").read_text(encoding="utf-8"),
+        (REPO_ROOT / "src" / "lfx" / "docker" / "Dockerfile").read_text(encoding="utf-8"),
+    )
+    for source in sources:
+        assert "mkdir -p /app/data" in source
+        assert "chown -R 1000:0 /app/data" in source
+        assert "chmod -R g+rwX /app/data" in source
+
+
+@pytest.mark.parametrize(("dockerfile", "target"), PUBLISHED_IMAGES)
 def test_published_images_do_not_force_restrictive_runtime_defaults(dockerfile: str, target: str | None) -> None:
     runtime_env = _target_env(REPO_ROOT / "docker" / dockerfile, target)
 
