@@ -433,6 +433,8 @@ export const lazyIconsMapping = {
     import("@/icons/SearchVector").then((mod) => ({
       default: mod.SearchVectorIcon,
     })),
+  Scavio: () =>
+    import("@/icons/Scavio").then((mod) => ({ default: mod.ScavioIcon })),
   Searx: () =>
     import("@/icons/Searx").then((mod) => ({ default: mod.SearxIcon })),
   SerpSearch: () =>
