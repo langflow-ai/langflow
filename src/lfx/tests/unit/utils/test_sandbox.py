@@ -628,6 +628,48 @@ class TestRunCodeInSandbox:
         # The post-shutdown run completed on the current epoch: readiness set.
         assert fresh_executor._startup_complete
 
+    @pytest.mark.usefixtures("fake_exec_sandbox")
+    def test_fork_hook_replaces_held_mutex(self, monkeypatch, fresh_executor):
+        """The after-fork hook must rebuild a mutex a dead parent thread held.
+
+        Simulates the child side of a fork taken while another thread owned
+        the executor mutex: the inherited lock is locked with no surviving
+        owner, and without the hook the next run() would block forever before
+        reaching the dead-loop recovery.
+        """
+        import threading
+
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        # Establish live state, then simulate the fork child: the mutex is
+        # held by a thread that no longer exists.
+        assert run_code_in_sandbox("print('hi')").success
+        inherited_lock = fresh_executor._lock
+        assert inherited_lock.acquire(blocking=False)  # now "held by a dead thread"
+        old_generation = fresh_executor._generation
+
+        sandbox_module._reinit_executor_after_fork()
+
+        assert fresh_executor._lock is not inherited_lock
+        assert fresh_executor._lock.acquire(blocking=False)
+        fresh_executor._lock.release()
+        assert fresh_executor._loop is None
+        assert fresh_executor._thread is None
+        assert fresh_executor._scheduler is None
+        assert fresh_executor._scheduler_lock is None
+        assert not fresh_executor._startup_complete
+        assert fresh_executor._generation == old_generation + 1
+
+        # A run in the "child" must complete instead of deadlocking on the
+        # inherited mutex; bound it with a joined thread so a regression
+        # fails the test rather than hanging the suite.
+        results = []
+        worker = threading.Thread(target=lambda: results.append(run_code_in_sandbox("print('hi')")), daemon=True)
+        worker.start()
+        worker.join(timeout=5)
+        assert not worker.is_alive(), "run() deadlocked on the fork-inherited mutex"
+        assert results
+        assert results[0].success
+
     def test_shutdown_is_a_barrier_for_inflight_creation(self, monkeypatch, fresh_executor, fake_exec_sandbox):
         """A shutdown overlapping Scheduler.__aenter__ must wait and then close it.
 

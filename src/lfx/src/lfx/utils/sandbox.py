@@ -35,6 +35,7 @@ import ast
 import asyncio
 import atexit
 import contextlib
+import os
 import re
 import subprocess
 import sys
@@ -229,8 +230,6 @@ def _emulation_forced_by_env() -> bool:
     decision consumes upstream's own Settings in
     :func:`_assert_hardware_acceleration`.
     """
-    import os
-
     return os.environ.get("EXEC_SANDBOX_FORCE_EMULATION", "").strip().lower() in {
         "1",
         "true",
@@ -345,6 +344,28 @@ class _ExecSandboxExecutor:
             self._loop = loop
             self._thread = thread
         return self._loop
+
+    def _reset_after_fork(self) -> None:
+        """Rebuild synchronization state in a freshly forked child.
+
+        Called from an ``os.register_at_fork(after_in_child=...)`` hook, i.e.
+        in the guaranteed single-threaded window right after fork() returns
+        in the child, so replacing state without holding any lock is safe.
+
+        The mutex must be REPLACED, not merely relied upon: if another parent
+        thread held ``self._lock`` at fork time, the child inherits it locked
+        with no surviving owner and run() would block forever before ever
+        reaching the dead-loop recovery in _ensure_loop_locked. Loop-affine
+        state is cleared outright — threads do not survive fork, so the
+        inherited loop/scheduler/asyncio-lock are all unusable husks.
+        """
+        self._lock = threading.Lock()
+        self._scheduler_lock = None
+        self._scheduler = None
+        self._loop = None
+        self._thread = None
+        self._startup_complete = False
+        self._generation += 1
 
     async def _ensure_scheduler(self, *, allow_software_emulation: bool):
         # Runs ON the sandbox loop, so scheduler state is loop-affine by
@@ -575,6 +596,24 @@ class _ExecSandboxExecutor:
 
 
 _executor = _ExecSandboxExecutor()
+
+
+def _reinit_executor_after_fork() -> None:
+    """after_in_child fork hook: give the (current) executor fresh sync state.
+
+    Resolves the module global at call time so a test-injected executor is
+    covered too. Runs in the child's single-threaded post-fork window; must
+    never raise (an exception here would surface inside unrelated fork calls).
+    """
+    with contextlib.suppress(Exception):
+        _executor._reset_after_fork()  # noqa: SLF001 - module-owned singleton
+
+
+if hasattr(os, "register_at_fork"):
+    # POSIX only (exec-sandbox itself is Linux/macOS only). Registered once at
+    # import for the process lifetime; the hook re-resolves _executor when it
+    # fires, so it never pins a stale instance.
+    os.register_at_fork(after_in_child=_reinit_executor_after_fork)
 
 
 def build_import_preamble(global_imports: str | list[str]) -> str:
