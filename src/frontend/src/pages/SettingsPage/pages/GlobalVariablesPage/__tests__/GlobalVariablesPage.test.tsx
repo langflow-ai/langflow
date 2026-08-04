@@ -87,6 +87,7 @@ describe("GlobalVariablesPage - permissions loading", () => {
 
     const { rerender } = render(<GlobalVariablesPage />);
 
+    expect(screen.getByRole("status")).toBeInTheDocument();
     expect(screen.getByTestId("loading-icon")).toHaveAccessibleName("Loading");
     expect(screen.queryByTestId("global-variables-table")).toBeNull();
 

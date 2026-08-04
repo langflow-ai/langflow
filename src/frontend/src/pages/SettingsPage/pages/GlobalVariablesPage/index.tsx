@@ -59,6 +59,7 @@ export default function GlobalVariablesPage() {
       resourceType="variable"
       resourceIds={resourceIds}
       actions={["read", "write", "delete"]}
+      preservePreviousPermissions
     >
       <GlobalVariablesPageContent globalVariables={globalVariables} />
     </PermissionsProvider>
@@ -431,7 +432,10 @@ function GlobalVariablesPageContent({
 
       <div className="flex h-full w-full flex-col justify-between">
         {permissionsLoading ? (
-          <div className="flex h-full min-h-72 w-full items-center justify-center rounded-md border">
+          <div
+            role="status"
+            className="flex h-full min-h-72 w-full items-center justify-center rounded-md border"
+          >
             <Loading
               aria-label={t("common.loading", "Loading")}
               className="h-6 w-6 text-primary"
