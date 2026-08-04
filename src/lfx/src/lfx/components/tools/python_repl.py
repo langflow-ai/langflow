@@ -79,7 +79,12 @@ class PythonREPLToolComponent(LCToolComponent):
         value = self._attributes.get(key)
         if not value and key in self._inputs:
             value = self._inputs[key].value
-        return value
+        if value is None or isinstance(value, str):
+            return value
+        # StrInput only warns on non-string values, so a non-string can reach here;
+        # StructuredTool.from_function requires string metadata (it strips the
+        # description), so coerce instead of crashing deep inside langchain-core.
+        return str(value)
 
     def build_tool(self) -> Tool:
         def run_python_code(code: str) -> str:

@@ -192,7 +192,7 @@ class TestPythonREPLComponentSecurity:
         assert "SHOULD_NOT_RUN" not in str(data)
 
 
-class TestPythonREPLToolComponentToolNameDescription:
+class TestPythonREPLToolComponentToolNameDescription(ComponentTestBaseWithoutClient):
     """build_tool must honor the "Tool Name" / "Tool Description" inputs.
 
     The class attributes `name = "PythonREPLTool"` and `description = "A tool for..."`
@@ -200,6 +200,23 @@ class TestPythonREPLToolComponentToolNameDescription:
     normal attribute lookup fails, so self.name/self.description in build_tool always
     returned the class attributes and the user's input values were silently ignored.
     """
+
+    @pytest.fixture
+    def component_class(self):
+        return PythonREPLToolComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        return {
+            "name": "python_repl",
+            "description": "run code",
+            "global_imports": "math",
+            "code": "print('x')",
+        }
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        return []
 
     def test_tool_uses_name_and_description_inputs(self):
         component = PythonREPLToolComponent(
@@ -233,6 +250,17 @@ class TestPythonREPLToolComponentToolNameDescription:
         tool = component.build_tool()
         assert tool.name == "PythonREPLTool"
         assert tool.description == "A tool for running Python code in a REPL environment."
+
+    def test_tool_coerces_non_string_inputs(self):
+        """StrInput only warns on non-string values; tool metadata must still be strings.
+
+        Without coercion a non-string description crashes inside
+        StructuredTool.from_function (it dedents/strips the description).
+        """
+        component = PythonREPLToolComponent(name=123, description=456)
+        tool = component.build_tool()
+        assert tool.name == "123"
+        assert tool.description == "456"
 
 
 class TestPythonREPLToolComponentSecurity:
