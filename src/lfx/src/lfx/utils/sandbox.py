@@ -478,8 +478,17 @@ class _ExecSandboxExecutor:
         # and skipped when a shutdown was requested after this run was
         # accepted — its scheduler is (being) closed, so its completion says
         # nothing about the current epoch's readiness.
-        if self._generation == generation:
-            self._startup_complete = True
+        #
+        # The comparison and the write must be one atomic step under the same
+        # mutex _shutdown() uses for its transition: unlocked, a shutdown can
+        # land between a successful comparison and the assignment, leaving
+        # startup_complete=True with no scheduler — the next cold start would
+        # then run under the steady-state margin and can time out. Holding
+        # the thread mutex briefly on the loop thread is deadlock-free: no
+        # mutex holder ever blocks on the loop while holding it.
+        with self._lock:
+            if self._generation == generation:
+                self._startup_complete = True
         return SandboxResult(
             stdout=result.stdout,
             stderr=result.stderr,
