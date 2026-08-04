@@ -526,10 +526,22 @@ def handle_model_input_update(
     )
     selected_provider_after_refresh = _selected_provider()
     provider_changed_during_refresh = selected_provider_before_refresh != selected_provider_after_refresh
+    initial_provider_selected_during_refresh = (
+        selected_provider_before_refresh is None and selected_provider_after_refresh is not None
+    )
 
     # When the user directly edits a provider-specific field (e.g. api_key),
     # skip the provider reset/re-population so their value is preserved.
     provider_mapped_fields = _get_all_provider_mapped_fields()
+    preserved_direct_edit: tuple[str, Any, Any] | None = None
+    if initial_provider_selected_during_refresh and field_name is not None and field_name in provider_mapped_fields:
+        edited_field_config = build_config.get(field_name)
+        if isinstance(edited_field_config, dict):
+            preserved_direct_edit = (
+                field_name,
+                edited_field_config.get("value"),
+                edited_field_config.get("load_from_db", False),
+            )
     if field_name in provider_mapped_fields and not provider_changed_during_refresh:
         return build_config
 
@@ -596,6 +608,16 @@ def handle_model_input_update(
                 build_config["truncate_input_tokens"]["show"] = is_watsonx
             if "input_text" in build_config:
                 build_config["input_text"]["show"] = is_watsonx
+
+    # An initial provider selection is an implementation detail of refreshing
+    # options, not a user-initiated provider switch. Restore the directly edited
+    # value only when the selected provider actually exposes that field.
+    if preserved_direct_edit is not None:
+        preserved_field_name, preserved_value, preserved_load_from_db = preserved_direct_edit
+        preserved_field_config = build_config.get(preserved_field_name)
+        if isinstance(preserved_field_config, dict) and preserved_field_config.get("show"):
+            preserved_field_config["value"] = preserved_value
+            preserved_field_config["load_from_db"] = preserved_load_from_db
 
     # Hide and clear the API key field when the selected provider doesn't use one
     # (e.g. Ollama). ``apply_provider_variable_config_to_build_config`` already
