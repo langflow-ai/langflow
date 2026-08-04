@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-scavio",
+  "version": "0.1.0",
+  "name": "Scavio",
+  "description": "Scavio search API for AI agents: Google, YouTube, Amazon, Walmart, Reddit, TikTok, TikTok Shop, Instagram, X and LinkedIn behind one key.",
+  "lfx": {
+    "compat": ["1"]
+  },
+  "bundles": [
+    {
+      "name": "scavio",
+      "path": "components/scavio"
+    }
+  ]
+}

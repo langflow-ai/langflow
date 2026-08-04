@@ -1,0 +1,52 @@
+[project]
+name = "lfx-scavio"
+version = "0.1.0"
+description = "Scavio search API components (Google, YouTube, Amazon, Walmart, Reddit, TikTok, TikTok Shop, Instagram, X, LinkedIn) as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Scavio", email = "support@scavio.dev" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "scavio", "search", "serp"]
+
+# Runtime deps: lfx (the BUNDLE_API surface) plus httpx, which the components use
+# directly to call https://api.scavio.dev. There is no vendor SDK - every endpoint
+# is a plain JSON POST with a bearer token.
+# lfx is floored at the current major.minor line and capped below the next lfx
+# major; `make patch` re-syncs the pin via scripts/ci/sync_bundle_lfx_pin.py.
+dependencies = [
+    "lfx>=1.12.0.dev0,<2.0.0",
+    "httpx>=0.27,<1",
+]
+
+[project.urls]
+Homepage = "https://scavio.dev"
+Documentation = "https://scavio.dev/docs/langflow"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the
+# ``langflow.extensions`` entry-point. Editable installs whose
+# ``dist.files`` only surfaces dist-info entries fall back to this
+# entry-point to find the manifest.
+[project.entry-points."langflow.extensions"]
+lfx-scavio = "lfx_scavio"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + components live inside the lfx_scavio package so
+# ``importlib.metadata.files(dist)`` finds them and the loader resolves
+# bundles[].path relative to the manifest's directory.
+packages = ["src/lfx_scavio"]
+include = ["src/lfx_scavio/extension.json", "src/lfx_scavio/components/**/*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_scavio",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]
