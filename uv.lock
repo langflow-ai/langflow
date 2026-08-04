@@ -7940,6 +7940,7 @@ dependencies = [
     { name = "lfx-openai" },
     { name = "lfx-openai-compatible" },
     { name = "lfx-oracle" },
+    { name = "lfx-scavio" },
     { name = "lfx-toolguard" },
     { name = "lfx-vllm" },
 ]
@@ -8076,6 +8077,7 @@ requires-dist = [
     { name = "lfx-openai-compatible", editable = "src/bundles/openai-compatible" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
     { name = "lfx-paddle", marker = "extra == 'bundles'", editable = "src/bundles/paddle" },
+    { name = "lfx-scavio", editable = "src/bundles/scavio" },
     { name = "lfx-toolguard", editable = "src/bundles/toolguard" },
     { name = "lfx-valkey", marker = "extra == 'bundles'", editable = "src/bundles/valkey" },
     { name = "lfx-vllm", editable = "src/bundles/vllm" },
