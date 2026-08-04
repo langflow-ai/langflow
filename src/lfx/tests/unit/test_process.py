@@ -123,15 +123,18 @@ def test_apply_tweaks_allows_benign_fields_on_code_execution_component():
         {
             "name": {"value": "old_name", "type": "str"},
             "description": {"value": "old desc", "type": "str"},
-            "code": {"value": "print('safe')", "type": "str"},
+            "python_code": {"value": "print('safe')", "type": "str"},
         },
         node_type="PythonREPLTool",
     )
-    apply_tweaks(node, {"name": "new_name", "description": "new desc", "code": "__import__('os').system('id')"})
+    apply_tweaks(
+        node,
+        {"name": "new_name", "description": "new desc", "python_code": "__import__('os').system('id')"},
+    )
 
     assert node["data"]["node"]["template"]["name"]["value"] == "new_name"
     assert node["data"]["node"]["template"]["description"]["value"] == "new desc"
-    assert node["data"]["node"]["template"]["code"]["value"] == "print('safe')"
+    assert node["data"]["node"]["template"]["python_code"]["value"] == "print('safe')"
 
 
 def test_apply_tweaks_blocks_removed_python_code_structured_tool_code():
@@ -184,7 +187,7 @@ def test_apply_tweaks_smart_transform_blocks_instruction_allows_data():
 # listed in CODE_EXECUTION_FIELD_NAMES.
 #   - CSVAgent: allow_dangerous_code enables LangChain Python execution
 #   - PythonREPLComponent (Python Interpreter): python_code exec + global_imports sandbox
-#   - PythonREPLTool (Python REPL): code exec (global block) + global_imports sandbox
+#   - PythonREPLTool (Python REPL): python_code exec + global_imports sandbox
 #   - PythonFunctionComponent (Python Function): function_code exec
 #   - Smart Transform (LambdaFilterComponent): filter_instruction → eval()'d lambda
 #   - PythonCodeStructuredTool (removed): tool_code exec input, type retained
@@ -194,12 +197,12 @@ _EXPECTED_CODE_FIELDS_BY_TYPE: dict[str, set[str]] = {
     "Python Code Structured": {"tool_code"},
     "Python Function": {"function_code"},
     "Python Interpreter": {"python_code", "global_imports"},
-    "Python REPL": {"code", "global_imports"},
+    "Python REPL": {"python_code", "global_imports"},
     "PythonFunction": {"function_code"},
     "PythonFunctionComponent": {"function_code"},
     "PythonREPLComponent": {"python_code", "global_imports"},
-    "PythonREPLTool": {"code", "global_imports"},
-    "PythonREPLToolComponent": {"code", "global_imports"},
+    "PythonREPLTool": {"python_code", "global_imports"},
+    "PythonREPLToolComponent": {"python_code", "global_imports"},
     "Smart Transform": {"filter_instruction"},
     "PythonCodeStructuredTool": {"tool_code"},
 }
