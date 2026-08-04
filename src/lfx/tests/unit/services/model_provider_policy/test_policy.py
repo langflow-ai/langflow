@@ -790,6 +790,8 @@ def test_delegating_model_component_skips_outer_provider_gate(monkeypatch):
 
 
 def test_known_llm_provider_ignores_spoofed_runtime_metadata(monkeypatch):
+    from lfx.base.models.unified_models import instantiation
+
     requested_classes = []
     captured = {}
 
@@ -804,6 +806,11 @@ def test_known_llm_provider_ignores_spoofed_runtime_metadata(monkeypatch):
     monkeypatch.setattr("lfx.base.models.unified_models.get_model_class", _get_model_class)
     monkeypatch.setattr("lfx.base.models.unified_models.get_api_key_for_provider", lambda *_args, **_kwargs: None)
     monkeypatch.setattr("lfx.base.models.unified_models.get_all_variables_for_provider", lambda *_args: {})
+    # ollama.test (RFC 6761 reserved TLD) never resolves, so the DNS-pinning
+    # SSRF transport for ChatOllama fails in every environment. The URL value
+    # is irrelevant to this test's subject (spoofed metadata being ignored),
+    # so stub the transport factory (same seam test_provider_registry stubs).
+    monkeypatch.setattr(instantiation, "ssrf_protected_httpx_client_kwargs_for_url", lambda _url: ({}, {}))
 
     result = get_llm(
         [
@@ -851,6 +858,9 @@ def test_known_embedding_provider_ignores_spoofed_runtime_metadata(monkeypatch):
     monkeypatch.setattr("lfx.base.models.unified_models.get_api_key_for_provider", lambda *_args, **_kwargs: None)
     monkeypatch.setattr("lfx.base.models.unified_models.get_all_variables_for_provider", lambda *_args: {})
     monkeypatch.setattr(instantiation, "_get_configured_embedding_providers", lambda *_args: [])
+    # See the LLM variant above: ollama.test never resolves, and DNS is not
+    # what this test is about.
+    monkeypatch.setattr(instantiation, "ssrf_protected_httpx_client_kwargs_for_url", lambda _url: ({}, {}))
 
     result = get_embeddings(
         [
