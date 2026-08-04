@@ -1952,7 +1952,7 @@
   "components.pythonreplcomponent.inputs.global_imports.display_name.1542c386": "Global Imports",
   "components.pythonreplcomponent.inputs.global_imports.info.f5a977b9": "A comma-separated list of modules to import globally, e.g. 'math,numpy,pandas'.",
   "components.pythonreplcomponent.inputs.python_code.display_name.2f8192c9": "Python Code",
-  "components.pythonreplcomponent.inputs.python_code.info.c5f42d73": "The Python code to execute. Only modules specified in Global Imports can be used.",
+  "components.pythonreplcomponent.inputs.python_code.info.db9231ca": "The Python code to execute. By default only modules specified in Global Imports can be used. When a sandbox backend is configured (LANGFLOW_SANDBOX_BACKEND), the code runs in an isolated microVM instead and may import any module available in the sandbox image.",
   "components.pythonreplcomponent.outputs.results.display_name.219c4a6c": "Results",
   "components.pythonrepltool.description.080a674d": "A tool for running Python code in a REPL environment.",
   "components.pythonrepltool.display_name.0b985bc6": "Python REPL",
