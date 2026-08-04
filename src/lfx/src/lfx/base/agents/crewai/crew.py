@@ -52,7 +52,7 @@ def convert_llm(llm: Any, excluded_keys=None):
         A CrewAI-compatible LLM object
     """
     try:
-        from crewai import LLM
+        from crewai import LLM, BaseLLM
     except ImportError as e:
         msg = "CrewAI is not installed. Please install it with `uv pip install crewai`."
         raise ImportError(msg) from e
@@ -60,8 +60,8 @@ def convert_llm(llm: Any, excluded_keys=None):
     if not llm:
         return None
 
-    # Check if this is already an LLM object
-    if isinstance(llm, LLM):
+    # Check if this is already a CrewAI LLM. LLM is a factory that can return another BaseLLM subclass.
+    if isinstance(llm, BaseLLM):
         return llm
 
     # Check if we should use model_name model, or something else
@@ -112,7 +112,7 @@ def convert_tools(tools):
         A CrewAI-compatible tools list.
     """
     try:
-        from crewai.tools.base_tool import Tool
+        from crewai.tools.base_tool import BaseTool, Tool
     except ImportError as e:
         msg = "CrewAI is not installed. Please install it with `uv pip install crewai`."
         raise ImportError(msg) from e
@@ -120,7 +120,7 @@ def convert_tools(tools):
     if not tools:
         return []
 
-    return [Tool.from_langchain(tool) for tool in tools]
+    return [tool if isinstance(tool, BaseTool) else Tool.from_langchain(tool) for tool in tools]
 
 
 class BaseCrewComponent(Component):
@@ -160,20 +160,47 @@ class BaseCrewComponent(Component):
         if not agents_list:
             agents_list = self.agents or []
 
-        # Deduplicate by identity and convert each agent exactly once.
-        # An agent wired into N tasks appears N times in agents_list; converting
-        # in-place on the same object repeatedly would double-wrap the LLM and
-        # tools on each call (convert_tools is not idempotent).
-        seen_ids: set[int] = set()
-        converted: list = []
-        for agent in agents_list:
-            if id(agent) not in seen_ids:
-                seen_ids.add(id(agent))
-                agent.llm = convert_llm(agent.llm)
-                agent.tools = convert_tools(agent.tools)
-                converted.append(agent)
+        source_tasks = list(self.tasks or [])
+        source_agents = list(agents_list)
+        source_agents.extend(task.agent for task in source_tasks if getattr(task, "agent", None) is not None)
 
-        return self.tasks, converted
+        # An agent wired into multiple tasks appears multiple times in agents_list.
+        # Keep one converted copy per original so another crew cannot observe these changes.
+        copied_agents: dict[int, Any] = {}
+        converted_agents: list[Any] = []
+        for agent in source_agents:
+            agent_id = id(agent)
+            if agent_id in copied_agents:
+                continue
+
+            copied_agent = agent.copy()
+            copied_agent.llm = convert_llm(copied_agent.llm)
+            copied_agent.tools = convert_tools(copied_agent.tools)
+            copied_agents[agent_id] = copied_agent
+            converted_agents.append(copied_agent)
+
+        copied_tasks: list[Any] = []
+        # Preseed the map so Task.copy can resolve context tasks regardless of their order.
+        task_mapping: dict[str, Any] = {task.key: task for task in source_tasks}
+        copied_tasks_by_id: dict[int, Any] = {}
+        for task in source_tasks:
+            copied_task = task.copy(converted_agents, task_mapping)
+            task_agent = getattr(task, "agent", None)
+            if task_agent is not None:
+                # Task.copy matches agents by role, which is ambiguous when two agents share a role.
+                copied_task.agent = copied_agents[id(task_agent)]
+            copied_tasks.append(copied_task)
+            copied_tasks_by_id[id(task)] = copied_task
+            task_mapping[task.key] = copied_task
+
+        # Task.copy can only resolve contexts already present in task_mapping. Remap them after every task exists.
+        for task, copied_task in zip(source_tasks, copied_tasks, strict=True):
+            if isinstance(task.context, list):
+                copied_task.context = [
+                    copied_tasks_by_id.get(id(context_task), context_task) for context_task in task.context
+                ]
+
+        return copied_tasks, converted_agents
 
     def get_manager_llm(self):
         if not self.manager_llm:
