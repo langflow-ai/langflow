@@ -201,6 +201,10 @@ class BaseAuthorizationService(Service, abc.ABC):
     # plugin evaluate owner-owned resources for API-key requests instead of
     # applying the built-in owner override first.
     SUPPORTS_API_KEY_SCOPES: ClassVar[bool] = False
+    # Incomplete claim states are a newer opt-in contract. Legacy plugins only
+    # receive complete snapshots so an empty tuple cannot be misread as a
+    # destructive authoritative snapshot.
+    SUPPORTS_INCOMPLETE_DIRECTORY_MEMBERSHIP_SNAPSHOTS: ClassVar[bool] = False
 
     async def supports_cross_user_fetch(self) -> bool:
         """Return True when this service can authorize non-owner resource access."""
@@ -209,6 +213,10 @@ class BaseAuthorizationService(Service, abc.ABC):
     async def supports_api_key_scopes(self) -> bool:
         """Return True when API-key requests should be enforced even for owners."""
         return self.SUPPORTS_API_KEY_SCOPES
+
+    async def supports_incomplete_directory_membership_snapshots(self) -> bool:
+        """Return whether this service accepts sanitized incomplete claim states."""
+        return self.SUPPORTS_INCOMPLETE_DIRECTORY_MEMBERSHIP_SNAPSHOTS
 
     @abc.abstractmethod
     async def is_enabled(self) -> bool:
@@ -491,10 +499,12 @@ class BaseAuthorizationService(Service, abc.ABC):
         session: Any,
         snapshot: DirectoryMembershipSnapshot,
     ) -> DirectoryMembershipIngestResult:
-        """Ingest one complete provider snapshot in the caller's transaction.
+        """Ingest one provider snapshot in the caller's transaction.
 
         The base implementation is intentionally inert. Directory polling and
-        provider-specific pagination remain plugin responsibilities.
+        provider-specific pagination remain plugin responsibilities. Callers
+        deliver incomplete claim states only when the implementation explicitly
+        opts in through ``supports_incomplete_directory_membership_snapshots``.
         """
         _ = (session, snapshot)
         return DirectoryMembershipIngestResult()

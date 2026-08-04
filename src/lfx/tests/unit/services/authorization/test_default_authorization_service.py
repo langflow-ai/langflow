@@ -207,6 +207,13 @@ async def test_external_groups_claim_path_preserves_plugin_opt_out(service: Auth
     assert await service.external_groups_claim_path(provider_id="directory-1", issuer=None) is None
 
 
+async def test_incomplete_directory_membership_snapshots_require_explicit_opt_in(
+    service: AuthorizationService,
+) -> None:
+    """Legacy plugins retain the complete-only ingestion contract by default."""
+    assert await service.supports_incomplete_directory_membership_snapshots() is False
+
+
 async def test_identity_committed_adapts_to_legacy_invalidation_hooks(
     service: AuthorizationService,
 ) -> None:

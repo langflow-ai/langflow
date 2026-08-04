@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import warnings
-from collections.abc import Awaitable, Callable, Coroutine, Mapping
+from collections.abc import Awaitable, Callable, Coroutine, Iterable, Mapping
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -62,7 +62,9 @@ _MAX_EXTERNAL_GROUP_CLAIM_PATH_DEPTH = 16
 def _has_external_group_overage(claims: Mapping[str, object], claim_path: tuple[str, ...]) -> bool:
     """Return whether an Entra-style overage pointer replaces the group claim."""
     claim_names = claims.get("_claim_names")
-    claim_name = claim_path[0] if len(claim_path) == 1 else ".".join(claim_path)
+    # ``_claim_names`` identifies top-level JWT claim names. Joining the path
+    # would collapse ("a.b",) and ("a", "b") into the same selector.
+    claim_name = claim_path[0]
     return isinstance(claim_names, Mapping) and claim_name in claim_names
 
 
@@ -209,6 +211,14 @@ class AuthService(BaseAuthService):
                 # one. When external_token is None or identical to the token we
                 # already tried, behavior is unchanged.
                 if external_token and external_token != token:
+                    # A recognized auth failure can still follow external JIT
+                    # materialization (for example, a later authorization-policy
+                    # rejection). Start the distinct credential at a clean
+                    # transaction and context boundary so its commit cannot
+                    # persist state from the rejected attempt.
+                    await db.rollback()
+                    clear_current_auth_context()
+                    clear_current_external_access_context()
                     external_user = await self._authenticate_with_external_token(external_token, db)
                     if external_user is not None:
                         return external_user
@@ -411,7 +421,11 @@ class AuthService(BaseAuthService):
         db: AsyncSession,
     ) -> None:
         """Send one sanitized verified group-claim state through the authorization seam."""
-        from lfx.services.authorization import DirectoryMembershipClaimState, DirectoryMembershipSnapshot
+        from lfx.services.authorization import (
+            AuthorizationMutationRejected,
+            DirectoryMembershipClaimState,
+            DirectoryMembershipSnapshot,
+        )
 
         from langflow.services.authorization.audit import AUDIT_ALLOW, AUDIT_SKIP, audit_decision
         from langflow.services.authorization.lifecycle import safe_directory_membership_committed
@@ -447,6 +461,7 @@ class AuthService(BaseAuthService):
         claim_state: DirectoryMembershipClaimState | None = None
         complete = True
         normalized_groups: set[str] = set()
+        candidates: Iterable[object] = ()
         if _has_external_group_overage(identity.claims, claim_path):
             claim_state = DirectoryMembershipClaimState.OVERAGE
             complete = False
@@ -501,21 +516,46 @@ class AuthService(BaseAuthService):
                 claim_state.value,
             )
 
-        result = await authorization_service.ingest_directory_membership_snapshot(
-            session=db,
-            snapshot=DirectoryMembershipSnapshot(
-                provider_id=identity.provider,
-                source="external_bearer",
-                observed_at=datetime.now(timezone.utc),
-                user_id=user.id,
-                provider_user_id=identity.subject,
-                memberships=groups,
-                authoritative=complete,
-                complete=complete,
-                claim_state=claim_state,
-                claim_path=claim_path,
-            ),
-        )
+            supports_incomplete = getattr(
+                authorization_service,
+                "supports_incomplete_directory_membership_snapshots",
+                None,
+            )
+            if supports_incomplete is None or not await supports_incomplete():
+                # Preserve the original complete-only plugin contract. Commit
+                # JIT/profile bookkeeping before the independent audit writer
+                # resolves the user's foreign key, but never present a legacy
+                # plugin with an ambiguous empty tuple.
+                await db.commit()
+                await audit_reconciliation(
+                    result=AUDIT_SKIP,
+                    details={
+                        "claim_name": claim_name,
+                        "reason": claim_state.value,
+                        "authoritative": False,
+                        "complete": False,
+                    },
+                )
+                return
+
+        try:
+            result = await authorization_service.ingest_directory_membership_snapshot(
+                session=db,
+                snapshot=DirectoryMembershipSnapshot(
+                    provider_id=identity.provider,
+                    source="external_bearer",
+                    observed_at=datetime.now(timezone.utc),
+                    user_id=user.id,
+                    provider_user_id=identity.subject,
+                    memberships=groups,
+                    authoritative=complete,
+                    complete=complete,
+                    claim_state=claim_state,
+                    claim_path=claim_path,
+                ),
+            )
+        except AuthorizationMutationRejected as exc:
+            raise AuthInvalidTokenError(exc.public_detail) from exc
         await db.commit()
         if result is None:
             # Compatibility with a plugin built against the initial untyped
@@ -945,6 +985,12 @@ class AuthService(BaseAuthService):
             return await self._authenticate_with_token(resolved_token, db)
         except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError, InvalidCredentialsError) as e:
             if external_token and external_token != resolved_token:
+                # Match the framework-agnostic credential path: the failed
+                # attempt may have staged JIT/profile state before a policy
+                # rejection, so the distinct credential needs a clean boundary.
+                await db.rollback()
+                clear_current_auth_context()
+                clear_current_external_access_context()
                 external_user = await self._authenticate_with_external_token(external_token, db)
                 if external_user is not None:
                     return external_user
