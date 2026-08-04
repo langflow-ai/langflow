@@ -185,13 +185,14 @@ def _sandbox_settings() -> _SandboxSettings:
 
 
 def _hardware_acceleration_available() -> bool:
-    """Whether QEMU can use a hardware hypervisor (KVM on Linux, HVF on macOS).
+    """Shallow preflight: whether a hardware hypervisor looks present at all.
 
-    Without it exec-sandbox silently falls back to TCG software emulation,
-    which upstream explicitly documents as NOT security-supported — and this
-    module skips the Python-level defenses on the assumption of a hardware
-    boundary, so TCG must be refused unless the operator explicitly opts in
-    via ``sandbox_allow_software_emulation`` (trusted/dev workloads only).
+    Fast fail before any loop/scheduler work when there is obviously no
+    KVM/HVF. This is deliberately NOT the authoritative gate — exec-sandbox's
+    own probe additionally verifies device permissions, KVM ioctls, and the
+    QEMU binary's accelerator support, so the real decision is made on the
+    sandbox loop via :func:`_assert_hardware_acceleration` right before the
+    Scheduler is created.
     """
     if sys.platform.startswith("linux"):
         return Path("/dev/kvm").exists()
@@ -211,6 +212,52 @@ def _hardware_acceleration_available() -> bool:
     return False
 
 
+def _emulation_forced_by_env() -> bool:
+    """True when exec-sandbox is told to force TCG regardless of hardware.
+
+    Upstream honors EXEC_SANDBOX_FORCE_EMULATION, which would silently select
+    software emulation even on a KVM/HVF-capable host — so it must be treated
+    exactly like a host without acceleration.
+    """
+    import os
+
+    return os.environ.get("EXEC_SANDBOX_FORCE_EMULATION", "").strip().lower() in {"1", "true", "yes"}
+
+
+_TCG_REFUSAL_MSG = (
+    "LANGFLOW_SANDBOX_BACKEND=exec-sandbox is configured but QEMU would run under "
+    "TCG software emulation instead of a hardware hypervisor (KVM on Linux requires "
+    "a usable /dev/kvm; HVF on macOS), either because acceleration is unavailable "
+    "or EXEC_SANDBOX_FORCE_EMULATION is set. exec-sandbox does not support TCG as "
+    "a security boundary — and sandbox mode disables the in-process Python defenses "
+    "on the assumption of hardware isolation. Enable hardware virtualization (or "
+    "pass /dev/kvm through to the container), or set "
+    "LANGFLOW_SANDBOX_ALLOW_SOFTWARE_EMULATION=true only for trusted/development "
+    "workloads. Refusing to run the code."
+)
+
+
+async def _assert_hardware_acceleration() -> None:
+    """Authoritative TCG gate, evaluated where exec_sandbox is importable.
+
+    Prefers upstream's deep probe (device permissions, KVM ioctl, QEMU
+    accelerator support) so Langflow refuses exactly when exec-sandbox would
+    fall back to TCG; degrades to the shallow platform check if the private
+    probe API moves in a future exec-sandbox release.
+    """
+    if _emulation_forced_by_env():
+        raise SandboxUnavailableError(_TCG_REFUSAL_MSG)
+    try:
+        from exec_sandbox.system_probes import check_hwaccel_available
+
+        accelerated = await check_hwaccel_available()
+    except (ImportError, AttributeError):
+        logger.debug("exec-sandbox hwaccel probe unavailable; using shallow platform check")
+        accelerated = _hardware_acceleration_available()
+    if not accelerated:
+        raise SandboxUnavailableError(_TCG_REFUSAL_MSG)
+
+
 class _ExecSandboxExecutor:
     """Owns the private event-loop thread and the lazily-created Scheduler."""
 
@@ -220,6 +267,7 @@ class _ExecSandboxExecutor:
         self._scheduler = None
         self._scheduler_lock: asyncio.Lock | None = None
         self._lock = threading.Lock()
+        self._atexit_registered = False
 
     def _ensure_loop(self) -> asyncio.AbstractEventLoop:
         with self._lock:
@@ -242,7 +290,7 @@ class _ExecSandboxExecutor:
                 self._thread = thread
             return self._loop
 
-    async def _ensure_scheduler(self):
+    async def _ensure_scheduler(self, *, allow_software_emulation: bool):
         # Runs ON the sandbox loop, so scheduler state is loop-affine by
         # construction. exec_sandbox import errors are translated into the
         # fail-closed SandboxUnavailableError contract by run().
@@ -263,27 +311,51 @@ class _ExecSandboxExecutor:
             self._scheduler_lock = asyncio.Lock()
         async with self._scheduler_lock:
             if self._scheduler is None:
+                # The authoritative TCG gate runs here — on the loop, with
+                # exec_sandbox importable, before any VM resources exist.
+                if not allow_software_emulation:
+                    await _assert_hardware_acceleration()
                 from exec_sandbox import Scheduler, SchedulerConfig
 
                 scheduler = Scheduler(SchedulerConfig())
                 self._scheduler = await scheduler.__aenter__()
-                atexit.register(self._shutdown)
+                if not self._atexit_registered:
+                    atexit.register(self._shutdown)
+                    self._atexit_registered = True
         return self._scheduler
 
+    async def _close_scheduler(self) -> None:
+        """Exit and CLEAR the scheduler under the creation lock.
+
+        Clearing ``_scheduler`` makes shutdown restartable: a later execution
+        goes back through :meth:`_ensure_scheduler` and creates a fresh
+        Scheduler instead of calling into one whose context has exited
+        ("Scheduler not started").
+        """
+        if self._scheduler_lock is None:
+            return
+        async with self._scheduler_lock:
+            if self._scheduler is None:
+                return
+            scheduler, self._scheduler = self._scheduler, None
+            await scheduler.__aexit__(None, None, None)
+
     def _shutdown(self) -> None:
-        """Best-effort Scheduler teardown at interpreter exit.
+        """Best-effort Scheduler teardown (atexit + app-shutdown hook).
 
         The loop thread is a daemon, so without this the process would exit
-        without ever running Scheduler.__aexit__ and warm-pool VMs could
-        outlive Langflow. atexit runs while daemon threads are still alive,
-        so the coroutine can complete on the sandbox loop; a short timeout
-        and blanket suppress keep a wedged VM from hanging process exit.
+        without ever running Scheduler.__aexit__ and guest VMs could outlive
+        Langflow. atexit runs while daemon threads are still alive, so the
+        coroutine can complete on the sandbox loop; a short timeout and
+        blanket suppress keep a wedged VM from hanging process exit. Safe to
+        call repeatedly and mid-process: state is cleared under the creation
+        lock, so a subsequent execution starts a fresh Scheduler.
         """
-        scheduler, loop = self._scheduler, self._loop
-        if scheduler is None or loop is None or loop.is_closed():
+        loop = self._loop
+        if self._scheduler is None or loop is None or loop.is_closed():
             return
         with contextlib.suppress(Exception):
-            asyncio.run_coroutine_threadsafe(scheduler.__aexit__(None, None, None), loop).result(timeout=10)
+            asyncio.run_coroutine_threadsafe(self._close_scheduler(), loop).result(timeout=10)
 
     async def _run_on_loop(
         self,
@@ -293,9 +365,10 @@ class _ExecSandboxExecutor:
         memory_mb: int,
         allow_network: bool,
         allowed_domains: tuple[str, ...],
+        allow_software_emulation: bool,
         env: dict[str, str] | None,
     ) -> SandboxResult:
-        scheduler = await self._ensure_scheduler()
+        scheduler = await self._ensure_scheduler(allow_software_emulation=allow_software_emulation)
         # NOTE: the keyword is env_vars (not env as the README suggests), and
         # timeouts do NOT raise — they surface as exit_code == -1. With
         # allow_network=True and no allowed_domains, exec-sandbox's DNS filter
@@ -331,20 +404,20 @@ class _ExecSandboxExecutor:
             )
             raise SandboxUnavailableError(msg) from e
 
-        if not settings.allow_software_emulation and not _hardware_acceleration_available():
-            msg = (
-                "LANGFLOW_SANDBOX_BACKEND=exec-sandbox is configured but no hardware "
-                "hypervisor is available (KVM on Linux requires /dev/kvm; HVF on macOS). "
-                "QEMU would fall back to TCG software emulation, which exec-sandbox does "
-                "not support as a security boundary — and sandbox mode disables the "
-                "in-process Python defenses on the assumption of hardware isolation. "
-                "Enable hardware virtualization (or pass /dev/kvm through to the "
-                "container), or set LANGFLOW_SANDBOX_ALLOW_SOFTWARE_EMULATION=true only "
-                "for trusted/development workloads. Refusing to run the code."
-            )
-            raise SandboxUnavailableError(msg)
+        if not settings.allow_software_emulation and (
+            _emulation_forced_by_env() or not _hardware_acceleration_available()
+        ):
+            # Shallow fast-fail; the authoritative deep gate (exec-sandbox's
+            # own probe: device permissions, KVM ioctls, QEMU accelerator
+            # support) runs on the loop in _ensure_scheduler.
+            raise SandboxUnavailableError(_TCG_REFUSAL_MSG)
 
         loop = self._ensure_loop()
+        # Capture cold-start state BEFORE submitting: once the coroutine runs,
+        # the loop thread may set _scheduler and then still spend first-boot
+        # time in scheduler.run(), so reading it after submission could apply
+        # the steady-state margin to a first execution.
+        is_first_execution = self._scheduler is None
         future = asyncio.run_coroutine_threadsafe(
             self._run_on_loop(
                 code,
@@ -352,6 +425,7 @@ class _ExecSandboxExecutor:
                 memory_mb=settings.memory_mb,
                 allow_network=settings.allow_network,
                 allowed_domains=settings.allowed_domains,
+                allow_software_emulation=settings.allow_software_emulation,
                 env=env,
             ),
             loop,
@@ -361,7 +435,7 @@ class _ExecSandboxExecutor:
         # the component thread cannot hang forever. The first execution gets a
         # larger margin because Scheduler startup (image download, VM boot)
         # happens inside the same coroutine.
-        grace = _RUN_GRACE_SECONDS if self._scheduler is not None else _STARTUP_GRACE_SECONDS
+        grace = _STARTUP_GRACE_SECONDS if is_first_execution else _RUN_GRACE_SECONDS
         deadline = settings.timeout_seconds + grace
         try:
             return future.result(timeout=deadline)
@@ -437,11 +511,22 @@ def _compose_sandbox_code(preamble: str, code: str) -> str:
         idx += 1
     if idx == 0:
         return f"{preamble}\n{code}"
-    split_line = body[idx - 1].end_lineno or 0
-    lines = code.splitlines()
-    head = "\n".join(lines[:split_line])
-    tail = "\n".join(lines[split_line:])
-    return f"{head}\n{preamble}\n{tail}"
+    if idx >= len(body):
+        # Only a docstring/future block — nothing runs after the preamble.
+        return f"{code}\n{preamble}"
+    # Split at the exact (line, column) start of the first real statement, not
+    # at a line boundary: semicolon-joined code like
+    # ``from __future__ import annotations; print(math.pi)`` would otherwise
+    # keep user statements on the hoisted line and run them before the
+    # preamble's imports.
+    first_tail = body[idx]
+    lines = code.splitlines(keepends=True)
+    offset = sum(len(line) for line in lines[: first_tail.lineno - 1]) + first_tail.col_offset
+    head, tail = code[:offset], code[offset:]
+    # head ends mid-line in the semicolon-joined case; add the newline only
+    # then (a trailing semicolon before a newline is valid Python).
+    separator = "" if head.endswith("\n") else "\n"
+    return f"{head}{separator}{preamble}\n{tail}"
 
 
 def run_code_in_sandbox(

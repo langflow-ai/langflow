@@ -138,7 +138,8 @@ markers = [
     "slow: Slow-running tests",
     "asyncio: Async tests",
     "lfx_env_file(path): path to a .env file loaded before this test's flow execution",
-    "lfx_timeout(seconds): timeout in seconds for this test's flow execution"
+    "lfx_timeout(seconds): timeout in seconds for this test's flow execution",
+    "qemu: live exec-sandbox tests that boot a real QEMU microVM (opt-in via LANGFLOW_SANDBOX_LIVE_TESTS=1)"
 ]
 
 [dependency-groups]

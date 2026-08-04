@@ -229,6 +229,18 @@ class SecuritySettings(BaseModel):
     V1 uses one bucket per flow; v2 uses its public-workflow bucket. Each run executes as the flow owner, so
     anonymous callers are throttled separately from and more generously than login. Gated by rate_limit_enabled."""
 
+    @field_validator("sandbox_allowed_domains", mode="after")
+    @classmethod
+    def normalize_sandbox_allowed_domains(cls, value: list[str]) -> list[str]:
+        """Strip whitespace and drop empty entries.
+
+        The env parser splits ``LANGFLOW_SANDBOX_ALLOWED_DOMAINS=a.com, b.com``
+        on commas without trimming, and exec-sandbox's DNS filter rejects
+        entries with leading/trailing whitespace — normalize here so the
+        natural comma-and-space spelling works.
+        """
+        return [domain.strip() for domain in value if domain and domain.strip()]
+
     @field_validator("sandbox_backend", mode="before")
     @classmethod
     def validate_sandbox_backend(cls, value):

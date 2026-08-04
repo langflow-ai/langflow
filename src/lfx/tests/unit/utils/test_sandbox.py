@@ -121,8 +121,14 @@ def _install_fake_exec_sandbox(monkeypatch):
     TCG-refusal gate (which has its own dedicated tests).
     """
     _FakeScheduler.instances = []
-    module = SimpleNamespace(Scheduler=_FakeScheduler, SchedulerConfig=_FakeSchedulerConfig)
+
+    async def _hwaccel_available():
+        return True
+
+    probes = SimpleNamespace(check_hwaccel_available=_hwaccel_available)
+    module = SimpleNamespace(Scheduler=_FakeScheduler, SchedulerConfig=_FakeSchedulerConfig, system_probes=probes)
     monkeypatch.setitem(sys.modules, "exec_sandbox", module)
+    monkeypatch.setitem(sys.modules, "exec_sandbox.system_probes", probes)
     monkeypatch.setattr(sandbox_module, "_hardware_acceleration_available", lambda: True)
     return _FakeScheduler
 
@@ -311,6 +317,58 @@ class TestRunCodeInSandbox:
         assert lines[1] == "from __future__ import annotations"
         assert "import math" in lines[2]
         compile(sent, "<test>", "exec")  # composed code must be valid Python
+
+    def test_deep_probe_refusal_overrides_shallow_pass(self, monkeypatch, fake_exec_sandbox):
+        """The deep upstream probe is authoritative over the shallow preflight.
+
+        exec-sandbox's probe checks device permissions, KVM ioctls, and QEMU
+        accelerator support — a shallow pass must not permit TCG when it says no.
+        """
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+
+        async def _no_hwaccel():
+            return False
+
+        monkeypatch.setattr(sys.modules["exec_sandbox.system_probes"], "check_hwaccel_available", _no_hwaccel)
+        with pytest.raises(SandboxUnavailableError, match="TCG"):
+            run_code_in_sandbox("print('hi')")
+        assert not fake_exec_sandbox.instances
+
+    def test_forced_emulation_env_refused(self, monkeypatch, fake_exec_sandbox):
+        """EXEC_SANDBOX_FORCE_EMULATION would make upstream select TCG silently."""
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        monkeypatch.setenv("EXEC_SANDBOX_FORCE_EMULATION", "true")
+        with pytest.raises(SandboxUnavailableError, match="TCG"):
+            run_code_in_sandbox("print('hi')")
+        assert not fake_exec_sandbox.instances
+
+    def test_shutdown_is_restartable(self, monkeypatch, fake_exec_sandbox):
+        """Run -> shutdown_sandbox() -> run must create a fresh scheduler."""
+        from lfx.utils.sandbox import shutdown_sandbox
+
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        assert run_code_in_sandbox("print('hi')").success
+        shutdown_sandbox()
+        assert run_code_in_sandbox("print('hi')").success
+        assert len(fake_exec_sandbox.instances) == 2
+
+    def test_same_line_future_import_composes_correctly(self, monkeypatch, fake_exec_sandbox):
+        """Semicolon-joined statements after a future import must run AFTER the preamble."""
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        code = "from __future__ import annotations; print(math.pi)"
+        run_code_in_sandbox(code, global_imports="math")
+        sent = fake_exec_sandbox.instances[-1].run_calls[-1]["code"]
+        compile(sent, "<test>", "exec")
+        assert sent.index("import math") < sent.index("print(math.pi)")
+        assert sent.index("from __future__") < sent.index("import math")
+
+    def test_same_line_docstring_composes_correctly(self, monkeypatch, fake_exec_sandbox):
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        code = '"""doc."""; print(math.pi)'
+        run_code_in_sandbox(code, global_imports="math")
+        sent = fake_exec_sandbox.instances[-1].run_calls[-1]["code"]
+        compile(sent, "<test>", "exec")
+        assert sent.index("import math") < sent.index("print(math.pi)")
 
     def test_refuses_tcg_without_override(self, monkeypatch, fake_exec_sandbox):
         """No hardware hypervisor -> fail closed rather than silently run under TCG."""
@@ -560,6 +618,20 @@ class TestSettingsValidation:
         with pytest.raises(ValidationError):
             SecuritySettings(sandbox_memory_mb=64)
 
+    def test_allowed_domains_normalized(self):
+        from lfx.services.settings.groups.security import SecuritySettings
+
+        settings = SecuritySettings(sandbox_allowed_domains=["api.example.com", " files.pythonhosted.org ", ""])
+        assert settings.sandbox_allowed_domains == ["api.example.com", "files.pythonhosted.org"]
+
+    def test_allowed_domains_env_comma_space(self, monkeypatch):
+        """The natural comma-and-space env spelling must reach the backend clean."""
+        from lfx.services.settings.base import Settings
+
+        monkeypatch.setenv("LANGFLOW_SANDBOX_ALLOWED_DOMAINS", "api.example.com, files.pythonhosted.org")
+        settings = Settings()
+        assert settings.sandbox_allowed_domains == ["api.example.com", "files.pythonhosted.org"]
+
     def test_backend_normalized(self):
         from lfx.services.settings.groups.security import SecuritySettings
 
@@ -570,9 +642,13 @@ class TestSettingsValidation:
 _HAS_REAL_EXEC_SANDBOX = importlib.util.find_spec("exec_sandbox") is not None
 
 
+_LIVE_TESTS_ENABLED = os.getenv("LANGFLOW_SANDBOX_LIVE_TESTS", "").strip().lower() in {"1", "true", "yes"}
+
+
+@pytest.mark.qemu
 @pytest.mark.skipif(not _HAS_REAL_EXEC_SANDBOX, reason="requires the exec-sandbox extra (Python >= 3.12)")
 @pytest.mark.skipif(
-    not os.getenv("LANGFLOW_SANDBOX_LIVE_TESTS"),
+    not _LIVE_TESTS_ENABLED,
     reason="live microVM test; set LANGFLOW_SANDBOX_LIVE_TESTS=1 on a host with QEMU 8+ to run",
 )
 class TestLiveExecSandbox:
