@@ -250,7 +250,8 @@ EXPECTED_FIELDS = {
     "sandbox_timeout_seconds",
     "sandbox_memory_mb",
     "sandbox_allow_network",
-    "sandbox_warm_pool_size",
+    "sandbox_allowed_domains",
+    "sandbox_allow_software_emulation",
 }
 
 

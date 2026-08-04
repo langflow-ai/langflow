@@ -132,14 +132,15 @@ class SecuritySettings(BaseModel):
       behavior; nothing extra to install.
     - "exec-sandbox": each execution runs in a dedicated QEMU microVM via the
       optional ``exec-sandbox`` package (``pip install 'langflow[sandbox]'``;
-      requires Python >= 3.12 and QEMU 8+ with KVM/HVF hardware acceleration, or
-      slower TCG emulation). The VM has a read-only rootfs, no host filesystem
-      access, and no network unless ``sandbox_allow_network`` is enabled. In this
-      mode the Python-level import allow-list and AST escape-gadget restrictions
-      are not applied — the VM boundary replaces them — so sandboxed code may
-      import any module available in the guest image. If the backend is
-      configured but unusable, execution fails closed with an error instead of
-      silently running in-process.
+      requires Python >= 3.12 and QEMU 8+ with KVM/HVF hardware acceleration —
+      hosts without a hardware hypervisor are refused unless
+      ``sandbox_allow_software_emulation`` is enabled). The VM has a read-only
+      rootfs, no host filesystem access, and no network unless
+      ``sandbox_allow_network`` is enabled. In this mode the Python-level import
+      allow-list and AST escape-gadget restrictions are not applied — the VM
+      boundary replaces them — so sandboxed code may import any module available
+      in the guest image. If the backend is configured but unusable, execution
+      fails closed with an error instead of silently running in-process.
 
     See https://github.com/langflow-ai/langflow/issues/12029."""
 
@@ -156,11 +157,29 @@ class SecuritySettings(BaseModel):
     runs fully offline, which is the strongest isolation. Note the in-process
     backend has full server-side network access, so enabling the sandbox with the
     default here is a behavior change for code that fetches URLs.
+
+    When enabled WITHOUT ``sandbox_allowed_domains``, exec-sandbox's DNS filter
+    still only permits its package-registry defaults (PyPI /
+    files.pythonhosted.org) — ordinary APIs stay unreachable until their domains
+    are listed explicitly. Only used when sandbox_backend is not "none"."""
+
+    sandbox_allowed_domains: list[str] = []
+    """Comma-separated list of domains sandboxed code may reach when
+    ``sandbox_allow_network`` is enabled (forwarded to exec-sandbox's DNS
+    filter). Empty (default) keeps exec-sandbox's package-registry-only
+    default. Listing a domain here permits guest egress to it, so treat this
+    like an SSRF allow-list: prefer narrow, fully-qualified domains.
     Only used when sandbox_backend is not "none"."""
 
-    sandbox_warm_pool_size: int = Field(default=0, ge=0, le=32)
-    """Number of pre-booted VMs kept warm per language to cut execution latency
-    (0 disables pre-booting). Warm VMs consume memory while idle.
+    sandbox_allow_software_emulation: bool = False
+    """Permit the sandbox to run without a hardware hypervisor (KVM on Linux,
+    HVF on macOS), letting QEMU fall back to TCG software emulation.
+
+    Default False and strongly recommended to keep it that way: upstream
+    exec-sandbox documents TCG as NOT security-supported (and ~5-8x slower),
+    while sandbox mode disables the in-process Python defenses on the
+    assumption of a hardware boundary. Enable only for trusted/development
+    workloads, e.g. CI smoke tests or containers without /dev/kvm passthrough.
     Only used when sandbox_backend is not "none"."""
 
     restrict_local_file_access: bool = False

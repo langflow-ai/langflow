@@ -31,12 +31,16 @@ VM pool across executions.
 
 from __future__ import annotations
 
+import ast
 import asyncio
 import atexit
 import contextlib
 import re
+import subprocess
+import sys
 import threading
 from dataclasses import dataclass
+from pathlib import Path
 
 from lfx.log.logger import logger
 
@@ -148,24 +152,63 @@ def is_sandbox_enabled() -> bool:
     return get_sandbox_backend() != SANDBOX_BACKEND_NONE
 
 
-def _sandbox_settings() -> tuple[int, int, bool, int]:
-    """Return (timeout_seconds, memory_mb, allow_network, warm_pool_size) from settings."""
-    timeout_seconds, memory_mb, allow_network, warm_pool_size = 30, 192, False, 0
+@dataclass(frozen=True)
+class _SandboxSettings:
+    timeout_seconds: int = 30
+    memory_mb: int = 192
+    allow_network: bool = False
+    allowed_domains: tuple[str, ...] = ()
+    allow_software_emulation: bool = False
+
+
+def _sandbox_settings() -> _SandboxSettings:
+    """Read the sandbox tuning settings, defaulting when the settings stack is absent."""
+    defaults = _SandboxSettings()
     try:
         from lfx.services.deps import get_settings_service
 
         settings_service = get_settings_service()
     except ImportError:
-        return timeout_seconds, memory_mb, allow_network, warm_pool_size
+        return defaults
     if settings_service is None:
-        return timeout_seconds, memory_mb, allow_network, warm_pool_size
+        return defaults
     settings = settings_service.settings
-    return (
-        getattr(settings, "sandbox_timeout_seconds", timeout_seconds),
-        getattr(settings, "sandbox_memory_mb", memory_mb),
-        getattr(settings, "sandbox_allow_network", allow_network),
-        getattr(settings, "sandbox_warm_pool_size", warm_pool_size),
+    return _SandboxSettings(
+        timeout_seconds=getattr(settings, "sandbox_timeout_seconds", defaults.timeout_seconds),
+        memory_mb=getattr(settings, "sandbox_memory_mb", defaults.memory_mb),
+        allow_network=getattr(settings, "sandbox_allow_network", defaults.allow_network),
+        allowed_domains=tuple(getattr(settings, "sandbox_allowed_domains", ()) or ()),
+        allow_software_emulation=getattr(
+            settings, "sandbox_allow_software_emulation", defaults.allow_software_emulation
+        ),
     )
+
+
+def _hardware_acceleration_available() -> bool:
+    """Whether QEMU can use a hardware hypervisor (KVM on Linux, HVF on macOS).
+
+    Without it exec-sandbox silently falls back to TCG software emulation,
+    which upstream explicitly documents as NOT security-supported — and this
+    module skips the Python-level defenses on the assumption of a hardware
+    boundary, so TCG must be refused unless the operator explicitly opts in
+    via ``sandbox_allow_software_emulation`` (trusted/dev workloads only).
+    """
+    if sys.platform.startswith("linux"):
+        return Path("/dev/kvm").exists()
+    if sys.platform == "darwin":
+        try:
+            out = subprocess.run(
+                ["/usr/sbin/sysctl", "-n", "kern.hv_support"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        return out.stdout.strip() == "1"
+    # exec-sandbox supports only Linux and macOS.
+    return False
 
 
 class _ExecSandboxExecutor:
@@ -199,7 +242,7 @@ class _ExecSandboxExecutor:
                 self._thread = thread
             return self._loop
 
-    async def _ensure_scheduler(self, warm_pool_size: int):
+    async def _ensure_scheduler(self):
         # Runs ON the sandbox loop, so scheduler state is loop-affine by
         # construction. exec_sandbox import errors are translated into the
         # fail-closed SandboxUnavailableError contract by run().
@@ -208,13 +251,21 @@ class _ExecSandboxExecutor:
         # on the single loop thread); the asyncio.Lock then serializes the
         # awaited Scheduler startup so two concurrent first calls cannot each
         # create a scheduler and leak one VM pool.
+        #
+        # The warm pool is deliberately NOT configured: upstream pre-boots N
+        # VMs for EVERY language (python/javascript/raw) at a fixed default
+        # memory size, ignoring per-run memory_mb on warm hits, and network-
+        # enabled runs bypass the pool entirely. Langflow only runs Python
+        # with an operator-tunable memory limit, so the upstream pool contract
+        # does not fit; revisit if exec-sandbox grows a per-language,
+        # memory-keyed pool.
         if self._scheduler_lock is None:
             self._scheduler_lock = asyncio.Lock()
         async with self._scheduler_lock:
             if self._scheduler is None:
                 from exec_sandbox import Scheduler, SchedulerConfig
 
-                scheduler = Scheduler(SchedulerConfig(warm_pool_size=warm_pool_size))
+                scheduler = Scheduler(SchedulerConfig())
                 self._scheduler = await scheduler.__aenter__()
                 atexit.register(self._shutdown)
         return self._scheduler
@@ -241,12 +292,15 @@ class _ExecSandboxExecutor:
         timeout_seconds: int,
         memory_mb: int,
         allow_network: bool,
-        warm_pool_size: int,
+        allowed_domains: tuple[str, ...],
         env: dict[str, str] | None,
     ) -> SandboxResult:
-        scheduler = await self._ensure_scheduler(warm_pool_size)
+        scheduler = await self._ensure_scheduler()
         # NOTE: the keyword is env_vars (not env as the README suggests), and
-        # timeouts do NOT raise — they surface as exit_code == -1.
+        # timeouts do NOT raise — they surface as exit_code == -1. With
+        # allow_network=True and no allowed_domains, exec-sandbox's DNS filter
+        # defaults to package registries only (PyPI/files.pythonhosted.org);
+        # broader egress requires an explicit domain list.
         result = await scheduler.run(
             code=code,
             language="python",
@@ -254,6 +308,7 @@ class _ExecSandboxExecutor:
             memory_mb=memory_mb,
             env_vars=env or {},
             allow_network=allow_network,
+            allowed_domains=list(allowed_domains) if allowed_domains else None,
         )
         return SandboxResult(
             stdout=result.stdout,
@@ -263,7 +318,7 @@ class _ExecSandboxExecutor:
         )
 
     def run(self, code: str, *, env: dict[str, str] | None = None) -> SandboxResult:
-        timeout_seconds, memory_mb, allow_network, warm_pool_size = _sandbox_settings()
+        settings = _sandbox_settings()
         try:
             import exec_sandbox  # noqa: F401
         except ImportError as e:
@@ -276,14 +331,27 @@ class _ExecSandboxExecutor:
             )
             raise SandboxUnavailableError(msg) from e
 
+        if not settings.allow_software_emulation and not _hardware_acceleration_available():
+            msg = (
+                "LANGFLOW_SANDBOX_BACKEND=exec-sandbox is configured but no hardware "
+                "hypervisor is available (KVM on Linux requires /dev/kvm; HVF on macOS). "
+                "QEMU would fall back to TCG software emulation, which exec-sandbox does "
+                "not support as a security boundary — and sandbox mode disables the "
+                "in-process Python defenses on the assumption of hardware isolation. "
+                "Enable hardware virtualization (or pass /dev/kvm through to the "
+                "container), or set LANGFLOW_SANDBOX_ALLOW_SOFTWARE_EMULATION=true only "
+                "for trusted/development workloads. Refusing to run the code."
+            )
+            raise SandboxUnavailableError(msg)
+
         loop = self._ensure_loop()
         future = asyncio.run_coroutine_threadsafe(
             self._run_on_loop(
                 code,
-                timeout_seconds=timeout_seconds,
-                memory_mb=memory_mb,
-                allow_network=allow_network,
-                warm_pool_size=warm_pool_size,
+                timeout_seconds=settings.timeout_seconds,
+                memory_mb=settings.memory_mb,
+                allow_network=settings.allow_network,
+                allowed_domains=settings.allowed_domains,
                 env=env,
             ),
             loop,
@@ -294,7 +362,7 @@ class _ExecSandboxExecutor:
         # larger margin because Scheduler startup (image download, VM boot)
         # happens inside the same coroutine.
         grace = _RUN_GRACE_SECONDS if self._scheduler is not None else _STARTUP_GRACE_SECONDS
-        deadline = timeout_seconds + grace
+        deadline = settings.timeout_seconds + grace
         try:
             return future.result(timeout=deadline)
         except SandboxExecutionError:
@@ -340,6 +408,42 @@ def build_import_preamble(global_imports: str | list[str]) -> str:
     return "\n".join(f"import {module}" for module in modules)
 
 
+def _compose_sandbox_code(preamble: str, code: str) -> str:
+    """Join the import preamble and user code without breaking future imports.
+
+    ``from __future__ import ...`` must be the first statement after an
+    optional module docstring, so naively prepending the preamble would turn
+    valid user code into a SyntaxError. Insert the preamble after any leading
+    docstring/future-import block instead. If the user code does not parse,
+    return the naive concatenation — the guest surfaces the same SyntaxError
+    the user would get anyway.
+    """
+    if not preamble:
+        return code
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return f"{preamble}\n{code}"
+    idx = 0
+    body = tree.body
+    if (
+        body
+        and isinstance(body[0], ast.Expr)
+        and isinstance(body[0].value, ast.Constant)
+        and isinstance(body[0].value.value, str)
+    ):
+        idx = 1
+    while idx < len(body) and isinstance(body[idx], ast.ImportFrom) and body[idx].module == "__future__":
+        idx += 1
+    if idx == 0:
+        return f"{preamble}\n{code}"
+    split_line = body[idx - 1].end_lineno or 0
+    lines = code.splitlines()
+    head = "\n".join(lines[:split_line])
+    tail = "\n".join(lines[split_line:])
+    return f"{head}\n{preamble}\n{tail}"
+
+
 def run_code_in_sandbox(
     code: str, *, global_imports: str | list[str] = "", env: dict[str, str] | None = None
 ) -> SandboxResult:
@@ -366,6 +470,23 @@ def run_code_in_sandbox(
         )
         raise SandboxUnavailableError(msg)
 
+    if not code.strip():
+        # Parity with the in-process interpreter, which returns an empty
+        # result for blank code; exec-sandbox rejects empty code outright and
+        # that rejection would otherwise surface as an infrastructure error.
+        return SandboxResult(stdout="", stderr="", exit_code=0)
+
     preamble = build_import_preamble(global_imports)
-    full_code = f"{preamble}\n{code}" if preamble else code
+    full_code = _compose_sandbox_code(preamble, code)
     return _executor.run(full_code, env=env)
+
+
+def shutdown_sandbox() -> None:
+    """Best-effort teardown of the sandbox scheduler and its VMs.
+
+    Safe to call when the sandbox was never used. Wired into application
+    shutdown in addition to the atexit hook because exec-sandbox only gets
+    QEMU parent-death cleanup on QEMU 10.2+; on older QEMU an abrupt worker
+    exit could otherwise leave guest VMs running.
+    """
+    _executor._shutdown()  # noqa: SLF001 - module-owned singleton

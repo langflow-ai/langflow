@@ -29,7 +29,8 @@ def _settings(backend, **extra):
         "sandbox_timeout_seconds": 30,
         "sandbox_memory_mb": 192,
         "sandbox_allow_network": False,
-        "sandbox_warm_pool_size": 0,
+        "sandbox_allowed_domains": [],
+        "sandbox_allow_software_emulation": False,
     }
     defaults.update(extra)
     return SimpleNamespace(settings=SimpleNamespace(**defaults))
@@ -96,6 +97,8 @@ class _FakeScheduler:
             return _FakeExecutionResult(stderr="NameError: nope", exit_code=1)
         if "TIMEOUT" in code:
             return _FakeExecutionResult(exit_code=-1)
+        if "OOM_KILL" in code:
+            return _FakeExecutionResult(exit_code=137)
         return _FakeExecutionResult(stdout="hello from vm\n")
 
 
@@ -111,10 +114,16 @@ def fake_exec_sandbox(monkeypatch):
 
 
 def _install_fake_exec_sandbox(monkeypatch):
-    """Install a stub exec_sandbox module and return the fake Scheduler class."""
+    """Install a stub exec_sandbox module and return the fake Scheduler class.
+
+    Also fakes hardware acceleration as available: CI runners have no
+    /dev/kvm, and these tests exercise routing/mapping logic, not the
+    TCG-refusal gate (which has its own dedicated tests).
+    """
     _FakeScheduler.instances = []
     module = SimpleNamespace(Scheduler=_FakeScheduler, SchedulerConfig=_FakeSchedulerConfig)
     monkeypatch.setitem(sys.modules, "exec_sandbox", module)
+    monkeypatch.setattr(sandbox_module, "_hardware_acceleration_available", lambda: True)
     return _FakeScheduler
 
 
@@ -225,7 +234,7 @@ class TestRunCodeInSandbox:
                 sandbox_timeout_seconds=77,
                 sandbox_memory_mb=256,
                 sandbox_allow_network=True,
-                sandbox_warm_pool_size=2,
+                sandbox_allowed_domains=["api.example.com"],
             ),
         )
         run_code_in_sandbox("print('hi')")
@@ -234,9 +243,12 @@ class TestRunCodeInSandbox:
         assert call["timeout_seconds"] == 77
         assert call["memory_mb"] == 256
         assert call["allow_network"] is True
+        assert call["allowed_domains"] == ["api.example.com"]
         # exec_sandbox's run() takes env_vars (not env)
         assert call["env_vars"] == {}
-        assert scheduler.config.kwargs == {"warm_pool_size": 2}
+        # Warm pool is deliberately not configured (upstream pool contract
+        # mismatch: per-language pools at fixed memory).
+        assert scheduler.config.kwargs == {}
 
     def test_network_is_disabled_by_default(self, monkeypatch, fake_exec_sandbox):
         """Default settings must reach the backend as allow_network=False (offline VM)."""
@@ -244,6 +256,9 @@ class TestRunCodeInSandbox:
         run_code_in_sandbox("print('hi')")
         call = fake_exec_sandbox.instances[-1].run_calls[-1]
         assert call["allow_network"] is False
+        # No allowed_domains configured -> None reaches the backend (which
+        # then applies its package-registry-only default filter).
+        assert call["allowed_domains"] is None
 
     @pytest.mark.usefixtures("fake_exec_sandbox")
     def test_user_code_failure_is_result_not_exception(self, monkeypatch):
@@ -265,6 +280,55 @@ class TestRunCodeInSandbox:
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
         with pytest.raises(SandboxExecutionError, match="vm exploded"):
             run_code_in_sandbox("BOOM_INFRA")
+
+    @pytest.mark.usefixtures("fake_exec_sandbox")
+    def test_oom_exit_code_message(self, monkeypatch):
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        result = run_code_in_sandbox("OOM_KILL")
+        assert not result.success
+        assert "memory" in result.error_message()
+
+    def test_blank_code_returns_empty_success(self, monkeypatch, fake_exec_sandbox):
+        """Blank code is an empty result, matching the in-process interpreter.
+
+        exec-sandbox rejects empty code outright, which would otherwise
+        surface as an infrastructure error, so it must never be invoked.
+        """
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        result = run_code_in_sandbox("   \n  ")
+        assert result.success
+        assert result.stdout == ""
+        assert not fake_exec_sandbox.instances
+
+    def test_future_imports_stay_first(self, monkeypatch, fake_exec_sandbox):
+        """The import preamble must not precede `from __future__ import ...`."""
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        code = '"""doc."""\nfrom __future__ import annotations\nprint(1)'
+        run_code_in_sandbox(code, global_imports="math")
+        sent = fake_exec_sandbox.instances[-1].run_calls[-1]["code"]
+        lines = sent.splitlines()
+        assert lines[0] == '"""doc."""'
+        assert lines[1] == "from __future__ import annotations"
+        assert "import math" in lines[2]
+        compile(sent, "<test>", "exec")  # composed code must be valid Python
+
+    def test_refuses_tcg_without_override(self, monkeypatch, fake_exec_sandbox):
+        """No hardware hypervisor -> fail closed rather than silently run under TCG."""
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        monkeypatch.setattr(sandbox_module, "_hardware_acceleration_available", lambda: False)
+        with pytest.raises(SandboxUnavailableError, match="hardware"):
+            run_code_in_sandbox("print('hi')")
+        assert not fake_exec_sandbox.instances
+
+    @pytest.mark.usefixtures("fake_exec_sandbox")
+    def test_software_emulation_override_allows_tcg(self, monkeypatch):
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: _settings("exec-sandbox", sandbox_allow_software_emulation=True),
+        )
+        monkeypatch.setattr(sandbox_module, "_hardware_acceleration_available", lambda: False)
+        result = run_code_in_sandbox("print('hello from vm')")
+        assert result.success
 
     def test_concurrent_first_calls_create_one_scheduler(self, monkeypatch, fake_exec_sandbox):
         """Two racing first executions must share one scheduler (no leaked VM pool).
@@ -495,10 +559,6 @@ class TestSettingsValidation:
             SecuritySettings(sandbox_timeout_seconds=301)
         with pytest.raises(ValidationError):
             SecuritySettings(sandbox_memory_mb=64)
-        with pytest.raises(ValidationError):
-            SecuritySettings(sandbox_warm_pool_size=-1)
-        with pytest.raises(ValidationError):
-            SecuritySettings(sandbox_warm_pool_size=100000)
 
     def test_backend_normalized(self):
         from lfx.services.settings.groups.security import SecuritySettings
