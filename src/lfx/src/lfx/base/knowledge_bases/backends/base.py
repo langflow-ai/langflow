@@ -65,6 +65,24 @@ class BackendType(str, Enum):
     OPENSEARCH = "opensearch"
 
 
+def requires_local_disk(backend_type: str | None, backend_config: dict[str, Any] | None = None) -> bool:
+    """Whether a KB's vectors live on the local filesystem at its ``kb_path``.
+
+    Single source of truth for the "does this KB need its directory?" question.
+    Only a local Chroma ``PersistentClient`` stores vectors under ``kb_path``;
+    every remote target (Chroma Cloud, OpenSearch, pgvector) keeps them
+    off-box, so a replica that never held the directory can still serve them.
+
+    Call sites use this to decide whether a missing KB directory is a real
+    error (local Chroma — the store is gone) or irrelevant (remote — the
+    directory only ever held bookkeeping). ``None`` is treated as Chroma to
+    match the ``backend_type`` column default.
+    """
+    if (backend_type or BackendType.CHROMA.value) != BackendType.CHROMA.value:
+        return False
+    return str((backend_config or {}).get("mode", "local")).lower() != "cloud"
+
+
 # Keys Langflow always writes into ``Document.metadata`` for every chunk.
 # Kept here so every backend and helper agrees on the schema.
 METADATA_KEY_SOURCE = "source"

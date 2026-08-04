@@ -37,6 +37,7 @@ from lfx.base.knowledge_bases.backends.base import (
     BaseVectorStoreBackend,
     IngestedDocument,
     TestConnectionResult,
+    requires_local_disk,
 )
 from lfx.base.knowledge_bases.backends.chroma import (
     ChromaBackend,
@@ -84,4 +85,5 @@ __all__ = [
     "get_backend_class",
     "register_backend",
     "registered_backends",
+    "requires_local_disk",
 ]

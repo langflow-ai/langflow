@@ -41,6 +41,7 @@ from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.files_and_knowledge._kb_paths import (
+    EMBEDDING_METADATA_FILENAME,
     KBKeyDecryptError,
     load_kb_metadata,
 )
@@ -708,22 +709,29 @@ class KnowledgeComponent(Component):
         )
         metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
 
-    def _update_metadata_metrics(self, kb_path: Path, chroma: Chroma) -> None:
-        """Update embedding_metadata.json with accurate chunk/word/character counts."""
+    def _update_metadata_metrics(self, kb_path: Path, chroma: Chroma) -> dict[str, Any]:
+        """Recompute chunk/word/character counts for a local-Chroma KB.
+
+        Returns the freshly computed metrics so the caller can persist them to
+        the ``knowledge_base`` row directly. The sidecar is still refreshed when
+        it exists (local Chroma keeps its bookkeeping next to its vectors), but
+        it is no longer the transport: routing metrics through the file meant a
+        KB with no local directory silently never updated its row.
+        """
         import chromadb.errors
         from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBStorageHelper
 
-        metadata_path = kb_path / "embedding_metadata.json"
-        if not metadata_path.exists():
-            return
-
+        metadata_path = kb_path / EMBEDDING_METADATA_FILENAME
         try:
-            metadata = json.loads(metadata_path.read_text())
+            metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
             KBAnalysisHelper.update_text_metrics(kb_path, metadata, chroma)
             metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
-            metadata_path.write_text(json.dumps(metadata, indent=2))
+            if metadata_path.exists():
+                metadata_path.write_text(json.dumps(metadata, indent=2))
         except (OSError, ValueError, TypeError, json.JSONDecodeError, chromadb.errors.ChromaError) as e:
             self.log(f"Warning: Could not update metadata metrics: {e}")
+            return {}
+        return metadata
 
     @staticmethod
     def _extract_source_types_from_df(df_source: pd.DataFrame) -> set[str]:
@@ -816,34 +824,44 @@ class KnowledgeComponent(Component):
             mapping = input_value
         return cls._extract_source_types_from_mapping(mapping)
 
-    def _merge_source_types(self, kb_path: Path, extensions: set[str]) -> None:
-        """Merge newly observed extensions into the KB's ``source_types`` metadata.
+    def _merge_source_types(self, kb_path: Path, extensions: set[str]) -> list[str]:
+        """Merge newly observed extensions into the KB's ``source_types``.
 
         Mirrors the direct-upload path in ``KBIngestionHelper`` so the icon
         rendering on the Knowledge Bases list works regardless of which
-        ingestion route was used.
+        ingestion route was used. Returns the merged list so the caller can
+        persist it to the ``knowledge_base`` row even when there is no sidecar
+        on this replica to merge into.
         """
         if not extensions:
-            return
-        metadata_path = kb_path / "embedding_metadata.json"
+            return []
+        metadata_path = kb_path / EMBEDDING_METADATA_FILENAME
         if not metadata_path.exists():
-            return
+            return sorted(extensions)
         try:
             metadata = json.loads(metadata_path.read_text())
             existing = set(metadata.get("source_types") or [])
-            metadata["source_types"] = sorted(existing | extensions)
+            merged = sorted(existing | extensions)
+            metadata["source_types"] = merged
             metadata_path.write_text(json.dumps(metadata, indent=2))
         except (OSError, ValueError, TypeError, json.JSONDecodeError) as e:
             self.log(f"Warning: Could not update source_types metadata: {e}")
+            return sorted(extensions)
+        return merged
 
-    async def _update_backend_metadata_metrics(self, kb_path: Path, backend: BaseVectorStoreBackend) -> None:
-        """Update metadata metrics for non-Chroma backends."""
-        metadata_path = kb_path / "embedding_metadata.json"
-        if not metadata_path.exists():
-            return
+    async def _update_backend_metadata_metrics(
+        self, kb_path: Path, backend: BaseVectorStoreBackend
+    ) -> dict[str, Any]:
+        """Recompute metrics for non-Chroma backends.
 
+        Returns the computed metrics so the caller can write them straight to
+        the ``knowledge_base`` row. These backends are exactly the ones that may
+        have no local KB directory at all, so the sidecar refresh is
+        best-effort and skipped when the file is absent.
+        """
+        metadata_path = kb_path / EMBEDDING_METADATA_FILENAME
         try:
-            metadata = json.loads(metadata_path.read_text())
+            metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
             chunks = await backend.count()
             characters = 0
             words = 0
@@ -857,9 +875,12 @@ class KnowledgeComponent(Component):
             metadata["words"] = words
             metadata["avg_chunk_size"] = characters / chunks if chunks else 0.0
             metadata["size"] = await backend.storage_size_bytes()
-            metadata_path.write_text(json.dumps(metadata, indent=2))
+            if metadata_path.exists():
+                metadata_path.write_text(json.dumps(metadata, indent=2))
         except (OSError, ValueError, TypeError, json.JSONDecodeError) as e:
             self.log(f"Warning: Could not update backend metadata metrics: {e}")
+            return {}
+        return metadata
 
     @staticmethod
     def _default_backend_selection() -> tuple[str, dict[str, Any]]:
@@ -959,22 +980,6 @@ class KnowledgeComponent(Component):
             )
         except Exception as exc:  # noqa: BLE001
             self.log(f"Warning: could not persist knowledge base record: {exc}")
-
-    def _save_kb_files(
-        self,
-        kb_path: Path,
-        config_list: list[dict[str, Any]],
-    ) -> None:
-        """Save KB files using File Component storage patterns."""
-        try:
-            kb_path.mkdir(parents=True, exist_ok=True)
-
-            cfg_path = kb_path / "schema.json"
-            if not cfg_path.exists():
-                cfg_path.write_text(json.dumps(config_list, indent=2))
-
-        except (OSError, TypeError, ValueError) as e:
-            self.log(f"Error saving KB files: {e}")
 
     def _build_column_metadata(self, config_list: list[dict[str, Any]], df_source: pd.DataFrame) -> dict[str, Any]:
         """Build detailed column metadata."""
@@ -1308,15 +1313,17 @@ class KnowledgeComponent(Component):
 
             backend = await self._create_vector_store(df_source, config_list, embedding_function=embedding_function)
 
-            self._save_kb_files(kb_path, config_list)
-
+            # Metrics are collected here and handed to ``_record_kb_stats``
+            # below rather than round-tripped through the sidecar, so the row
+            # is updated even when this replica has no KB directory.
+            kb_stats: dict[str, Any] = {}
             try:
                 if not isinstance(backend, BaseVectorStoreBackend):
                     pass
                 elif backend.backend_type == BackendType.CHROMA and hasattr(backend, "raw_langchain_store"):
-                    self._update_metadata_metrics(kb_path, backend.raw_langchain_store())
+                    kb_stats = self._update_metadata_metrics(kb_path, backend.raw_langchain_store())
                 else:
-                    await self._update_backend_metadata_metrics(kb_path, backend)
+                    kb_stats = await self._update_backend_metadata_metrics(kb_path, backend)
                 # Stamp the KB with the file extensions we just ingested so
                 # the Knowledge Bases list renders the correct icon for
                 # flow-driven ingestion (input_df), matching direct upload.
@@ -1325,7 +1332,9 @@ class KnowledgeComponent(Component):
                 # when projecting onto the DataFrame.
                 source_types = self._extract_source_types_from_input(input_value)
                 source_types |= self._extract_source_types_from_df(df_source)
-                self._merge_source_types(kb_path, source_types)
+                merged_source_types = self._merge_source_types(kb_path, source_types)
+                if merged_source_types:
+                    kb_stats["source_types"] = merged_source_types
             finally:
                 if isinstance(backend, BaseVectorStoreBackend):
                     await backend.teardown()
@@ -1351,7 +1360,7 @@ class KnowledgeComponent(Component):
                 )
 
             if kb_record_id is not None:
-                await self._record_kb_stats(kb_record_id, kb_path)
+                await self._record_kb_stats(kb_record_id, kb_path, stats=kb_stats)
                 await self._record_kb_status(kb_record_id, "ready")
 
             self.status = f"✅ KB **{self.knowledge_base}** saved · {len(df_source)} chunks."
@@ -1511,22 +1520,37 @@ class KnowledgeComponent(Component):
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not update KB status to {status_value}: {exc}")
 
-    async def _record_kb_stats(self, kb_record_id: uuid.UUID, kb_path: Path) -> None:
-        """Push freshly-refreshed metrics from embedding_metadata.json onto the DB row."""
+    async def _record_kb_stats(
+        self,
+        kb_record_id: uuid.UUID,
+        kb_path: Path,
+        stats: dict[str, Any] | None = None,
+    ) -> None:
+        """Push freshly-refreshed metrics onto the KB's database row.
+
+        ``stats`` is the metrics dict the metric helpers just computed. Passing
+        it in is the normal path: the numbers go straight from the backend to
+        the row. The sidecar read is only a fallback for callers that have no
+        computed stats to hand, and is skipped entirely when the file is absent
+        — a remote-backed KB on a replica with no local directory still gets
+        its row updated, which the previous file-only path silently never did.
+        """
         try:
             from langflow.api.utils import knowledge_base_service
         except ImportError:
             self.log("knowledge_base_service unavailable; KB stats will not sync to DB row.")
             return
-        metadata_path = kb_path / "embedding_metadata.json"
-        if not metadata_path.exists():
-            self.log(f"No embedding_metadata.json at {metadata_path}; skipping KB stats sync.")
-            return
-        try:
-            metadata = json.loads(metadata_path.read_text())
-        except (OSError, json.JSONDecodeError) as exc:
-            self.log(f"Could not read KB metadata for stats sync: {exc}")
-            return
+        metadata = stats
+        if not metadata:
+            metadata_path = kb_path / EMBEDDING_METADATA_FILENAME
+            if not metadata_path.exists():
+                self.log("No computed stats and no sidecar on this replica; skipping KB stats sync.")
+                return
+            try:
+                metadata = json.loads(metadata_path.read_text())
+            except (OSError, json.JSONDecodeError) as exc:
+                self.log(f"Could not read KB metadata for stats sync: {exc}")
+                return
         chunks = int(metadata.get("chunks", 0) or 0)
         words = int(metadata.get("words", 0) or 0)
         characters = int(metadata.get("characters", 0) or 0)
@@ -1578,6 +1602,67 @@ class KnowledgeComponent(Component):
             log_label=f"knowledge base '{self.knowledge_base}'",
             require_api_key=require_api_key,
         )
+
+    async def _metadata_from_record(self) -> dict[str, Any] | None:
+        """Read this KB's metadata off its ``knowledge_base`` row.
+
+        ``record_to_metadata_dict`` emits the same key set the on-disk sidecar
+        carries, so the caller cannot tell which source it got — everything
+        retrieval needs (``model_selection``, ``chunk_size``, backend routing)
+        is on the row. The one exception is the legacy per-KB encrypted
+        ``api_key``, which has no column and is layered in by
+        :meth:`_load_kb_metadata_db_first`.
+
+        Returns ``None`` when there is no row to read — a legacy KB predating
+        the record, or bare lfx with no langflow installed. Mirrors
+        :meth:`_backend_from_record`.
+        """
+        try:
+            from langflow.api.utils import knowledge_base_service
+        except ImportError:
+            return None
+
+        user_uuid = self._user_uuid
+        if user_uuid is None:
+            return None
+        record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
+        if record is None:
+            return None
+        return knowledge_base_service.record_to_metadata_dict(record)
+
+    async def _load_kb_metadata_db_first(self, kb_path: Path, *, require_api_key: bool = False) -> dict[str, Any]:
+        """Resolve KB metadata from the database row first, the sidecar second.
+
+        Retrieval used to read ``embedding_metadata.json`` and hard-fail when it
+        was absent. That made a remote-backed KB (pgvector / OpenSearch / Chroma
+        Cloud) unqueryable on any replica whose local disk never held the KB
+        directory, even though every vector was sitting readable in the
+        configured store — the same class of cross-replica bug
+        ``_resolve_backend_config`` fixed for backend routing.
+
+        The sidecar is still read when it exists, for two reasons: legacy
+        disk-only KBs have no row at all, and the per-KB encrypted ``api_key``
+        has no column to live in. When the file is present and a credential is
+        needed we keep passing ``require_api_key`` through so an undecryptable
+        key still fails loudly with its recovery hint rather than silently
+        falling through to a global variable. When the file is absent we simply
+        do without: ``get_embeddings`` resolves the credential from the user's
+        global variables, which is how Memory Base and the server-side ingestion
+        path have always worked.
+        """
+        raise_error_if_astra_cloud_disable_component(astra_error_msg)
+
+        sidecar: dict[str, Any] = {}
+        if (kb_path / EMBEDDING_METADATA_FILENAME).exists():
+            sidecar = self._get_kb_metadata(kb_path, require_api_key=require_api_key)
+
+        record_metadata = await self._metadata_from_record()
+        if record_metadata is None:
+            return sidecar
+        # Row wins for config; the sidecar contributes only the legacy key.
+        if sidecar.get("api_key"):
+            return {**record_metadata, "api_key": sidecar["api_key"]}
+        return record_metadata
 
     async def _backend_from_record(self) -> tuple[str, dict[str, Any]] | None:
         """Read ``(backend_type, backend_config)`` off the KB's database row.
@@ -1708,8 +1793,10 @@ class KnowledgeComponent(Component):
 
         component_api_key = self.api_key if getattr(self, "api_key", None) else None
         needs_stored_key = not component_api_key
-        metadata = self._get_kb_metadata(kb_path, require_api_key=needs_stored_key)
+        metadata = await self._load_kb_metadata_db_first(kb_path, require_api_key=needs_stored_key)
         if not metadata:
+            # Neither a database row nor a readable sidecar: the KB genuinely
+            # cannot be described, so fail loudly rather than guessing.
             msg = f"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed."
             raise ValueError(msg)
 

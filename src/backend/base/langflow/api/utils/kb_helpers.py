@@ -220,6 +220,43 @@ async def resolve_embedding_selection(
     return _DEFAULT_EMBEDDING_PROVIDER, _DEFAULT_EMBEDDING_MODEL
 
 
+async def load_kb_metadata_db_first(
+    *,
+    user_id: uuid.UUID,
+    kb_name: str,
+    kb_path: Path | None = None,
+    record: Any | None = None,
+    fast: bool = True,
+) -> dict[str, Any]:
+    """Return a KB's metadata dict, ``knowledge_base`` row first, sidecar second.
+
+    ``record_to_metadata_dict`` emits the same key set ``KBAnalysisHelper.get_metadata``
+    produces, so route handlers can swap to this without a parallel consumer
+    refactor. The row is authoritative; the on-disk sidecar is a legacy fallback
+    for KBs that predate the record (or were dropped in from an export) and is
+    only consulted when a ``kb_path`` is supplied.
+
+    Pass ``record`` when the caller already resolved one — route guards resolve
+    the *owner's* row for shared KBs, and re-looking-it-up against the actor
+    would miss it and fall through to the actor's (absent) directory.
+
+    Omit ``kb_path`` entirely for callers that must not depend on the local
+    filesystem; the sidecar branch is then skipped outright, matching the
+    ``kb_path=None`` convention :func:`resolve_backend_selection` established.
+    Returns ``{}`` when neither source resolves.
+    """
+    from langflow.api.utils import knowledge_base_service
+
+    if record is None:
+        record = await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
+    if record is not None:
+        return knowledge_base_service.record_to_metadata_dict(record)
+
+    if kb_path is None:
+        return {}
+    return KBAnalysisHelper.get_metadata(kb_path, fast=fast)
+
+
 class KBStorageHelper:
     """Helper class for Knowledge Base storage and path management."""
 

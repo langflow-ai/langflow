@@ -129,12 +129,16 @@ async def get_knowledge_bases(kb_root: Path, user_id: UUID | str) -> list[str]:
     hidden bundles) and any directory carrying the ``.kb_deleted``
     sentinel.
 
+    ``kb_root`` is only consulted by that fallback. It is deliberately NOT
+    checked up front: a remote-backed deployment (pgvector / OpenSearch /
+    Chroma Cloud) may have no KB directory at all, and an early
+    ``kb_root.exists()`` return would make the DB-first branch below
+    unreachable — the dropdown would come back empty on a replica whose
+    local disk never held the KB directory, even with rows present.
+
     Returns:
         A list of knowledge base names.
     """
-    if not kb_root.exists():
-        return []
-
     # Lazy imports: langflow's DB models aren't part of the lfx
     # standalone install, and lfx's validate-rewrite layer can't
     # substitute ``lfx.services.database.models.user.crud`` (no such

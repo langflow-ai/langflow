@@ -227,8 +227,11 @@ class TestKnowledgeBaseAPI:
         record = await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name)
         assert record is not None
         assert record.model_selection == model_selection
-        metadata = json.loads((tmp_path / active_user.username / kb_name / "embedding_metadata.json").read_text())
-        assert metadata["model_selection"] == model_selection
+        assert record.backend_type == "opensearch"
+        assert record.backend_config == {"index_name": "new_kb_index"}
+        # A remote-backed KB writes nothing to local disk: the row is its only
+        # description, so any replica can serve it without a shared volume.
+        assert not (tmp_path / active_user.username / kb_name).exists()
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
