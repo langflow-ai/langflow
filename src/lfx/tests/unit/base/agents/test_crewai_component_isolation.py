@@ -83,15 +83,19 @@ class FakeToolAdapter:
 
 @pytest.fixture
 def fake_crewai(monkeypatch):
+    fake_base_llm = type("BaseLLM", (), {})
+    fake_base_tool = type("BaseTool", (), {})
     crewai_module = ModuleType("crewai")
     crewai_module.__path__ = []
     crewai_module.Crew = FakeCrew
+    crewai_module.BaseLLM = fake_base_llm
     crewai_module.LLM = FakeLLM
     crewai_module.Process = SimpleNamespace(sequential="sequential", hierarchical="hierarchical")
 
     tools_module = ModuleType("crewai.tools")
     tools_module.__path__ = []
     base_tool_module = ModuleType("crewai.tools.base_tool")
+    base_tool_module.BaseTool = fake_base_tool
     base_tool_module.Tool = FakeToolAdapter
     task_module = ModuleType("crewai.task")
     task_module.TaskOutput = type("TaskOutput", (), {})
@@ -120,13 +124,13 @@ def test_sequential_build_crew_returns_fresh_agents_and_tasks(fake_crewai):  # n
     crew_one = component.build_crew()
     crew_two = component.build_crew()
 
-    assert crew_one.agents[0] is crew_one.agents[1]
-    assert crew_one.agents[0] is not crew_one.agents[2]
+    assert len(crew_one.agents) == 2
+    assert crew_one.agents[0] is not crew_one.agents[1]
     assert crew_one.agents[0] is not crew_two.agents[0]
     assert crew_one.tasks[0] is not crew_two.tasks[0]
     assert crew_one.tasks[0].agent is crew_one.agents[0]
     assert crew_one.tasks[1].agent is crew_one.agents[0]
-    assert crew_one.tasks[2].agent is crew_one.agents[2]
+    assert crew_one.tasks[2].agent is crew_one.agents[1]
     assert crew_one.tasks[1].context == [crew_one.tasks[0]]
     assert crew_one.tasks[2].context == [crew_one.tasks[1]]
     assert crew_two.tasks[1].context == [crew_two.tasks[0]]
