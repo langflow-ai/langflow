@@ -23,7 +23,7 @@ from sqlmodel import col, select
 
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, session_scope
-from langflow.services.warm_registry.service import get_warm_registry
+from langflow.services.warm_registry.service import FlowStoreUnavailableError, get_warm_registry
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -52,18 +52,22 @@ async def _fetch_flow(session: AsyncSession, flow_id: str) -> Flow | None:
 async def warm_one(flow_id: str) -> tuple[Graph, str] | None:
     """Lazy-warm a single flow into the registry on a cache miss.
 
-    Returns the ``(template, version)`` entry, or ``None`` when the flow does not
-    exist / has no data (caller maps that to a 404). Registered under the canonical
-    UUID; callers that looked up by endpoint name should use the returned entry
-    directly rather than re-reading the registry by the requested id.
+    Returns the ``(template, version)`` entry, or ``None`` when the flow genuinely
+    does not exist / has no data (caller maps that to a 404). A DB *availability*
+    failure instead raises :class:`FlowStoreUnavailableError` so the caller can answer
+    503 (retryable) rather than a permanent-looking 404 — important on a cold worker
+    during pool exhaustion. Registered under the canonical UUID; callers that looked
+    up by endpoint name should use the returned entry directly.
     """
     reg = get_warm_registry()
     try:
         async with session_scope() as session:
             flow = await _fetch_flow(session, flow_id)
-    except Exception:  # noqa: BLE001 — a DB blip must not surface as a 500 here
+    except Exception as exc:
+        # A transient store failure must be distinguishable from not-found: re-raise
+        # as a typed availability error (host -> 503) instead of collapsing to None.
         logger.exception("warm_registry: warm_one query failed for %s", flow_id)
-        return None
+        raise FlowStoreUnavailableError(flow_id) from exc
     if flow is None or not flow.data:
         return None
     canonical = str(flow.id)

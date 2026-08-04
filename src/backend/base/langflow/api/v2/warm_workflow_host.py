@@ -92,11 +92,21 @@ class WarmWorkflowHost(WorkflowHostBase):
         from lfx.utils.flow_validation import validate_flow_for_current_settings
 
         from langflow.services.warm_registry.reconcile import warm_one
-        from langflow.services.warm_registry.service import get_warm_registry
+        from langflow.services.warm_registry.service import FlowStoreUnavailableError, get_warm_registry
 
         # Fast path: in-memory registry hit; on a miss, warm_one() lazily loads that one
-        # flow from the DB and caches it.
-        hit = get_warm_registry().get(flow_id) or await warm_one(flow_id)
+        # flow from the DB and caches it. A store-availability failure (DB down / pool
+        # exhausted) surfaces as 503 (retryable), NOT a permanent-looking 404.
+        registry = get_warm_registry()
+        hit = registry.get(flow_id)
+        if hit is None:
+            try:
+                hit = await warm_one(flow_id)
+            except FlowStoreUnavailableError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail={"error": "flow store unavailable", "code": "FLOW_STORE_UNAVAILABLE", "flow_id": flow_id},
+                ) from exc
         # Still nothing -> not deployed (or retired/pulled). This is the "active-flow
         # guard": a flow removed from the DB can't be run even if still resident.
         if hit is None:

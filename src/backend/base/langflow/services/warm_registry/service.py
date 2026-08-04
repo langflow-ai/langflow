@@ -22,6 +22,15 @@ if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
 
 
+class FlowStoreUnavailableError(Exception):
+    """The flow store could not be reached while (lazily) warming a flow.
+
+    Distinguishes a transient availability failure (DB down / pool exhausted) from a
+    genuine not-found, so the API layer can answer 503 (retryable) instead of 404
+    (permanent). Raised by ``warm_one``; translated to an HTTP 503 by the host.
+    """
+
+
 class WarmGraphRegistry:
     """In-memory ``flow_id -> (Graph template, version)`` cache for one worker."""
 
@@ -54,8 +63,11 @@ class WarmGraphRegistry:
 
         The (expensive) build runs outside the lock; only the dict swap is guarded,
         so concurrent adds for other flows are not blocked by one slow build.
+        ``Graph.from_payload`` is synchronous and CPU-heavy, so it runs in a worker
+        thread — this yields the event loop during the build, keeping request handling
+        and health checks responsive on a reconcile pass or a cache-miss warm.
         """
-        graph = self._build(flow_id, name, data)
+        graph = await asyncio.to_thread(self._build, flow_id, name, data)
         async with self._lock:
             self._flows[flow_id] = (graph, version)
 

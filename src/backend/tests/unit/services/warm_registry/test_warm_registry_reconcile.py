@@ -340,10 +340,36 @@ async def _boom():
     yield  # pragma: no cover
 
 
-async def test_warm_one_db_error_returns_none(clean_registry, monkeypatch):  # noqa: ARG001
-    """A DB blip inside warm_one is swallowed -> None (host maps to 404, not 500)."""
+async def test_warm_one_db_error_raises_unavailable(clean_registry, monkeypatch):  # noqa: ARG001
+    """A DB availability failure inside warm_one raises FlowStoreUnavailableError (-> 503)."""
+    from langflow.services.warm_registry.service import FlowStoreUnavailableError
+
     monkeypatch.setattr(reconcile_mod, "session_scope", _boom)
-    assert await warm_one("any-id") is None
+    with pytest.raises(FlowStoreUnavailableError):
+        await warm_one("any-id")
+
+
+async def test_host_get_flow_503_on_store_unavailable(clean_registry, monkeypatch):  # noqa: ARG001
+    """A store-availability failure while resolving a flow -> HTTP 503, not 404."""
+    from fastapi import HTTPException
+    from langflow.api.v2 import warm_workflow_host as host_mod
+    from langflow.services.warm_registry.service import FlowStoreUnavailableError
+
+    async def _unavailable(_flow_id):
+        raise FlowStoreUnavailableError(_flow_id)
+
+    import langflow.services.warm_registry.reconcile as reconcile_module
+    import langflow.services.warm_registry.service as service_module
+
+    # Empty registry so the host falls through to warm_one, which reports unavailable.
+    service_module._warm_registry = None
+    monkeypatch.setattr(reconcile_module, "warm_one", _unavailable)
+
+    host = host_mod.WarmWorkflowHost()
+    with pytest.raises(HTTPException) as exc:
+        await host.get_flow("some-id", caller=None)
+    assert exc.value.status_code == 503
+    assert exc.value.detail["code"] == "FLOW_STORE_UNAVAILABLE"
 
 
 async def test_warm_all_survives_unbuildable_flow(client, active_user, basic_data, clean_registry):  # noqa: ARG001
