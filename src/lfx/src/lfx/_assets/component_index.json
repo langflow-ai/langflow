@@ -1959,7 +1959,7 @@
           "icon": "CrewAI",
           "legacy": true,
           "metadata": {
-            "code_hash": "42e59f6d6572",
+            "code_hash": "8fc6f1e00606",
             "dependencies": {
               "dependencies": [
                 {
@@ -2014,7 +2014,7 @@
               "show": true,
               "title_case": false,
               "type": "code",
-              "value": "from lfx.base.agents.crewai.crew import BaseCrewComponent\nfrom lfx.io import HandleInput\nfrom lfx.schema.message import Message\n\n\nclass SequentialCrewComponent(BaseCrewComponent):\n    display_name: str = \"Sequential Crew\"\n    description: str = \"Represents a group of agents with tasks that are executed sequentially.\"\n    documentation: str = \"https://docs.crewai.com/how-to/Sequential/\"\n    icon = \"CrewAI\"\n    legacy = True\n    replacement = \"agents.Agent\"\n\n    inputs = [\n        *BaseCrewComponent.get_base_inputs(),\n        HandleInput(name=\"tasks\", display_name=\"Tasks\", input_types=[\"SequentialTask\"], is_list=True),\n    ]\n\n    @property\n    def agents(self: \"SequentialCrewComponent\") -> list:\n        # Derive agents directly from linked tasks\n        return [task.agent for task in self.tasks if hasattr(task, \"agent\")]\n\n    def get_tasks_and_agents(self, agents_list=None) -> tuple[list, list]:\n        # Use the agents property to derive agents\n        if not agents_list:\n            existing_agents = self.agents\n            agents_list = existing_agents + (agents_list or [])\n\n        return super().get_tasks_and_agents(agents_list=agents_list)\n\n    def build_crew(self) -> Message:\n        try:\n            from crewai import Crew, Process\n        except ImportError as e:\n            msg = \"CrewAI is not installed. Please install it with `uv pip install crewai`.\"\n            raise ImportError(msg) from e\n\n        tasks, agents = self.get_tasks_and_agents()\n\n        return Crew(\n            agents=agents,\n            tasks=tasks,\n            process=Process.sequential,\n            verbose=self.verbose,\n            memory=self.memory,\n            cache=self.use_cache,\n            max_rpm=self.max_rpm,\n            share_crew=self.share_crew,\n            function_calling_llm=self.function_calling_llm,\n            step_callback=self.get_step_callback(),\n            task_callback=self.get_task_callback(),\n        )\n"
+              "value": "from lfx.base.agents.crewai.crew import BaseCrewComponent\nfrom lfx.io import HandleInput\nfrom lfx.schema.message import Message\n\n\nclass SequentialCrewComponent(BaseCrewComponent):\n    display_name: str = \"Sequential Crew\"\n    description: str = \"Represents a group of agents with tasks that are executed sequentially.\"\n    documentation: str = \"https://docs.crewai.com/how-to/Sequential/\"\n    icon = \"CrewAI\"\n    legacy = True\n    replacement = \"agents.Agent\"\n\n    inputs = [\n        *BaseCrewComponent.get_base_inputs(),\n        HandleInput(name=\"tasks\", display_name=\"Tasks\", input_types=[\"SequentialTask\"], is_list=True),\n    ]\n\n    @property\n    def agents(self: \"SequentialCrewComponent\") -> list:\n        # Derive agents directly from linked tasks\n        agents = []\n        seen_ids: set[int] = set()\n        for task in self.tasks:\n            if not hasattr(task, \"agent\"):\n                continue\n            agent = task.agent\n            if agent is None:\n                continue\n            agent_id = id(agent)\n            if agent_id in seen_ids:\n                continue\n            seen_ids.add(agent_id)\n            agents.append(agent)\n        return agents\n\n    def get_tasks_and_agents(self, agents_list=None) -> tuple[list, list]:\n        # Use the agents property to derive agents\n        if not agents_list:\n            existing_agents = self.agents\n            agents_list = existing_agents + (agents_list or [])\n\n        return super().get_tasks_and_agents(agents_list=agents_list)\n\n    def build_crew(self) -> Message:\n        try:\n            from crewai import Crew, Process\n        except ImportError as e:\n            msg = \"CrewAI is not installed. Please install it with `uv pip install crewai`.\"\n            raise ImportError(msg) from e\n\n        tasks, agents = self.get_tasks_and_agents()\n\n        return Crew(\n            agents=agents,\n            tasks=tasks,\n            process=Process.sequential,\n            verbose=self.verbose,\n            memory=self.memory,\n            cache=self.use_cache,\n            max_rpm=self.max_rpm,\n            share_crew=self.share_crew,\n            function_calling_llm=self.function_calling_llm,\n            step_callback=self.get_step_callback(),\n            task_callback=self.get_task_callback(),\n        )\n"
             },
             "function_calling_llm": {
               "_input_type": "HandleInput",
@@ -5119,7 +5119,7 @@
               "dependencies": [
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "lfx",
@@ -6563,7 +6563,7 @@
                 },
                 {
                   "name": "cryptography",
-                  "version": "49.0.0"
+                  "version": "48.0.1"
                 },
                 {
                   "name": "langchain_chroma",
@@ -6579,7 +6579,7 @@
                 },
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "chromadb",
@@ -8149,7 +8149,7 @@
               "dependencies": [
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "langflow",
@@ -30998,6 +30998,6 @@
     "num_components": 127,
     "num_modules": 16
   },
-  "sha256": "b44348561ad73afa03b14d10352e2d56907924b4e3de4ef6c5f64774e4f83648",
+  "sha256": "56190a568c1a48635455c8520ad9cbea4359861f7e39f6d2fb6fcde61e283354",
   "version": "1.12.0"
 }
