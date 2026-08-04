@@ -14,10 +14,7 @@ import {
   SHOW_LEGACY_ADMIN_PAGE,
 } from "@/customization/components/custom-admin-page-menu-item";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
-import {
-  ENABLE_DATASTAX_LANGFLOW,
-  ENABLE_ENTERPRISE,
-} from "@/customization/feature-flags";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
@@ -126,9 +123,7 @@ export const AccountMenu = () => {
                 </HeaderMenuItemButton>
               </div>
             )}
-            {ENABLE_ENTERPRISE && isAdmin && (
-              <CustomAdminPageMenuItem onNavigate={(path) => navigate(path)} />
-            )}
+            <CustomAdminPageMenuItem onNavigate={(path) => navigate(path)} />
             <HeaderMenuItemLink
               newPage
               href={ENABLE_DATASTAX_LANGFLOW ? DATASTAX_DOCS_URL : DOCS_URL}

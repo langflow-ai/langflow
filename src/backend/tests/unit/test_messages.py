@@ -1,4 +1,5 @@
 import asyncio
+import base64
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -347,10 +348,11 @@ def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
 
 
 def test_to_lc_message_keeps_supported_image_attachments(tmp_path):
-    from PIL import Image as PILImage
-
     image_path = tmp_path / "image.png"
-    PILImage.new("RGB", (1, 1)).save(image_path)
+    image_content = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
+    )
+    image_path.write_bytes(image_content)
 
     message = Message(
         text="Hello",

@@ -1,0 +1,56 @@
+import { render, screen } from "@testing-library/react";
+import type { AxiosError } from "axios";
+import { customShouldSkipAuthRefresh } from "../../utils/custom-should-skip-auth-refresh";
+import {
+  CustomAdminPageMenuItem,
+  SHOW_LEGACY_ADMIN_PAGE,
+} from "../custom-admin-page-menu-item";
+import CustomLoginBrandTitle from "../custom-login-brand-title";
+import CustomLoginSignupPrompt from "../custom-login-signup-prompt";
+import CustomLoginSsoOptions from "../custom-login-sso-options";
+
+describe("OSS auth customization seams", () => {
+  it("preserves the legacy Admin Page link", () => {
+    expect(SHOW_LEGACY_ADMIN_PAGE).toBe(true);
+  });
+
+  it("does not render Enterprise admin navigation", () => {
+    const { container } = render(
+      <CustomAdminPageMenuItem onNavigate={jest.fn()} />,
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("renders the OSS product name as the login brand", () => {
+    render(<CustomLoginBrandTitle />);
+
+    expect(screen.getByText("Langflow")).toBeInTheDocument();
+  });
+
+  it("passes signup prompt children through", () => {
+    render(
+      <CustomLoginSignupPrompt>
+        <p>Don't have an account? Sign Up</p>
+      </CustomLoginSignupPrompt>,
+    );
+
+    expect(
+      screen.getByText("Don't have an account? Sign Up"),
+    ).toBeInTheDocument();
+  });
+
+  it("renders no SSO login options", () => {
+    const { container } = render(<CustomLoginSsoOptions />);
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("never skips auth refresh", () => {
+    const error = {
+      response: { status: 403, data: { detail: "must_change_password" } },
+    } as AxiosError;
+
+    expect(customShouldSkipAuthRefresh(error)).toBe(false);
+  });
+});

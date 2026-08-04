@@ -15,10 +15,8 @@ YELLOW=\033[1;33m
 
 log_level ?= debug
 host ?= 0.0.0.0
+port ?= 7860
 env ?= .env
-# Prefer LANGFLOW_PORT from the env file when `port` is not passed on the CLI
-_env_port := $(shell sed -n 's/^LANGFLOW_PORT=//p' $(env) 2>/dev/null | head -1 | tr -d ' "'"'"'')
-port ?= $(if $(_env_port),$(_env_port),7860)
 open_browser ?= true
 path = src/backend/base/langflow/frontend
 workers ?= 1
@@ -296,7 +294,7 @@ backend_base: ## run the backend with only langflow-base installed
 
 
 backend: setup_env install_backend ## run the backend in development mode
-	@-kill -9 $$(lsof -t -i:$(port)) || true
+	@-kill -9 $$(lsof -t -i:7860) || true
 ifdef login
 	@echo "Running backend autologin is $(login)";
 	LANGFLOW_AUTO_LOGIN=$(login) uv run$(if $(strip $(UV_RUN_ARGS)), $(strip $(UV_RUN_ARGS))) uvicorn \

@@ -4,13 +4,9 @@ export interface CustomLoginFormGateProps {
   children: ReactNode;
 }
 
-// OSS no-op: always renders the local username/password form, preserving
-// today's behavior. Downstream overlays (e.g. an SSO enterprise layer) can
-// wrap this to decide whether the local form should render at all — for
-// example, hiding it on the primary login route once an external identity
-// provider connection is active, while still showing it on a dedicated
-// recovery route. The decision is intentionally left to the override: OSS
-// itself has no concept of alternate login methods.
+// OSS no-op: always renders the local username/password form.
+// Downstream overlays can return null (or alternate UI) to hide the form on
+// the primary login route while still showing it on a recovery route.
 export default function CustomLoginFormGate({
   children,
 }: CustomLoginFormGateProps) {
