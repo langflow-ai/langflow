@@ -388,8 +388,12 @@ class _ExecSandboxExecutor:
         it and then closes the freshly created scheduler instead of returning
         early and leaving it running. Clearing ``_scheduler`` makes shutdown
         restartable (a later execution creates a fresh Scheduler rather than
-        calling into an exited one), and bumping the generation lets an
-        overlapping run detect it belongs to the closed scheduler.
+        calling into an exited one).
+
+        Readiness/generation are NOT touched here: _shutdown() transitions
+        them synchronously under the thread mutex at submission time, because
+        by the time this coroutine runs another run may already have captured
+        its grace classification.
         """
         if self._scheduler_lock is None:
             return
@@ -397,8 +401,6 @@ class _ExecSandboxExecutor:
             if self._scheduler is None:
                 return
             scheduler, self._scheduler = self._scheduler, None
-            self._startup_complete = False
-            self._generation += 1
             await scheduler.__aexit__(None, None, None)
 
     def _shutdown(self) -> None:
@@ -409,25 +411,29 @@ class _ExecSandboxExecutor:
         Langflow. atexit runs while daemon threads are still alive, so the
         coroutine can complete on the sandbox loop; a short timeout and
         blanket suppress keep a wedged VM from hanging process exit. Safe to
-        call repeatedly and mid-process: state is cleared under the creation
-        lock, so a subsequent execution starts a fresh Scheduler.
+        call repeatedly and mid-process.
 
-        The close is SUBMITTED under ``self._lock`` — the same mutex run()
-        holds across readiness capture and run submission — so shutdown and
-        run are totally ordered from any thread: a run accepted before the
-        shutdown has its coroutine queued (and, with the eagerly created
-        creation lock, the close queues behind it and closes whatever it
-        creates); a run accepted after the shutdown observes the cleared
-        state and performs a fresh cold start with startup grace. Only the
-        wait happens outside the mutex, so a slow close never blocks new
-        submissions. If the close outlives the wait timeout, the coroutine
-        keeps running on the loop and still performs the close as soon as
-        in-flight creation completes.
+        The lifecycle transition happens SYNCHRONOUSLY under ``self._lock``
+        at submission time — readiness is cleared and the generation bumped
+        before the mutex is released, NOT inside the queued close coroutine.
+        A run accepted after this point therefore always classifies itself as
+        a cold start (startup grace) even though the close has not executed
+        yet, and an in-flight run of the closing generation can no longer
+        re-mark readiness (its completion guard sees the bumped generation).
+        The close coroutine itself only performs the actual __aexit__ behind
+        the creation lock: with the eagerly created creation lock, a run
+        accepted before the shutdown has its coroutine queued ahead of the
+        close, which then closes whatever that run creates. Only the wait
+        happens outside the mutex, so a slow close never blocks new
+        submissions; if it outlives the wait timeout it keeps running on the
+        loop and still closes as soon as in-flight creation completes.
         """
         with self._lock:
             loop = self._loop
             if self._scheduler_lock is None or loop is None or loop.is_closed():
                 return
+            self._startup_complete = False
+            self._generation += 1
             future = asyncio.run_coroutine_threadsafe(self._close_scheduler(), loop)
         with contextlib.suppress(Exception):
             future.result(timeout=10)
@@ -441,13 +447,16 @@ class _ExecSandboxExecutor:
         allow_network: bool,
         allowed_domains: tuple[str, ...],
         allow_software_emulation: bool,
+        generation: int,
         env: dict[str, str] | None,
     ) -> SandboxResult:
+        # ``generation`` is the lifecycle epoch captured at ACCEPTANCE time
+        # (in run(), under the thread mutex). Capturing it here instead would
+        # be too late: a shutdown that lands between acceptance and this
+        # coroutine executing bumps the generation first, and a run of the
+        # closing epoch would then adopt the new epoch and wrongly mark its
+        # readiness below.
         scheduler = await self._ensure_scheduler(allow_software_emulation=allow_software_emulation)
-        # Remember which scheduler generation this run belongs to: if a
-        # shutdown closes the scheduler while this run is in flight, the run
-        # must not mark the NEXT generation's startup as complete.
-        generation = self._generation
         # NOTE: the keyword is env_vars (not env as the README suggests), and
         # timeouts do NOT raise — they surface as exit_code == -1. With
         # allow_network=True and no allowed_domains, exec-sandbox's DNS filter
@@ -466,8 +475,9 @@ class _ExecSandboxExecutor:
         # is downloaded and a VM booted; only now do later callers stop
         # needing the startup grace margin. Left False on exceptions so a
         # failed cold start keeps the generous margin for the next attempt,
-        # and skipped when a shutdown replaced the scheduler mid-run — this
-        # run's completion says nothing about the new generation's readiness.
+        # and skipped when a shutdown was requested after this run was
+        # accepted — its scheduler is (being) closed, so its completion says
+        # nothing about the current epoch's readiness.
         if self._generation == generation:
             self._startup_complete = True
         return SandboxResult(
@@ -520,6 +530,7 @@ class _ExecSandboxExecutor:
             future = asyncio.run_coroutine_threadsafe(
                 self._run_on_loop(
                     code,
+                    generation=self._generation,
                     timeout_seconds=settings.timeout_seconds,
                     memory_mb=settings.memory_mb,
                     allow_network=settings.allow_network,

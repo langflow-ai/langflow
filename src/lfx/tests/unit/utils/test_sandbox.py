@@ -558,6 +558,76 @@ class TestRunCodeInSandbox:
         assert run_code_in_sandbox("print('hi')").success
         assert len(fake_exec_sandbox.instances) == 2
 
+    def test_run_during_pending_shutdown_gets_startup_grace(self, monkeypatch, fresh_executor, fake_exec_sandbox):
+        """A run accepted while a shutdown's close is queued must cold-start.
+
+        The lifecycle transition (readiness clear + generation bump) happens
+        synchronously in _shutdown() under the mutex, so even before the
+        queued close coroutine executes, a newly accepted run classifies
+        itself as a first execution and gets the startup grace — with stale
+        warm state and the steady margin squeezed to zero it would time out
+        before its fresh scheduler finishes creating.
+        """
+        import threading
+        import time
+
+        from lfx.utils.sandbox import shutdown_sandbox
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: _settings("exec-sandbox", sandbox_timeout_seconds=0),
+        )
+        monkeypatch.setattr(sandbox_module, "_RUN_GRACE_SECONDS", 0)
+        monkeypatch.setattr(sandbox_module, "_STARTUP_GRACE_SECONDS", 5)
+
+        # Warm up (cold, startup grace), leaving readiness True.
+        assert run_code_in_sandbox("print('hi')").success
+        assert fresh_executor._startup_complete
+
+        # Freeze the loop so the shutdown's queued close cannot execute.
+        loop = fresh_executor._loop
+        release = threading.Event()
+        frozen = threading.Event()
+
+        def freeze():
+            frozen.set()
+            release.wait(timeout=5)
+
+        loop.call_soon_threadsafe(freeze)
+        assert frozen.wait(timeout=5)
+
+        # Shutdown submits its close (queued behind the freeze) and blocks
+        # waiting for it; the lifecycle transition must already be visible.
+        shutdown_thread = threading.Thread(target=shutdown_sandbox, daemon=True)
+        shutdown_thread.start()
+        deadline = time.monotonic() + 5
+        while fresh_executor._startup_complete and time.monotonic() < deadline:
+            time.sleep(0.001)
+        assert not fresh_executor._startup_complete, "shutdown did not clear readiness synchronously"
+
+        # Accept a run while the close is still pending: it must classify as
+        # a first execution (startup grace) or the 0-second steady deadline
+        # fails before its fresh scheduler finishes creating.
+        results = []
+
+        def call():
+            results.append(run_code_in_sandbox("print('hi')"))
+
+        run_thread = threading.Thread(target=call, daemon=True)
+        run_thread.start()
+        time.sleep(0.02)  # let it submit behind the queued close
+        release.set()
+        run_thread.join(timeout=5)
+        shutdown_thread.join(timeout=5)
+        assert not run_thread.is_alive()
+        assert results
+        assert results[0].success
+        # Old scheduler closed by the pending shutdown; fresh one created.
+        assert len(fake_exec_sandbox.instances) == 2
+        assert fake_exec_sandbox.instances[0].exited
+        # The post-shutdown run completed on the current epoch: readiness set.
+        assert fresh_executor._startup_complete
+
     def test_shutdown_is_a_barrier_for_inflight_creation(self, monkeypatch, fresh_executor, fake_exec_sandbox):
         """A shutdown overlapping Scheduler.__aenter__ must wait and then close it.
 
