@@ -131,10 +131,17 @@ async def reconcile_once() -> None:
             logger.exception("warm_registry: change fetch failed; will retry next pass")
             return
         for flow in rows:
+            sid = str(flow.id)
             if not flow.data:
+                # A (re)deployed flow whose executable data is now empty is not runnable.
+                # Evict any resident template rather than leaving the stale one behind: the
+                # previous ``continue`` kept an outdated graph AND never advanced the cached
+                # version, so every subsequent pass re-detected it as changed and re-skipped
+                # it forever. After eviction it resolves to a 404, matching its empty state.
+                await reg.evict(sid)
                 continue
             try:
-                await reg.add(str(flow.id), flow.name, flow.data, _version(flow.updated_at))
+                await reg.add(sid, flow.name, flow.data, _version(flow.updated_at))
                 verb = "added new" if flow.id in new_ids else "rebuilt changed"
                 logger.info("warm_registry: %s flow %s (%r)", verb, flow.id, flow.name)
             except Exception:  # noqa: BLE001

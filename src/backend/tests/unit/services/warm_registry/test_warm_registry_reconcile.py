@@ -57,6 +57,15 @@ async def _touch_flow(flow_id: str, new_name: str) -> None:
         session.add(flow)
 
 
+async def _empty_flow_data(flow_id: str) -> None:
+    """Blank a flow's executable data and bump updated_at (a real 'emptied' edit)."""
+    async with session_scope() as session:
+        flow = (await session.exec(select(Flow).where(Flow.id == UUID(flow_id)))).first()
+        flow.data = {}
+        flow.updated_at = datetime.now(timezone.utc)
+        session.add(flow)
+
+
 async def _delete_flow(flow_id: str) -> None:
     async with session_scope() as session:
         flow = (await session.exec(select(Flow).where(Flow.id == UUID(flow_id)))).first()
@@ -353,6 +362,26 @@ async def test_reconcile_skips_dataless_flow(client, active_user, clean_registry
     await reconcile_once()
 
     assert len(get_warm_registry()) == 0
+
+
+async def test_reconcile_evicts_flow_whose_data_becomes_empty(
+    client,  # noqa: ARG001
+    active_user,
+    basic_data,
+    clean_registry,  # noqa: ARG001
+):
+    """A resident flow edited to empty data must be evicted, not left stale."""
+    await _clear_flows()
+    flow_id = await _insert_flow("full", basic_data, active_user.id)
+    await warm_all()
+    assert get_warm_registry().get(flow_id) is not None
+
+    # Emptying the flow's data (with a version bump) makes it non-runnable.
+    await _empty_flow_data(flow_id)
+    await reconcile_once()
+
+    # The stale template is gone (pre-fix this stayed resident forever).
+    assert get_warm_registry().get(flow_id) is None
 
 
 async def test_reconcile_rebuild_error_is_caught(client, active_user, clean_registry):  # noqa: ARG001
