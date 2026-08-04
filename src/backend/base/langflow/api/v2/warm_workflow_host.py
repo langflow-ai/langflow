@@ -21,6 +21,7 @@ Key differences from ``LangflowWorkflowHost``:
 
 from __future__ import annotations
 
+import asyncio
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
@@ -32,7 +33,8 @@ from fastapi import HTTPException, status
 from lfx.workflow.host import ResolvedFlow, WorkflowHostBase
 
 if TYPE_CHECKING:
-    from fastapi import Request
+    from fastapi import BackgroundTasks, Request
+    from lfx.schema.workflow import ParsedWorkflowRun, WorkflowExecutionResponse
 
 
 class WarmWorkflowHost(WorkflowHostBase):
@@ -113,3 +115,40 @@ class WarmWorkflowHost(WorkflowHostBase):
         # Return a run-ready Graph (not a FlowRead) as ResolvedFlow, so the base
         # run_sync/stream can execute it directly — no from_payload rebuild on this path.
         return ResolvedFlow(flow_id=flow_id, graph=graph_copy, session_id_default=flow_id)
+
+    async def run_sync(
+        self,
+        parsed: ParsedWorkflowRun,
+        flow: ResolvedFlow,
+        caller: Any,
+        *,
+        http_request: Request,
+        background_tasks: BackgroundTasks,
+    ) -> WorkflowExecutionResponse:
+        """Run the graph with the langflow wall-clock ceiling enforced (408 on timeout).
+
+        The lean base ``run_sync`` has no timeout, so a runaway flow on the execution
+        plane would run unbounded and hold a worker forever. Wrap it in the configured
+        ``workflow_execution_timeout`` and surface the same 408 contract the DB host
+        uses. (Only per-flow RBAC + job/vertex-build writes stay dropped; the durable
+        job-tracking and header-global/session mapping remain a separate adapter.)
+        """
+        from langflow.services.deps import get_settings_service
+
+        timeout_seconds = get_settings_service().settings.workflow_execution_timeout
+        try:
+            return await asyncio.wait_for(
+                super().run_sync(parsed, flow, caller, http_request=http_request, background_tasks=background_tasks),
+                timeout=timeout_seconds,
+            )
+        except (TimeoutError, asyncio.TimeoutError):
+            raise HTTPException(
+                status_code=status.HTTP_408_REQUEST_TIMEOUT,
+                detail={
+                    "error": "Execution timeout",
+                    "code": "EXECUTION_TIMEOUT",
+                    "message": f"Workflow execution exceeded {timeout_seconds} seconds",
+                    "flow_id": flow.flow_id,
+                    "timeout_seconds": timeout_seconds,
+                },
+            ) from None

@@ -505,3 +505,73 @@ async def test_reconcile_loop_survives_bad_pass(monkeypatch):
     with contextlib.suppress(asyncio.CancelledError):
         await task
     assert calls >= 1
+
+
+# ── #2: deferred host selection (fixes import-time-vs-env-file ordering) ──────
+def test_deferred_host_resolves_db_when_not_prod(monkeypatch):
+    """settings.prod False -> DB-backed LangflowWorkflowHost."""
+    from types import SimpleNamespace
+
+    from langflow.api.v2.host_selection import DeferredWorkflowHost
+    from langflow.api.v2.workflow_host import LangflowWorkflowHost
+    from langflow.services import deps
+
+    monkeypatch.setattr(deps, "is_settings_service_initialized", lambda: True)
+    monkeypatch.setattr(deps, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace(prod=False)))
+    host = DeferredWorkflowHost()
+    assert isinstance(host._resolve(), LangflowWorkflowHost)
+
+
+def test_deferred_host_resolves_warm_when_prod(monkeypatch):
+    """settings.prod True -> WarmWorkflowHost, and the choice is cached."""
+    from types import SimpleNamespace
+
+    from langflow.api.v2.host_selection import DeferredWorkflowHost
+    from langflow.api.v2.warm_workflow_host import WarmWorkflowHost
+    from langflow.services import deps
+
+    monkeypatch.setattr(deps, "is_settings_service_initialized", lambda: True)
+    monkeypatch.setattr(deps, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace(prod=True)))
+    host = DeferredWorkflowHost()
+    resolved = host._resolve()
+    assert isinstance(resolved, WarmWorkflowHost)
+    assert host._resolve() is resolved  # cached
+
+
+def test_deferred_host_does_not_cache_before_settings_init(monkeypatch):
+    """An access before settings are initialized (import time) must not cache a choice."""
+    from langflow.api.v2.host_selection import DeferredWorkflowHost
+    from langflow.api.v2.workflow_host import LangflowWorkflowHost
+    from langflow.services import deps
+
+    monkeypatch.setattr(deps, "is_settings_service_initialized", lambda: False)
+    host = DeferredWorkflowHost()
+    resolved = host._resolve()
+    assert isinstance(resolved, LangflowWorkflowHost)  # transient DB fallback
+    assert host._host is None  # NOT cached — real choice deferred to first post-startup call
+
+
+# ── #5: warm host enforces the workflow_execution_timeout (408) on sync runs ──
+async def test_warm_host_run_sync_enforces_timeout(monkeypatch):
+    """A sync run exceeding workflow_execution_timeout -> HTTP 408 (the lean base has none)."""
+    from types import SimpleNamespace
+
+    import lfx.workflow.router as lfx_router
+    from fastapi import HTTPException
+    from langflow.api.v2.warm_workflow_host import WarmWorkflowHost
+    from langflow.services import deps
+
+    async def _slow(*_args, **_kwargs):
+        await asyncio.sleep(1)
+
+    monkeypatch.setattr(lfx_router, "run_workflow_sync", _slow)
+    monkeypatch.setattr(
+        deps, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace(workflow_execution_timeout=0.01))
+    )
+
+    host = WarmWorkflowHost()
+    flow = SimpleNamespace(graph=object(), flow_id="fid")
+    with pytest.raises(HTTPException) as exc:
+        await host.run_sync(SimpleNamespace(), flow, None, http_request=None, background_tasks=None)
+    assert exc.value.status_code == 408
+    assert exc.value.detail["code"] == "EXECUTION_TIMEOUT"
