@@ -525,7 +525,14 @@ def handle_model_input_update(
         model_field_name=model_field_name,
     )
     selected_provider_after_refresh = _selected_provider()
-    provider_changed_during_refresh = selected_provider_before_refresh != selected_provider_after_refresh
+    # Only an actual provider replacement should clear mapped credentials. On
+    # first selection (None -> provider), the refreshed catalog may choose a
+    # default while the user is editing a provider field such as ``api_key``;
+    # treating that as a switch would erase the value they just submitted.
+    provider_changed_during_refresh = (
+        selected_provider_before_refresh is not None
+        and selected_provider_before_refresh != selected_provider_after_refresh
+    )
 
     # When the user directly edits a provider-specific field (e.g. api_key),
     # skip the provider reset/re-population so their value is preserved.
