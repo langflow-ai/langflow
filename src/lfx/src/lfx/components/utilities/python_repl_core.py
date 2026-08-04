@@ -26,7 +26,12 @@ class PythonREPLComponent(Component):
         MultilineInput(
             name="python_code",
             display_name="Python Code",
-            info="The Python code to execute. Only modules specified in Global Imports can be used.",
+            info=(
+                "The Python code to execute. By default only modules specified in Global Imports "
+                "can be used. When a sandbox backend is configured (LANGFLOW_SANDBOX_BACKEND), the "
+                "code runs in an isolated microVM instead and may import any module available in "
+                "the sandbox image."
+            ),
             value="print('Hello, World!')",
             input_types=["Message"],
             tool_mode=True,

@@ -5,6 +5,8 @@ stubbed into sys.modules so the routing, fail-closed, and result-mapping logic
 is exercised everywhere CI runs.
 """
 
+import importlib.util
+import os
 import sys
 from types import SimpleNamespace
 
@@ -35,10 +37,22 @@ def _settings(backend, **extra):
 
 @pytest.fixture(autouse=True)
 def fresh_executor(monkeypatch):
-    """Give each test its own executor so loop threads/schedulers don't leak between tests."""
+    """Give each test its own executor and tear down its loop thread afterwards."""
+    import atexit
+
     executor = sandbox_module._ExecSandboxExecutor()
     monkeypatch.setattr(sandbox_module, "_executor", executor)
-    return executor
+    yield executor
+    # Tear down so daemon loop threads and atexit hooks don't accumulate
+    # across the test session.
+    atexit.unregister(executor._shutdown)
+    executor._shutdown()
+    loop, thread = executor._loop, executor._thread
+    if loop is not None and not loop.is_closed():
+        loop.call_soon_threadsafe(loop.stop)
+        if thread is not None:
+            thread.join(timeout=5)
+        loop.close()
 
 
 class _FakeExecutionResult:
@@ -224,6 +238,13 @@ class TestRunCodeInSandbox:
         assert call["env_vars"] == {}
         assert scheduler.config.kwargs == {"warm_pool_size": 2}
 
+    def test_network_is_disabled_by_default(self, monkeypatch, fake_exec_sandbox):
+        """Default settings must reach the backend as allow_network=False (offline VM)."""
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        run_code_in_sandbox("print('hi')")
+        call = fake_exec_sandbox.instances[-1].run_calls[-1]
+        assert call["allow_network"] is False
+
     @pytest.mark.usefixtures("fake_exec_sandbox")
     def test_user_code_failure_is_result_not_exception(self, monkeypatch):
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
@@ -246,23 +267,31 @@ class TestRunCodeInSandbox:
             run_code_in_sandbox("BOOM_INFRA")
 
     def test_concurrent_first_calls_create_one_scheduler(self, monkeypatch, fake_exec_sandbox):
-        """Two racing first executions must share one scheduler (no leaked VM pool)."""
+        """Two racing first executions must share one scheduler (no leaked VM pool).
+
+        A barrier releases both threads together and the fake __aenter__ yields
+        control (asyncio.sleep) so the two coroutines genuinely interleave at
+        the creation await; without the creation lock this test fails.
+        """
         import threading
 
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
         errors = []
+        start_barrier = threading.Barrier(2)
 
         def call():
             try:
+                start_barrier.wait(timeout=5)
                 run_code_in_sandbox("print('hi')")
             except Exception as e:
                 errors.append(e)
 
-        threads = [threading.Thread(target=call) for _ in range(2)]
+        threads = [threading.Thread(target=call, daemon=True) for _ in range(2)]
         for t in threads:
             t.start()
         for t in threads:
-            t.join()
+            t.join(timeout=5)
+        assert all(not t.is_alive() for t in threads), "sandbox execution deadlocked"
         assert not errors
         assert len(fake_exec_sandbox.instances) == 1
 
@@ -392,6 +421,61 @@ class TestComponentRouting:
         sent = fake_exec_sandbox.instances[-1].run_calls[-1]["code"]
         assert sent.endswith("print('hello from vm')")
 
+    def test_repl_tool_default_stays_in_process(self, monkeypatch, fake_exec_sandbox):
+        """Backend "none": the tool executes in-process and never touches the sandbox.
+
+        langchain_experimental is stubbed (see the interpreter counterpart) so
+        this runs in the isolated lfx CI environment.
+        """
+        import io
+        from contextlib import redirect_stdout
+
+        from lfx.components.tools import python_repl as python_repl_module
+        from lfx.components.tools.python_repl import PythonREPLToolComponent
+
+        class _FakePythonREPL:
+            def __init__(self, _globals=None):
+                self._globals = _globals or {}
+
+            @staticmethod
+            def sanitize_input(code):
+                return code.strip()
+
+            def run(self, code):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    exec(code, self._globals)  # noqa: S102
+                return out.getvalue()
+
+        fake_utilities = SimpleNamespace(PythonREPL=_FakePythonREPL)
+        monkeypatch.setitem(sys.modules, "langchain_experimental", SimpleNamespace(utilities=fake_utilities))
+        monkeypatch.setitem(sys.modules, "langchain_experimental.utilities", fake_utilities)
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("none"))
+
+        def _explode(*_args, **_kwargs):
+            msg = "run_code_in_sandbox must not be called when backend is none"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(python_repl_module, "run_code_in_sandbox", _explode)
+
+        component = PythonREPLToolComponent(name="python_repl", description="repl", global_imports="math")
+        tool = component.build_tool()
+        observation = tool.run("print(math.sqrt(4))")
+        assert observation == "2.0\n"
+        assert not fake_exec_sandbox.instances
+
+    def test_repl_tool_fails_closed_without_package(self, monkeypatch):
+        """Configured-but-unavailable backend surfaces as ToolException, never local exec."""
+        from langchain_core.tools import ToolException
+        from lfx.components.tools.python_repl import PythonREPLToolComponent
+
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        monkeypatch.setitem(sys.modules, "exec_sandbox", None)
+        component = PythonREPLToolComponent(name="python_repl", description="repl", global_imports="math")
+        tool = component.build_tool()
+        with pytest.raises(ToolException, match=r"exec-sandbox.*not installed"):
+            tool.run("print('hi')")
+
 
 class TestSettingsValidation:
     def test_unknown_backend_rejected_at_settings_level(self):
@@ -421,3 +505,33 @@ class TestSettingsValidation:
 
         assert SecuritySettings(sandbox_backend="Exec-Sandbox").sandbox_backend == "exec-sandbox"
         assert SecuritySettings().sandbox_backend == "none"
+
+
+_HAS_REAL_EXEC_SANDBOX = importlib.util.find_spec("exec_sandbox") is not None
+
+
+@pytest.mark.skipif(not _HAS_REAL_EXEC_SANDBOX, reason="requires the exec-sandbox extra (Python >= 3.12)")
+@pytest.mark.skipif(
+    not os.getenv("LANGFLOW_SANDBOX_LIVE_TESTS"),
+    reason="live microVM test; set LANGFLOW_SANDBOX_LIVE_TESTS=1 on a host with QEMU 8+ to run",
+)
+class TestLiveExecSandbox:
+    """Opt-in end-to-end test against the real exec-sandbox backend.
+
+    Exercises the genuine Scheduler/SchedulerConfig API and a real guest
+    execution so upstream API changes or scheduler lifecycle regressions are
+    not hidden by the stubs above. Requires the sandbox extra, QEMU 8+, and
+    network access for the one-time VM image download.
+    """
+
+    def test_real_guest_execution(self, monkeypatch):
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        result = run_code_in_sandbox("print('sandbox ok')", global_imports="math")
+        assert result.success
+        assert result.stdout.strip() == "sandbox ok"
+
+    def test_real_guest_user_error(self, monkeypatch):
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        result = run_code_in_sandbox("this_name_does_not_exist")
+        assert not result.success
+        assert "NameError" in result.stderr

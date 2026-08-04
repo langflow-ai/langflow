@@ -85,6 +85,17 @@ class SandboxUnavailableError(SandboxExecutionError):
 _EXIT_CODE_TIMEOUT = -1
 _EXIT_CODE_KILLED = 137
 
+# Host-side grace added on top of the guest-enforced timeout when waiting for
+# the loop-thread future. The guest timeout is authoritative (it surfaces as a
+# graceful exit_code == -1 result); this margin exists only so a wedged
+# scheduler cannot pin the component thread forever, and it must be generous
+# enough that legitimate infrastructure work is never misclassified as a wedge:
+# scheduling delay and result transport in the steady state, plus one-time
+# Scheduler startup (VM image download ~75MB + warm-pool boot, or slow TCG
+# boots on hosts without KVM/HVF) on the first execution.
+_RUN_GRACE_SECONDS = 60
+_STARTUP_GRACE_SECONDS = 300
+
 
 @dataclass(frozen=True)
 class SandboxResult:
@@ -277,16 +288,20 @@ class _ExecSandboxExecutor:
             ),
             loop,
         )
+        # The VM enforces timeout_seconds internally (exit_code -1 on
+        # timeout); the outer margin only guards against a wedged scheduler so
+        # the component thread cannot hang forever. The first execution gets a
+        # larger margin because Scheduler startup (image download, VM boot)
+        # happens inside the same coroutine.
+        grace = _RUN_GRACE_SECONDS if self._scheduler is not None else _STARTUP_GRACE_SECONDS
+        deadline = timeout_seconds + grace
         try:
-            # The VM enforces timeout_seconds internally (exit_code -1 on
-            # timeout); the outer margin only guards against a wedged
-            # scheduler so the component thread cannot hang forever.
-            return future.result(timeout=timeout_seconds + 60)
+            return future.result(timeout=deadline)
         except SandboxExecutionError:
             raise
         except TimeoutError as e:
             future.cancel()
-            msg = f"Sandboxed execution did not complete within {timeout_seconds + 60}s (scheduler unresponsive)."
+            msg = f"Sandboxed execution did not complete within {deadline}s (scheduler unresponsive)."
             raise SandboxExecutionError(msg) from e
         except Exception as e:
             # exec_sandbox raises its own exception hierarchy (SandboxError
