@@ -122,13 +122,29 @@ def _install_fake_exec_sandbox(monkeypatch):
     """
     _FakeScheduler.instances = []
 
-    async def _hwaccel_available():
-        return True
+    def _fake_upstream_settings():
+        # Mirrors upstream: a pydantic bool field fed by EXEC_SANDBOX_FORCE_EMULATION.
+        raw = os.environ.get("EXEC_SANDBOX_FORCE_EMULATION", "").strip().lower()
+        return SimpleNamespace(force_emulation=raw in {"1", "true", "yes", "on", "y", "t"})
 
-    probes = SimpleNamespace(check_hwaccel_available=_hwaccel_available)
-    module = SimpleNamespace(Scheduler=_FakeScheduler, SchedulerConfig=_FakeSchedulerConfig, system_probes=probes)
+    async def _detect_accel_type(kvm_available=None, hvf_available=None, *, force_emulation=False):  # noqa: ARG001
+        return "tcg" if force_emulation else "kvm"
+
+    accel_type = SimpleNamespace(KVM="kvm", HVF="hvf", TCG="tcg")
+    probes = SimpleNamespace(detect_accel_type=_detect_accel_type)
+    settings_mod = SimpleNamespace(Settings=_fake_upstream_settings)
+    vm_types = SimpleNamespace(AccelType=accel_type)
+    module = SimpleNamespace(
+        Scheduler=_FakeScheduler,
+        SchedulerConfig=_FakeSchedulerConfig,
+        system_probes=probes,
+        settings=settings_mod,
+        vm_types=vm_types,
+    )
     monkeypatch.setitem(sys.modules, "exec_sandbox", module)
     monkeypatch.setitem(sys.modules, "exec_sandbox.system_probes", probes)
+    monkeypatch.setitem(sys.modules, "exec_sandbox.settings", settings_mod)
+    monkeypatch.setitem(sys.modules, "exec_sandbox.vm_types", vm_types)
     monkeypatch.setattr(sandbox_module, "_hardware_acceleration_available", lambda: True)
     return _FakeScheduler
 
@@ -319,25 +335,39 @@ class TestRunCodeInSandbox:
         compile(sent, "<test>", "exec")  # composed code must be valid Python
 
     def test_deep_probe_refusal_overrides_shallow_pass(self, monkeypatch, fake_exec_sandbox):
-        """The deep upstream probe is authoritative over the shallow preflight.
+        """Upstream's accelerator decision is authoritative over the shallow preflight.
 
-        exec-sandbox's probe checks device permissions, KVM ioctls, and QEMU
-        accelerator support — a shallow pass must not permit TCG when it says no.
+        detect_accel_type is exec-sandbox's single source of truth; when it
+        says TCG, a shallow pass must not permit execution.
         """
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
 
-        async def _no_hwaccel():
-            return False
+        async def _tcg_accel(**_kwargs):
+            return "tcg"
 
-        monkeypatch.setattr(sys.modules["exec_sandbox.system_probes"], "check_hwaccel_available", _no_hwaccel)
+        monkeypatch.setattr(sys.modules["exec_sandbox.system_probes"], "detect_accel_type", _tcg_accel)
         with pytest.raises(SandboxUnavailableError, match="TCG"):
             run_code_in_sandbox("print('hi')")
         assert not fake_exec_sandbox.instances
 
-    def test_forced_emulation_env_refused(self, monkeypatch, fake_exec_sandbox):
-        """EXEC_SANDBOX_FORCE_EMULATION would make upstream select TCG silently."""
+    def test_fails_closed_when_accel_decision_unobtainable(self, monkeypatch, fake_exec_sandbox):
+        """If upstream's decision API is missing, refuse — never guess via the shallow check."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
-        monkeypatch.setenv("EXEC_SANDBOX_FORCE_EMULATION", "true")
+
+        async def _boom(**_kwargs):
+            msg = "probe API moved"
+            raise RuntimeError(msg)
+
+        monkeypatch.setattr(sys.modules["exec_sandbox.system_probes"], "detect_accel_type", _boom)
+        with pytest.raises(SandboxUnavailableError, match="could not determine"):
+            run_code_in_sandbox("print('hi')")
+        assert not fake_exec_sandbox.instances
+
+    @pytest.mark.parametrize("spelling", ["true", "on", "t", "Y"])
+    def test_forced_emulation_env_refused(self, monkeypatch, fake_exec_sandbox, spelling):
+        """Every pydantic-truthy spelling upstream accepts must be refused here too."""
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        monkeypatch.setenv("EXEC_SANDBOX_FORCE_EMULATION", spelling)
         with pytest.raises(SandboxUnavailableError, match="TCG"):
             run_code_in_sandbox("print('hi')")
         assert not fake_exec_sandbox.instances
@@ -387,6 +417,29 @@ class TestRunCodeInSandbox:
         monkeypatch.setattr(sandbox_module, "_hardware_acceleration_available", lambda: False)
         result = run_code_in_sandbox("print('hello from vm')")
         assert result.success
+
+    def test_unicode_docstring_same_line_composes_correctly(self, monkeypatch, fake_exec_sandbox):
+        """Ast col_offset is a UTF-8 byte offset; non-ASCII text must not shift the split."""
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        code = '"""caf\u00e9."""; print(math.pi)'
+        run_code_in_sandbox(code, global_imports="math")
+        sent = fake_exec_sandbox.instances[-1].run_calls[-1]["code"]
+        compile(sent, "<test>", "exec")
+        assert "print(math.pi)" in sent
+        assert sent.index("import math") < sent.index("print(math.pi)")
+
+    @pytest.mark.usefixtures("fake_exec_sandbox")
+    def test_startup_grace_until_first_run_completes(self, monkeypatch, fresh_executor):
+        """Readiness flips only after a run completes, not when the scheduler appears."""
+        from lfx.utils.sandbox import shutdown_sandbox
+
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        assert not fresh_executor._startup_complete
+        run_code_in_sandbox("print('hi')")
+        assert fresh_executor._startup_complete
+        shutdown_sandbox()
+        # A restarted sandbox needs the startup margin again.
+        assert not fresh_executor._startup_complete
 
     def test_concurrent_first_calls_create_one_scheduler(self, monkeypatch, fake_exec_sandbox):
         """Two racing first executions must share one scheduler (no leaked VM pool).

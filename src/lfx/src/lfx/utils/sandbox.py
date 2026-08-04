@@ -217,11 +217,23 @@ def _emulation_forced_by_env() -> bool:
 
     Upstream honors EXEC_SANDBOX_FORCE_EMULATION, which would silently select
     software emulation even on a KVM/HVF-capable host — so it must be treated
-    exactly like a host without acceleration.
+    exactly like a host without acceleration. The truthy set mirrors pydantic's
+    bool coercion (upstream parses the env var with a pydantic ``bool`` field),
+    so values like ``on`` or ``t`` cannot slip past this preflight while still
+    forcing TCG upstream. This is only the fast preflight; the authoritative
+    decision consumes upstream's own Settings in
+    :func:`_assert_hardware_acceleration`.
     """
     import os
 
-    return os.environ.get("EXEC_SANDBOX_FORCE_EMULATION", "").strip().lower() in {"1", "true", "yes"}
+    return os.environ.get("EXEC_SANDBOX_FORCE_EMULATION", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+        "y",
+        "t",
+    }
 
 
 _TCG_REFUSAL_MSG = (
@@ -240,21 +252,37 @@ _TCG_REFUSAL_MSG = (
 async def _assert_hardware_acceleration() -> None:
     """Authoritative TCG gate, evaluated where exec_sandbox is importable.
 
-    Prefers upstream's deep probe (device permissions, KVM ioctl, QEMU
-    accelerator support) so Langflow refuses exactly when exec-sandbox would
-    fall back to TCG; degrades to the shallow platform check if the private
-    probe API moves in a future exec-sandbox release.
-    """
-    if _emulation_forced_by_env():
-        raise SandboxUnavailableError(_TCG_REFUSAL_MSG)
-    try:
-        from exec_sandbox.system_probes import check_hwaccel_available
+    Reproduces upstream's own accelerator decision — ``detect_accel_type`` is
+    exec-sandbox's documented single source of truth, fed with the
+    ``force_emulation`` value parsed by exec-sandbox's *own* Settings (so
+    every pydantic-truthy spelling of EXEC_SANDBOX_FORCE_EMULATION is honored
+    identically) — and refuses when that decision is TCG.
 
-        accelerated = await check_hwaccel_available()
-    except (ImportError, AttributeError):
-        logger.debug("exec-sandbox hwaccel probe unavailable; using shallow platform check")
-        accelerated = _hardware_acceleration_available()
-    if not accelerated:
+    FAILS CLOSED if the decision cannot be obtained: the pinned dependency
+    range guarantees this API today, and guessing about the isolation
+    boundary when it moves would be exactly the fail-open this gate exists to
+    prevent.
+    """
+    try:
+        from exec_sandbox.settings import Settings as ExecSandboxSettings
+        from exec_sandbox.system_probes import detect_accel_type
+        from exec_sandbox.vm_types import AccelType
+
+        force_emulation = ExecSandboxSettings().force_emulation
+        accel = await detect_accel_type(force_emulation=force_emulation)
+    except Exception as e:
+        logger.debug("Could not obtain exec-sandbox accelerator decision", exc_info=True)
+        msg = (
+            "LANGFLOW_SANDBOX_BACKEND=exec-sandbox is configured but Langflow could not "
+            "determine which QEMU accelerator exec-sandbox would select "
+            f"({type(e).__name__}: {e}). Refusing to run rather than risk TCG software "
+            "emulation, which is not a supported security boundary. If this exec-sandbox "
+            "version changed its probe API, this Langflow version does not support it; "
+            "LANGFLOW_SANDBOX_ALLOW_SOFTWARE_EMULATION=true bypasses this gate for "
+            "trusted/development workloads only."
+        )
+        raise SandboxUnavailableError(msg) from e
+    if accel == AccelType.TCG:
         raise SandboxUnavailableError(_TCG_REFUSAL_MSG)
 
 
@@ -268,6 +296,11 @@ class _ExecSandboxExecutor:
         self._scheduler_lock: asyncio.Lock | None = None
         self._lock = threading.Lock()
         self._atexit_registered = False
+        # True only after a first execution has fully completed: _scheduler
+        # becomes non-None before the first scheduler.run() finishes its
+        # base-image download / VM boot, so _scheduler alone cannot decide
+        # whether a caller still needs the startup grace margin.
+        self._startup_complete = False
 
     def _ensure_loop(self) -> asyncio.AbstractEventLoop:
         with self._lock:
@@ -279,6 +312,7 @@ class _ExecSandboxExecutor:
                 # state bound to a loop that no longer runs.
                 self._scheduler = None
                 self._scheduler_lock = None
+                self._startup_complete = False
                 loop = asyncio.new_event_loop()
                 thread = threading.Thread(
                     target=loop.run_forever,
@@ -338,6 +372,7 @@ class _ExecSandboxExecutor:
             if self._scheduler is None:
                 return
             scheduler, self._scheduler = self._scheduler, None
+            self._startup_complete = False
             await scheduler.__aexit__(None, None, None)
 
     def _shutdown(self) -> None:
@@ -383,6 +418,11 @@ class _ExecSandboxExecutor:
             allow_network=allow_network,
             allowed_domains=list(allowed_domains) if allowed_domains else None,
         )
+        # Any completed run (even a non-zero guest exit) proves the base image
+        # is downloaded and a VM booted; only now do later callers stop
+        # needing the startup grace margin. Left False on exceptions so a
+        # failed cold start keeps the generous margin for the next attempt.
+        self._startup_complete = True
         return SandboxResult(
             stdout=result.stdout,
             stderr=result.stderr,
@@ -413,11 +453,12 @@ class _ExecSandboxExecutor:
             raise SandboxUnavailableError(_TCG_REFUSAL_MSG)
 
         loop = self._ensure_loop()
-        # Capture cold-start state BEFORE submitting: once the coroutine runs,
-        # the loop thread may set _scheduler and then still spend first-boot
-        # time in scheduler.run(), so reading it after submission could apply
-        # the steady-state margin to a first execution.
-        is_first_execution = self._scheduler is None
+        # Capture cold-start state BEFORE submitting, from the readiness flag
+        # rather than _scheduler: the scheduler becomes non-None before the
+        # first run finishes its base-image download / VM boot, so a second
+        # concurrent caller would otherwise get the steady-state margin while
+        # startup work is still in flight.
+        is_first_execution = not self._startup_complete
         future = asyncio.run_coroutine_threadsafe(
             self._run_on_loop(
                 code,
@@ -521,7 +562,13 @@ def _compose_sandbox_code(preamble: str, code: str) -> str:
     # preamble's imports.
     first_tail = body[idx]
     lines = code.splitlines(keepends=True)
-    offset = sum(len(line) for line in lines[: first_tail.lineno - 1]) + first_tail.col_offset
+    # ast col_offset counts UTF-8 BYTES, not characters — slicing the string
+    # with it directly would split mid-identifier after any non-ASCII text
+    # (e.g. an accented docstring). Convert via a byte-slice round-trip; AST
+    # offsets always fall on character boundaries so the decode is safe.
+    tail_line = lines[first_tail.lineno - 1]
+    col_chars = len(tail_line.encode("utf-8")[: first_tail.col_offset].decode("utf-8"))
+    offset = sum(len(line) for line in lines[: first_tail.lineno - 1]) + col_chars
     head, tail = code[:offset], code[offset:]
     # head ends mid-line in the semicolon-joined case; add the newline only
     # then (a trailing semicolon before a newline is valid Python).
