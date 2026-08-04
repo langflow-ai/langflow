@@ -73,6 +73,23 @@ class LLMProviderMetricsCallbackHandler(BaseCallbackHandler):
         self._lock = threading.Lock()
         self._runs: dict[UUID, tuple[float, dict[str, str]]] = {}
 
+    def __deepcopy__(self, memo: dict[int, Any]) -> LLMProviderMetricsCallbackHandler:
+        """Share the instance rather than copying it.
+
+        Components are deep-copied on the way into a graph, and this handler is reachable from
+        the callbacks attached to them. It holds a ``threading.Lock``, which cannot be copied
+        (``TypeError: cannot pickle '_thread.lock' object``), so without this a flow carrying
+        the handler fails to build.
+
+        Returning self is the intended semantics rather than a way around that error: the
+        handler is a process-wide singleton by construction, its state is keyed by run_id and
+        guarded by the lock, and its instruments belong to one meter. A copy would keep a
+        private ``_runs`` and its own instruments, so starts and ends recorded through
+        different copies would never pair up. Same reasoning as the handler in langfuse.py.
+        """
+        memo[id(self)] = self
+        return self
+
     def _start(self, run_id: UUID, **kwargs: Any) -> None:
         model = extract_llm_model_name(kwargs)
         provider = detect_provider_from_model(model)

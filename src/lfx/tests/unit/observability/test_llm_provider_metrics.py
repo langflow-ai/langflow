@@ -132,3 +132,26 @@ def test_no_leak_and_bounded_cardinality(reader):
                 assert "sk-SECRET-LEAK" not in text
                 assert "http" not in text
                 assert "super secret prompt" not in text
+
+
+def test_the_handler_survives_a_deep_copy_and_stays_one_instance():
+    """Components are deep-copied into a graph, and the handler is reachable from their callbacks.
+
+    It holds a threading.Lock, so a real copy raises ``cannot pickle '_thread.lock' object`` and
+    the flow fails to build. Sharing the instance is also the correct semantics rather than only
+    a way around that: a copy would keep its own ``_runs`` and its own instruments, so a start
+    and its end recorded through different copies would never pair into a duration.
+    """
+    import copy
+    import uuid
+
+    from lfx.observability_llm_metrics import LLMProviderMetricsCallbackHandler
+
+    handler = LLMProviderMetricsCallbackHandler()
+    assert copy.deepcopy(handler) is handler
+    assert copy.deepcopy({"callbacks": [handler]})["callbacks"][0] is handler
+
+    # The shared state is what makes pairing work, so pin that a copy still sees one run table.
+    run_id = uuid.uuid4()
+    handler.on_chat_model_start({}, [[HumanMessage("x")]], run_id=run_id, invocation_params={"model_name": "gpt-4o"})
+    assert run_id in copy.deepcopy(handler)._runs
