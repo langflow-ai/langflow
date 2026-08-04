@@ -42,6 +42,7 @@ dependencies = [
     "lfx-vllm>=0.1.0,<1.0.0",
     "lfx-openai-compatible>=0.1.0,<1.0.0",
     "lfx-google>=0.1.0,<1.0.0",
+    "lfx-scavio>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 

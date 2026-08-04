@@ -3,7 +3,6 @@ from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInp
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output
-
 from lfx_scavio.components.scavio._base import DOCUMENTATION, Endpoint, ScavioAPIMixin, api_key_input
 
 ENDPOINTS = {

@@ -1,7 +1,6 @@
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import MultiselectInput
 from lfx.template.field.base import Output
-
 from lfx_scavio.components.scavio._base import (
     DOCUMENTATION,
     Endpoint,
