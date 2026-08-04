@@ -59,6 +59,11 @@ KNOWN_SANDBOX_BACKENDS = (SANDBOX_BACKEND_NONE, SANDBOX_BACKEND_EXEC_SANDBOX)
 _FENCE_PREFIX_RE = re.compile(r"^(\s|`)*(?i:python)?\s*")
 _FENCE_SUFFIX_RE = re.compile(r"(\s|`)*$")
 
+# The Python tokenizer's line-break set: \n, \r\n, \r. Deliberately narrower
+# than str.splitlines(), which also breaks on U+2028/U+2029 etc. that Python
+# source treats as ordinary characters inside string literals.
+_SOURCE_NEWLINE_RE = re.compile(r"\r\n|\r|\n")
+
 
 def sanitize_code(code: str) -> str:
     """Strip markdown fences/backticks the way PythonREPL.sanitize_input does."""
@@ -256,12 +261,15 @@ async def _assert_hardware_acceleration() -> None:
     exec-sandbox's documented single source of truth, fed with the
     ``force_emulation`` value parsed by exec-sandbox's *own* Settings (so
     every pydantic-truthy spelling of EXEC_SANDBOX_FORCE_EMULATION is honored
-    identically) — and refuses when that decision is TCG.
+    identically) — and ALLOWLISTS the two hardware hypervisors: anything that
+    is not exactly KVM or HVF is refused, so a future pre-1.0 exec-sandbox
+    that renames TCG, adds another software accelerator, or changes the
+    return shape fails closed instead of slipping past a TCG-only denylist.
 
-    FAILS CLOSED if the decision cannot be obtained: the pinned dependency
-    range guarantees this API today, and guessing about the isolation
-    boundary when it moves would be exactly the fail-open this gate exists to
-    prevent.
+    Also FAILS CLOSED if the decision cannot be obtained: the pinned
+    dependency range guarantees this API today, and guessing about the
+    isolation boundary when it moves would be exactly the fail-open this gate
+    exists to prevent.
     """
     try:
         from exec_sandbox.settings import Settings as ExecSandboxSettings
@@ -282,8 +290,9 @@ async def _assert_hardware_acceleration() -> None:
             "trusted/development workloads only."
         )
         raise SandboxUnavailableError(msg) from e
-    if accel == AccelType.TCG:
-        raise SandboxUnavailableError(_TCG_REFUSAL_MSG)
+    if accel not in (AccelType.KVM, AccelType.HVF):
+        msg = f"{_TCG_REFUSAL_MSG} (exec-sandbox accelerator decision: {accel!r})"
+        raise SandboxUnavailableError(msg)
 
 
 class _ExecSandboxExecutor:
@@ -301,6 +310,11 @@ class _ExecSandboxExecutor:
         # base-image download / VM boot, so _scheduler alone cannot decide
         # whether a caller still needs the startup grace margin.
         self._startup_complete = False
+        # Scheduler lifecycle generation: incremented whenever the scheduler
+        # is closed or the loop restarts. Lets a run that overlaps a shutdown
+        # detect that it belongs to a previous scheduler and refrain from
+        # marking the NEW generation's startup complete.
+        self._generation = 0
 
     def _ensure_loop(self) -> asyncio.AbstractEventLoop:
         with self._lock:
@@ -313,6 +327,7 @@ class _ExecSandboxExecutor:
                 self._scheduler = None
                 self._scheduler_lock = None
                 self._startup_complete = False
+                self._generation += 1
                 loop = asyncio.new_event_loop()
                 thread = threading.Thread(
                     target=loop.run_forever,
@@ -361,10 +376,13 @@ class _ExecSandboxExecutor:
     async def _close_scheduler(self) -> None:
         """Exit and CLEAR the scheduler under the creation lock.
 
-        Clearing ``_scheduler`` makes shutdown restartable: a later execution
-        goes back through :meth:`_ensure_scheduler` and creates a fresh
-        Scheduler instead of calling into one whose context has exited
-        ("Scheduler not started").
+        Acquiring the creation lock makes this a BARRIER for in-flight
+        creation: a shutdown that overlaps ``Scheduler.__aenter__`` waits for
+        it and then closes the freshly created scheduler instead of returning
+        early and leaving it running. Clearing ``_scheduler`` makes shutdown
+        restartable (a later execution creates a fresh Scheduler rather than
+        calling into an exited one), and bumping the generation lets an
+        overlapping run detect it belongs to the closed scheduler.
         """
         if self._scheduler_lock is None:
             return
@@ -373,6 +391,7 @@ class _ExecSandboxExecutor:
                 return
             scheduler, self._scheduler = self._scheduler, None
             self._startup_complete = False
+            self._generation += 1
             await scheduler.__aexit__(None, None, None)
 
     def _shutdown(self) -> None:
@@ -385,9 +404,16 @@ class _ExecSandboxExecutor:
         blanket suppress keep a wedged VM from hanging process exit. Safe to
         call repeatedly and mid-process: state is cleared under the creation
         lock, so a subsequent execution starts a fresh Scheduler.
+
+        Gated on the creation lock existing — not on ``_scheduler`` — because
+        ``_scheduler`` stays None while ``Scheduler.__aenter__`` is still in
+        flight; the submitted close coroutine then waits behind the creation
+        lock and closes the new scheduler once creation finishes. If that
+        takes longer than the wait timeout, the coroutine keeps running on
+        the loop and still performs the close as soon as creation completes.
         """
         loop = self._loop
-        if self._scheduler is None or loop is None or loop.is_closed():
+        if self._scheduler_lock is None or loop is None or loop.is_closed():
             return
         with contextlib.suppress(Exception):
             asyncio.run_coroutine_threadsafe(self._close_scheduler(), loop).result(timeout=10)
@@ -404,6 +430,10 @@ class _ExecSandboxExecutor:
         env: dict[str, str] | None,
     ) -> SandboxResult:
         scheduler = await self._ensure_scheduler(allow_software_emulation=allow_software_emulation)
+        # Remember which scheduler generation this run belongs to: if a
+        # shutdown closes the scheduler while this run is in flight, the run
+        # must not mark the NEXT generation's startup as complete.
+        generation = self._generation
         # NOTE: the keyword is env_vars (not env as the README suggests), and
         # timeouts do NOT raise — they surface as exit_code == -1. With
         # allow_network=True and no allowed_domains, exec-sandbox's DNS filter
@@ -421,8 +451,11 @@ class _ExecSandboxExecutor:
         # Any completed run (even a non-zero guest exit) proves the base image
         # is downloaded and a VM booted; only now do later callers stop
         # needing the startup grace margin. Left False on exceptions so a
-        # failed cold start keeps the generous margin for the next attempt.
-        self._startup_complete = True
+        # failed cold start keeps the generous margin for the next attempt,
+        # and skipped when a shutdown replaced the scheduler mid-run — this
+        # run's completion says nothing about the new generation's readiness.
+        if self._generation == generation:
+            self._startup_complete = True
         return SandboxResult(
             stdout=result.stdout,
             stderr=result.stderr,
@@ -561,14 +594,23 @@ def _compose_sandbox_code(preamble: str, code: str) -> str:
     # keep user statements on the hoisted line and run them before the
     # preamble's imports.
     first_tail = body[idx]
-    lines = code.splitlines(keepends=True)
+    # Line starts must use the tokenizer's newline semantics (\n, \r\n, \r) —
+    # NOT str.splitlines(), which also breaks on U+2028/U+2029 and friends
+    # that Python source treats as ordinary characters inside strings; a
+    # docstring containing U+2028 would otherwise shift every subsequent
+    # offset and drop the preamble inside the docstring.
+    line_start = 0
+    for _ in range(first_tail.lineno - 1):
+        match = _SOURCE_NEWLINE_RE.search(code, line_start)
+        if match is None:  # pragma: no cover - AST linenos always fit the source
+            break
+        line_start = match.end()
     # ast col_offset counts UTF-8 BYTES, not characters — slicing the string
     # with it directly would split mid-identifier after any non-ASCII text
     # (e.g. an accented docstring). Convert via a byte-slice round-trip; AST
     # offsets always fall on character boundaries so the decode is safe.
-    tail_line = lines[first_tail.lineno - 1]
-    col_chars = len(tail_line.encode("utf-8")[: first_tail.col_offset].decode("utf-8"))
-    offset = sum(len(line) for line in lines[: first_tail.lineno - 1]) + col_chars
+    col_chars = len(code[line_start:].encode("utf-8")[: first_tail.col_offset].decode("utf-8"))
+    offset = line_start + col_chars
     head, tail = code[:offset], code[offset:]
     # head ends mid-line in the semicolon-joined case; add the newline only
     # then (a trailing semicolon before a newline is valid Python).

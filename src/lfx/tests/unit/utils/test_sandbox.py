@@ -73,6 +73,7 @@ class _FakeScheduler:
         self.config = config
         self.run_calls: list[dict] = []
         self.entered = False
+        self.exited = False
         type(self).instances.append(self)
 
     async def __aenter__(self):
@@ -85,9 +86,15 @@ class _FakeScheduler:
         return self
 
     async def __aexit__(self, *args):
+        self.exited = True
         return False
 
     async def run(self, **kwargs):
+        # Yield once so lifecycle transitions (e.g. a concurrent shutdown)
+        # can interleave between scheduler acquisition and completion.
+        import asyncio
+
+        await asyncio.sleep(0)
         self.run_calls.append(kwargs)
         code = kwargs["code"]
         if "BOOM_INFRA" in code:
@@ -439,6 +446,68 @@ class TestRunCodeInSandbox:
         assert fresh_executor._startup_complete
         shutdown_sandbox()
         # A restarted sandbox needs the startup margin again.
+        assert not fresh_executor._startup_complete
+
+    def test_unknown_accelerator_refused(self, monkeypatch, fake_exec_sandbox):
+        """Allowlist semantics: anything that is not exactly KVM/HVF fails closed."""
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+
+        async def _novel_accel(**_kwargs):
+            return "warp-drive"
+
+        monkeypatch.setattr(sys.modules["exec_sandbox.system_probes"], "detect_accel_type", _novel_accel)
+        with pytest.raises(SandboxUnavailableError, match="warp-drive"):
+            run_code_in_sandbox("print('hi')")
+        assert not fake_exec_sandbox.instances
+
+    @pytest.mark.parametrize("separator", ["\u2028", "\u2029"])
+    def test_unicode_line_separator_in_docstring_composes_correctly(self, monkeypatch, fake_exec_sandbox, separator):
+        """U+2028/U+2029 are ordinary characters to the tokenizer, not line breaks.
+
+        str.splitlines() would treat them as boundaries and shift every
+        subsequent offset, dropping the preamble inside the docstring.
+        """
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        code = f'"""a{separator}b"""; print(math.pi)'
+        run_code_in_sandbox(code, global_imports="math")
+        sent = fake_exec_sandbox.instances[-1].run_calls[-1]["code"]
+        compile(sent, "<test>", "exec")
+        assert "print(math.pi)" in sent
+        assert sent.index("import math") < sent.index("print(math.pi)")
+
+    def test_shutdown_is_a_barrier_for_inflight_creation(self, monkeypatch, fresh_executor, fake_exec_sandbox):
+        """A shutdown overlapping Scheduler.__aenter__ must wait and then close it.
+
+        Also covers the generation guard: the overlapped run completes against
+        the closed scheduler and must not mark the next generation's startup
+        as complete.
+        """
+        import threading
+        import time
+
+        from lfx.utils.sandbox import shutdown_sandbox
+
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+        results = []
+
+        def call():
+            results.append(run_code_in_sandbox("print('hi')"))
+
+        worker = threading.Thread(target=call, daemon=True)
+        worker.start()
+        # Wait until Scheduler construction started (its __aenter__ is still
+        # sleeping), then shut down mid-creation.
+        deadline = time.monotonic() + 5
+        while not fake_exec_sandbox.instances and time.monotonic() < deadline:
+            time.sleep(0.001)
+        assert fake_exec_sandbox.instances, "scheduler creation never started"
+        shutdown_sandbox()
+        worker.join(timeout=5)
+        assert not worker.is_alive()
+        # The barrier waited for creation and closed the new scheduler.
+        assert fake_exec_sandbox.instances[0].exited
+        # The overlapped run belongs to the closed generation: readiness for
+        # the next scheduler must still be False.
         assert not fresh_executor._startup_complete
 
     def test_concurrent_first_calls_create_one_scheduler(self, monkeypatch, fake_exec_sandbox):
