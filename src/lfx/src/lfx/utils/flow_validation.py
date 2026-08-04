@@ -27,11 +27,12 @@ PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE = "This flow is temporarily unavailabl
 # surfaces. Identifiers include class names plus their ``name``/``display_name`` aliases so the
 # check matches whatever value the node carries in ``data.type``.
 #
-# This set is used by both:
+# This set is used by:
 # - the opt-in ``block_code_interpreter_components`` authenticated-flow gate, and
-# - the unauthenticated public-flow gate for ``/api/v1/build_public_tmp/{flow_id}/flow``.
+# - the unauthenticated public-flow gate for ``/api/v1/build_public_tmp/{flow_id}/flow``, and
+# - the shared component/tool runtime gate.
 #
-# Keeping the two enforcement points on the same set prevents code-execution aliases from
+# Keeping these enforcement points on the same set prevents code-execution aliases from
 # drifting between the multi-tenant hardening and public-build hardening paths.
 CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
     {
@@ -55,6 +56,13 @@ CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
         "Smart Transform",
     }
 )
+
+
+def is_code_execution_component(*identifiers: object) -> bool:
+    """Return whether any component identifier is registered as code-executing."""
+    return any(
+        isinstance(identifier, str) and identifier in CODE_EXECUTION_COMPONENT_TYPES for identifier in identifiers
+    )
 
 
 class CustomComponentValidationError(ValueError):
@@ -123,6 +131,17 @@ CODE_EXECUTION_FIELD_NAMES: frozenset[str] = frozenset(
 PROTECTED_TWEAK_FIELDS_BY_COMPONENT: Mapping[str, frozenset[str]] = {
     "SQLComponent": frozenset({"database_url", "query"}),
 }
+
+
+def is_protected_tweak_field(component_type: str | None, field_name: str, field_type: str = "") -> bool:
+    """Return whether a runtime tweak must preserve the flow author's value."""
+    return (
+        field_type == "code"
+        or field_name == "code"
+        or (component_type in CODE_EXECUTION_COMPONENT_TYPES and field_name in CODE_EXECUTION_FIELD_NAMES)
+        or field_name in PROTECTED_TWEAK_FIELDS_BY_COMPONENT.get(component_type or "", ())
+    )
+
 
 # Component node ``type`` values that load and execute *another* saved flow by
 # id or name at build/run time. On the unauthenticated public path these are an
@@ -453,9 +472,7 @@ def _find_code_execution_components(nodes: list[dict]) -> list[str]:
         display_name = node_info.get("display_name") if isinstance(node_info, dict) else None
 
         component_type = node_data.get("type")
-        type_matches = isinstance(component_type, str) and component_type in CODE_EXECUTION_COMPONENT_TYPES
-        display_name_matches = isinstance(display_name, str) and display_name in CODE_EXECUTION_COMPONENT_TYPES
-        if type_matches or display_name_matches:
+        if is_code_execution_component(component_type, display_name):
             display_name = display_name or component_type
             node_id = node_data.get("id") or node.get("id", "unknown")
             found.append(f"{display_name} ({node_id})")
