@@ -91,6 +91,18 @@ class PythonREPLToolComponent(LCToolComponent):
         global_dict["__builtins__"] = safe_builtins()
         return global_dict
 
+    def _get_input_value(self, key: str) -> str | None:
+        """Return the value of the input named ``key``, ignoring shadowing class attributes."""
+        value = self._attributes.get(key)
+        if not value and key in self._inputs:
+            value = self._inputs[key].value
+        if value is None or isinstance(value, str):
+            return value
+        # StrInput only warns on non-string values, so a non-string can reach here;
+        # StructuredTool.from_function requires string metadata (it strips the
+        # description), so coerce instead of crashing deep inside langchain-core.
+        return str(value)
+
     def build_tool(self) -> Tool:
         def run_python_code(code: str) -> str:
             try:
@@ -111,9 +123,17 @@ class PythonREPLToolComponent(LCToolComponent):
                 logger.debug("Error running Python code", exc_info=True)
                 raise ToolException(str(e)) from e
 
+        # The StrInputs named "name" and "description" are shadowed by this class's
+        # own `name`/`description` attributes — Component.__getattr__ only fires when
+        # normal lookup fails, so self.name/self.description always resolve to the
+        # class attributes. Read the input values explicitly, keeping the class
+        # attributes as fallback when the inputs are empty.
+        tool_name = self._get_input_value("name") or type(self).name
+        tool_description = self._get_input_value("description") or type(self).description
+
         tool = StructuredTool.from_function(
-            name=self.name,
-            description=self.description,
+            name=tool_name,
+            description=tool_description,
             func=run_python_code,
             args_schema=self.PythonREPLSchema,
         )
