@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import Dropdown from "@/components/core/dropdownComponent";
 import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVariableModal";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
-import Loading from "@/components/ui/loading";
+import { Loading } from "@/components/ui/loading";
 import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 import {
   PermissionsProvider,
