@@ -21,6 +21,8 @@ const DEFAULTS: Omit<
   preproc_instructions: undefined,
   pending_messages_count: 0,
   last_generated_at: undefined,
+  backend_type: undefined,
+  backend_config: undefined,
 };
 
 export const mapMemoryApiToMemoryInfo = (dto: MemoryApiDTO): MemoryInfo => {
@@ -38,6 +40,8 @@ export const mapMemoryApiToMemoryInfo = (dto: MemoryApiDTO): MemoryInfo => {
     preprocessing_model: dto.preproc_model,
     preproc_instructions: dto.preproc_instructions,
     batch_size: Math.max(1, Math.trunc(dto.threshold ?? 1)),
+    backend_type: dto.backend_type,
+    backend_config: dto.backend_config,
   };
 };
 

@@ -929,17 +929,13 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
         # Validate the auth token
         try:
             auth_user = None
-            async with session_scope() as session:
-                # Try JWT first
-                user = None
-                try:
-                    user = await get_current_user_from_access_token(auth_token, session)
-                except (InvalidTokenError, HTTPException):
-                    # Try API key
-                    api_key_result = await check_key(session, auth_token)
-                    if api_key_result and hasattr(api_key_result, "is_superuser"):
-                        user = api_key_result
-                auth_user = user
+            # Try JWT first, closing its session before falling back to API-key
+            # authentication, which owns a separate database transaction.
+            try:
+                async with session_scope() as session:
+                    auth_user = await get_current_user_from_access_token(auth_token, session)
+            except (InvalidTokenError, HTTPException):
+                auth_user = await check_key(auth_token)
 
             if not auth_user or not auth_user.is_superuser:
                 typer.echo(

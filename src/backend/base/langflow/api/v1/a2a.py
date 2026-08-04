@@ -124,41 +124,41 @@ async def _enforce_a2a_auth(flow: Flow, request: Request) -> User | None:
     - anything else (an auth type A2A doesn't understand) -> fail closed with 403: treating a
       *protected* folder as public would expose an owner-identity run anonymously.
 
-    Uses ``check_key`` directly, NOT ``api_key_security``: under AUTO_LOGIN the latter
+    Uses ``authenticate_api_key`` directly, NOT ``api_key_security``: under AUTO_LOGIN the latter
     returns the superuser for a *missing* key, which would silently bypass this gate.
     """
-    # Short writable session (check_key flushes usage counters), closed before
-    # dispatch so no lock is held across the up-to-300s run.
-    async with session_scope() as session:
+    # Resolve the folder policy first, then close that read session before API-key
+    # authentication opens its owned write transaction.
+    async with session_scope_readonly() as session:
         auth_type = await folder_auth_type(flow, session)
-        if auth_type == "none":
-            return None  # public agent
-        if auth_type not in ("apikey", "oauth"):
-            # Protected folder with a scheme A2A can't enforce: fail closed, never public.
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"A2A access is disabled for this agent: unsupported folder auth type {auth_type!r}.",
-            )
-        api_key = request.headers.get(A2A_APIKEY_HEADER)
-        if not api_key:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required")
-        api_key_result = await authenticate_api_key(session, api_key)
-        # Same message for invalid and wrong-owner: don't reveal a key is valid for another user.
-        if api_key_result is None or api_key_result.user.id != flow.user_id:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
-        user = api_key_result.user
-        set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
-        try:
-            await ensure_flow_permission(
-                user,
-                FlowAction.EXECUTE,
-                flow_id=flow.id,
-                flow_user_id=flow.user_id,
-                folder_id=flow.folder_id,
-            )
-        except HTTPException as exc:
-            raise deny_to_404(exc, detail="Not Found") from exc
-        return user
+    if auth_type == "none":
+        return None  # public agent
+    if auth_type not in ("apikey", "oauth"):
+        # Protected folder with a scheme A2A can't enforce: fail closed, never public.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"A2A access is disabled for this agent: unsupported folder auth type {auth_type!r}.",
+        )
+    api_key = request.headers.get(A2A_APIKEY_HEADER)
+    if not api_key:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required")
+    api_key_result = await authenticate_api_key(api_key)
+    # Same message for invalid and wrong-owner: don't reveal a key is valid for another user.
+    if api_key_result is None or api_key_result.user.id != flow.user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+    user = api_key_result.user
+    set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
+    try:
+        await ensure_flow_permission(
+            user,
+            FlowAction.EXECUTE,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            folder_id=flow.folder_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Not Found") from exc
+    return user
 
 
 class _FlowContextBuilder(DefaultServerCallContextBuilder):
