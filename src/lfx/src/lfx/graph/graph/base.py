@@ -878,11 +878,15 @@ class Graph:
             raise
         except asyncio.CancelledError:
             # CancelledError is a BaseException, so the handler below does not see it and the
-            # span would otherwise report the run as "ok". Two live paths reach here: a user
-            # pressing stop (the job service marks the job CANCELLED and re-raises) and the v2
-            # execution ceiling (asyncio.wait_for cancels the build driver). Neither finished
-            # the work, and neither is a service fault, so this gets its own value and leaves
-            # span status UNSET rather than paging someone for a withdrawn request.
+            # span would otherwise report the run as "ok". Reached by a user pressing stop (the
+            # job service marks the job CANCELLED and re-raises) and by any asyncio.wait_for
+            # ceiling wrapped around a span-carrying run: the v2 build driver, a2a, and the
+            # agentic assistant all have one. The run did not finish, so it gets its own value.
+            #
+            # Span status stays UNSET, which is right for a stop button and arguable for a
+            # timeout: a server-imposed ceiling is closer to a fault, and an operator alerting
+            # on span error rate will not see it. Left as one value for now because the two are
+            # indistinguishable here; the job row (CANCELLED vs FAILED) still tells them apart.
             status = "cancelled"
             raise
         except Exception as exc:
