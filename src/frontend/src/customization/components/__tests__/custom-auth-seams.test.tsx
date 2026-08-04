@@ -1,20 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import type { AxiosError } from "axios";
 import { customShouldSkipAuthRefresh } from "../../utils/custom-should-skip-auth-refresh";
-import {
-  CustomAdminPageMenuItem,
-  SHOW_LEGACY_ADMIN_PAGE,
-} from "../custom-admin-page-menu-item";
+import { CustomAdminPageMenuItem } from "../custom-admin-page-menu-item";
 import CustomLoginBrandTitle from "../custom-login-brand-title";
 import CustomLoginSignupPrompt from "../custom-login-signup-prompt";
 import CustomLoginSsoOptions from "../custom-login-sso-options";
 
 describe("OSS auth customization seams", () => {
-  it("preserves the legacy Admin Page link", () => {
-    expect(SHOW_LEGACY_ADMIN_PAGE).toBe(true);
-  });
-
-  it("does not render Enterprise admin navigation", () => {
+  it("does not render admin navigation", () => {
     const { container } = render(
       <CustomAdminPageMenuItem onNavigate={jest.fn()} />,
     );

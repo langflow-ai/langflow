@@ -9,10 +9,7 @@ import {
   TWITTER_URL,
 } from "@/constants/constants";
 import { useLogout } from "@/controllers/API/queries/auth";
-import {
-  CustomAdminPageMenuItem,
-  SHOW_LEGACY_ADMIN_PAGE,
-} from "@/customization/components/custom-admin-page-menu-item";
+import { CustomAdminPageMenuItem } from "@/customization/components/custom-admin-page-menu-item";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -36,11 +33,7 @@ export const AccountMenu = () => {
   const navigate = useCustomNavigate();
   const { mutate: mutationLogout } = useLogout();
   const hideLogoutButton = useUtilityStore((state) => state.hideLogoutButton);
-
-  const { isAdmin, autoLogin } = useAuthStore((state) => ({
-    isAdmin: state.isAdmin,
-    autoLogin: state.autoLogin,
-  }));
+  const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const handleLogout = () => {
     mutationLogout();
@@ -107,22 +100,6 @@ export const AccountMenu = () => {
               </span>
             </HeaderMenuItemButton>
 
-            {SHOW_LEGACY_ADMIN_PAGE && isAdmin && !autoLogin && (
-              <div>
-                <HeaderMenuItemButton
-                  onClick={() => {
-                    navigate("/admin");
-                  }}
-                >
-                  <span
-                    data-testid="menu_admin_page_button"
-                    id="menu_admin_page_button"
-                  >
-                    {t("account.adminPage")}
-                  </span>
-                </HeaderMenuItemButton>
-              </div>
-            )}
             <CustomAdminPageMenuItem onNavigate={(path) => navigate(path)} />
             <HeaderMenuItemLink
               newPage

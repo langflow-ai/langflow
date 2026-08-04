@@ -5,7 +5,6 @@ import {
   Outlet,
   Route,
 } from "react-router-dom";
-import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
 import { ProtectedRoute } from "./components/authorization/authGuard";
 import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
@@ -43,7 +42,6 @@ import ModelProvidersPage from "./pages/SettingsPage/pages/ModelProvidersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 
-const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
 
 const PlaygroundPage = lazy(() => import("./pages/Playground"));
@@ -173,14 +171,6 @@ const router = createBrowserRouter(
                   {CustomRoutesStore()}
                 </Route>
                 {CustomRoutesStorePages()}
-                <Route
-                  path="admin"
-                  element={
-                    <ProtectedAdminRoute>
-                      <AdminPage />
-                    </ProtectedAdminRoute>
-                  }
-                />
               </Route>
               <Route path="flow/:id/">
                 <Route path="" element={<CustomDashboardWrapperPage />}>

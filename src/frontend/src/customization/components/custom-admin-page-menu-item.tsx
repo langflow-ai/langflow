@@ -2,8 +2,7 @@ export interface CustomAdminPageMenuItemProps {
   onNavigate: (path: string) => void;
 }
 
-export const SHOW_LEGACY_ADMIN_PAGE = true;
-
+// OSS has no admin page. Enterprise overlays this seam with the /admin-ee entry.
 export const CustomAdminPageMenuItem = (_: CustomAdminPageMenuItemProps) =>
   null;
 
