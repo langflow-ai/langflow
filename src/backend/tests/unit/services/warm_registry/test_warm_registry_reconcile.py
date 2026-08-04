@@ -240,23 +240,26 @@ async def test_reconcile_loop_ticks_then_cancels(monkeypatch):
 
 
 async def test_prod_lifespan_warms_and_cancels_loop(monkeypatch, tmp_path):
-    """Boot the app with LANGFLOW_PROD=true to cover the main.py prod wiring.
+    """Boot the app under the prod deployment profile to cover the main.py prod wiring.
 
     Startup runs the warm block; shutdown cancels the reconcile loop.
     """
+    import langflow.main as main_mod
     from asgi_lifespan import LifespanManager
     from langflow.main import create_app
     from langflow.services.deps import get_db_service
     from lfx.services.manager import get_service_manager
 
     db_path = tmp_path / "prod.db"
-    monkeypatch.setenv("LANGFLOW_PROD", "true")
+    # ``deployment_profile`` is owned by the preflight PR and not present on this branch,
+    # so drive the prod branch by patching the profile check the lifespan calls.
+    monkeypatch.setattr(main_mod, "is_prod_deployment", lambda _settings: True)
     monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
     monkeypatch.setenv("DO_NOT_TRACK", "true")
 
     def _init():
-        # Fresh service stack so settings.prod is re-read from the env above.
+        # Fresh service stack booted from the env above.
         get_service_manager().factories.clear()
         get_service_manager().services.clear()
         app = create_app()
@@ -279,6 +282,7 @@ async def test_prod_lifespan_warms_and_cancels_loop(monkeypatch, tmp_path):
 
 async def test_prod_lifespan_survives_warm_failure(monkeypatch, tmp_path):
     """A failure in warm_all during prod startup is logged, not fatal (except branch)."""
+    import langflow.main as main_mod
     from asgi_lifespan import LifespanManager
     from langflow.main import create_app
     from langflow.services.deps import get_db_service
@@ -293,7 +297,8 @@ async def test_prod_lifespan_survives_warm_failure(monkeypatch, tmp_path):
     monkeypatch.setattr(reconcile_mod, "warm_all", _boom_warm)
 
     db_path = tmp_path / "prod_fail.db"
-    monkeypatch.setenv("LANGFLOW_PROD", "true")
+    # Drive the prod branch via the profile check (see the sibling lifespan test).
+    monkeypatch.setattr(main_mod, "is_prod_deployment", lambda _settings: True)
     monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
     monkeypatch.setenv("DO_NOT_TRACK", "true")
@@ -517,7 +522,9 @@ def test_deferred_host_resolves_db_when_not_prod(monkeypatch):
     from langflow.services import deps
 
     monkeypatch.setattr(deps, "is_settings_service_initialized", lambda: True)
-    monkeypatch.setattr(deps, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace(prod=False)))
+    monkeypatch.setattr(
+        deps, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace(deployment_profile="dev"))
+    )
     host = DeferredWorkflowHost()
     assert isinstance(host._resolve(), LangflowWorkflowHost)
 
@@ -531,7 +538,9 @@ def test_deferred_host_resolves_warm_when_prod(monkeypatch):
     from langflow.services import deps
 
     monkeypatch.setattr(deps, "is_settings_service_initialized", lambda: True)
-    monkeypatch.setattr(deps, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace(prod=True)))
+    monkeypatch.setattr(
+        deps, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace(deployment_profile="prod"))
+    )
     host = DeferredWorkflowHost()
     resolved = host._resolve()
     assert isinstance(resolved, WarmWorkflowHost)

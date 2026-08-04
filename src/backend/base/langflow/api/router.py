@@ -151,13 +151,14 @@ router_v2.include_router(registration_router_v2)
 # them (one handler per method+path). ``developer_api_guard=False`` because the
 # authenticated langflow v2 router has never carried a developer-api gate; the
 # default-off setting would otherwise 403 every authenticated request.
-# In PROD (``LANGFLOW_PROD``, execution-plane / ``--backend-only``) the warm host
-# serves deployed flows from the in-memory registry and skips per-flow RBAC. The
-# warm-vs-DB choice is made per ``settings.prod`` but DEFERRED to first use: this
-# module is imported before ``load_dotenv(--env-file)`` runs, so reading the env
-# (or the settings service) here would miss ``--env-file`` values. The route
-# structure is identical for both hosts, so binding the deferred proxy changes
-# nothing structurally — only which concrete host each request resolves to.
+# Under the production deployment profile (``LANGFLOW_DEPLOYMENT_PROFILE=prod``,
+# execution-plane / ``--backend-only``) the warm host serves deployed flows from the
+# in-memory registry and skips per-flow RBAC. The warm-vs-DB choice is made per that
+# profile but DEFERRED to first use: this module is imported before
+# ``load_dotenv(--env-file)`` runs, so reading the env (or the settings service) here
+# would miss ``--env-file`` values. The route structure is identical for both hosts,
+# so binding the deferred proxy changes nothing structurally — only which concrete
+# host each request resolves to.
 _workflow_host: WorkflowHost = DeferredWorkflowHost()
 assert isinstance(_workflow_host, WorkflowHost)  # noqa: S101
 router_v2.include_router(

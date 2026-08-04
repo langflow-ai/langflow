@@ -1,7 +1,10 @@
 """Deferred selection of the v2 workflow host (warm PROD registry vs DB-backed).
 
-Which host serves ``POST /api/v2/workflows`` depends on ``settings.prod``
-(``LANGFLOW_PROD``). The problem: ``langflow.__main__`` imports the router module
+Which host serves ``POST /api/v2/workflows`` depends on the deployment profile
+(``LANGFLOW_DEPLOYMENT_PROFILE=prod`` -> ``settings.deployment_profile``, the same
+umbrella flag whose prod value the deployment-profile preflight fail-fast-validates:
+enabling the warm/authz-lean host is gated behind that validated profile, not a
+standalone switch). The problem: ``langflow.__main__`` imports the router module
 (and therefore builds this router) *before* it runs ``load_dotenv(--env-file)``, so
 reading the env — or the settings service — at import time would miss any value
 supplied via ``--env-file``. That is exactly the ordering trap the extensions router
@@ -9,8 +12,8 @@ documents for ``LANGFLOW_ENABLE_EXTENSION_RELOAD``.
 
 ``DeferredWorkflowHost`` defers the choice to first use. By the time any workflow
 route (or capability flag) is exercised, ``setup_app``/lifespan has initialized the
-settings service from the fully-loaded environment, so ``settings.prod`` is correct.
-The route *structure* is identical for both hosts (the shared router only reads
+settings service from the fully-loaded environment, so the profile is correct. The
+route *structure* is identical for both hosts (the shared router only reads
 ``supports_*`` at request time, and ``auto_register_job_routes=False`` neutralizes
 the one mount-time read), so binding this single proxy at import changes nothing
 structurally — only which concrete host each request lands on.
@@ -35,8 +38,21 @@ if TYPE_CHECKING:
     from lfx.workflow.host import ResolvedFlow, WorkflowAction
 
 
+def is_prod_deployment(settings: Any) -> bool:
+    """True when the production deployment profile is active.
+
+    Consumes ``settings.deployment_profile`` (env ``LANGFLOW_DEPLOYMENT_PROFILE``) —
+    the umbrella flag owned by the deployment-profile preflight feature. Read
+    defensively via ``getattr`` so this code is safe on branches where that setting
+    does not exist yet: absent -> ``"dev"`` -> production behavior stays off. The
+    warm registry + authz-lean host therefore activate only under the same ``prod``
+    profile the preflight gate validates.
+    """
+    return getattr(settings, "deployment_profile", "dev") == "prod"
+
+
 class DeferredWorkflowHost(WorkflowHostBase):
-    """A ``WorkflowHost`` that picks the concrete host lazily from ``settings.prod``.
+    """A ``WorkflowHost`` that picks the concrete host lazily from the deployment profile.
 
     Every member delegates to the resolved host. Resolution is cached only once the
     settings service is initialized, so an access during module import (before
@@ -60,7 +76,9 @@ class DeferredWorkflowHost(WorkflowHostBase):
         # real choice is still made on the first post-startup call.
         if not is_settings_service_initialized():
             return LangflowWorkflowHost()
-        host: WorkflowHostBase = WarmWorkflowHost() if get_settings_service().settings.prod else LangflowWorkflowHost()
+        host: WorkflowHostBase = (
+            WarmWorkflowHost() if is_prod_deployment(get_settings_service().settings) else LangflowWorkflowHost()
+        )
         self._host = host
         return host
 

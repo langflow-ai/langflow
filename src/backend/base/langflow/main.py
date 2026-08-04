@@ -29,6 +29,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from langflow.api import health_check_router, log_router
 from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
+from langflow.api.v2.host_selection import is_prod_deployment
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
     create_or_update_starter_projects,
@@ -491,7 +492,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             # build). Warming and the loop are launched INDEPENDENTLY: a failed eager warm
             # must not stop the reconcile loop, which self-heals on its next pass. Runs
             # once per worker (app "lifespan"); the settings service is safe here.
-            if get_settings_service().settings.prod:
+            if is_prod_deployment(get_settings_service().settings):
                 from langflow.services.warm_registry.reconcile import reconcile_loop, warm_all
 
                 try:

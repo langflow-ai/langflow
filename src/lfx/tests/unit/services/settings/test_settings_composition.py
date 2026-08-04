@@ -157,7 +157,6 @@ EXPECTED_FIELDS = {
     "like_webhook_url",
     # RuntimeSettings
     "dev",
-    "prod",
     "warm_reconcile_interval",
     "event_delivery",
     "worker_timeout",
