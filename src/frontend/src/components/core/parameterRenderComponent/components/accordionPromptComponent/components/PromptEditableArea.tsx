@@ -13,6 +13,7 @@ export function PromptEditableArea({
   disabled,
   readonly,
   id,
+  domId,
   internalValue,
   isScrollable,
   isDoubleBrackets,
@@ -28,6 +29,7 @@ export function PromptEditableArea({
   disabled?: boolean;
   readonly?: boolean;
   id: string;
+  domId?: string;
   internalValue: string;
   isScrollable: boolean;
   isDoubleBrackets: boolean;
@@ -51,7 +53,7 @@ export function PromptEditableArea({
         onInput={onInput}
         onKeyDown={onKeyDown}
         suppressContentEditableWarning
-        id={id}
+        id={domId}
         data-testid={id}
         className={cn(
           "relative min-h-10 overflow-y-auto rounded-md border bg-background px-3 py-2 pr-8 text-sm outline-none break-words whitespace-pre-wrap",
@@ -62,7 +64,10 @@ export function PromptEditableArea({
           readonly && "cursor-default",
           !internalValue && "text-muted-foreground",
         )}
-        data-placeholder={getPlaceholder(disabled, "Type your prompt here...")}
+        data-placeholder={getPlaceholder(
+          disabled ?? false,
+          "Type your prompt here...",
+        )}
       />
       {!disabled && (
         <div

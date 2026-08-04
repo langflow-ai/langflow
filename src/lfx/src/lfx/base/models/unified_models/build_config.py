@@ -153,7 +153,7 @@ def apply_provider_variable_config_to_build_config(
         if mapping_field:
             vars_by_field[mapping_field] = v
 
-    # Apply the current provider's variable metadata to show/configure the right fields and pre-populate credentials.
+    # Apply the current provider's metadata without changing explicit field values.
     for field_name, var_info in vars_by_field.items():
         if field_name not in build_config:
             continue
@@ -175,56 +175,6 @@ def apply_provider_variable_config_to_build_config(
             field_config["info"] = info
 
         field_config["show"] = True
-
-        # Pre-populate with the variable name (never the raw secret) when a
-        # credential is available in the database or environment.  Setting
-        # load_from_db=True tells the runtime to resolve the actual value.
-        var_key = var_info.get("variable_key")
-        if var_key:
-            # DropdownInput fields don't support load_from_db because the
-            # variable key name (e.g. "WATSONX_URL") isn't a valid dropdown
-            # option.  These fields are resolved separately by
-            # _resolve_dropdown_provider_values in handle_model_input_update.
-            input_type = field_config.get("_input_type", "")
-            if input_type == "DropdownInput":
-                logger.debug(
-                    "Skipping load_from_db for DropdownInput field %s (will resolve separately)",
-                    field_name,
-                )
-            else:
-                # Decide whether to install this provider's variable key on
-                # the field.  Cases:
-                #
-                # 1. Empty field — auto-populate.
-                # 2. ``load_from_db=True`` with a value that doesn't match
-                #    this provider's ``var_key`` — stale cross-provider
-                #    credential (e.g. ``ANTHROPIC_API_KEY`` left over after
-                #    switching to OpenAI).  Replace with the current
-                #    provider's var_key.
-                # 3. ``load_from_db=True`` with a value that matches
-                #    ``var_key`` — already correct, preserve.
-                # 4. ``load_from_db=False`` with a value — user-typed raw
-                #    credential.  Preserve so it survives refresh cycles.
-                #    We cannot tell from the backend whether a raw value is
-                #    stale after a provider switch, so we err on the side
-                #    of preservation; the user can overwrite it manually.
-                current_value = field_config.get("value")
-                current_load_from_db = field_config.get("load_from_db", False)
-                is_empty = not current_value
-                is_stale_cross_provider_var = current_load_from_db and current_value != var_key
-                if is_empty or is_stale_cross_provider_var:
-                    field_config["value"] = var_key
-                    field_config["load_from_db"] = True
-                    logger.debug(
-                        "Set field %s to var name %s (value resolved at runtime)",
-                        field_name,
-                        var_key,
-                    )
-                else:
-                    logger.debug(
-                        "Skipping auto-set for field %s - user has already supplied a value",
-                        field_name,
-                    )
 
     return build_config
 
@@ -607,15 +557,9 @@ def handle_model_input_update(
             build_config[model_field_name]["value"] = field_value if value_is_valid else [options[0]] if options else ""
             field_value = build_config[model_field_name]["value"]
 
-    # Step 2: Hide all provider-specific fields.  We do NOT clear values
-    # here — the frontend has already mutated ``template[model]["value"]``
-    # to the new selection before POSTing, so the backend can't distinguish
-    # a real provider switch from a same-provider refresh based on the
-    # incoming build_config alone.  Instead,
-    # ``apply_provider_variable_config_to_build_config`` (Step 3) handles
-    # the credential swap by detecting stale cross-provider variable keys
-    # in provider-mapped fields and replacing them with the current
-    # provider's var key.  Raw user-typed values are preserved in all cases.
+    # Step 2: Reset provider-specific visibility without changing values.
+    # Step 3 shows and configures the fields for the selected provider while
+    # preserving every explicit raw value or global-variable assignment.
     for field in provider_mapped_fields:
         if field in build_config:
             field_config = build_config[field]

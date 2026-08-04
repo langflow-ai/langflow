@@ -40,6 +40,7 @@ from lfx.utils.flow_validation import (
     PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
     CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
+    prepare_public_flow_build,
     validate_flow_for_current_settings,
     validate_public_flow_no_code_execution,
 )
@@ -158,6 +159,7 @@ async def execute_public_workflow(
 
         # Validate stored flow data after the public-access gate so private
         # flows never trigger validation side effects.
+        sanitized_public_data: dict | None = None
         async with session_scope() as session:
             flow = await session.get(Flow, real_flow_id)
             if flow and flow.data:
@@ -167,6 +169,11 @@ async def execute_public_workflow(
                 # Smart Transform lambda). Without this, any public flow containing
                 # such a component is an unauthenticated code-execution primitive.
                 validate_public_flow_no_code_execution(flow.data)
+                # Mirror v1's public build: substitute trusted server component
+                # source and reject unknown custom components before the graph is
+                # built. Without this, the v2 path falls back to the database copy
+                # and can execute altered stored component code as the flow owner.
+                sanitized_public_data = await prepare_public_flow_build(flow.data)
             flow_name = flow.name if flow else None
     except CatalogPolicyIdentityUnavailableError as exc:
         await logger.awarning("Public workflow component identities are temporarily unavailable: %s", exc)
@@ -205,7 +212,10 @@ async def execute_public_workflow(
         mode="stream",
         start_component_id=request.start_component_id,
         stop_component_id=request.stop_component_id,
-        data=None,
+        # The default public policy builds from the server-sanitized graph. The
+        # explicit allow_public_custom_components opt-in returns None and keeps
+        # the historical database-loaded behavior.
+        data=sanitized_public_data,
         files=request.files,
     )
 

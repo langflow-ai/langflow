@@ -42,12 +42,29 @@ class PythonREPLToolComponent(LCToolComponent):
             value="math",
         ),
         StrInput(
-            name="code",
+            name="python_code",
             display_name="Python Code",
             info="The Python code to execute.",
             value="print('Hello, World!')",
         ),
     ]
+
+    @staticmethod
+    def _normalize_legacy_code_input(params: dict) -> dict:
+        # `code` is reserved for the component's source. Preserve programmatic
+        # callers that used the old input name while serializing the value separately.
+        if "code" in params:
+            params.setdefault("python_code", params.pop("code"))
+        return params
+
+    def set(self, **kwargs):
+        return super().set(**self._normalize_legacy_code_input(kwargs))
+
+    def set_attributes(self, params: dict) -> None:
+        super().set_attributes(self._normalize_legacy_code_input(params))
+
+    def set_input_value(self, name: str, value) -> None:
+        super().set_input_value("python_code" if name == "code" else name, value)
 
     class PythonREPLSchema(BaseModel):
         code: str = Field(..., description="The Python code to execute.")
@@ -74,6 +91,18 @@ class PythonREPLToolComponent(LCToolComponent):
         # builtins module, leaving __import__/open/eval/exec reachable.
         global_dict["__builtins__"] = safe_builtins()
         return global_dict
+
+    def _get_input_value(self, key: str) -> str | None:
+        """Return the value of the input named ``key``, ignoring shadowing class attributes."""
+        value = self._attributes.get(key)
+        if not value and key in self._inputs:
+            value = self._inputs[key].value
+        if value is None or isinstance(value, str):
+            return value
+        # StrInput only warns on non-string values, so a non-string can reach here;
+        # StructuredTool.from_function requires string metadata (it strips the
+        # description), so coerce instead of crashing deep inside langchain-core.
+        return str(value)
 
     def build_tool(self) -> Tool:
         def run_python_code(code: str) -> str:
@@ -111,9 +140,17 @@ class PythonREPLToolComponent(LCToolComponent):
                 logger.debug("Error running Python code", exc_info=True)
                 raise ToolException(str(e)) from e
 
+        # The StrInputs named "name" and "description" are shadowed by this class's
+        # own `name`/`description` attributes — Component.__getattr__ only fires when
+        # normal lookup fails, so self.name/self.description always resolve to the
+        # class attributes. Read the input values explicitly, keeping the class
+        # attributes as fallback when the inputs are empty.
+        tool_name = self._get_input_value("name") or type(self).name
+        tool_description = self._get_input_value("description") or type(self).description
+
         tool = StructuredTool.from_function(
-            name=self.name,
-            description=self.description,
+            name=tool_name,
+            description=tool_description,
             func=run_python_code,
             args_schema=self.PythonREPLSchema,
         )
@@ -123,5 +160,6 @@ class PythonREPLToolComponent(LCToolComponent):
 
     def run_model(self) -> list[Data]:
         tool = self.build_tool()
-        result = tool.run(self.code)
+        code_input = "" if self.python_code is None else self.python_code
+        result = tool.run({"code": code_input})
         return [Data(data={"result": result})]

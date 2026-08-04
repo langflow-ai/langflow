@@ -35,6 +35,16 @@ const REAL_FLOW_ID = "real-flow-id-123";
 const CLIENT_ID = "client-id-456";
 const USER_ID = "user-id-789";
 
+type AuthState = {
+  isAuthenticated: boolean;
+  autoLogin: boolean | null;
+  userData: { id: string } | null;
+};
+type FlowState = { playgroundPage: boolean };
+type FlowsManagerState = { currentFlowId: string };
+type UtilityState = { clientId: string };
+type StoreSelector<TState> = (state: TState) => unknown;
+
 describe("useGetFlowId", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -46,9 +56,7 @@ describe("useGetFlowId", () => {
     mockUtilityStore.mockReturnValue(CLIENT_ID); // clientId
     mockAuthStore.mockReturnValue(false); // isAuthenticated (first call)
 
-    // Re-mock to handle multiple selector calls
-    let authCallCount = 0;
-    mockAuthStore.mockImplementation((selector: any) => {
+    mockAuthStore.mockImplementation((selector: StoreSelector<AuthState>) => {
       const state = {
         isAuthenticated: false,
         autoLogin: false,
@@ -57,33 +65,39 @@ describe("useGetFlowId", () => {
       return selector(state);
     });
 
-    mockFlowStore.mockImplementation((selector: any) => {
+    mockFlowStore.mockImplementation((selector: StoreSelector<FlowState>) => {
       return selector({ playgroundPage: false });
     });
 
-    mockFlowsManagerStore.mockImplementation((selector: any) => {
-      return selector({ currentFlowId: REAL_FLOW_ID });
-    });
+    mockFlowsManagerStore.mockImplementation(
+      (selector: StoreSelector<FlowsManagerState>) => {
+        return selector({ currentFlowId: REAL_FLOW_ID });
+      },
+    );
 
-    mockUtilityStore.mockImplementation((selector: any) => {
-      return selector({ clientId: CLIENT_ID });
-    });
+    mockUtilityStore.mockImplementation(
+      (selector: StoreSelector<UtilityState>) => {
+        return selector({ clientId: CLIENT_ID });
+      },
+    );
 
     const result = useGetFlowId();
     expect(result).toBe(REAL_FLOW_ID);
   });
 
   it("should_use_client_id_for_uuid_when_anonymous_on_playground", () => {
-    mockFlowStore.mockImplementation((selector: any) =>
+    mockFlowStore.mockImplementation((selector: StoreSelector<FlowState>) =>
       selector({ playgroundPage: true }),
     );
-    mockFlowsManagerStore.mockImplementation((selector: any) =>
-      selector({ currentFlowId: REAL_FLOW_ID }),
+    mockFlowsManagerStore.mockImplementation(
+      (selector: StoreSelector<FlowsManagerState>) =>
+        selector({ currentFlowId: REAL_FLOW_ID }),
     );
-    mockUtilityStore.mockImplementation((selector: any) =>
-      selector({ clientId: CLIENT_ID }),
+    mockUtilityStore.mockImplementation(
+      (selector: StoreSelector<UtilityState>) =>
+        selector({ clientId: CLIENT_ID }),
     );
-    mockAuthStore.mockImplementation((selector: any) =>
+    mockAuthStore.mockImplementation((selector: StoreSelector<AuthState>) =>
       selector({
         isAuthenticated: false,
         autoLogin: true,
@@ -92,21 +106,23 @@ describe("useGetFlowId", () => {
     );
 
     const result = useGetFlowId();
-    const expected = uuidv5(`${CLIENT_ID}_${REAL_FLOW_ID}`, uuidv5.DNS);
+    const expected = uuidv5(`client:${CLIENT_ID}_${REAL_FLOW_ID}`, uuidv5.DNS);
     expect(result).toBe(expected);
   });
 
   it("should_use_user_id_for_uuid_when_authenticated_on_playground", () => {
-    mockFlowStore.mockImplementation((selector: any) =>
+    mockFlowStore.mockImplementation((selector: StoreSelector<FlowState>) =>
       selector({ playgroundPage: true }),
     );
-    mockFlowsManagerStore.mockImplementation((selector: any) =>
-      selector({ currentFlowId: REAL_FLOW_ID }),
+    mockFlowsManagerStore.mockImplementation(
+      (selector: StoreSelector<FlowsManagerState>) =>
+        selector({ currentFlowId: REAL_FLOW_ID }),
     );
-    mockUtilityStore.mockImplementation((selector: any) =>
-      selector({ clientId: CLIENT_ID }),
+    mockUtilityStore.mockImplementation(
+      (selector: StoreSelector<UtilityState>) =>
+        selector({ clientId: CLIENT_ID }),
     );
-    mockAuthStore.mockImplementation((selector: any) =>
+    mockAuthStore.mockImplementation((selector: StoreSelector<AuthState>) =>
       selector({
         isAuthenticated: true,
         autoLogin: false,
@@ -115,21 +131,23 @@ describe("useGetFlowId", () => {
     );
 
     const result = useGetFlowId();
-    const expected = uuidv5(`${USER_ID}_${REAL_FLOW_ID}`, uuidv5.DNS);
+    const expected = uuidv5(`user:${USER_ID}_${REAL_FLOW_ID}`, uuidv5.DNS);
     expect(result).toBe(expected);
   });
 
   it("should_use_client_id_when_autologin_even_if_authenticated", () => {
-    mockFlowStore.mockImplementation((selector: any) =>
+    mockFlowStore.mockImplementation((selector: StoreSelector<FlowState>) =>
       selector({ playgroundPage: true }),
     );
-    mockFlowsManagerStore.mockImplementation((selector: any) =>
-      selector({ currentFlowId: REAL_FLOW_ID }),
+    mockFlowsManagerStore.mockImplementation(
+      (selector: StoreSelector<FlowsManagerState>) =>
+        selector({ currentFlowId: REAL_FLOW_ID }),
     );
-    mockUtilityStore.mockImplementation((selector: any) =>
-      selector({ clientId: CLIENT_ID }),
+    mockUtilityStore.mockImplementation(
+      (selector: StoreSelector<UtilityState>) =>
+        selector({ clientId: CLIENT_ID }),
     );
-    mockAuthStore.mockImplementation((selector: any) =>
+    mockAuthStore.mockImplementation((selector: StoreSelector<AuthState>) =>
       selector({
         isAuthenticated: true,
         autoLogin: true,
@@ -138,21 +156,48 @@ describe("useGetFlowId", () => {
     );
 
     const result = useGetFlowId();
-    const expected = uuidv5(`${CLIENT_ID}_${REAL_FLOW_ID}`, uuidv5.DNS);
+    const expected = uuidv5(`client:${CLIENT_ID}_${REAL_FLOW_ID}`, uuidv5.DNS);
+    expect(result).toBe(expected);
+  });
+
+  it("should_use_client_id_while_autologin_is_unresolved", () => {
+    mockFlowStore.mockImplementation((selector: StoreSelector<FlowState>) =>
+      selector({ playgroundPage: true }),
+    );
+    mockFlowsManagerStore.mockImplementation(
+      (selector: StoreSelector<FlowsManagerState>) =>
+        selector({ currentFlowId: REAL_FLOW_ID }),
+    );
+    mockUtilityStore.mockImplementation(
+      (selector: StoreSelector<UtilityState>) =>
+        selector({ clientId: CLIENT_ID }),
+    );
+    mockAuthStore.mockImplementation((selector: StoreSelector<AuthState>) =>
+      selector({
+        isAuthenticated: true,
+        autoLogin: null,
+        userData: { id: USER_ID },
+      }),
+    );
+
+    const result = useGetFlowId();
+    const expected = uuidv5(`client:${CLIENT_ID}_${REAL_FLOW_ID}`, uuidv5.DNS);
     expect(result).toBe(expected);
   });
 
   it("should_use_client_id_when_user_data_has_no_id", () => {
-    mockFlowStore.mockImplementation((selector: any) =>
+    mockFlowStore.mockImplementation((selector: StoreSelector<FlowState>) =>
       selector({ playgroundPage: true }),
     );
-    mockFlowsManagerStore.mockImplementation((selector: any) =>
-      selector({ currentFlowId: REAL_FLOW_ID }),
+    mockFlowsManagerStore.mockImplementation(
+      (selector: StoreSelector<FlowsManagerState>) =>
+        selector({ currentFlowId: REAL_FLOW_ID }),
     );
-    mockUtilityStore.mockImplementation((selector: any) =>
-      selector({ clientId: CLIENT_ID }),
+    mockUtilityStore.mockImplementation(
+      (selector: StoreSelector<UtilityState>) =>
+        selector({ clientId: CLIENT_ID }),
     );
-    mockAuthStore.mockImplementation((selector: any) =>
+    mockAuthStore.mockImplementation((selector: StoreSelector<AuthState>) =>
       selector({
         isAuthenticated: true,
         autoLogin: false,
@@ -161,7 +206,7 @@ describe("useGetFlowId", () => {
     );
 
     const result = useGetFlowId();
-    const expected = uuidv5(`${CLIENT_ID}_${REAL_FLOW_ID}`, uuidv5.DNS);
+    const expected = uuidv5(`client:${CLIENT_ID}_${REAL_FLOW_ID}`, uuidv5.DNS);
     expect(result).toBe(expected);
   });
 });

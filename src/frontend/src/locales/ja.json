@@ -1866,7 +1866,7 @@
   "shortcuts.combinationExists": "この組み合わせはすでに存在します！",
   "shortcuts.defaultNotFound": "既定のショートカットが見つかりません。",
   "shortcuts.description": "よく使う操作にすばやくアクセスできるよう、ショートカットを管理します。",
-  "shortcuts.name.advancedSettings": "コントロール",
+  "shortcuts.name.advancedSettings": "パラメーター",
   "shortcuts.name.aiAssistant": "AIアシスタント",
   "shortcuts.name.api": "API",
   "shortcuts.name.changesSave": "変更を保存",

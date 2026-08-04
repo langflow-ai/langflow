@@ -16,7 +16,7 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IPostTemplateValue {
-  value: any;
+  value: unknown;
   tool_mode?: boolean;
   // the dropdown input re-gathers all
   // dropdown items each time a single
@@ -54,6 +54,9 @@ export const usePostTemplateValue: useMutationFunctionType<
 
     if (!template) return;
 
+    // LE-2045: a grouped node proxies its fields and has no code to recompile.
+    if (!template.code) return undefined;
+
     const allowCustomComponents =
       useUtilityStore.getState().allowCustomComponents;
 
@@ -84,14 +87,15 @@ export const usePostTemplateValue: useMutationFunctionType<
           tool_mode: payload.tool_mode,
         },
       );
-    } catch (e: any) {
+    } catch (e: unknown) {
       // Suppress 403 specifically from custom component blocking — fallback
       // for race conditions where the guards above couldn't detect the
       // outdated state in time.
       if (!allowCustomComponents && isCustomComponentBlockError(e)) {
+        const error = e as ResponseErrorDetailAPI;
         console.warn(
           `Suppressed 403 for outdated component (node ${nodeId}):`,
-          e.response.data.detail,
+          error.response.data.detail,
         );
         return undefined;
       }
