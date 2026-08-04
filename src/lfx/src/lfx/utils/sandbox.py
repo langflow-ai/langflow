@@ -25,8 +25,8 @@ loop-bound, while component code may run on any thread/loop (and
 A shared scheduler on a throwaway loop would break, so this module owns a
 single long-lived daemon thread running a private event loop; the scheduler
 lives on that loop for the life of the process and calls are submitted with
-``asyncio.run_coroutine_threadsafe``. This also preserves exec-sandbox's warm
-VM pool across executions.
+``asyncio.run_coroutine_threadsafe``. This also amortizes Scheduler startup
+(asset verification, VM image download) across executions.
 """
 
 from __future__ import annotations
