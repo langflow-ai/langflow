@@ -41,11 +41,14 @@ class FakeTask:
         copied_context = None
         if isinstance(self.context, list):
             copied_context = [task_mapping[task.key] for task in self.context]
+        copied_tools = list(self.tools)
+        if not copied_tools and copied_agent is not None:
+            copied_tools = list(copied_agent.tools)
         return FakeTask(
             key=self.key,
             agent=copied_agent,
             context=copied_context,
-            tools=list(self.tools),
+            tools=copied_tools,
         )
 
 
@@ -171,8 +174,8 @@ def test_get_tasks_and_agents_remaps_forward_task_context(monkeypatch):
 
 
 def test_get_tasks_and_agents_rebinds_equal_role_agents_by_identity(monkeypatch):
-    first_agent = FakeAgent(role="researcher", llm=None)
-    second_agent = FakeAgent(role="researcher", llm=None)
+    first_agent = FakeAgent(role="researcher", llm=None, tools=["first-tool"])
+    second_agent = FakeAgent(role="researcher", llm=None, tools=["second-tool"])
     component = SequentialCrewComponent(
         tasks=[
             FakeTask(key="first", agent=first_agent),
@@ -191,6 +194,9 @@ def test_get_tasks_and_agents_rebinds_equal_role_agents_by_identity(monkeypatch)
     assert tasks[0].agent is agents[0]
     assert tasks[1].agent is agents[0]
     assert tasks[2].agent is agents[1]
+    assert tasks[0].tools == ["first-tool"]
+    assert tasks[1].tools == ["first-tool"]
+    assert tasks[2].tools == ["second-tool"]
     assert len(llm_calls) == 2
     assert len(tool_calls) == 2
 

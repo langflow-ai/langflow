@@ -159,7 +159,6 @@ class BaseCrewComponent(Component):
         # Allow passing a custom list of agents
         if not agents_list:
             agents_list = self.agents or []
-
         source_tasks = list(self.tasks or [])
         source_agents = list(agents_list)
         source_agents.extend(task.agent for task in source_tasks if getattr(task, "agent", None) is not None)
@@ -184,11 +183,19 @@ class BaseCrewComponent(Component):
         task_mapping: dict[str, Any] = {task.key: task for task in source_tasks}
         copied_tasks_by_id: dict[int, Any] = {}
         for task in source_tasks:
-            copied_task = task.copy(converted_agents, task_mapping)
             task_agent = getattr(task, "agent", None)
+            task_agents = converted_agents
+            if task_agent is not None:
+                copied_task_agent = copied_agents[id(task_agent)]
+                task_agents = [
+                    copied_task_agent,
+                    *(agent for agent in converted_agents if agent is not copied_task_agent),
+                ]
+
+            copied_task = task.copy(task_agents, task_mapping)
             if task_agent is not None:
                 # Task.copy matches agents by role, which is ambiguous when two agents share a role.
-                copied_task.agent = copied_agents[id(task_agent)]
+                copied_task.agent = copied_task_agent
             copied_tasks.append(copied_task)
             copied_tasks_by_id[id(task)] = copied_task
             task_mapping[task.key] = copied_task
@@ -206,9 +213,16 @@ class BaseCrewComponent(Component):
         if not self.manager_llm:
             return None
 
-        self.manager_llm = convert_llm(self.manager_llm)
+        return convert_llm(self.manager_llm)
 
-        return self.manager_llm
+    def get_manager_agent(self):
+        if not getattr(self, "manager_agent", None):
+            return None
+
+        manager_agent = self.manager_agent.copy()
+        manager_agent.llm = convert_llm(manager_agent.llm)
+        manager_agent.tools = convert_tools(manager_agent.tools)
+        return manager_agent
 
     def build_crew(self):
         msg = "build_crew must be implemented in subclasses"
