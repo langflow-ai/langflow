@@ -1866,7 +1866,7 @@
   "shortcuts.combinationExists": "¡Esa combinación ya existe!",
   "shortcuts.defaultNotFound": "No se ha encontrado el atajo predeterminado.",
   "shortcuts.description": "Gestiona los accesos directos para acceder rápidamente a las acciones que utilizas con más frecuencia.",
-  "shortcuts.name.advancedSettings": "Controles",
+  "shortcuts.name.advancedSettings": "Parámetros",
   "shortcuts.name.aiAssistant": "Asistente de IA",
   "shortcuts.name.api": "API",
   "shortcuts.name.changesSave": "Guardar cambios",

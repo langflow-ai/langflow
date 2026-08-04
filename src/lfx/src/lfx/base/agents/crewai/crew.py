@@ -60,7 +60,7 @@ def convert_llm(llm: Any, excluded_keys=None):
     if not llm:
         return None
 
-    # Check if this is already a CrewAI LLM. LLM is a factory that can return another BaseLLM subclass.
+    # From crewai 1.0 `LLM(...)` returns provider-specific BaseLLM subclasses, not LLM instances.
     if isinstance(llm, BaseLLM):
         return llm
 
