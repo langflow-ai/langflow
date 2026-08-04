@@ -47,6 +47,7 @@ from lfx.load import load_flow_from_json
 from lfx.log.logger import logger
 from lfx.observability import (
     bootstrap_application_telemetry,
+    execution_protocol,
     instrument_fastapi_app,
     start_event_loop_lag_monitor,
     stop_event_loop_lag_monitor,
@@ -108,7 +109,11 @@ async def guarded_execute(graph_copy, input_value, session_id=None, user_id=None
         reset_environ = os.environ.get(_SERVE_RESET_ENVIRON_ENV) == "1"
         env_snapshot = dict(os.environ) if reset_environ else None
         try:
-            return await execute_graph_with_capture(graph_copy, input_value, session_id=session_id, user_id=user_id)
+            # Both native serve routes (/flows/{id}/run and /flows/{id}/stream) funnel through
+            # here, so the flow span gets its label once. The v2 workflow router mounted on the
+            # same app binds its own, and binding is outermost-wins, so the two never fight.
+            with execution_protocol("lfx.serve"):
+                return await execute_graph_with_capture(graph_copy, input_value, session_id=session_id, user_id=user_id)
         finally:
             if env_snapshot is not None and os.environ != env_snapshot:
                 # Restore by diff — never os.environ.clear(). clear() empties the mapping key
