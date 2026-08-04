@@ -1238,8 +1238,17 @@ async def test_materialize_external_user_preserves_email_when_token_omits_it(
 class _DirectoryAuthorizationStub:
     """Authorization seam double for verified external-group reconciliation."""
 
-    def __init__(self, *, result, claim_name: str | None = "groups") -> None:
+    def __init__(
+        self,
+        *,
+        result,
+        claim_name: str | None = "groups",
+        claim_path: tuple[str, ...] | None = None,
+    ) -> None:
         self.external_groups_claim = AsyncMock(return_value=claim_name)
+        self.external_groups_claim_path = AsyncMock(
+            return_value=claim_path if claim_path is not None else ((claim_name,) if claim_name else None)
+        )
         self.ingest_directory_membership_snapshot = AsyncMock(return_value=result)
         self.directory_membership_committed = AsyncMock()
 
@@ -1284,6 +1293,8 @@ async def test_external_group_reconciliation_normalizes_commits_and_audits(auth_
     assert snapshot.memberships == ("engineering", "reviewers")
     assert snapshot.authoritative is True
     assert snapshot.complete is True
+    assert snapshot.claim_state is None
+    assert snapshot.claim_path == ("groups",)
     db.commit.assert_awaited_once()
     authz.directory_membership_committed.assert_awaited_once_with(user_id=user.id, changed=True)
 
@@ -1309,7 +1320,7 @@ async def test_external_group_reconciliation_normalizes_commits_and_audits(auth_
 
 @pytest.mark.anyio
 async def test_external_group_reconciliation_accepts_present_empty_claim(auth_service: AuthService):
-    from lfx.services.authorization import DirectoryMembershipIngestResult
+    from lfx.services.authorization import DirectoryMembershipClaimState, DirectoryMembershipIngestResult
 
     user = _dummy_user(uuid4())
     db = AsyncMock()
@@ -1327,8 +1338,63 @@ async def test_external_group_reconciliation_accepts_present_empty_claim(auth_se
 
     snapshot = authz.ingest_directory_membership_snapshot.await_args.kwargs["snapshot"]
     assert snapshot.memberships == ()
+    assert snapshot.claim_state is DirectoryMembershipClaimState.EMPTY
     db.commit.assert_awaited_once()
     authz.directory_membership_committed.assert_awaited_once_with(user_id=user.id, changed=False)
+
+
+@pytest.mark.anyio
+async def test_external_group_reconciliation_resolves_nested_claim_path(auth_service: AuthService):
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(
+        result=DirectoryMembershipIngestResult(),
+        claim_path=("realm_access", "groups"),
+    )
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=AsyncMock()),
+    ):
+        await auth_service._reconcile_verified_external_groups(
+            identity=_external_identity({"realm_access": {"groups": [" engineering "]}}),
+            user=user,
+            db=db,
+        )
+
+    snapshot = authz.ingest_directory_membership_snapshot.await_args.kwargs["snapshot"]
+    assert snapshot.memberships == ("engineering",)
+    assert snapshot.claim_path == ("realm_access", "groups")
+    authz.external_groups_claim.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_external_group_reconciliation_marks_invalid_nested_container_malformed(auth_service: AuthService):
+    from lfx.services.authorization import DirectoryMembershipClaimState, DirectoryMembershipIngestResult
+
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(
+        result=DirectoryMembershipIngestResult(),
+        claim_path=("realm_access", "groups"),
+    )
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=AsyncMock()),
+    ):
+        await auth_service._reconcile_verified_external_groups(
+            identity=_external_identity({"realm_access": "not-an-object"}),
+            user=user,
+            db=db,
+        )
+
+    snapshot = authz.ingest_directory_membership_snapshot.await_args.kwargs["snapshot"]
+    assert snapshot.claim_state is DirectoryMembershipClaimState.MALFORMED
+    assert snapshot.authoritative is False
+    assert snapshot.complete is False
 
 
 @pytest.mark.parametrize(
@@ -1353,7 +1419,7 @@ async def test_incomplete_external_group_claim_skips_authoritative_reconciliatio
     claims: dict,
     expected_reason: str,
 ):
-    from lfx.services.authorization import DirectoryMembershipIngestResult
+    from lfx.services.authorization import DirectoryMembershipClaimState, DirectoryMembershipIngestResult
 
     user = _dummy_user(uuid4())
     db = AsyncMock()
@@ -1372,9 +1438,14 @@ async def test_incomplete_external_group_claim_skips_authoritative_reconciliatio
             db=db,
         )
 
-    authz.ingest_directory_membership_snapshot.assert_not_awaited()
+    snapshot = authz.ingest_directory_membership_snapshot.await_args.kwargs["snapshot"]
+    assert snapshot.memberships == ()
+    assert snapshot.authoritative is False
+    assert snapshot.complete is False
+    assert snapshot.claim_state is DirectoryMembershipClaimState(expected_reason)
+    assert snapshot.claim_path == ("groups",)
     db.commit.assert_awaited_once()
-    authz.directory_membership_committed.assert_not_awaited()
+    authz.directory_membership_committed.assert_awaited_once_with(user_id=user.id, changed=True)
     audit.assert_awaited_once()
     assert events == ["commit", "audit"]
     audit_call = audit.await_args.kwargs
@@ -1392,6 +1463,31 @@ async def test_incomplete_external_group_claim_skips_authoritative_reconciliatio
         "authoritative": False,
         "complete": False,
     }
+
+
+@pytest.mark.anyio
+async def test_incomplete_external_group_claim_reaches_plugin_before_commit(auth_service: AuthService):
+    from lfx.services.authorization import AuthorizationMutationRejected
+
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(result=None)
+    authz.ingest_directory_membership_snapshot.side_effect = AuthorizationMutationRejected("Group claim required")
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=AsyncMock()) as audit,
+        pytest.raises(AuthorizationMutationRejected, match="Group claim required"),
+    ):
+        await auth_service._reconcile_verified_external_groups(
+            identity=_external_identity({}),
+            user=user,
+            db=db,
+        )
+
+    authz.ingest_directory_membership_snapshot.assert_awaited_once()
+    db.commit.assert_not_awaited()
+    audit.assert_not_awaited()
 
 
 @pytest.mark.anyio
@@ -1515,10 +1611,10 @@ async def test_directory_skip_audit_failure_does_not_fail_authentication(auth_se
             db=db,
         )
 
-    authz.ingest_directory_membership_snapshot.assert_not_awaited()
+    authz.ingest_directory_membership_snapshot.assert_awaited_once()
     db.commit.assert_awaited_once()
     audit.assert_awaited_once()
-    authz.directory_membership_committed.assert_not_awaited()
+    authz.directory_membership_committed.assert_awaited_once_with(user_id=user.id, changed=True)
 
 
 # =============================================================================

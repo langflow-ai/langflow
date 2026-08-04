@@ -77,6 +77,16 @@ class AuthorizationMutationKind(str, Enum):
     API_KEY_DELETED = "api_key.deleted"  # pragma: allowlist secret
 
 
+class DirectoryMembershipClaimState(str, Enum):
+    """Sanitized state of a configured verified group claim."""
+
+    ABSENT = "absent"
+    EMPTY = "empty"
+    OVERAGE = "overage"
+    MALFORMED = "malformed"
+    TOO_MANY = "too_many"
+
+
 class AuthorizationMutationRejected(Exception):  # noqa: N818 - public contract uses rejection terminology
     """Policy-safe rejection raised before a canonical identity mutation.
 
@@ -131,8 +141,10 @@ class DirectoryMembershipSnapshot:
     """Provider-neutral authoritative directory membership snapshot.
 
     ``memberships`` contains normalized, non-secret group identifiers, not raw
-    identity-provider claims. Providers own paging, record/runtime bounds, and
-    cursor persistence before presenting a complete snapshot here.
+    identity-provider claims. ``claim_state`` and ``claim_path`` carry only the
+    sanitized verified-claim outcome needed for plugin policy. Providers own
+    paging, record/runtime bounds, and cursor persistence before presenting a
+    complete snapshot here.
     """
 
     provider_id: str
@@ -143,6 +155,8 @@ class DirectoryMembershipSnapshot:
     memberships: tuple[str, ...]
     authoritative: bool = True
     complete: bool = True
+    claim_state: DirectoryMembershipClaimState | None = None
+    claim_path: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -500,6 +514,16 @@ class BaseAuthorizationService(Service, abc.ABC):
         """
         _ = (provider_id, issuer)
         return None
+
+    async def external_groups_claim_path(
+        self,
+        *,
+        provider_id: str,
+        issuer: str | None,
+    ) -> tuple[str, ...] | None:
+        """Return a nested claim path while adapting legacy top-level selectors."""
+        claim_name = await self.external_groups_claim(provider_id=provider_id, issuer=issuer)
+        return (claim_name,) if claim_name else None
 
     async def directory_membership_committed(self, *, user_id: UUID, changed: bool = True) -> None:
         """Publish a committed membership change to authorization replicas."""

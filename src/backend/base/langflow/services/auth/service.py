@@ -56,12 +56,46 @@ from langflow.services.schema import ServiceType
 
 _MAX_EXTERNAL_AUTHORIZATION_GROUPS = 500
 _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH = 256
+_MAX_EXTERNAL_GROUP_CLAIM_PATH_DEPTH = 16
 
 
-def _has_external_group_overage(claims: Mapping[str, object], claim_name: str) -> bool:
+def _has_external_group_overage(claims: Mapping[str, object], claim_path: tuple[str, ...]) -> bool:
     """Return whether an Entra-style overage pointer replaces the group claim."""
     claim_names = claims.get("_claim_names")
+    claim_name = claim_path[0] if len(claim_path) == 1 else ".".join(claim_path)
     return isinstance(claim_names, Mapping) and claim_name in claim_names
+
+
+def _validated_external_group_claim_path(value: object) -> tuple[str, ...] | None:
+    """Validate the plugin-selected path before traversing verified claims."""
+    if value is None:
+        return None
+    if not isinstance(value, tuple) or not value or len(value) > _MAX_EXTERNAL_GROUP_CLAIM_PATH_DEPTH:
+        msg = "external groups claim path must contain between 1 and 16 segments"
+        raise ValueError(msg)
+    if any(
+        not isinstance(segment, str)
+        or not segment.strip()
+        or segment != segment.strip()
+        or len(segment) > _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH
+        for segment in value
+    ):
+        msg = "external groups claim path segments must be normalized strings of at most 256 characters"
+        raise ValueError(msg)
+    return value
+
+
+def _claim_value_at_path(claims: Mapping[str, object], claim_path: tuple[str, ...]) -> tuple[bool, object]:
+    """Resolve a claim path without treating dots inside claim names as separators."""
+    current: object = claims
+    for segment in claim_path:
+        if not isinstance(current, Mapping):
+            msg = "external groups claim path traverses a non-object value"
+            raise TypeError(msg)
+        if segment not in current:
+            return False, None
+        current = current[segment]
+    return True, current
 
 
 def _audit_audience(claims: Mapping[str, object]) -> str | list[str] | None:
@@ -376,14 +410,8 @@ class AuthService(BaseAuthService):
         user: User,
         db: AsyncSession,
     ) -> None:
-        """Send a complete verified group claim through the authorization seam.
-
-        Missing, overage, or malformed claims are not authoritative zero-group
-        snapshots and therefore skip reconciliation. Provider configuration and
-        transactional ingest failures intentionally remain fail-closed; audit
-        enqueue and post-commit publication are isolated from authentication.
-        """
-        from lfx.services.authorization import DirectoryMembershipSnapshot
+        """Send one sanitized verified group-claim state through the authorization seam."""
+        from lfx.services.authorization import DirectoryMembershipClaimState, DirectoryMembershipSnapshot
 
         from langflow.services.authorization.audit import AUDIT_ALLOW, AUDIT_SKIP, audit_decision
         from langflow.services.authorization.lifecycle import safe_directory_membership_committed
@@ -392,12 +420,19 @@ class AuthService(BaseAuthService):
         authorization_service = get_authorization_service()
         issuer_value = identity.claims.get("iss")
         issuer = issuer_value.strip() if isinstance(issuer_value, str) and issuer_value.strip() else None
-        claim_name = await authorization_service.external_groups_claim(
-            provider_id=identity.provider,
-            issuer=issuer,
-        )
-        if not claim_name:
+        path_selector = getattr(authorization_service, "external_groups_claim_path", None)
+        if path_selector is None:
+            claim_name = await authorization_service.external_groups_claim(
+                provider_id=identity.provider,
+                issuer=issuer,
+            )
+            selected_path: object = (claim_name,) if claim_name else None
+        else:
+            selected_path = await path_selector(provider_id=identity.provider, issuer=issuer)
+        claim_path = _validated_external_group_claim_path(selected_path)
+        if claim_path is None:
             return
+        claim_name = ".".join(claim_path)
 
         async def audit_reconciliation(*, result: str, details: dict[str, object]) -> None:
             await _safe_audit_directory_reconciliation(
@@ -409,91 +444,62 @@ class AuthService(BaseAuthService):
                 details=details,
             )
 
-        async def audit_skip(reason: str) -> None:
-            # JIT user/profile and last-login updates share this transaction.
-            # Commit them before the independent audit writer resolves the
-            # audit row's user foreign key.
-            await db.commit()
-            await audit_reconciliation(
-                result=AUDIT_SKIP,
-                details={
-                    "claim_name": claim_name,
-                    "reason": reason,
-                    "authoritative": False,
-                    "complete": False,
-                },
-            )
-
-        if _has_external_group_overage(identity.claims, claim_name):
-            logger.warning(
-                "Skipping external group reconciliation for provider=%s user=%s: claim=%s uses an overage pointer",
-                identity.provider,
-                user.id,
-                claim_name,
-            )
-            await audit_skip("overage")
-            return
-        if claim_name not in identity.claims:
-            logger.warning(
-                "Skipping external group reconciliation for provider=%s user=%s: claim=%s is absent",
-                identity.provider,
-                user.id,
-                claim_name,
-            )
-            await audit_skip("absent")
-            return
-
-        raw_groups = identity.claims[claim_name]
-        if isinstance(raw_groups, str):
-            candidates = (raw_groups,)
-        elif isinstance(raw_groups, (list, tuple, set, frozenset)):
-            candidates = raw_groups
-        else:
-            logger.warning(
-                "Skipping external group reconciliation for provider=%s user=%s: claim=%s has an invalid type",
-                identity.provider,
-                user.id,
-                claim_name,
-            )
-            await audit_skip("malformed")
-            return
-
+        claim_state: DirectoryMembershipClaimState | None = None
+        complete = True
         normalized_groups: set[str] = set()
-        for candidate in candidates:
-            if not isinstance(candidate, str):
-                logger.warning(
-                    "Skipping external group reconciliation for provider=%s user=%s: "
-                    "claim=%s contains a non-string entry",
-                    identity.provider,
-                    user.id,
-                    claim_name,
-                )
-                await audit_skip("malformed")
-                return
-            group = candidate.strip()
-            if not group or len(group) > _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH:
-                logger.warning(
-                    "Skipping external group reconciliation for provider=%s user=%s: "
-                    "claim=%s contains an invalid group identifier",
-                    identity.provider,
-                    user.id,
-                    claim_name,
-                )
-                await audit_skip("malformed")
-                return
-            normalized_groups.add(group)
+        if _has_external_group_overage(identity.claims, claim_path):
+            claim_state = DirectoryMembershipClaimState.OVERAGE
+            complete = False
+        else:
+            try:
+                found, raw_groups = _claim_value_at_path(identity.claims, claim_path)
+            except TypeError:
+                found = False
+                raw_groups = None
+                claim_state = DirectoryMembershipClaimState.MALFORMED
+                complete = False
+            if complete and not found:
+                claim_state = DirectoryMembershipClaimState.ABSENT
+                complete = False
+            elif complete and isinstance(raw_groups, str):
+                candidates = (raw_groups,)
+            elif complete and isinstance(raw_groups, (list, tuple, set, frozenset)):
+                candidates = raw_groups
+            elif complete:
+                candidates = ()
+                claim_state = DirectoryMembershipClaimState.MALFORMED
+                complete = False
 
-        groups = tuple(sorted(normalized_groups))
-        if len(groups) > _MAX_EXTERNAL_AUTHORIZATION_GROUPS:
+            if complete:
+                for candidate in candidates:
+                    if not isinstance(candidate, str):
+                        claim_state = DirectoryMembershipClaimState.MALFORMED
+                        complete = False
+                        break
+                    group = candidate.strip()
+                    if not group or len(group) > _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH:
+                        claim_state = DirectoryMembershipClaimState.MALFORMED
+                        complete = False
+                        break
+                    normalized_groups.add(group)
+
+        groups = tuple(sorted(normalized_groups)) if complete else ()
+        if complete and len(groups) > _MAX_EXTERNAL_AUTHORIZATION_GROUPS:
+            groups = ()
+            claim_state = DirectoryMembershipClaimState.TOO_MANY
+            complete = False
+        elif complete and not groups:
+            claim_state = DirectoryMembershipClaimState.EMPTY
+
+        if not complete:
+            assert claim_state is not None  # noqa: S101 - internal state-machine invariant
             logger.warning(
-                "Skipping external group reconciliation for provider=%s user=%s: claim=%s exceeds the %d-group limit",
+                "External group claim is incomplete for provider=%s user=%s: claim=%s state=%s",
                 identity.provider,
                 user.id,
                 claim_name,
-                _MAX_EXTERNAL_AUTHORIZATION_GROUPS,
+                claim_state.value,
             )
-            await audit_skip("too_many")
-            return
 
         result = await authorization_service.ingest_directory_membership_snapshot(
             session=db,
@@ -504,8 +510,10 @@ class AuthService(BaseAuthService):
                 user_id=user.id,
                 provider_user_id=identity.subject,
                 memberships=groups,
-                authoritative=True,
-                complete=True,
+                authoritative=complete,
+                complete=complete,
+                claim_state=claim_state,
+                claim_path=claim_path,
             ),
         )
         await db.commit()
@@ -529,6 +537,25 @@ class AuthService(BaseAuthService):
             changed = bool(getattr(result, "changed", True))
             added = getattr(result, "added", None)
             removed = getattr(result, "removed", None)
+
+        if not complete:
+            assert claim_state is not None  # noqa: S101 - internal state-machine invariant
+            await audit_reconciliation(
+                result=AUDIT_SKIP,
+                details={
+                    "claim_name": claim_name,
+                    "reason": claim_state.value,
+                    "authoritative": False,
+                    "complete": False,
+                },
+            )
+            if changed:
+                await safe_directory_membership_committed(
+                    authorization_service,
+                    user_id=user.id,
+                    changed=True,
+                )
+            return
 
         await audit_reconciliation(
             result=AUDIT_ALLOW,

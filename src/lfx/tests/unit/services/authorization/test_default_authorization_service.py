@@ -195,6 +195,18 @@ async def test_identity_and_directory_contracts_are_default_noops(service: Autho
         result.changed = True  # type: ignore[misc]
 
 
+async def test_external_groups_claim_path_adapts_legacy_claim_selector(service: AuthorizationService) -> None:
+    """A legacy top-level claim selector remains a one-segment claim path."""
+    service.external_groups_claim = AsyncMock(return_value="groups")  # type: ignore[method-assign]
+
+    assert await service.external_groups_claim_path(provider_id="directory-1", issuer=None) == ("groups",)
+
+
+async def test_external_groups_claim_path_preserves_plugin_opt_out(service: AuthorizationService) -> None:
+    """The default no-op service does not opt into external group reconciliation."""
+    assert await service.external_groups_claim_path(provider_id="directory-1", issuer=None) is None
+
+
 async def test_identity_committed_adapts_to_legacy_invalidation_hooks(
     service: AuthorizationService,
 ) -> None:
