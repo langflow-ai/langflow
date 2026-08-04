@@ -395,7 +395,7 @@ export const useProviderConfiguration = ({
     }));
   }, []);
 
-  // Save all variables in parallel — validates first, then saves if valid
+  // Save all variables in provider order — validates first, then saves if valid
   const handleSaveAllVariables = useCallback(async () => {
     if (!selectedProvider) return;
 
@@ -412,30 +412,30 @@ export const useProviderConfiguration = ({
     setValidationFailed(false);
 
     try {
-      // Fire all mutations in parallel
-      await Promise.all(
-        variablesToSave.map(async (variable) => {
-          const value = variableValues[variable.variable_key].trim();
-          const existingVariable = globalVariables.find(
-            (v) => v.name === variable.variable_key,
-          );
-          const variableType = variable.is_secret
-            ? VARIABLE_CATEGORY.CREDENTIAL
-            : VARIABLE_CATEGORY.GLOBAL;
+      // Provider credentials can depend on connection fields that precede them
+      // in the provider metadata. Persist each field before starting the next
+      // request so backend validation can read the complete configuration.
+      for (const variable of variablesToSave) {
+        const value = variableValues[variable.variable_key].trim();
+        const existingVariable = globalVariables.find(
+          (v) => v.name === variable.variable_key,
+        );
+        const variableType = variable.is_secret
+          ? VARIABLE_CATEGORY.CREDENTIAL
+          : VARIABLE_CATEGORY.GLOBAL;
 
-          if (existingVariable) {
-            return updateGlobalVariable({ id: existingVariable.id, value });
-          } else {
-            return createGlobalVariable({
-              name: variable.variable_key,
-              value,
-              type: variableType,
-              category: VARIABLE_CATEGORY.GLOBAL,
-              default_fields: [],
-            });
-          }
-        }),
-      );
+        if (existingVariable) {
+          await updateGlobalVariable({ id: existingVariable.id, value });
+        } else {
+          await createGlobalVariable({
+            name: variable.variable_key,
+            value,
+            type: variableType,
+            category: VARIABLE_CATEGORY.GLOBAL,
+            default_fields: [],
+          });
+        }
+      }
 
       // All succeeded — defer toast and value clear until after models refetch
       hasUserMadeChangesRef.current = true;
