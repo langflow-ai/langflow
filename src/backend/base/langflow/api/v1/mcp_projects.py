@@ -130,6 +130,16 @@ async def verify_project_auth(
                         return project_user
             raise HTTPException(status_code=404, detail="Project owner not found")
 
+    # Public MCP projects execute as their owning principal, never as the
+    # instance-wide superuser used by the legacy single-user fallback.
+    if project_auth_type == "none":
+        if project_user_id:
+            async with session_scope() as db:
+                project_user = await db.get(User, project_user_id)
+                if project_user:
+                    return project_user
+        raise HTTPException(status_code=404, detail="Project owner not found")
+
     # OAuth projects must present a valid API key at the Langflow transport endpoint: network-level
     # trust (loopback / same-host proxy) is unsafe because it cannot distinguish the local MCP
     # Composer subprocess from another loopback peer behind a reverse proxy or sidecar. The

@@ -103,6 +103,19 @@ def _get_secret_text(input_obj: Any, value: Any) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+def _fallback_default(input_obj: Any) -> Any:
+    """Return the value an input carries when the stored template omits it.
+
+    A falsy value only survives when the component author declared it. Inputs that never
+    got an explicit value inherit ``BaseInputMixin.value = ""``, which is a placeholder and
+    not a real default: an unconnected HandleInput/DataFrameInput must stay ``None`` so
+    consumers keep reading it as "nothing supplied".
+    """
+    if "value" in getattr(input_obj, "model_fields_set", ()):
+        return input_obj.value
+    return input_obj.value or None
+
+
 def _copy_component_template(items: list[Any]) -> list[Any]:
     return [item.model_copy(deep=True) if isinstance(item, BaseModel) else deepcopy(item) for item in items]
 
@@ -1235,7 +1248,7 @@ class Component(CustomComponent):
             if key not in attributes and key not in self._attributes:
                 if secret_text := _get_secret_text(input_obj, input_obj.value):
                     self._secret_values.add(secret_text)
-                attributes[key] = _wrap_if_secret(input_obj, input_obj.value or None)
+                attributes[key] = _wrap_if_secret(input_obj, _fallback_default(input_obj))
 
         self._attributes.update(attributes)
 
@@ -1342,6 +1355,7 @@ class Component(CustomComponent):
     async def _build_results(self) -> tuple[dict, dict]:
         results, artifacts = {}, {}
 
+        self._ensure_code_execution_policy()
         self._pre_run_setup_if_needed()
         self._handle_tool_mode()
 
@@ -1355,6 +1369,16 @@ class Component(CustomComponent):
 
         self._finalize_results(results, artifacts)
         return results, artifacts
+
+    def _ensure_code_execution_policy(self) -> None:
+        """Enforce server policy before a registered code-execution component runs."""
+        # Keep these imports local because Component is foundational and flow validation
+        # imports component-loading helpers that eventually depend on this module.
+        from lfx.utils.flow_validation import is_code_execution_component
+        from lfx.utils.python_repl_security import ensure_code_execution_enabled
+
+        if is_code_execution_component(type(self).__name__, self.name, self.display_name):
+            ensure_code_execution_enabled()
 
     def _pre_run_setup_if_needed(self):
         if hasattr(self, "_pre_run_setup"):

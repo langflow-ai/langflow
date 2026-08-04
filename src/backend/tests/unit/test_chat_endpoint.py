@@ -1273,7 +1273,7 @@ async def test_build_public_tmp_namespaces_caller_session(
     )
     assert response.status_code == codes.OK
 
-    expected_namespace = str(compute_virtual_flow_id(client_id, flow_id))
+    expected_namespace = str(compute_virtual_flow_id(client_id, flow_id, principal_type="client"))
     sent_inputs = captured["inputs"]
     assert sent_inputs is not None
     assert sent_inputs.session == f"{expected_namespace}:{victim_session}"
@@ -1301,7 +1301,7 @@ async def test_build_public_tmp_session_already_namespaced_unchanged(
 
     client_id = "ns-passthrough-client"
     _send_unauthenticated(client, client_id)
-    namespace = str(compute_virtual_flow_id(client_id, flow_id))
+    namespace = str(compute_virtual_flow_id(client_id, flow_id, principal_type="client"))
     already_scoped = f"{namespace}:thread-1"
 
     response = await client.post(
@@ -1417,7 +1417,7 @@ async def test_build_public_tmp_empty_session_is_namespaced(
     )
     assert response.status_code == codes.OK
 
-    expected_namespace = str(compute_virtual_flow_id(client_id, flow_id))
+    expected_namespace = str(compute_virtual_flow_id(client_id, flow_id, principal_type="client"))
     sent_session = captured["inputs"].session
     assert sent_session != ""
     assert sent_session == f"{expected_namespace}:"
@@ -1450,7 +1450,7 @@ async def test_build_public_tmp_authenticated_namespace_uses_user_id(
     )
     assert response.status_code == codes.OK
 
-    expected_namespace = str(compute_virtual_flow_id(active_user.id, flow_id))
+    expected_namespace = str(compute_virtual_flow_id(active_user.id, flow_id, principal_type="user"))
     assert captured["inputs"].session == f"{expected_namespace}:thread-A"
 
 

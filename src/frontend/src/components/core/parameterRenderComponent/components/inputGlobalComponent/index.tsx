@@ -29,6 +29,7 @@ export default function InputGlobalComponent({
   handleOnNewValue,
   value,
   id,
+  nodeId,
   load_from_db,
   password,
   _input_type,
@@ -194,6 +195,7 @@ export default function InputGlobalComponent({
       popoverWidth="17.5rem"
       placeholder={getPlaceholder(disabled, placeholder)}
       id={id}
+      nodeId={nodeId}
       editNode={editNode}
       disabled={disabled}
       password={password ?? false}
