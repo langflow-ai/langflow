@@ -55,6 +55,28 @@ except ImportError:
 
 FLOW_EXECUTION_SPAN_NAME = "flow.execute"
 
+
+class FlowSpanScope:
+    """Lets a driver that handles its own component errors still mark the run as failed.
+
+    The /build vertex walk catches a component exception, turns it into an error output for the
+    client and stops walking, rather than re-raising. The span's own except clauses therefore
+    never see it, and without this the run would be exported as a success. Callers that let
+    exceptions propagate (arun, async_start, process) need none of this and ignore the scope.
+
+    Only the exception *type* is accepted, never the message: component output ends up in those
+    messages and must not reach the operator's APM.
+    """
+
+    __slots__ = ("error_type",)
+
+    def __init__(self) -> None:
+        self.error_type: str | None = None
+
+    def record_error(self, error_type: str) -> None:
+        self.error_type = error_type
+
+
 INPUT_TYPE_COMPONENT_TYPES = {
     "chat": {InterfaceComponentTypes.ChatInput.value},
     "text": {InterfaceComponentTypes.TextInput.value},
@@ -826,9 +848,14 @@ class Graph:
         none of them: it did not fail, and calling it OK would tell an operator the work finished
         when a human is still holding it. Span status stays UNSET for a pause so alerting on the
         error rate does not fire, and the attribute carries the distinction.
+
+        Yields a :class:`FlowSpanScope`. Callers that let exceptions propagate can ignore it; a
+        driver that catches component failures itself must call ``record_error`` or its run is
+        exported as a success.
         """
+        scope = FlowSpanScope()
         if otel_trace is None or self._is_subgraph:
-            yield
+            yield scope
             return
         span = otel_trace.get_tracer(APPLICATION_TRACER_NAME).start_span(FLOW_EXECUTION_SPAN_NAME)
         status = "ok"
@@ -843,11 +870,20 @@ class Graph:
                             span, end_on_exit=False, record_exception=False, set_status_on_exception=False
                         )
                     )
-                yield
+                yield scope
         except GraphPausedException:
             # A HITL pause suspends the unit of work; it is not a failed request. The resume is
             # driven through Graph.process by the durable runner, which opens its own span.
             status = "paused"
+            raise
+        except asyncio.CancelledError:
+            # CancelledError is a BaseException, so the handler below does not see it and the
+            # span would otherwise report the run as "ok". Two live paths reach here: a user
+            # pressing stop (the job service marks the job CANCELLED and re-raises) and the v2
+            # execution ceiling (asyncio.wait_for cancels the build driver). Neither finished
+            # the work, and neither is a service fault, so this gets its own value and leaves
+            # span status UNSET rather than paging someone for a withdrawn request.
+            status = "cancelled"
             raise
         except Exception as exc:
             status = "error"
@@ -865,6 +901,12 @@ class Graph:
             # gap the operator can see, an "unknown" value looks like a protocol we support.
             if (protocol := get_execution_protocol()) is not None:
                 span.set_attribute("protocol", protocol)
+            # A driver that swallowed its own component error exits this scope cleanly, so the
+            # only signal is what it recorded on the way out.
+            if status == "ok" and scope.error_type is not None:
+                status = "error"
+                span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, scope.error_type))
+                span.set_attribute("error.type", scope.error_type)
             span.set_attribute("status", status)
             span.end()
 

@@ -51,9 +51,7 @@ APPLICATION_METER_NAME = "langflow"
 DEFAULT_SERVICE_NAME = "langflow"
 
 # The surface a flow run arrived through, recorded as the flow span's ``protocol`` attribute so
-# an operator can tell a playground click from a webhook delivery from an MCP tool call. These
-# are the values the runtime sets today; the sweep in the epic's exit ticket asserts one per
-# live cell of the runtime x protocol matrix.
+# an operator can tell a playground click from a webhook delivery from an MCP tool call.
 #
 # Ambient rather than a parameter because the graph is several layers below the surface that
 # knows the answer, and two of those layers hand the run to a fresh asyncio task. Task creation
@@ -84,6 +82,12 @@ def execution_protocol(protocol: str) -> Iterator[None]:
     Reset on exit so a worker that serves many requests on one task cannot leak one request's
     protocol into the next. A run handed to ``asyncio.create_task`` inside the block keeps the
     value regardless, because the task copies the context at creation.
+
+    Entry points bind with this. The one exception is a callee that is itself an async
+    generator: an async generator body runs in the context of whoever calls ``__anext__``, so a
+    scope wrapped around it from outside would set and reset across its suspension points. Those
+    take a plain ``protocol`` argument and bind it inside, on the coroutine that does the work
+    (see ``_stream_event_frames``).
     """
     if _current_protocol.get() is not None:
         yield

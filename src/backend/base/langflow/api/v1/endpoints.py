@@ -322,7 +322,6 @@ async def simple_run_flow(
     event_manager: EventManager | None = None,
     context: dict | None = None,
     run_id: str | None = None,
-    protocol: str = "v1",
 ):
     validate_input_and_tweaks(input_request)
     policy_context_token = set_current_model_provider_policy_context(
@@ -394,9 +393,10 @@ async def simple_run_flow(
                 user_id=user_id,
                 job_type=JobType.WORKFLOW,
             )
-            # Bound at the shared funnel rather than at each of the four callers, so a new
-            # surface that reuses simple_run_flow is labelled "v1" instead of unlabelled.
-            with execution_protocol(protocol):
+            # The funnel default. Binding is outermost-wins, so a caller that already named its
+            # surface (webhook, mcp, openai_responses) keeps it and only the bare v1 route lands
+            # here; a new surface that reuses simple_run_flow is labelled "v1" rather than nothing.
+            with execution_protocol("v1"):
                 task_result, session_id = await _job_svc.execute_with_status(
                     run_id_uuid,
                     run_graph_internal,
@@ -494,15 +494,15 @@ async def simple_run_flow_task(
                 {"ids": vertex_ids, "to_run": vertex_ids, "run_id": run_id},
             )
 
-        result = await simple_run_flow(
-            flow=flow,
-            input_request=input_request,
-            stream=stream,
-            api_key_user=api_key_user,
-            event_manager=effective_event_manager,
-            run_id=run_id,
-            protocol="webhook",
-        )
+        with execution_protocol("webhook"):
+            result = await simple_run_flow(
+                flow=flow,
+                input_request=input_request,
+                stream=stream,
+                api_key_user=api_key_user,
+                event_manager=effective_event_manager,
+                run_id=run_id,
+            )
 
         if should_emit and flow_id is not None:
             await webhook_event_manager.emit(flow_id, "end", {"run_id": run_id, "success": True})
@@ -610,7 +610,6 @@ async def run_flow_generator(
     event_manager: EventManager,
     client_consumed_queue: asyncio.Queue,
     context: dict | None = None,
-    protocol: str = "v1",
 ) -> None:
     """Executes a flow asynchronously and manages event streaming to the client.
 
@@ -624,7 +623,6 @@ async def run_flow_generator(
         event_manager (EventManager): Manages the streaming of events to the client
         client_consumed_queue (asyncio.Queue): Tracks client consumption of events
         context (dict | None): Optional context to pass to the flow
-        protocol (str): The surface this run arrived through, recorded on the flow span
 
     Events Generated:
         - "add_message": Sent when new messages are added during flow execution
@@ -646,7 +644,6 @@ async def run_flow_generator(
             api_key_user=api_key_user,
             event_manager=event_manager,
             context=context,
-            protocol=protocol,
         )
         event_manager.on_end(data={"result": result.model_dump()})
         await client_consumed_queue.get()

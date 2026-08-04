@@ -203,6 +203,25 @@ asyncio.run(main())
 """
 )
 
+# CancelledError is a BaseException, so an `except Exception` handler never sees it. A user
+# pressing stop and the v2 execution ceiling both cancel the driver this span wraps.
+CANCELLED_PROBE = (
+    PROVIDER_SETUP
+    + """
+async def main():
+    graph = build_graph()
+    raised = False
+    try:
+        with graph.flow_execution_span():
+            raise asyncio.CancelledError()
+    except asyncio.CancelledError:
+        raised = True
+    report({"raised": raised})
+
+asyncio.run(main())
+"""
+)
+
 NO_OTEL_PROBE = """
 import asyncio, json, sys
 
@@ -347,3 +366,15 @@ def test_an_inner_binding_does_not_overwrite_the_surface_that_took_the_request()
     assert result["spans"][0]["attrs"]["protocol"] == "voice"
     # Reset on exit, so a worker reusing this task for the next request starts unbound.
     assert result["after"] is None
+
+
+def test_a_cancelled_flow_is_not_recorded_as_a_successful_one():
+    result = run_probe(CANCELLED_PROBE)
+    assert result["raised"] is True
+
+    assert len(result["spans"]) == 1
+    span = result["spans"][0]
+    assert span["attrs"]["status"] == "cancelled"
+    # A withdrawn request is not a service fault, so it must not land on the error rate.
+    assert span["status"] == "UNSET"
+    assert "error.type" not in span["attrs"]

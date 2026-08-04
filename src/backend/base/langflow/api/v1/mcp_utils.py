@@ -16,6 +16,7 @@ from uuid import UUID, uuid4
 from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from lfx.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
 from lfx.log.logger import logger
+from lfx.observability import execution_protocol
 from lfx.utils.flow_validation import CustomComponentValidationError
 from lfx.utils.helpers import build_content_type_from_extension
 from mcp import types
@@ -359,14 +360,14 @@ async def handle_call_tool(
 
             try:
                 try:
-                    result = await simple_run_flow(
-                        flow=flow,
-                        input_request=input_request,
-                        stream=False,
-                        api_key_user=current_user,
-                        context=exec_context,
-                        protocol="mcp",
-                    )
+                    with execution_protocol("mcp"):
+                        result = await simple_run_flow(
+                            flow=flow,
+                            input_request=input_request,
+                            stream=False,
+                            api_key_user=current_user,
+                            context=exec_context,
+                        )
                     # Process all outputs and messages, ensuring no duplicates
                     processed_texts = set()
 

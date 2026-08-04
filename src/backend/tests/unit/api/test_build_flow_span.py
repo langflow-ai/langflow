@@ -2,12 +2,16 @@
 
 The build driver walks the vertices itself and never enters ``Graph.arun`` / ``async_start`` /
 ``process``, so it did not inherit the flow span those three carry. That made the busiest
-surfaces in the product — playground, v2 sync and background, voice — the ones the operator's
-APM could not see. These tests drive the actual route so both halves are covered: the span the
-build loop opens, and the protocol the route binds around it.
+surfaces in the product — playground, v2 streaming and background, voice — the ones the
+operator's APM could not see. (v2 sync goes through ``arun`` and always had one.)
+
+These tests drive the actual route so both halves are covered: the span the build loop opens,
+and the protocol the route binds around it.
 """
 
 from __future__ import annotations
+
+import json
 
 import pytest
 from lfx.observability import APPLICATION_TRACER_NAME
@@ -21,9 +25,15 @@ pytestmark = pytest.mark.usefixtures("client")
 def span_exporter():
     """Install a provider for this module and hand back its exporter.
 
-    ``set_tracer_provider`` is process-global and first-write-wins, so the assert below is the
-    point: if anything else in this worker installs a provider first, our spans go to it and
-    every assertion here would pass vacuously. Failing loudly beats a green vacuous test.
+    The sibling OTel tests run their provider in a subprocess because it is process-global.
+    That is not available here: the point of these tests is the real HTTP route, which needs
+    the app, the DB and the auth fixtures, so the provider has to go into the test process.
+
+    Two consequences are handled rather than ignored. ``set_tracer_provider`` is
+    first-write-wins, so the assert is what stops this file from passing vacuously if anything
+    else in the worker installs one first. And the provider cannot be uninstalled, so the
+    teardown shuts it down instead — otherwise every later test in this worker that runs a
+    flow would keep appending spans to an exporter nobody reads.
     """
     from opentelemetry import trace
     from opentelemetry.sdk.trace import TracerProvider
@@ -37,7 +47,9 @@ def span_exporter():
     assert trace.get_tracer_provider() is provider, (
         "another test installed a tracer provider first; these assertions would be vacuous"
     )
-    return exporter
+    yield exporter
+    provider.shutdown()
+    exporter.clear()
 
 
 def _flow_spans(exporter):
@@ -95,3 +107,58 @@ async def test_no_component_spans_reach_the_operators_apm(
         if span.instrumentation_scope.name == APPLICATION_TRACER_NAME
     ]
     assert [span.name for span in application_spans] == ["flow.execute"]
+
+
+# The build driver catches a component failure, turns it into an error output and stops walking,
+# rather than raising. So the span sees a clean exit unless the driver tells it, and a failed run
+# would report "ok" while the same flow through Graph.arun reports "error".
+SENTINEL = "component-detail-that-must-not-be-exported"
+
+FAILING_COMPONENT_CODE = f"""
+from lfx.custom import Component
+from lfx.io import HandleInput, Output, TabInput
+from lfx.schema import Message
+
+
+class TypeConverterComponent(Component):
+    display_name = "Type Convert"
+    description = "converts"
+    name = "TypeConverterComponent"
+    inputs = [
+        HandleInput(name="input_data", display_name="Input", input_types=["Message", "Data", "DataFrame"]),
+        TabInput(name="output_type", display_name="Output Type", options=["Message"], value="Message"),
+    ]
+    outputs = [Output(display_name="Message Output", name="message_output", method="convert_to_message")]
+
+    def convert_to_message(self) -> Message:
+        raise RuntimeError("{SENTINEL}")
+"""
+
+
+def _flow_with_a_failing_component(flow_data: str) -> str:
+    payload = json.loads(flow_data)
+    for node in payload["data"]["nodes"]:
+        if node["id"] == "TypeConverterComponent-koSIz":
+            node["data"]["node"]["template"]["code"]["value"] = FAILING_COMPONENT_CODE
+    return json.dumps(payload)
+
+
+async def test_a_failed_build_is_not_reported_as_a_successful_run(
+    client, json_memory_chatbot_no_llm, logged_in_headers, span_exporter
+):
+    span_exporter.clear()
+
+    flow_id = await create_flow(client, _flow_with_a_failing_component(json_memory_chatbot_no_llm), logged_in_headers)
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    events = await get_build_events(client, build_response["job_id"], logged_in_headers)
+    body = "".join([line async for line in events.aiter_lines()])
+    assert SENTINEL in body, "the component was supposed to fail this build"
+
+    spans = _flow_spans(span_exporter)
+    assert len(spans) == 1
+    span = spans[0]
+    assert span.attributes["status"] == "error"
+    # The driver wraps the component's own exception, so this is the type an operator sees.
+    assert span.attributes["error.type"] == "ComponentBuildError"
+    # The wrapped message embeds component output, so only the type may reach the APM.
+    assert SENTINEL not in json.dumps(dict(span.attributes))

@@ -638,6 +638,10 @@ async def generate_flow_events(
             logger.exception("Error sorting vertices")
             return graph.sort_vertices()
 
+    # _build_vertex converts a component failure into an error output instead of raising, so the
+    # flow span cannot observe it. Remember the type here and hand it to the span after the walk.
+    build_error_type: str | None = None
+
     async def _build_vertex(vertex_id: str, graph: Graph, event_manager: EventManager) -> VertexBuildResponse:
         flow_id_str = str(flow_id)
         next_runnable_vertices = []
@@ -671,6 +675,8 @@ async def generate_flow_events(
                 # error output would terminalize a suspendable run.
                 raise
             except Exception as exc:  # noqa: BLE001
+                nonlocal build_error_type
+                build_error_type = type(exc).__name__
                 if isinstance(exc, ComponentBuildError):
                     params = exc.message
                     tb = exc.formatted_traceback
@@ -916,14 +922,18 @@ async def generate_flow_events(
     try:
         runner_owns_status = job_id is not None  # background path: JobRunner already wraps execute_with_status
         # This driver walks the vertices itself and never enters Graph.arun/async_start/process, so
-        # without this the busiest surfaces in the product (playground, v2 sync and background, voice)
-        # were the ones producing no flow span at all. Safe as make_current: this is a coroutine run
-        # as its own task, not an async generator, so the context token cannot outlive the scope.
-        with graph.flow_execution_span():
+        # without this the busiest surfaces in the product (playground, v2 streaming and background,
+        # voice) were the ones producing no flow span at all. v2 sync is not in that list: it runs
+        # through run_graph_internal -> Graph.arun, which has carried the span all along.
+        # Safe as make_current: this is a coroutine run as its own task, not an async generator,
+        # so the context token cannot outlive the scope.
+        with graph.flow_execution_span() as flow_span:
             if _build_job_svc and _build_run_id and not runner_owns_status:
                 await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
             else:
                 await _run_vertex_build()
+            if build_error_type is not None:
+                flow_span.record_error(build_error_type)
     except GraphPausedException as exc:
         # Non-terminal: persist the card to history, emit the pause event, end without on_end.
         from langflow.api.v2.hitl import persist_human_input_card
