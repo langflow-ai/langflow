@@ -1496,7 +1496,7 @@
           "icon": "CrewAI",
           "legacy": true,
           "metadata": {
-            "code_hash": "144be482cfb0",
+            "code_hash": "9f2c4e99e4d9",
             "dependencies": {
               "dependencies": [
                 {
@@ -1574,7 +1574,7 @@
               "show": true,
               "title_case": false,
               "type": "code",
-              "value": "from lfx.base.agents.crewai.crew import BaseCrewComponent\nfrom lfx.io import HandleInput\n\n\nclass HierarchicalCrewComponent(BaseCrewComponent):\n    display_name: str = \"Hierarchical Crew\"\n    description: str = (\n        \"Represents a group of agents, defining how they should collaborate and the tasks they should perform.\"\n    )\n    documentation: str = \"https://docs.crewai.com/how-to/Hierarchical/\"\n    icon = \"CrewAI\"\n    legacy = True\n    replacement = \"agents.Agent\"\n\n    inputs = [\n        *BaseCrewComponent.get_base_inputs(),\n        HandleInput(name=\"agents\", display_name=\"Agents\", input_types=[\"Agent\"], is_list=True),\n        HandleInput(name=\"tasks\", display_name=\"Tasks\", input_types=[\"HierarchicalTask\"], is_list=True),\n        HandleInput(name=\"manager_llm\", display_name=\"Manager LLM\", input_types=[\"LanguageModel\"], required=False),\n        HandleInput(name=\"manager_agent\", display_name=\"Manager Agent\", input_types=[\"Agent\"], required=False),\n    ]\n\n    def build_crew(self):\n        try:\n            from crewai import Crew, Process\n        except ImportError as e:\n            msg = \"CrewAI is not installed. Please install it with `uv pip install crewai`.\"\n            raise ImportError(msg) from e\n\n        tasks, agents = self.get_tasks_and_agents()\n        manager_llm = self.get_manager_llm()\n\n        return Crew(\n            agents=agents,\n            tasks=tasks,\n            process=Process.hierarchical,\n            verbose=self.verbose,\n            memory=self.memory,\n            cache=self.use_cache,\n            max_rpm=self.max_rpm,\n            share_crew=self.share_crew,\n            function_calling_llm=self.function_calling_llm,\n            manager_agent=self.manager_agent,\n            manager_llm=manager_llm,\n            step_callback=self.get_step_callback(),\n            task_callback=self.get_task_callback(),\n        )\n"
+              "value": "from lfx.base.agents.crewai.crew import BaseCrewComponent\nfrom lfx.io import HandleInput\n\n\nclass HierarchicalCrewComponent(BaseCrewComponent):\n    display_name: str = \"Hierarchical Crew\"\n    description: str = (\n        \"Represents a group of agents, defining how they should collaborate and the tasks they should perform.\"\n    )\n    documentation: str = \"https://docs.crewai.com/how-to/Hierarchical/\"\n    icon = \"CrewAI\"\n    legacy = True\n    replacement = \"agents.Agent\"\n\n    inputs = [\n        *BaseCrewComponent.get_base_inputs(),\n        HandleInput(name=\"agents\", display_name=\"Agents\", input_types=[\"Agent\"], is_list=True),\n        HandleInput(name=\"tasks\", display_name=\"Tasks\", input_types=[\"HierarchicalTask\"], is_list=True),\n        HandleInput(name=\"manager_llm\", display_name=\"Manager LLM\", input_types=[\"LanguageModel\"], required=False),\n        HandleInput(name=\"manager_agent\", display_name=\"Manager Agent\", input_types=[\"Agent\"], required=False),\n    ]\n\n    def build_crew(self):\n        try:\n            from crewai import Crew, Process\n        except ImportError as e:\n            msg = \"CrewAI is not installed. Please install it with `uv pip install crewai`.\"\n            raise ImportError(msg) from e\n\n        tasks, agents = self.get_tasks_and_agents()\n        manager_llm = self.get_manager_llm()\n        manager_agent = self.get_manager_agent()\n\n        return Crew(\n            agents=agents,\n            tasks=tasks,\n            process=Process.hierarchical,\n            verbose=self.verbose,\n            memory=self.memory,\n            cache=self.use_cache,\n            max_rpm=self.max_rpm,\n            share_crew=self.share_crew,\n            function_calling_llm=self.function_calling_llm,\n            manager_agent=manager_agent,\n            manager_llm=manager_llm,\n            step_callback=self.get_step_callback(),\n            task_callback=self.get_task_callback(),\n        )\n"
             },
             "function_calling_llm": {
               "_input_type": "HandleInput",
@@ -30976,6 +30976,6 @@
     "num_components": 127,
     "num_modules": 16
   },
-  "sha256": "5ebb02640116cbbe998805b52b7a11052c83cd51f74ae34bc29a9edc5c68e681",
+  "sha256": "f02b420e10fbc57304dba1e56e1a68ce67edaf53a139bf8860b82a999f7e076f",
   "version": "1.12.0"
 }
