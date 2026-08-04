@@ -36,11 +36,17 @@ def test_auto_login_true_preserves_configured_credentials_and_scrubs_password(tm
     assert settings.SUPERUSER_PASSWORD.get_secret_value() == ""
 
 
-def test_default_superuser_password_is_empty(tmp_path: Path):
+def test_default_superuser_password_is_empty(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    # conftest load_dotenv() can inject a developer .env (e.g. LANGFLOW_SUPERUSER=admin);
+    # this test asserts AuthSettings defaults, so clear any process overrides.
+    monkeypatch.delenv("LANGFLOW_SUPERUSER", raising=False)
+    monkeypatch.delenv("LANGFLOW_SUPERUSER_PASSWORD", raising=False)
+
     cfg_dir = tmp_path.as_posix()
     settings = AuthSettings(CONFIG_DIR=cfg_dir)
     assert settings.SUPERUSER == DEFAULT_SUPERUSER
-    assert settings.SUPERUSER_PASSWORD.get_secret_value() == DEFAULT_SUPERUSER_PASSWORD.get_secret_value() == ""
+    assert settings.SUPERUSER_PASSWORD.get_secret_value() == ""
+    assert DEFAULT_SUPERUSER_PASSWORD.get_secret_value() == ""
 
 
 def test_short_secret_key_logs_upgrade_warning(tmp_path: Path):
