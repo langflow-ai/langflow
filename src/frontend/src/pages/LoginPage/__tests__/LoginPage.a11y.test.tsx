@@ -48,6 +48,11 @@ jest.mock("@/hooks/use-sanitize-redirect-url", () => ({
   useSanitizeRedirectUrl: jest.fn(),
 }));
 
+jest.mock("@/pages/LoginPage/components/dot-grid-background", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 function renderLoginPage() {
   const queryClient = new QueryClient();
   return render(

@@ -46,6 +46,11 @@ jest.mock("@/customization/utils/analytics", () => ({
   track: jest.fn(),
 }));
 
+jest.mock("@/pages/LoginPage/components/dot-grid-background", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 function renderSignUpPage() {
   return render(<SignUp />);
 }
@@ -97,15 +102,15 @@ describe("SignUpPage accessibility", () => {
     ).toBeInTheDocument();
   });
 
-  it("announces_actionable_password_mismatch_suggestion_after_confirm_blur", async () => {
-    const user = userEvent.setup();
-    renderSignUpPage();
+  it("announces_actionable_password_mismatch_suggestion_after_confirm_blur", () => {
+    const { container } = renderSignUpPage();
 
-    await user.type(screen.getByPlaceholderText("Password"), "first-password");
-    await user.type(
-      screen.getByPlaceholderText("Confirm your password"),
-      "second-password",
-    );
+    fireEvent.change(screen.getByPlaceholderText("Password"), {
+      target: { value: "first-password" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Confirm your password"), {
+      target: { value: "second-password" },
+    });
 
     expect(
       screen.queryByText(
@@ -115,7 +120,7 @@ describe("SignUpPage accessibility", () => {
 
     fireEvent.blur(screen.getByPlaceholderText("Confirm your password"));
 
-    const mismatch = await screen.findByText(
+    const mismatch = screen.getByText(
       "Passwords do not match. Re-enter both passwords so they match.",
     );
     expect(mismatch).toHaveAttribute("role", "alert");
@@ -125,6 +130,9 @@ describe("SignUpPage accessibility", () => {
     expect(
       screen.getByPlaceholderText("Confirm your password"),
     ).toHaveAttribute("aria-describedby", "signup-confirm-password-error");
+    expect(container.querySelector("#signup-confirm-password-error")).toBe(
+      mismatch,
+    );
   });
 
   it("adds_actionable_suggestion_to_server_signup_errors", () => {
