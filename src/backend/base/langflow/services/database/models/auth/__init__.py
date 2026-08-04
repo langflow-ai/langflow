@@ -11,7 +11,7 @@ from .authz import (
     SharePermissionLevel,
     ShareScope,
 )
-from .sso import SSOConfig, SSOSettings, SSOUserProfile
+from .sso import SSOConfig, SSOConfigCreate, SSOConfigRead, SSOConfigUpdate, SSOSettings, SSOUserProfile
 from .sso_secret import (
     SSOSecretError,
     decrypt_sso_client_secret,
@@ -30,6 +30,9 @@ __all__ = [
     "AuthzTeamMember",
     "CasbinRule",
     "SSOConfig",
+    "SSOConfigCreate",
+    "SSOConfigRead",
+    "SSOConfigUpdate",
     "SSOSecretError",
     "SSOSettings",
     "SSOUserProfile",

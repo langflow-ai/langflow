@@ -14,7 +14,7 @@ from typing import Annotated, Any, Literal, TypeAlias
 from uuid import uuid4
 
 import sqlalchemy as sa
-from pydantic import BaseModel, ConfigDict, TypeAdapter, model_validator
+from pydantic import BaseModel, ConfigDict, SecretStr, TypeAdapter, field_validator, model_validator
 from pydantic import Field as PydanticField
 from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index
 from sqlalchemy.orm import validates
@@ -39,7 +39,7 @@ def _utc_now() -> datetime:
 class OIDCProviderSettings(BaseModel):
     """OIDC-specific settings stored in ``sso_config.provider_settings``."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     protocol: Literal["oidc"] = "oidc"
     discovery_url: str | None = None
@@ -66,6 +66,37 @@ def _validate_provider_settings(protocol: str, value: object) -> SSOProviderSett
     return settings
 
 
+def _validate_enabled_config(
+    provider_settings: SSOProviderSettings,
+    *,
+    enabled: bool,
+    has_client_secret: bool,
+) -> None:
+    if not enabled:
+        return
+
+    if not provider_settings.client_id:
+        msg = "Enabled OIDC configurations require a client_id"
+        raise ValueError(msg)
+    if not has_client_secret:
+        msg = "Enabled OIDC configurations require a client secret"
+        raise ValueError(msg)
+
+    has_discovery = bool(provider_settings.discovery_url)
+    has_explicit_endpoints = all(
+        (
+            provider_settings.authorization_endpoint,
+            provider_settings.token_endpoint,
+            provider_settings.jwks_uri,
+        )
+    )
+    if not has_discovery and not has_explicit_endpoints:
+        msg = (
+            "Enabled OIDC configurations require discovery_url or authorization_endpoint, token_endpoint, and jwks_uri"
+        )
+        raise ValueError(msg)
+
+
 class _ProviderSettingsJSON(sa.TypeDecorator):
     """Persist validated provider settings as JSON and restore their Pydantic type."""
 
@@ -90,6 +121,19 @@ class _ProviderSettingsJSON(sa.TypeDecorator):
         if value is None:
             return None
         return _PROVIDER_SETTINGS_ADAPTER.validate_python(value)
+
+
+class _SSOClientSecretEnvelope(sa.TypeDecorator):
+    """Reject non-envelope values on every SQL bind path, including Core updates."""
+
+    impl = sa.String
+    cache_ok = True
+
+    def process_bind_param(self, value: str | None, _dialect: sa.engine.Dialect) -> str | None:
+        if value is not None and not is_sso_client_secret_envelope(value):
+            msg = "client_secret_encrypted must be a versioned SSO secret envelope"
+            raise ValueError(msg)
+        return value
 
 
 class SSOUserProfile(SQLModel, table=True):  # type: ignore[call-arg]
@@ -138,10 +182,13 @@ class SSOConfig(SQLModel, table=True):  # type: ignore[call-arg]
     slug: str = Field(default_factory=_generate_sso_slug, description="Immutable URL-safe connection identifier")
     display_name: str = Field(description="Mutable admin-facing connection label")
     protocol: str = Field(default="oidc", description="Protocol discriminator for provider_settings")
-    enabled: bool = Field(default=True)
+    enabled: bool = Field(default=False)
     sort_order: int = Field(default=0, description="Login-button display order")
     client_secret_encrypted: str | None = Field(
         default=None,
+        exclude=True,
+        repr=False,
+        sa_column=Column(_SSOClientSecretEnvelope(), nullable=True),
         description="Versioned ciphertext envelope; never serialize in a read response",
     )
     provider_settings: SSOProviderSettings = Field(
@@ -193,11 +240,46 @@ class SSOConfig(SQLModel, table=True):  # type: ignore[call-arg]
             data.get("provider_settings", OIDCProviderSettings()),
         )
         super().__init__(**data)
+        _validate_enabled_config(
+            self.provider_settings,
+            enabled=self.enabled,
+            has_client_secret=self.client_secret_encrypted is not None,
+        )
 
     @model_validator(mode="after")
-    def validate_provider_settings_protocol(self) -> Self:
-        self.provider_settings = _validate_provider_settings(self.protocol, self.provider_settings)
+    def validate_configuration(self) -> Self:
+        """Validate without assigning through SQLAlchemy instrumentation."""
+        provider_settings = _validate_provider_settings(self.protocol, self.provider_settings)
+        _validate_enabled_config(
+            provider_settings,
+            enabled=self.enabled,
+            has_client_secret=self.client_secret_encrypted is not None,
+        )
         return self
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug_field(cls, value: str) -> str:
+        if not _SSO_SLUG_PATTERN.fullmatch(value):
+            msg = "SSOConfig.slug must contain only lowercase letters, numbers, and single hyphens"
+            raise ValueError(msg)
+        return value
+
+    @field_validator("client_secret_encrypted")
+    @classmethod
+    def validate_client_secret_field(cls, value: str | None) -> str | None:
+        if value is not None and not is_sso_client_secret_envelope(value):
+            msg = "client_secret_encrypted must be a versioned SSO secret envelope"
+            raise ValueError(msg)
+        return value
+
+    @validates("slug")
+    def validate_slug_assignment(self, _key: str, value: str) -> str:
+        """Reject invalid slugs assigned before the first insert."""
+        if not _SSO_SLUG_PATTERN.fullmatch(value):
+            msg = "SSOConfig.slug must contain only lowercase letters, numbers, and single hyphens"
+            raise ValueError(msg)
+        return value
 
     @validates("protocol")
     def validate_protocol(self, _key: str, value: str) -> str:
@@ -227,6 +309,132 @@ class SSOConfig(SQLModel, table=True):  # type: ignore[call-arg]
         return value
 
 
+class SSOConfigCreate(SQLModel):
+    """Validated external input for creating an SSO configuration."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    display_name: str
+    protocol: Literal["oidc"] = "oidc"
+    enabled: bool = False
+    sort_order: int = 0
+    client_secret: SecretStr | None = Field(default=None, exclude=True, repr=False)
+    provider_settings: SSOProviderSettings = Field(default_factory=OIDCProviderSettings)
+    email_claim: str = "email"
+    username_claim: str = "preferred_username"
+    user_id_claim: str = "sub"
+    created_by: UUIDstr | None = None
+    updated_by: UUIDstr | None = None
+
+    @model_validator(mode="after")
+    def validate_configuration(self) -> Self:
+        provider_settings = _validate_provider_settings(self.protocol, self.provider_settings)
+        _validate_enabled_config(
+            provider_settings,
+            enabled=self.enabled,
+            has_client_secret=self.client_secret is not None,
+        )
+        return self
+
+    def to_model(self, settings_service: Any | None = None) -> SSOConfig:
+        """Build the persistence model, encrypting plaintext before it reaches the table."""
+        from langflow.services.database.models.auth.sso_secret import encrypt_sso_client_secret
+
+        values = self.model_dump(exclude={"client_secret"})
+        if self.client_secret is not None:
+            values["client_secret_encrypted"] = encrypt_sso_client_secret(
+                self.client_secret.get_secret_value(),
+                settings_service,
+            )
+        return SSOConfig(**values)
+
+
+class SSOConfigRead(SQLModel):
+    """Secret-free representation of a persisted SSO configuration."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUIDstr
+    slug: str
+    display_name: str
+    protocol: str
+    enabled: bool
+    sort_order: int
+    provider_settings: SSOProviderSettings
+    email_claim: str
+    username_claim: str
+    user_id_claim: str
+    created_at: datetime
+    updated_at: datetime
+    created_by: UUIDstr | None
+    updated_by: UUIDstr | None
+
+
+class SSOConfigUpdate(SQLModel):
+    """Validated partial update input for an SSO configuration."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    display_name: str | None = None
+    protocol: Literal["oidc"] | None = None
+    enabled: bool | None = None
+    sort_order: int | None = None
+    client_secret: SecretStr | None = Field(default=None, exclude=True, repr=False)
+    provider_settings: SSOProviderSettings | None = None
+    email_claim: str | None = None
+    username_claim: str | None = None
+    user_id_claim: str | None = None
+    updated_by: UUIDstr | None = None
+
+    def apply_to(self, config: SSOConfig, settings_service: Any | None = None) -> SSOConfig:
+        """Validate the merged state and apply this update to a persistence model."""
+        from langflow.services.database.models.auth.sso_secret import encrypt_sso_client_secret
+
+        values = self.model_dump(exclude_unset=True, exclude={"client_secret"})
+        if "provider_settings" in self.model_fields_set:
+            values["provider_settings"] = self.provider_settings
+        required_fields = {
+            "display_name",
+            "protocol",
+            "enabled",
+            "sort_order",
+            "provider_settings",
+            "email_claim",
+            "username_claim",
+            "user_id_claim",
+        }
+        null_fields = sorted(field for field in required_fields if field in values and values[field] is None)
+        if null_fields:
+            msg = f"SSO configuration fields cannot be null: {', '.join(null_fields)}"
+            raise ValueError(msg)
+
+        protocol = values.get("protocol", config.protocol)
+        provider_settings = _validate_provider_settings(
+            protocol,
+            values.get("provider_settings", config.provider_settings),
+        )
+        enabled = values.get("enabled", config.enabled)
+
+        encrypted_secret = config.client_secret_encrypted
+        if "client_secret" in self.model_fields_set:
+            encrypted_secret = (
+                encrypt_sso_client_secret(self.client_secret.get_secret_value(), settings_service)
+                if self.client_secret is not None
+                else None
+            )
+        _validate_enabled_config(
+            provider_settings,
+            enabled=enabled,
+            has_client_secret=encrypted_secret is not None,
+        )
+
+        for field_name, value in values.items():
+            setattr(config, field_name, value)
+        if "client_secret" in self.model_fields_set:
+            config.client_secret_encrypted = encrypted_secret
+        return config
+
+
 class SSOSettings(SQLModel, table=True):  # type: ignore[call-arg]
     """Singleton instance-level SSO policy settings."""
 
@@ -247,3 +455,22 @@ def _prevent_sso_config_slug_update(
     if sa.inspect(target).attrs.slug.history.has_changes():
         msg = "SSOConfig.slug is immutable after insert"
         raise ValueError(msg)
+    _validate_enabled_config(
+        _validate_provider_settings(target.protocol, target.provider_settings),
+        enabled=target.enabled,
+        has_client_secret=target.client_secret_encrypted is not None,
+    )
+
+
+@sa.event.listens_for(SSOConfig, "before_insert")
+def _validate_sso_config_before_insert(
+    _mapper: sa.orm.Mapper[SSOConfig],
+    _connection: sa.Connection,
+    target: SSOConfig,
+) -> None:
+    """Validate cross-column invariants before ORM inserts."""
+    _validate_enabled_config(
+        _validate_provider_settings(target.protocol, target.provider_settings),
+        enabled=target.enabled,
+        has_client_secret=target.client_secret_encrypted is not None,
+    )

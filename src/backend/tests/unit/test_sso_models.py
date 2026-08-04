@@ -8,12 +8,18 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
-from langflow.services.database.models.auth import decrypt_sso_client_secret, encrypt_sso_client_secret
+from langflow.services.database.models.auth import (
+    SSOConfigCreate,
+    SSOConfigRead,
+    SSOConfigUpdate,
+    decrypt_sso_client_secret,
+    encrypt_sso_client_secret,
+)
 from langflow.services.database.models.auth.sso import OIDCProviderSettings, SSOConfig, SSOSettings, SSOUserProfile
 from langflow.services.database.models.user.model import User
 from pydantic import SecretStr, ValidationError
-from sqlalchemy import event
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import event, update
+from sqlalchemy.exc import IntegrityError, StatementError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, select
@@ -214,7 +220,7 @@ class TestSSOConfig:
         assert config.provider_settings.discovery_url == "https://idp.example.com/.well-known/openid-configuration"
         assert config.provider_settings.scopes == "openid email profile groups"
         assert config.client_secret_encrypted == encrypted_secret
-        assert config.enabled is True
+        assert config.enabled is False
         assert config.sort_order == 0
         assert config.email_claim == "email"
         assert config.username_claim == "preferred_username"
@@ -232,7 +238,7 @@ class TestSSOConfig:
 
         assert config.protocol == "oidc"
         assert config.provider_settings == OIDCProviderSettings()
-        assert config.enabled is True
+        assert config.enabled is False
         assert config.sort_order == 0
         assert config.email_claim == "email"
         assert config.username_claim == "preferred_username"
@@ -241,12 +247,29 @@ class TestSSOConfig:
         assert config.updated_by is None
 
     async def test_multiple_enabled_configs_have_deterministic_sort_order_and_one_instance_policy(
-        self, sso_async_session
+        self, sso_async_session, sso_secret_settings
     ):
         settings = SSOSettings(enforce_sso=True)
+        encrypted_secret = encrypt_sso_client_secret(_TEST_PLAINTEXT_SECRET, sso_secret_settings)
+        provider_settings = OIDCProviderSettings(
+            client_id="client-id",
+            discovery_url="https://idp.example.com/.well-known/openid-configuration",
+        )
         configs = [
-            SSOConfig(display_name="Second", sort_order=20),
-            SSOConfig(display_name="First", sort_order=10),
+            SSOConfig(
+                display_name="Second",
+                enabled=True,
+                sort_order=20,
+                client_secret_encrypted=encrypted_secret,
+                provider_settings=provider_settings,
+            ),
+            SSOConfig(
+                display_name="First",
+                enabled=True,
+                sort_order=10,
+                client_secret_encrypted=encrypted_secret,
+                provider_settings=provider_settings,
+            ),
         ]
         sso_async_session.add_all([settings, *configs])
         await sso_async_session.commit()
@@ -308,6 +331,92 @@ class TestSSOConfig:
                 client_secret_encrypted=_TEST_PLAINTEXT_SECRET,
             )
 
+    async def test_client_secret_rejects_plaintext_core_updates(self, sso_async_session):
+        config = SSOConfig(display_name="Core update connection")
+        sso_async_session.add(config)
+        await sso_async_session.commit()
+
+        with pytest.raises(StatementError, match="versioned SSO secret envelope"):
+            await sso_async_session.execute(
+                update(SSOConfig)
+                .where(SSOConfig.id == config.id)
+                .values(client_secret_encrypted=_TEST_PLAINTEXT_SECRET)
+            )
+
+    async def test_client_secret_is_excluded_from_serialization_and_repr(self, sso_secret_settings):
+        encrypted = encrypt_sso_client_secret(_TEST_PLAINTEXT_SECRET, sso_secret_settings)
+        config = SSOConfig(display_name="Safe output", client_secret_encrypted=encrypted)
+
+        assert "client_secret_encrypted" not in config.model_dump()
+        assert encrypted not in config.model_dump_json()
+        assert encrypted not in repr(config)
+
+        read_config = SSOConfigRead.model_validate(config)
+        assert "client_secret_encrypted" not in SSOConfigRead.model_fields
+        assert encrypted not in read_config.model_dump_json()
+
+    async def test_create_schema_accepts_plaintext_secret_and_encrypts_for_persistence(self, sso_secret_settings):
+        create = SSOConfigCreate(
+            display_name="Created safely",
+            client_secret=SecretStr(_TEST_PLAINTEXT_SECRET),
+        )
+
+        assert "client_secret" not in create.model_dump()
+        config = create.to_model(sso_secret_settings)
+        assert config.client_secret_encrypted is not None
+        assert config.client_secret_encrypted != _TEST_PLAINTEXT_SECRET
+        assert decrypt_sso_client_secret(config.client_secret_encrypted, sso_secret_settings) == _TEST_PLAINTEXT_SECRET
+
+    async def test_update_schema_encrypts_secret_and_validates_merged_enabled_state(self, sso_secret_settings):
+        config = SSOConfig(display_name="Update safely")
+        update_schema = SSOConfigUpdate(
+            enabled=True,
+            client_secret=SecretStr(_TEST_PLAINTEXT_SECRET),
+            provider_settings=OIDCProviderSettings(
+                client_id="client-id",
+                discovery_url="https://idp.example.com/.well-known/openid-configuration",
+            ),
+        )
+
+        update_schema.apply_to(config, sso_secret_settings)
+
+        assert config.enabled is True
+        assert config.client_secret_encrypted is not None
+        assert decrypt_sso_client_secret(config.client_secret_encrypted, sso_secret_settings) == _TEST_PLAINTEXT_SECRET
+
+    async def test_incomplete_config_cannot_be_enabled(self, sso_async_session):
+        with pytest.raises(ValueError, match="require a client_id"):
+            SSOConfig(display_name="Incomplete", enabled=True)
+
+        config = SSOConfig(display_name="Initially disabled")
+        sso_async_session.add(config)
+        await sso_async_session.commit()
+        config.enabled = True
+
+        with pytest.raises(ValueError, match="require a client_id"):
+            await sso_async_session.commit()
+
+    async def test_create_schema_rejects_incomplete_enabled_config(self):
+        with pytest.raises(ValidationError, match="require a client_id"):
+            SSOConfigCreate(display_name="Incomplete", enabled=True)
+
+    async def test_standard_model_validation_is_safe_and_strict(self):
+        config = SSOConfig.model_validate({"display_name": "Validated"})
+        assert config.display_name == "Validated"
+        assert config.enabled is False
+
+        with pytest.raises(ValidationError, match="display_name"):
+            SSOConfig.model_validate({})
+        with pytest.raises(ValidationError, match="valid string"):
+            SSOConfig.model_validate({"display_name": 123})
+        with pytest.raises(ValidationError, match="extra_forbidden"):
+            SSOConfig.model_validate(
+                {
+                    "display_name": "Malformed",
+                    "provider_settings": {"protocol": "oidc", "unexpected": True},
+                }
+            )
+
     async def test_display_name_update_preserves_profile_connection(self, sso_async_session):
         """Changing the label does not change the profile's stable connection identity."""
         user = User(username="stable_connection_user", password=_TEST_PASSWORD)
@@ -362,6 +471,11 @@ class TestSSOConfig:
         with pytest.raises(ValueError, match="lowercase letters"):
             SSOConfig(slug="Not URL safe!", display_name="Invalid")
 
+    async def test_invalid_slug_assignment_is_rejected_before_insert(self):
+        config = SSOConfig(display_name="Pending")
+        with pytest.raises(ValueError, match="lowercase letters"):
+            config.slug = "INVALID!"
+
     async def test_provider_settings_reject_protocol_mismatch(self):
         with pytest.raises(ValueError, match="does not match"):
             SSOConfig(
@@ -407,3 +521,8 @@ class TestSSOConfig:
             "jwks_uri",
             "issuer",
         }.isdisjoint(columns.keys())
+
+    async def test_nested_provider_settings_are_immutable(self):
+        config = SSOConfig(display_name="Immutable settings")
+        with pytest.raises(ValidationError, match="frozen_instance"):
+            config.provider_settings.client_id = "new-client-id"
