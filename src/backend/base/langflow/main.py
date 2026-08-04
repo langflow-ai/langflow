@@ -21,7 +21,7 @@ from fastapi_pagination import add_pagination
 from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
-from lfx.observability import instrument_fastapi_app
+from lfx.observability import instrument_fastapi_app, start_event_loop_lag_monitor, stop_event_loop_lag_monitor
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -42,6 +42,7 @@ from langflow.services.database.models.deployment.exceptions import DeploymentGu
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
     get_background_execution_service,
+    get_db_service,
     get_queue_service,
     get_service,
     get_settings_service,
@@ -49,6 +50,7 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.schema import ServiceType
+from langflow.services.telemetry.opentelemetry import instrument_db_pool
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
@@ -178,6 +180,9 @@ def get_lifespan(*, fix_migration=False, version=None):
         sync_flows_from_fs_task = None
         mcp_init_task = None
         models_dev_refresh_task = None
+        # Same reason as ``temp_dirs`` below: the shutdown path stops this, so it must exist
+        # even when startup fails before it is created.
+        lag_monitor = None
         # Bind ``temp_dirs`` before the ``try`` so the shutdown cleanup in the
         # ``finally`` block (which iterates it) never raises ``UnboundLocalError``
         # when startup fails before bundle loading assigns it below. Otherwise an
@@ -218,6 +223,19 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
+            # Surface env-driven pgVector so operators can confirm the deployment
+            # snap-configured to Postgres as the default Knowledge Base vector store.
+            try:
+                from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured
+
+                if postgres_env_configured():
+                    await logger.ainfo(
+                        "pgVector detected via PGVECTOR_CONNECTION_STRING — "
+                        "default Knowledge Base vector store is Postgres (pgvector)."
+                    )
+            except Exception as exc:  # noqa: BLE001 — never block startup on a detection log
+                await logger.adebug(f"pgVector detection skipped: {exc}")
+
             # Start the telemetry writer (no-op when telemetry_writer_enabled is False).
             try:
                 from langflow.services.deps import get_telemetry_writer_service
@@ -245,6 +263,16 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await audit_log_cleanup_worker.start()
             except Exception as exc:  # noqa: BLE001 — never block startup on cleanup scheduling
                 await logger.awarning(f"Failed to start authz audit-log cleanup worker: {exc}")
+
+            # Keep the default OSS provider ceiling coherent across backend
+            # worker processes after an administrator commits a replacement.
+            # This worker is part of policy enforcement, so a scheduling failure
+            # must fail startup rather than leave a worker stale indefinitely.
+            from langflow.services.task.model_provider_policy_refresh import (
+                model_provider_policy_refresh_worker,
+            )
+
+            await model_provider_policy_refresh_worker.start()
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")
@@ -559,6 +587,22 @@ def get_lifespan(*, fix_migration=False, version=None):
             await start_streamable_http_manager()
             await start_project_task_group()
 
+            # Started in the lifespan rather than with the rest of the telemetry setup: it
+            # needs the running loop, and under gunicorn the services are initialized in the
+            # master before the fork, so a task created there would not exist in the workers.
+            # Best-effort, like every other optional subsystem here: instrumentation must
+            # never be the reason the server fails to boot.
+            try:
+                lag_monitor = start_event_loop_lag_monitor(telemetry_service.ot.meter_provider)
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(f"Event loop lag monitor failed to start: {e}")
+            # Pool saturation is read from the live engine at collection time, so it has to be
+            # registered after the database service exists.
+            try:
+                instrument_db_pool(telemetry_service.ot.meter_provider, get_db_service().engine)
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(f"DB pool metrics failed to register: {e}")
+
             yield
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")
@@ -584,6 +628,11 @@ def get_lifespan(*, fix_migration=False, version=None):
             # CRITICAL: Cleanup MCP sessions FIRST, before any other shutdown logic.
             # This ensures MCP subprocesses are killed even if shutdown is interrupted.
             await cleanup_mcp_sessions()
+
+            # After the MCP cleanup above, deliberately: stopping the sampler awaits a
+            # cancellation, and parking there first would both delay that guarantee and give
+            # the supervisor's own cancellation somewhere to be swallowed.
+            await stop_event_loop_lag_monitor(lag_monitor)
 
             # Clean shutdown with progress indicator
             # Create shutdown progress (show verbose timing if log level is DEBUG)
@@ -633,6 +682,14 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await audit_log_cleanup_worker.stop()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop authz audit-log cleanup worker: {e}")
+                    try:
+                        from langflow.services.task.model_provider_policy_refresh import (
+                            model_provider_policy_refresh_worker,
+                        )
+
+                        await model_provider_policy_refresh_worker.stop()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop model-provider policy refresh worker: {e}")
 
                     # Cancel background tasks
                     tasks_to_cancel = []

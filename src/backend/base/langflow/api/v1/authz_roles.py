@@ -15,7 +15,11 @@ from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_roles import RoleCreate, RoleRead, RoleUpdate
-from langflow.services.authorization.lifecycle import safe_identity_mutation_committed, stage_identity_mutation
+from langflow.services.authorization.lifecycle import (
+    acquire_identity_mutation_lock,
+    safe_identity_mutation_committed,
+    stage_identity_mutation,
+)
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
 from langflow.services.deps import get_authorization_service
@@ -109,6 +113,12 @@ async def create_role(
 ) -> RoleRead:
     """Create a custom (non-system) role. Superuser-only."""
     _require_superuser(current_user)
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(
+        authorization_service,
+        session,
+        kind=AuthorizationMutationKind.ROLE_CREATED,
+    )
 
     if payload.parent_role_id is not None:
         parent = await session.get(AuthzRole, payload.parent_role_id)
@@ -127,7 +137,6 @@ async def create_role(
         created_by=current_user.id,
     )
     session.add(role)
-    authorization_service = get_authorization_service()
     mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.ROLE_CREATED,
         entity_id=role.id,
@@ -171,6 +180,13 @@ async def update_role(
 ) -> RoleRead:
     """Update fields on a custom role. System roles are read-only."""
     _require_superuser(current_user)
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(
+        authorization_service,
+        session,
+        kind=AuthorizationMutationKind.ROLE_UPDATED,
+        entity_id=role_id,
+    )
 
     role = await session.get(AuthzRole, role_id)
     if role is None:
@@ -244,8 +260,6 @@ async def update_role(
         policy_relevant_fields=tuple(sorted(fields_set & {"name", "permissions", "parent_role_id"})),
         previous_identifier=previous_name if role.name != previous_name else None,
     )
-    authorization_service = get_authorization_service()
-
     try:
         await session.flush()
         await stage_identity_mutation(authorization_service, session, mutation)
@@ -284,6 +298,13 @@ async def delete_role(
     (delete the assignments first).
     """
     _require_superuser(current_user)
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(
+        authorization_service,
+        session,
+        kind=AuthorizationMutationKind.ROLE_DELETED,
+        entity_id=role_id,
+    )
 
     role = await session.get(AuthzRole, role_id)
     if role is None:
@@ -312,7 +333,6 @@ async def delete_role(
         policy_relevant_fields=("name", "permissions", "parent_role_id"),
         previous_identifier=role_name,
     )
-    authorization_service = get_authorization_service()
     await session.delete(role)
     await session.flush()
     await stage_identity_mutation(authorization_service, session, mutation)

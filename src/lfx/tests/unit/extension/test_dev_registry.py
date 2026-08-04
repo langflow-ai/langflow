@@ -66,6 +66,26 @@ def _scaffold(tmp_path: Path, name: str = "my-ext") -> Path:
     return target
 
 
+def _add_bundle(extension_dir: Path, bundle_name: str) -> None:
+    manifest_path = extension_dir / "extension.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["bundles"].append(
+        {
+            "name": bundle_name,
+            "path": f"components/{bundle_name}",
+            "display_name": bundle_name.title(),
+        }
+    )
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    bundle_dir = extension_dir / "components" / bundle_name
+    bundle_dir.mkdir(parents=True)
+    (bundle_dir / "__init__.py").write_text("", encoding="utf-8")
+    (bundle_dir / "secondary.py").write_text(
+        "from lfx.custom import Component\n\nclass SecondaryComponent(Component):\n    display_name = 'Secondary'\n",
+        encoding="utf-8",
+    )
+
+
 # ---------------------------------------------------------------------------
 # state_file_path / register / list
 # ---------------------------------------------------------------------------
@@ -178,6 +198,18 @@ def test_load_dev_extensions_returns_loaded_components(tmp_path: Path) -> None:
     assert any(c.class_name == "MyExtHelloComponent" for c in result.components)
 
 
+def test_load_dev_extensions_loads_every_manifest_bundle(tmp_path: Path) -> None:
+    extension_dir = _scaffold(tmp_path)
+    _add_bundle(extension_dir, "secondary")
+    register_dev_extension(extension_dir)
+
+    results = load_dev_extensions()
+
+    assert [result.bundle for result in results] == ["my_ext", "secondary"]
+    assert all(result.ok for result in results)
+    assert all(result.components for result in results)
+
+
 def test_load_dev_extensions_surfaces_missing_directory(tmp_path: Path) -> None:
     extension_dir = _scaffold(tmp_path)
     register_dev_extension(extension_dir)
@@ -223,6 +255,17 @@ def test_dev_extension_component_paths_returns_bundle_dir(tmp_path: Path) -> Non
     assert len(paths) == 1
     # Resolved path should point inside the extension's components dir.
     assert paths[0].is_relative_to(extension_dir.resolve())
+
+
+def test_dev_extension_component_paths_returns_every_bundle_dir(tmp_path: Path) -> None:
+    extension_dir = _scaffold(tmp_path)
+    _add_bundle(extension_dir, "secondary")
+    register_dev_extension(extension_dir)
+
+    paths, errors = dev_extension_component_paths()
+
+    assert errors == []
+    assert {path.name for path in paths} == {"my_ext", "secondary"}
 
 
 def test_dev_extension_component_paths_surfaces_missing_dir(tmp_path: Path) -> None:

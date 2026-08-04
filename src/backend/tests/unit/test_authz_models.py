@@ -11,6 +11,7 @@ from langflow.services.database.models.auth import (
     AuthzEditLock,
     AuthzRole,
     AuthzRoleAssignment,
+    AuthzRoleAssignmentGrant,
     AuthzShare,
     AuthzTeam,
     AuthzTeamMember,
@@ -104,6 +105,66 @@ async def test_authz_role_assignment_persists(authz_async_session: AsyncSession)
     assert stored.assigned_by == assigner.id
     assert stored.domain_type == "global"
     assert stored.domain_id is None
+
+
+@pytest.mark.anyio
+async def test_role_assignment_grants_preserve_independent_manual_and_idp_sources(
+    authz_async_session: AsyncSession,
+):
+    user = User(username="sourced_assignee", password=_TEST_PASSWORD)
+    actor = User(username="sourced_actor", password=_TEST_PASSWORD)
+    role = AuthzRole(name="sourced_editor", permissions=["flow:write"])
+    authz_async_session.add_all([user, actor, role])
+    await authz_async_session.commit()
+
+    assignment = AuthzRoleAssignment(user_id=user.id, role_id=role.id)
+    authz_async_session.add(assignment)
+    await authz_async_session.flush()
+    authz_async_session.add_all(
+        [
+            AuthzRoleAssignmentGrant(
+                assignment_id=assignment.id,
+                source_kind="manual",
+                administrative_actor=actor.id,
+            ),
+            AuthzRoleAssignmentGrant(
+                assignment_id=assignment.id,
+                source_kind="idp",
+                provider_id="customer-idp",
+                external_group="corp_dev",
+            ),
+        ]
+    )
+    await authz_async_session.commit()
+
+    grants = (
+        await authz_async_session.exec(
+            select(AuthzRoleAssignmentGrant).where(AuthzRoleAssignmentGrant.assignment_id == assignment.id)
+        )
+    ).all()
+    assert {(grant.source_kind, grant.provider_id, grant.external_group) for grant in grants} == {
+        ("manual", None, None),
+        ("idp", "customer-idp", "corp_dev"),
+    }
+
+
+@pytest.mark.anyio
+async def test_role_assignment_grant_rejects_duplicate_manual_source(authz_async_session: AsyncSession):
+    from sqlalchemy.exc import IntegrityError
+
+    user = User(username="duplicate_source_user", password=_TEST_PASSWORD)
+    role = AuthzRole(name="duplicate_source_role", permissions=[])
+    authz_async_session.add_all([user, role])
+    await authz_async_session.commit()
+    assignment = AuthzRoleAssignment(user_id=user.id, role_id=role.id)
+    authz_async_session.add(assignment)
+    await authz_async_session.flush()
+    authz_async_session.add(AuthzRoleAssignmentGrant(assignment_id=assignment.id, source_kind="manual"))
+    await authz_async_session.commit()
+    authz_async_session.add(AuthzRoleAssignmentGrant(assignment_id=assignment.id, source_kind="manual"))
+    with pytest.raises(IntegrityError):
+        await authz_async_session.commit()
+    await authz_async_session.rollback()
 
 
 @pytest.mark.anyio
@@ -617,6 +678,24 @@ async def test_authz_audit_log_persists(authz_async_session: AsyncSession):
     assert stored.actor_type == "api_key"
     assert stored.actor_id == actor_id
     assert stored.timestamp is not None
+
+
+@pytest.mark.anyio
+async def test_authz_audit_log_accepts_skipped_reconciliation(authz_async_session: AsyncSession):
+    """Skipped reconciliation is a first-class, queryable audit outcome."""
+    entry = AuthzAuditLog(
+        action="directory_membership:reconcile",
+        resource_type="user",
+        result="skip",
+        details={"reason": "overage"},
+    )
+    authz_async_session.add(entry)
+    await authz_async_session.commit()
+
+    stored = (await authz_async_session.exec(select(AuthzAuditLog).where(AuthzAuditLog.id == entry.id))).first()
+    assert stored is not None
+    assert stored.result == "skip"
+    assert stored.details == {"reason": "overage"}
 
 
 def test_authz_audit_actor_identity_has_no_fk_and_composite_timestamp_index():

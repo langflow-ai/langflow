@@ -17,6 +17,7 @@ from lfx.graph.flow_builder.builder import build_flow_from_spec
 from lfx.io import MessageTextInput, Output
 from lfx.log.logger import logger
 from lfx.schema import Data
+from lfx.services.model_provider_policy import ModelProviderPolicyError
 
 from ._state import (
     _current_flow_id_var,
@@ -126,7 +127,29 @@ class BuildFlowFromSpec(Component):
         # Pass the user-aware registry so user-registered Components
         # (created via Layer-2 validated generation) are addressable in
         # the spec by their class name.
-        result = build_flow_from_spec(self.spec, registry=_load_registry_user_aware())
+        registry = _load_registry_user_aware()
+        from .mutate_tools import (
+            _model_providers_in_flow,
+            _model_providers_in_flow_spec,
+            _require_allowed_model_providers,
+        )
+
+        try:
+            from lfx.graph.flow_builder.spec import parse_flow_spec
+
+            parse_flow_spec(self.spec)
+        except ValueError:
+            # Preserve the builder's established invalid-spec error contract.
+            configured_providers = set()
+        else:
+            configured_providers = _model_providers_in_flow_spec(self.spec, registry)
+        try:
+            _require_allowed_model_providers(configured_providers)
+        except ModelProviderPolicyError as exc:
+            logger.warning("build_flow blocked by model-provider policy: %s", exc)
+            return Data(data={"error": str(exc), "text": str(exc)})
+
+        result = build_flow_from_spec(self.spec, registry=registry)
         if "error" in result:
             error_msg = f"Flow build failed: {result['error']}"
             if "details" in result:
@@ -134,6 +157,11 @@ class BuildFlowFromSpec(Component):
             logger.warning("build_flow_from_spec failed: %s", result["error"])
             result["text"] = error_msg
         elif "flow" in result:
+            try:
+                _require_allowed_model_providers(_model_providers_in_flow(result["flow"], registry))
+            except ModelProviderPolicyError as exc:
+                logger.warning("built flow blocked by model-provider policy: %s", exc)
+                return Data(data={"error": str(exc), "text": str(exc)})
             orphan_ids = _find_orphan_nodes(result["flow"])
             # A single-component flow has no edges by definition — it is a
             # valid standalone flow (e.g. the agent built one component to
@@ -312,7 +340,7 @@ class RunFlow(Component):
                     requested.get("api_key_var"),
                     overwrite_existing_model=True,
                 )
-            elif run_provider and run_model_name:
+            elif run_provider and run_model_name and run_model.get("allow_configuration", True):
                 # No explicit request: only FILL an Agent that has no model with
                 # the assistant's verified runtime model (preserve a set one).
                 inject_model_into_flow(

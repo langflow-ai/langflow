@@ -159,7 +159,7 @@ describe("useCreateMemoryModal", () => {
     );
   });
 
-  it("defaults to local Chroma and includes backend fields in the payload", () => {
+  it("omits the implicit Chroma type so the server can choose its default", () => {
     const { result } = renderHook(() =>
       useCreateMemoryModal({ flowId: "flow-1", onClose: jest.fn() }),
     );
@@ -184,7 +184,7 @@ describe("useCreateMemoryModal", () => {
 
     expect(mockMutate).toHaveBeenCalledWith(
       expect.objectContaining({
-        backend_type: "chroma",
+        backend_type: undefined,
         backend_config: {},
       }),
     );

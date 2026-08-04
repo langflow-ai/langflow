@@ -1,4 +1,4 @@
-import { expect } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
@@ -16,9 +16,18 @@ withEventDeliveryModes(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page
-      .getByRole("heading", { name: "Research Translation Loop" })
-      .click();
+    const templateHeading = page.getByRole("heading", {
+      name: "Research Translation Loop",
+    });
+    const templateAvailable = await templateHeading
+      .waitFor({ state: "visible", timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    test.skip(
+      !templateAvailable,
+      "Research Translation Loop requires the optional lfx-arxiv bundle",
+    );
+    await templateHeading.click();
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,

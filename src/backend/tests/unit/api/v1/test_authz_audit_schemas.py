@@ -167,6 +167,46 @@ async def test_audit_query_filters_and_returns_first_class_actor_fields():
 
 
 @pytest.mark.anyio
+async def test_audit_query_filters_skipped_reconciliation_results():
+    from langflow.api.v1.authz_audit import list_audit_log
+
+    row = SimpleNamespace(
+        id=uuid4(),
+        user_id=uuid4(),
+        actor_type="user",
+        actor_id=uuid4(),
+        action="directory_membership:reconcile",
+        resource_type="user",
+        resource_id=uuid4(),
+        result="skip",
+        details={"reason": "overage"},
+        timestamp=datetime.now(timezone.utc),
+    )
+    session = _Session(row)
+
+    result = await list_audit_log(
+        session=session,
+        _admin=SimpleNamespace(),
+        user_id=None,
+        actor_type=None,
+        actor_id=None,
+        resource_type=None,
+        resource_id=None,
+        action="directory_membership:reconcile",
+        result="skip",
+        since=None,
+        until=None,
+        page=1,
+        size=50,
+    )
+
+    assert result.items[0].result == "skip"
+    assert result.items[0].details == {"reason": "overage"}
+    assert "authz_audit_log.action" in str(session.statements[0])
+    assert "authz_audit_log.result" in str(session.statements[0])
+
+
+@pytest.mark.anyio
 async def test_unknown_actor_filter_includes_legacy_null_and_explicit_unknown_rows():
     from langflow.api.v1.authz_audit import list_audit_log
 

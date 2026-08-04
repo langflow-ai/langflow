@@ -112,7 +112,7 @@ jest.mock("@/components/common/shadTooltipComponent", () => ({
 // Store the onValueChange function so we can call it in tests
 let mockOnValueChange: ((value: string) => void) | undefined;
 
-jest.mock("@/components/ui/select-custom", () => ({
+jest.mock("@/components/ui/select", () => ({
   Select: ({
     children,
     onValueChange,

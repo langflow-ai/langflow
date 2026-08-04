@@ -17,7 +17,10 @@ degrades to a no-op when it is absent, so bare lfx imports this module without c
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import os
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -38,11 +41,23 @@ APPLICATION_TRACER_NAME = "langflow.observability"
 
 # The meter name the application records its own counters and histograms on. Kept as
 # "langflow" because that is the scope langflow's custom metrics already use, and the metric
-# filter must allowlist it. Under bare ``lfx serve`` nothing records on this meter, so
-# allowlisting it is simply harmless.
+# filter must allowlist it. Under bare ``lfx serve`` the only thing recording here is the
+# event-loop lag sampler below; langflow's own counters and gauges are additional.
 APPLICATION_METER_NAME = "langflow"
 
 DEFAULT_SERVICE_NAME = "langflow"
+
+# Event-loop scheduling delay. Sampled rather than instrumented: there is no hook that
+# reports "the loop was blocked", so the only way to see it is to ask for a known sleep and
+# measure how late the answer comes back.
+EVENT_LOOP_LAG_METRIC = "langflow_event_loop_lag_seconds"
+EVENT_LOOP_LAG_INTERVAL_SECONDS = 0.25
+
+# Explicit buckets, because the SDK default boundaries start (0, 5, 10, 25, ...) and are
+# shaped for milliseconds. Recording seconds against them puts a healthy 0.2ms loop and a
+# catastrophic 4s stall in the same bucket, which makes the histogram unable to answer the
+# one question it exists for. These span "healthy" (sub-millisecond) to "the loop is gone".
+EVENT_LOOP_LAG_BUCKETS_SECONDS = (0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
 SUPPORTED_OTLP_PROTOCOLS = ("grpc", "http/protobuf")
 
 # The endpoint vars that mean "an operator wants to export". Any one of these being set is the
@@ -541,3 +556,65 @@ def instrument_fastapi_app(app: FastAPI) -> None:
     # preflight). Patch the helper before instrumenting.
     patch_otel_fastapi_route_details()
     FastAPIInstrumentor.instrument_app(app)
+
+
+def start_event_loop_lag_monitor(
+    meter_provider: MeterProvider | None,
+    *,
+    interval: float = EVENT_LOOP_LAG_INTERVAL_SECONDS,
+) -> asyncio.Task | None:
+    """Record event-loop scheduling delay as a histogram on the running loop.
+
+    This is the async-specific failure that nothing else on a dashboard explains: one
+    blocking call on the loop thread stalls every endpoint at once, while CPU, memory and GC
+    stay flat, so the process metrics report a healthy service while it is on fire. Sleeping
+    a known interval and measuring how late we actually wake is the cheapest signal that
+    separates "blocked" from "genuinely busy".
+
+    Carries no attributes on purpose: the value describes this process, and unbounded labels
+    are what make metrics expensive.
+
+    Returns the task so the caller can stop it on shutdown, or None when there is no meter
+    provider to record on (nothing configured, or OpenTelemetry not installed).
+    """
+    if not _OTEL_AVAILABLE or meter_provider is None:
+        return None
+
+    histogram = meter_provider.get_meter(APPLICATION_METER_NAME).create_histogram(
+        EVENT_LOOP_LAG_METRIC,
+        unit="s",
+        description="How much later than requested the event loop resumed a sleeping task.",
+        explicit_bucket_boundaries_advisory=list(EVENT_LOOP_LAG_BUCKETS_SECONDS),
+    )
+
+    async def _monitor() -> None:
+        while True:
+            started = time.perf_counter()
+            await asyncio.sleep(interval)
+            try:
+                # perf_counter is monotonic, so drift cannot go negative from a clock change;
+                # clamp anyway so a pathological scheduler cannot record a negative latency.
+                histogram.record(max(time.perf_counter() - started - interval, 0.0))
+            except Exception:  # noqa: BLE001 - a sampler must not take the app down
+                # Without this the task dies silently (the metric simply stops) and the
+                # exception waits on the task until shutdown awaits it, where it would
+                # replace whatever was actually shutting the app down.
+                logger.exception("Event loop lag sampler failed; continuing without this sample")
+
+    return asyncio.create_task(_monitor(), name="langflow-event-loop-lag")
+
+
+async def stop_event_loop_lag_monitor(task: asyncio.Task | None) -> None:
+    """Cancel the monitor started by :func:`start_event_loop_lag_monitor`. Safe with None."""
+    if task is None:
+        return
+
+    async def _wait_for_monitor() -> None:
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    task.cancel()
+    # The waiter absorbs only the monitor's expected cancellation. Shielding it keeps
+    # cancellation of the calling lifespan task from being forwarded into that waiter
+    # and mistaken for the monitor's cancellation.
+    await asyncio.shield(_wait_for_monitor())

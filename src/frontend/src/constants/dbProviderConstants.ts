@@ -36,7 +36,7 @@ export type DBProviderId =
 
 export type AvailableDBProviderId = Extract<
   DBProviderId,
-  "chroma" | "chroma_cloud" | "opensearch"
+  "chroma" | "chroma_cloud" | "opensearch" | "postgres"
 >;
 
 export interface DBProviderTextField {
@@ -223,11 +223,16 @@ export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
     configFields: [],
   },
   {
+    // Environment-driven: pgVector is configured from the server's
+    // PGVECTOR_CONNECTION_STRING, not from the UI. No editable fields — the
+    // card only reflects whether it's reachable (via test-connection) and lets
+    // the user make it active, exactly like Chroma Local.
     id: "postgres",
     label: "Postgres pgvector",
-    description: "Postgres-backed vector storage.",
+    description:
+      "Postgres pgvector is set up automatically from your server's environment configuration — there's nothing to enter here. When it's available, your knowledge bases and memory bases use it automatically.",
     icon: "Postgres",
-    status: "coming_soon",
+    status: "available",
     configFields: [],
   },
 ];
@@ -280,6 +285,7 @@ export function getActiveDBProvider(
   );
   if (configuredProvider === "opensearch") return "opensearch";
   if (configuredProvider === "chroma_cloud") return "chroma_cloud";
+  if (configuredProvider === "postgres") return "postgres";
   return "chroma";
 }
 
@@ -367,6 +373,7 @@ export function resolveUIBackendType(
   backendConfig: Record<string, unknown> | undefined,
 ): AvailableDBProviderId {
   if (backendType === "opensearch") return "opensearch";
+  if (backendType === "postgres") return "postgres";
   // Already a frontend UI ID — pass through directly.
   if (backendType === "chroma_cloud") return "chroma_cloud";
   // Server always stores "chroma" for both modes; mode discriminates.
@@ -381,6 +388,16 @@ export function isDBProviderConfigured(
 ): boolean {
   if (providerType === "chroma") {
     return true;
+  }
+
+  // pgVector has no UI fields. It becomes explicitly selectable only after the
+  // DB Providers panel has successfully tested and activated it; the server
+  // still re-validates connectivity during creation.
+  if (providerType === "postgres") {
+    return (
+      getGlobalVariableValue(variables, ACTIVE_DB_PROVIDER_VARIABLE) ===
+      "postgres"
+    );
   }
 
   const provider = getDBProviderOption(providerType);
