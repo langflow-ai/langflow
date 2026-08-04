@@ -475,6 +475,89 @@ class TestRunCodeInSandbox:
         assert "print(math.pi)" in sent
         assert sent.index("import math") < sent.index("print(math.pi)")
 
+    def test_shutdown_closes_run_submitted_before_loop_executed_it(
+        self, monkeypatch, fresh_executor, fake_exec_sandbox
+    ):
+        """A run accepted before shutdown is closed even before its coroutine runs.
+
+        The pre-creation-lock window: the loop is frozen so the submitted run
+        coroutine cannot execute; the shutdown submitted afterwards must queue
+        behind it and close the scheduler that run creates.
+        """
+        import threading
+        import time
+
+        from lfx.utils.sandbox import shutdown_sandbox
+
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
+
+        # Create the loop, then freeze it so nothing submitted can execute.
+        with fresh_executor._lock:
+            loop = fresh_executor._ensure_loop_locked()
+        release = threading.Event()
+        frozen = threading.Event()
+
+        def freeze():
+            frozen.set()
+            release.wait(timeout=5)
+
+        loop.call_soon_threadsafe(freeze)
+        assert frozen.wait(timeout=5)
+
+        results = []
+        worker = threading.Thread(target=lambda: results.append(run_code_in_sandbox("print('hi')")), daemon=True)
+        worker.start()
+        # Wait for the worker to have SUBMITTED (it then blocks in
+        # future.result); the loop is still frozen, so no scheduler exists yet.
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            with fresh_executor._lock:
+                submitted = fresh_executor._loop is loop and fresh_executor._scheduler_lock is not None
+            if submitted and worker.is_alive():
+                break
+            time.sleep(0.001)
+        assert not fake_exec_sandbox.instances
+
+        shutdown_pathway = threading.Thread(target=shutdown_sandbox, daemon=True)
+        shutdown_pathway.start()
+        time.sleep(0.01)  # let shutdown submit its close behind the run
+        release.set()
+        worker.join(timeout=5)
+        shutdown_pathway.join(timeout=5)
+        assert not worker.is_alive()
+        assert not shutdown_pathway.is_alive()
+        # The run executed first (FIFO), created a scheduler, and the queued
+        # close then closed it — nothing left open.
+        assert fake_exec_sandbox.instances
+        assert fake_exec_sandbox.instances[0].exited
+        assert fresh_executor._scheduler is None
+        assert not fresh_executor._startup_complete
+
+    def test_run_after_shutdown_gets_startup_grace(self, monkeypatch, fake_exec_sandbox):
+        """A cold start following a shutdown must run under the startup margin.
+
+        Reproduces the compressed-margin scenario: with the steady-state
+        grace squeezed to zero, a post-shutdown run only succeeds because it
+        is classified as a first execution (startup grace), proving the
+        readiness capture and shutdown are ordered.
+        """
+        from lfx.utils.sandbox import shutdown_sandbox
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: _settings("exec-sandbox", sandbox_timeout_seconds=0),
+        )
+        monkeypatch.setattr(sandbox_module, "_RUN_GRACE_SECONDS", 0)
+        monkeypatch.setattr(sandbox_module, "_STARTUP_GRACE_SECONDS", 5)
+        # Cold start (creation sleeps 20ms): succeeds only under startup grace.
+        assert run_code_in_sandbox("print('hi')").success
+        shutdown_sandbox()
+        # Post-shutdown run is another cold start and must again be
+        # classified as first execution; with stale steady-state grace the
+        # 0-second deadline would fail before creation completes.
+        assert run_code_in_sandbox("print('hi')").success
+        assert len(fake_exec_sandbox.instances) == 2
+
     def test_shutdown_is_a_barrier_for_inflight_creation(self, monkeypatch, fresh_executor, fake_exec_sandbox):
         """A shutdown overlapping Scheduler.__aenter__ must wait and then close it.
 

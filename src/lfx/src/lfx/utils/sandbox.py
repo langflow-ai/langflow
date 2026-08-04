@@ -316,28 +316,35 @@ class _ExecSandboxExecutor:
         # marking the NEW generation's startup complete.
         self._generation = 0
 
-    def _ensure_loop(self) -> asyncio.AbstractEventLoop:
-        with self._lock:
-            if self._loop is None or self._thread is None or not self._thread.is_alive():
-                # A dead loop thread (first use, or a fork inheriting this
-                # module-global) invalidates everything loop-affine: the
-                # scheduler's VM transports and the asyncio lock lived on the
-                # old loop, so drop them and start fresh rather than reuse
-                # state bound to a loop that no longer runs.
-                self._scheduler = None
-                self._scheduler_lock = None
-                self._startup_complete = False
-                self._generation += 1
-                loop = asyncio.new_event_loop()
-                thread = threading.Thread(
-                    target=loop.run_forever,
-                    name="lfx-sandbox-loop",
-                    daemon=True,
-                )
-                thread.start()
-                self._loop = loop
-                self._thread = thread
-            return self._loop
+    def _ensure_loop_locked(self) -> asyncio.AbstractEventLoop:
+        """Create/return the loop. Caller MUST hold ``self._lock``."""
+        if self._loop is None or self._thread is None or not self._thread.is_alive():
+            # A dead loop thread (first use, or a fork inheriting this
+            # module-global) invalidates everything loop-affine: the
+            # scheduler's VM transports and the asyncio lock lived on the
+            # old loop, so drop them and start fresh rather than reuse
+            # state bound to a loop that no longer runs.
+            self._scheduler = None
+            self._startup_complete = False
+            self._generation += 1
+            # Create the creation lock EAGERLY, together with the loop: it
+            # must exist by the time run() releases self._lock, so a
+            # subsequent _shutdown() always finds it and queues the close
+            # behind any submitted-but-not-yet-executed run instead of
+            # returning early and leaving that run's scheduler open.
+            # (asyncio.Lock binds to a loop only on first acquire, so
+            # constructing it off-loop here is safe on Python 3.10+.)
+            self._scheduler_lock = asyncio.Lock()
+            loop = asyncio.new_event_loop()
+            thread = threading.Thread(
+                target=loop.run_forever,
+                name="lfx-sandbox-loop",
+                daemon=True,
+            )
+            thread.start()
+            self._loop = loop
+            self._thread = thread
+        return self._loop
 
     async def _ensure_scheduler(self, *, allow_software_emulation: bool):
         # Runs ON the sandbox loop, so scheduler state is loop-affine by
@@ -405,18 +412,25 @@ class _ExecSandboxExecutor:
         call repeatedly and mid-process: state is cleared under the creation
         lock, so a subsequent execution starts a fresh Scheduler.
 
-        Gated on the creation lock existing — not on ``_scheduler`` — because
-        ``_scheduler`` stays None while ``Scheduler.__aenter__`` is still in
-        flight; the submitted close coroutine then waits behind the creation
-        lock and closes the new scheduler once creation finishes. If that
-        takes longer than the wait timeout, the coroutine keeps running on
-        the loop and still performs the close as soon as creation completes.
+        The close is SUBMITTED under ``self._lock`` — the same mutex run()
+        holds across readiness capture and run submission — so shutdown and
+        run are totally ordered from any thread: a run accepted before the
+        shutdown has its coroutine queued (and, with the eagerly created
+        creation lock, the close queues behind it and closes whatever it
+        creates); a run accepted after the shutdown observes the cleared
+        state and performs a fresh cold start with startup grace. Only the
+        wait happens outside the mutex, so a slow close never blocks new
+        submissions. If the close outlives the wait timeout, the coroutine
+        keeps running on the loop and still performs the close as soon as
+        in-flight creation completes.
         """
-        loop = self._loop
-        if self._scheduler_lock is None or loop is None or loop.is_closed():
-            return
+        with self._lock:
+            loop = self._loop
+            if self._scheduler_lock is None or loop is None or loop.is_closed():
+                return
+            future = asyncio.run_coroutine_threadsafe(self._close_scheduler(), loop)
         with contextlib.suppress(Exception):
-            asyncio.run_coroutine_threadsafe(self._close_scheduler(), loop).result(timeout=10)
+            future.result(timeout=10)
 
     async def _run_on_loop(
         self,
@@ -485,25 +499,36 @@ class _ExecSandboxExecutor:
             # support) runs on the loop in _ensure_scheduler.
             raise SandboxUnavailableError(_TCG_REFUSAL_MSG)
 
-        loop = self._ensure_loop()
-        # Capture cold-start state BEFORE submitting, from the readiness flag
-        # rather than _scheduler: the scheduler becomes non-None before the
-        # first run finishes its base-image download / VM boot, so a second
-        # concurrent caller would otherwise get the steady-state margin while
-        # startup work is still in flight.
-        is_first_execution = not self._startup_complete
-        future = asyncio.run_coroutine_threadsafe(
-            self._run_on_loop(
-                code,
-                timeout_seconds=settings.timeout_seconds,
-                memory_mb=settings.memory_mb,
-                allow_network=settings.allow_network,
-                allowed_domains=settings.allowed_domains,
-                allow_software_emulation=settings.allow_software_emulation,
-                env=env,
-            ),
-            loop,
-        )
+        # Loop acquisition, readiness capture, and submission form one
+        # critical section under the executor's thread mutex, totally ordered
+        # against _shutdown() (which submits its close under the same mutex).
+        # This closes two races: a shutdown can no longer slip between the
+        # readiness read and the submission (stale steady-state grace for
+        # what becomes a cold start), and a shutdown can no longer observe
+        # partially initialized state for an already-accepted run — the loop
+        # and its creation lock are created together, so an accepted run
+        # always leaves something for the close to queue behind.
+        #
+        # The readiness flag is read here rather than _scheduler because the
+        # scheduler becomes non-None before the first run finishes its
+        # base-image download / VM boot; a second concurrent caller would
+        # otherwise get the steady-state margin while startup work is still
+        # in flight.
+        with self._lock:
+            loop = self._ensure_loop_locked()
+            is_first_execution = not self._startup_complete
+            future = asyncio.run_coroutine_threadsafe(
+                self._run_on_loop(
+                    code,
+                    timeout_seconds=settings.timeout_seconds,
+                    memory_mb=settings.memory_mb,
+                    allow_network=settings.allow_network,
+                    allowed_domains=settings.allowed_domains,
+                    allow_software_emulation=settings.allow_software_emulation,
+                    env=env,
+                ),
+                loop,
+            )
         # The VM enforces timeout_seconds internally (exit_code -1 on
         # timeout); the outer margin only guards against a wedged scheduler so
         # the component thread cannot hang forever. The first execution gets a
