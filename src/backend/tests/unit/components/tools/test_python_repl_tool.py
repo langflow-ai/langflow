@@ -193,6 +193,77 @@ class TestPythonREPLComponentSecurity:
         assert "SHOULD_NOT_RUN" not in str(data)
 
 
+class TestPythonREPLToolComponentToolNameDescription(ComponentTestBaseWithoutClient):
+    """build_tool must honor the "Tool Name" / "Tool Description" inputs.
+
+    The class attributes `name = "PythonREPLTool"` and `description = "A tool for..."`
+    shadow the StrInputs of the same names — Component.__getattr__ only fires when
+    normal attribute lookup fails, so self.name/self.description in build_tool always
+    returned the class attributes and the user's input values were silently ignored.
+    """
+
+    @pytest.fixture
+    def component_class(self):
+        return PythonREPLToolComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        return {
+            "name": "python_repl",
+            "description": "run code",
+            "global_imports": "math",
+            "code": "print('x')",
+        }
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        return []
+
+    def test_tool_uses_name_and_description_inputs(self):
+        component = PythonREPLToolComponent(
+            name="my_custom_repl",
+            description="Custom description the agent should see.",
+            global_imports="math",
+            code="print('x')",
+        )
+        tool = component.build_tool()
+        assert tool.name == "my_custom_repl"
+        assert tool.description == "Custom description the agent should see."
+
+    def test_tool_uses_input_defaults_when_unset(self):
+        """With no explicit inputs, the input defaults win over the class attributes."""
+        tool = PythonREPLToolComponent().build_tool()
+        assert tool.name == "python_repl"
+        assert tool.description.startswith("A Python shell.")
+
+    def test_tool_falls_back_to_input_defaults_when_inputs_empty(self):
+        """Empty explicit inputs fall back to the input defaults."""
+        component = PythonREPLToolComponent(name="", description="")
+        tool = component.build_tool()
+        assert tool.name == "python_repl"
+        assert tool.description.startswith("A Python shell.")
+
+    def test_tool_falls_back_to_class_attributes_when_all_values_empty(self):
+        """When both the attribute and the input value are empty, the class attributes back-fill."""
+        component = PythonREPLToolComponent(name="", description="")
+        component._inputs["name"].value = ""
+        component._inputs["description"].value = ""
+        tool = component.build_tool()
+        assert tool.name == "PythonREPLTool"
+        assert tool.description == "A tool for running Python code in a REPL environment."
+
+    def test_tool_coerces_non_string_inputs(self):
+        """StrInput only warns on non-string values; tool metadata must still be strings.
+
+        Without coercion a non-string description crashes inside
+        StructuredTool.from_function (it dedents/strips the description).
+        """
+        component = PythonREPLToolComponent(name=123, description=456)
+        tool = component.build_tool()
+        assert tool.name == "123"
+        assert tool.description == "456"
+
+
 class TestPythonREPLToolComponentRunModel:
     """run_model must execute the Python Code input, not the component's own source.
 
