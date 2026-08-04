@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from ag_ui.core import RunFinishedEvent, RunStartedEvent
 
+from lfx.constants import USER_CANCELLED_MESSAGE
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
 from lfx.graph.exceptions import GraphPausedException
@@ -876,18 +877,27 @@ class Graph:
             # driven through Graph.process by the durable runner, which opens its own span.
             status = "paused"
             raise
-        except asyncio.CancelledError:
+        except asyncio.CancelledError as exc:
             # CancelledError is a BaseException, so the handler below does not see it and the
-            # span would otherwise report the run as "ok". Reached by a user pressing stop (the
-            # job service marks the job CANCELLED and re-raises) and by any asyncio.wait_for
-            # ceiling wrapped around a span-carrying run: the v2 build driver, a2a, and the
-            # agentic assistant all have one. The run did not finish, so it gets its own value.
+            # span would otherwise report the run as "ok". Two very different things arrive as
+            # the same exception type, and they must not share an outcome:
             #
-            # Span status stays UNSET, which is right for a stop button and arguable for a
-            # timeout: a server-imposed ceiling is closer to a fault, and an operator alerting
-            # on span error rate will not see it. Left as one value for now because the two are
-            # indistinguishable here; the job row (CANCELLED vs FAILED) still tells them apart.
-            status = "cancelled"
+            # A user pressing stop withdrew the request. Nothing is wrong with the service, so
+            # span status stays UNSET and this never reaches error-rate alerting.
+            #
+            # Anything else cancelling the run is the service failing to deliver it: an
+            # asyncio.wait_for execution ceiling (the v2 build driver, a2a and the agentic
+            # assistant each have one), a worker shutdown, a parent task being torn down. The
+            # client is served an error and the job row is written FAILED, so the span says
+            # ERROR too. Reporting these as merely "cancelled" hid every timeout from alerting.
+            #
+            # The producers stamp the user case on args; see USER_CANCELLED_MESSAGE.
+            if exc.args and exc.args[0] == USER_CANCELLED_MESSAGE:
+                status = "cancelled"
+            else:
+                status = "aborted"
+                span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, "CancelledError"))
+                span.set_attribute("error.type", "CancelledError")
             raise
         except Exception as exc:
             status = "error"

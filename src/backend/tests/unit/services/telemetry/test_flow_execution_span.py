@@ -203,20 +203,45 @@ asyncio.run(main())
 """
 )
 
-# CancelledError is a BaseException, so an `except Exception` handler never sees it. A user
-# pressing stop and the v2 execution ceiling both cancel the driver this span wraps.
+# CancelledError is a BaseException, so an `except Exception` handler never sees it. Both a user
+# pressing stop and a server-imposed ceiling arrive as this one type, and they mean opposite
+# things to an operator, so the span has to tell them apart.
 CANCELLED_PROBE = (
     PROVIDER_SETUP
     + """
+from lfx.constants import USER_CANCELLED_MESSAGE
+
 async def main():
     graph = build_graph()
     raised = False
     try:
         with graph.flow_execution_span():
-            raise asyncio.CancelledError()
+            raise asyncio.CancelledError(USER_CANCELLED_MESSAGE)
     except asyncio.CancelledError:
         raised = True
     report({"raised": raised})
+
+asyncio.run(main())
+"""
+)
+
+# A wall-clock ceiling, exactly as asyncio.wait_for delivers it: an untagged CancelledError.
+ABORTED_PROBE = (
+    PROVIDER_SETUP
+    + """
+async def main():
+    graph = build_graph()
+
+    async def forever():
+        with graph.flow_execution_span():
+            await asyncio.sleep(10)
+
+    timed_out = False
+    try:
+        await asyncio.wait_for(forever(), timeout=0.05)
+    except (asyncio.TimeoutError, TimeoutError):
+        timed_out = True
+    report({"timed_out": timed_out})
 
 asyncio.run(main())
 """
@@ -368,7 +393,7 @@ def test_an_inner_binding_does_not_overwrite_the_surface_that_took_the_request()
     assert result["after"] is None
 
 
-def test_a_cancelled_flow_is_not_recorded_as_a_successful_one():
+def test_a_flow_a_user_stopped_is_not_recorded_as_a_successful_one():
     result = run_probe(CANCELLED_PROBE)
     assert result["raised"] is True
 
@@ -378,3 +403,15 @@ def test_a_cancelled_flow_is_not_recorded_as_a_successful_one():
     # A withdrawn request is not a service fault, so it must not land on the error rate.
     assert span["status"] == "UNSET"
     assert "error.type" not in span["attrs"]
+
+
+def test_a_flow_killed_by_a_timeout_is_recorded_as_an_error():
+    """The client is served an error and the job row says FAILED, so the span must agree."""
+    result = run_probe(ABORTED_PROBE)
+    assert result["timed_out"] is True
+
+    assert len(result["spans"]) == 1
+    span = result["spans"][0]
+    assert span["attrs"]["status"] == "aborted"
+    assert span["status"] == "ERROR"
+    assert span["attrs"]["error.type"] == "CancelledError"

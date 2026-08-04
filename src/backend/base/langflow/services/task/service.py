@@ -5,6 +5,8 @@ from collections.abc import Callable, Coroutine
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
+from lfx.constants import USER_CANCELLED_MESSAGE
+
 from langflow.exceptions.api import WorkflowResourceError, WorkflowServiceUnavailableError
 from langflow.services.base import Service
 from langflow.services.deps import get_queue_service
@@ -98,7 +100,7 @@ class TaskService(Service):
         try:
             await job_queue_service.cleanup_job(str(task_id))
         except asyncio.CancelledError as e:
-            if str(e) != "LANGFLOW_USER_CANCELLED":
+            if str(e) != USER_CANCELLED_MESSAGE:
                 raise
             return True
         return True

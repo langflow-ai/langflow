@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Coroutine
 
+from lfx.constants import USER_CANCELLED_MESSAGE
 from lfx.log.logger import logger
 
 from langflow.events.event_manager import EventManager
@@ -456,7 +457,7 @@ class JobQueueService(Service):
                     # User-initiated cancellation so we explicitly called task.cancel() above
                     await logger.adebug(f"Task for job_id {job_id} was successfully cancelled.")
                     # Re-raise with user cancellation message code
-                    exc.args = ("LANGFLOW_USER_CANCELLED",)
+                    exc.args = (USER_CANCELLED_MESSAGE,)
                     raise
                 # System-initiated cancellation for other reasons
                 await logger.adebug(f"Task for job_id {job_id} was cancelled by system.")

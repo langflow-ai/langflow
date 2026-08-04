@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
+from lfx.constants import USER_CANCELLED_MESSAGE
 from lfx.graph.exceptions import GraphPausedException
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlmodel import col, func, select
@@ -857,7 +858,7 @@ class JobService(Service):
 
         except asyncio.CancelledError as exc:
             # Check the message code to determine if this was user-initiated or system-initiated
-            if exc.args and exc.args[0] == "LANGFLOW_USER_CANCELLED":
+            if exc.args and exc.args[0] == USER_CANCELLED_MESSAGE:
                 # User-initiated cancellation, update status to CANCELLED
                 await logger.awarning(f"Job {job_id} was cancelled by user")
                 await self.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)

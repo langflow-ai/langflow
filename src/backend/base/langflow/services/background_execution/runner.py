@@ -22,6 +22,7 @@ from collections.abc import AsyncIterator, Callable
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
+from lfx.constants import USER_CANCELLED_MESSAGE
 from lfx.log.logger import logger
 
 from langflow.services.background_execution.live_bus import LiveFrame
@@ -122,7 +123,7 @@ class JobRunner:
                 paused = True
                 await logger.adebug(f"Background job {job_id} suspended for human input")
         except asyncio.CancelledError as exc:
-            user_tagged = bool(exc.args) and exc.args[0] == "LANGFLOW_USER_CANCELLED"
+            user_tagged = bool(exc.args) and exc.args[0] == USER_CANCELLED_MESSAGE
             if not user_tagged and not await self._stop_requested(job_id):
                 raise
             await logger.adebug(f"Background job {job_id} stopped")
@@ -319,7 +320,7 @@ class JobRunner:
     @staticmethod
     def _user_cancelled() -> asyncio.CancelledError:
         exc = asyncio.CancelledError()
-        exc.args = ("LANGFLOW_USER_CANCELLED",)
+        exc.args = (USER_CANCELLED_MESSAGE,)
         return exc
 
     @staticmethod
