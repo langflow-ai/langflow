@@ -6,12 +6,12 @@ Create Date: 2026-02-24
 
 Phase: EXPAND
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
 import sqlmodel
 from alembic import op
-
 from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
@@ -43,8 +43,8 @@ def upgrade() -> None:
             sa.Column("authorization_endpoint", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
             sa.Column("jwks_uri", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
             sa.Column("issuer", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-            sa.Column("created_at", sa.DateTime(), nullable=False),
-            sa.Column("updated_at", sa.DateTime(), nullable=False),
+            sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+            sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
             sa.Column("created_by", sa.Uuid(), nullable=True),
             sa.ForeignKeyConstraint(["created_by"], ["user.id"], ondelete="SET NULL"),
             sa.PrimaryKeyConstraint("id"),

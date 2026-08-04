@@ -21,12 +21,13 @@ def _config_values(
     provider_name: str,
     enforce_sso: bool,
     timestamp: datetime,
+    enabled: bool = True,
 ) -> dict:
     return {
         "id": config_id,
         "provider": "oidc",
         "provider_name": provider_name,
-        "enabled": True,
+        "enabled": enabled,
         "enforce_sso": enforce_sso,
         "email_claim": "email",
         "username_claim": "preferred_username",
@@ -178,5 +179,43 @@ def test_sso_instance_fields_upgrade_and_downgrade_preserve_seeded_rows(db_url):
                 )
                 == 1
             )
+    finally:
+        engine.dispose()
+
+
+def test_sso_instance_fields_upgrade_ignores_disabled_enforce_sso(db_url):  # noqa: F811
+    alembic_cfg = _make_alembic_cfg(db_url)
+    command.upgrade(alembic_cfg, _PRIOR_REVISION)
+
+    timestamp = datetime.now(timezone.utc)
+    config_id = str(uuid4())
+
+    engine = sa.create_engine(_engine_url(db_url))
+    try:
+        metadata = sa.MetaData()
+        with engine.begin() as connection:
+            sso_config = sa.Table("sso_config", metadata, autoload_with=connection)
+            connection.execute(
+                sso_config.insert(),
+                _config_values(
+                    config_id=config_id,
+                    provider_name="Disabled OIDC",
+                    enforce_sso=True,
+                    timestamp=timestamp,
+                    enabled=False,
+                ),
+            )
+    finally:
+        engine.dispose()
+
+    command.upgrade(alembic_cfg, _REVISION)
+
+    engine = sa.create_engine(_engine_url(db_url))
+    try:
+        metadata = sa.MetaData()
+        with engine.begin() as connection:
+            sso_settings = sa.Table("sso_settings", metadata, autoload_with=connection)
+            settings_rows = connection.execute(sa.select(sso_settings)).mappings().all()
+            assert settings_rows == [{"id": 1, "enforce_sso": False}]
     finally:
         engine.dispose()

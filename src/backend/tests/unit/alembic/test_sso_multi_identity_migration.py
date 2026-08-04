@@ -209,3 +209,84 @@ def test_sso_multi_identity_upgrade_and_downgrade_preserve_seeded_rows(db_url): 
             )
     finally:
         engine.dispose()
+
+
+def test_sso_multi_identity_downgrade_rejects_users_with_multiple_identities(db_url):  # noqa: F811
+    alembic_cfg = _make_alembic_cfg(db_url)
+    command.upgrade(alembic_cfg, _PRIOR_REVISION)
+
+    timestamp = datetime.now(timezone.utc)
+    user_id = str(uuid4())
+    config_id = str(uuid4())
+    original_profile_id = str(uuid4())
+    second_profile_id = str(uuid4())
+
+    engine = sa.create_engine(_engine_url(db_url))
+    try:
+        metadata = sa.MetaData()
+        with engine.begin() as connection:
+            user = sa.Table("user", metadata, autoload_with=connection)
+            sso_config = sa.Table("sso_config", metadata, autoload_with=connection)
+            sso_user_profile = sa.Table("sso_user_profile", metadata, autoload_with=connection)
+            connection.execute(
+                user.insert(),
+                {
+                    "id": user_id,
+                    "username": "sso-multi-identity-downgrade-user",
+                    "password": _TEST_PASSWORD,
+                    "is_active": True,
+                    "is_superuser": False,
+                    "create_at": timestamp,
+                    "updated_at": timestamp,
+                },
+            )
+            connection.execute(
+                sso_config.insert(),
+                {
+                    "id": config_id,
+                    "provider": "oidc",
+                    "provider_name": "Primary OIDC",
+                    "enabled": True,
+                    "enforce_sso": False,
+                    "email_claim": "email",
+                    "username_claim": "preferred_username",
+                    "user_id_claim": "sub",
+                    "created_at": timestamp,
+                    "updated_at": timestamp,
+                },
+            )
+            connection.execute(
+                sso_user_profile.insert(),
+                _profile_values(
+                    profile_id=original_profile_id,
+                    user_id=user_id,
+                    provider="oidc-primary",
+                    sso_user_id="subject-1",
+                    timestamp=timestamp,
+                ),
+            )
+    finally:
+        engine.dispose()
+
+    command.upgrade(alembic_cfg, _REVISION)
+
+    engine = sa.create_engine(_engine_url(db_url))
+    try:
+        metadata = sa.MetaData()
+        with engine.begin() as connection:
+            sso_user_profile = sa.Table("sso_user_profile", metadata, autoload_with=connection)
+            connection.execute(
+                sso_user_profile.insert(),
+                _profile_values(
+                    profile_id=second_profile_id,
+                    user_id=user_id,
+                    provider="saml",
+                    sso_user_id="subject-2",
+                    timestamp=timestamp,
+                ),
+            )
+    finally:
+        engine.dispose()
+
+    with pytest.raises(RuntimeError, match=rf"multiple identities for user_id\(s\): {user_id}"):
+        command.downgrade(alembic_cfg, _PRIOR_REVISION)

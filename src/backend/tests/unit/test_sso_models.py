@@ -370,6 +370,18 @@ class TestSSOConfig:
                 provider_settings={"protocol": "oidc"},
             )
 
+    async def test_protocol_assignment_rejects_mismatch_with_provider_settings(self):
+        config = SSOConfig(protocol="oidc", display_name="Valid")
+        with pytest.raises(ValueError, match="does not match"):
+            config.protocol = "saml"
+
+    async def test_provider_settings_assignment_rejects_protocol_mismatch(self):
+        config = SSOConfig(protocol="oidc", display_name="Valid")
+        # Bypass validates so we can exercise the provider_settings assignment check.
+        config.__dict__["protocol"] = "saml"
+        with pytest.raises(ValueError, match="does not match"):
+            config.provider_settings = OIDCProviderSettings()
+
     async def test_provider_settings_reject_invalid_oidc_payload(self):
         with pytest.raises(ValidationError, match="saml_metadata_url"):
             SSOConfig(

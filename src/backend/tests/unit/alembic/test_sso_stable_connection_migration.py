@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
+import pytest
 import sqlalchemy as sa
 from alembic import command
 
@@ -142,3 +143,51 @@ def test_sso_connection_identity_upgrade_and_downgrade_preserve_seeded_rows(db_u
             assert profile_row["sso_provider"] == "Renamed OIDC"
     finally:
         engine.dispose()
+
+
+def test_sso_connection_identity_upgrade_rejects_duplicate_provider_names(db_url):  # noqa: F811
+    alembic_cfg = _make_alembic_cfg(db_url)
+    command.upgrade(alembic_cfg, _PRIOR_REVISION)
+
+    timestamp = datetime.now(timezone.utc)
+    config_ids = [str(uuid4()), str(uuid4())]
+
+    engine = sa.create_engine(_engine_url(db_url))
+    try:
+        metadata = sa.MetaData()
+        with engine.begin() as connection:
+            sso_config = sa.Table("sso_config", metadata, autoload_with=connection)
+            connection.execute(
+                sso_config.insert(),
+                [
+                    {
+                        "id": config_ids[0],
+                        "provider": "oidc",
+                        "provider_name": "Shared OIDC",
+                        "enabled": True,
+                        "enforce_sso": False,
+                        "email_claim": "email",
+                        "username_claim": "preferred_username",
+                        "user_id_claim": "sub",
+                        "created_at": timestamp,
+                        "updated_at": timestamp,
+                    },
+                    {
+                        "id": config_ids[1],
+                        "provider": "oidc",
+                        "provider_name": "Shared OIDC",
+                        "enabled": True,
+                        "enforce_sso": False,
+                        "email_claim": "email",
+                        "username_claim": "preferred_username",
+                        "user_id_claim": "sub",
+                        "created_at": timestamp,
+                        "updated_at": timestamp,
+                    },
+                ],
+            )
+    finally:
+        engine.dispose()
+
+    with pytest.raises(RuntimeError, match="duplicate provider_name"):
+        command.upgrade(alembic_cfg, _REVISION)

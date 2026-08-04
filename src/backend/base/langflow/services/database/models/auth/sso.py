@@ -147,14 +147,22 @@ class SSOConfig(SQLModel, table=True):  # type: ignore[call-arg]
     provider_settings: SSOProviderSettings = Field(
         default_factory=OIDCProviderSettings,
         sa_column=Column(_ProviderSettingsJSON(), nullable=False),
+        description=(
+            "Validated provider settings persisted as JSON. Assign a new object "
+            "(or call flag_modified) to persist changes; in-place nested field "
+            "mutations are not tracked by SQLAlchemy."
+        ),
     )
     email_claim: str = Field(default="email")
     username_claim: str = Field(default="preferred_username")
     user_id_claim: str = Field(default="sub")
-    created_at: datetime = Field(default_factory=_utc_now)
+    created_at: datetime = Field(
+        default_factory=_utc_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
     updated_at: datetime = Field(
         default_factory=_utc_now,
-        sa_column=Column(DateTime(), nullable=False, onupdate=_utc_now),
+        sa_column=Column(DateTime(timezone=True), nullable=False, onupdate=_utc_now),
     )
     created_by: UUIDstr | None = Field(
         default=None,
@@ -190,6 +198,25 @@ class SSOConfig(SQLModel, table=True):  # type: ignore[call-arg]
     def validate_provider_settings_protocol(self) -> Self:
         self.provider_settings = _validate_provider_settings(self.protocol, self.provider_settings)
         return self
+
+    @validates("protocol")
+    def validate_protocol(self, _key: str, value: str) -> str:
+        """Keep protocol aligned with provider_settings on attribute assignment."""
+        # Use __dict__ so we do not assume the counterpart is loaded yet (e.g. DB hydrate).
+        if "provider_settings" in self.__dict__:
+            _validate_provider_settings(value, self.__dict__["provider_settings"])
+        return value
+
+    @validates("provider_settings")
+    def validate_provider_settings(
+        self,
+        _key: str,
+        value: SSOProviderSettings | dict[str, Any],
+    ) -> SSOProviderSettings:
+        """Keep provider_settings aligned with protocol on attribute assignment."""
+        if "protocol" in self.__dict__:
+            return _validate_provider_settings(self.__dict__["protocol"], value)
+        return _PROVIDER_SETTINGS_ADAPTER.validate_python(value)
 
     @validates("client_secret_encrypted")
     def validate_client_secret_envelope(self, _key: str, value: str | None) -> str | None:

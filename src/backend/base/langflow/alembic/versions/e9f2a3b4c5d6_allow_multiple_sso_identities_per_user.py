@@ -120,13 +120,28 @@ def _backfill_profile_connection_slugs(conn: sa.Connection) -> None:
     profile = sa.table(_PROFILE_TABLE, sa.column("sso_provider"))
     external_provider = _external_auth_provider()
     rows = conn.execute(sa.select(config.c.slug, config.c.provider_name).order_by(config.c.id)).all()
+    # Build provider_name -> [slug, ...] for rows that will re-key profiles. Duplicate
+    # names would otherwise rewrite the same profiles onto whichever config still
+    # matches the legacy name first, silently mis-binding the rest.
+    slugs_by_provider_name: dict[str, list[str]] = {}
     for row in rows:
         if not (row.slug and row.provider_name):
             continue
         # Leave EXTERNAL_AUTH-owned identities alone; see _external_auth_provider.
         if external_provider is not None and row.provider_name == external_provider:
             continue
-        conn.execute(profile.update().where(profile.c.sso_provider == row.provider_name).values(sso_provider=row.slug))
+        slugs_by_provider_name.setdefault(row.provider_name, []).append(row.slug)
+    duplicates = {name: slugs for name, slugs in slugs_by_provider_name.items() if len(slugs) > 1}
+    if duplicates:
+        details = "; ".join(f"{name!r} maps to slugs {slugs}" for name, slugs in sorted(duplicates.items()))
+        msg = (
+            "sso_config contains duplicate provider_name values that prevent unambiguous "
+            f"profile re-binding to slugs: {details}. Resolve the duplicates before "
+            "rerunning this migration."
+        )
+        raise RuntimeError(msg)
+    for provider_name, slugs in slugs_by_provider_name.items():
+        conn.execute(profile.update().where(profile.c.sso_provider == provider_name).values(sso_provider=slugs[0]))
 
 
 def _restore_profile_connection_names(conn: sa.Connection) -> None:
@@ -255,9 +270,20 @@ def _backfill_provider_name(conn: sa.Connection) -> None:
 
 def _create_and_backfill_sso_settings(conn: sa.Connection) -> None:
     enforce_sso = False
-    if migration.table_exists(_CONFIG_TABLE, conn) and "enforce_sso" in _column_names(conn, _CONFIG_TABLE):
-        config = sa.table(_CONFIG_TABLE, sa.column("enforce_sso", sa.Boolean()))
-        enforce_sso = any(conn.execute(sa.select(config.c.enforce_sso)).scalars())
+    if migration.table_exists(_CONFIG_TABLE, conn):
+        columns = _column_names(conn, _CONFIG_TABLE)
+        if "enforce_sso" in columns:
+            selected = [sa.column("enforce_sso", sa.Boolean())]
+            if "enabled" in columns:
+                selected.append(sa.column("enabled", sa.Boolean()))
+                config = sa.table(_CONFIG_TABLE, *selected)
+                # Ignore disabled/sanitized connections so a stale enforce_sso flag
+                # on an inactive row cannot turn on instance-wide enforcement.
+                stmt = sa.select(config.c.enforce_sso).where(config.c.enabled.is_(True))
+            else:
+                config = sa.table(_CONFIG_TABLE, *selected)
+                stmt = sa.select(config.c.enforce_sso)
+            enforce_sso = any(conn.execute(stmt).scalars())
 
     if not migration.table_exists(_SETTINGS_TABLE, conn):
         op.create_table(
@@ -437,6 +463,29 @@ def _downgrade_sso_config(conn: sa.Connection) -> None:
                 batch_op.drop_column(name)
 
 
+def _raise_for_multiple_identities_per_user(conn: sa.Connection) -> None:
+    """Fail clearly when multi-identity rows would block restoring unique(user_id)."""
+    profile = sa.table(_PROFILE_TABLE, sa.column("user_id"))
+    duplicates = (
+        conn.execute(
+            sa.select(profile.c.user_id, sa.func.count().label("identity_count"))
+            .group_by(profile.c.user_id)
+            .having(sa.func.count() > 1)
+            .order_by(profile.c.user_id)
+        )
+        .mappings()
+        .all()
+    )
+    if not duplicates:
+        return
+    details = ", ".join(f"{row['user_id']} ({row['identity_count']} identities)" for row in duplicates)
+    msg = (
+        f"{_PROFILE_TABLE} has multiple identities for user_id(s): {details}. "
+        "Remove the extra identities before restoring the unique user_id index."
+    )
+    raise RuntimeError(msg)
+
+
 def upgrade() -> None:
     conn = op.get_bind()
     if migration.table_exists(_PROFILE_TABLE, conn):
@@ -468,6 +517,9 @@ def downgrade() -> None:
     if migration.table_exists(_PROFILE_TABLE, conn):
         indexes = _indexes(conn, _PROFILE_TABLE)
         user_id_index = indexes.get(_USER_ID_INDEX)
+        needs_unique_user_id = user_id_index is None or not user_id_index.get("unique")
+        if needs_unique_user_id:
+            _raise_for_multiple_identities_per_user(conn)
         with op.batch_alter_table(_PROFILE_TABLE, schema=None) as batch_op:
             if _USER_PROVIDER_INDEX in indexes:
                 batch_op.drop_index(_USER_PROVIDER_INDEX)
