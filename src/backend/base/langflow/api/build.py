@@ -915,10 +915,15 @@ async def generate_flow_events(
 
     try:
         runner_owns_status = job_id is not None  # background path: JobRunner already wraps execute_with_status
-        if _build_job_svc and _build_run_id and not runner_owns_status:
-            await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
-        else:
-            await _run_vertex_build()
+        # This driver walks the vertices itself and never enters Graph.arun/async_start/process, so
+        # without this the busiest surfaces in the product (playground, v2 sync and background, voice)
+        # were the ones producing no flow span at all. Safe as make_current: this is a coroutine run
+        # as its own task, not an async generator, so the context token cannot outlive the scope.
+        with graph.flow_execution_span():
+            if _build_job_svc and _build_run_id and not runner_owns_status:
+                await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
+            else:
+                await _run_vertex_build()
     except GraphPausedException as exc:
         # Non-terminal: persist the card to history, emit the pause event, end without on_end.
         from langflow.api.v2.hitl import persist_human_input_card

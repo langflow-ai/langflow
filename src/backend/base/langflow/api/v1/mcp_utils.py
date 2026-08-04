@@ -365,6 +365,7 @@ async def handle_call_tool(
                         stream=False,
                         api_key_user=current_user,
                         context=exec_context,
+                        protocol="mcp",
                     )
                     # Process all outputs and messages, ensuring no duplicates
                     processed_texts = set()

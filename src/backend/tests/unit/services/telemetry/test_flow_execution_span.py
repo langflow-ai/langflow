@@ -167,6 +167,42 @@ asyncio.run(main())
 """
 )
 
+PROTOCOL_PROBE = (
+    PROVIDER_SETUP
+    + """
+from lfx.observability import execution_protocol
+
+async def main():
+    graph = build_graph()
+    with execution_protocol("webhook"):
+        await graph.arun(inputs=[{}], outputs=["chat-output"])
+    report({})
+
+asyncio.run(main())
+"""
+)
+
+# Several surfaces share one driver (voice and the playground both reach the graph through the
+# build loop), so the inner generic binding must not overwrite the outer one that knows how the
+# request actually arrived.
+NESTED_PROTOCOL_PROBE = (
+    PROVIDER_SETUP
+    + """
+from lfx.observability import execution_protocol, get_execution_protocol
+
+async def main():
+    graph = build_graph()
+    with execution_protocol("voice"):
+        with execution_protocol("playground"):
+            inner = get_execution_protocol()
+            await graph.arun(inputs=[{}], outputs=["chat-output"])
+    after = get_execution_protocol()
+    report({"inner": inner, "after": after})
+
+asyncio.run(main())
+"""
+)
+
 NO_OTEL_PROBE = """
 import asyncio, json, sys
 
@@ -241,8 +277,12 @@ def test_arun_emits_one_application_span():
     span = result["spans"][0]
     assert span["name"] == "flow.execute"
     assert span["scope"] == APPLICATION_TRACER_NAME
-    assert set(span["attrs"]) == {"flow_id", "run_id", "session_id"}
+    assert set(span["attrs"]) == {"flow_id", "run_id", "session_id", "status"}
     assert span["attrs"]["session_id"] == "session-abc"
+    assert span["attrs"]["status"] == "ok"
+    # No surface bound one, so the attribute is absent rather than guessed. An operator seeing a
+    # protocol-less flow span is looking at a genuinely unwired path.
+    assert "protocol" not in span["attrs"]
     assert span["status"] == "UNSET"
 
 
@@ -253,6 +293,7 @@ def test_failing_flow_marks_the_span_as_an_error_without_leaking_the_message():
     assert len(result["spans"]) == 1
     span = result["spans"][0]
     assert span["status"] == "ERROR"
+    assert span["attrs"]["status"] == "error"
     assert span["attrs"]["error.type"] == "ValueError"
     # The wrapped message embeds component output, which must not reach the operator's APM.
     assert SENTINEL not in json.dumps(span)
@@ -275,7 +316,10 @@ def test_a_paused_flow_is_not_recorded_as_an_error():
 
     assert len(result["spans"]) == 1
     span = result["spans"][0]
+    # Span status stays UNSET so a pause never counts toward the error rate, but the attribute
+    # tells a paused run apart from a finished one, which UNSET alone cannot.
     assert span["status"] == "UNSET"
+    assert span["attrs"]["status"] == "paused"
     assert "error.type" not in span["attrs"]
 
 
@@ -286,3 +330,20 @@ def test_a_flow_run_from_inside_a_flow_nests_under_its_caller():
     child, parent = result["spans"]
     assert child["attrs"]["session_id"] == "child-session"
     assert child["parent_span_id"] == parent["span_id"]
+
+
+def test_the_span_records_the_surface_the_run_arrived_through():
+    result = run_probe(PROTOCOL_PROBE)
+
+    assert len(result["spans"]) == 1
+    assert result["spans"][0]["attrs"]["protocol"] == "webhook"
+
+
+def test_an_inner_binding_does_not_overwrite_the_surface_that_took_the_request():
+    result = run_probe(NESTED_PROTOCOL_PROBE)
+
+    assert result["inner"] == "voice", "the inner generic driver overwrote the real surface"
+    assert len(result["spans"]) == 1
+    assert result["spans"][0]["attrs"]["protocol"] == "voice"
+    # Reset on exit, so a worker reusing this task for the next request starts unbound.
+    assert result["after"] is None

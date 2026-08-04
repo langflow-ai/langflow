@@ -112,6 +112,7 @@ async def run_flow_for_openai_responses(
                     event_manager=event_manager,
                     client_consumed_queue=asyncio_queue_client_consumed,
                     context=context,
+                    protocol="openai_responses",
                 )
             )
 
@@ -464,6 +465,7 @@ async def run_flow_for_openai_responses(
         stream=False,
         api_key_user=api_key_user,
         context=context,
+        protocol="openai_responses",
     )
 
     # Extract output text, tool calls, and usage from result

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import contextvars
 import os
 import time
 from dataclasses import dataclass
@@ -28,6 +29,8 @@ from lfx.log.logger import logger
 from lfx.observability_fastapi import patch_otel_fastapi_route_details
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from fastapi import FastAPI
     from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk.metrics import MeterProvider
@@ -46,6 +49,51 @@ APPLICATION_TRACER_NAME = "langflow.observability"
 APPLICATION_METER_NAME = "langflow"
 
 DEFAULT_SERVICE_NAME = "langflow"
+
+# The surface a flow run arrived through, recorded as the flow span's ``protocol`` attribute so
+# an operator can tell a playground click from a webhook delivery from an MCP tool call. These
+# are the values the runtime sets today; the sweep in the epic's exit ticket asserts one per
+# live cell of the runtime x protocol matrix.
+#
+# Ambient rather than a parameter because the graph is several layers below the surface that
+# knows the answer, and two of those layers hand the run to a fresh asyncio task. Task creation
+# copies the context, so setting this at the entry point carries it into the run without
+# threading an argument through every intermediate signature. It also means a path nobody wired
+# reports no protocol at all rather than inheriting a wrong one from its caller.
+_current_protocol: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "lfx_execution_protocol",
+    default=None,
+)
+
+
+def get_execution_protocol() -> str | None:
+    """Return the surface the current flow run arrived through, or None outside a served run."""
+    return _current_protocol.get()
+
+
+@contextlib.contextmanager
+def execution_protocol(protocol: str) -> Iterator[None]:
+    """Bind *protocol* as the surface for flow runs started in this context, outermost wins.
+
+    An already-bound protocol is left alone, because several surfaces share one driver
+    underneath: voice and the playground both reach the graph through the same build path, and
+    a flow-as-tool child run reaches it through whichever surface called the parent. In every
+    such pair the outer binding is the one that names how the request actually arrived, so the
+    inner generic driver must not overwrite it.
+
+    Reset on exit so a worker that serves many requests on one task cannot leak one request's
+    protocol into the next. A run handed to ``asyncio.create_task`` inside the block keeps the
+    value regardless, because the task copies the context at creation.
+    """
+    if _current_protocol.get() is not None:
+        yield
+        return
+    token = _current_protocol.set(protocol)
+    try:
+        yield
+    finally:
+        _current_protocol.reset(token)
+
 
 # Event-loop scheduling delay. Sampled rather than instrumented: there is no hook that
 # reports "the loop was blocked", so the only way to see it is to ask for a known sleep and

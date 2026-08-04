@@ -52,6 +52,7 @@ from lfx.graph.checkpoint.schema import GraphCheckpoint
 from lfx.graph.checkpoint.store import CheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.log.logger import logger
+from lfx.observability import execution_protocol
 from lfx.run.hitl import reroute_decision_on_timeout
 from lfx.schema.workflow import (
     GLOBAL_KEY_MAX_LEN,
@@ -255,17 +256,20 @@ async def _run_flow(flow_id: UUID, task_id: str, text: str, context_id: str | No
         job_id = UUID(task_id)
     except ValueError:
         job_id = uuid4()
-    return await execute_sync_workflow_with_timeout(
-        parsed=parsed,
-        flow=flow,
-        job_id=job_id,
-        current_user=user,
-        background_tasks=BackgroundTasks(),
-        http_request=None,
-        # HITL: a flow with a HumanInput node durably checkpoints and returns a suspended
-        # response instead of running through. Resume happens in _resume_flow.
-        checkpoint_store=A2ACheckpointStore(),
-    )
+    # Bound before the v2 executor underneath binds "v2": this run arrived over A2A, and
+    # outermost wins, so the operator sees the surface rather than the shared implementation.
+    with execution_protocol("a2a"):
+        return await execute_sync_workflow_with_timeout(
+            parsed=parsed,
+            flow=flow,
+            job_id=job_id,
+            current_user=user,
+            background_tasks=BackgroundTasks(),
+            http_request=None,
+            # HITL: a flow with a HumanInput node durably checkpoints and returns a suspended
+            # response instead of running through. Resume happens in _resume_flow.
+            checkpoint_store=A2ACheckpointStore(),
+        )
 
 
 def _resolve_action(text: str, pending: dict[str, Any]) -> str | None:
@@ -352,16 +356,18 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
         raise ResumeConflictError(msg)
 
     try:
-        run_outputs, session_id = await asyncio.wait_for(
-            run_graph_internal(
-                graph,
-                str(flow_id),
-                session_id=graph.session_id,
-                inputs=[],
-                outputs=graph.get_terminal_nodes(),
-            ),
-            timeout=_resolve_execution_timeout(),
-        )
+        # No flow_execution_span here: run_graph_internal reaches Graph.arun, which opens one.
+        with execution_protocol("a2a"):
+            run_outputs, session_id = await asyncio.wait_for(
+                run_graph_internal(
+                    graph,
+                    str(flow_id),
+                    session_id=graph.session_id,
+                    inputs=[],
+                    outputs=graph.get_terminal_nodes(),
+                ),
+                timeout=_resolve_execution_timeout(),
+            )
     except GraphPausedException as exc:
         # Paused again (multi-step HITL): the new checkpoint is already saved under this run_id.
         return _suspended_response(flow_id, task_id, graph.session_id, exc.data or {})

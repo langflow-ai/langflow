@@ -39,7 +39,7 @@ from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
-from lfx.observability import APPLICATION_TRACER_NAME
+from lfx.observability import APPLICATION_TRACER_NAME, get_execution_protocol
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
@@ -821,11 +821,17 @@ class Graph:
         of it. It must stay False when the scope wraps an async generator: the context token would be
         attached and detached across the generator's suspension points, which leaks it into whatever
         task resumes the generator.
+
+        The status attribute exists because OTel's StatusCode has three values and a paused run is
+        none of them: it did not fail, and calling it OK would tell an operator the work finished
+        when a human is still holding it. Span status stays UNSET for a pause so alerting on the
+        error rate does not fire, and the attribute carries the distinction.
         """
         if otel_trace is None or self._is_subgraph:
             yield
             return
         span = otel_trace.get_tracer(APPLICATION_TRACER_NAME).start_span(FLOW_EXECUTION_SPAN_NAME)
+        status = "ok"
         try:
             with contextlib.ExitStack() as stack:
                 if make_current:
@@ -841,8 +847,10 @@ class Graph:
         except GraphPausedException:
             # A HITL pause suspends the unit of work; it is not a failed request. The resume is
             # driven through Graph.process by the durable runner, which opens its own span.
+            status = "paused"
             raise
         except Exception as exc:
+            status = "error"
             span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, type(exc).__name__))
             span.set_attribute("error.type", type(exc).__name__)
             raise
@@ -853,6 +861,11 @@ class Graph:
                 span.set_attribute("run_id", self._run_id)
             if self.session_id:
                 span.set_attribute("session_id", str(self.session_id))
+            # Absent rather than "unknown" when nothing set it: a missing attribute is a wiring
+            # gap the operator can see, an "unknown" value looks like a protocol we support.
+            if (protocol := get_execution_protocol()) is not None:
+                span.set_attribute("protocol", protocol)
+            span.set_attribute("status", status)
             span.end()
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:

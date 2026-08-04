@@ -23,6 +23,7 @@ from lfx.custom.utils import (
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
+from lfx.observability import execution_protocol
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.services.model_provider_policy import (
@@ -321,6 +322,7 @@ async def simple_run_flow(
     event_manager: EventManager | None = None,
     context: dict | None = None,
     run_id: str | None = None,
+    protocol: str = "v1",
 ):
     validate_input_and_tweaks(input_request)
     policy_context_token = set_current_model_provider_policy_context(
@@ -392,17 +394,20 @@ async def simple_run_flow(
                 user_id=user_id,
                 job_type=JobType.WORKFLOW,
             )
-            task_result, session_id = await _job_svc.execute_with_status(
-                run_id_uuid,
-                run_graph_internal,
-                graph=graph,
-                flow_id=flow_id_str,
-                session_id=input_request.session_id,
-                inputs=inputs,
-                outputs=outputs,
-                stream=stream,
-                event_manager=event_manager,
-            )
+            # Bound at the shared funnel rather than at each of the four callers, so a new
+            # surface that reuses simple_run_flow is labelled "v1" instead of unlabelled.
+            with execution_protocol(protocol):
+                task_result, session_id = await _job_svc.execute_with_status(
+                    run_id_uuid,
+                    run_graph_internal,
+                    graph=graph,
+                    flow_id=flow_id_str,
+                    session_id=input_request.session_id,
+                    inputs=inputs,
+                    outputs=outputs,
+                    stream=stream,
+                    event_manager=event_manager,
+                )
         except Exception as exc:
             await logger.aerror(
                 "Workflow job execution failed for flow %s: %s",
@@ -496,6 +501,7 @@ async def simple_run_flow_task(
             api_key_user=api_key_user,
             event_manager=effective_event_manager,
             run_id=run_id,
+            protocol="webhook",
         )
 
         if should_emit and flow_id is not None:
@@ -604,6 +610,7 @@ async def run_flow_generator(
     event_manager: EventManager,
     client_consumed_queue: asyncio.Queue,
     context: dict | None = None,
+    protocol: str = "v1",
 ) -> None:
     """Executes a flow asynchronously and manages event streaming to the client.
 
@@ -617,6 +624,7 @@ async def run_flow_generator(
         event_manager (EventManager): Manages the streaming of events to the client
         client_consumed_queue (asyncio.Queue): Tracks client consumption of events
         context (dict | None): Optional context to pass to the flow
+        protocol (str): The surface this run arrived through, recorded on the flow span
 
     Events Generated:
         - "add_message": Sent when new messages are added during flow execution
@@ -638,6 +646,7 @@ async def run_flow_generator(
             api_key_user=api_key_user,
             event_manager=event_manager,
             context=context,
+            protocol=protocol,
         )
         event_manager.on_end(data={"result": result.model_dump()})
         await client_consumed_queue.get()
@@ -1298,14 +1307,15 @@ async def experimental_run_flow(
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     try:
-        task_result, session_id = await run_graph_internal(
-            graph=graph,
-            flow_id=flow_id_str,
-            session_id=session_id,
-            inputs=inputs,
-            outputs=outputs,
-            stream=stream,
-        )
+        with execution_protocol("v1.advanced"):
+            task_result, session_id = await run_graph_internal(
+                graph=graph,
+                flow_id=flow_id_str,
+                session_id=session_id,
+                inputs=inputs,
+                outputs=outputs,
+                stream=stream,
+            )
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 

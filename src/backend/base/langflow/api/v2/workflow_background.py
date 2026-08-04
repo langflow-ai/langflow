@@ -307,6 +307,9 @@ async def _buffer_background_run(
             # keyed by job_id and GET-status reconstruction can find them.
             run_id=job_id,
             track_job_status=False,
+            # Distinct from the live v2 stream: same driver, but nobody is holding the connection,
+            # so an operator reading latency needs to tell the two apart.
+            protocol="v2.background",
         ):
             if terminal_error_type is not None and event_type == terminal_error_type:
                 errored = True

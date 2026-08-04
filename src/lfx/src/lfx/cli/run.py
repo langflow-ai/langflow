@@ -7,6 +7,7 @@ from pathlib import Path
 import typer
 from asyncer import syncify
 
+from lfx.observability import execution_protocol
 from lfx.run.base import RunError, run_flow
 
 # Verbosity level constants
@@ -154,24 +155,26 @@ async def run(
     verbosity = 3 if verbose_full else (2 if verbose_detailed else (1 if verbose else 0))
 
     try:
-        result = await run_flow(
-            script_path=script_path,
-            input_value=input_value,
-            input_value_option=input_value_option,
-            output_format=output_format,
-            flow_json=flow_json,
-            stdin=bool(stdin),
-            check_variables=check_variables,
-            check_dependencies=check_dependencies,
-            verbose=verbose,
-            verbose_detailed=verbose_detailed,
-            verbose_full=verbose_full,
-            timing=timing,
-            global_variables=None,
-            session_id=session_id,
-            upgrade_flow=upgrade_flow,
-            human_input=human_input,
-        )
+        # The whole one-shot run happens inside this await, including the graph's own span.
+        with execution_protocol("lfx.run"):
+            result = await run_flow(
+                script_path=script_path,
+                input_value=input_value,
+                input_value_option=input_value_option,
+                output_format=output_format,
+                flow_json=flow_json,
+                stdin=bool(stdin),
+                check_variables=check_variables,
+                check_dependencies=check_dependencies,
+                verbose=verbose,
+                verbose_detailed=verbose_detailed,
+                verbose_full=verbose_full,
+                timing=timing,
+                global_variables=None,
+                session_id=session_id,
+                upgrade_flow=upgrade_flow,
+                human_input=human_input,
+            )
 
         # Output based on format
         if output_format in {"text", "message", "result"}:
