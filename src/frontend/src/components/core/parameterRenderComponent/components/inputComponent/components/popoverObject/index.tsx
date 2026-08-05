@@ -16,10 +16,12 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { classNames, cn } from "@/utils/utils";
+import { getNodeScopedDomId } from "../../../../helpers/get-node-scoped-dom-id";
 import { useIMEInputForOnChange } from "../../../../hooks/use-ime-input";
 
 const CustomInputPopoverObject = ({
   id,
+  nodeId = undefined,
   refInput,
   onInputLostFocus,
   selectedOption,
@@ -88,7 +90,7 @@ const CustomInputPopoverObject = ({
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
         <Input
-          id={id}
+          id={getNodeScopedDomId(id, nodeId)}
           ref={refInput}
           type="text"
           {...(isSelectionMode ? {} : imeInputProps)}

@@ -347,6 +347,9 @@ class TestFlowBuilderToolsIntegration:
 
 
 class TestResetToolCache:
+    def setup_method(self):
+        reset_tool_cache()
+
     def test_reset_tool_cache_should_drop_existing_entries(self):
         producer_calls = 0
 

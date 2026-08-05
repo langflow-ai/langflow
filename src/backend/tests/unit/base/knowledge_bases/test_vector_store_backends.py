@@ -1,10 +1,11 @@
 """Stub-state tests for the disabled DB-connector backends.
 
-The Astra / MongoDB / Postgres backends ship as stubs in this phase
-(see each module's docstring under
-``lfx.base.knowledge_bases.backends``). These tests pin the
-"intentionally disabled" contract so accidental re-registration or
-silent re-introduction of partial implementations fails loudly:
+The Astra / MongoDB backends ship as stubs in this phase (see each module's
+docstring under ``lfx.base.knowledge_bases.backends``). Postgres (pgvector) is
+now a real, registered backend and is covered by ``test_postgres_backend.py``.
+These tests pin the "intentionally disabled" contract so accidental
+re-registration or silent re-introduction of partial implementations fails
+loudly:
 
 * the classes still import (preserves enum + type compatibility),
 * the registry does NOT bind them (``create_backend('astra')`` raises),
@@ -24,7 +25,6 @@ from lfx.base.knowledge_bases.backends import (
     AstraBackend,
     BackendType,
     MongoDBBackend,
-    PostgresBackend,
     create_backend,
     registered_backends,
 )
@@ -35,7 +35,6 @@ if TYPE_CHECKING:
 _STUBBED_BACKENDS = (
     (BackendType.ASTRA, AstraBackend),
     (BackendType.MONGODB, MongoDBBackend),
-    (BackendType.POSTGRES, PostgresBackend),
 )
 
 

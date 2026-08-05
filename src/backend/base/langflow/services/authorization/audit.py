@@ -33,6 +33,7 @@ from langflow.services.deps import get_settings_service
 AUDIT_ALLOW = "allow"
 AUDIT_DENY = "deny"
 AUDIT_OWNER_OVERRIDE = "owner_override"
+AUDIT_SKIP = "skip"
 
 AUDIT_ACTOR_API_KEY = "api_key"  # pragma: allowlist secret
 AUDIT_ACTOR_UNKNOWN = "unknown"

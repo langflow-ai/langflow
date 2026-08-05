@@ -11,12 +11,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Dialog as Modal,
+  DialogContentPlain as ModalContent,
   VisuallyHidden,
 } from "../../components/ui/dialog";
-import {
-  Dialog as Modal,
-  DialogContent as ModalContent,
-} from "../../components/ui/dialog-with-no-close";
 import type { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { switchCaseModalSize } from "./helpers/switch-case-size";

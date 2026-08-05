@@ -507,12 +507,12 @@ For more information, see [Docker image defaults](/deployment-docker#docker-imag
 
 Enable these flags when untrusted users can build flows on this server.
 
-The `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` and `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` flags are _complementary_.
-`LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` blocks user-authored component code, but built-in code-execution components still pass that check because their class code is trusted. Set `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true` to block those built-in components as well.
+The `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` and `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` flags support two deployment modes.
+`LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` blocks user-authored component code and registered built-in code-execution components at runtime. Set `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true` independently when custom components should remain enabled but built-in code execution should be disabled.
 
 To enable these flags, set the following:
 
-* `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`: blocks user-authored component code. See [Block custom components](/deployment-block-custom-components).
+* `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`: blocks user-authored component code and registered built-in code-execution components. See [Block custom components](/deployment-block-custom-components).
 * `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true`: blocks built-in code-execution components.
 * `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true`: confines built-in file access to the upload sandbox.
 * `LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true`: tightens Docker MCP server arguments.

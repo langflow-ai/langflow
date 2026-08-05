@@ -9,12 +9,13 @@ import orjson
 import pytest
 from httpx import AsyncClient
 from langflow.api.v1.schemas import FlowListCreate, ResultDataResponse
-from langflow.initial_setup.setup import load_starter_projects
+from langflow.initial_setup.setup import filter_starter_projects_by_available_components, load_starter_projects
+from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.deps import get_db_service, get_settings_service
 from lfx.graph.utils import log_transaction, log_vertex_build
 
 
@@ -1234,8 +1235,13 @@ async def test_delete_nonexistent_flow(client: AsyncClient, logged_in_headers):
 async def test_read_only_starter_projects(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/flows/basic_examples/", headers=logged_in_headers)
     starter_projects = await load_starter_projects()
+    all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
+    available_starter_projects = filter_starter_projects_by_available_components(starter_projects, all_types_dict)
+
     assert response.status_code == 200
-    assert len(response.json()) == len(starter_projects)
+    assert sorted(project["name"] for project in response.json()) == sorted(
+        project["name"] for _, project in available_starter_projects
+    )
 
 
 async def test_sqlite_pragmas():

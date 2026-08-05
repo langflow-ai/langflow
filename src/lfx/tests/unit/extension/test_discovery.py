@@ -54,8 +54,8 @@ def _manifest(extension_id: str, bundle_name: str, version: str = "1.0.0") -> di
 
 def _write_extension_json(root: Path, manifest: dict[str, object]) -> Path:
     root.mkdir(parents=True, exist_ok=True)
-    bundle_name = manifest["bundles"][0]["name"]  # type: ignore[index]
-    (root / bundle_name).mkdir(exist_ok=True)
+    for bundle in manifest["bundles"]:  # type: ignore[union-attr]
+        (root / bundle["path"]).mkdir(parents=True, exist_ok=True)  # type: ignore[index]
     (root / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
     return root / "extension.json"
 
@@ -205,6 +205,44 @@ def test_discover_installed_records_carry_manifest_source(
         assert isinstance(ext.manifest, ManifestSource)
         assert ext.manifest.path.exists()
         assert ext.extension_root == ext.manifest.path.parent
+
+
+def test_discover_installed_records_every_manifest_bundle(tmp_path: Path) -> None:
+    root = tmp_path / "site-packages" / "lfx_datastax"
+    manifest = _manifest("lfx-datastax", "datastax")
+    manifest["bundles"].append({"name": "cassandra", "path": "cassandra"})  # type: ignore[union-attr]
+    _write_extension_json(root, manifest)
+    dist = _FakeDistribution(name="lfx-datastax", root=root, manifest_relative="extension.json")
+
+    extensions, errors = discover_installed_extensions(distributions=[dist])
+
+    assert errors == []
+    assert len(extensions) == 1
+    assert extensions[0].bundle_name == "datastax"
+    assert extensions[0].bundle_names == ("datastax", "cassandra")
+
+
+def test_discover_installed_checks_every_bundle_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "site-packages" / "lfx_datastax"
+    manifest = _manifest("lfx-datastax", "datastax")
+    manifest["bundles"].append({"name": "cassandra", "path": "cassandra"})  # type: ignore[union-attr]
+    _write_extension_json(root, manifest)
+    dist = _FakeDistribution(name="lfx-datastax", root=root, manifest_relative="extension.json")
+    checked: list[str] = []
+
+    def _record_check(_extension_root: Path, bundle: object) -> None:
+        checked.append(bundle.name)  # type: ignore[attr-defined]
+
+    monkeypatch.setattr("lfx.extension.discovery._verify_bundle_path_safety", _record_check)
+
+    extensions, errors = discover_installed_extensions(distributions=[dist])
+
+    assert errors == []
+    assert len(extensions) == 1
+    assert checked == ["datastax", "cassandra"]
 
 
 def test_discover_installed_accepts_pyproject_form(

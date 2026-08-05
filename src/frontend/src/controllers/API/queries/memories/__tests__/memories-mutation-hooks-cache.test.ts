@@ -103,6 +103,22 @@ describe("memories mutation hooks cache wiring", () => {
     jest.clearAllMocks();
   });
 
+  it("mapMemoryApiToMemoryInfo carries backend_type and backend_config through", () => {
+    const cloud = mapMemoryApiToMemoryInfo(
+      buildMemoryDto({
+        backend_type: "chroma",
+        backend_config: { mode: "cloud" },
+      }),
+    );
+    expect(cloud.backend_type).toBe("chroma");
+    // Config is what lets the UI distinguish Chroma Cloud from Chroma Local.
+    expect(cloud.backend_config).toEqual({ mode: "cloud" });
+    // Absent in the DTO stays undefined; the UI falls back to a default label.
+    const bare = mapMemoryApiToMemoryInfo(buildMemoryDto());
+    expect(bare.backend_type).toBeUndefined();
+    expect(bare.backend_config).toBeUndefined();
+  });
+
   it("useCreateMemory seeds details cache and inserts into memories list cache", async () => {
     const dto = buildMemoryDto({
       id: "m3",

@@ -41,6 +41,16 @@ def test_compute_virtual_flow_id_differs_per_user():
     assert result_a != result_b
 
 
+def test_compute_virtual_flow_id_separates_user_and_client_identity_domains():
+    shared_identifier = uuid.uuid4()
+    flow_id = uuid.uuid4()
+
+    user_namespace = compute_virtual_flow_id(shared_identifier, flow_id, principal_type="user")
+    client_namespace = compute_virtual_flow_id(shared_identifier, flow_id, principal_type="client")
+
+    assert user_namespace != client_namespace
+
+
 def test_compute_virtual_flow_id_differs_per_flow():
     """Same user produces different virtual flow_ids for different flows."""
     user_id = uuid.uuid4()
@@ -113,7 +123,7 @@ async def test_update_shared_message_requires_auth(client: AsyncClient):
 async def shared_messages_setup(active_user):
     """Create test messages with a virtual flow_id scoped to active_user."""
     source_flow_id = uuid.uuid4()
-    virtual_flow_id = compute_virtual_flow_id(active_user.id, source_flow_id)
+    virtual_flow_id = compute_virtual_flow_id(active_user.id, source_flow_id, principal_type="user")
     base_timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
     async with session_scope() as session:

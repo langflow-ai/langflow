@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 from lfx.base.models.model_remediation import cached_overrides, find_remediation, remember, restore_overrides
+from lfx.base.models.provider_registry import get_registry_snapshot
 from lfx.graph.flow_builder.flow import flow_to_spec_summary
 from lfx.log.logger import logger
 from lfx.mcp.flow_builder_tools import (
@@ -23,6 +24,7 @@ from lfx.mcp.flow_builder_tools import (
     set_propose_existing_edits,
 )
 from lfx.mcp.tool_cache import reset_tool_cache
+from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
 
 from langflow.agentic.helpers.code_extraction import extract_component_code, extract_flow_json
 from langflow.agentic.helpers.code_security import scan_code_security
@@ -718,28 +720,78 @@ async def execute_flow_with_validation_streaming(
             f"{current_input}"
         )
 
-    # Tell the agent which language model(s) it can safely put on any Agent
-    # it builds — building an Agent without a model makes the run fail with
-    # "No model selected". The PREFERRED one is the model the assistant
+    # Tell the agent which language model(s) it can safely put on any Agent it
+    # builds — building an Agent without a model makes the run fail with
+    # "No model selected".
+    # Resolve one CONFIGURE snapshot before exposing names or binding the
+    # classifier's requested model; this keeps the assistant from reintroducing
+    # a provider hidden by governance through prompt context or deterministic
+    # run-model injection.
+    # The PREFERRED one is the model the assistant
     # itself runs with (key guaranteed). We also list every provider whose
     # API key is configured (provider-agnostic, detected from the env-built
     # global variables — NO OpenAI bias). Omitted (input byte-identical to
     # before) only when neither is available.
     from langflow.agentic.services.flow_preparation import available_model_providers
 
+    _available_provider_names = available_model_providers(global_variables)
+    _registered_provider_names = sorted(
+        descriptor.name for descriptor in get_registry_snapshot().descriptors_by_id.values()
+    )
+    _policy_candidates = list(
+        dict.fromkeys(
+            [
+                *_registered_provider_names,
+                *_available_provider_names,
+                *([provider] if provider else []),
+                *([intent_result.requested_provider] if intent_result.requested_provider else []),
+            ]
+        )
+    )
+    try:
+        _provider_policy = await aresolve_model_provider_policy(
+            user_id=user_id,
+            providers=_policy_candidates,
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+    except BaseException:
+        # The current canvas was already seeded above, but the main request
+        # try/finally has not started yet. A fail-closed policy error or
+        # cancellation must not leak that ContextVar state to the next request.
+        reset_working_flow()
+        raise
+    _requested_provider = intent_result.requested_provider
+    _requested_provider_allowed = not _requested_provider or _provider_policy.allows(_requested_provider)
+    _allowed_configuration_providers = _provider_policy.filter(_registered_provider_names)
+    _catalog_is_restricted = any(not _provider_policy.allows(name) for name in _policy_candidates)
+
     _model_parts: list[str] = []
-    if provider and model_name:
+    if provider and model_name and _provider_policy.allows(provider):
         _model_parts.append(f"preferred: provider={provider!r}, name={model_name!r}")
-    _avail = available_model_providers(global_variables)
+    _avail = _provider_policy.filter(_available_provider_names)
     if _avail:
         _model_parts.append("providers with credentials configured: " + ", ".join(_avail))
     if _model_parts:
         current_input = (
             f"[Available language models — these are a DEFAULT only. If the user explicitly named a "
-            f"model, set EXACTLY that model (verbatim) and IGNORE this block. ONLY when the user did "
-            f"NOT name a model, configure an Agent's `model` field with the one marked `preferred` "
-            f"(else any listed provider) so the flow can run: "
+            f"model and no Model provider policy notice rejects it, set EXACTLY that model and IGNORE "
+            f"this block. ONLY when the user did NOT name a model, configure an Agent's `model` field "
+            f"with the one marked `preferred` (else any listed provider) so the flow can run: "
             f"{'; '.join(_model_parts)}]\n\n{current_input}"
+        )
+    if _catalog_is_restricted or not _requested_provider_allowed:
+        allowed_notice = (
+            "Configure only these providers: " + ", ".join(_allowed_configuration_providers) + ". "
+            if _allowed_configuration_providers
+            else "No model providers are available for configuration. "
+        )
+        requested_notice = (
+            "The explicitly requested provider is unavailable. " if not _requested_provider_allowed else ""
+        )
+        current_input = (
+            f"[Model provider policy: {requested_notice}{allowed_notice}"
+            "Do not discover, configure, or run any other provider.]\n\n"
+            f"{current_input}"
         )
 
     # Headless callers (MCP) have no review UI, so steer the agent away from a
@@ -829,16 +881,22 @@ async def execute_flow_with_validation_streaming(
         set_current_user_id(user_id)
         # The generate_component tool re-runs the component-gen LLM flow
         # mid-loop and needs the same provider/model the request used.
-        set_agent_run_model(provider, model_name, api_key_var)
+        set_agent_run_model(
+            provider,
+            model_name,
+            api_key_var,
+            allow_configuration=bool(provider and _provider_policy.allows(provider)),
+        )
         set_agent_run_iterations(_iterations_from_globals(global_variables))
         # If the user EXPLICITLY named a model (e.g. "use the OpenAI gpt-5.4
         # model"), bind it so the run-time injector ENFORCES it on the Agent —
         # the canvas must show exactly what the user asked for, never the
         # assistant's own runtime model. Same-provider runs reuse the verified
         # api_key_var; a different provider falls back to its default var.
-        _req_provider = intent_result.requested_provider
+        _req_provider = intent_result.requested_provider if _requested_provider_allowed else None
         _req_api_key_var = api_key_var if (_req_provider and provider and _req_provider == provider) else None
-        set_requested_agent_model(_req_provider, intent_result.requested_model, _req_api_key_var)
+        _req_model = intent_result.requested_model if _req_provider else None
+        set_requested_agent_model(_req_provider, _req_model, _req_api_key_var)
 
         # max_retries=0 means 1 attempt (no retries), matching non-streaming semantics
         total_attempts = max_retries + 1

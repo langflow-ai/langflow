@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import warnings
-from collections.abc import Coroutine
+from collections.abc import Awaitable, Callable, Coroutine, Mapping
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -53,6 +53,60 @@ from langflow.services.database.models.user.crud import (
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import session_scope
 from langflow.services.schema import ServiceType
+
+_MAX_EXTERNAL_AUTHORIZATION_GROUPS = 500
+_MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH = 256
+
+
+def _has_external_group_overage(claims: Mapping[str, object], claim_name: str) -> bool:
+    """Return whether an Entra-style overage pointer replaces the group claim."""
+    claim_names = claims.get("_claim_names")
+    return isinstance(claim_names, Mapping) and claim_name in claim_names
+
+
+def _audit_audience(claims: Mapping[str, object]) -> str | list[str] | None:
+    """Normalize a verified audience claim to a JSON-safe audit value."""
+    audience = claims.get("aud")
+    if isinstance(audience, str):
+        return audience
+    if isinstance(audience, (list, tuple)) and all(isinstance(value, str) for value in audience):
+        return list(audience)
+    return None
+
+
+async def _safe_audit_directory_reconciliation(
+    audit: Callable[..., Awaitable[None]],
+    *,
+    identity: ExternalIdentity,
+    user: User,
+    issuer: str | None,
+    result: str,
+    details: dict[str, object],
+) -> None:
+    """Record reconciliation without letting audit outages fail authentication."""
+    try:
+        await audit(
+            user_id=user.id,
+            action="directory_membership:reconcile",
+            obj=f"user:{user.id}",
+            result=result,
+            details={
+                "provider_id": identity.provider,
+                "issuer": issuer,
+                "subject": identity.subject,
+                "audience": _audit_audience(identity.claims),
+                "source": "external_bearer",
+                **details,
+            },
+        )
+    except Exception:  # noqa: BLE001
+        await logger.aexception(
+            "Authorization directory reconciliation audit failed for provider=%s user=%s result=%s",
+            identity.provider,
+            user.id,
+            result,
+        )
+
 
 if TYPE_CHECKING:
     from cryptography.fernet import Fernet, MultiFernet
@@ -129,12 +183,25 @@ class AuthService(BaseAuthService):
                 # Token auth failed for an unexpected reason; try the distinct
                 # external credential first, then fall back to API key if provided.
                 if external_token and external_token != token:
+                    # Token authentication can delegate to external JIT
+                    # provisioning, which may flush user/profile state before a
+                    # later step fails. Give the distinct external credential a
+                    # clean transaction and authentication context.
+                    await db.rollback()
+                    clear_current_auth_context()
+                    clear_current_external_access_context()
                     external_user = await self._authenticate_with_external_token(external_token, db)
                     if external_user is not None:
                         return external_user
                 if api_key:
+                    # API-key authentication commits its usage bookkeeping. Roll
+                    # back both prior credential attempts immediately before it so
+                    # that commit cannot persist state they left in the session.
+                    await db.rollback()
+                    clear_current_auth_context()
+                    clear_current_external_access_context()
                     try:
-                        user = await self._authenticate_with_api_key(api_key, db)
+                        user = await self._authenticate_with_api_key(api_key)
                         if user:
                             return user
                         msg = "Invalid API key"
@@ -158,8 +225,14 @@ class AuthService(BaseAuthService):
 
         # Try API key authentication
         if api_key:
+            if external_token:
+                # The owned API-key transaction must not coexist with state or
+                # a checked-out connection left by the failed external attempt.
+                await db.rollback()
+                clear_current_auth_context()
+                clear_current_external_access_context()
             try:
-                user = await self._authenticate_with_api_key(api_key, db)
+                user = await self._authenticate_with_api_key(api_key)
                 if user:
                     return user
                 msg = "Invalid API key"
@@ -292,9 +365,190 @@ class AuthService(BaseAuthService):
             AuthCredentialContext(method=AUTH_METHOD_EXTERNAL, external_provider=identity.provider)
         )
         set_current_external_access_context(access_context_from_identity(identity, self.settings.auth_settings))
-        return await self._materialize_external_user(identity, db)
+        user = await self._materialize_external_user(identity, db)
+        await self._reconcile_verified_external_groups(identity=identity, user=user, db=db)
+        return user
 
-    async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
+    async def _reconcile_verified_external_groups(
+        self,
+        *,
+        identity: ExternalIdentity,
+        user: User,
+        db: AsyncSession,
+    ) -> None:
+        """Send a complete verified group claim through the authorization seam.
+
+        Missing, overage, or malformed claims are not authoritative zero-group
+        snapshots and therefore skip reconciliation. Provider configuration and
+        transactional ingest failures intentionally remain fail-closed; audit
+        enqueue and post-commit publication are isolated from authentication.
+        """
+        from lfx.services.authorization import DirectoryMembershipSnapshot
+
+        from langflow.services.authorization.audit import AUDIT_ALLOW, AUDIT_SKIP, audit_decision
+        from langflow.services.authorization.lifecycle import safe_directory_membership_committed
+        from langflow.services.deps import get_authorization_service
+
+        authorization_service = get_authorization_service()
+        issuer_value = identity.claims.get("iss")
+        issuer = issuer_value.strip() if isinstance(issuer_value, str) and issuer_value.strip() else None
+        claim_name = await authorization_service.external_groups_claim(
+            provider_id=identity.provider,
+            issuer=issuer,
+        )
+        if not claim_name:
+            return
+
+        async def audit_reconciliation(*, result: str, details: dict[str, object]) -> None:
+            await _safe_audit_directory_reconciliation(
+                audit_decision,
+                identity=identity,
+                user=user,
+                issuer=issuer,
+                result=result,
+                details=details,
+            )
+
+        async def audit_skip(reason: str) -> None:
+            # JIT user/profile and last-login updates share this transaction.
+            # Commit them before the independent audit writer resolves the
+            # audit row's user foreign key.
+            await db.commit()
+            await audit_reconciliation(
+                result=AUDIT_SKIP,
+                details={
+                    "claim_name": claim_name,
+                    "reason": reason,
+                    "authoritative": False,
+                    "complete": False,
+                },
+            )
+
+        if _has_external_group_overage(identity.claims, claim_name):
+            logger.warning(
+                "Skipping external group reconciliation for provider=%s user=%s: claim=%s uses an overage pointer",
+                identity.provider,
+                user.id,
+                claim_name,
+            )
+            await audit_skip("overage")
+            return
+        if claim_name not in identity.claims:
+            logger.warning(
+                "Skipping external group reconciliation for provider=%s user=%s: claim=%s is absent",
+                identity.provider,
+                user.id,
+                claim_name,
+            )
+            await audit_skip("absent")
+            return
+
+        raw_groups = identity.claims[claim_name]
+        if isinstance(raw_groups, str):
+            candidates = (raw_groups,)
+        elif isinstance(raw_groups, (list, tuple, set, frozenset)):
+            candidates = raw_groups
+        else:
+            logger.warning(
+                "Skipping external group reconciliation for provider=%s user=%s: claim=%s has an invalid type",
+                identity.provider,
+                user.id,
+                claim_name,
+            )
+            await audit_skip("malformed")
+            return
+
+        normalized_groups: set[str] = set()
+        for candidate in candidates:
+            if not isinstance(candidate, str):
+                logger.warning(
+                    "Skipping external group reconciliation for provider=%s user=%s: "
+                    "claim=%s contains a non-string entry",
+                    identity.provider,
+                    user.id,
+                    claim_name,
+                )
+                await audit_skip("malformed")
+                return
+            group = candidate.strip()
+            if not group or len(group) > _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH:
+                logger.warning(
+                    "Skipping external group reconciliation for provider=%s user=%s: "
+                    "claim=%s contains an invalid group identifier",
+                    identity.provider,
+                    user.id,
+                    claim_name,
+                )
+                await audit_skip("malformed")
+                return
+            normalized_groups.add(group)
+
+        groups = tuple(sorted(normalized_groups))
+        if len(groups) > _MAX_EXTERNAL_AUTHORIZATION_GROUPS:
+            logger.warning(
+                "Skipping external group reconciliation for provider=%s user=%s: claim=%s exceeds the %d-group limit",
+                identity.provider,
+                user.id,
+                claim_name,
+                _MAX_EXTERNAL_AUTHORIZATION_GROUPS,
+            )
+            await audit_skip("too_many")
+            return
+
+        result = await authorization_service.ingest_directory_membership_snapshot(
+            session=db,
+            snapshot=DirectoryMembershipSnapshot(
+                provider_id=identity.provider,
+                source="external_bearer",
+                observed_at=datetime.now(timezone.utc),
+                user_id=user.id,
+                provider_user_id=identity.subject,
+                memberships=groups,
+                authoritative=True,
+                complete=True,
+            ),
+        )
+        await db.commit()
+        if result is None:
+            # Compatibility with a plugin built against the initial untyped
+            # seam: an unknown result must invalidate, never preserve stale
+            # policy by assuming nothing changed.
+            logger.warning(
+                "Authorization plugin returned no directory ingest result for provider=%s user=%s; "
+                "invalidating conservatively",
+                identity.provider,
+                user.id,
+            )
+            changed = True
+            added = None
+            removed = None
+        else:
+            # The initial seam only documented ``changed`` through caller-side
+            # duck typing. Keep older plugin result objects safe after commit
+            # while the explicit result contract rolls out.
+            changed = bool(getattr(result, "changed", True))
+            added = getattr(result, "added", None)
+            removed = getattr(result, "removed", None)
+
+        await audit_reconciliation(
+            result=AUDIT_ALLOW,
+            details={
+                "membership_count": len(groups),
+                "membership_sha256": hashlib.sha256("\0".join(groups).encode()).hexdigest(),
+                "changed": changed,
+                "added": added,
+                "removed": removed,
+                "authoritative": True,
+                "complete": True,
+            },
+        )
+        await safe_directory_membership_committed(
+            authorization_service,
+            user_id=user.id,
+            changed=changed,
+        )
+
+    async def _authenticate_with_api_key(self, api_key: str) -> UserRead | None:
         """Internal method to authenticate with API key (raises generic exceptions).
 
         The EXTERNAL_AUTH access ceiling block for externally-managed users is
@@ -302,7 +556,7 @@ class AuthService(BaseAuthService):
         returns ``None`` for a blocked user so every caller treats it as an auth
         failure. No additional ceiling check is needed here.
         """
-        result = await authenticate_api_key(db, api_key)
+        result = await authenticate_api_key(api_key)
         if not result:
             return None
 
@@ -392,16 +646,26 @@ class AuthService(BaseAuthService):
             is_superuser=False,
             last_login_at=now,
         )
-        new_profile = SSOUserProfile(
-            user_id=user.id,
-            sso_provider=identity.provider,
-            sso_user_id=identity.subject,
-            email=identity.email,
-            sso_last_login_at=now,
-        )
         db.add(user)
-        db.add(new_profile)
         try:
+            # Flush `user` on its own before constructing `new_profile`.
+            # SSOUserProfile.user_id is a bare FK column - no SQLModel
+            # Relationship() ties User and SSOUserProfile together - so
+            # SQLAlchemy's unit-of-work can't infer that the user row must be
+            # inserted before sso_user_profile in a single flush. Without a
+            # declared relationship, the two INSERTs aren't guaranteed to be
+            # ordered, and on Postgres that can raise ForeignKeyViolation on
+            # sso_user_profile_user_id_fkey. A separate flush here removes the
+            # ordering dependency entirely instead of relying on it.
+            await db.flush()
+            new_profile = SSOUserProfile(
+                user_id=user.id,
+                sso_provider=identity.provider,
+                sso_user_id=identity.subject,
+                email=identity.email,
+                sso_last_login_at=now,
+            )
+            db.add(new_profile)
             await db.flush()
             await db.refresh(user)
             await self._initialize_jit_user_defaults(user, db)
@@ -447,20 +711,13 @@ class AuthService(BaseAuthService):
     async def api_key_security(
         self, query_param: str | None, header_param: str | None, db: AsyncSession | None = None
     ) -> UserRead | None:
-        settings_service = self.settings
-
-        # Use provided session or create a new one
-        if db is not None:
-            return await self._api_key_security_impl(query_param, header_param, db, settings_service)
-
-        async with session_scope() as new_db:
-            return await self._api_key_security_impl(query_param, header_param, new_db, settings_service)
+        return await self._api_key_security_impl(query_param, header_param, db, self.settings)
 
     async def _api_key_security_impl(
         self,
         query_param: str | None,
         header_param: str | None,
-        db: AsyncSession,
+        db: AsyncSession | None,
         settings_service,
     ) -> UserRead | None:
         clear_current_auth_context()
@@ -474,7 +731,11 @@ class AuthService(BaseAuthService):
                 )
             if not query_param and not header_param:
                 if settings_service.auth_settings.skip_auth_auto_login:
-                    result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+                    if db is not None:
+                        result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+                    else:
+                        async with session_scope() as auto_login_db:
+                            result = await get_user_by_username(auto_login_db, settings_service.auth_settings.SUPERUSER)
                     if result is None:
                         raise HTTPException(
                             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -496,7 +757,7 @@ class AuthService(BaseAuthService):
             api_key = query_param or header_param
             if api_key is None:  # pragma: no cover - guaranteed by the if-condition above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            api_key_result = await authenticate_api_key(db, api_key)
+            api_key_result = await authenticate_api_key(api_key)
 
         elif not query_param and not header_param:
             raise HTTPException(
@@ -509,7 +770,7 @@ class AuthService(BaseAuthService):
             api_key = query_param or header_param
             if api_key is None:  # pragma: no cover - guaranteed by the elif-condition above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            api_key_result = await authenticate_api_key(db, api_key)
+            api_key_result = await authenticate_api_key(api_key)
 
         if not api_key_result:
             raise HTTPException(
@@ -528,57 +789,57 @@ class AuthService(BaseAuthService):
         settings = self.settings
         clear_current_auth_context()
         clear_current_external_access_context()
-        async with session_scope() as db:
-            api_key_result = None
-            if settings.auth_settings.AUTO_LOGIN:
-                if not settings.auth_settings.SUPERUSER:
-                    raise WebSocketException(
-                        code=status.WS_1011_INTERNAL_ERROR,
-                        reason="Missing first superuser credentials",
-                    )
-                if not api_key:
-                    if settings.auth_settings.skip_auth_auto_login:
+        api_key_result = None
+        if settings.auth_settings.AUTO_LOGIN:
+            if not settings.auth_settings.SUPERUSER:
+                raise WebSocketException(
+                    code=status.WS_1011_INTERNAL_ERROR,
+                    reason="Missing first superuser credentials",
+                )
+            if not api_key:
+                if settings.auth_settings.skip_auth_auto_login:
+                    async with session_scope() as db:
                         result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
-                        if result is None:
-                            raise WebSocketException(
-                                code=status.WS_1011_INTERNAL_ERROR,
-                                reason="Superuser not found",
-                            )
-                        if not result.is_active:
-                            raise WebSocketException(
-                                code=status.WS_1008_POLICY_VIOLATION,
-                                reason="User account is inactive",
-                            )
-                        logger.warning(AUTO_LOGIN_WARNING)
-                        set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
-                    else:
+                    if result is None:
+                        raise WebSocketException(
+                            code=status.WS_1011_INTERNAL_ERROR,
+                            reason="Superuser not found",
+                        )
+                    if not result.is_active:
                         raise WebSocketException(
                             code=status.WS_1008_POLICY_VIOLATION,
-                            reason=AUTO_LOGIN_ERROR,
+                            reason="User account is inactive",
                         )
+                    logger.warning(AUTO_LOGIN_WARNING)
+                    set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
                 else:
-                    api_key_result = await authenticate_api_key(db, api_key)
-                    result = api_key_result.user if api_key_result is not None else None
-
-            else:
-                if not api_key:
                     raise WebSocketException(
                         code=status.WS_1008_POLICY_VIOLATION,
-                        reason="An API key must be passed as query or header",
+                        reason=AUTO_LOGIN_ERROR,
                     )
-                api_key_result = await authenticate_api_key(db, api_key)
+            else:
+                api_key_result = await authenticate_api_key(api_key)
                 result = api_key_result.user if api_key_result is not None else None
 
-            if not result:
+        else:
+            if not api_key:
                 raise WebSocketException(
                     code=status.WS_1008_POLICY_VIOLATION,
-                    reason="Invalid or missing API key",
+                    reason="An API key must be passed as query or header",
                 )
+            api_key_result = await authenticate_api_key(api_key)
+            result = api_key_result.user if api_key_result is not None else None
 
-            if isinstance(result, User):
-                if api_key_result is not None:
-                    set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
-                return UserRead.model_validate(result, from_attributes=True)
+        if not result:
+            raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="Invalid or missing API key",
+            )
+
+        if isinstance(result, User):
+            if api_key_result is not None:
+                set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
+            return UserRead.model_validate(result, from_attributes=True)
 
         raise WebSocketException(
             code=status.WS_1011_INTERNAL_ERROR,
@@ -722,15 +983,14 @@ class AuthService(BaseAuthService):
         api_key = api_key_header_val or api_key_query_val
 
         try:
-            async with session_scope() as db:
-                result = await authenticate_api_key(db, api_key)
-                if not result:
-                    logger.warning("Invalid API key provided for webhook")
-                    raise HTTPException(status_code=403, detail="Invalid API key")
+            result = await authenticate_api_key(api_key)
+            if not result:
+                logger.warning("Invalid API key provided for webhook")
+                raise HTTPException(status_code=403, detail="Invalid API key")
 
-                set_current_auth_context(AuthCredentialContext.from_api_key_result(result))
-                authenticated_user = UserRead.model_validate(result.user, from_attributes=True)
-                logger.info("Webhook API key validated successfully")
+            set_current_auth_context(AuthCredentialContext.from_api_key_result(result))
+            authenticated_user = UserRead.model_validate(result.user, from_attributes=True)
+            logger.info("Webhook API key validated successfully")
         except HTTPException:
             raise
         except Exception as exc:
@@ -1080,7 +1340,7 @@ class AuthService(BaseAuthService):
                 api_key = query_param or header_param
                 if api_key is None:  # pragma: no cover - guaranteed by the if-condition above
                     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-                api_key_result = await authenticate_api_key(db, api_key)
+                api_key_result = await authenticate_api_key(api_key)
                 result = api_key_result.user if api_key_result is not None else None
 
         elif not query_param and not header_param:
@@ -1090,14 +1350,14 @@ class AuthService(BaseAuthService):
             )
 
         elif query_param:
-            api_key_result = await authenticate_api_key(db, query_param)
+            api_key_result = await authenticate_api_key(query_param)
             result = api_key_result.user if api_key_result is not None else None
 
         else:
             # header_param must be truthy here (query_param is falsy, and we passed the not-both-None check)
             if header_param is None:  # pragma: no cover - guaranteed by the elif chain above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            api_key_result = await authenticate_api_key(db, header_param)
+            api_key_result = await authenticate_api_key(header_param)
             result = api_key_result.user if api_key_result is not None else None
 
         if not result:

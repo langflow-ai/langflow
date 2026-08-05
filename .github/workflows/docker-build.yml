@@ -24,7 +24,7 @@ on:
         type: string
         description: "Ref to check out. If not specified, will default to the main version or current branch."
       warning_check:
-        required: true
+        required: false
         type: boolean
         description: "Warning - use docker-build-v2 unless you have a very valid reason for using this deprecated workflow. By setting to True, you acknowledge all risks of using a possibly breaking workflow."
         default: false
@@ -160,6 +160,7 @@ jobs:
       docker_tags: ${{ steps.set-vars.outputs.docker_tags }}
       ghcr_tags: ${{ steps.set-vars.outputs.ghcr_tags }}
       file: ${{ steps.set-vars.outputs.file }}
+      target: ${{ steps.set-vars.outputs.target }}
     steps:
       - name: Set Dockerfile and Tags
         id: set-vars
@@ -173,13 +174,15 @@ jobs:
             # LANGFLOW-BASE RELEASE
             echo "docker_tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
             echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
-            echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
+            echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
+            echo "target=base" >> $GITHUB_OUTPUT
           else
             if [[ "${{ inputs.pre_release }}" == "true" ]]; then
               # LANGFLOW-MAIN PRE-RELEASE
               echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
               echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
+              echo "target=full" >> $GITHUB_OUTPUT
             elif [[ "${{ inputs.release_type }}" == "main-ep" ]]; then
               # LANGFLOW-MAIN (ENTRYPOINT) RELEASE
               echo "docker_tags=langflowai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
@@ -190,11 +193,13 @@ jobs:
               echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
+              echo "target=full" >> $GITHUB_OUTPUT
             elif [[ "${{ inputs.release_type }}" == "main-all" || "${{ inputs.release_type }}" == "nightly-main-all" ]]; then
               # LANGFLOW-MAIN (ALL OPTIONAL DEPS) RELEASE
               echo "docker_tags=langflowai/langflow-all${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow-all${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "ghcr_tags=ghcr.io/langflow-ai/langflow-all${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-all${nightly_suffix}:latest" >> $GITHUB_OUTPUT
-              echo "file=./docker/build_and_push_with_extras.Dockerfile" >> $GITHUB_OUTPUT
+              echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
+              echo "target=full-bundles" >> $GITHUB_OUTPUT
             else
               echo "Invalid release type. Exiting the workflow."
               exit 1
@@ -261,6 +266,7 @@ jobs:
             context: .
             push: true
             file: ${{ needs.setup.outputs.file }}
+            target: ${{ needs.setup.outputs.target }}
             tags: ${{ needs.setup.outputs.docker_tags }}
             platforms: linux/amd64,linux/arm64
             cache-from: type=gha
@@ -281,6 +287,7 @@ jobs:
             context: .
             push: true
             file: ${{ needs.setup.outputs.file }}
+            target: ${{ needs.setup.outputs.target }}
             tags: ${{ needs.setup.outputs.ghcr_tags }}
             platforms: linux/amd64,linux/arm64
             cache-from: type=gha
@@ -343,14 +350,14 @@ jobs:
             network=host
 
       - name: Login to Docker Hub
-        if: ${{ matrix.component == 'docker-backend' }} || ${{ matrix.component == 'docker-frontend' }}
+        if: ${{ matrix.component == 'docker-backend' || matrix.component == 'docker-frontend' }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to Github Container Registry
-        if: ${{ matrix.component == 'ghcr-backend' }} || ${{ matrix.component == 'ghcr-frontend' }}
+        if: ${{ matrix.component == 'ghcr-backend' || matrix.component == 'ghcr-frontend' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io

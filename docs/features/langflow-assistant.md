@@ -1890,11 +1890,11 @@ C4Context
   System(assistant, "Langflow Assistant", "AI-powered component generation through natural language")
 
   System_Ext(llm_providers, "LLM Providers", "OpenAI, Anthropic, Azure, Google - text generation")
-  System_Ext(langflow_core, "Langflow Core", "Flow execution, component validation, canvas")
+  System_Ext(langflow_runtime, "Langflow Runtime", "Flow execution, component validation, canvas")
 
   Rel(user, assistant, "Sends prompts, receives components")
   Rel(assistant, llm_providers, "Generates text via API")
-  Rel(assistant, langflow_core, "Validates code, adds to canvas")
+  Rel(assistant, langflow_runtime, "Validates code, adds to canvas")
 ```
 
 ### 9.2 Container Diagram (Level 2)
