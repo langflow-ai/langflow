@@ -7,9 +7,11 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, HTTPException
 from langflow.api.v1.schemas import FlowDataRequest
 from lfx.events.event_manager import create_default_event_manager
+from lfx.graph.vertex.base import Vertex
+from lfx.utils.file_path_security import LocalFileAccessError
 
 
 @pytest.mark.parametrize("use_sanitized_data", [False, True])
@@ -72,3 +74,50 @@ async def test_generate_flow_events_sets_source_flow_provenance_for_public_graph
     else:
         build_from_db.assert_awaited_once()
         build_from_data.assert_not_awaited()
+
+
+async def test_generate_flow_events_maps_rejected_file_tweaks_to_bad_request(monkeypatch):
+    import langflow.api.build as build_module
+
+    flow_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    vertex = MagicMock(spec=Vertex)
+    vertex.id = "file-node"
+    rejection = "FileInput path is outside the authenticated user's storage scope."
+    vertex.update_raw_params.side_effect = LocalFileAccessError(rejection)
+    graph = MagicMock()
+    graph.vertices = [vertex]
+
+    chat_service = MagicMock()
+    telemetry_service = MagicMock()
+
+    @asynccontextmanager
+    async def fake_session_scope():
+        yield MagicMock()
+
+    monkeypatch.setattr(build_module, "get_chat_service", lambda: chat_service)
+    monkeypatch.setattr(build_module, "get_telemetry_service", lambda: telemetry_service)
+    monkeypatch.setattr(build_module, "session_scope", fake_session_scope)
+    monkeypatch.setattr(build_module, "build_graph_from_db", AsyncMock(return_value=graph))
+    unexpected_log = AsyncMock()
+    monkeypatch.setattr(build_module.logger, "aexception", unexpected_log)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await build_module.generate_flow_events(
+            flow_id=flow_id,
+            background_tasks=BackgroundTasks(),
+            event_manager=create_default_event_manager(asyncio.Queue()),
+            inputs=None,
+            data=None,
+            files=None,
+            stop_component_id=None,
+            start_component_id=None,
+            log_builds=False,
+            current_user=SimpleNamespace(id=user_id),
+            tweaks={"file-node": {"file": "other-flow/secret.txt"}},
+            track_job_status=False,
+        )
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == rejection
+    unexpected_log.assert_not_awaited()

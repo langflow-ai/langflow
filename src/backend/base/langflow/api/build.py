@@ -13,6 +13,7 @@ from lfx.graph.vertex.base import Vertex
 from lfx.log.logger import logger
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
+from lfx.utils.file_path_security import LocalFileAccessError
 from sqlmodel import select
 
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
@@ -571,7 +572,7 @@ async def generate_flow_events(
                 error_message=str(exc),
             )
 
-            if "stream or streaming set to True" in str(exc):
+            if isinstance(exc, LocalFileAccessError) or "stream or streaming set to True" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
             await logger.aexception("Error checking build status: " + str(exc))
             raise HTTPException(status_code=500, detail=str(exc)) from exc
