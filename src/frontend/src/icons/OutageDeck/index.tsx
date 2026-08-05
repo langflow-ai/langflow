@@ -1,10 +1,14 @@
-import type React from "react";
-import { forwardRef } from "react";
+import { forwardRef, type SVGProps } from "react";
 import SvgOutageDeck from "./outagedeck";
 
-export const OutageDeckIcon = forwardRef<
-  SVGSVGElement,
-  React.PropsWithChildren<{}>
->((props, ref) => {
-  return <SvgOutageDeck ref={ref} {...props} />;
-});
+type OutageDeckIconProps = SVGProps<SVGSVGElement> & {
+  isDark?: boolean;
+};
+
+export const OutageDeckIcon = forwardRef<SVGSVGElement, OutageDeckIconProps>(
+  (props, ref) => {
+    return <SvgOutageDeck ref={ref} {...props} />;
+  },
+);
+
+OutageDeckIcon.displayName = "OutageDeckIcon";

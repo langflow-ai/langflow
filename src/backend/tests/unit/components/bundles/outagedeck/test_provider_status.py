@@ -98,7 +98,11 @@ class TestOutageDeckProviderStatusComponent(ComponentTestBaseWithoutClient):
 
         assert result.data == {"error": "OutageDeck returned an unexpected response shape."}
 
-    @pytest.mark.asyncio
-    async def test_latest_version(self, component_class, default_kwargs):
-        component = component_class(**default_kwargs)
-        assert component is not None
+    @respx.mock
+    async def test_invalid_json_returns_error(self, component_class):
+        respx.get(f"{OUTAGEDECK_API_BASE_URL}/github").mock(return_value=Response(200, text="not-json"))
+        component = component_class(provider_slug="github")
+
+        result = await component.get_provider_status()
+
+        assert result.data == {"error": "OutageDeck returned a response that was not valid JSON."}

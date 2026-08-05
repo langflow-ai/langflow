@@ -73,7 +73,7 @@ nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0", "nv-ingest-client>=26.1.0,<26.
 olivya = []
 ollama = ["lfx-ollama>=0.1.0,<1.0.0"]
 openrouter = ["langchain-openai>=1.1.6"]
-outagedeck = []
+outagedeck = ["httpx>=0.28.1"]
 perplexity = ["langchain-perplexity>=1.0.0,<2.0.0"]
 pgvector = ["pgvector>=0.4.2", "langchain-community>=0.4.1,<1.0.0"]
 pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]

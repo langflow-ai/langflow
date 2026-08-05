@@ -9314,6 +9314,7 @@ all = [
     { name = "gitpython" },
     { name = "google-api-python-client" },
     { name = "google-search-results" },
+    { name = "httpx" },
     { name = "huggingface-hub" },
     { name = "jigsawstack" },
     { name = "langchain-chroma" },
@@ -9381,6 +9382,7 @@ all-no-torch = [
     { name = "gitpython" },
     { name = "google-api-python-client" },
     { name = "google-search-results" },
+    { name = "httpx" },
     { name = "huggingface-hub" },
     { name = "jigsawstack" },
     { name = "langchain-chroma" },
@@ -9573,6 +9575,9 @@ ollama = [
 openrouter = [
     { name = "langchain-openai" },
 ]
+outagedeck = [
+    { name = "httpx" },
+]
 perplexity = [
     { name = "langchain-perplexity" },
 ]
@@ -9681,6 +9686,7 @@ requires-dist = [
     { name = "gitpython", marker = "extra == 'git'", specifier = ">=3.1.50" },
     { name = "google-api-python-client", marker = "extra == 'youtube'", specifier = "~=2.161" },
     { name = "google-search-results", marker = "extra == 'serpapi'", specifier = ">=2.4.1,<3.0.0" },
+    { name = "httpx", marker = "extra == 'outagedeck'", specifier = ">=0.28.1" },
     { name = "huggingface-hub", extras = ["inference"], marker = "extra == 'huggingface'", specifier = ">=1.0.0,<2.0.0" },
     { name = "jigsawstack", marker = "extra == 'jigsawstack'", specifier = "==0.2.7" },
     { name = "langchain-chroma", marker = "extra == 'chroma'", specifier = "~=0.2.6" },
