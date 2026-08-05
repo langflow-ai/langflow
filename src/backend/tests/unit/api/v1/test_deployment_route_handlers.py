@@ -872,7 +872,6 @@ class TestListDeploymentsMetadataSync:
 
 
 class TestListDeploymentsSharedPrefilter:
-    @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.ensure_deployment_permission", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.has_visible_deployment_for_provider", new_callable=AsyncMock)
@@ -912,7 +911,6 @@ class TestListDeploymentsSharedPrefilter:
         mock_get_shared_pa.assert_awaited_once()
         mock_resolve_adapter.assert_not_called()
 
-    @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.has_visible_deployment_for_provider", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.get_shared_listing_provider_account_or_404", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
@@ -950,7 +948,6 @@ class TestListDeploymentsSharedPrefilter:
         mock_get_owned_pa.assert_awaited_once()
         mock_get_shared_pa.assert_not_awaited()
 
-    @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")

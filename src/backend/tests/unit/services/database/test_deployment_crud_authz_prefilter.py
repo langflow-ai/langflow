@@ -197,7 +197,6 @@ async def test_get_provider_account_by_id_unscoped_loads_foreign_account(async_s
     assert await get_provider_account_by_id_unscoped(async_session, provider_id=uuid4()) is None
 
 
-@pytest.mark.asyncio
 async def test_provider_visibility_proof_is_bound_to_provider_and_scope(async_session: AsyncSession):
     """An unscoped provider fetch is permitted only for a visible row under that provider."""
     owner, provider, _owned, foreign_visible, _foreign_hidden = await _seed(async_session)

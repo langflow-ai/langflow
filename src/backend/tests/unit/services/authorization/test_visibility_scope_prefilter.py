@@ -147,7 +147,6 @@ def test_unassigned_workspace_scope_uses_a_compact_null_predicate():
     )
 
 
-@pytest.mark.anyio
 async def test_workspace_scope_sql_matches_in_memory_for_project_nulls_and_exclusions(async_session):
     owner_id = uuid4()
     ordinary_project_id = uuid4()

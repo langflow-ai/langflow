@@ -1706,6 +1706,7 @@
   "project.deletedSuccessfully": "O projeto foi excluído com sucesso.",
   "project.errorDeleting": "Erro ao excluir o projeto.",
   "project.newName": "Novo projeto",
+  "project.ownedBy": "{{name}} — {{owner}}",
   "project.starterName": "Projeto Inicial",
   "settings.addNewKey": "Incluir novo",
   "settings.apiKeys.columnCreated": "Criado em",

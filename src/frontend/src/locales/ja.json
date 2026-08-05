@@ -1706,6 +1706,7 @@
   "project.deletedSuccessfully": "プロジェクトが正常に削除されました。",
   "project.errorDeleting": "プロジェクトの削除に失敗しました。",
   "project.newName": "新規プロジェクト",
+  "project.ownedBy": "{{owner}} の {{name}}",
   "project.starterName": "入門プロジェクト",
   "settings.addNewKey": "新規の追加",
   "settings.apiKeys.columnCreated": "作成済み",

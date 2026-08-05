@@ -129,7 +129,7 @@ export const MenuBar = memo((): JSX.Element => {
                   }}
                 >
                   <span className="truncate">
-                    {getProjectDisplayName(currentFolder)}
+                    {getProjectDisplayName(currentFolder, t)}
                   </span>
                 </Button>
               </div>

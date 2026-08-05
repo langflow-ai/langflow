@@ -8,7 +8,7 @@ from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
 from lfx.utils.util_strings import escape_like_pattern
-from sqlalchemy import literal, or_, update
+from sqlalchemy import literal, null, or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
@@ -283,10 +283,13 @@ async def read_projects(
         # Convert while the session is active so owner-qualified project lists
         # do not trigger lazy loads after the request-scoped session closes.
         return [
-            FolderListRead(
-                **FolderRead.model_validate(project, from_attributes=True).model_dump(),
-                owner_username=owners_by_id.get(str(project.user_id)) if project.user_id is not None else None,
-                is_owner=str(project.user_id) == str(current_user.id),
+            FolderListRead.model_validate(
+                project,
+                from_attributes=True,
+                update={
+                    "owner_username": owners_by_id.get(str(project.user_id)) if project.user_id is not None else None,
+                    "is_owner": str(project.user_id) == str(current_user.id),
+                },
             )
             for project in sorted_projects
         ]
@@ -381,7 +384,7 @@ async def read_project(
                     stmt,
                     id_column=Flow.id,
                     owner_clause=Flow.user_id == current_user.id,
-                    workspace_expression=literal(project.workspace_id),
+                    workspace_expression=null() if project.workspace_id is None else literal(project.workspace_id),
                     project_column=Flow.folder_id,
                     visibility=visibility_scope,
                 )

@@ -27,8 +27,15 @@ jest.mock("@tanstack/react-query", () => ({
 jest.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: jest.fn() },
   useTranslation: () => ({
-    t: (key: string) =>
-      key === "sidebar.projectCreateError" ? "Unable to create project." : key,
+    t: (key: string, options?: Record<string, string>) => {
+      if (key === "sidebar.projectCreateError") {
+        return "Unable to create project.";
+      }
+      if (key === "project.ownedBy") {
+        return `${options?.name} — ${options?.owner}`;
+      }
+      return key;
+    },
   }),
 }));
 
@@ -251,6 +258,8 @@ describe("project creation errors", () => {
 
     render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
 
+    expect(screen.getByTestId("sidebar-nav-own-id")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-nav-foreign-id")).toBeInTheDocument();
     const ownLabel = screen.getByText("Starter Project");
     const foreignLabel = screen.getByText("Starter Project — other-user");
     fireEvent.doubleClick(foreignLabel);

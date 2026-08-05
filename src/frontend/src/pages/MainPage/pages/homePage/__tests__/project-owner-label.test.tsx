@@ -35,7 +35,10 @@ const mockFolderQuery = {
 };
 
 jest.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, string>) =>
+      key === "project.ownedBy" ? `${options?.name} — ${options?.owner}` : key,
+  }),
 }));
 jest.mock("react-router-dom", () => ({
   useLocation: () => ({ state: undefined }),

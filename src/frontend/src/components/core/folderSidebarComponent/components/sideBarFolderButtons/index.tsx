@@ -440,6 +440,7 @@ const SideBarFoldersButtonsComponent = ({
                         <SidebarMenuItem
                           key={item.id}
                           className="group/menu-button"
+                          data-project-id={item.id}
                           onMouseEnter={() => setHoveredFolderId(item.id!)}
                           onMouseLeave={() => setHoveredFolderId(null)}
                         >
@@ -453,7 +454,7 @@ const SideBarFoldersButtonsComponent = ({
                                   onDragLeave={dragLeave}
                                   onDrop={(e) => onDrop(e, item.id!)}
                                   key={item.id}
-                                  data-testid={`sidebar-nav-${item.name}-${item.id}`}
+                                  data-testid={`sidebar-nav-${item.id}`}
                                   id={`sidebar-nav-${item.id}`}
                                   isActive={checkPathName(item.id!)}
                                   onClick={() => handleChangeFolder!(item.id!)}
@@ -488,7 +489,7 @@ const SideBarFoldersButtonsComponent = ({
                                         />
                                       ) : (
                                         <span className="block w-0 grow truncate text-sm opacity-100">
-                                          {getProjectDisplayName(item)}
+                                          {getProjectDisplayName(item, t)}
                                         </span>
                                       )}
                                     </div>

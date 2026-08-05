@@ -28,6 +28,7 @@ import contextlib
 import gzip
 import json
 from typing import TYPE_CHECKING, Any
+from unittest.mock import patch
 from uuid import UUID, uuid4
 
 from langflow.services.database.models.flow.model import Flow
@@ -35,6 +36,8 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_auth_service, get_settings_service, session_scope
 from lfx.services.authorization.base import BaseAuthorizationService, ResourceVisibilityScope
+from sqlalchemy.dialects.postgresql.asyncpg import PGDialect_asyncpg
+from sqlalchemy.sql.sqltypes import NullType
 from sqlmodel import select
 
 if TYPE_CHECKING:
@@ -376,6 +379,51 @@ async def test_shared_project_flow_listing_uses_project_workspace_for_both_respo
             )
             assert spoofed_visible not in hidden_ids
             assert canonical_visible in visible_ids
+
+
+async def test_shared_unassigned_project_pagination_compiles_safely_for_asyncpg(client):
+    from langflow.api.v1 import projects as projects_module
+
+    settings = get_settings_service()
+    username = f"owner_{uuid4().hex}"
+    await _make_user(username)
+    other_id = await _make_user(f"other_{uuid4().hex}")
+    headers = await _login(client, username)
+    project_id = await _make_folder(
+        f"unassigned_project_{uuid4().hex}",
+        user_id=other_id,
+        workspace_id=None,
+    )
+    await _make_flow(
+        f"visible_{uuid4().hex}",
+        user_id=other_id,
+        folder_id=project_id,
+        workspace_id=None,
+    )
+    scope = ResourceVisibilityScope(include_unassigned_workspace=True)
+    compiled_statements = []
+    original_apaginate = projects_module.apaginate
+
+    async def capture_statement(*args, **kwargs):
+        statement = args[1]
+        compiled_statements.append(statement.compile(dialect=PGDialect_asyncpg()))
+        return await original_apaginate(*args, **kwargs)
+
+    with (
+        _install_prefilter_authz(settings, {}, scope_by_type={"flow": scope}),
+        patch.object(projects_module, "apaginate", new=capture_statement),
+    ):
+        response = await client.get(
+            f"api/v1/projects/{project_id}",
+            headers=headers,
+            params={"page": 1, "size": 50},
+        )
+
+    assert response.status_code == 200, response.text
+    assert len(compiled_statements) == 1
+    compiled = compiled_statements[0]
+    assert "NULL IS NULL" in str(compiled)
+    assert not any(isinstance(bind.type, NullType) for bind in compiled.binds.values())
 
 
 async def test_shared_project_get_does_not_delete_flows_hidden_from_response(client):

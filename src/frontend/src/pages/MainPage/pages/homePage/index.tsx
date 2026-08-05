@@ -54,7 +54,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     folders.find((folder) => folder.id === currentFolderId) ?? folders[0];
   const folderName = currentFolder?.name ?? "";
   const folderDisplayName = currentFolder
-    ? getProjectDisplayName(currentFolder)
+    ? getProjectDisplayName(currentFolder, t)
     : "";
   const flows = useFlowsManagerStore((state) => state.flows);
   // The primary "New Flow" handler — creates an empty flow, primes the

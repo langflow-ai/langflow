@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
 import {
   Select,
   SelectContent,
@@ -33,7 +32,7 @@ export const SelectOptions = ({
   const canRename = can(item.id, "write");
   const canDownload = can(item.id, "read");
   const canDelete = can(item.id, "delete");
-  const displayName = getProjectDisplayName(item);
+  const displayName = getProjectDisplayName(item, t);
   return (
     <div>
       <Select
@@ -57,7 +56,7 @@ export const SelectOptions = ({
             variant="plain"
             className="h-6 w-6 min-h-[24px] min-w-[24px]"
             id={`options-trigger-${item.id}`}
-            data-testid={`more-options-button_${convertTestName(item?.name ?? "")}_${item.id}`}
+            data-testid={`more-options-button_${item.id}`}
             aria-label={t("folder.optionsFor", { name: displayName })}
           >
             <IconComponent
