@@ -455,9 +455,9 @@ class TestS3DeleteAfterProcessingSecurity:
         assert not temp_file.exists()
         storage_service.delete_file.assert_not_awaited()
 
-    def test_s3_key_cleanup_uses_storage_service_without_local_unlink(self, monkeypatch, tmp_path):
+    def test_s3_user_key_cleanup_uses_storage_service_without_local_unlink(self, monkeypatch, tmp_path):
         monkeypatch.chdir(tmp_path)
-        local_collision = tmp_path / "flow-id" / "file.txt"
+        local_collision = tmp_path / "user-id" / "file.txt"
         local_collision.parent.mkdir()
         local_collision.write_text("SAFE_CANARY", encoding="utf-8")
 
@@ -465,17 +465,17 @@ class TestS3DeleteAfterProcessingSecurity:
         monkeypatch.setattr("lfx.base.data.base_file.get_storage_service", lambda: storage_service, raising=False)
 
         component = TestFileComponent()
-        component._user_id = "flow-id"
-        component.file_path = Data(data={"file_path": "flow-id/file.txt"})
+        component._user_id = "user-id"
+        component.file_path = Data(data={"file_path": "user-id/file.txt"})
         component.delete_server_file_after_processing = True
 
         component.load_files_base()
 
-        storage_service.delete_file.assert_awaited_once_with("flow-id", "file.txt")
+        storage_service.delete_file.assert_awaited_once_with("user-id", "file.txt")
         assert local_collision.read_text(encoding="utf-8") == "SAFE_CANARY"
 
     @pytest.mark.parametrize("caller_scope", [None, "attacker-id"], ids=["missing-scope", "different-scope"])
-    def test_s3_key_cleanup_rejects_unauthorized_scope(self, monkeypatch, caller_scope):
+    def test_s3_key_cleanup_skips_unauthorized_scope(self, monkeypatch, caller_scope):
         storage_service = SimpleNamespace(delete_file=AsyncMock())
         monkeypatch.setattr("lfx.base.data.base_file.get_storage_service", lambda: storage_service, raising=False)
 
@@ -485,7 +485,22 @@ class TestS3DeleteAfterProcessingSecurity:
         component.file_path = Data(data={"file_path": "victim-id/file.txt"})
         component.delete_server_file_after_processing = True
 
-        with pytest.raises(ValueError, match="authenticated user or executing flow scope"):
-            component.load_files_base()
+        component.load_files_base()
+
+        storage_service.delete_file.assert_not_awaited()
+
+    def test_s3_key_cleanup_rejects_flow_id_collision_with_other_user(self, monkeypatch):
+        storage_service = SimpleNamespace(delete_file=AsyncMock())
+        monkeypatch.setattr("lfx.base.data.base_file.get_storage_service", lambda: storage_service, raising=False)
+
+        component = TestFileComponent()
+        component._user_id = "attacker-id"
+        component._vertex = SimpleNamespace(
+            graph=SimpleNamespace(user_id="attacker-id", flow_id="victim-id"),
+        )
+        component.file_path = Data(data={"file_path": "victim-id/file.txt"})
+        component.delete_server_file_after_processing = True
+
+        component.load_files_base()
 
         storage_service.delete_file.assert_not_awaited()

@@ -20,7 +20,11 @@ from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
-from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
+from lfx.utils.file_path_security import (
+    component_authenticated_user_scope,
+    component_file_access_scopes,
+    enforce_local_file_access,
+)
 from lfx.utils.helpers import build_content_type_from_extension
 
 if TYPE_CHECKING:
@@ -336,16 +340,20 @@ class BaseFileComponent(Component, ABC):
                 # deleted from the host filesystem.
                 return
 
-            flow_id, file_name = parsed_path
-            if flow_id not in component_file_access_scopes(self):
-                msg = "S3 file cleanup is limited to the authenticated user or executing flow scope."
-                raise ValueError(msg)
+            namespace_id, file_name = parsed_path
+            if namespace_id != component_authenticated_user_scope(self):
+                # User-file and legacy flow-file objects share an untyped top-level
+                # namespace. Flow IDs are caller-selectable, so accepting a matching
+                # graph flow ID here could collide with another user's UUID. Only the
+                # authenticated user's namespace has unambiguous ownership.
+                self.log("Skipping S3 file cleanup outside the authenticated user's storage namespace.")
+                return
 
             storage_service = get_storage_service()
             if storage_service is None:
                 msg = "Storage service is unavailable; could not delete processed S3 file."
                 raise RuntimeError(msg)
-            run_until_complete(storage_service.delete_file(flow_id, file_name))
+            run_until_complete(storage_service.delete_file(namespace_id, file_name))
             return
 
         self._delete_local_path(file.path)
