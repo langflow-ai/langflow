@@ -60,11 +60,13 @@ from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NA
 from langflow.services.database.models.folder.model import (
     Folder,
     FolderCreate,
+    FolderListRead,
     FolderRead,
     FolderReadWithFlows,
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_settings_service
 from langflow.services.schema import ServiceType
 
@@ -220,7 +222,7 @@ async def create_project(
     return folder_read
 
 
-@router.get("/", response_model=list[FolderRead], status_code=200)
+@router.get("/", response_model=list[FolderListRead], status_code=200)
 async def read_projects(
     *,
     session: DbSession,
@@ -272,8 +274,22 @@ async def read_projects(
             )
         sorted_projects = sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
 
-        # Convert to FolderRead while session is still active to avoid detached instance errors
-        return [FolderRead.model_validate(project, from_attributes=True) for project in sorted_projects]
+        owner_ids = {project.user_id for project in sorted_projects if project.user_id is not None}
+        owners_by_id: dict[str, str] = {}
+        if owner_ids:
+            owner_rows = (await session.exec(select(User.id, User.username).where(User.id.in_(owner_ids)))).all()
+            owners_by_id = {str(owner_id): username for owner_id, username in owner_rows}
+
+        # Convert while the session is active so owner-qualified project lists
+        # do not trigger lazy loads after the request-scoped session closes.
+        return [
+            FolderListRead(
+                **FolderRead.model_validate(project, from_attributes=True).model_dump(),
+                owner_username=owners_by_id.get(str(project.user_id)) if project.user_id is not None else None,
+                is_owner=str(project.user_id) == str(current_user.id),
+            )
+            for project in sorted_projects
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

@@ -640,8 +640,10 @@ async def test_ensure_project_permission_create_uses_wildcard_obj(monkeypatch, f
     install_audit_recorder(monkeypatch)
 
     await authz_guards.ensure_project_permission(fake_user, ProjectAction.CREATE)
+    assert service.calls[0]["domain"] == "*"
     assert service.calls[0]["obj"] == "project:*"
     assert service.calls[0]["act"] == "create"
+    assert service.calls[0]["context"]["workspace_id"] is None
 
 
 # ----------------------------------------------------------------------------- #

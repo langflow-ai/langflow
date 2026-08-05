@@ -2,7 +2,21 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import SideBarFoldersButtonsComponent from "..";
 
 const mockMutateAddFolder = jest.fn();
+const mockMutateUpdateFolder = jest.fn();
 const mockSetErrorData = jest.fn();
+const mockCan = jest.fn(
+  (_projectId: string | undefined | null, _action: string) => true,
+);
+let mockFolders: Array<{
+  id: string;
+  name: string;
+  description: string;
+  parent_id: string;
+  flows: never[];
+  components: never[];
+  owner_username: string;
+  is_owner: boolean;
+}> = [];
 
 jest.mock("@tanstack/react-query", () => ({
   ...jest.requireActual("@tanstack/react-query"),
@@ -27,6 +41,19 @@ jest.mock("@/components/ui/sidebar", () => {
   const Wrapper = ({ children }: { children?: React.ReactNode }) => (
     <div>{children}</div>
   );
+  const SidebarMenuButton = ({
+    children,
+    isActive: _isActive,
+    size: _size,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    isActive?: boolean;
+    size?: string;
+  }) => (
+    <button type="button" {...props}>
+      {children}
+    </button>
+  );
   return {
     Sidebar: Wrapper,
     SidebarContent: Wrapper,
@@ -35,7 +62,7 @@ jest.mock("@/components/ui/sidebar", () => {
     SidebarGroupContent: Wrapper,
     SidebarHeader: Wrapper,
     SidebarMenu: Wrapper,
-    SidebarMenuButton: Wrapper,
+    SidebarMenuButton,
     SidebarMenuItem: Wrapper,
   };
 });
@@ -44,6 +71,7 @@ jest.mock("@/contexts/permissionsContext", () => ({
   PermissionsProvider: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
   ),
+  usePermissions: () => ({ can: mockCan }),
 }));
 
 jest.mock("@/controllers/API/queries/auth", () => ({
@@ -51,7 +79,7 @@ jest.mock("@/controllers/API/queries/auth", () => ({
 }));
 
 jest.mock("@/controllers/API/queries/folders", () => ({
-  usePatchFolders: () => ({ mutate: jest.fn() }),
+  usePatchFolders: () => ({ mutate: mockMutateUpdateFolder }),
   usePostFolders: () => ({
     mutate: mockMutateAddFolder,
     isPending: false,
@@ -107,13 +135,13 @@ jest.mock("@/stores/flowsManagerStore", () => ({
 jest.mock("@/stores/foldersStore", () => ({
   useFolderStore: (
     selector: (state: {
-      folders: never[];
+      folders: typeof mockFolders;
       folderIdDragging: null;
       myCollectionId: string;
     }) => unknown,
   ) =>
     selector({
-      folders: [],
+      folders: mockFolders,
       folderIdDragging: null,
       myCollectionId: "root",
     }),
@@ -135,7 +163,27 @@ jest.mock("../components/header-buttons", () => ({
   ),
 }));
 jest.mock("../components/input-edit-folder-name", () => ({
-  InputEditFolderName: () => null,
+  InputEditFolderName: ({
+    item,
+    foldersNames,
+    handleEditFolderName,
+    handleEditNameFolder,
+  }: {
+    item: { id: string };
+    foldersNames: Record<string, string>;
+    handleEditFolderName: (
+      event: React.ChangeEvent<HTMLInputElement>,
+      folderId: string,
+    ) => void;
+    handleEditNameFolder: (item: { id: string }) => void;
+  }) => (
+    <input
+      data-testid={`input-project-${item.id}`}
+      value={foldersNames[item.id] ?? ""}
+      onChange={(event) => handleEditFolderName(event, item.id)}
+      onBlur={() => handleEditNameFolder(item)}
+    />
+  ),
 }));
 jest.mock("../components/mcp-server-notice", () => ({
   MCPServerNotice: () => null,
@@ -150,6 +198,8 @@ jest.mock("../../sidebarFolderSkeleton", () => ({
 describe("project creation errors", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCan.mockReturnValue(true);
+    mockFolders = [];
   });
 
   it("surfaces a backend permission denial in the alert UI", () => {
@@ -168,5 +218,65 @@ describe("project creation errors", () => {
       title: "Unable to create project.",
       list: ["Not enough permissions"],
     });
+  });
+
+  it("qualifies foreign duplicate names and only renames writable projects by id", () => {
+    mockFolders = [
+      {
+        id: "own-id",
+        name: "Starter Project",
+        description: "",
+        parent_id: "",
+        flows: [],
+        components: [],
+        owner_username: "current-user",
+        is_owner: true,
+      },
+      {
+        id: "foreign-id",
+        name: "Starter Project",
+        description: "",
+        parent_id: "",
+        flows: [],
+        components: [],
+        owner_username: "other-user",
+        is_owner: false,
+      },
+    ];
+
+    mockCan.mockImplementation(
+      (projectId: string | undefined | null, action: string) =>
+        action !== "write" || projectId !== "foreign-id",
+    );
+
+    render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
+
+    const ownLabel = screen.getByText("Starter Project");
+    const foreignLabel = screen.getByText("Starter Project — other-user");
+    fireEvent.doubleClick(foreignLabel);
+
+    expect(
+      screen.queryByTestId("input-project-foreign-id"),
+    ).not.toBeInTheDocument();
+    expect(mockMutateUpdateFolder).not.toHaveBeenCalled();
+
+    fireEvent.doubleClick(ownLabel);
+
+    const ownInput = screen.getByTestId("input-project-own-id");
+    expect(
+      screen.queryByTestId("input-project-foreign-id"),
+    ).not.toBeInTheDocument();
+    expect(ownInput).toHaveValue("Starter Project");
+
+    fireEvent.change(ownInput, { target: { value: "Renamed Project" } });
+    fireEvent.blur(ownInput);
+
+    expect(mockMutateUpdateFolder).toHaveBeenCalledWith(
+      {
+        data: expect.objectContaining({ name: "Renamed Project" }),
+        folderId: "own-id",
+      },
+      expect.any(Object),
+    );
   });
 });

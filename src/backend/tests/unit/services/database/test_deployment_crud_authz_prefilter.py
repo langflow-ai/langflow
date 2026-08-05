@@ -16,6 +16,7 @@ from uuid import uuid4
 import pytest
 from langflow.services.database.models.deployment.crud import (
     count_deployments_by_provider,
+    has_visible_deployment_for_provider,
     list_deployments_page,
 )
 from langflow.services.database.models.deployment.model import Deployment
@@ -194,6 +195,32 @@ async def test_get_provider_account_by_id_unscoped_loads_foreign_account(async_s
     # A non-existent id returns None (the helper raises no error; the route maps
     # None → 404).
     assert await get_provider_account_by_id_unscoped(async_session, provider_id=uuid4()) is None
+
+
+@pytest.mark.asyncio
+async def test_provider_visibility_proof_is_bound_to_provider_and_scope(async_session: AsyncSession):
+    """An unscoped provider fetch is permitted only for a visible row under that provider."""
+    owner, provider, _owned, foreign_visible, _foreign_hidden = await _seed(async_session)
+    actor_id = uuid4()
+
+    assert await has_visible_deployment_for_provider(
+        async_session,
+        user_id=actor_id,
+        deployment_provider_account_id=provider.id,
+        visibility_scope=ResourceVisibilityScope(resource_ids=(foreign_visible.id,)),
+    )
+    assert not await has_visible_deployment_for_provider(
+        async_session,
+        user_id=actor_id,
+        deployment_provider_account_id=provider.id,
+        visibility_scope=ResourceVisibilityScope(project_ids=(uuid4(),)),
+    )
+    assert not await has_visible_deployment_for_provider(
+        async_session,
+        user_id=owner.id,
+        deployment_provider_account_id=uuid4(),
+        visibility_scope=ResourceVisibilityScope(all_resources=True),
+    )
 
 
 async def test_count_deployments_by_provider_reflects_allowed_ids(async_session: AsyncSession):

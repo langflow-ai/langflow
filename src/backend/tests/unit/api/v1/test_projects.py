@@ -152,6 +152,44 @@ async def test_read_projects(client: AsyncClient, logged_in_headers):
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, list), "The result must be a list"
     assert len(result) > 0, "The list must not be empty"
+    assert all(project["owner_username"] for project in result)
+    assert all(project["is_owner"] is True for project in result)
+
+
+async def test_read_projects_qualifies_visible_same_named_projects_by_owner():
+    from langflow.api.v1.projects import read_projects
+
+    actor_id = uuid4()
+    other_user_id = uuid4()
+    own_project = Folder(id=uuid4(), name="Starter Project", user_id=actor_id)
+    shared_project = Folder(id=uuid4(), name="Starter Project", user_id=other_user_id)
+    internal_project = Folder(id=uuid4(), name=STARTER_FOLDER_NAME, user_id=other_user_id)
+
+    projects_result = MagicMock()
+    projects_result.all.return_value = [shared_project, internal_project, own_project]
+    owners_result = MagicMock()
+    owners_result.all.return_value = [(actor_id, "current-user"), (other_user_id, "other-user")]
+    session = AsyncMock()
+    session.exec.side_effect = [projects_result, owners_result]
+
+    async def return_candidates(*_args, **kwargs):
+        return kwargs["candidates"]
+
+    with patch(
+        "langflow.api.v1.projects.filter_visible_resources",
+        new_callable=AsyncMock,
+        side_effect=return_candidates,
+    ):
+        result = await read_projects(
+            session=session,
+            current_user=SimpleNamespace(id=actor_id),
+        )
+
+    assert [(project.name, project.owner_username, project.is_owner) for project in result] == [
+        ("Starter Project", "other-user", False),
+        ("Starter Project", "current-user", True),
+    ]
+    assert session.exec.await_count == 2
 
 
 async def test_read_project(client: AsyncClient, logged_in_headers, basic_case):

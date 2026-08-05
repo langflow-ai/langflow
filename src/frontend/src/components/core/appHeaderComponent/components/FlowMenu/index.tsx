@@ -22,6 +22,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
+import { getProjectDisplayName } from "@/utils/project-display-name";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 
@@ -127,7 +128,9 @@ export const MenuBar = memo((): JSX.Element => {
                     );
                   }}
                 >
-                  <span className="truncate">{currentFolder?.name}</span>
+                  <span className="truncate">
+                    {getProjectDisplayName(currentFolder)}
+                  </span>
                 </Button>
               </div>
             )}

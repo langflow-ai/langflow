@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { usePermissions } from "@/contexts/permissionsContext";
 import type { FolderType } from "@/pages/MainPage/entities";
+import { getProjectDisplayName } from "@/utils/project-display-name";
 import { cn } from "@/utils/utils";
 import { handleSelectChange } from "../helpers/handle-select-change";
 import { FolderSelectItem } from "./folder-select-item";
@@ -32,6 +33,7 @@ export const SelectOptions = ({
   const canRename = can(item.id, "write");
   const canDownload = can(item.id, "read");
   const canDelete = can(item.id, "delete");
+  const displayName = getProjectDisplayName(item);
   return (
     <div>
       <Select
@@ -54,11 +56,11 @@ export const SelectOptions = ({
           <SelectTrigger
             variant="plain"
             className="h-6 w-6 min-h-[24px] min-w-[24px]"
-            id={`options-trigger-${item.name}`}
+            id={`options-trigger-${item.id}`}
             data-testid={
               "more-options-button" + `_${convertTestName(item?.name ?? "")}`
             }
-            aria-label={t("folder.optionsFor", { name: item.name })}
+            aria-label={t("folder.optionsFor", { name: displayName })}
           >
             <IconComponent
               name={"MoreHorizontal"}
