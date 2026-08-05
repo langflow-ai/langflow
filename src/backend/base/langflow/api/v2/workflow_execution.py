@@ -42,6 +42,7 @@ from lfx.workflow.converters import ParsedWorkflowRun, create_error_response, ru
 from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.v1.schemas import FlowDataRequest, RunResponse
 from langflow.api.v2.workflow_validation import _validate_output_ids
+from langflow.api.warm_graph import warm_deepcopy
 from langflow.exceptions.api import WorkflowTimeoutError, WorkflowValidationError
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.database.models.flow.model import FlowRead
@@ -495,15 +496,22 @@ async def execute_sync_workflow(
     try:
         flow_id_str = str(flow.id)
         user_id = str(current_user.id)
-        # Use deepcopy to prevent mutation of the original flow.data
-        # process_tweaks modifies nested dictionaries in-place
-        graph_data = deepcopy(flow.data)
-        graph_data = process_tweaks(graph_data, tweaks, stream=False)
-        # Pass context to graph (similar to V1's simple_run_flow)
-        # This allows components to access request metadata via graph.context
-        graph = Graph.from_payload(
-            graph_data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name, context=context
-        )
+        # Warm fast-path (PROD execution plane): serve a deepcopy of the pre-built template
+        # instead of rebuilding. Cold-fall-back (None) for tweaks, request context/globals,
+        # or a HITL/checkpointed run — none of which fit a shared user-agnostic template.
+        graph = None
+        if not tweaks and context is None and checkpoint_store is None:
+            graph = await warm_deepcopy(flow_id_str, user_id=user_id, session_id=session_id)
+        if graph is None:
+            # Use deepcopy to prevent mutation of the original flow.data
+            # process_tweaks modifies nested dictionaries in-place
+            graph_data = deepcopy(flow.data)
+            graph_data = process_tweaks(graph_data, tweaks, stream=False)
+            # Pass context to graph (similar to V1's simple_run_flow)
+            # This allows components to access request metadata via graph.context
+            graph = Graph.from_payload(
+                graph_data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name, context=context
+            )
         # Set run_id for tracing/logging (similar to V1's simple_run_flow)
         graph.set_run_id(job_id)
         # HITL: when a checkpoint store is supplied, a pausing node (HumanInput) durably

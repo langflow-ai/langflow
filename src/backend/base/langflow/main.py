@@ -29,7 +29,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from langflow.api import health_check_router, log_router
 from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
-from langflow.api.v2.host_selection import is_prod_deployment
+from langflow.api.warm_graph import is_prod_deployment
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
     create_or_update_starter_projects,

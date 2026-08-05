@@ -4,7 +4,7 @@ Unlike ``test_warm_registry.py`` (hermetic, ``_build`` stubbed), these use the
 ``client`` fixture to boot a real service stack + test DB, insert real ``Flow``
 rows, and drive the ACTUAL ``warm_all`` / ``warm_one`` / ``reconcile_once`` /
 ``reconcile_loop`` against the ``flow`` table — building real ``Graph`` templates
-and serving them through ``WarmWorkflowHost.get_flow``.
+and resolving them through the shared warm run seam (``warm_graph``).
 """
 
 from __future__ import annotations
@@ -199,29 +199,6 @@ async def test_reconcile_fail_safe_keeps_registry_on_db_error(
     assert get_warm_registry().get(flow_id) is not None  # not evicted
 
 
-async def test_host_get_flow_success_returns_deepcopied_graph(
-    client,  # noqa: ARG001
-    active_user,
-    basic_data,
-    clean_registry,  # noqa: ARG001
-):
-    """WarmWorkflowHost.get_flow serves a per-request deepcopy of the warm template."""
-    from langflow.api.v2.warm_workflow_host import WarmWorkflowHost
-
-    await _clear_flows()
-    flow_id = await _insert_flow("served", basic_data, active_user.id)
-    await warm_all()
-
-    host = WarmWorkflowHost()
-    resolved = await host.get_flow(flow_id, caller=None)
-
-    assert resolved.flow_id == flow_id
-    assert len(resolved.graph.vertices) > 0
-    # The served graph is a COPY, not the shared template.
-    template = get_warm_registry().get(flow_id)[0]
-    assert resolved.graph is not template
-
-
 async def test_reconcile_loop_ticks_then_cancels(monkeypatch):
     """reconcile_loop calls reconcile_once on each interval and stops on cancel."""
     calls = 0
@@ -349,29 +326,6 @@ async def test_warm_one_db_error_raises_unavailable(clean_registry, monkeypatch)
         await warm_one("any-id")
 
 
-async def test_host_get_flow_503_on_store_unavailable(clean_registry, monkeypatch):  # noqa: ARG001
-    """A store-availability failure while resolving a flow -> HTTP 503, not 404."""
-    from fastapi import HTTPException
-    from langflow.api.v2 import warm_workflow_host as host_mod
-    from langflow.services.warm_registry.service import FlowStoreUnavailableError
-
-    async def _unavailable(_flow_id):
-        raise FlowStoreUnavailableError(_flow_id)
-
-    import langflow.services.warm_registry.reconcile as reconcile_module
-    import langflow.services.warm_registry.service as service_module
-
-    # Empty registry so the host falls through to warm_one, which reports unavailable.
-    service_module._warm_registry = None
-    monkeypatch.setattr(reconcile_module, "warm_one", _unavailable)
-
-    host = host_mod.WarmWorkflowHost()
-    with pytest.raises(HTTPException) as exc:
-        await host.get_flow("some-id", caller=None)
-    assert exc.value.status_code == 503
-    assert exc.value.detail["code"] == "FLOW_STORE_UNAVAILABLE"
-
-
 async def test_warm_all_survives_unbuildable_flow(client, active_user, basic_data, clean_registry):  # noqa: ARG001
     """One flow that fails to build must not abort warming the rest."""
     await _clear_flows()
@@ -478,34 +432,6 @@ async def test_reconcile_loop_uses_settings_interval(clean_registry, monkeypatch
     assert calls >= 1
 
 
-async def test_resolve_caller_authenticates(monkeypatch):
-    """resolve_caller gathers the three credential sources and resolves a user."""
-    from langflow.api.v2.warm_workflow_host import WarmWorkflowHost
-    from langflow.services.auth import utils as auth_utils
-
-    sentinel = object()
-
-    async def _token(_request):
-        return "the-token"
-
-    async def _none(_request):
-        return None
-
-    async def _resolve(token, query_param, header_param):
-        assert token == "the-token"  # noqa: S105
-        assert query_param is None
-        assert header_param is None
-        return sentinel
-
-    monkeypatch.setattr(auth_utils, "oauth2_login", _token)
-    monkeypatch.setattr(auth_utils, "api_key_query", _none)
-    monkeypatch.setattr(auth_utils, "api_key_header", _none)
-    monkeypatch.setattr(auth_utils, "get_current_user_for_workflow", _resolve)
-
-    host = WarmWorkflowHost()
-    assert await host.resolve_caller(request=object()) is sentinel
-
-
 async def test_reconcile_loop_propagates_cancel(monkeypatch):
     """A CancelledError from reconcile_once is re-raised (never swallowed)."""
 
@@ -539,80 +465,8 @@ async def test_reconcile_loop_survives_bad_pass(monkeypatch):
 
 
 # ── #2: deferred host selection (fixes import-time-vs-env-file ordering) ──────
-def test_deferred_host_resolves_db_when_not_prod(monkeypatch):
-    """settings.prod False -> DB-backed LangflowWorkflowHost."""
-    from types import SimpleNamespace
-
-    from langflow.api.v2.host_selection import DeferredWorkflowHost
-    from langflow.api.v2.workflow_host import LangflowWorkflowHost
-    from langflow.services import deps
-
-    monkeypatch.setattr(deps, "is_settings_service_initialized", lambda: True)
-    monkeypatch.setattr(
-        deps, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace(deployment_profile="dev"))
-    )
-    host = DeferredWorkflowHost()
-    assert isinstance(host._resolve(), LangflowWorkflowHost)
 
 
-def test_deferred_host_resolves_warm_when_prod(monkeypatch):
-    """settings.prod True -> WarmWorkflowHost, and the choice is cached."""
-    from types import SimpleNamespace
-
-    from langflow.api.v2.host_selection import DeferredWorkflowHost
-    from langflow.api.v2.warm_workflow_host import WarmWorkflowHost
-    from langflow.services import deps
-
-    monkeypatch.setattr(deps, "is_settings_service_initialized", lambda: True)
-    monkeypatch.setattr(
-        deps, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace(deployment_profile="prod"))
-    )
-    host = DeferredWorkflowHost()
-    resolved = host._resolve()
-    assert isinstance(resolved, WarmWorkflowHost)
-    assert host._resolve() is resolved  # cached
-
-
-def test_deferred_host_does_not_cache_before_settings_init(monkeypatch):
-    """An access before settings are initialized (import time) must not cache a choice."""
-    from langflow.api.v2.host_selection import DeferredWorkflowHost
-    from langflow.api.v2.workflow_host import LangflowWorkflowHost
-    from langflow.services import deps
-
-    monkeypatch.setattr(deps, "is_settings_service_initialized", lambda: False)
-    host = DeferredWorkflowHost()
-    resolved = host._resolve()
-    assert isinstance(resolved, LangflowWorkflowHost)  # transient DB fallback
-    assert host._host is None  # NOT cached — real choice deferred to first post-startup call
-
-
-# ── #5: warm host enforces the workflow_execution_timeout (408) on sync runs ──
-async def test_warm_host_run_sync_enforces_timeout(monkeypatch):
-    """A sync run exceeding workflow_execution_timeout -> HTTP 408 (the lean base has none)."""
-    from types import SimpleNamespace
-
-    import lfx.workflow.router as lfx_router
-    from fastapi import HTTPException
-    from langflow.api.v2.warm_workflow_host import WarmWorkflowHost
-    from langflow.services import deps
-
-    async def _slow(*_args, **_kwargs):
-        await asyncio.sleep(1)
-
-    monkeypatch.setattr(lfx_router, "run_workflow_sync", _slow)
-    monkeypatch.setattr(
-        deps, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace(workflow_execution_timeout=0.01))
-    )
-
-    host = WarmWorkflowHost()
-    flow = SimpleNamespace(graph=object(), flow_id="fid")
-    with pytest.raises(HTTPException) as exc:
-        await host.run_sync(SimpleNamespace(), flow, None, http_request=None, background_tasks=None)
-    assert exc.value.status_code == 408
-    assert exc.value.detail["code"] == "EXECUTION_TIMEOUT"
-
-
-# ── shared warm run seam for v1/webhook/MCP (try_warm_run_graph) ──────────────
 def _api_req(**kw):
     from langflow.api.v1.schemas import SimplifiedAPIRequest
 
@@ -625,28 +479,28 @@ def _flow_obj(flow_id_str: str, data: dict):
     return Flow(id=UUID(flow_id_str), name="warm", data=data)
 
 
-def test_flow_needs_auto_globals_detects_eligible_empty_field():
-    from langflow.api.v1.run_warm import _flow_needs_auto_globals
+def testflow_needs_auto_globals_detects_eligible_empty_field():
+    from langflow.api.warm_graph import flow_needs_auto_globals
 
     def _tmpl(field):
         return {"nodes": [{"data": {"node": {"template": {"k": field}}}}]}
 
-    assert _flow_needs_auto_globals(_tmpl({"type": "str", "show": True, "value": "", "display_name": "Key"})) is True
+    assert flow_needs_auto_globals(_tmpl({"type": "str", "show": True, "value": "", "display_name": "Key"})) is True
     # filled value -> not eligible
-    assert _flow_needs_auto_globals(_tmpl({"type": "str", "show": True, "value": "x", "display_name": "Key"})) is False
+    assert flow_needs_auto_globals(_tmpl({"type": "str", "show": True, "value": "x", "display_name": "Key"})) is False
     # explicit load_from_db -> not eligible (already bound)
     explicit_field = {"type": "str", "value": "", "load_from_db": True, "display_name": "Key"}
     explicit = {"nodes": [{"data": {"node": {"template": {"k": explicit_field}}}}]}
-    assert _flow_needs_auto_globals(explicit) is False
-    assert _flow_needs_auto_globals(None) is False
+    assert flow_needs_auto_globals(explicit) is False
+    assert flow_needs_auto_globals(None) is False
 
 
 async def test_try_warm_returns_none_when_not_prod(client, active_user, basic_data, clean_registry):  # noqa: ARG001
     """Default (dev) profile -> warm seam is inert, cold path runs."""
-    from langflow.api.v1.run_warm import try_warm_run_graph
+    from langflow.api import warm_graph
 
     flow = _flow_obj(str(UUID(int=1)), basic_data)
-    assert await try_warm_run_graph(flow, _api_req(), user_id=active_user.id, context=None) is None
+    assert await warm_graph.try_warm_run_graph(flow, _api_req(), user_id=active_user.id, context=None) is None
 
 
 async def test_try_warm_hit_returns_deepcopy_with_identity(
@@ -657,20 +511,19 @@ async def test_try_warm_hit_returns_deepcopy_with_identity(
     monkeypatch,
 ):
     """PROD + no tweaks + non-auto-bind + warm hit -> deepcopy carrying the run's user_id."""
-    from langflow.api.v1 import run_warm
-    from langflow.api.v2 import host_selection
+    from langflow.api import warm_graph
 
     await _clear_flows()
     flow_id = await _insert_flow("warm", basic_data, active_user.id)
     await warm_all()
 
-    monkeypatch.setattr(host_selection, "is_prod_deployment", lambda _s: True)
+    monkeypatch.setattr(warm_graph, "is_prod_deployment", lambda _s: True)
     # Isolate the registry-hit behavior from auto-bind detection (tested separately);
     # Basic Prompting happens to have an eligible empty field, which is its own test.
-    monkeypatch.setattr(run_warm, "_flow_needs_auto_globals", lambda _d: False)
+    monkeypatch.setattr(warm_graph, "flow_needs_auto_globals", lambda _d: False)
 
     flow = _flow_obj(flow_id, basic_data)
-    graph = await run_warm.try_warm_run_graph(flow, _api_req(), user_id=active_user.id, context=None)
+    graph = await warm_graph.try_warm_run_graph(flow, _api_req(), user_id=active_user.id, context=None)
 
     assert graph is not None
     assert len(graph.vertices) > 0
@@ -686,14 +539,13 @@ async def test_try_warm_cold_on_tweaks(
     clean_registry,  # noqa: ARG001
     monkeypatch,
 ):
-    from langflow.api.v1 import run_warm
-    from langflow.api.v2 import host_selection
+    from langflow.api import warm_graph
 
-    monkeypatch.setattr(host_selection, "is_prod_deployment", lambda _s: True)
-    monkeypatch.setattr(run_warm, "_flow_needs_auto_globals", lambda _d: False)
+    monkeypatch.setattr(warm_graph, "is_prod_deployment", lambda _s: True)
+    monkeypatch.setattr(warm_graph, "flow_needs_auto_globals", lambda _d: False)
     flow = _flow_obj(str(UUID(int=2)), basic_data)
     req = _api_req(tweaks={"n": {"f": "v"}})
-    assert await run_warm.try_warm_run_graph(flow, req, user_id=active_user.id, context=None) is None
+    assert await warm_graph.try_warm_run_graph(flow, req, user_id=active_user.id, context=None) is None
 
 
 async def test_try_warm_cold_on_context(
@@ -703,13 +555,12 @@ async def test_try_warm_cold_on_context(
     clean_registry,  # noqa: ARG001
     monkeypatch,
 ):
-    from langflow.api.v1 import run_warm
-    from langflow.api.v2 import host_selection
+    from langflow.api import warm_graph
 
-    monkeypatch.setattr(host_selection, "is_prod_deployment", lambda _s: True)
-    monkeypatch.setattr(run_warm, "_flow_needs_auto_globals", lambda _d: False)
+    monkeypatch.setattr(warm_graph, "is_prod_deployment", lambda _s: True)
+    monkeypatch.setattr(warm_graph, "flow_needs_auto_globals", lambda _d: False)
     flow = _flow_obj(str(UUID(int=3)), basic_data)
-    assert await run_warm.try_warm_run_graph(flow, _api_req(), user_id=active_user.id, context={"x": 1}) is None
+    assert await warm_graph.try_warm_run_graph(flow, _api_req(), user_id=active_user.id, context={"x": 1}) is None
 
 
 async def test_try_warm_cold_on_auto_bind_flow(
@@ -719,11 +570,10 @@ async def test_try_warm_cold_on_auto_bind_flow(
     monkeypatch,
 ):
     """A flow with an eligible empty str field must NOT be warm-served (auto-bind gap)."""
-    from langflow.api.v1 import run_warm
-    from langflow.api.v2 import host_selection
+    from langflow.api import warm_graph
 
-    monkeypatch.setattr(host_selection, "is_prod_deployment", lambda _s: True)
+    monkeypatch.setattr(warm_graph, "is_prod_deployment", lambda _s: True)
     auto_bind_field = {"type": "str", "show": True, "value": "", "display_name": "Key"}
     auto_bind_data = {"nodes": [{"data": {"node": {"template": {"k": auto_bind_field}}}}]}
     flow = _flow_obj(str(UUID(int=4)), auto_bind_data)
-    assert await run_warm.try_warm_run_graph(flow, _api_req(), user_id=active_user.id, context=None) is None
+    assert await warm_graph.try_warm_run_graph(flow, _api_req(), user_id=active_user.id, context=None) is None

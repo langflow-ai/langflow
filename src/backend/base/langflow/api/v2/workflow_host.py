@@ -83,9 +83,19 @@ class LangflowWorkflowHost(WorkflowHostBase):
         return ResolvedFlow(flow_id=str(flow_id), graph=flow, session_id_default=str(flow.id))
 
     async def authorize(self, caller: Any, flow: ResolvedFlow, action: WorkflowAction) -> None:
-        """Map the workflow action to a flow action and enforce it (deny -> 404)."""
-        from langflow.api.v2.workflow import authorize_flow_action
+        """Map the workflow action to a flow action and enforce it (deny -> 404).
 
+        Under the production deployment profile (``LANGFLOW_DEPLOYMENT_PROFILE=prod``,
+        execution plane) per-flow RBAC is intentionally skipped: the plane is single-tenant
+        by construction (one service-account principal), and enabling the profile is gated
+        behind the preflight fail-fast checks. Authentication (``resolve_caller``) still runs.
+        """
+        from langflow.api.v2.workflow import authorize_flow_action
+        from langflow.api.warm_graph import is_prod_deployment
+        from langflow.services.deps import get_settings_service
+
+        if is_prod_deployment(get_settings_service().settings):
+            return
         await authorize_flow_action(caller, flow.graph, action, requested_id=flow.flow_id)
 
     async def run_sync(

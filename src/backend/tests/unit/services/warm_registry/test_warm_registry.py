@@ -80,37 +80,9 @@ async def test_get_does_not_copy_template(registry):
     assert registry.get("flow-1")[0] is registry.get("flow-1")[0]
 
 
-async def test_host_get_flow_404_when_absent(monkeypatch):
-    """A flow neither cached nor warmable -> 404 FLOW_NOT_FOUND (the pulled-flow guard)."""
-    from fastapi import HTTPException
-    from langflow.api.v2 import warm_workflow_host as mod
+async def test_warm_deepcopy_none_when_not_prod(monkeypatch):
+    """warm_deepcopy is inert outside the prod profile -> callers rebuild cold."""
+    from langflow.api import warm_graph
 
-    empty = WarmGraphRegistry()
-    monkeypatch.setattr(mod, "get_warm_registry", lambda: empty, raising=False)
-
-    async def _no_warm(_flow_id):
-        return None
-
-    # ``warm_one`` and ``get_warm_registry`` are imported inside get_flow; patch the source modules.
-    import langflow.services.warm_registry.reconcile as reconcile_mod
-    import langflow.services.warm_registry.service as service_mod
-
-    monkeypatch.setattr(service_mod, "get_warm_registry", lambda: empty)
-    monkeypatch.setattr(reconcile_mod, "warm_one", _no_warm)
-
-    host = mod.WarmWorkflowHost()
-    with pytest.raises(HTTPException) as exc:
-        await host.get_flow("missing-id", caller=None)
-    assert exc.value.status_code == 404
-    assert exc.value.detail["code"] == "FLOW_NOT_FOUND"
-
-
-def test_run_user_id_from_caller():
-    from types import SimpleNamespace
-
-    from langflow.api.v2.warm_workflow_host import WarmWorkflowHost
-
-    host = WarmWorkflowHost()
-    assert host._run_user_id(SimpleNamespace(id="user-42")) == "user-42"
-    assert host._run_user_id(SimpleNamespace(id=None)) is None
-    assert host._run_user_id(object()) is None
+    monkeypatch.setattr(warm_graph, "is_prod_deployment", lambda _settings: False)
+    assert await warm_graph.warm_deepcopy("any-id", user_id="u", session_id=None) is None

@@ -47,7 +47,7 @@ from langflow.api.v2 import mcp_router as mcp_router_v2
 from langflow.api.v2 import registration_router as registration_router_v2
 from langflow.api.v2 import workflow_background_router as workflow_background_router_v2
 from langflow.api.v2 import workflow_public_router as workflow_public_router_v2
-from langflow.api.v2.host_selection import DeferredWorkflowHost
+from langflow.api.v2.workflow_host import LangflowWorkflowHost
 
 router_v1 = APIRouter(
     prefix="/v1",
@@ -151,15 +151,13 @@ router_v2.include_router(registration_router_v2)
 # them (one handler per method+path). ``developer_api_guard=False`` because the
 # authenticated langflow v2 router has never carried a developer-api gate; the
 # default-off setting would otherwise 403 every authenticated request.
-# Under the production deployment profile (``LANGFLOW_DEPLOYMENT_PROFILE=prod``,
-# execution-plane / ``--backend-only``) the warm host serves deployed flows from the
-# in-memory registry and skips per-flow RBAC. The warm-vs-DB choice is made per that
-# profile but DEFERRED to first use: this module is imported before
-# ``load_dotenv(--env-file)`` runs, so reading the env (or the settings service) here
-# would miss ``--env-file`` values. The route structure is identical for both hosts,
-# so binding the deferred proxy changes nothing structurally — only which concrete
-# host each request resolves to.
-_workflow_host: WorkflowHost = DeferredWorkflowHost()
+# One host for every profile. Prod-vs-dev no longer swaps the host object: under the
+# production deployment profile the host resolves flows from the warm registry (at the
+# per-run build sites) and skips per-flow RBAC (in ``authorize``) — both decided at
+# request time from ``settings.deployment_profile``, which is correct even when supplied
+# via ``--env-file`` (this module is imported before ``load_dotenv`` runs, so an
+# import-time env read would miss it). No import-time branch, no proxy.
+_workflow_host: WorkflowHost = LangflowWorkflowHost()
 assert isinstance(_workflow_host, WorkflowHost)  # noqa: S101
 router_v2.include_router(
     create_workflow_router(
