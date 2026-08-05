@@ -16,7 +16,7 @@
  * against a control that isn't actually there.
  */
 
-import type { Element, Properties, Root } from "hast";
+import type { Element, Properties, Root, Text } from "hast";
 import { sanitize } from "hast-util-sanitize";
 import { markdownSanitizeSchema } from "../sanitizeSchema";
 
@@ -27,6 +27,8 @@ const el = (
   properties: Properties = {},
   children: Element["children"] = [],
 ): Element => ({ type: "element", tagName, properties, children });
+
+const text = (value: string): Text => ({ type: "text", value });
 
 const clean = (node: Element): Element | undefined =>
   (sanitize(root([node])) as Root).children[0] as Element | undefined;
@@ -192,9 +194,17 @@ describe("markdownSanitizeSchema", () => {
       expect(out).toBeUndefined();
     });
 
-    it("drops script elements", () => {
-      expect(cleanWithSchema(el("script", {}))).toBeUndefined();
-    });
+    it.each(["script", "style"])(
+      "strips <%s> elements including their text content",
+      (tagName) => {
+        const out = sanitize(
+          root([el(tagName, {}, [text("must not survive")])]),
+          markdownSanitizeSchema,
+        ) as Root;
+
+        expect(out.children).toEqual([]);
+      },
+    );
 
     it("drops inline event handlers while keeping the element", () => {
       const out = cleanWithSchema(
@@ -218,12 +228,9 @@ describe("markdownSanitizeSchema", () => {
       expect(out?.properties?.[attr]).toBeUndefined();
     });
 
-    it.each(["object", "embed", "form", "input", "style"])(
-      "drops <%s>",
-      (tagName) => {
-        expect(cleanWithSchema(el(tagName, {}))).toBeUndefined();
-      },
-    );
+    it.each(["object", "embed", "form", "input"])("drops <%s>", (tagName) => {
+      expect(cleanWithSchema(el(tagName, {}))).toBeUndefined();
+    });
 
     it("preserves legitimate links and media", () => {
       const link = cleanWithSchema(
