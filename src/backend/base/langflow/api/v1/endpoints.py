@@ -45,6 +45,7 @@ from langflow.api.v1.custom_component_policy import (
 from langflow.api.v1.files import get_flow
 from langflow.api.v1.global_variable_defaults import apply_global_variable_defaults
 from langflow.api.v1.run_validation import raise_if_hitl_unsupported
+from langflow.api.v1.run_warm import try_warm_run_graph
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -334,19 +335,25 @@ async def simple_run_flow(
         if flow.data is None:
             msg = f"Flow {flow_id_str} has no data"
             raise ValueError(msg)
-        graph_data = flow.data.copy()
-        graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
-        raise_if_hitl_unsupported(graph_data)
-        # Mirror the Playground's one-time fix in-memory: bind empty fields whose
-        # display_name matches a user global variable's default_fields. Without
-        # this, API-only workflows never trigger the frontend hook that persists
-        # load_from_db=true, so variables with "Apply to Fields" silently fail.
-        # See: https://github.com/langflow-ai/langflow/issues/11781
-        if user_id is not None:
-            graph_data = await apply_global_variable_defaults(graph_data, user_id)
-        graph = Graph.from_payload(
-            graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
-        )
+        # Warm fast-path (PROD execution plane): serve a deepcopy of the pre-built
+        # template + apply this run's identity, skipping from_payload and the flow-row
+        # rebuild. Returns None (-> cold rebuild below) for tweaks / context / auto-bind
+        # flows / HITL / non-prod / cache-miss. See ``run_warm.try_warm_run_graph``.
+        graph = await try_warm_run_graph(flow, input_request, user_id=user_id, context=context)
+        if graph is None:
+            graph_data = flow.data.copy()
+            graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
+            raise_if_hitl_unsupported(graph_data)
+            # Mirror the Playground's one-time fix in-memory: bind empty fields whose
+            # display_name matches a user global variable's default_fields. Without
+            # this, API-only workflows never trigger the frontend hook that persists
+            # load_from_db=true, so variables with "Apply to Fields" silently fail.
+            # See: https://github.com/langflow-ai/langflow/issues/11781
+            if user_id is not None:
+                graph_data = await apply_global_variable_defaults(graph_data, user_id)
+            graph = Graph.from_payload(
+                graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
+            )
         # Forward the caller-supplied identifier to tracing providers without
         # affecting authn/authz. The API-key owner remains the effective user
         # for permissions, global variables, and job ownership.

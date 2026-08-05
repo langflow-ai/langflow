@@ -610,3 +610,120 @@ async def test_warm_host_run_sync_enforces_timeout(monkeypatch):
         await host.run_sync(SimpleNamespace(), flow, None, http_request=None, background_tasks=None)
     assert exc.value.status_code == 408
     assert exc.value.detail["code"] == "EXECUTION_TIMEOUT"
+
+
+# ── shared warm run seam for v1/webhook/MCP (try_warm_run_graph) ──────────────
+def _api_req(**kw):
+    from langflow.api.v1.schemas import SimplifiedAPIRequest
+
+    return SimplifiedAPIRequest(**kw)
+
+
+def _flow_obj(flow_id_str: str, data: dict):
+    from langflow.services.database.models.flow.model import Flow
+
+    return Flow(id=UUID(flow_id_str), name="warm", data=data)
+
+
+def test_flow_needs_auto_globals_detects_eligible_empty_field():
+    from langflow.api.v1.run_warm import _flow_needs_auto_globals
+
+    def _tmpl(field):
+        return {"nodes": [{"data": {"node": {"template": {"k": field}}}}]}
+
+    assert _flow_needs_auto_globals(_tmpl({"type": "str", "show": True, "value": "", "display_name": "Key"})) is True
+    # filled value -> not eligible
+    assert _flow_needs_auto_globals(_tmpl({"type": "str", "show": True, "value": "x", "display_name": "Key"})) is False
+    # explicit load_from_db -> not eligible (already bound)
+    explicit_field = {"type": "str", "value": "", "load_from_db": True, "display_name": "Key"}
+    explicit = {"nodes": [{"data": {"node": {"template": {"k": explicit_field}}}}]}
+    assert _flow_needs_auto_globals(explicit) is False
+    assert _flow_needs_auto_globals(None) is False
+
+
+async def test_try_warm_returns_none_when_not_prod(client, active_user, basic_data, clean_registry):  # noqa: ARG001
+    """Default (dev) profile -> warm seam is inert, cold path runs."""
+    from langflow.api.v1.run_warm import try_warm_run_graph
+
+    flow = _flow_obj(str(UUID(int=1)), basic_data)
+    assert await try_warm_run_graph(flow, _api_req(), user_id=active_user.id, context=None) is None
+
+
+async def test_try_warm_hit_returns_deepcopy_with_identity(
+    client,  # noqa: ARG001
+    active_user,
+    basic_data,
+    clean_registry,  # noqa: ARG001
+    monkeypatch,
+):
+    """PROD + no tweaks + non-auto-bind + warm hit -> deepcopy carrying the run's user_id."""
+    from langflow.api.v1 import run_warm
+    from langflow.api.v2 import host_selection
+
+    await _clear_flows()
+    flow_id = await _insert_flow("warm", basic_data, active_user.id)
+    await warm_all()
+
+    monkeypatch.setattr(host_selection, "is_prod_deployment", lambda _s: True)
+    # Isolate the registry-hit behavior from auto-bind detection (tested separately);
+    # Basic Prompting happens to have an eligible empty field, which is its own test.
+    monkeypatch.setattr(run_warm, "_flow_needs_auto_globals", lambda _d: False)
+
+    flow = _flow_obj(flow_id, basic_data)
+    graph = await run_warm.try_warm_run_graph(flow, _api_req(), user_id=active_user.id, context=None)
+
+    assert graph is not None
+    assert len(graph.vertices) > 0
+    assert str(graph.user_id) == str(active_user.id)
+    # It's a copy, not the shared template.
+    assert graph is not get_warm_registry().get(flow_id)[0]
+
+
+async def test_try_warm_cold_on_tweaks(
+    client,  # noqa: ARG001
+    active_user,
+    basic_data,
+    clean_registry,  # noqa: ARG001
+    monkeypatch,
+):
+    from langflow.api.v1 import run_warm
+    from langflow.api.v2 import host_selection
+
+    monkeypatch.setattr(host_selection, "is_prod_deployment", lambda _s: True)
+    monkeypatch.setattr(run_warm, "_flow_needs_auto_globals", lambda _d: False)
+    flow = _flow_obj(str(UUID(int=2)), basic_data)
+    req = _api_req(tweaks={"n": {"f": "v"}})
+    assert await run_warm.try_warm_run_graph(flow, req, user_id=active_user.id, context=None) is None
+
+
+async def test_try_warm_cold_on_context(
+    client,  # noqa: ARG001
+    active_user,
+    basic_data,
+    clean_registry,  # noqa: ARG001
+    monkeypatch,
+):
+    from langflow.api.v1 import run_warm
+    from langflow.api.v2 import host_selection
+
+    monkeypatch.setattr(host_selection, "is_prod_deployment", lambda _s: True)
+    monkeypatch.setattr(run_warm, "_flow_needs_auto_globals", lambda _d: False)
+    flow = _flow_obj(str(UUID(int=3)), basic_data)
+    assert await run_warm.try_warm_run_graph(flow, _api_req(), user_id=active_user.id, context={"x": 1}) is None
+
+
+async def test_try_warm_cold_on_auto_bind_flow(
+    client,  # noqa: ARG001
+    active_user,
+    clean_registry,  # noqa: ARG001
+    monkeypatch,
+):
+    """A flow with an eligible empty str field must NOT be warm-served (auto-bind gap)."""
+    from langflow.api.v1 import run_warm
+    from langflow.api.v2 import host_selection
+
+    monkeypatch.setattr(host_selection, "is_prod_deployment", lambda _s: True)
+    auto_bind_field = {"type": "str", "show": True, "value": "", "display_name": "Key"}
+    auto_bind_data = {"nodes": [{"data": {"node": {"template": {"k": auto_bind_field}}}}]}
+    flow = _flow_obj(str(UUID(int=4)), auto_bind_data)
+    assert await run_warm.try_warm_run_graph(flow, _api_req(), user_id=active_user.id, context=None) is None
