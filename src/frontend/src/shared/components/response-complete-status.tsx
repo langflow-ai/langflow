@@ -7,13 +7,18 @@ export function ResponseCompleteStatus({
   completedCount: number;
 }) {
   const { t } = useTranslation();
+  // A single persistent text node that mutates in place is the announcement
+  // pattern WebKit's live-region diffing handles reliably; remounting a keyed
+  // child (remove + re-add of identical text) is dropped by Safari/VoiceOver
+  // (LE-2041 QA). Alternate a trailing no-break space so consecutive
+  // completions still produce a text change to announce.
+  const message =
+    completedCount > 0
+      ? t("chat.responseComplete") + (completedCount % 2 === 0 ? "\u00a0" : "")
+      : "";
   return (
     <div role="status" aria-live="polite" className="sr-only">
-      {completedCount > 0 && (
-        // Keyed so an identical announcement still replaces the region's
-        // content and gets re-announced on every completed response.
-        <span key={completedCount}>{t("chat.responseComplete")}</span>
-      )}
+      {message}
     </div>
   );
 }

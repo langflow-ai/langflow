@@ -3,6 +3,25 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { IS_MAC } from "@/constants/constants";
 import { cn } from "@/utils/utils";
 
+// Spoken name for a single shortcut key token, mirroring the visual branches
+// below. Used to build an explicit aria-label on shortcut wrappers: WebKit
+// drops visually-clipped (sr-only) text from grid cell values, so relying on
+// hidden text next to the icons leaves the modifiers unannounced in
+// Safari/VoiceOver (LE-2041 QA).
+export function shortcutKeyLabel(
+  value: string,
+  t: (key: string) => string,
+): string {
+  const check = value.toLowerCase().trim();
+  if (check === "shift") return t("shortcuts.key.shift");
+  if (check === "ctrl" || (check === "mod" && !IS_MAC)) {
+    return t("shortcuts.key.ctrl");
+  }
+  if (check === "alt" && IS_MAC) return t("shortcuts.key.option");
+  if (check === "mod" || check === "cmd") return t("shortcuts.key.command");
+  return value.toUpperCase();
+}
+
 export default function RenderKey({
   value,
   tableRender,

@@ -63,27 +63,20 @@ describe("Messages live region accessibility", () => {
     mockChatHistory.chatHistory = [];
   });
 
-  it("should_expose_the_message_list_as_a_named_log_region", () => {
+  it("should_expose_the_message_list_as_a_named_muted_log_region", () => {
     mockChatHistory.chatHistory = [userMessage, botMessage];
 
     render(<Messages visibleSession={null} />);
 
+    // The list must NOT be live: React remounts earlier messages on send,
+    // which a live region re-announces as additions (Safari/VoiceOver read
+    // the whole history on every send — LE-2041 QA). aria-live="off"
+    // overrides role="log"'s implicit politeness; announcements come from
+    // the separate status region only.
     const log = screen.getByRole("log", { name: "Chat messages" });
-    expect(log).toHaveAttribute("aria-live", "polite");
-    expect(log).toHaveAttribute("aria-relevant", "additions");
-    expect(log).toHaveAttribute("aria-busy", "false");
-  });
-
-  it("should_mark_the_log_busy_while_building", () => {
-    mockFlowState.isBuilding = true;
-    mockChatHistory.chatHistory = [userMessage];
-
-    render(<Messages visibleSession={null} />);
-
-    expect(screen.getByRole("log", { name: "Chat messages" })).toHaveAttribute(
-      "aria-busy",
-      "true",
-    );
+    expect(log).toHaveAttribute("aria-live", "off");
+    expect(log).not.toHaveAttribute("aria-relevant");
+    expect(log).not.toHaveAttribute("aria-busy");
   });
 
   it("should_announce_completion_once_the_build_settles_on_a_bot_reply", () => {

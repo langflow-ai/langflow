@@ -183,12 +183,15 @@ export default function ChatView({
       initial="instant"
     >
       <StickToBottom.Content className="flex flex-col min-h-full ">
+        {/* aria-live="off" neutralizes role="log"'s implicit politeness: React
+            remounts earlier messages on send (lastMessage flips), which a live
+            list region re-announces as additions — Safari/VoiceOver read the
+            whole history on every send (LE-2041 QA). The completion cue is
+            announced solely by ResponseCompleteStatus below. */}
         <div
           className="flex flex-col flex-grow place-self-center w-5/6 max-w-[768px]"
           role="log"
-          aria-live="polite"
-          aria-relevant="additions"
-          aria-busy={isBuilding}
+          aria-live="off"
           aria-label={t("chat.messagesRegionLabel")}
         >
           {chatHistory &&
@@ -197,7 +200,7 @@ export default function ChatView({
                 <MemoizedChatMessage
                   chat={chat}
                   lastMessage={chatHistory.length - 1 === index}
-                  key={`${chat.id}-${index}`}
+                  key={chat.id}
                   updateChat={updateChat}
                   closeChat={closeChat}
                   playgroundPage={playgroundPage}

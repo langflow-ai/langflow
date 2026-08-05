@@ -221,12 +221,15 @@ export const Messages = ({
   );
 
   const messagesContent = (
+    // aria-live="off" neutralizes role="log"'s implicit politeness: React
+    // remounts earlier messages on send (lastMessage flips), which a live
+    // list region re-announces as additions — Safari/VoiceOver read the whole
+    // history on every send (LE-2041 QA). The completion cue is announced
+    // solely by ResponseCompleteStatus below.
     <div
       className="flex flex-col flex-grow place-self-center w-full relative overflow-x-hidden"
       role="log"
-      aria-live="polite"
-      aria-relevant="additions"
-      aria-busy={isBuilding}
+      aria-live="off"
       aria-label={t("chat.messagesRegionLabel")}
     >
       {chatHistory && (isBuilding || chatHistory.length > 0) && (
@@ -239,7 +242,7 @@ export const Messages = ({
           {chatHistory.map((chat: ChatMessageType, index) => {
             return (
               <ChatMessage
-                key={`${chat.id}-${index}`}
+                key={chat.id}
                 chat={chat}
                 lastMessage={
                   !showThinkingPlaceholder && chatHistory.length - 1 === index
