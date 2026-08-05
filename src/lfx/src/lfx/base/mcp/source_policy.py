@@ -733,6 +733,14 @@ def validate_mcp_stdio_source_policy(
         else interpreter_hardening
     )
 
+    if use_interpreter_hardening and configured_packages is None:
+        # Interpreter hardening is documented as restricting tenants to
+        # operator-approved packages, but an unset package list leaves the
+        # uvx/npx lane open to ANY registry package -- arbitrary code
+        # execution with the hardening switch on. Compose fail-closed:
+        # deny all packages unless the operator explicitly lists them.
+        configured_packages = frozenset()
+
     _validate_interpreter_invocation(base_command, combined_args, hardened=use_interpreter_hardening)
     if base_command == "uvx":
         _validate_uvx_args(combined_args)
