@@ -771,7 +771,14 @@ class FileComponent(BaseFileComponent):
 
         temp_path = Path(temp_file_path)
         data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(temp_path)})
-        return [BaseFileComponent.BaseFile(data_obj, temp_path, delete_after_processing=True)]
+        return [
+            BaseFileComponent.BaseFile(
+                data_obj,
+                temp_path,
+                delete_after_processing=True,
+                cleanup_local_file=True,
+            )
+        ]
 
     def _read_from_google_drive(self) -> list[BaseFileComponent.BaseFile]:
         """Read file from Google Drive."""
@@ -829,7 +836,14 @@ class FileComponent(BaseFileComponent):
 
         temp_path = Path(temp_file_path)
         data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(temp_path)})
-        return [BaseFileComponent.BaseFile(data_obj, temp_path, delete_after_processing=True)]
+        return [
+            BaseFileComponent.BaseFile(
+                data_obj,
+                temp_path,
+                delete_after_processing=True,
+                cleanup_local_file=True,
+            )
+        ]
 
     def _is_docling_compatible(self, file_path: str) -> bool:
         """Lightweight extension gate for Docling-compatible types."""

@@ -46,11 +46,13 @@ class BaseFileComponent(Component, ABC):
             path: Path,
             *,
             delete_after_processing: bool = False,
+            cleanup_local_file: bool = False,
             silent_errors: bool = False,
         ):
             self._data = data if isinstance(data, list) else [data]
             self.path = path
             self.delete_after_processing = delete_after_processing
+            self.cleanup_local_file = cleanup_local_file
             self._silent_errors = silent_errors
 
         @property
@@ -321,6 +323,10 @@ class BaseFileComponent(Component, ABC):
         if not file.delete_after_processing:
             return
 
+        if file.cleanup_local_file:
+            self._delete_local_path(file.path)
+            return
+
         settings = get_settings_service().settings
         if settings.storage_type == "s3":
             parsed_path = parse_storage_path(str(file.path))
@@ -330,19 +336,28 @@ class BaseFileComponent(Component, ABC):
                 # deleted from the host filesystem.
                 return
 
+            flow_id, file_name = parsed_path
+            if flow_id not in component_file_access_scopes(self):
+                msg = "S3 file cleanup is limited to the authenticated user or executing flow scope."
+                raise ValueError(msg)
+
             storage_service = get_storage_service()
             if storage_service is None:
                 msg = "Storage service is unavailable; could not delete processed S3 file."
                 raise RuntimeError(msg)
-            flow_id, file_name = parsed_path
             run_until_complete(storage_service.delete_file(flow_id, file_name))
             return
 
-        if file.path.exists():
-            if file.path.is_dir():
-                shutil.rmtree(file.path)
+        self._delete_local_path(file.path)
+
+    @staticmethod
+    def _delete_local_path(path: Path) -> None:
+        """Delete an explicitly local cleanup target."""
+        if path.exists():
+            if path.is_dir():
+                shutil.rmtree(path)
             else:
-                file.path.unlink()
+                path.unlink()
 
     def load_files_core(self) -> list[Data]:
         """Load files and return as Data objects, with per-instance caching.
@@ -681,6 +696,7 @@ class BaseFileComponent(Component, ABC):
                     data=merged_data_list,
                     path=base_file.path,
                     delete_after_processing=base_file.delete_after_processing,
+                    cleanup_local_file=base_file.cleanup_local_file,
                 )
             )
 
@@ -846,6 +862,7 @@ class BaseFileComponent(Component, ABC):
                             data,
                             sub_path,
                             delete_after_processing=delete_after_processing,
+                            cleanup_local_file=file.cleanup_local_file,
                         )
                         for sub_path in path.rglob("*")
                         if sub_path.is_file() and not sub_path.is_symlink()
@@ -869,6 +886,7 @@ class BaseFileComponent(Component, ABC):
                             data,
                             sub_path,
                             delete_after_processing=delete_after_processing,
+                            cleanup_local_file=file.cleanup_local_file,
                         )
                         for sub_path in subpaths
                     ]

@@ -796,6 +796,31 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
         new_temp_files = temp_files_after - temp_files_before
         assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
 
+    @patch("lfx.base.data.cloud_storage_utils.create_s3_client")
+    @patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials")
+    def test_s3_download_uses_explicit_local_cleanup(self, mock_validate, mock_create_client):  # noqa: ARG002
+        """Successful AWS downloads must remain eligible for local temp cleanup."""
+        component = FileComponent()
+        component.set_attributes(
+            {
+                "storage_location": [{"name": "AWS"}],
+                "aws_access_key_id": "test_key",
+                "aws_secret_access_key": "test_secret",
+                "bucket_name": "test-bucket",
+                "s3_file_key": "test-file.txt",
+            }
+        )
+        mock_s3_client = MagicMock()
+        mock_s3_client.download_fileobj.side_effect = lambda _bucket, _key, target: target.write(b"SAFE_CANARY")
+        mock_create_client.return_value = mock_s3_client
+
+        base_file = component._read_from_aws_s3()[0]
+
+        assert base_file.cleanup_local_file is True
+        assert base_file.path.read_bytes() == b"SAFE_CANARY"
+        component._delete_after_processing(base_file)
+        assert not base_file.path.exists()
+
     @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
     def test_google_drive_temp_file_cleanup_on_download_failure(self, mock_create_service):
         """Test that temp file is cleaned up when Google Drive download fails."""
@@ -833,6 +858,30 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
         )
         new_temp_files = temp_files_after - temp_files_before
         assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
+
+    @patch("googleapiclient.http.MediaIoBaseDownload")
+    @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
+    def test_google_drive_download_uses_explicit_local_cleanup(self, mock_create_service, mock_downloader_class):
+        """Successful Drive downloads must remain eligible for local temp cleanup."""
+        component = FileComponent()
+        component.set_attributes(
+            {
+                "storage_location": [{"name": "Google Drive"}],
+                "service_account_key": '{"type": "service_account", "project_id": "test"}',
+                "file_id": "test-file-id",
+            }
+        )
+        mock_drive_service = MagicMock()
+        mock_drive_service.files().get().execute.return_value = {"name": "test-file.txt"}
+        mock_create_service.return_value = mock_drive_service
+        mock_downloader_class.return_value.next_chunk.return_value = (None, True)
+
+        base_file = component._read_from_google_drive()[0]
+
+        assert base_file.cleanup_local_file is True
+        assert base_file.path.exists()
+        component._delete_after_processing(base_file)
+        assert not base_file.path.exists()
 
 
 class TestFileComponentCloudEnvironment:
