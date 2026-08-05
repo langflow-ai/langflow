@@ -5,9 +5,12 @@ Revision ID: f7a9c2d4e6b8
 Revises: 8d9e0f1a2b3c
 Create Date: 2026-08-05 00:00:00.000000
 
-The legacy provider singleton and catalog rule tables remain in place for N-1
-services and downgrade compatibility. The initial active revision is a complete
-snapshot of their currently enforced global policy.
+The legacy provider singleton and catalog rule tables remain in place for
+already-running legacy services during the mixed-version window and for a
+qualified rollback image that recognizes the preceding migration head. The
+initial active revision is a complete snapshot of their currently enforced
+global policy. A previously shipped image that does not recognize the preceding
+head still requires a pre-upgrade database restore.
 """
 
 from __future__ import annotations
