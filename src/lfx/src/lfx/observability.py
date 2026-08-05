@@ -28,6 +28,8 @@ from lfx.log.logger import logger
 from lfx.observability_fastapi import patch_otel_fastapi_route_details
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from fastapi import FastAPI
     from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk.metrics import MeterProvider
@@ -136,6 +138,7 @@ PROCESS_METRICS_CONFIG = {
 # public entry point below returns without doing anything.
 try:
     from opentelemetry import _logs, metrics, trace
+    from opentelemetry import trace as otel_trace
     from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
     from opentelemetry.sdk.metrics import MeterProvider
@@ -153,6 +156,7 @@ try:
     _OTEL_AVAILABLE = True
 except ImportError:
     _OTEL_AVAILABLE = False
+    otel_trace = None
 
 
 if _OTEL_AVAILABLE:
@@ -530,6 +534,41 @@ def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> Appl
         tracer_provider=tracer_provider,
         logger_provider=logger_provider,
     )
+
+
+@contextlib.contextmanager
+def outbound_call_span(name: str, **attributes: str) -> Iterator[None]:
+    """One span for an outbound call the runtime makes itself, for the operator's APM.
+
+    Emitted under APPLICATION_TRACER_NAME rather than by instrumenting the transport. The
+    transport is shared with the LLM vendor SDKs, and the export filter allowlists by
+    instrumentation scope name, so an httpx span from our MCP client and one from the OpenAI
+    SDK are the same string and cannot be told apart. Emitting the span ourselves makes the
+    scope name the discriminator by construction.
+
+    It also makes the span identical across MCP's three transports. Instrumenting httpx would
+    have missed stdio entirely, and stdio is a subprocess over stdin and stdout with no HTTP
+    at all, so it is the transport most local MCP servers use.
+
+    Identifiers only: tool and server names, never arguments or results, which carry flow data.
+    Errors record the exception type, never its message, for the same reason.
+    """
+    if otel_trace is None:
+        yield
+        return
+    tracer = otel_trace.get_tracer(APPLICATION_TRACER_NAME)
+    # Neither recording nor status-setting is delegated to the SDK: its versions write the
+    # exception message onto the span, and that can carry flow data.
+    with tracer.start_as_current_span(name, record_exception=False, set_status_on_exception=False) as span:
+        for key, value in attributes.items():
+            if value is not None:
+                span.set_attribute(key, str(value))
+        try:
+            yield
+        except Exception as exc:
+            span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, type(exc).__name__))
+            span.set_attribute("error.type", type(exc).__name__)
+            raise
 
 
 def instrument_fastapi_app(app: FastAPI) -> None:

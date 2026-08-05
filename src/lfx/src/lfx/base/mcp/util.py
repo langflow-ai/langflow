@@ -30,12 +30,14 @@ from lfx.base.mcp.security import (
     validate_mcp_stdio_config,
 )
 from lfx.log.logger import logger
+from lfx.observability import outbound_call_span
 from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
+MCP_TOOL_SPAN_NAME = "mcp.tool.call"
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
 # HTTP status codes used in validation
@@ -1831,6 +1833,19 @@ class MCPStdioClient:
         return await session_manager.get_session(self._session_context, self._connection_params, "stdio")
 
     async def run_tool(self, tool_name: str, arguments: dict[str, Any], timeout: float | None = None) -> Any:  # noqa: ASYNC109
+        """Run the tool, with one application span covering the call and any retries."""
+        with outbound_call_span(
+            MCP_TOOL_SPAN_NAME,
+            **{"mcp.tool.name": tool_name, "mcp.transport": "stdio"},
+        ):
+            return await self._run_tool_uninstrumented(tool_name, arguments, timeout)
+
+    async def _run_tool_uninstrumented(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+        timeout: float | None = None,  # noqa: ASYNC109
+    ) -> Any:
         """Run a tool with the given arguments using context-specific session.
 
         Args:
@@ -2116,6 +2131,19 @@ class MCPStreamableHttpClient:
             logger.debug(f"Unable to send session DELETE to '{url}': {e}")
 
     async def run_tool(self, tool_name: str, arguments: dict[str, Any], timeout: float | None = None) -> Any:  # noqa: ASYNC109
+        """Run the tool, with one application span covering the call and any retries."""
+        with outbound_call_span(
+            MCP_TOOL_SPAN_NAME,
+            **{"mcp.tool.name": tool_name, "mcp.transport": "streamable_http"},
+        ):
+            return await self._run_tool_uninstrumented(tool_name, arguments, timeout)
+
+    async def _run_tool_uninstrumented(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+        timeout: float | None = None,  # noqa: ASYNC109
+    ) -> Any:
         """Run a tool with the given arguments using context-specific session.
 
         Args:
