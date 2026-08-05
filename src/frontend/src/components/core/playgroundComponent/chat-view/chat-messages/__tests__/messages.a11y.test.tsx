@@ -79,18 +79,21 @@ describe("Messages live region accessibility", () => {
     expect(log).not.toHaveAttribute("aria-busy");
   });
 
-  it("should_announce_completion_once_the_build_settles_on_a_bot_reply", () => {
+  it("should_announce_the_reply_content_once_the_build_settles", () => {
     mockFlowState.isBuilding = true;
     mockChatHistory.chatHistory = [userMessage, botMessage];
 
     const { rerender } = render(<Messages visibleSession={null} />);
-    expect(screen.queryByText("Response complete")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
 
     mockFlowState.isBuilding = false;
     rerender(<Messages visibleSession={null} />);
 
+    // The transcript is muted, so this status region is the reply's only
+    // path to the screen reader — it must carry the reply text itself, not
+    // just a "done" cue (LE-2041 QA).
     const status = screen.getByRole("status");
-    expect(status).toHaveTextContent("Response complete");
+    expect(status).toHaveTextContent("hello back");
   });
 
   it("should_not_announce_when_the_build_settles_without_a_bot_reply", () => {

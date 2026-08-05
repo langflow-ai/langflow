@@ -194,7 +194,7 @@ export const Messages = ({
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const completedCount = useResponseCompleteCue(isBuilding, chatHistory);
+  const responseCue = useResponseCompleteCue(isBuilding, chatHistory);
 
   // Show thinking placeholder when building and last message is from user (no bot response yet)
   // Only show if the flow has a ChatOutput, otherwise there's nothing to produce a response
@@ -286,7 +286,10 @@ export const Messages = ({
       <StickToBottom.Content className="flex flex-col min-h-full ">
         {messagesContent}
       </StickToBottom.Content>
-      <ResponseCompleteStatus completedCount={completedCount} />
+      <ResponseCompleteStatus
+        completedCount={responseCue.completedCount}
+        completedText={responseCue.completedText}
+      />
       <SafariScrollFix />
     </StickToBottom>
   );

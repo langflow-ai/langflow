@@ -119,7 +119,7 @@ export default function ChatView({
     setChatHistory(finalChatHistory);
   }, [messages, visibleSession]);
 
-  const completedCount = useResponseCompleteCue(isBuilding, chatHistory);
+  const responseCue = useResponseCompleteCue(isBuilding, chatHistory);
 
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -243,7 +243,10 @@ export default function ChatView({
             flowRunningSkeletonMemo}
         </div>
       </StickToBottom.Content>
-      <ResponseCompleteStatus completedCount={completedCount} />
+      <ResponseCompleteStatus
+        completedCount={responseCue.completedCount}
+        completedText={responseCue.completedText}
+      />
       <SafariScrollFix />
 
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
