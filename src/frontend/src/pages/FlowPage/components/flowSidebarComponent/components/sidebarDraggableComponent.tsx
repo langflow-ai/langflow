@@ -12,7 +12,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-} from "@/components/ui/select-custom";
+} from "@/components/ui/select";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useDarkStore } from "@/stores/darkStore";
@@ -104,14 +104,6 @@ export const SidebarDraggableComponent = forwardRef(
       }
     }
 
-    const handleKeyDown = (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        e.stopPropagation();
-        addComponent(apiClass, itemName);
-      }
-    };
-
     return (
       <Select
         onValueChange={handleSelectChange}
@@ -131,9 +123,6 @@ export const SidebarDraggableComponent = forwardRef(
             }}
             key={itemName}
             data-tooltip-id={itemName}
-            tabIndex={0}
-            onKeyDown={handleKeyDown}
-            className="rounded-md outline-none ring-ring focus-visible:ring-1"
             data-testid={`${sectionName.toLowerCase()}_${display_name.toLowerCase()}_draggable`}
           >
             <div
@@ -206,7 +195,6 @@ export const SidebarDraggableComponent = forwardRef(
                     )}`}
                     variant="ghost"
                     size="icon"
-                    tabIndex={-1}
                     aria-label={t("sidebar.addComponentToCanvas", {
                       name: display_name,
                     })}
@@ -215,7 +203,7 @@ export const SidebarDraggableComponent = forwardRef(
                   >
                     <ForwardedIconComponent
                       name="Plus"
-                      className="h-4 w-4 shrink-0 transition-all group-hover/draggable:opacity-100 group-focus/draggable:opacity-100 sm:opacity-0"
+                      className="h-4 w-4 shrink-0 transition-all group-hover/draggable:opacity-100 group-focus-within/draggable:opacity-100 sm:opacity-0"
                     />
                   </Button>
                 )}
@@ -225,6 +213,7 @@ export const SidebarDraggableComponent = forwardRef(
                     className="h-4 w-4 shrink-0 text-muted-foreground group-hover/draggable:text-primary"
                   />
                   <SelectTrigger
+                    variant="plain"
                     tabIndex={-1}
                     aria-label={t("folder.options")}
                   ></SelectTrigger>
@@ -232,13 +221,14 @@ export const SidebarDraggableComponent = forwardRef(
                     position="popper"
                     side="bottom"
                     sideOffset={-25}
+                    className="min-w-[11.5rem]"
                     style={{
                       position: "absolute",
                       left: cursorPos.x,
                       top: cursorPos.y,
                     }}
                   >
-                    <SelectItem value={"download"}>
+                    <SelectItem variant="plain" value={"download"}>
                       <div className="flex">
                         <IconComponent
                           name="Download"
@@ -249,6 +239,7 @@ export const SidebarDraggableComponent = forwardRef(
                     </SelectItem>
                     {(!official || onDelete) && (
                       <SelectItem
+                        variant="plain"
                         value={"delete"}
                         data-testid="draggable-component-menu-delete"
                       >

@@ -60,6 +60,7 @@ from lfx.schema.workflow import (
     WorkflowRunRequest,
 )
 from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
+from lfx.utils.flow_validation import prepare_public_flow_build, validate_public_flow_no_code_execution
 from lfx.utils.ssrf_transport import create_ssrf_protected_client
 from lfx.workflow.converters import parse_workflow_run_request, run_response_to_workflow_response
 from sqlalchemy import case, delete, false
@@ -124,41 +125,41 @@ async def _enforce_a2a_auth(flow: Flow, request: Request) -> User | None:
     - anything else (an auth type A2A doesn't understand) -> fail closed with 403: treating a
       *protected* folder as public would expose an owner-identity run anonymously.
 
-    Uses ``check_key`` directly, NOT ``api_key_security``: under AUTO_LOGIN the latter
+    Uses ``authenticate_api_key`` directly, NOT ``api_key_security``: under AUTO_LOGIN the latter
     returns the superuser for a *missing* key, which would silently bypass this gate.
     """
-    # Short writable session (check_key flushes usage counters), closed before
-    # dispatch so no lock is held across the up-to-300s run.
-    async with session_scope() as session:
+    # Resolve the folder policy first, then close that read session before API-key
+    # authentication opens its owned write transaction.
+    async with session_scope_readonly() as session:
         auth_type = await folder_auth_type(flow, session)
-        if auth_type == "none":
-            return None  # public agent
-        if auth_type not in ("apikey", "oauth"):
-            # Protected folder with a scheme A2A can't enforce: fail closed, never public.
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"A2A access is disabled for this agent: unsupported folder auth type {auth_type!r}.",
-            )
-        api_key = request.headers.get(A2A_APIKEY_HEADER)
-        if not api_key:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required")
-        api_key_result = await authenticate_api_key(session, api_key)
-        # Same message for invalid and wrong-owner: don't reveal a key is valid for another user.
-        if api_key_result is None or api_key_result.user.id != flow.user_id:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
-        user = api_key_result.user
-        set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
-        try:
-            await ensure_flow_permission(
-                user,
-                FlowAction.EXECUTE,
-                flow_id=flow.id,
-                flow_user_id=flow.user_id,
-                folder_id=flow.folder_id,
-            )
-        except HTTPException as exc:
-            raise deny_to_404(exc, detail="Not Found") from exc
-        return user
+    if auth_type == "none":
+        return None  # public agent
+    if auth_type not in ("apikey", "oauth"):
+        # Protected folder with a scheme A2A can't enforce: fail closed, never public.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"A2A access is disabled for this agent: unsupported folder auth type {auth_type!r}.",
+        )
+    api_key = request.headers.get(A2A_APIKEY_HEADER)
+    if not api_key:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required")
+    api_key_result = await authenticate_api_key(api_key)
+    # Same message for invalid and wrong-owner: don't reveal a key is valid for another user.
+    if api_key_result is None or api_key_result.user.id != flow.user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+    user = api_key_result.user
+    set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
+    try:
+        await ensure_flow_permission(
+            user,
+            FlowAction.EXECUTE,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            folder_id=flow.folder_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Not Found") from exc
+    return user
 
 
 class _FlowContextBuilder(DefaultServerCallContextBuilder):
@@ -172,6 +173,38 @@ class _FlowContextBuilder(DefaultServerCallContextBuilder):
         # converter). Without this, the same task addressed via two encodings lands in two scopes.
         context.state["flow_id"] = str(UUID(request.path_params["flow_id"]))
         return context
+
+
+async def _is_public_a2a_flow(flow: Flow) -> bool:
+    """Whether an A2A flow admits callers without an API key."""
+    async with session_scope_readonly() as session:
+        return await folder_auth_type(flow, session) == "none"
+
+
+async def _prepare_a2a_execution_flow(flow: Flow) -> Flow:
+    """Apply the public-flow code policy before an anonymous A2A owner-identity run."""
+    if not await _is_public_a2a_flow(flow):
+        return flow
+
+    validate_public_flow_no_code_execution(flow.data)
+    sanitized_data = await prepare_public_flow_build(flow.data)
+    if sanitized_data is None:
+        return flow
+    return flow.model_copy(update={"data": sanitized_data}, deep=True)
+
+
+async def _prepare_a2a_resume_checkpoint(flow_id: UUID, checkpoint: GraphCheckpoint) -> GraphCheckpoint:
+    """Re-apply the public-flow policy to the graph payload restored for HITL resume."""
+    user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+    flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id)
+    if not await _is_public_a2a_flow(flow):
+        return checkpoint
+
+    validate_public_flow_no_code_execution(checkpoint.flow_payload)
+    sanitized_data = await prepare_public_flow_build(checkpoint.flow_payload)
+    if sanitized_data is None:
+        return checkpoint
+    return checkpoint.model_copy(update={"flow_payload": sanitized_data}, deep=True)
 
 
 async def _run_flow(flow_id: UUID, task_id: str, text: str, context_id: str | None) -> WorkflowExecutionResponse:
@@ -195,6 +228,7 @@ async def _run_flow(flow_id: UUID, task_id: str, text: str, context_id: str | No
 
     user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id)
+    flow = await _prepare_a2a_execution_flow(flow)
     # context_id is client-controlled on a public endpoint, so namespace it under a
     # per-(owner, flow) virtual id before it becomes the chat session_id: a contextId
     # can never address another flow's session, and since the run always executes as the
@@ -284,6 +318,7 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
     if checkpoint.flow_id != str(flow_id):
         msg = f"A2A task {task_id} does not belong to flow {flow_id}"
         raise RuntimeError(msg)
+    checkpoint = await _prepare_a2a_resume_checkpoint(flow_id, checkpoint)
 
     pending = (checkpoint.pause_context or {}).get("data") or {}
     allowed = pending.get("allowed_decisions") or []

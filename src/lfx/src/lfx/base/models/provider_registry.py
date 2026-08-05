@@ -35,11 +35,13 @@ test seam.
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import re
 import threading
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
+from functools import lru_cache
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
@@ -207,6 +209,7 @@ _undo = _Undo()
 # ---------------------------------------------------------------------------
 
 
+@lru_cache(maxsize=1)
 def _core_provider_ids() -> dict[str, str]:
     """Return stable-id -> legacy-name mappings for providers shipped in core."""
     return {
@@ -216,7 +219,9 @@ def _core_provider_ids() -> dict[str, str]:
     }
 
 
+@lru_cache(maxsize=1)
 def _core_aliases() -> dict[str, str]:
+    """Return normalized aliases for the process-static core provider catalog."""
     aliases: dict[str, str] = {}
     for provider_id, name in _core_provider_ids().items():
         metadata = MODEL_PROVIDER_METADATA[name]
@@ -604,6 +609,28 @@ def provider_id_for(provider: str) -> str | None:
     return _registered[registered_name].canonical_id()
 
 
+def resolve_provider_id(name_or_id_or_alias: str) -> str:
+    """Return a stable policy identity for any non-empty provider selector.
+
+    Registered names, display names, aliases, and IDs resolve through the
+    authoritative registry. Unknown legacy selectors receive the same
+    deterministic derived ID used by manifests that predate ``provider_id``.
+    A selector with no ASCII slug receives an opaque deterministic fallback;
+    this keeps old saved flows runnable under the OSS allow-all policy without
+    reflecting malformed input in policy errors or logs.
+    """
+    if not isinstance(name_or_id_or_alias, str) or not name_or_id_or_alias.strip():
+        msg = "Provider identity must be a non-empty string"
+        raise ValueError(msg)
+    if provider_id := provider_id_for(name_or_id_or_alias):
+        return provider_id
+    try:
+        return _derive_provider_id(name_or_id_or_alias)
+    except ValueError:
+        normalized = name_or_id_or_alias.strip().casefold().encode()
+        return f"legacy-{hashlib.sha256(normalized).hexdigest()}"
+
+
 def model_component_provider_id(component: object, *, module_name: str | None = None) -> str:
     """Derive a stable policy identity for a standalone model component.
 
@@ -621,8 +648,7 @@ def model_component_provider_id(component: object, *, module_name: str | None = 
     """
     explicit_id = getattr(component, "model_provider_id", None)
     if isinstance(explicit_id, str) and explicit_id:
-        resolved = provider_id_for(explicit_id)
-        return resolved or _derive_provider_id(explicit_id)
+        return resolve_provider_id(explicit_id)
 
     display_name = getattr(component, "display_name", None)
     if isinstance(display_name, str) and (resolved := provider_id_for(display_name)):
@@ -646,10 +672,21 @@ def model_component_provider_id(component: object, *, module_name: str | None = 
             candidate = parts[2]
 
     if candidate:
-        return provider_id_for(candidate) or _derive_provider_id(candidate)
+        return resolve_provider_id(candidate)
     if isinstance(display_name, str) and display_name.strip():
-        return _derive_provider_id(display_name)
-    return _derive_provider_id(component.__class__.__name__)
+        return resolve_provider_id(display_name)
+    return resolve_provider_id(component.__class__.__name__)
+
+
+def model_component_policy_mode(component: object) -> str:
+    """Return the normalized provider-policy mode declared by a model component.
+
+    The attribute may be inherited or type-annotated, so runtime attribute
+    lookup is the authoritative source. Unknown or malformed values fail
+    closed to ``standalone`` rather than creating an exemption.
+    """
+    mode = getattr(component, "model_provider_policy_mode", "standalone")
+    return mode if mode in ("delegate", "none") else "standalone"
 
 
 def uses_standalone_model_provider_policy(component: object) -> bool:
@@ -659,8 +696,7 @@ def uses_standalone_model_provider_policy(component: object) -> bool:
     the selected provider—not the wrapper's module—is enforced. Local utility
     components can opt out because they do not invoke a model provider.
     """
-    mode = getattr(component, "model_provider_policy_mode", "standalone")
-    return mode not in ("delegate", "none")
+    return model_component_policy_mode(component) == "standalone"
 
 
 def provider_name_for_id(provider_id: str) -> str | None:

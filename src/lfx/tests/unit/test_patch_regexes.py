@@ -17,11 +17,11 @@ import pytest
 # ---------------------------------------------------------------------------
 
 
-def _patch_main_pyproject(txt: str, langflow_version: str, core_compat_version: str) -> str:
+def _patch_main_pyproject(txt: str, langflow_version: str, base_compat_version: str) -> str:
     txt = re.sub(r'^version = ".*"', f'version = "{langflow_version}"', txt, flags=re.MULTILINE)
     return re.sub(
-        r'"langflow-core(\[[^\]]*\])?(?:==|>=|~=)[^"]*"',
-        lambda match: f'"langflow-core{match.group(1) or ""}~={core_compat_version}"',
+        r'"langflow-base(\[[^\]]*\])?(?:==|>=|~=)[^"]*"',
+        lambda match: f'"langflow-base{match.group(1) or ""}~={base_compat_version}"',
         txt,
     )
 
@@ -31,15 +31,6 @@ def _patch_langflow_base_pyproject(txt: str, base_version: str, langflow_version
     return re.sub(
         r'"lfx(?P<extra>\[[^\]]+\])?(?:~=|>=)[^"]*"',
         lambda match: f'"lfx{match.group("extra") or ""}~={langflow_version}"',
-        txt,
-    )
-
-
-def _patch_langflow_core_pyproject(txt: str, langflow_version: str, base_compat_version: str) -> str:
-    txt = re.sub(r'^version = ".*"', f'version = "{langflow_version}"', txt, flags=re.MULTILINE)
-    return re.sub(
-        r'"langflow-base(\[[^\]]*\])?(?:==|>=|~=)[^"]*"',
-        rf'"langflow-base\1~={base_compat_version}"',
         txt,
     )
 
@@ -61,93 +52,59 @@ def _component_index_version_matches(txt: str, langflow_version: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# langflow-core pins in main pyproject.toml
+# langflow-base pins in main pyproject.toml
 # ---------------------------------------------------------------------------
 
 
-class TestLangflowCorePinSubstitution:
-    V = "1.11.1"
-    C = "1.11.0"
+class TestLangflowBasePinSubstitution:
+    V = "1.12.1"
+    B = "1.12.0"
 
     def test_replaces_gte_with_extras(self):
-        txt = '    "langflow-core[audio]>=1.10.0",'
-        assert '"langflow-core[audio]~=1.11.0"' in _patch_main_pyproject(txt, self.V, self.C)
+        txt = '    "langflow-base[audio]>=1.11.0",'
+        assert '"langflow-base[audio]~=1.12.0"' in _patch_main_pyproject(txt, self.V, self.B)
 
     def test_replaces_equality_pin(self):
-        txt = '    "langflow-core==1.10.0",'
-        assert '"langflow-core~=1.11.0"' in _patch_main_pyproject(txt, self.V, self.C)
+        txt = '    "langflow-base==1.11.0",'
+        assert '"langflow-base~=1.12.0"' in _patch_main_pyproject(txt, self.V, self.B)
 
     def test_replaces_compatible_release_pin(self):
-        txt = '    "langflow-core~=1.10.0",'
-        assert '"langflow-core~=1.11.0"' in _patch_main_pyproject(txt, self.V, self.C)
+        txt = '    "langflow-base~=1.11.0",'
+        assert '"langflow-base~=1.12.0"' in _patch_main_pyproject(txt, self.V, self.B)
 
     def test_replaces_bare_gte_without_extras(self):
-        txt = '    "langflow-core>=1.10.0",'
-        assert '"langflow-core~=1.11.0"' in _patch_main_pyproject(txt, self.V, self.C)
+        txt = '    "langflow-base>=1.11.0",'
+        assert '"langflow-base~=1.12.0"' in _patch_main_pyproject(txt, self.V, self.B)
 
     def test_does_not_touch_workspace_line(self):
-        txt = "langflow-core = { workspace = true }"
-        assert _patch_main_pyproject(txt, self.V, self.C) == txt
+        txt = "langflow-base = { workspace = true }"
+        assert _patch_main_pyproject(txt, self.V, self.B) == txt
 
     def test_updates_version_field(self):
         txt = 'version = "1.10.0"'
-        assert 'version = "1.11.1"' in _patch_main_pyproject(txt, self.V, self.C)
+        assert 'version = "1.12.1"' in _patch_main_pyproject(txt, self.V, self.B)
 
     def test_patch_release_preserves_minor_compatibility_floor(self):
-        txt = 'dependencies = ["langflow-core~=1.11.0"]'
-        assert '"langflow-core~=1.11.0"' in _patch_main_pyproject(txt, self.V, self.C)
+        txt = 'dependencies = ["langflow-base~=1.12.0"]'
+        assert '"langflow-base~=1.12.0"' in _patch_main_pyproject(txt, self.V, self.B)
 
     def test_realistic_pyproject_fragment(self):
         txt = """\
 [project]
 name = "langflow"
-version = "1.11.0"
+version = "1.12.0"
 dependencies = [
-    "langflow-core~=1.11.0",
+    "langflow-base~=1.12.0",
 ]
 [project.optional-dependencies]
-audio = ["langflow-core[audio]~=1.11.0"]
-postgresql = ["langflow-core[postgresql]~=1.11.0"]
+audio = ["langflow-base[audio]~=1.12.0"]
+postgresql = ["langflow-base[postgresql]~=1.12.0"]
 """
-        result = _patch_main_pyproject(txt, self.V, self.C)
-        assert 'version = "1.11.1"' in result
-        assert '"langflow-core~=1.11.0"' in result
-        assert '"langflow-core[audio]~=1.11.0"' in result
-        assert '"langflow-core[postgresql]~=1.11.0"' in result
-
-
-# ---------------------------------------------------------------------------
-# langflow-base pins and product version in langflow-core pyproject.toml
-# ---------------------------------------------------------------------------
-
-
-class TestLangflowCoreSubstitution:
-    V = "1.11.1"
-    B = "0.11.0"
-
-    def test_updates_product_version(self):
-        txt = 'version = "1.11.0"'
-        assert 'version = "1.11.1"' in _patch_langflow_core_pyproject(txt, self.V, self.B)
-
-    def test_updates_complete_base_dependency(self):
-        txt = '    "langflow-base[complete]~=0.11.0",'
-        result = _patch_langflow_core_pyproject(txt, self.V, self.B)
-        assert '"langflow-base[complete]~=0.11.0"' in result
-
-    def test_updates_postgresql_base_dependency(self):
-        txt = 'postgresql = ["langflow-base[postgresql]>=0.11.0,<0.12.0"]'
-        result = _patch_langflow_core_pyproject(txt, self.V, self.B)
-        assert '"langflow-base[postgresql]~=0.11.0"' in result
-
-    def test_updates_audio_base_dependency(self):
-        txt = 'audio = ["langflow-base[audio]~=0.11.0"]'
-        result = _patch_langflow_core_pyproject(txt, self.V, self.B)
-        assert '"langflow-base[audio]~=0.11.0"' in result
-
-    def test_preserves_unrelated_dependencies(self):
-        txt = 'dependencies = ["langflow-base[complete]~=0.11.0", "httpx>=0.28"]'
-        result = _patch_langflow_core_pyproject(txt, self.V, self.B)
-        assert '"httpx>=0.28"' in result
+        result = _patch_main_pyproject(txt, self.V, self.B)
+        assert 'version = "1.12.1"' in result
+        assert '"langflow-base~=1.12.0"' in result
+        assert '"langflow-base[audio]~=1.12.0"' in result
+        assert '"langflow-base[postgresql]~=1.12.0"' in result
 
 
 # ---------------------------------------------------------------------------
@@ -156,23 +113,23 @@ class TestLangflowCoreSubstitution:
 
 
 class TestLfxPinSubstitution:
-    V = "1.11.0"
-    B = "0.11.0"
+    V = "1.12.0"
+    B = "1.12.1"
 
     def test_replaces_tilde_form(self):
         # Stable form written by make patch
         txt = '    "lfx~=1.10.0",'
-        assert '"lfx~=1.11.0"' in _patch_langflow_base_pyproject(txt, self.B, self.V)
+        assert '"lfx~=1.12.0"' in _patch_langflow_base_pyproject(txt, self.B, self.V)
 
     def test_replaces_gte_range_form(self):
         # Form written by release.yml after a pre-release build:
         # "lfx>=X.Y.Z,<X.(Y+1).dev0"
         txt = '    "lfx>=1.10.0,<1.11.dev0",'
-        assert '"lfx~=1.11.0"' in _patch_langflow_base_pyproject(txt, self.B, self.V)
+        assert '"lfx~=1.12.0"' in _patch_langflow_base_pyproject(txt, self.B, self.V)
 
     def test_preserves_extra(self):
         txt = 'toolguard = ["lfx[toolguard]~=1.10.0"]'
-        assert '"lfx[toolguard]~=1.11.0"' in _patch_langflow_base_pyproject(txt, self.B, self.V)
+        assert '"lfx[toolguard]~=1.12.0"' in _patch_langflow_base_pyproject(txt, self.B, self.V)
 
     def test_does_not_touch_workspace_line(self):
         txt = "lfx = { workspace = true }"
@@ -180,7 +137,7 @@ class TestLfxPinSubstitution:
 
     def test_updates_version_field(self):
         txt = 'version = "0.10.0"'
-        assert 'version = "0.11.0"' in _patch_langflow_base_pyproject(txt, self.B, self.V)
+        assert 'version = "1.12.1"' in _patch_langflow_base_pyproject(txt, self.B, self.V)
 
     def test_realistic_langflow_base_fragment(self):
         txt = """\
@@ -192,9 +149,9 @@ dependencies = [
     "pydantic>=2.0.0",
 ]
 """
-        result = _patch_langflow_base_pyproject(txt, "0.11.0", "1.11.0")
-        assert 'version = "0.11.0"' in result
-        assert '"lfx~=1.11.0"' in result
+        result = _patch_langflow_base_pyproject(txt, "1.12.1", "1.12.0")
+        assert 'version = "1.12.1"' in result
+        assert '"lfx~=1.12.0"' in result
         assert '"pydantic>=2.0.0"' in result  # unrelated dep untouched
 
     def test_realistic_gte_range_form_fragment(self):
@@ -208,8 +165,8 @@ dependencies = [
     "pydantic>=2.0.0",
 ]
 """
-        result = _patch_langflow_base_pyproject(txt, "0.11.0", "1.11.0")
-        assert '"lfx~=1.11.0"' in result
+        result = _patch_langflow_base_pyproject(txt, "1.12.1", "1.12.0")
+        assert '"lfx~=1.12.0"' in result
         assert '"pydantic>=2.0.0"' in result
 
 

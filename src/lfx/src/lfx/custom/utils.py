@@ -521,24 +521,34 @@ def build_component_metadata(
     from lfx.base.models.model import LCModelComponent
     from lfx.base.models.provider_registry import (
         get_provider_descriptor,
+        model_component_policy_mode,
         model_component_provider_id,
-        uses_standalone_model_provider_policy,
     )
 
-    if isinstance(custom_component, LCModelComponent | LCEmbeddingsModel) and uses_standalone_model_provider_policy(
-        custom_component
-    ):
-        provider_id = model_component_provider_id(
-            custom_component,
-            module_name=module_name,
-        )
-        descriptor = get_provider_descriptor(provider_id)
-        frontend_node.metadata["model_provider_id"] = provider_id
-        frontend_node.metadata["model_provider_display_name"] = (
-            descriptor.display_name
-            if descriptor is not None and descriptor.display_name
-            else provider_id.replace("_", " ").replace("-", " ").title()
-        )
+    if isinstance(custom_component, LCModelComponent | LCEmbeddingsModel):
+        policy_mode = model_component_policy_mode(custom_component)
+        # This metadata is produced from the loaded class, not inferred from
+        # the serialized source field. Static registry consumers can therefore
+        # honor inherited and annotated policy declarations without parsing
+        # user-controlled code.
+        frontend_node.metadata["model_provider_policy_mode"] = policy_mode
+        if policy_mode == "standalone":
+            provider_id = model_component_provider_id(
+                custom_component,
+                module_name=module_name,
+            )
+            descriptor = get_provider_descriptor(provider_id)
+            frontend_node.metadata["model_provider_id"] = provider_id
+            frontend_node.metadata["model_provider_display_name"] = (
+                descriptor.display_name
+                if descriptor is not None and descriptor.display_name
+                else provider_id.replace("_", " ").replace("-", " ").title()
+            )
+        else:
+            # Delegating/identity-free components must not retain a stale
+            # standalone identity from a reused or pre-populated template.
+            frontend_node.metadata.pop("model_provider_id", None)
+            frontend_node.metadata.pop("model_provider_display_name", None)
 
     # Generate code hash for cache invalidation and debugging
     try:

@@ -5,6 +5,8 @@ This module exposes template search and creation functions as MCP tools using Fa
 
 import asyncio
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 from uuid import UUID
 
@@ -44,6 +46,7 @@ from langflow.agentic.utils.template_search import (
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 
 _services_initialized = False
+_policy_refresh_started = False
 _services_init_lock = asyncio.Lock()
 
 
@@ -54,21 +57,58 @@ async def _ensure_services() -> None:
     ``initialize_services()`` (its startup/migration side effects are not
     safe to run twice).
     """
-    global _services_initialized  # noqa: PLW0603
-    if _services_initialized:
+    global _policy_refresh_started, _services_initialized  # noqa: PLW0603
+    if _services_initialized and _policy_refresh_started:
         return
     async with _services_init_lock:
-        if _services_initialized:
-            return
-        get_db_service()
-        from langflow.services.utils import initialize_services
+        if not _services_initialized:
+            get_db_service()
+            from langflow.services.utils import initialize_services
 
-        await initialize_services()
-        _services_initialized = True
+            await initialize_services()
+            # Mark service initialization immediately after it succeeds. If
+            # refresh startup fails, a later MCP call retries only that worker
+            # instead of repeating database migrations and registry setup.
+            _services_initialized = True
+
+        if not _policy_refresh_started:
+            from langflow.services.task.model_provider_policy_refresh import (
+                model_provider_policy_refresh_worker,
+            )
+
+            # Standalone stdio servers do not enter the FastAPI lifespan, but
+            # they are long-lived model consumers and must converge after an
+            # admin changes the install-wide provider ceiling.
+            await model_provider_policy_refresh_worker.start()
+            _policy_refresh_started = True
+
+
+async def _stop_policy_refresh() -> None:
+    """Stop the standalone refresh worker during MCP server shutdown."""
+    global _policy_refresh_started  # noqa: PLW0603
+    if not _policy_refresh_started:
+        return
+    from langflow.services.task.model_provider_policy_refresh import (
+        model_provider_policy_refresh_worker,
+    )
+
+    try:
+        await model_provider_policy_refresh_worker.stop()
+    finally:
+        _policy_refresh_started = False
+
+
+@asynccontextmanager
+async def _service_lifespan(_server: FastMCP) -> AsyncIterator[dict]:
+    """Pair lazy standalone service startup with refresh-worker teardown."""
+    try:
+        yield {}
+    finally:
+        await _stop_policy_refresh()
 
 
 # Initialize FastMCP server
-mcp = FastMCP("langflow-agentic")
+mcp = FastMCP("langflow-agentic", lifespan=_service_lifespan)
 
 DEFAULT_TEMPLATE_FIELDS = ["id", "name", "description", "tags", "endpoint_name", "icon"]
 DEFAULT_COMPONENT_FIELDS = ["name", "type", "display_name", "description"]

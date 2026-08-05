@@ -40,8 +40,9 @@ class _FakeAsyncSession:
         self.flushed = 0
         self.committed = 0
         self.rolled_back = 0
+        self.events: list[str] = []
 
-    async def get(self, model: type, key: UUID) -> Any:
+    async def get(self, model: type, key: UUID, **_kwargs: Any) -> Any:
         return self._get_by_type.get((model, key))
 
     def add(self, obj: Any) -> None:
@@ -51,9 +52,11 @@ class _FakeAsyncSession:
         self.deleted.append(obj)
 
     async def flush(self) -> None:
+        self.events.append("flush")
         self.flushed += 1
 
     async def commit(self) -> None:
+        self.events.append("commit")
         self.committed += 1
         if self._commit_raises is not None:
             raise self._commit_raises
@@ -65,6 +68,7 @@ class _FakeAsyncSession:
         return None
 
     async def exec(self, _stmt: Any):
+        self.events.append("exec")
         if not self._exec_results:
             return _ExecResult([])
         return _ExecResult(self._exec_results.pop(0))
@@ -96,6 +100,7 @@ class _StubAuthz:
         self.staged_mutations: list[Any] = []
         self.committed_mutations: list[Any] = []
         self.validated_mutations: list[Any] = []
+        self.lock_requests: list[dict[str, Any]] = []
         self._staged_session: _FakeAsyncSession | None = None
 
     async def supports_cross_user_fetch(self) -> bool:
@@ -122,11 +127,18 @@ class _StubAuthz:
     async def get_effective_permissions(self, **_kwargs) -> dict[UUID, list[str]]:
         return self.effective_perms_payload or {}
 
+    async def acquire_identity_mutation_lock(self, *, session, **request) -> None:
+        session.events.append("lock")
+        self.lock_requests.append(request)
+        assert session.committed == 0
+
     async def validate_identity_mutation(self, *, session, mutation) -> None:
+        session.events.append("validate")
         self.validated_mutations.append(mutation)
         assert session.committed == 0
 
     async def stage_identity_mutation(self, *, session, event) -> None:
+        session.events.append("stage")
         assert session.committed == 0
         self._staged_session = session
         self.staged_mutations.append(event)
@@ -776,6 +788,38 @@ async def test_list_assignments_no_user_id_defaults_to_self(stub_authz):
 
 
 @pytest.mark.asyncio
+async def test_list_assignments_serializes_grant_sources(stub_authz):
+    """Assignment reads include every durable provenance source."""
+    from langflow.api.v1 import authz_role_assignments
+    from langflow.services.database.models.auth import AuthzRoleAssignment, AuthzRoleAssignmentGrant
+
+    stub_authz()
+    user = _make_user(is_superuser=False)
+    assignment = AuthzRoleAssignment(user_id=user.id, role_id=uuid4(), assigned_by=user.id)
+    manual_grant = AuthzRoleAssignmentGrant(
+        assignment_id=assignment.id,
+        source_kind="manual",
+        administrative_actor=user.id,
+    )
+    idp_grant = AuthzRoleAssignmentGrant(
+        assignment_id=assignment.id,
+        source_kind="idp",
+        provider_id="entra",
+        external_group="corp-dev",
+    )
+    session = _FakeAsyncSession(exec_results=[[assignment], [manual_grant, idp_grant]])
+
+    result = await authz_role_assignments.list_assignments(session=session, current_user=user)
+
+    assert len(result) == 1
+    sources = {source.source_kind: source for source in result[0].grant_sources}
+    assert sources.keys() == {"manual", "idp"}
+    assert sources["manual"].administrative_actor == user.id
+    assert sources["idp"].provider_id == "entra"
+    assert sources["idp"].external_group == "corp-dev"
+
+
+@pytest.mark.asyncio
 async def test_create_assignment_invalid_user_404(stub_authz):
     from langflow.api.v1 import authz_role_assignments
     from langflow.api.v1.schemas.authz_role_assignments import RoleAssignmentCreate
@@ -816,12 +860,276 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz):
         current_user=actor,
         session=session,
     )
-    assert len(session.added) == 1
+    assert len(session.added) == 2
+    assert session.added[1].source_kind == "manual"
+    assert session.added[1].assignment_id == session.added[0].id
     assert session.committed == 1
     assert authz.staged_mutations == authz.committed_mutations
+    assert authz.validated_mutations == []
+    assert len(authz.lock_requests) == 1
+    assert authz.lock_requests[0]["affected_user_ids"] == (target_user.id,)
     assert authz.staged_mutations[0].affected_user_ids == (target_user.id,)
+    assert authz.staged_mutations[0].entity_id == session.added[0].id
     assert authz.staged_mutations[0].domain_type == "global"
     assert authz.staged_mutations[0].domain_id is None
+    assert session.events.index("lock") < session.events.index("exec")
+    assert session.events.index("lock") < session.events.index("flush")
+
+
+@pytest.mark.asyncio
+async def test_create_assignment_duplicate_manual_source_is_409(stub_authz):
+    from langflow.api.v1 import authz_role_assignments
+    from langflow.api.v1.schemas.authz_role_assignments import RoleAssignmentCreate
+    from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment, AuthzRoleAssignmentGrant
+    from langflow.services.database.models.user.model import User
+
+    authz = stub_authz()
+    actor = _make_user(is_superuser=True)
+    target_user = SimpleNamespace(id=uuid4())
+    role = SimpleNamespace(id=uuid4(), name="viewer")
+    assignment = AuthzRoleAssignment(user_id=target_user.id, role_id=role.id, assigned_by=actor.id)
+    manual_grant = AuthzRoleAssignmentGrant(
+        assignment_id=assignment.id,
+        source_kind="manual",
+        administrative_actor=actor.id,
+    )
+    session = _FakeAsyncSession(
+        {(User, target_user.id): target_user, (AuthzRole, role.id): role},
+        exec_results=[[assignment], [manual_grant]],
+    )
+
+    with pytest.raises(HTTPException) as excinfo:
+        await authz_role_assignments.create_assignment(
+            payload=RoleAssignmentCreate(user_id=target_user.id, role_id=role.id),
+            current_user=actor,
+            session=session,
+        )
+
+    assert excinfo.value.status_code == 409
+    assert "Manual assignment already exists" in excinfo.value.detail
+    assert session.added == []
+    assert session.committed == 0
+    assert authz.validated_mutations == []
+    assert len(authz.lock_requests) == 1
+    assert authz.staged_mutations == []
+
+
+@pytest.mark.asyncio
+async def test_create_assignment_adds_manual_source_to_idp_assignment_without_lifecycle_mutation(stub_authz):
+    from langflow.api.v1 import authz_role_assignments
+    from langflow.api.v1.schemas.authz_role_assignments import RoleAssignmentCreate
+    from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment, AuthzRoleAssignmentGrant
+    from langflow.services.database.models.user.model import User
+
+    authz = stub_authz()
+    actor = _make_user(is_superuser=True)
+    target_user = SimpleNamespace(id=uuid4())
+    role = SimpleNamespace(id=uuid4(), name="viewer")
+    original_actor_id = uuid4()
+    assignment = AuthzRoleAssignment(
+        user_id=target_user.id,
+        role_id=role.id,
+        assigned_by=original_actor_id,
+    )
+    idp_grant = AuthzRoleAssignmentGrant(
+        assignment_id=assignment.id,
+        source_kind="idp",
+        provider_id="entra",
+        external_group="corp-dev",
+    )
+    persisted_manual = AuthzRoleAssignmentGrant(
+        assignment_id=assignment.id,
+        source_kind="manual",
+        administrative_actor=actor.id,
+    )
+    session = _FakeAsyncSession(
+        {(User, target_user.id): target_user, (AuthzRole, role.id): role},
+        exec_results=[[assignment], [], [idp_grant, persisted_manual]],
+    )
+
+    result = await authz_role_assignments.create_assignment(
+        payload=RoleAssignmentCreate(user_id=target_user.id, role_id=role.id),
+        current_user=actor,
+        session=session,
+    )
+
+    assert len(session.added) == 1
+    assert session.added[0].source_kind == "manual"
+    assert session.added[0].assignment_id == assignment.id
+    assert session.committed == 1
+    assert authz.validated_mutations == []
+    assert len(authz.lock_requests) == 1
+    assert authz.staged_mutations == []
+    assert authz.committed_mutations == []
+    assert session.events.index("lock") < session.events.index("exec")
+    assert result.id == assignment.id
+    assert result.assigned_by == original_actor_id
+    assert {source.source_kind for source in result.grant_sources} == {"idp", "manual"}
+
+
+@pytest.mark.asyncio
+async def test_delete_assignment_rejects_idp_only_source(stub_authz):
+    from langflow.api.v1 import authz_role_assignments
+    from langflow.services.database.models.auth import AuthzRoleAssignment, AuthzRoleAssignmentGrant
+
+    authz = stub_authz()
+    actor = _make_user(is_superuser=True)
+    assignment = AuthzRoleAssignment(user_id=uuid4(), role_id=uuid4())
+    idp_grant = AuthzRoleAssignmentGrant(
+        assignment_id=assignment.id,
+        source_kind="idp",
+        provider_id="entra",
+        external_group="corp-dev",
+    )
+    session = _FakeAsyncSession(
+        {(AuthzRoleAssignment, assignment.id): assignment},
+        exec_results=[[idp_grant]],
+    )
+
+    with pytest.raises(HTTPException) as excinfo:
+        await authz_role_assignments.delete_assignment(
+            assignment_id=assignment.id,
+            current_user=actor,
+            session=session,
+        )
+
+    assert excinfo.value.status_code == 409
+    assert "IdP-derived assignments" in excinfo.value.detail
+    assert session.deleted == []
+    assert session.committed == 0
+    assert len(authz.lock_requests) == 1
+    assert authz.validated_mutations == []
+    assert authz.staged_mutations == []
+
+
+@pytest.mark.asyncio
+async def test_delete_assignment_returns_surviving_idp_assignment(stub_authz, monkeypatch):
+    from langflow.api.v1 import authz_role_assignments
+    from langflow.services.database.models.auth import AuthzRoleAssignment, AuthzRoleAssignmentGrant
+
+    authz = stub_authz()
+    actor = _make_user(is_superuser=True)
+    domain_id = uuid4()
+    assignment = AuthzRoleAssignment(
+        user_id=uuid4(),
+        role_id=uuid4(),
+        domain_type="workspace",
+        domain_id=domain_id,
+        assigned_by=actor.id,
+    )
+    manual_grant = AuthzRoleAssignmentGrant(
+        assignment_id=assignment.id,
+        source_kind="manual",
+        administrative_actor=actor.id,
+    )
+    idp_grant = AuthzRoleAssignmentGrant(
+        assignment_id=assignment.id,
+        source_kind="idp",
+        provider_id="entra",
+        external_group="corp-dev",
+    )
+    session = _FakeAsyncSession(
+        {(AuthzRoleAssignment, assignment.id): assignment},
+        exec_results=[[manual_grant, idp_grant]],
+    )
+    audit_calls: list[dict[str, Any]] = []
+
+    async def capture_audit(**kwargs):
+        audit_calls.append(kwargs)
+
+    monkeypatch.setattr(authz_role_assignments, "audit_decision", capture_audit)
+
+    result = await authz_role_assignments.delete_assignment(
+        assignment_id=assignment.id,
+        current_user=actor,
+        session=session,
+    )
+
+    delete_route = next(route for route in authz_role_assignments.router.routes if "DELETE" in route.methods)
+    assert delete_route.status_code == 200
+    assert result.id == assignment.id
+    assert len(result.grant_sources) == 1
+    assert result.grant_sources[0].source_kind == "idp"
+    assert result.grant_sources[0].provider_id == "entra"
+    assert result.grant_sources[0].external_group == "corp-dev"
+    assert session.deleted == [manual_grant]
+    assert session.committed == 1
+    assert len(authz.lock_requests) == 1
+    assert authz.validated_mutations == []
+    assert authz.staged_mutations == []
+    assert audit_calls[0]["action"] == "role_assignment:delete_manual_source"
+    assert audit_calls[0]["details"] == {
+        "assignment_id": str(assignment.id),
+        "role_id": str(assignment.role_id),
+        "domain_type": "workspace",
+        "domain_id": str(domain_id),
+        "effective_assignment_preserved": True,
+        "surviving_grant_sources": [
+            {
+                "source_kind": "idp",
+                "provider_id": "entra",
+                "external_group": "corp-dev",
+            }
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_delete_assignment_manual_only_returns_204(stub_authz):
+    from langflow.api.v1 import authz_role_assignments
+    from langflow.services.database.models.auth import AuthzRoleAssignment, AuthzRoleAssignmentGrant
+
+    authz = stub_authz()
+    actor = _make_user(is_superuser=True)
+    assignment = AuthzRoleAssignment(user_id=uuid4(), role_id=uuid4())
+    manual_grant = AuthzRoleAssignmentGrant(
+        assignment_id=assignment.id,
+        source_kind="manual",
+        administrative_actor=actor.id,
+    )
+    session = _FakeAsyncSession(
+        {(AuthzRoleAssignment, assignment.id): assignment},
+        exec_results=[[manual_grant]],
+    )
+
+    result = await authz_role_assignments.delete_assignment(
+        assignment_id=assignment.id,
+        current_user=actor,
+        session=session,
+    )
+
+    assert result.status_code == 204
+    assert session.deleted == [assignment]
+    assert len(authz.lock_requests) == 1
+    assert len(authz.validated_mutations) == 1
+    assert authz.staged_mutations == authz.committed_mutations
+
+
+@pytest.mark.asyncio
+async def test_delete_legacy_assignment_without_grant_rows_returns_204(stub_authz):
+    from langflow.api.v1 import authz_role_assignments
+    from langflow.services.database.models.auth import AuthzRoleAssignment
+
+    authz = stub_authz()
+    actor = _make_user(is_superuser=True)
+    assignment = AuthzRoleAssignment(user_id=uuid4(), role_id=uuid4())
+    session = _FakeAsyncSession(
+        {(AuthzRoleAssignment, assignment.id): assignment},
+        exec_results=[[]],
+    )
+
+    result = await authz_role_assignments.delete_assignment(
+        assignment_id=assignment.id,
+        current_user=actor,
+        session=session,
+    )
+
+    assert result.status_code == 204
+    assert session.deleted == [assignment]
+    assert session.committed == 1
+    assert len(authz.lock_requests) == 1
+    assert len(authz.validated_mutations) == 1
+    assert authz.staged_mutations == authz.committed_mutations
 
 
 # =====================================================================
