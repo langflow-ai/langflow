@@ -1,0 +1,37 @@
+---
+title: OutageDeck
+slug: /bundles-outagedeck
+description: Check normalized cloud and SaaS provider status from a Langflow flow or agent tool.
+---
+
+import Icon from "@site/src/components/icon";
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+The **OutageDeck** bundle provides keyless, read-only status data for more than 170 cloud and SaaS providers. OutageDeck normalizes official provider status sources into consistent service states, incident summaries, freshness metadata, and source links.
+
+For the complete endpoint contract and provider catalog, see the [OutageDeck API documentation](https://outagedeck.com/developers/api?utm_source=langflow&utm_medium=integration&utm_campaign=langflow_provider_status).
+
+## Provider Status
+
+The **Provider Status** component retrieves the current normalized record for one provider. Connect its **Provider Status** output to components that accept [`JSON`](/data-types#json), or enable tool mode on **Provider Slug** so an Agent can choose the provider at runtime.
+
+OutageDeck reports one of six normalized provider states: Operational, Maintenance, Degraded, Partial Outage, Major Outage, or Unknown. The response also includes:
+
+- The provider status headline and capture time.
+- Official-source type, last checked time, and status page URL.
+- Individual service states.
+- Active and recent incident summaries.
+- OutageDeck and official provider links.
+
+This component checks aggregated provider status. It does not perform synthetic uptime monitoring from your own network or application.
+
+### Provider Status parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| provider_slug | String | The lowercase OutageDeck provider slug, such as `github`, `aws`, `cloudflare`, or `openai`. This input supports tool mode. |
+| provider_status | JSON | The versioned OutageDeck API response containing status, services, incidents, freshness, and source links. |

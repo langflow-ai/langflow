@@ -24,4 +24,16 @@ describe("SIDEBAR_BUNDLES", () => {
       ]),
     );
   });
+
+  it("classifies OutageDeck as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "OutageDeck",
+          icon: "OutageDeck",
+          name: "outagedeck",
+        }),
+      ]),
+    );
+  });
 });

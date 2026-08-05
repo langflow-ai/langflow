@@ -73,6 +73,7 @@ nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0", "nv-ingest-client>=26.1.0,<26.
 olivya = []
 ollama = ["lfx-ollama>=0.1.0,<1.0.0"]
 openrouter = ["langchain-openai>=1.1.6"]
+outagedeck = []
 perplexity = ["langchain-perplexity>=1.0.0,<2.0.0"]
 pgvector = ["pgvector>=0.4.2", "langchain-community>=0.4.1,<1.0.0"]
 pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]
@@ -141,6 +142,7 @@ all = [
     "lfx-bundles[nvidia]",
     "lfx-bundles[olivya]",
     "lfx-bundles[openrouter]",
+    "lfx-bundles[outagedeck]",
     "lfx-bundles[perplexity]",
     "lfx-bundles[pgvector]",
     "lfx-bundles[pinecone]",
@@ -208,6 +210,7 @@ all-no-torch = [
     "lfx-bundles[nvidia]",
     "lfx-bundles[olivya]",
     "lfx-bundles[openrouter]",
+    "lfx-bundles[outagedeck]",
     "lfx-bundles[perplexity]",
     "lfx-bundles[pgvector]",
     "lfx-bundles[pinecone]",

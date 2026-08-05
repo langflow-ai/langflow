@@ -385,6 +385,10 @@ export const lazyIconsMapping = {
     import("@/icons/OpenRouter").then((mod) => ({
       default: mod.OpenRouterIcon,
     })),
+  OutageDeck: () =>
+    import("@/icons/OutageDeck").then((mod) => ({
+      default: mod.OutageDeckIcon,
+    })),
   OpenSearch: () =>
     import("@/icons/OpenSearch").then((mod) => ({ default: mod.OpenSearch })),
   Oracle: () =>
