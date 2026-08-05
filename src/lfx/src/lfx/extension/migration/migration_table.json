@@ -4910,6 +4910,66 @@
       "legacy_slot": "ext:valkey:ValkeyIndexChatMemory@official-pre-a",
       "target": "ext:valkey:ValkeyIndexChatMemory@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "PlivoLookupNumberComponent",
+      "target": "ext:plivo:PlivoLookupNumberComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.plivo.lookup_number.PlivoLookupNumberComponent",
+      "target": "ext:plivo:PlivoLookupNumberComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.plivo.PlivoLookupNumberComponent",
+      "target": "ext:plivo:PlivoLookupNumberComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:plivo:PlivoLookupNumberComponent@official-pre-a",
+      "target": "ext:plivo:PlivoLookupNumberComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "PlivoMakeCallComponent",
+      "target": "ext:plivo:PlivoMakeCallComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.plivo.make_call.PlivoMakeCallComponent",
+      "target": "ext:plivo:PlivoMakeCallComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.plivo.PlivoMakeCallComponent",
+      "target": "ext:plivo:PlivoMakeCallComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:plivo:PlivoMakeCallComponent@official-pre-a",
+      "target": "ext:plivo:PlivoMakeCallComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "PlivoSendSMSComponent",
+      "target": "ext:plivo:PlivoSendSMSComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.plivo.send_sms.PlivoSendSMSComponent",
+      "target": "ext:plivo:PlivoSendSMSComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.plivo.PlivoSendSMSComponent",
+      "target": "ext:plivo:PlivoSendSMSComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:plivo:PlivoSendSMSComponent@official-pre-a",
+      "target": "ext:plivo:PlivoSendSMSComponent@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [
