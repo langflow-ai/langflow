@@ -53,6 +53,12 @@ def test_sso_client_secret_rejects_wrong_langflow_secret_key():
         decrypt_sso_client_secret(encrypted, _settings("different-langflow-secret-key"))
 
 
+@pytest.mark.parametrize("client_secret", ["", " ", "\t\n"])
+def test_sso_client_secret_rejects_blank_plaintext(client_secret):
+    with pytest.raises(SSOSecretError, match="must not be blank"):
+        encrypt_sso_client_secret(client_secret, _settings())
+
+
 def test_sso_client_secret_rejects_unknown_envelope_version():
     encrypted = encrypt_sso_client_secret(_PLAINTEXT, _settings())
     unknown_version = encrypted.replace(":v1:", ":v2:", 1)

@@ -11,6 +11,7 @@ Plugins must use these tables via the models exported from
 import re
 from datetime import datetime, timezone
 from typing import Annotated, Any, Literal, TypeAlias
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -25,6 +26,13 @@ from langflow.schema.serialize import UUIDstr
 from langflow.services.database.models.auth.sso_secret import is_sso_client_secret_envelope
 
 _SSO_SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+_OIDC_REMOTE_URL_FIELDS = (
+    "discovery_url",
+    "token_endpoint",
+    "authorization_endpoint",
+    "jwks_uri",
+    "issuer",
+)
 
 
 def _generate_sso_slug() -> str:
@@ -50,6 +58,37 @@ class OIDCProviderSettings(BaseModel):
     jwks_uri: str | None = None
     issuer: str | None = None
     client_id: str | None = None
+
+    @field_validator("client_id", mode="before")
+    @classmethod
+    def validate_client_id(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        value = value.strip()
+        if not value:
+            msg = "OIDC client_id must not be blank"
+            raise ValueError(msg)
+        return value
+
+    @field_validator(*_OIDC_REMOTE_URL_FIELDS, mode="before")
+    @classmethod
+    def validate_remote_url(cls, value: object, info: Any) -> object:
+        """Require absolute HTTP(S) URLs for values consumed by the OIDC HTTP client."""
+        if value is None or not isinstance(value, str):
+            return value
+        value = value.strip()
+        if not value:
+            msg = f"OIDC {info.field_name} must not be blank"
+            raise ValueError(msg)
+        try:
+            parsed = urlsplit(value)
+            is_http_url = parsed.scheme.lower() in {"http", "https"} and parsed.hostname is not None
+        except ValueError:
+            is_http_url = False
+        if not is_http_url:
+            msg = f"OIDC {info.field_name} must be an absolute HTTP(S) URL"
+            raise ValueError(msg)
+        return value
 
 
 # Add future protocol variants to this discriminated union. The database schema
@@ -309,6 +348,99 @@ class SSOConfig(SQLModel, table=True):  # type: ignore[call-arg]
         return value
 
 
+def _nonblank_json_string(json_column: sa.Column[Any], key: str) -> sa.ColumnElement[bool]:
+    value = json_column[key].as_string()
+    return sa.and_(value.is_not(None), sa.func.length(sa.func.trim(value)) > 0)
+
+
+def _http_json_url_or_null(json_column: sa.Column[Any], key: str) -> sa.ColumnElement[bool]:
+    value = json_column[key].as_string()
+    normalized = sa.func.lower(value)
+    return sa.or_(value.is_(None), normalized.like("http://%"), normalized.like("https://%"))
+
+
+def _install_sso_config_database_invariants() -> None:
+    """Install portable checks and dialect-specific slug immutability triggers."""
+    table = SSOConfig.__table__
+    provider_settings = table.c.provider_settings
+    protocol = table.c.protocol
+    enabled = table.c.enabled
+
+    table.append_constraint(
+        CheckConstraint(
+            sa.and_(
+                protocol == "oidc",
+                provider_settings["protocol"].as_string().is_not(None),
+                provider_settings["protocol"].as_string() == protocol,
+            ),
+            name="ck_sso_config_protocol_consistency",
+        )
+    )
+    table.append_constraint(
+        CheckConstraint(
+            sa.or_(
+                enabled.is_(False),
+                sa.and_(
+                    table.c.client_secret_encrypted.is_not(None),
+                    _nonblank_json_string(provider_settings, "client_id"),
+                    sa.or_(
+                        _nonblank_json_string(provider_settings, "discovery_url"),
+                        sa.and_(
+                            _nonblank_json_string(provider_settings, "authorization_endpoint"),
+                            _nonblank_json_string(provider_settings, "token_endpoint"),
+                            _nonblank_json_string(provider_settings, "jwks_uri"),
+                        ),
+                    ),
+                    *(_http_json_url_or_null(provider_settings, key) for key in _OIDC_REMOTE_URL_FIELDS),
+                ),
+            ),
+            name="ck_sso_config_enabled_complete",
+        )
+    )
+
+    sqlite_trigger = sa.DDL(
+        """
+        CREATE TRIGGER trg_sso_config_slug_immutable
+        BEFORE UPDATE OF slug ON sso_config
+        FOR EACH ROW
+        WHEN NEW.slug IS NOT OLD.slug
+        BEGIN
+            SELECT RAISE(ABORT, 'SSOConfig.slug is immutable after insert');
+        END
+        """
+    ).execute_if(dialect="sqlite")
+    postgres_trigger_function = sa.DDL(
+        """
+        CREATE OR REPLACE FUNCTION prevent_sso_config_slug_update()
+        RETURNS trigger AS $$
+        BEGIN
+            IF NEW.slug IS DISTINCT FROM OLD.slug THEN
+                RAISE EXCEPTION 'SSOConfig.slug is immutable after insert';
+            END IF;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql
+        """
+    ).execute_if(dialect="postgresql")
+    postgres_trigger = sa.DDL(
+        """
+        CREATE TRIGGER trg_sso_config_slug_immutable
+        BEFORE UPDATE OF slug ON sso_config
+        FOR EACH ROW EXECUTE FUNCTION prevent_sso_config_slug_update()
+        """
+    ).execute_if(dialect="postgresql")
+    drop_postgres_function = sa.DDL("DROP FUNCTION IF EXISTS prevent_sso_config_slug_update()").execute_if(
+        dialect="postgresql"
+    )
+    sa.event.listen(table, "after_create", sqlite_trigger)
+    sa.event.listen(table, "after_create", postgres_trigger_function)
+    sa.event.listen(table, "after_create", postgres_trigger)
+    sa.event.listen(table, "after_drop", drop_postgres_function)
+
+
+_install_sso_config_database_invariants()
+
+
 class SSOConfigCreate(SQLModel):
     """Validated external input for creating an SSO configuration."""
 
@@ -323,8 +455,14 @@ class SSOConfigCreate(SQLModel):
     email_claim: str = "email"
     username_claim: str = "preferred_username"
     user_id_claim: str = "sub"
-    created_by: UUIDstr | None = None
-    updated_by: UUIDstr | None = None
+
+    @field_validator("client_secret")
+    @classmethod
+    def validate_client_secret(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None and not value.get_secret_value().strip():
+            msg = "SSO client secret must not be blank"
+            raise ValueError(msg)
+        return value
 
     @model_validator(mode="after")
     def validate_configuration(self) -> Self:
@@ -336,7 +474,12 @@ class SSOConfigCreate(SQLModel):
         )
         return self
 
-    def to_model(self, settings_service: Any | None = None) -> SSOConfig:
+    def to_model(
+        self,
+        settings_service: Any | None = None,
+        *,
+        actor_id: UUIDstr | None = None,
+    ) -> SSOConfig:
         """Build the persistence model, encrypting plaintext before it reaches the table."""
         from langflow.services.database.models.auth.sso_secret import encrypt_sso_client_secret
 
@@ -346,6 +489,8 @@ class SSOConfigCreate(SQLModel):
                 self.client_secret.get_secret_value(),
                 settings_service,
             )
+        values["created_by"] = actor_id
+        values["updated_by"] = actor_id
         return SSOConfig(**values)
 
 
@@ -384,9 +529,22 @@ class SSOConfigUpdate(SQLModel):
     email_claim: str | None = None
     username_claim: str | None = None
     user_id_claim: str | None = None
-    updated_by: UUIDstr | None = None
 
-    def apply_to(self, config: SSOConfig, settings_service: Any | None = None) -> SSOConfig:
+    @field_validator("client_secret")
+    @classmethod
+    def validate_client_secret(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None and not value.get_secret_value().strip():
+            msg = "SSO client secret must not be blank"
+            raise ValueError(msg)
+        return value
+
+    def apply_to(
+        self,
+        config: SSOConfig,
+        settings_service: Any | None = None,
+        *,
+        actor_id: UUIDstr | None = None,
+    ) -> SSOConfig:
         """Validate the merged state and apply this update to a persistence model."""
         from langflow.services.database.models.auth.sso_secret import encrypt_sso_client_secret
 
@@ -432,6 +590,7 @@ class SSOConfigUpdate(SQLModel):
             setattr(config, field_name, value)
         if "client_secret" in self.model_fields_set:
             config.client_secret_encrypted = encrypted_secret
+        config.updated_by = actor_id
         return config
 
 

@@ -6,6 +6,7 @@ CASCADE delete, unique constraints, and default values.
 
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.auth import (
@@ -400,6 +401,41 @@ class TestSSOConfig:
         with pytest.raises(ValidationError, match="require a client_id"):
             SSOConfigCreate(display_name="Incomplete", enabled=True)
 
+    async def test_provider_credentials_reject_blank_values_and_non_http_urls(self):
+        with pytest.raises(ValidationError, match="client_id must not be blank"):
+            OIDCProviderSettings(client_id=" \t ")
+
+        for field_name in ("discovery_url", "token_endpoint", "authorization_endpoint", "jwks_uri", "issuer"):
+            with pytest.raises(ValidationError, match="absolute HTTP"):
+                OIDCProviderSettings(**{field_name: "file:///etc/passwd"})
+
+        with pytest.raises(ValidationError, match="client secret must not be blank"):
+            SSOConfigCreate(display_name="Blank secret", client_secret=SecretStr("  "))
+        with pytest.raises(ValidationError, match="client secret must not be blank"):
+            SSOConfigUpdate(client_secret=SecretStr(""))
+
+    async def test_external_schemas_do_not_accept_audit_actor_fields(self, sso_secret_settings):
+        actor_id = uuid4()
+        with pytest.raises(ValidationError, match="created_by"):
+            SSOConfigCreate(display_name="Caller attributed", created_by=actor_id)
+        with pytest.raises(ValidationError, match="updated_by"):
+            SSOConfigUpdate(updated_by=actor_id)
+
+        config = SSOConfigCreate(display_name="Server attributed").to_model(
+            sso_secret_settings,
+            actor_id=actor_id,
+        )
+        assert config.created_by == actor_id
+        assert config.updated_by == actor_id
+
+        new_actor_id = uuid4()
+        SSOConfigUpdate(display_name="Updated").apply_to(
+            config,
+            sso_secret_settings,
+            actor_id=new_actor_id,
+        )
+        assert config.updated_by == new_actor_id
+
     async def test_standard_model_validation_is_safe_and_strict(self):
         config = SSOConfig.model_validate({"display_name": "Validated"})
         assert config.display_name == "Validated"
@@ -457,6 +493,32 @@ class TestSSOConfig:
         config.slug = "sso-replacement"
         with pytest.raises(ValueError, match="immutable after insert"):
             await sso_async_session.commit()
+
+    async def test_core_update_cannot_enable_an_incomplete_config(self, sso_async_session):
+        config = SSOConfig(display_name="Core incomplete")
+        sso_async_session.add(config)
+        await sso_async_session.commit()
+
+        with pytest.raises(IntegrityError, match=r"enabled_complete|CHECK constraint failed"):
+            await sso_async_session.execute(update(SSOConfig).where(SSOConfig.id == config.id).values(enabled=True))
+
+    async def test_core_update_cannot_change_protocol(self, sso_async_session):
+        config = SSOConfig(display_name="Core protocol")
+        sso_async_session.add(config)
+        await sso_async_session.commit()
+
+        with pytest.raises(IntegrityError, match=r"protocol_consistency|CHECK constraint failed"):
+            await sso_async_session.execute(update(SSOConfig).where(SSOConfig.id == config.id).values(protocol="saml"))
+
+    async def test_core_update_cannot_change_slug(self, sso_async_session):
+        config = SSOConfig(display_name="Core slug")
+        sso_async_session.add(config)
+        await sso_async_session.commit()
+
+        with pytest.raises(IntegrityError, match="immutable after insert"):
+            await sso_async_session.execute(
+                update(SSOConfig).where(SSOConfig.id == config.id).values(slug="sso-replacement")
+            )
 
     async def test_duplicate_slug_is_rejected(self, sso_async_session):
         slug = "sso-fixed-connection"

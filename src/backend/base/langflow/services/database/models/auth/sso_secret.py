@@ -126,6 +126,9 @@ def encrypt_sso_client_secret(
     if not isinstance(client_secret, str):
         msg = "SSO client secret must be a string"
         raise TypeError(msg)
+    if not client_secret.strip():
+        msg = "SSO client secret must not be blank"
+        raise SSOSecretError(msg)
 
     nonce = os.urandom(_NONCE_BYTES)
     ciphertext = AESGCM(_derive_key(settings_service)).encrypt(nonce, client_secret.encode(), _AAD)
