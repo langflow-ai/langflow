@@ -15,6 +15,13 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
+# opentelemetry is an optional lfx extra (``lfx[otel]``), and the probe below imports it in a
+# subprocess that inherits this interpreter. Without the guard this errors instead of skipping
+# on an lfx install that did not opt in, which is exactly what the isolated lfx CI job is.
+pytest.importorskip("opentelemetry")
+
 FLOW_ID = "22222222-2222-2222-2222-222222222222"
 API_KEY = "probe-key"  # pragma: allowlist secret
 
