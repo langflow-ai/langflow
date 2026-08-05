@@ -3,6 +3,7 @@ import socket
 from unittest.mock import AsyncMock, patch
 
 import httpcore
+import httpx
 import pytest
 from lfx.utils.ssrf_httpx import (
     ssrf_protected_httpx_client_kwargs_for_url,
@@ -154,3 +155,122 @@ class TestSSRFSafeHTTPX:
         assert response.status_code == 200
         assert call_count == 1
         assert connected_to_ip == "8.8.8.8"
+
+    def test_sync_redirects_are_revalidated_and_strip_cross_origin_credentials(self):
+        first_url = "https://models.example/v1/models"
+        second_url = "https://catalog.example/models"
+        auth = httpx.BasicAuth("user", "secret")
+        responses = [
+            httpx.Response(302, headers={"location": second_url}, request=httpx.Request("GET", first_url)),
+            httpx.Response(200, json={"data": []}, request=httpx.Request("GET", second_url)),
+        ]
+
+        with (
+            patch(
+                "lfx.utils.ssrf_httpx.validate_and_resolve_connector_url",
+                side_effect=lambda url: (url, []),
+            ) as validate_url,
+            patch("httpx.Client.get", side_effect=responses) as get,
+        ):
+            response = ssrf_safe_httpx_get(
+                first_url,
+                headers=[
+                    (b"Authorization", b"Bearer secret"),
+                    (b"Cookie", b"session=header-secret"),
+                    (b"Proxy-Authorization", b"Basic proxy-secret"),
+                    (b"User-Agent", b"langflow-test"),
+                ],
+                auth=auth,
+                cookies={"session": "kwarg-secret"},
+                timeout=5,
+                follow_redirects=True,
+            )
+
+        assert response.status_code == 200
+        assert [call.args[0] for call in validate_url.call_args_list] == [first_url, second_url]
+        first_headers = get.call_args_list[0].kwargs["headers"]
+        assert first_headers["Authorization"] == "Bearer secret"
+        assert first_headers["Cookie"] == "session=header-secret"
+        assert first_headers["Proxy-Authorization"] == "Basic proxy-secret"
+        assert get.call_args_list[0].kwargs["auth"] is auth
+        assert get.call_args_list[0].kwargs["cookies"] == {"session": "kwarg-secret"}
+
+        second_headers = get.call_args_list[1].kwargs["headers"]
+        assert dict(second_headers) == {"user-agent": "langflow-test"}
+        assert "auth" not in get.call_args_list[1].kwargs
+        assert "cookies" not in get.call_args_list[1].kwargs
+        assert all(call.kwargs["follow_redirects"] is False for call in get.call_args_list)
+
+    def test_sync_https_upgrade_preserves_auth_but_not_cookie_or_proxy_credentials(self):
+        first_url = "http://models.example:80/v1/models"
+        second_url = "https://models.example:443/v1/models"
+        auth = httpx.BasicAuth("user", "secret")
+        responses = [
+            httpx.Response(308, headers={"location": second_url}, request=httpx.Request("GET", first_url)),
+            httpx.Response(200, json={"data": []}, request=httpx.Request("GET", second_url)),
+        ]
+
+        with (
+            patch(
+                "lfx.utils.ssrf_httpx.validate_and_resolve_connector_url",
+                side_effect=lambda url: (url, []),
+            ),
+            patch("httpx.Client.get", side_effect=responses) as get,
+        ):
+            response = ssrf_safe_httpx_get(
+                first_url,
+                headers=[
+                    (b"Authorization", b"Bearer secret"),
+                    (b"Cookie", b"session=header-secret"),
+                    (b"Proxy-Authorization", b"Basic proxy-secret"),
+                ],
+                auth=auth,
+                cookies={"session": "kwarg-secret"},
+                follow_redirects=True,
+            )
+
+        assert response.status_code == 200
+        second_call = get.call_args_list[1]
+        assert second_call.kwargs["headers"]["Authorization"] == "Bearer secret"
+        assert "Cookie" not in second_call.kwargs["headers"]
+        assert "Proxy-Authorization" not in second_call.kwargs["headers"]
+        assert second_call.kwargs["auth"] is auth
+        assert "cookies" not in second_call.kwargs
+
+    def test_sync_public_redirect_uses_each_hops_validated_pinned_ip(self):
+        first_url = "http://first.example:8080/models"
+        second_url = "http://second.example:8081/models"
+        public_ips = {"first.example": "8.8.8.8", "second.example": "1.1.1.1"}
+        resolved_hosts: list[str] = []
+        connections: list[tuple[str, int]] = []
+
+        def mock_getaddrinfo(host, _port, *_args, **_kwargs):
+            resolved_hosts.append(host)
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (public_ips[host], 0))]
+
+        def mock_connect_tcp(_self, host, port, **_kwargs):
+            connections.append((host, port))
+            if host == public_ips["first.example"]:
+                body = b""
+                status_line = b"HTTP/1.1 302 Found\r\n"
+                location = f"Location: {second_url}\r\n".encode()
+            else:
+                body = b'{"data":[]}'
+                status_line = b"HTTP/1.1 200 OK\r\n"
+                location = b""
+            response_chunks = [status_line, f"Content-Length: {len(body)}\r\n".encode()]
+            if location:
+                response_chunks.append(location)
+            response_chunks.extend([b"Content-Type: application/json\r\n", b"\r\n", body])
+            return httpcore.MockStream(response_chunks)
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.object(httpcore.SyncBackend, "connect_tcp", mock_connect_tcp),
+        ):
+            response = ssrf_safe_httpx_get(first_url, timeout=5, follow_redirects=True)
+
+        assert response.status_code == 200
+        assert resolved_hosts == ["first.example", "second.example"]
+        assert connections == [("8.8.8.8", 8080), ("1.1.1.1", 8081)]
