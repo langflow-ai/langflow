@@ -395,13 +395,25 @@ export const useProviderConfiguration = ({
     }));
   }, []);
 
-  // Save all variables in provider order — validates first, then saves if valid
+  // Save all variables with the primary provider variable last — validates first,
+  // then saves if valid
   const handleSaveAllVariables = useCallback(async () => {
     if (!selectedProvider) return;
 
-    const variablesToSave = providerVariables.filter((v) =>
-      variableValues[v.variable_key]?.trim(),
-    );
+    // Match the backend's primary-variable selection: required secret, then
+    // any secret, then the first provider variable. The variables API validates
+    // that field against companion values already in storage, so persist it last.
+    const primaryVariableKey =
+      providerVariables.find((v) => v.required && v.is_secret)?.variable_key ??
+      providerVariables.find((v) => v.is_secret)?.variable_key ??
+      providerVariables[0]?.variable_key;
+    const variablesToSave = providerVariables
+      .filter((v) => variableValues[v.variable_key]?.trim())
+      .sort(
+        (a, b) =>
+          Number(a.variable_key === primaryVariableKey) -
+          Number(b.variable_key === primaryVariableKey),
+      );
 
     if (variablesToSave.length === 0) return;
 
@@ -412,8 +424,7 @@ export const useProviderConfiguration = ({
     setValidationFailed(false);
 
     try {
-      // Provider credentials can depend on connection fields that precede them
-      // in the provider metadata. Persist each field before starting the next
+      // Persist each companion field before starting the primary-variable
       // request so backend validation can read the complete configuration.
       for (const variable of variablesToSave) {
         const value = variableValues[variable.variable_key].trim();

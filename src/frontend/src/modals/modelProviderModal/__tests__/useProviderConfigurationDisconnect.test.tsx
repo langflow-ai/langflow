@@ -410,4 +410,83 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
       dateNowSpy.mockRestore();
     }
   });
+
+  it("persists the OpenAI base URL before its primary credential", async () => {
+    mockProviderVariablesMapping.OpenAI = [
+      {
+        variable_name: "OpenAI API Key",
+        variable_key: "OPENAI_API_KEY",
+        required: true,
+        is_secret: true,
+        is_list: false,
+        options: [],
+      },
+      {
+        variable_name: "OpenAI Base URL",
+        variable_key: "OPENAI_BASE_URL",
+        required: false,
+        is_secret: false,
+        is_list: false,
+        options: [],
+      },
+    ];
+
+    let resolveFirstWrite!: () => void;
+    mockCreateMutateAsync
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveFirstWrite = resolve;
+          }),
+      )
+      .mockResolvedValue(undefined);
+
+    const { result } = renderProviderConfiguration({
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: false,
+      is_configured: false,
+      models: [],
+    });
+
+    act(() => {
+      result.current.handleVariableChange(
+        "OPENAI_API_KEY",
+        "custom-endpoint-key",
+      );
+      result.current.handleVariableChange(
+        "OPENAI_BASE_URL",
+        "https://example.com/v1",
+      );
+    });
+
+    const dateNowSpy = jest
+      .spyOn(Date, "now")
+      .mockImplementationOnce(() => 0)
+      .mockImplementation(() => 500);
+    let savePromise!: Promise<void>;
+
+    try {
+      await act(async () => {
+        savePromise = result.current.handleSaveAllVariables();
+        await Promise.resolve();
+      });
+
+      const callsBeforeFirstWriteResolved =
+        mockCreateMutateAsync.mock.calls.map(([{ name }]) => name);
+
+      await act(async () => {
+        resolveFirstWrite();
+        await savePromise;
+      });
+
+      expect(callsBeforeFirstWriteResolved).toEqual(["OPENAI_BASE_URL"]);
+      expect(
+        mockCreateMutateAsync.mock.calls.map(([{ name }]) => name),
+      ).toEqual(["OPENAI_BASE_URL", "OPENAI_API_KEY"]);
+      expect(mockSetErrorData).not.toHaveBeenCalled();
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
 });
