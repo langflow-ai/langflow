@@ -23,6 +23,7 @@ import os
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit, urlunsplit
 
 from lfx.log.logger import logger
 from lfx.observability_fastapi import patch_otel_fastapi_route_details
@@ -183,6 +184,7 @@ if _OTEL_AVAILABLE:
         def on_end(self, span) -> None:
             scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
             if scope in APPLICATION_INSTRUMENTATION_SCOPES:
+                _redact_url_attributes(span)
                 super().on_end(span)
                 return
             if scope not in self._dropped_scopes:
@@ -493,6 +495,52 @@ class ApplicationTelemetry:
             self.tracer_provider.shutdown()
         if self.logger_provider is not None:
             self.logger_provider.shutdown()
+
+
+# URL attributes an HTTP instrumentor may set. Every one of them can carry a full URL, and a
+# full URL can carry a credential: providers put API keys in the query string (Gemini's
+# ?key=, several others), and a URL may also carry userinfo before the host.
+_URL_SPAN_ATTRIBUTES = ("http.url", "url.full", "http.target", "url.query")
+
+
+def _redact_url_attributes(span) -> None:
+    """Strip query strings and userinfo from a span's URL attributes, in place.
+
+    A live leak, not a hypothetical, and on a scope that is already allowlisted: the FastAPI
+    server span records ``url.query`` verbatim, and ``lfx serve`` accepts its API key as a
+    query parameter (``APIKeyQuery``). A probe against the real instrumented app exports
+    ``url.query = "x-api-key=<the key>"``, so any deployment whose callers pass the key that
+    way has been sending it to the operator's APM.
+
+    Done at the export boundary rather than through an instrumentor hook because this is the
+    same place that already decides what leaves: one chokepoint, and it covers instrumentors
+    the runtime does not install itself.
+
+    Scheme, host, port, path and every non-URL attribute survive, so "POST api.openai.com
+    /v1/chat/completions took 3s" still reads exactly as an operator needs it to.
+    """
+    attributes = span.attributes
+    if not attributes or not any(key in attributes for key in _URL_SPAN_ATTRIBUTES):
+        return
+    redacted = dict(attributes)
+    for key in _URL_SPAN_ATTRIBUTES:
+        if key not in redacted:
+            continue
+        if key == "url.query":
+            # The whole point of this attribute is the query string, so there is nothing to keep.
+            redacted[key] = ""
+            continue
+        parts = urlsplit(str(redacted[key]))
+        netloc = parts.hostname or ""
+        if parts.port:
+            netloc = f"{netloc}:{parts.port}"
+        redacted[key] = urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+    # Imported here, not at module scope: opentelemetry is an optional lfx extra and this
+    # module must stay importable without it.
+    from opentelemetry.attributes import BoundedAttributes
+
+    # ReadableSpan exposes no setter; the SDK's own processors reach for this attribute too.
+    span._attributes = BoundedAttributes(attributes=redacted)  # noqa: SLF001
 
 
 def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> ApplicationTelemetry:
