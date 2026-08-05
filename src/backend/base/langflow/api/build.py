@@ -614,22 +614,27 @@ async def generate_flow_events(
                 session_id=effective_session_id,
                 run_id=str(job_id) if job_id is not None else run_id,
             )
-            if source_flow_id is not None:
-                graph.flow_id = str(flow_id)
-            return graph
+        else:
+            if not flow_name:
+                result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
+                flow_name = result.first()
 
-        if not flow_name:
-            result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
-            flow_name = result.first()
+            graph = await build_graph_from_data(
+                flow_id=flow_id_str,
+                payload=data.model_dump(),
+                user_id=str(current_user.id),
+                flow_name=flow_name,
+                session_id=effective_session_id,
+                run_id=str(job_id) if job_id is not None else run_id,
+            )
 
-        return await build_graph_from_data(
-            flow_id=flow_id_str,
-            payload=data.model_dump(),
-            user_id=str(current_user.id),
-            flow_name=flow_name,
-            session_id=effective_session_id,
-            run_id=str(job_id) if job_id is not None else run_id,
-        )
+        if source_flow_id is not None:
+            # This value comes from the server-resolved public flow, never from
+            # request data. ChatInput uses it only to validate already-approved
+            # public attachment references after flow_id becomes visitor-virtual.
+            graph.source_flow_id = str(source_flow_id)
+            graph.flow_id = str(flow_id)
+        return graph
 
     def sort_vertices(graph: Graph) -> list[str]:
         try:

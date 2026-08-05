@@ -96,6 +96,9 @@ class Graph:
         self._runs = 0
         self._updates = 0
         self.flow_id = flow_id
+        # Server-set provenance for a public flow whose execution uses a virtual
+        # flow_id. Request data must never populate this storage scope.
+        self.source_flow_id: str | None = None
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
@@ -2712,6 +2715,7 @@ class Graph:
         subgraph._tracing_service_initialized = True
         subgraph._run_id = self._run_id
         subgraph.session_id = self.session_id
+        subgraph.source_flow_id = self.source_flow_id
         subgraph._is_subgraph = True
 
         # Add the filtered nodes and edges
