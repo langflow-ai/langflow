@@ -627,18 +627,18 @@ def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> Appl
     )
 
 
-def instrument_dependencies(*, engine: object | None = None) -> None:
-    """Instrument the database, so a slow request can be attributed to the queries it made.
+def instrument_database(engine: object) -> None:
+    """Instrument a SQLAlchemy engine, so a slow request can be attributed to its queries.
 
-    Deliberately does NOT instrument httpx or requests. Those are the transports the LLM
-    vendor SDKs ride on, and instrumenting them globally would put one span per outbound
-    provider call into the operator's APM. That boundary is held elsewhere too (the export
-    filter does not allowlist those scopes), and outbound provider health is delivered as
-    leak-safe metrics rather than spans.
+    Takes the engine rather than instrumenting globally. Langflow's engine is an AsyncEngine and
+    the instrumentor patches the sync engine underneath it; a global ``instrument()`` with no
+    engine attaches to pool events only, which produces a connect span per checkout and no query
+    spans at all. Verified against a live backend: 13 connect spans and zero db.statement for one
+    API request. That is worse than nothing, because it looks like DB visibility.
 
-    The instrumentor is given an explicit ``tracer_provider``. That is not decoration: a bare
-    ``instrument()`` binds to whatever provider is global, which is how vendor SDKs end up
-    exporting through ours.
+    Deliberately does not instrument httpx or requests. Those are the transports the LLM vendor
+    SDKs ride on, and instrumenting them globally would put one span per outbound provider call
+    into the operator's APM.
 
     Optional and failure-tolerant: a missing package or a double-instrument call must not take
     the app down, because none of this is worth a failed boot.
@@ -646,18 +646,18 @@ def instrument_dependencies(*, engine: object | None = None) -> None:
     _instrument_sqlalchemy(engine)
 
 
-def _instrument_sqlalchemy(engine: object | None) -> None:
+def _instrument_sqlalchemy(engine: object) -> None:
     try:
         from opentelemetry import trace
         from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
     except ImportError:
         return
     try:
-        kwargs = {"tracer_provider": trace.get_tracer_provider()}
-        if engine is not None:
-            # An async engine exposes the sync one the instrumentor actually patches.
-            kwargs["engine"] = getattr(engine, "sync_engine", engine)
-        SQLAlchemyInstrumentor().instrument(**kwargs)
+        SQLAlchemyInstrumentor().instrument(
+            # An AsyncEngine exposes the sync one the instrumentor actually patches.
+            engine=getattr(engine, "sync_engine", engine),
+            tracer_provider=trace.get_tracer_provider(),
+        )
     except Exception:  # noqa: BLE001 - see above
         logger.debug("sqlalchemy instrumentation unavailable; DB spans will be missing", exc_info=True)
 

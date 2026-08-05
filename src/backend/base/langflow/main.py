@@ -22,7 +22,6 @@ from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
 from lfx.observability import (
-    instrument_dependencies,
     instrument_fastapi_app,
     start_event_loop_lag_monitor,
     stop_event_loop_lag_monitor,
@@ -993,9 +992,6 @@ def create_app():
     # lazy-include route patch + instrument_app). The helper lives in lfx so lfx serve
     # instruments its own app the same way.
     instrument_fastapi_app(app)
-    # The rest of the trace tree: DB queries and outbound HTTP made during a run. The engine is
-    # not built yet at app-factory time, so SQLAlchemy instruments its own dispatcher globally.
-    instrument_dependencies()
 
     add_pagination(app)
 
