@@ -46,7 +46,7 @@ test(
 
     await page.goto("/");
 
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
       timeout: 30000,
     });
 
@@ -200,7 +200,7 @@ test(
 
     await page.getByText(TEXTS.logout, { exact: true }).click();
 
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
       timeout: 30000,
     });
 
@@ -208,10 +208,6 @@ test(
       .getByPlaceholder(TEXTS.placeholderUsername)
       .fill(secondRandomName);
     await page.getByPlaceholder(TEXTS.placeholderPassword).fill(randomPassword);
-
-    await page.waitForSelector("text=Sign in", {
-      timeout: 1500,
-    });
 
     await page.getByRole("button", { name: TEXTS.signIn }).click();
 
@@ -275,7 +271,7 @@ test(
 
     await page.getByText(TEXTS.logout, { exact: true }).click();
 
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
       timeout: 30000,
     });
 

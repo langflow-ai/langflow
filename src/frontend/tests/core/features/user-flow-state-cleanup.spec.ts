@@ -48,7 +48,7 @@ test(
 
     // Log in as admin and create test user
     await page.goto("/");
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
       timeout: 30000,
     });
     await page
@@ -103,7 +103,7 @@ test(
     // ---- USER A SESSION ----
 
     // Log in as User A
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
       timeout: 30000,
     });
     await page.getByPlaceholder(TEXTS.placeholderUsername).fill(userAName);
@@ -178,7 +178,7 @@ test(
     // ---- ADMIN SESSION AGAIN ----
 
     // Log in as admin again
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
       timeout: 30000,
     });
     await page

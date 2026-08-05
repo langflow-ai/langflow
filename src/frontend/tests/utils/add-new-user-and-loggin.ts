@@ -32,7 +32,7 @@ export const addNewUserAndLogin = async (page: Page) => {
 
   await page.goto("/");
 
-  await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+  await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
     timeout: 30000,
   });
 
@@ -104,16 +104,12 @@ export const addNewUserAndLogin = async (page: Page) => {
 
   await page.getByText(TEXTS.logout, { exact: true }).click();
 
-  await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+  await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
     timeout: 30000,
   });
 
   await page.getByPlaceholder(TEXTS.placeholderUsername).fill(randomName);
   await page.getByPlaceholder(TEXTS.placeholderPassword).fill(randomPassword);
-
-  await page.waitForSelector("text=Sign in", {
-    timeout: 1500,
-  });
 
   await page.getByRole("button", { name: TEXTS.signIn }).click();
 
