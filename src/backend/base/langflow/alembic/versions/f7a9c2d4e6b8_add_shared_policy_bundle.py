@@ -2,7 +2,7 @@
 
 Phase: EXPAND
 Revision ID: f7a9c2d4e6b8
-Revises: d4a7c9e1b2f6
+Revises: 8d9e0f1a2b3c
 Create Date: 2026-08-05 00:00:00.000000
 
 The legacy provider singleton and catalog rule tables remain in place for N-1
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 revision: str = "f7a9c2d4e6b8"  # pragma: allowlist secret
-down_revision: str | None = "d4a7c9e1b2f6"  # pragma: allowlist secret
+down_revision: str | None = "8d9e0f1a2b3c"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

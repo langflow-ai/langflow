@@ -10,7 +10,7 @@ from langflow.services.database import service as database_service_module
 from langflow.services.database.service import DatabaseService
 
 CURRENT_REVISION = "f7a9c2d4e6b8"  # pragma: allowlist secret
-TARGET_REVISION = "d4a7c9e1b2f6"  # pragma: allowlist secret
+TARGET_REVISION = "8d9e0f1a2b3c"  # pragma: allowlist secret
 
 
 def _service(monkeypatch, *, current_revisions: set[str]) -> DatabaseService:
