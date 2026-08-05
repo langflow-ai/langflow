@@ -4,10 +4,14 @@ import json
 import tempfile
 import threading
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
+import pytest
 from lfx.base.data.base_file import BaseFileComponent
 from lfx.schema.data import Data
 from lfx.schema.message import Message
+from lfx.utils.file_path_security import LocalFileAccessError
 
 
 class TestFileComponent(BaseFileComponent):
@@ -386,3 +390,66 @@ class TestDeleteAfterProcessingRaceCondition:
             "Race-recovery must be keyed to the current paths and gated on the "
             "validation-skip flag; an empty input must not return a stale cached result."
         )
+
+
+class TestS3DeleteAfterProcessingSecurity:
+    """Regression tests for storage-aware cleanup of S3-backed server files."""
+
+    @pytest.fixture(autouse=True)
+    def _s3_settings(self, monkeypatch, tmp_path):
+        settings = SimpleNamespace(
+            config_dir=str(tmp_path / "config"),
+            database_url="",
+            restrict_local_file_access=False,
+            storage_type="s3",
+        )
+        settings_service = SimpleNamespace(settings=settings)
+        monkeypatch.setattr("lfx.base.data.base_file.get_settings_service", lambda: settings_service)
+        monkeypatch.setattr("lfx.utils.file_path_security.get_settings_service", lambda: settings_service)
+        self.settings = settings
+
+    def test_restricted_s3_rejects_out_of_scope_absolute_local_file(self, tmp_path):
+        canary = tmp_path / "outside.txt"
+        canary.write_text("SAFE_CANARY", encoding="utf-8")
+
+        component = TestFileComponent()
+        component._user_id = "user-id"
+        component.file_path = Data(data={"file_path": str(canary)})
+        component.delete_server_file_after_processing = True
+        self.settings.restrict_local_file_access = True
+
+        with pytest.raises(LocalFileAccessError):
+            component.load_files_base()
+
+        assert canary.read_text(encoding="utf-8") == "SAFE_CANARY"
+
+    def test_unrestricted_s3_local_file_is_read_but_never_deleted(self, tmp_path):
+        canary = tmp_path / "local-input.txt"
+        canary.write_text("SAFE_CANARY", encoding="utf-8")
+
+        component = TestFileComponent()
+        component.file_path = Data(data={"file_path": str(canary)})
+        component.delete_server_file_after_processing = True
+
+        result = component.load_files_base()
+
+        assert result[0].data["text"] == "SAFE_CANARY"
+        assert canary.read_text(encoding="utf-8") == "SAFE_CANARY"
+
+    def test_s3_key_cleanup_uses_storage_service_without_local_unlink(self, monkeypatch, tmp_path):
+        monkeypatch.chdir(tmp_path)
+        local_collision = tmp_path / "flow-id" / "file.txt"
+        local_collision.parent.mkdir()
+        local_collision.write_text("SAFE_CANARY", encoding="utf-8")
+
+        storage_service = SimpleNamespace(delete_file=AsyncMock())
+        monkeypatch.setattr("lfx.base.data.base_file.get_storage_service", lambda: storage_service, raising=False)
+
+        component = TestFileComponent()
+        component.file_path = Data(data={"file_path": "flow-id/file.txt"})
+        component.delete_server_file_after_processing = True
+
+        component.load_files_base()
+
+        storage_service.delete_file.assert_awaited_once_with("flow-id", "file.txt")
+        assert local_collision.read_text(encoding="utf-8") == "SAFE_CANARY"

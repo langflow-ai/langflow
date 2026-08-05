@@ -18,7 +18,7 @@ from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
-from lfx.services.deps import get_settings_service
+from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 from lfx.utils.helpers import build_content_type_from_extension
@@ -314,11 +314,35 @@ class BaseFileComponent(Component, ABC):
                     temp_dir.cleanup()
                 # Delete files marked for deletion
                 for file in final_files:
-                    if file.delete_after_processing and file.path.exists():
-                        if file.path.is_dir():
-                            shutil.rmtree(file.path)
-                        else:
-                            file.path.unlink()
+                    self._delete_after_processing(file)
+
+    def _delete_after_processing(self, file: BaseFile) -> None:
+        """Delete a processed server file through its configured storage backend."""
+        if not file.delete_after_processing:
+            return
+
+        settings = get_settings_service().settings
+        if settings.storage_type == "s3":
+            parsed_path = parse_storage_path(str(file.path))
+            if not parsed_path:
+                # Absolute local paths can still be read in unrestricted S3 deployments
+                # for compatibility, but they must never be treated as object keys or
+                # deleted from the host filesystem.
+                return
+
+            storage_service = get_storage_service()
+            if storage_service is None:
+                msg = "Storage service is unavailable; could not delete processed S3 file."
+                raise RuntimeError(msg)
+            flow_id, file_name = parsed_path
+            run_until_complete(storage_service.delete_file(flow_id, file_name))
+            return
+
+        if file.path.exists():
+            if file.path.is_dir():
+                shutil.rmtree(file.path)
+            else:
+                file.path.unlink()
 
     def load_files_core(self) -> list[Data]:
         """Load files and return as Data objects, with per-instance caching.
@@ -714,8 +738,18 @@ class BaseFileComponent(Component, ABC):
             # that don't exist on the local filesystem. We defer validation until file processing.
             # For local storage, validate the file exists immediately to fail fast.
             if settings.storage_type == "s3":
+                resolved_path = Path(path_str)
+                if resolved_path.is_absolute():
+                    # S3 deployments intentionally support genuine absolute local files
+                    # for trusted internal callers. Preserve that read behavior while
+                    # applying restricted-mode confinement and never deleting the local
+                    # path through the Server File cleanup flag.
+                    resolved_path = enforce_local_file_access(
+                        resolved_path, scope_ids=component_file_access_scopes(self)
+                    )
+                    delete_after_processing = False
                 resolved_files.append(
-                    BaseFileComponent.BaseFile(data, Path(path_str), delete_after_processing=delete_after_processing)
+                    BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
                 )
             else:
                 # Check if path looks like a storage path (flow_id/filename format)
