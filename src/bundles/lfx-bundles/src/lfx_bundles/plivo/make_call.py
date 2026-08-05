@@ -2,7 +2,6 @@ import json
 import os
 
 import httpx
-
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, MessageTextInput, Output, SecretStrInput
 from lfx.log.logger import logger
