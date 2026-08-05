@@ -6,8 +6,13 @@
  */
 
 import type { useUpdateNodeInternals } from "@xyflow/react";
+import i18n from "@/i18n";
+import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import { filterPlaceableSelection } from "@/utils/componentConstraints";
+import {
+  type ConstraintViolation,
+  filterPlaceableSelection,
+} from "@/utils/componentConstraints";
 import type { PendingFlowProposal } from "../assistant-panel.types";
 import { applyFlowUpdate, notifyNodesUntilMounted } from "./apply-flow-update";
 import { mergeFlowIntoCanvas } from "./merge-flow-into-canvas";
@@ -22,6 +27,23 @@ interface SimpleEdge {
   id: string;
   source: string;
   target: string;
+}
+
+/**
+ * The proposal card advertises the full node/edge counts, so a policy drop
+ * must be surfaced — a silent drop leaves the canvas diverging from what the
+ * user accepted (and can strand required inputs whose edge was pruned).
+ */
+function notifyPlacementViolations(violations: ConstraintViolation[]): void {
+  if (violations.length === 0) return;
+  const messages: string[] = [];
+  if (violations.some((v) => v.reason === "singleton")) {
+    messages.push(i18n.t("assistant.duplicateComponentsNotAdded"));
+  }
+  if (violations.some((v) => v.reason === "exclusivity")) {
+    messages.push(i18n.t("assistant.exclusiveComponentsNotAdded"));
+  }
+  useAlertStore.getState().setNoticeData({ title: messages.join(" ") });
 }
 
 export function applyFlowProposalToCanvas(
@@ -46,6 +68,7 @@ export function applyFlowProposalToCanvas(
       { nodes: proposalNodes as never[], edges: proposalEdges as never[] },
       store.nodes as Array<{ data?: { type?: string } }>,
     );
+    notifyPlacementViolations(placeable.violations);
     const merged = mergeFlowIntoCanvas(
       store.nodes as PositionedNode[],
       store.edges as SimpleEdge[],
@@ -59,8 +82,32 @@ export function applyFlowProposalToCanvas(
       .filter((id) => !existingIds.has(id));
     notifyNodesUntilMounted(addedIds, updateNodeInternals);
   } else {
+    // Replace targets an empty canvas, but the proposal can conflict with
+    // itself (e.g. two ChatInputs); filter a copy so re-apply stays intact.
+    const flow = proposal.flow as {
+      data?: { nodes?: unknown[]; edges?: unknown[] };
+    };
+    const placeable = filterPlaceableSelection(
+      {
+        nodes: (flow.data?.nodes ?? []) as never[],
+        edges: (flow.data?.edges ?? []) as never[],
+      },
+      [],
+    );
+    notifyPlacementViolations(placeable.violations);
     applyFlowUpdate(
-      { event: "flow_update", action: "set_flow", flow: proposal.flow },
+      {
+        event: "flow_update",
+        action: "set_flow",
+        flow: {
+          ...proposal.flow,
+          data: {
+            ...flow.data,
+            nodes: placeable.nodes,
+            edges: placeable.edges,
+          },
+        },
+      },
       updateNodeInternals,
     );
   }
