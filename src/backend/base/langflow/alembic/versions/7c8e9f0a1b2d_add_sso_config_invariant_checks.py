@@ -141,28 +141,52 @@ def _raise_for_protocol_mismatches(conn: sa.Connection, table: sa.Table) -> None
         raise RuntimeError(msg)
 
 
+def _existing_check_names(conn: sa.Connection) -> set[str]:
+    return {check["name"] for check in sa.inspect(conn).get_check_constraints(_CONFIG_TABLE) if check.get("name")}
+
+
 def _create_checks(conn: sa.Connection, table: sa.Table) -> None:
+    # create_all() may already have installed these from the SQLModel metadata.
+    existing = _existing_check_names(conn)
+    need_protocol = _PROTOCOL_CHECK not in existing
+    need_enabled = _ENABLED_CHECK not in existing
+    if not need_protocol and not need_enabled:
+        return
     if conn.dialect.name == "sqlite":
         with op.batch_alter_table(_CONFIG_TABLE, recreate="always") as batch_op:
-            batch_op.create_check_constraint(_PROTOCOL_CHECK, _protocol_check(table))
-            batch_op.create_check_constraint(_ENABLED_CHECK, _enabled_check(table))
+            if need_protocol:
+                batch_op.create_check_constraint(_PROTOCOL_CHECK, _protocol_check(table))
+            if need_enabled:
+                batch_op.create_check_constraint(_ENABLED_CHECK, _enabled_check(table))
         return
-    op.create_check_constraint(_PROTOCOL_CHECK, _CONFIG_TABLE, _protocol_check(table))
-    op.create_check_constraint(_ENABLED_CHECK, _CONFIG_TABLE, _enabled_check(table))
+    if need_protocol:
+        op.create_check_constraint(_PROTOCOL_CHECK, _CONFIG_TABLE, _protocol_check(table))
+    if need_enabled:
+        op.create_check_constraint(_ENABLED_CHECK, _CONFIG_TABLE, _enabled_check(table))
 
 
 def _drop_checks(conn: sa.Connection) -> None:
+    existing = _existing_check_names(conn)
+    if _ENABLED_CHECK not in existing and _PROTOCOL_CHECK not in existing:
+        return
     if conn.dialect.name == "sqlite":
         with op.batch_alter_table(_CONFIG_TABLE, recreate="always") as batch_op:
-            batch_op.drop_constraint(_ENABLED_CHECK, type_="check")
-            batch_op.drop_constraint(_PROTOCOL_CHECK, type_="check")
+            if _ENABLED_CHECK in existing:
+                batch_op.drop_constraint(_ENABLED_CHECK, type_="check")
+            if _PROTOCOL_CHECK in existing:
+                batch_op.drop_constraint(_PROTOCOL_CHECK, type_="check")
         return
-    op.drop_constraint(_ENABLED_CHECK, _CONFIG_TABLE, type_="check")
-    op.drop_constraint(_PROTOCOL_CHECK, _CONFIG_TABLE, type_="check")
+    if _ENABLED_CHECK in existing:
+        op.drop_constraint(_ENABLED_CHECK, _CONFIG_TABLE, type_="check")
+    if _PROTOCOL_CHECK in existing:
+        op.drop_constraint(_PROTOCOL_CHECK, _CONFIG_TABLE, type_="check")
 
 
 def _create_slug_trigger(conn: sa.Connection) -> None:
+    # Idempotent for create_all()-then-upgrade: model after_create listeners may
+    # already have installed the same trigger/function.
     if conn.dialect.name == "sqlite":
+        op.execute(sa.text(f"DROP TRIGGER IF EXISTS {_SLUG_TRIGGER}"))
         op.execute(
             sa.text(
                 f"""
@@ -177,6 +201,7 @@ def _create_slug_trigger(conn: sa.Connection) -> None:
             )
         )
     elif conn.dialect.name == "postgresql":
+        op.execute(sa.text(f"DROP TRIGGER IF EXISTS {_SLUG_TRIGGER} ON {_CONFIG_TABLE}"))
         op.execute(
             sa.text(
                 f"""
