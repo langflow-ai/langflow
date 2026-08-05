@@ -148,6 +148,39 @@ async def test_create_and_put_flow_enforce_catalog_policy_with_default_allow(
     assert blocked_put.json()["detail"].endswith(blocked_key)
 
 
+async def test_create_flow_maps_catalog_identity_unavailable_to_503(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+    from lfx.utils.flow_validation import CatalogPolicyIdentityUnavailableError
+
+    detail = "Catalog policy component identities are still initializing. Please try again in a few seconds."
+
+    def identities_unavailable(_flow_data, *, snapshot):
+        assert snapshot.blocked_component_keys
+        raise CatalogPolicyIdentityUnavailableError(detail)
+
+    service = type(
+        "CatalogPolicyService",
+        (),
+        {"snapshot": CatalogPolicySnapshot(blocked_component_keys={"Prompt Template"})},
+    )()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+    monkeypatch.setattr(flows, "validate_catalog_policy_for_flow", identities_unavailable)
+
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"catalog-identities-unavailable-{uuid.uuid4()}", "data": _catalog_flow_data("Prompt")},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert response.json()["detail"] == detail
+
+
 async def test_patch_and_put_metadata_only_updates_validate_stored_graph(
     client: AsyncClient,
     logged_in_headers,

@@ -942,13 +942,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let buildingFlowId = currentFlow!.id;
     if (get().playgroundPage) {
       const authState = useAuthStore.getState();
+      const authenticatedVisitorId =
+        authState.isAuthenticated && authState.autoLogin === false
+          ? authState.userData?.id
+          : undefined;
       const visitorId =
-        authState.isAuthenticated &&
-        authState.autoLogin === false &&
-        authState.userData?.id
-          ? authState.userData.id
-          : useUtilityStore.getState().clientId;
-      buildingFlowId = uuidv5(`${visitorId}_${currentFlow!.id}`, uuidv5.DNS);
+        authenticatedVisitorId ?? useUtilityStore.getState().clientId;
+      const principalType = authenticatedVisitorId ? "user" : "client";
+      buildingFlowId = uuidv5(
+        `${principalType}:${visitorId}_${currentFlow!.id}`,
+        uuidv5.DNS,
+      );
     }
     get().setBuildingSession(buildingFlowId, session ?? null);
 

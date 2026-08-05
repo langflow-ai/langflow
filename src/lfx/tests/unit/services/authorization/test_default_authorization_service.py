@@ -174,6 +174,14 @@ async def test_identity_and_directory_contracts_are_default_noops(service: Autho
     )
     session = object()
 
+    assert (
+        await service.acquire_identity_mutation_lock(
+            session=session,
+            kind=AuthorizationMutationKind.ROLE_ASSIGNMENT_CREATED,
+            affected_user_ids=(user_id,),
+        )
+        is None
+    )
     assert await service.validate_identity_mutation(session=session, mutation=mutation) is None
     assert await service.stage_identity_mutation(session=session, event=mutation) is None
     assert await service.identity_mutation_committed(mutation) is None

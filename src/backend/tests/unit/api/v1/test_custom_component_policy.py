@@ -6,7 +6,7 @@ import pytest
 from fastapi import HTTPException, status
 from langflow.api.v1 import custom_component_policy
 from lfx.services.catalog_policy.base import CatalogPolicySnapshot
-from lfx.utils.flow_validation import CatalogPolicyValidationError
+from lfx.utils.flow_validation import CatalogPolicyIdentityUnavailableError, CatalogPolicyValidationError
 
 
 @pytest.mark.parametrize(
@@ -103,3 +103,24 @@ def test_catalog_component_type_denial_has_no_superuser_bypass(monkeypatch):
         )
 
     assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_catalog_component_type_alias_resolution_initialization_maps_to_503(monkeypatch):
+    def identities_unavailable(_component_type, *, snapshot):
+        assert snapshot.blocked_component_keys
+        message = "Catalog policy component identities are still initializing"
+        raise CatalogPolicyIdentityUnavailableError(message)
+
+    monkeypatch.setattr(
+        custom_component_policy,
+        "validate_catalog_policy_for_component_type",
+        identities_unavailable,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        custom_component_policy.enforce_catalog_policy_for_component_type(
+            "PromptComponent",
+            snapshot=CatalogPolicySnapshot(blocked_component_keys={"Prompt Template"}),
+        )
+
+    assert exc_info.value.status_code == status.HTTP_503_SERVICE_UNAVAILABLE

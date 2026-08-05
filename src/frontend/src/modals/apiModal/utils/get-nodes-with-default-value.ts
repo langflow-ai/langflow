@@ -1,6 +1,6 @@
 import { cloneDeep } from "lodash";
 import type { AllNodeType, EdgeType } from "@/types/flow";
-import { LANGFLOW_SUPPORTED_TYPES } from "../../../constants/constants";
+import { isFieldTweakable } from "./api-exposure-rules";
 import { isFieldExposable } from "./is-field-exposable";
 
 export const getNodesWithDefaultValue = (
@@ -13,12 +13,12 @@ export const getNodesWithDefaultValue = (
     if (node?.data?.node?.template && node?.type === "genericNode") {
       const templateKeys = Object.keys(node.data.node.template).filter(
         (templateField) =>
-          templateField.charAt(0) !== "_" &&
           node!.data!.node!.template[templateField]?.show &&
-          LANGFLOW_SUPPORTED_TYPES.has(
-            node!.data!.node!.template[templateField].type,
-          ) &&
-          templateField !== "code",
+          isFieldTweakable(
+            node.data.type,
+            templateField,
+            node!.data!.node!.template[templateField],
+          ),
       );
       const newNode = cloneDeep(node);
       if (newNode?.data?.node?.template) {

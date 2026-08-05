@@ -162,6 +162,9 @@ export default function ModelInputComponent({
     !!enabledModelsError && enabledModelsData === undefined;
   const hasInitialLoadError =
     !isFetching && (providersUnusable || enabledModelsUnusable);
+  const providerStatusIsReliable = !isFetchingProviders && !providersError;
+  const modelStatusIsReliable =
+    providerStatusIsReliable && !isFetchingEnabledModels && !enabledModelsError;
 
   const hasEnabledProviders = useMemo(() => {
     return providersData?.some(
@@ -172,15 +175,29 @@ export default function ModelInputComponent({
   const groupedOptions = useMemo(() => {
     const grouped: Record<string, ModelOption[]> = {};
     const seen = new Set<string>();
+    const disconnectedProviders = new Set(
+      providerStatusIsReliable
+        ? providersData
+            .filter((provider) => provider.is_configured === false)
+            .map((provider) => provider.provider)
+        : [],
+    );
 
     for (const option of options) {
       if (option.metadata?.is_disabled_provider) continue;
       const provider = option.provider || "Unknown";
+      if (disconnectedProviders.has(provider)) continue;
 
       // Sticky-default entries only let the trigger name the saved model;
       // they are never selectable, disconnected or merely deactivated.
       if (option.metadata?.not_enabled_locally === true) continue;
 
+      // Filter against client-side enabled models data. This is the source of
+      // truth for what the current user has enabled — stale `options` saved in
+      // an imported flow may include models from providers the current user
+      // hasn't enabled (e.g. WatsonX). When the provider is tracked in
+      // enabled_models, the model must be explicitly enabled (=== true); a
+      // `false` or missing entry means the model should be hidden.
       if (enabledModelsData?.enabled_models) {
         const providerModels = enabledModelsData.enabled_models[provider];
         if (providerModels && providerModels[option.name] !== true) {
@@ -206,6 +223,7 @@ export default function ModelInputComponent({
     if (enabledModelsData?.enabled_models && providersData) {
       for (const providerInfo of providersData) {
         const providerName = providerInfo.provider;
+        if (disconnectedProviders.has(providerName)) continue;
         const providerModels = enabledModelsData.enabled_models[providerName];
         if (!providerModels) continue;
 
@@ -251,9 +269,11 @@ export default function ModelInputComponent({
       ? `${savedValue.provider || "Unknown"}::${savedValue.name}`
       : null;
     const savedProviderConfigured =
-      providersData?.some(
+      providerStatusIsReliable &&
+      (providersData?.some(
         (p) => p.provider === savedValue?.provider && p.is_configured,
-      ) ?? false;
+      ) ??
+        false);
     const savedInRegistry =
       !!savedValue?.name &&
       (providersData?.some(
@@ -291,6 +311,7 @@ export default function ModelInputComponent({
     modelType,
     value,
     passesModelFilters,
+    providerStatusIsReliable,
   ]);
 
   const flatOptions = useMemo(
@@ -322,9 +343,11 @@ export default function ModelInputComponent({
     if (match) return match;
 
     if (saved) {
-      const savedProviderConfigured = providersData?.some(
-        (p) => p.provider === saved.provider && p.is_configured,
-      );
+      const savedProviderConfigured = providerStatusIsReliable
+        ? providersData?.some(
+            (p) => p.provider === saved.provider && p.is_configured,
+          )
+        : undefined;
       if (!savedProviderConfigured) {
         return {
           ...(saved.id && { id: saved.id }),
@@ -340,11 +363,23 @@ export default function ModelInputComponent({
     }
 
     return flatOptions.length > 0 ? flatOptions[0] : null;
-  }, [value, flatOptions, isConnectionMode, externalOptions, providersData]);
+  }, [
+    value,
+    flatOptions,
+    isConnectionMode,
+    externalOptions,
+    providersData,
+    providerStatusIsReliable,
+  ]);
 
   useEffect(() => {
-    if (flatOptions.length === 0 || isConnectionMode) return;
-    if (hasProcessedEmptyRef.current) return;
+    if (
+      !modelStatusIsReliable ||
+      flatOptions.length === 0 ||
+      isConnectionMode
+    ) {
+      return;
+    }
 
     const isEmpty = !value || value.length === 0;
 
@@ -362,6 +397,15 @@ export default function ModelInputComponent({
       }
     }
 
+    // The ref debounces the empty-value auto-select only; a value that goes
+    // stale mid-session (provider disconnected) must still be replaced.
+    if (hasProcessedEmptyRef.current && !isSavedValueStale) return;
+
+    // Sticky-default: if the component has a saved value, keep it as-is. The
+    // backend injects any selection that isn't in the user's enabled list
+    // back into `options` tagged with `not_enabled_locally`, so the saved
+    // value remains visible and runnable. Only auto-select the first option
+    // when there's no saved value at all OR when the saved value is stale.
     if (!isEmpty && !isSavedValueStale) return;
 
     const firstOption = flatOptions[0];
@@ -376,7 +420,14 @@ export default function ModelInputComponent({
     ];
     handleOnNewValue({ value: newValue });
     hasProcessedEmptyRef.current = true;
-  }, [flatOptions, value, handleOnNewValue, isConnectionMode, providersData]);
+  }, [
+    flatOptions,
+    value,
+    handleOnNewValue,
+    isConnectionMode,
+    providersData,
+    modelStatusIsReliable,
+  ]);
 
   /**
    * Handles model selection from the dropdown.

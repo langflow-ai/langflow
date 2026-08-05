@@ -362,6 +362,32 @@ class BaseAuthorizationService(Service, abc.ABC):
         """Remove policy derived from a deleted share snapshot. Plugin override; OSS no-op."""
         _ = snapshot
 
+    async def acquire_identity_mutation_lock(
+        self,
+        *,
+        session: Any,
+        kind: AuthorizationMutationKind,
+        entity_id: _UUID | None = None,
+        affected_user_ids: tuple[_UUID, ...] = (),
+    ) -> None:
+        """Establish transaction ordering before canonical identity reads.
+
+        This hook is lock-only: implementations must not commit, roll back,
+        persist policy, emit audit events, or reject the requested mutation.
+        Callers can invoke it before they know whether a write will create a
+        row, attach provenance, or return a conflict. The default is a no-op
+        for OSS and existing third-party plugins.
+
+        Because this hook runs before canonical reads, ``kind`` and the other
+        request metadata are advisory, best-effort descriptions and may differ
+        from the mutation ultimately staged. Implementations must acquire a lock
+        broad enough for every possible result and must not narrow its scope by
+        ``kind``. The hook can run for unauthenticated public-signup attempts and
+        requests later rejected as conflicts, so acquisition must remain bounded
+        and safe under untrusted contention.
+        """
+        _ = (session, kind, entity_id, affected_user_ids)
+
     async def validate_identity_mutation(
         self,
         *,
