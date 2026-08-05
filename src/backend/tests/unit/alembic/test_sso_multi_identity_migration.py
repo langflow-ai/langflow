@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 import sqlalchemy as sa
@@ -217,6 +217,7 @@ def test_sso_multi_identity_downgrade_rejects_users_with_multiple_identities(db_
 
     timestamp = datetime.now(timezone.utc)
     user_id = str(uuid4())
+    stored_user_id = UUID(user_id).hex if db_url.startswith("sqlite") else user_id
     config_id = str(uuid4())
     original_profile_id = str(uuid4())
     second_profile_id = str(uuid4())
@@ -231,7 +232,7 @@ def test_sso_multi_identity_downgrade_rejects_users_with_multiple_identities(db_
             connection.execute(
                 user.insert(),
                 {
-                    "id": user_id,
+                    "id": stored_user_id,
                     "username": "sso-multi-identity-downgrade-user",
                     "password": _TEST_PASSWORD,
                     "is_active": True,
@@ -259,7 +260,7 @@ def test_sso_multi_identity_downgrade_rejects_users_with_multiple_identities(db_
                 sso_user_profile.insert(),
                 _profile_values(
                     profile_id=original_profile_id,
-                    user_id=user_id,
+                    user_id=stored_user_id,
                     provider="oidc-primary",
                     sso_user_id="subject-1",
                     timestamp=timestamp,
@@ -279,7 +280,7 @@ def test_sso_multi_identity_downgrade_rejects_users_with_multiple_identities(db_
                 sso_user_profile.insert(),
                 _profile_values(
                     profile_id=second_profile_id,
-                    user_id=user_id,
+                    user_id=stored_user_id,
                     provider="saml",
                     sso_user_id="subject-2",
                     timestamp=timestamp,
@@ -288,5 +289,5 @@ def test_sso_multi_identity_downgrade_rejects_users_with_multiple_identities(db_
     finally:
         engine.dispose()
 
-    with pytest.raises(RuntimeError, match=rf"multiple identities for user_id\(s\): {user_id}"):
+    with pytest.raises(RuntimeError, match=rf"multiple identities for user_id\(s\): {stored_user_id}"):
         command.downgrade(alembic_cfg, _PRIOR_REVISION)

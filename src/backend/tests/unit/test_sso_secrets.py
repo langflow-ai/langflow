@@ -7,11 +7,12 @@ from langflow.services.database.models import (
     SSOSecretError,
     decrypt_sso_client_secret,
     encrypt_sso_client_secret,
+    is_sso_client_secret_envelope,
 )
 from pydantic import SecretStr
 
 _PLAINTEXT = "downstream-oidc-client-secret"
-_DEFAULT_SECRET_KEY = "unit-test-langflow-secret-key-material"  # noqa: S105
+_DEFAULT_SECRET_KEY = "unit-test-langflow-secret-key-material"  # noqa: S105  # pragma: allowlist secret
 
 
 def _settings(secret_key: str | None = None):
@@ -65,3 +66,28 @@ def test_sso_client_secret_rejects_unknown_envelope_version():
 
     with pytest.raises(SSOSecretError, match="version"):
         decrypt_sso_client_secret(unknown_version, _settings())
+
+
+@pytest.mark.parametrize("invalid_character", ["!", "+", "/", "="])
+@pytest.mark.parametrize("payload_index", [4, 5], ids=["nonce", "ciphertext"])
+def test_sso_client_secret_rejects_non_base64url_payload_characters(invalid_character, payload_index):
+    encrypted = encrypt_sso_client_secret(_PLAINTEXT, _settings())
+    parts = encrypted.split(":")
+    parts[payload_index] = f"{invalid_character}{parts[payload_index][1:]}"
+    malformed = ":".join(parts)
+
+    assert not is_sso_client_secret_envelope(malformed)
+    with pytest.raises(SSOSecretError, match="Invalid base64url data"):
+        decrypt_sso_client_secret(malformed, _settings())
+
+
+@pytest.mark.parametrize("payload_index", [4, 5], ids=["nonce", "ciphertext"])
+def test_sso_client_secret_rejects_empty_payload(payload_index):
+    encrypted = encrypt_sso_client_secret(_PLAINTEXT, _settings())
+    parts = encrypted.split(":")
+    parts[payload_index] = ""
+    malformed = ":".join(parts)
+
+    assert not is_sso_client_secret_envelope(malformed)
+    with pytest.raises(SSOSecretError, match="Invalid base64url data"):
+        decrypt_sso_client_secret(malformed, _settings())

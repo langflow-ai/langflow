@@ -7,6 +7,8 @@ Create Date: 2026-08-04
 Phase: EXPAND
 """
 
+import base64
+import binascii
 import re
 from collections.abc import Sequence
 from urllib.parse import urlsplit
@@ -39,8 +41,22 @@ _SLUG_TRIGGER = "trg_sso_config_slug_immutable"
 _POSTGRES_TRIGGER_FUNCTION = "prevent_sso_config_slug_update"
 _SUPPORTED_PROTOCOLS = ("oidc", "saml", "ldap")
 _ENVELOPE_HEADER = "lf-sso:v1:hkdf-sha256-v1:aes-256-gcm:"
+_ENVELOPE_PART_COUNT = 6
 _ENVELOPE_NONCE_LENGTH = 16
 _ENVELOPE_MIN_CIPHERTEXT_LENGTH = 22
+_ENVELOPE_NONCE_BYTES = 12
+_ENVELOPE_MIN_CIPHERTEXT_BYTES = 16
+_BASE64URL_ALPHABET = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+_PROVIDER_SETTING_COLUMNS = (
+    "discovery_url",
+    "redirect_uri",
+    "scopes",
+    "token_endpoint",
+    "authorization_endpoint",
+    "jwks_uri",
+    "issuer",
+    "client_id",
+)
 _REMOTE_URL_FIELDS = (
     "discovery_url",
     "token_endpoint",
@@ -68,6 +84,10 @@ def _config_table() -> sa.Table:
         sa.Column("client_secret_encrypted", sa.String()),
         sa.Column("provider_settings", sa.JSON()),
     )
+
+
+def _column_names(conn: sa.Connection) -> set[str]:
+    return {column["name"] for column in sa.inspect(conn).get_columns(_CONFIG_TABLE)}
 
 
 def _nonblank_json_string(json_column: sa.Column, key: str) -> sa.ColumnElement[bool]:
@@ -101,6 +121,7 @@ def _protocol_check(
     table: sa.Table,
     *,
     allow_supported_mismatch: bool = False,
+    allow_pending_n_minus_one: bool = False,
 ) -> sa.ColumnElement[bool]:
     settings_protocol = table.c.provider_settings["protocol"].as_string()
     synchronized = sa.and_(
@@ -118,6 +139,8 @@ def _protocol_check(
             table.c.protocol.in_(_SUPPORTED_PROTOCOLS),
             settings_protocol.in_(_SUPPORTED_PROTOCOLS),
         )
+    if not allow_pending_n_minus_one:
+        return synchronized
     return sa.or_(
         # Temporary N-1 INSERT state. SQLite evaluates CHECK constraints before
         # the head revision's AFTER INSERT compatibility trigger can populate
@@ -125,22 +148,15 @@ def _protocol_check(
         sa.and_(
             table.c.protocol.is_(None),
             table.c.provider_settings.is_(None),
-            table.c.provider.is_not(None),
+            table.c.provider.in_(_SUPPORTED_PROTOCOLS),
         ),
         synchronized,
     )
 
 
-def _enabled_check(table: sa.Table) -> sa.ColumnElement[bool]:
+def _enabled_check(table: sa.Table, *, allow_pending_n_minus_one: bool = False) -> sa.ColumnElement[bool]:
     settings = table.c.provider_settings
-    return sa.or_(
-        # See _protocol_check: the compatibility trigger immediately fills the
-        # typed fields. Final constraints then validate the synchronized row.
-        sa.and_(
-            table.c.protocol.is_(None),
-            table.c.provider_settings.is_(None),
-            table.c.provider.is_not(None),
-        ),
+    allowed_states = [
         table.c.enabled.is_(False),
         # Historical Enterprise plugins can continue executing their released
         # SAML/LDAP rows during the rolling window. OIDC-only completeness is
@@ -160,7 +176,19 @@ def _enabled_check(table: sa.Table) -> sa.ColumnElement[bool]:
             ),
             *(_http_json_url_or_null(settings, key) for key in _REMOTE_URL_FIELDS),
         ),
-    )
+    ]
+    if allow_pending_n_minus_one:
+        # See _protocol_check: the compatibility trigger immediately fills the
+        # typed fields. Final constraints then validate the synchronized row.
+        allowed_states.insert(
+            0,
+            sa.and_(
+                table.c.protocol.is_(None),
+                table.c.provider_settings.is_(None),
+                table.c.provider.in_(_SUPPORTED_PROTOCOLS),
+            ),
+        )
+    return sa.or_(*allowed_states)
 
 
 def _client_secret_check(table: sa.Table) -> sa.ColumnElement[bool]:
@@ -175,6 +203,27 @@ def _client_secret_check(table: sa.Table) -> sa.ColumnElement[bool]:
             sa.func.length(secret) >= minimum_length,
         ),
     )
+
+
+def _is_secret_envelope(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    parts = value.split(":")
+    if len(parts) != _ENVELOPE_PART_COUNT or f"{':'.join(parts[:4])}:" != _ENVELOPE_HEADER:
+        return False
+
+    decoded_payloads = []
+    for encoded in parts[4:]:
+        if not encoded or any(character not in _BASE64URL_ALPHABET for character in encoded):
+            return False
+        try:
+            decoded_payloads.append(
+                base64.b64decode(encoded + "=" * (-len(encoded) % 4), altchars=b"-_", validate=True)
+            )
+        except (binascii.Error, ValueError):
+            return False
+    nonce, ciphertext = decoded_payloads
+    return len(nonce) == _ENVELOPE_NONCE_BYTES and len(ciphertext) >= _ENVELOPE_MIN_CIPHERTEXT_BYTES
 
 
 def _is_http_url(value: object) -> bool:
@@ -196,6 +245,68 @@ def _is_http_url(value: object) -> bool:
     except ValueError:
         return False
     return valid
+
+
+def _sanitize_pending_n_minus_one_configs(conn: sa.Connection) -> None:
+    """Fail closed for legacy rows written after the typed-column backfill."""
+    columns = _column_names(conn)
+    required = {"id", "protocol", "provider", "enabled", "client_secret_encrypted", "provider_settings"}
+    if not required <= columns:
+        return
+
+    selected_names = [*required]
+    selected_names.extend(name for name in _PROVIDER_SETTING_COLUMNS if name in columns)
+    table = sa.table(
+        _CONFIG_TABLE,
+        *(
+            sa.column(
+                name,
+                sa.JSON()
+                if name == "provider_settings"
+                else sa.Boolean()
+                if name == "enabled"
+                else sa.String()
+                if name != "id"
+                else None,
+            )
+            for name in selected_names
+        ),
+    )
+    rows = (
+        conn.execute(
+            sa.select(*(table.c[name] for name in selected_names)).where(
+                table.c.protocol.is_(None),
+                table.c.provider_settings.is_(None),
+                table.c.provider.in_(_SUPPORTED_PROTOCOLS),
+            )
+        )
+        .mappings()
+        .all()
+    )
+    for row in rows:
+        secret_is_valid = _is_secret_envelope(row["client_secret_encrypted"])
+        values: dict[str, object] = {}
+        if row["client_secret_encrypted"] is not None and not secret_is_valid:
+            values["client_secret_encrypted"] = None
+
+        if row["provider"] == "oidc" and row["enabled"]:
+            has_client_id = isinstance(row.get("client_id"), str) and bool(row["client_id"].strip())
+            has_discovery = _is_http_url(row.get("discovery_url"))
+            endpoint_values = [row.get(key) for key in ("authorization_endpoint", "token_endpoint", "jwks_uri")]
+            has_explicit_endpoints = all(_is_http_url(value) for value in endpoint_values)
+            supplied_urls_are_valid = all(
+                value is None or _is_http_url(value) for value in (row.get(key) for key in _REMOTE_URL_FIELDS)
+            )
+            if not (
+                secret_is_valid
+                and has_client_id
+                and (has_discovery or has_explicit_endpoints)
+                and supplied_urls_are_valid
+            ):
+                values["enabled"] = False
+
+        if values:
+            conn.execute(table.update().where(table.c.id == row["id"]).values(**values))
 
 
 def _disable_invalid_enabled_configs(conn: sa.Connection, table: sa.Table) -> None:
@@ -222,7 +333,7 @@ def _disable_invalid_enabled_configs(conn: sa.Connection, table: sa.Table) -> No
             value is None or _is_http_url(value) for value in (settings.get(key) for key in _REMOTE_URL_FIELDS)
         )
         if not (
-            row["client_secret_encrypted"]
+            _is_secret_envelope(row["client_secret_encrypted"])
             and has_client_id
             and (has_discovery or has_explicit_endpoints)
             and supplied_urls_are_valid
@@ -231,13 +342,29 @@ def _disable_invalid_enabled_configs(conn: sa.Connection, table: sa.Table) -> No
 
 
 def _raise_for_protocol_mismatches(conn: sa.Connection, table: sa.Table) -> None:
-    invalid_ids = [
-        str(row.id)
-        for row in conn.execute(sa.select(table.c.id, table.c.protocol, table.c.provider_settings))
-        if row.protocol not in _SUPPORTED_PROTOCOLS
-        or not isinstance(row.provider_settings, dict)
-        or row.provider_settings.get("protocol") != row.protocol
-    ]
+    has_legacy_provider = "provider" in _column_names(conn)
+    selected_columns = [table.c.id, table.c.protocol, table.c.provider_settings]
+    if has_legacy_provider:
+        selected_columns.append(table.c.provider)
+
+    invalid_ids = []
+    for row in conn.execute(sa.select(*selected_columns)).mappings():
+        # Mirror _protocol_check: a pending N-1 insert is a legal temporary
+        # state only when the released representation physically exists and
+        # names a supported protocol.
+        if (
+            has_legacy_provider
+            and row["protocol"] is None
+            and row["provider_settings"] is None
+            and row["provider"] in _SUPPORTED_PROTOCOLS
+        ):
+            continue
+        if (
+            row["protocol"] not in _SUPPORTED_PROTOCOLS
+            or not isinstance(row["provider_settings"], dict)
+            or row["provider_settings"].get("protocol") != row["protocol"]
+        ):
+            invalid_ids.append(str(row["id"]))
     if invalid_ids:
         msg = (
             "sso_config contains unsupported or inconsistent protocol settings for row(s): "
@@ -260,22 +387,38 @@ def _create_checks(conn: sa.Connection, table: sa.Table) -> None:
     need_client_secret = not existing.intersection(_CLIENT_SECRET_CHECK_ALIASES)
     if not need_protocol and not need_enabled and not need_client_secret:
         return
+    allow_pending_n_minus_one = "provider" in _column_names(conn)
     if conn.dialect.name == "sqlite":
         with op.batch_alter_table(_CONFIG_TABLE, recreate="always") as batch_op:
             if need_protocol:
                 batch_op.create_check_constraint(
                     op.f(_PROTOCOL_CHECK),
-                    _protocol_check(table, allow_supported_mismatch=True),
+                    _protocol_check(
+                        table,
+                        allow_supported_mismatch=True,
+                        allow_pending_n_minus_one=allow_pending_n_minus_one,
+                    ),
                 )
             if need_enabled:
-                batch_op.create_check_constraint(op.f(_ENABLED_CHECK), _enabled_check(table))
+                batch_op.create_check_constraint(
+                    op.f(_ENABLED_CHECK),
+                    _enabled_check(table, allow_pending_n_minus_one=allow_pending_n_minus_one),
+                )
             if need_client_secret:
                 batch_op.create_check_constraint(op.f(_CLIENT_SECRET_CHECK), _client_secret_check(table))
         return
     if need_protocol:
-        op.create_check_constraint(op.f(_PROTOCOL_CHECK), _CONFIG_TABLE, _protocol_check(table))
+        op.create_check_constraint(
+            op.f(_PROTOCOL_CHECK),
+            _CONFIG_TABLE,
+            _protocol_check(table, allow_pending_n_minus_one=allow_pending_n_minus_one),
+        )
     if need_enabled:
-        op.create_check_constraint(op.f(_ENABLED_CHECK), _CONFIG_TABLE, _enabled_check(table))
+        op.create_check_constraint(
+            op.f(_ENABLED_CHECK),
+            _CONFIG_TABLE,
+            _enabled_check(table, allow_pending_n_minus_one=allow_pending_n_minus_one),
+        )
     if need_client_secret:
         op.create_check_constraint(op.f(_CLIENT_SECRET_CHECK), _CONFIG_TABLE, _client_secret_check(table))
 
@@ -357,6 +500,7 @@ def upgrade() -> None:
     if not migration.table_exists(_CONFIG_TABLE, conn):
         return
     table = _config_table()
+    _sanitize_pending_n_minus_one_configs(conn)
     _disable_invalid_enabled_configs(conn, table)
     _raise_for_protocol_mismatches(conn, table)
     _create_checks(conn, table)

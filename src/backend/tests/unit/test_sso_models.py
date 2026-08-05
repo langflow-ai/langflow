@@ -403,6 +403,17 @@ class TestSSOConfig:
         assert config.client_secret_encrypted is not None
         assert decrypt_sso_client_secret(config.client_secret_encrypted, sso_secret_settings) == _TEST_PLAINTEXT_SECRET
 
+    async def test_update_schema_preserves_actor_when_omitted_and_updates_explicit_actor(self):
+        original_actor_id = uuid4()
+        config = SSOConfig(display_name="Actor attribution", updated_by=original_actor_id)
+
+        SSOConfigUpdate(display_name="No new actor").apply_to(config)
+        assert config.updated_by == original_actor_id
+
+        replacement_actor_id = uuid4()
+        SSOConfigUpdate(display_name="Replacement actor").apply_to(config, actor_id=replacement_actor_id)
+        assert config.updated_by == replacement_actor_id
+
     async def test_update_schema_atomically_converts_legacy_config_to_oidc(self, sso_secret_settings):
         config = SSOConfig(
             display_name="Legacy connection",

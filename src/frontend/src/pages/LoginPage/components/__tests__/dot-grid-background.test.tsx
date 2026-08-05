@@ -61,6 +61,23 @@ describe("DotGridBackground", () => {
     expect(window.requestAnimationFrame).not.toHaveBeenCalled();
   });
 
+  it("sizes the canvas to the layout viewport", () => {
+    jest
+      .spyOn(document.documentElement, "clientWidth", "get")
+      .mockReturnValue(960);
+    jest
+      .spyOn(document.documentElement, "clientHeight", "get")
+      .mockReturnValue(540);
+
+    const { container } = render(<DotGridBackground />);
+    const canvas = container.querySelector("canvas");
+
+    expect(canvas).toHaveProperty("width", 960);
+    expect(canvas).toHaveProperty("height", 540);
+    expect(canvas).toHaveStyle({ width: "960px", height: "540px" });
+    expect(context.clearRect).toHaveBeenLastCalledWith(0, 0, 960, 540);
+  });
+
   it("stops and restarts animation when reduced motion changes", () => {
     prefersReducedMotion = false;
     const { unmount } = render(<DotGridBackground />);

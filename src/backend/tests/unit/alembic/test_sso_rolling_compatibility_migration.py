@@ -15,10 +15,15 @@ from sqlalchemy.exc import IntegrityError
 from .test_migration_execution import _engine_url, _make_alembic_cfg, db_url  # noqa: F401
 
 _PRIOR_REVISION = "b7d5f9a3c2e4"  # pragma: allowlist secret
+_INVARIANT_PRIOR_REVISION = "f0a1b2c3d4e5"  # pragma: allowlist secret
 _HEAD_REVISION = "8d9e0f1a2b3c"  # pragma: allowlist secret
 _TEST_ENCRYPTED_SECRET = "lf-sso:v1:hkdf-sha256-v1:aes-256-gcm:AAAAAAAAAAAAAAAA:BBBBBBBBBBBBBBBBBBBBBBBB"  # noqa: S105  # pragma: allowlist secret
 _TEST_PLAINTEXT_SECRET = "plaintext-secret"  # noqa: S105  # pragma: allowlist secret
+_TEST_INVALID_BASE64_ENVELOPE = (  # pragma: allowlist secret
+    "lf-sso:v1:hkdf-sha256-v1:aes-256-gcm:!!!!!!!!!!!!!!!!:!!!!!!!!!!!!!!!!!!!!!!"
+)
 _TEST_PASSWORD = "hashed"  # noqa: S105  # pragma: allowlist secret
+_INVARIANT_MIGRATION = importlib.import_module("langflow.alembic.versions.7c8e9f0a1b2d_add_sso_config_invariant_checks")
 _HEAD_MIGRATION = importlib.import_module("langflow.alembic.versions.8d9e0f1a2b3c_complete_sso_expand_compatibility")
 
 
@@ -65,6 +70,123 @@ def _oidc_settings(*, discovery_url: str = "https://idp.example.com/.well-known/
         "issuer": "https://idp.example.com",
         "client_id": "client-id",
     }
+
+
+def test_sso_protocol_preflight_is_schema_aware_and_rejects_unsupported_legacy_state(db_url):  # noqa: F811
+    engine = sa.create_engine(_engine_url(db_url))
+    try:
+        typed_metadata = sa.MetaData()
+        typed_config = sa.Table(
+            "sso_config",
+            typed_metadata,
+            sa.Column("id", sa.String(), primary_key=True),
+            sa.Column("protocol", sa.String()),
+            sa.Column("provider_settings", sa.JSON()),
+        )
+        typed_metadata.create_all(engine)
+        with engine.begin() as connection:
+            connection.execute(
+                typed_config.insert(),
+                {"id": "typed-only", "protocol": "oidc", "provider_settings": {"protocol": "oidc"}},
+            )
+            _INVARIANT_MIGRATION._raise_for_protocol_mismatches(
+                connection,
+                _INVARIANT_MIGRATION._config_table(),
+            )
+        typed_metadata.drop_all(engine)
+
+        legacy_metadata = sa.MetaData()
+        legacy_config = sa.Table(
+            "sso_config",
+            legacy_metadata,
+            sa.Column("id", sa.String(), primary_key=True),
+            sa.Column("protocol", sa.String()),
+            sa.Column("provider", sa.String()),
+            sa.Column("provider_settings", sa.JSON()),
+        )
+        legacy_metadata.create_all(engine)
+        with engine.begin() as connection:
+            connection.execute(
+                legacy_config.insert(),
+                {"id": "unsupported-legacy", "protocol": None, "provider": "custom", "provider_settings": None},
+            )
+            with pytest.raises(RuntimeError, match="unsupported-legacy"):
+                _INVARIANT_MIGRATION._raise_for_protocol_mismatches(
+                    connection,
+                    _INVARIANT_MIGRATION._config_table(),
+                )
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize(
+    ("client_secret", "complete", "expected_enabled", "expected_secret"),
+    [
+        pytest.param(None, True, False, None, id="missing-secret"),
+        pytest.param(_TEST_PLAINTEXT_SECRET, True, False, None, id="plaintext-secret"),
+        pytest.param(_TEST_INVALID_BASE64_ENVELOPE, True, False, None, id="invalid-base64-envelope"),
+        pytest.param(
+            _TEST_ENCRYPTED_SECRET,
+            False,
+            False,
+            _TEST_ENCRYPTED_SECRET,
+            id="valid-envelope-incomplete-settings",
+        ),
+        pytest.param(_TEST_ENCRYPTED_SECRET, True, True, _TEST_ENCRYPTED_SECRET, id="complete-valid"),
+    ],
+)
+def test_sso_head_normalizes_pending_n_minus_one_insert(
+    db_url,  # noqa: F811
+    client_secret,
+    complete,
+    expected_enabled,
+    expected_secret,
+):
+    alembic_cfg = _make_alembic_cfg(db_url)
+    command.upgrade(alembic_cfg, _INVARIANT_PRIOR_REVISION)
+
+    timestamp = datetime.now(timezone.utc)
+    config_id = str(uuid4())
+    expected_settings = _oidc_settings()
+    if not complete:
+        expected_settings = {**expected_settings, "client_id": None, "discovery_url": None}
+
+    engine = sa.create_engine(_engine_url(db_url))
+    try:
+        with engine.begin() as connection:
+            sso_config = sa.Table("sso_config", sa.MetaData(), autoload_with=connection)
+            connection.execute(
+                sso_config.insert(),
+                {
+                    **_legacy_config_values(
+                        config_id=config_id,
+                        provider="oidc",
+                        provider_name="Pending N-1 OIDC",
+                        timestamp=timestamp,
+                    ),
+                    "client_secret_encrypted": client_secret,
+                    **{key: value for key, value in expected_settings.items() if key != "protocol"},
+                },
+            )
+    finally:
+        engine.dispose()
+
+    command.upgrade(alembic_cfg, _HEAD_REVISION)
+
+    engine = sa.create_engine(_engine_url(db_url))
+    try:
+        with engine.connect() as connection:
+            sso_config = sa.Table("sso_config", sa.MetaData(), autoload_with=connection)
+            row = connection.execute(sa.select(sso_config).where(sso_config.c.id == config_id)).mappings().one()
+            assert row["slug"] == f"sso-{UUID(config_id).hex}"
+            assert row["display_name"] == "Pending N-1 OIDC"
+            assert row["provider"] == "oidc"
+            assert row["protocol"] == "oidc"
+            assert row["provider_settings"] == expected_settings
+            assert row["enabled"] is expected_enabled
+            assert row["client_secret_encrypted"] == expected_secret
+    finally:
+        engine.dispose()
 
 
 def test_sso_expand_keeps_n_and_n_minus_one_writes_coherent(db_url):  # noqa: F811

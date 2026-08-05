@@ -29,10 +29,12 @@ export default function DotGridBackground() {
     const themeElement = document.getElementById("body");
     let animationFrame = 0;
     let dots: Dot[] = [];
+    let viewportWidth = 0;
+    let viewportHeight = 0;
     const pointer = { x: -1000, y: -1000 };
 
     const draw = () => {
-      context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      context.clearRect(0, 0, viewportWidth, viewportHeight);
       const isDark =
         themeElement?.classList.contains("dark") ?? colorSchemeMedia.matches;
 
@@ -74,15 +76,17 @@ export default function DotGridBackground() {
 
     const resize = () => {
       const pixelRatio = window.devicePixelRatio || 1;
-      canvas.width = window.innerWidth * pixelRatio;
-      canvas.height = window.innerHeight * pixelRatio;
-      canvas.style.width = `${window.innerWidth}px`;
-      canvas.style.height = `${window.innerHeight}px`;
+      viewportWidth = document.documentElement.clientWidth;
+      viewportHeight = document.documentElement.clientHeight;
+      canvas.width = viewportWidth * pixelRatio;
+      canvas.height = viewportHeight * pixelRatio;
+      canvas.style.width = `${viewportWidth}px`;
+      canvas.style.height = `${viewportHeight}px`;
       context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
       dots = [];
-      const columns = Math.ceil(window.innerWidth / DOT_SPACING) + 1;
-      const rows = Math.ceil(window.innerHeight / DOT_SPACING) + 1;
+      const columns = Math.ceil(viewportWidth / DOT_SPACING) + 1;
+      const rows = Math.ceil(viewportHeight / DOT_SPACING) + 1;
 
       for (let column = 0; column < columns; column += 1) {
         for (let row = 0; row < rows; row += 1) {

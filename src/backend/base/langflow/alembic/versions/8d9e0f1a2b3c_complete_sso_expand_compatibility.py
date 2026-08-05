@@ -29,7 +29,10 @@ datetime affinity, so the timestamp conversion is intentionally a no-op there.
 
 # ruff: noqa: S608
 
+import base64
+import binascii
 from collections.abc import Sequence
+from uuid import UUID
 
 import sqlalchemy as sa
 from alembic import op
@@ -54,6 +57,12 @@ _PROVIDER_SETTING_COLUMNS = (
     "issuer",
     "client_id",
 )
+_SUPPORTED_PROTOCOLS = ("oidc", "saml", "ldap")
+_ENVELOPE_HEADER = "lf-sso:v1:hkdf-sha256-v1:aes-256-gcm:"
+_ENVELOPE_PART_COUNT = 6
+_ENVELOPE_NONCE_BYTES = 12
+_ENVELOPE_MIN_CIPHERTEXT_BYTES = 16
+_BASE64URL_ALPHABET = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
 _COMPAT_COLUMNS = {
     "id",
     "slug",
@@ -61,6 +70,8 @@ _COMPAT_COLUMNS = {
     "provider_name",
     "protocol",
     "provider",
+    "enabled",
+    "client_secret_encrypted",
     "provider_settings",
     "enforce_sso",
     *_PROVIDER_SETTING_COLUMNS,
@@ -88,6 +99,74 @@ def _has_compatibility_schema(conn: sa.Connection) -> bool:
         and migration.table_exists(_SETTINGS_TABLE, conn)
         and _column_names(conn, _CONFIG_TABLE) >= _COMPAT_COLUMNS
     )
+
+
+def _is_secret_envelope(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    parts = value.split(":")
+    if len(parts) != _ENVELOPE_PART_COUNT or f"{':'.join(parts[:4])}:" != _ENVELOPE_HEADER:
+        return False
+
+    decoded_payloads = []
+    for encoded in parts[4:]:
+        if not encoded or any(character not in _BASE64URL_ALPHABET for character in encoded):
+            return False
+        try:
+            decoded_payloads.append(
+                base64.b64decode(encoded + "=" * (-len(encoded) % 4), altchars=b"-_", validate=True)
+            )
+        except (binascii.Error, ValueError):
+            return False
+    nonce, ciphertext = decoded_payloads
+    return len(nonce) == _ENVELOPE_NONCE_BYTES and len(ciphertext) >= _ENVELOPE_MIN_CIPHERTEXT_BYTES
+
+
+def _normalize_pending_n_minus_one_rows(conn: sa.Connection) -> None:
+    """Complete rows written through the legacy representation before this revision."""
+    if not _has_compatibility_schema(conn):
+        return
+
+    table = sa.table(
+        _CONFIG_TABLE,
+        sa.column("id"),
+        sa.column("slug", sa.String()),
+        sa.column("display_name", sa.String()),
+        sa.column("provider_name", sa.String()),
+        sa.column("protocol", sa.String()),
+        sa.column("provider", sa.String()),
+        sa.column("enabled", sa.Boolean()),
+        sa.column("client_secret_encrypted", sa.String()),
+        sa.column("provider_settings", sa.JSON()),
+        *(sa.column(name, sa.String()) for name in _PROVIDER_SETTING_COLUMNS),
+    )
+    rows = (
+        conn.execute(
+            sa.select(table).where(
+                table.c.protocol.is_(None),
+                table.c.provider_settings.is_(None),
+                table.c.provider.in_(_SUPPORTED_PROTOCOLS),
+            )
+        )
+        .mappings()
+        .all()
+    )
+    for row in rows:
+        provider_settings = {"protocol": row["provider"]}
+        provider_settings.update({name: row[name] for name in _PROVIDER_SETTING_COLUMNS})
+        values = {
+            "slug": row["slug"] or f"sso-{UUID(str(row['id'])).hex}",
+            "display_name": row["display_name"] or row["provider_name"],
+            "protocol": row["provider"],
+            "provider_settings": provider_settings,
+        }
+        if row["provider"] == "oidc" and not _is_secret_envelope(row["client_secret_encrypted"]):
+            # A pending row bypassed the typed OIDC completeness branch in 7c.
+            # Complete it fail-closed, and discard any legacy plaintext or
+            # malformed value instead of reintroducing an unusable credential.
+            values["enabled"] = False
+            values["client_secret_encrypted"] = None
+        conn.execute(table.update().where(table.c.id == row["id"]).values(**values))
 
 
 def _sqlite_provider_settings_json(prefix: str = "NEW") -> str:
@@ -496,6 +575,7 @@ def _convert_timestamps(conn: sa.Connection, *, timezone_aware: bool) -> None:
 
 def upgrade() -> None:
     conn = op.get_bind()
+    _normalize_pending_n_minus_one_rows(conn)
     _convert_timestamps(conn, timezone_aware=True)
     _create_compatibility_triggers(conn)
 

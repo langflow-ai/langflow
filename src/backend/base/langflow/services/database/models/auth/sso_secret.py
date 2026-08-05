@@ -52,6 +52,7 @@ _NONCE_BYTES = 12
 _TAG_BYTES = 16
 _ENVELOPE_PARTS = 6
 _HEADER_PARTS = 4
+_BASE64URL_ALPHABET = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
 
 
 class SSOSecretError(ValueError):
@@ -85,6 +86,9 @@ def _encode(value: bytes) -> str:
 
 
 def _decode(value: str) -> bytes:
+    if not value or any(character not in _BASE64URL_ALPHABET for character in value):
+        msg = "Invalid base64url data in SSO secret envelope"
+        raise SSOSecretError(msg)
     padding = "=" * (-len(value) % 4)
     try:
         return base64.b64decode(value + padding, altchars=b"-_", validate=True)

@@ -712,7 +712,8 @@ class SSOConfigUpdate(SQLModel):
             enabled=config.enabled,
             has_client_secret=config.client_secret_encrypted is not None,
         )
-        config.updated_by = actor_id
+        if actor_id is not None:
+            config.updated_by = actor_id
         return config
 
 

@@ -21,6 +21,7 @@ Usage:
 
 import argparse
 import base64
+import binascii
 import json
 import os
 import platform
@@ -50,6 +51,7 @@ SSO_NONCE_BYTES = 12
 SSO_TAG_BYTES = 16
 SSO_ENVELOPE_PARTS = 6
 SSO_HEADER_PARTS = 4
+SSO_BASE64URL_ALPHABET = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
 
 
 def get_default_config_dir() -> Path:
@@ -167,8 +169,17 @@ def _decode_sso_envelope(envelope: str) -> tuple[bytes, bytes]:
     if len(parts) != SSO_ENVELOPE_PARTS or ":".join(parts[:SSO_HEADER_PARTS]) != SSO_ENVELOPE_HEADER:
         msg = "Unsupported SSO client-secret envelope"
         raise ValueError(msg)
-    nonce = base64.urlsafe_b64decode(parts[4] + "=" * (-len(parts[4]) % 4))
-    ciphertext = base64.urlsafe_b64decode(parts[5] + "=" * (-len(parts[5]) % 4))
+    decoded_payloads: list[bytes] = []
+    for value in parts[4:]:
+        if not value or any(character not in SSO_BASE64URL_ALPHABET for character in value):
+            msg = "Invalid base64url data in SSO client-secret envelope"
+            raise ValueError(msg)
+        try:
+            decoded_payloads.append(base64.b64decode(value + "=" * (-len(value) % 4), altchars=b"-_", validate=True))
+        except (binascii.Error, ValueError) as exc:
+            msg = "Invalid base64url data in SSO client-secret envelope"
+            raise ValueError(msg) from exc
+    nonce, ciphertext = decoded_payloads
     if len(nonce) != SSO_NONCE_BYTES or len(ciphertext) < SSO_TAG_BYTES:
         msg = "Invalid SSO client-secret envelope payload"
         raise ValueError(msg)

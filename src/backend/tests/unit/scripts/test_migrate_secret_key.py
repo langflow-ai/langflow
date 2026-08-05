@@ -171,6 +171,25 @@ class TestEncryptDecrypt:
         with pytest.raises(InvalidTag):
             migrate_module.decrypt_sso_secret_with_key(migrated, old_key)
 
+    @pytest.mark.parametrize("payload_index", [4, 5], ids=["nonce", "ciphertext"])
+    @pytest.mark.parametrize("invalid_character", ["!", "+", "/"])
+    def test_sso_secret_rewrap_rejects_non_base64url_payload_characters(
+        self,
+        migrate_module,
+        old_key,
+        new_key,
+        payload_index,
+        invalid_character,
+    ):
+        encrypted = migrate_module.encrypt_sso_secret_with_key("oidc-client-secret", old_key)
+        parts = encrypted.split(":")
+        parts[payload_index] = f"{invalid_character}{parts[payload_index][1:]}"
+        malformed_envelope = ":".join(parts)
+
+        with pytest.raises(ValueError, match="Invalid base64url data"):
+            migrate_module._decode_sso_envelope(malformed_envelope)
+        assert migrate_module.migrate_sso_secret(malformed_envelope, old_key, new_key) is None
+
     def test_encrypt_decrypt_with_short_keys(self, migrate_module, short_old_key):
         """Short keys should work for encryption/decryption."""
         plaintext = "secret-value"
