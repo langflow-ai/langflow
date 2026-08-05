@@ -21,8 +21,16 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 _CONFIG_TABLE = "sso_config"
+# Final DB names (op.f / conv). Without the token wrapper, alembic's
+# ck_%(table_name)s_%(constraint_name)s convention doubles the prefix to
+# ck_sso_config_ck_sso_config_*, which then survives downgrade and breaks
+# later batch_alter drops of protocol / provider_settings on SQLite.
 _PROTOCOL_CHECK = "ck_sso_config_protocol_consistency"
 _ENABLED_CHECK = "ck_sso_config_enabled_complete"
+_LEGACY_DOUBLED_PROTOCOL_CHECK = "ck_sso_config_ck_sso_config_protocol_consistency"
+_LEGACY_DOUBLED_ENABLED_CHECK = "ck_sso_config_ck_sso_config_enabled_complete"
+_PROTOCOL_CHECK_ALIASES = (_PROTOCOL_CHECK, _LEGACY_DOUBLED_PROTOCOL_CHECK)
+_ENABLED_CHECK_ALIASES = (_ENABLED_CHECK, _LEGACY_DOUBLED_ENABLED_CHECK)
 _SLUG_TRIGGER = "trg_sso_config_slug_immutable"
 _POSTGRES_TRIGGER_FUNCTION = "prevent_sso_config_slug_update"
 _REMOTE_URL_FIELDS = (
@@ -147,39 +155,38 @@ def _existing_check_names(conn: sa.Connection) -> set[str]:
 
 def _create_checks(conn: sa.Connection, table: sa.Table) -> None:
     # create_all() may already have installed these from the SQLModel metadata.
+    # Also treat the legacy doubled-prefix names as present so a partial upgrade
+    # does not install a second copy under the canonical name.
     existing = _existing_check_names(conn)
-    need_protocol = _PROTOCOL_CHECK not in existing
-    need_enabled = _ENABLED_CHECK not in existing
+    need_protocol = not existing.intersection(_PROTOCOL_CHECK_ALIASES)
+    need_enabled = not existing.intersection(_ENABLED_CHECK_ALIASES)
     if not need_protocol and not need_enabled:
         return
     if conn.dialect.name == "sqlite":
         with op.batch_alter_table(_CONFIG_TABLE, recreate="always") as batch_op:
             if need_protocol:
-                batch_op.create_check_constraint(_PROTOCOL_CHECK, _protocol_check(table))
+                batch_op.create_check_constraint(op.f(_PROTOCOL_CHECK), _protocol_check(table))
             if need_enabled:
-                batch_op.create_check_constraint(_ENABLED_CHECK, _enabled_check(table))
+                batch_op.create_check_constraint(op.f(_ENABLED_CHECK), _enabled_check(table))
         return
     if need_protocol:
-        op.create_check_constraint(_PROTOCOL_CHECK, _CONFIG_TABLE, _protocol_check(table))
+        op.create_check_constraint(op.f(_PROTOCOL_CHECK), _CONFIG_TABLE, _protocol_check(table))
     if need_enabled:
-        op.create_check_constraint(_ENABLED_CHECK, _CONFIG_TABLE, _enabled_check(table))
+        op.create_check_constraint(op.f(_ENABLED_CHECK), _CONFIG_TABLE, _enabled_check(table))
 
 
 def _drop_checks(conn: sa.Connection) -> None:
     existing = _existing_check_names(conn)
-    if _ENABLED_CHECK not in existing and _PROTOCOL_CHECK not in existing:
+    to_drop = [name for name in (*_ENABLED_CHECK_ALIASES, *_PROTOCOL_CHECK_ALIASES) if name in existing]
+    if not to_drop:
         return
     if conn.dialect.name == "sqlite":
         with op.batch_alter_table(_CONFIG_TABLE, recreate="always") as batch_op:
-            if _ENABLED_CHECK in existing:
-                batch_op.drop_constraint(_ENABLED_CHECK, type_="check")
-            if _PROTOCOL_CHECK in existing:
-                batch_op.drop_constraint(_PROTOCOL_CHECK, type_="check")
+            for name in to_drop:
+                batch_op.drop_constraint(op.f(name), type_="check")
         return
-    if _ENABLED_CHECK in existing:
-        op.drop_constraint(_ENABLED_CHECK, _CONFIG_TABLE, type_="check")
-    if _PROTOCOL_CHECK in existing:
-        op.drop_constraint(_PROTOCOL_CHECK, _CONFIG_TABLE, type_="check")
+    for name in to_drop:
+        op.drop_constraint(op.f(name), _CONFIG_TABLE, type_="check")
 
 
 def _create_slug_trigger(conn: sa.Connection) -> None:

@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, SecretStr, TypeAdapter, field_valida
 from pydantic import Field as PydanticField
 from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index
 from sqlalchemy.orm import validates
+from sqlalchemy.sql.naming import conv
 from sqlmodel import Field, SQLModel
 from typing_extensions import Self
 
@@ -366,6 +367,8 @@ def _install_sso_config_database_invariants() -> None:
     protocol = table.c.protocol
     enabled = table.c.enabled
 
+    # conv() marks these as final names so alembic's ck_%(table_name)s_%(constraint_name)s
+    # convention (applied in alembic/env.py) does not double-prefix them.
     table.append_constraint(
         CheckConstraint(
             sa.and_(
@@ -373,7 +376,7 @@ def _install_sso_config_database_invariants() -> None:
                 provider_settings["protocol"].as_string().is_not(None),
                 provider_settings["protocol"].as_string() == protocol,
             ),
-            name="ck_sso_config_protocol_consistency",
+            name=conv("ck_sso_config_protocol_consistency"),
         )
     )
     table.append_constraint(
@@ -394,7 +397,7 @@ def _install_sso_config_database_invariants() -> None:
                     *(_http_json_url_or_null(provider_settings, key) for key in _OIDC_REMOTE_URL_FIELDS),
                 ),
             ),
-            name="ck_sso_config_enabled_complete",
+            name=conv("ck_sso_config_enabled_complete"),
         )
     )
 
