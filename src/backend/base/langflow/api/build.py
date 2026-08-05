@@ -643,6 +643,7 @@ async def generate_flow_events(
     build_error_type: str | None = None
 
     async def _build_vertex(vertex_id: str, graph: Graph, event_manager: EventManager) -> VertexBuildResponse:
+        nonlocal build_error_type
         flow_id_str = str(flow_id)
         next_runnable_vertices = []
         top_level_vertices = []
@@ -675,8 +676,10 @@ async def generate_flow_events(
                 # error output would terminalize a suspendable run.
                 raise
             except Exception as exc:  # noqa: BLE001
-                nonlocal build_error_type
-                build_error_type = type(exc).__name__
+                # First failure wins. Sibling vertices in a layer are gathered concurrently, so
+                # last-writer-wins would make the reported type depend on scheduling order.
+                if build_error_type is None:
+                    build_error_type = type(exc).__name__
                 if isinstance(exc, ComponentBuildError):
                     params = exc.message
                     tb = exc.formatted_traceback
@@ -927,6 +930,10 @@ async def generate_flow_events(
         # through run_graph_internal -> Graph.arun, which has carried the span all along.
         # Safe as make_current: this is a coroutine run as its own task, not an async generator,
         # so the context token cannot outlive the scope.
+        # Starts here and not earlier because the span hangs off the graph: a run that dies in
+        # build_graph_and_get_order has no graph to hang one on, so it emits no flow span. Those
+        # are request-shaped failures (bad flow data, no sortable order) and the server span
+        # still covers them, so the operator sees the request, just not a unit of work.
         with graph.flow_execution_span() as flow_span:
             if _build_job_svc and _build_run_id and not runner_owns_status:
                 await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
