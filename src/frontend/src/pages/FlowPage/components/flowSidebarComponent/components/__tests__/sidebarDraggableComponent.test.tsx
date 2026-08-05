@@ -411,6 +411,42 @@ describe("SidebarDraggableComponent", () => {
         "data-content",
       );
     });
+
+    it("should not set pointer-events-none on the disabled row, so its tooltip stays hoverable", () => {
+      // Regression test: `pointer-events-none` makes an element (and its
+      // subtree) unreachable by real mouse hover, which silently defeats
+      // the ShadTooltip trigger attached to this same row and permanently
+      // hides `disabledTooltip` from mouse users.
+      const propsWithDisabled = {
+        ...defaultProps,
+        disabled: true,
+        disabledTooltip: "Test component already added",
+      };
+
+      render(<SidebarDraggableComponent {...propsWithDisabled} />);
+
+      const row = screen.getByTestId("testsection_test component_draggable");
+      expect(row.className).not.toContain("pointer-events-none");
+    });
+
+    it("should not call addComponent on Enter/Space when disabled", () => {
+      const propsWithDisabled = { ...defaultProps, disabled: true };
+      render(<SidebarDraggableComponent {...propsWithDisabled} />);
+
+      const container = screen.getByTestId(/testsectiontest component/i);
+      fireEvent.keyDown(container, { key: "Enter" });
+      fireEvent.keyDown(container, { key: " " });
+
+      expect(mockAddComponentFn).not.toHaveBeenCalled();
+    });
+
+    it("should not be draggable when disabled", () => {
+      const propsWithDisabled = { ...defaultProps, disabled: true };
+      render(<SidebarDraggableComponent {...propsWithDisabled} />);
+
+      const container = screen.getByTestId(/testsectiontest component/i);
+      expect(container).toHaveAttribute("draggable", "false");
+    });
   });
 
   describe("Error State", () => {

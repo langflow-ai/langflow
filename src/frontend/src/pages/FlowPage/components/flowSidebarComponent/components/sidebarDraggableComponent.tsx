@@ -105,6 +105,7 @@ export const SidebarDraggableComponent = forwardRef(
     }
 
     const handleKeyDown = (e) => {
+      if (disabled) return;
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         e.stopPropagation();
@@ -135,7 +136,7 @@ export const SidebarDraggableComponent = forwardRef(
               "group/draggable flex items-center gap-2 rounded-md bg-muted p-1 px-2 hover:bg-secondary-hover/75",
               error && "cursor-not-allowed select-none",
               disabled
-                ? "pointer-events-none bg-accent text-placeholder-foreground h-8"
+                ? "cursor-not-allowed bg-accent text-placeholder-foreground h-8"
                 : "bg-muted text-foreground",
             )}
             data-testid={`${sectionName.toLowerCase()}_${display_name.toLowerCase()}_draggable`}
@@ -149,8 +150,11 @@ export const SidebarDraggableComponent = forwardRef(
               })}
               tabIndex={0}
               onKeyDown={handleKeyDown}
-              className="flex flex-1 cursor-grab items-center gap-2 rounded-md outline-none ring-ring focus-visible:ring-1"
-              draggable={!error}
+              className={cn(
+                "flex flex-1 items-center gap-2 rounded-md outline-none ring-ring focus-visible:ring-1",
+                disabled ? "cursor-not-allowed" : "cursor-grab",
+              )}
+              draggable={!error && !disabled}
               style={{
                 borderLeftColor: color,
               }}
