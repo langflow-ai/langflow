@@ -89,7 +89,20 @@ describe("DeploymentPhaseContent", () => {
   it("translates the deployment type label instead of showing a raw literal", () => {
     renderPhase({ deployments: [makeDeployment("d1", "My Bot")] });
 
-    expect(screen.getByText("agent deployment")).toBeInTheDocument();
+    expect(screen.getByText("Agent")).toBeInTheDocument();
+    expect(screen.queryByText(/^agent$/)).not.toBeInTheDocument();
+  });
+
+  it("falls back to the raw type value for an unrecognized deployment type", () => {
+    renderPhase({
+      deployments: [
+        makeDeployment("d1", "My Bot", {
+          type: "custom-type" as Deployment["type"],
+        }),
+      ],
+    });
+
+    expect(screen.getByText("custom-type")).toBeInTheDocument();
   });
 
   it("calls onSelectDeployment when a deployment is chosen", async () => {

@@ -1,11 +1,11 @@
-import type React from "react";
-import { memo } from "react";
+import { memo, useId } from "react";
 import { useTranslation } from "react-i18next";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/utils/utils";
 import type { ConnectionItem, EnvVarEntry } from "../types";
+import { handleTabListKeyDown } from "../utils/tab-keyboard-navigation";
 import { ConnectionSearchList } from "./connection-search-list";
 
 export type ConnectionTab = "available" | "create";
@@ -52,21 +52,8 @@ export const ConnectionPanel = memo(function ConnectionPanel({
   isDuplicateName?: boolean;
 }) {
   const { t } = useTranslation();
-
-  const handleTabKeyDown = (
-    event: React.KeyboardEvent<HTMLButtonElement>,
-    index: number,
-  ) => {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-    event.preventDefault();
-    const nextIndex =
-      event.key === "ArrowRight"
-        ? (index + 1) % CONNECTION_TABS.length
-        : (index - 1 + CONNECTION_TABS.length) % CONNECTION_TABS.length;
-    const nextTab = CONNECTION_TABS[nextIndex];
-    onTabChange(nextTab);
-    document.getElementById(`connection-tab-${nextTab}`)?.focus();
-  };
+  const connectionNameId = useId();
+  const connectionNameErrorId = useId();
 
   return (
     <>
@@ -90,7 +77,15 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                 aria-controls={`connection-panel-${tab}`}
                 tabIndex={connectionTab === tab ? 0 : -1}
                 onClick={() => onTabChange(tab)}
-                onKeyDown={(event) => handleTabKeyDown(event, index)}
+                onKeyDown={(event) =>
+                  handleTabListKeyDown(
+                    event,
+                    index,
+                    CONNECTION_TABS,
+                    onTabChange,
+                    "connection-tab",
+                  )
+                }
                 className={cn(
                   "min-w-0 rounded-lg px-3 py-2 text-sm transition-colors",
                   connectionTab === tab
@@ -108,105 +103,116 @@ export const ConnectionPanel = memo(function ConnectionPanel({
 
         {/* Tab content */}
         <div
-          id={`connection-panel-${connectionTab}`}
+          id="connection-panel-available"
           role="tabpanel"
-          aria-labelledby={`connection-tab-${connectionTab}`}
+          aria-labelledby="connection-tab-available"
           className="mt-4 flex-1 overflow-x-hidden overflow-y-auto"
-          key={connectionTab}
+          hidden={connectionTab !== "available"}
         >
-          {connectionTab === "available" ? (
-            <div className="min-w-0 space-y-3">
-              <ConnectionSearchList
-                connections={connections}
-                selectedConnections={selectedConnections}
-                onToggleConnection={onToggleConnection}
-                onSwitchToCreate={() => onTabChange("create")}
-              />
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col">
-                <label
-                  htmlFor="new-connection-name"
-                  className="pb-2 text-sm font-medium"
-                >
-                  {t("deployments.connectionNameLabel")}
-                  <span className="text-destructive" aria-hidden="true">
-                    *
-                  </span>
-                </label>
-                <Input
-                  id="new-connection-name"
-                  placeholder={t("deployments.placeholderConnectionName")}
-                  className="bg-muted"
-                  value={newConnectionName}
-                  aria-required="true"
-                  aria-invalid={isDuplicateName}
-                  onChange={(e) =>
-                    onNameChange(e.target.value.replace(/[^a-zA-Z0-9_ ]/g, ""))
-                  }
-                />
-                {isDuplicateName && (
-                  <span className="pt-1 text-xs text-destructive">
-                    {t("deployments.connectionNameExists")}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-col">
-                <span className="pb-2 text-sm font-medium">
-                  {t("deployments.environmentVariables")}
-                  <span className="text-destructive" aria-hidden="true">
-                    *
-                  </span>
+          <div className="min-w-0 space-y-3">
+            <ConnectionSearchList
+              connections={connections}
+              selectedConnections={selectedConnections}
+              onToggleConnection={onToggleConnection}
+              onSwitchToCreate={() => onTabChange("create")}
+            />
+          </div>
+        </div>
+        <div
+          id="connection-panel-create"
+          role="tabpanel"
+          aria-labelledby="connection-tab-create"
+          className="mt-4 flex-1 overflow-x-hidden overflow-y-auto"
+          hidden={connectionTab !== "create"}
+        >
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col">
+              <label
+                htmlFor={connectionNameId}
+                className="pb-2 text-sm font-medium"
+              >
+                {t("deployments.connectionNameLabel")}
+                <span className="text-destructive" aria-hidden="true">
+                  *
                 </span>
-                {detectedVarCount > 0 && (
-                  <p className="mb-2 text-xs text-muted-foreground">
-                    {t("deployments.variablesAutoDetected", {
-                      count: detectedVarCount,
-                    })}
-                  </p>
-                )}
-                <div className="space-y-2">
-                  {envVars.map((envVar) => (
-                    <div key={envVar.id} className="grid grid-cols-2 gap-2">
-                      <Input
-                        placeholder={t("deployments.placeholderKey")}
-                        className="bg-muted"
-                        value={envVar.key}
-                        onChange={(e) =>
-                          onEnvVarChange(envVar.id, "key", e.target.value)
-                        }
-                      />
-                      <InputComponent
-                        nodeStyle
-                        password
-                        id={`env-val-${envVar.id}`}
-                        placeholder={t("deployments.placeholderValue")}
-                        value={envVar.value}
-                        options={globalVariableOptions}
-                        optionsPlaceholder={t("deployments.globalVariables")}
-                        optionsIcon="Globe"
-                        selectedOption={envVar.globalVar ? envVar.value : ""}
-                        setSelectedOption={(sel) =>
-                          onEnvVarSelectGlobalVar(envVar.id, sel)
-                        }
-                        onChange={(text) =>
-                          onEnvVarChange(envVar.id, "value", text)
-                        }
-                      />
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={onAddEnvVar}
-                    className="text-sm text-muted-foreground hover:text-foreground"
-                  >
-                    {t("deployments.addVariable")}
-                  </button>
-                </div>
+              </label>
+              <Input
+                id={connectionNameId}
+                placeholder={t("deployments.placeholderConnectionName")}
+                className="bg-muted"
+                value={newConnectionName}
+                aria-required="true"
+                aria-invalid={isDuplicateName}
+                aria-describedby={
+                  isDuplicateName ? connectionNameErrorId : undefined
+                }
+                onChange={(e) =>
+                  onNameChange(e.target.value.replace(/[^a-zA-Z0-9_ ]/g, ""))
+                }
+              />
+              {isDuplicateName && (
+                <span
+                  id={connectionNameErrorId}
+                  className="pt-1 text-xs text-destructive"
+                >
+                  {t("deployments.connectionNameExists")}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col">
+              <span className="pb-2 text-sm font-medium">
+                {t("deployments.environmentVariables")}
+                <span className="text-destructive" aria-hidden="true">
+                  *
+                </span>
+              </span>
+              {detectedVarCount > 0 && (
+                <p className="mb-2 text-xs text-muted-foreground">
+                  {t("deployments.variablesAutoDetected", {
+                    count: detectedVarCount,
+                  })}
+                </p>
+              )}
+              <div className="space-y-2">
+                {envVars.map((envVar) => (
+                  <div key={envVar.id} className="grid grid-cols-2 gap-2">
+                    <Input
+                      placeholder={t("deployments.placeholderKey")}
+                      className="bg-muted"
+                      value={envVar.key}
+                      onChange={(e) =>
+                        onEnvVarChange(envVar.id, "key", e.target.value)
+                      }
+                    />
+                    <InputComponent
+                      nodeStyle
+                      password
+                      id={`env-val-${envVar.id}`}
+                      placeholder={t("deployments.placeholderValue")}
+                      value={envVar.value}
+                      options={globalVariableOptions}
+                      optionsPlaceholder={t("deployments.globalVariables")}
+                      optionsIcon="Globe"
+                      selectedOption={envVar.globalVar ? envVar.value : ""}
+                      setSelectedOption={(sel) =>
+                        onEnvVarSelectGlobalVar(envVar.id, sel)
+                      }
+                      onChange={(text) =>
+                        onEnvVarChange(envVar.id, "value", text)
+                      }
+                    />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={onAddEnvVar}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  {t("deployments.addVariable")}
+                </button>
               </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Footer buttons */}

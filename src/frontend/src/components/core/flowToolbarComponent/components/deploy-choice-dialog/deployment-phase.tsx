@@ -13,6 +13,7 @@ import type {
   ProviderAccount,
 } from "@/pages/MainPage/pages/deploymentsPage/types";
 import { getDeploymentDisplayName } from "@/pages/MainPage/pages/deploymentsPage/types";
+import { getDeploymentTypeLabel } from "./get-deployment-type-label";
 
 const NEW_DEPLOYMENT_VALUE = "__new__";
 
@@ -87,9 +88,7 @@ export default function DeploymentPhaseContent({
                 >
                   <span className="text-sm font-medium">{displayName}</span>
                   <span className="text-xs text-muted-foreground">
-                    {t("deployments.deploymentTypeLabel", {
-                      type: deployment.type,
-                    })}
+                    {getDeploymentTypeLabel(deployment.type, t)}
                   </span>
                 </Label>
               </div>

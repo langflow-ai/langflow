@@ -98,7 +98,7 @@ async function goToStepReview(page: Page) {
   await page.getByTestId("flow-item-f1").click();
   // Click version item
   await page.waitForSelector('[data-testid="version-item-fv1"]');
-  await page.getByTestId("version-item-fv1").click();
+  await page.getByTestId("version-item-fv1-select").click();
   // After clicking version, a connection panel may appear - skip it if present
   const skipBtn = page.getByRole("button", { name: /skip/i });
   const skipVisible = await skipBtn.isVisible().catch(() => false);
@@ -220,7 +220,7 @@ test(
 
     // Version panel should appear, click the version
     await page.waitForSelector('[data-testid="version-item-fv1"]');
-    await page.getByTestId("version-item-fv1").click();
+    await page.getByTestId("version-item-fv1-select").click();
 
     // Skip connection if prompted
     const skipBtn = page.getByRole("button", { name: /skip/i });

@@ -412,7 +412,7 @@ test(
     // Click the pre-attached flow and its version to open the connection panel
     await page.getByTestId("flow-item-f1").click();
     await page.waitForSelector('[data-testid="version-item-fv1"]');
-    await page.getByTestId("version-item-fv1").click();
+    await page.getByTestId("version-item-fv1-select").click();
 
     // Wait for connection panel to appear with available connections
     await page.waitForSelector('[data-testid="connection-item-existing-app"]');
@@ -505,7 +505,7 @@ test(
     await page.waitForSelector('[data-testid="flow-item-f1"]');
     await page.getByTestId("flow-item-f1").click();
     await page.waitForSelector('[data-testid="version-item-fv1"]');
-    await page.getByTestId("version-item-fv1").click();
+    await page.getByTestId("version-item-fv1-select").click();
 
     // Wait for connection panel
     await page.waitForSelector('[data-testid="connection-item-existing-app"]');

@@ -1,4 +1,3 @@
-import type React from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -8,6 +7,7 @@ import { decorateWxoUrl } from "@/utils/decorate-wxo-url";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
 import type { DeploymentProvider, ProviderAccount } from "../types";
+import { handleTabListKeyDown } from "../utils/tab-keyboard-navigation";
 import ProviderCredentialsForm from "./provider-credentials-form";
 import { RadioSelectItem } from "./radio-select-item";
 
@@ -33,21 +33,6 @@ function EnvironmentTabToggle({
 }) {
   const { t } = useTranslation();
 
-  const handleKeyDown = (
-    event: React.KeyboardEvent<HTMLButtonElement>,
-    index: number,
-  ) => {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-    event.preventDefault();
-    const nextIndex =
-      event.key === "ArrowRight"
-        ? (index + 1) % ENVIRONMENT_TABS.length
-        : (index - 1 + ENVIRONMENT_TABS.length) % ENVIRONMENT_TABS.length;
-    const nextTab = ENVIRONMENT_TABS[nextIndex];
-    onTabChange(nextTab);
-    document.getElementById(`environment-tab-${nextTab}`)?.focus();
-  };
-
   return (
     <div className="rounded-xl border border-border bg-muted p-1">
       <div
@@ -65,7 +50,15 @@ function EnvironmentTabToggle({
             aria-controls={`environment-panel-${tab}`}
             tabIndex={activeTab === tab ? 0 : -1}
             onClick={() => onTabChange(tab)}
-            onKeyDown={(event) => handleKeyDown(event, index)}
+            onKeyDown={(event) =>
+              handleTabListKeyDown(
+                event,
+                index,
+                ENVIRONMENT_TABS,
+                onTabChange,
+                "environment-tab",
+              )
+            }
             className={cn(
               "rounded-lg py-2 text-sm transition-colors",
               activeTab === tab
@@ -209,31 +202,30 @@ export default function StepProvider() {
             activeTab={environmentTab}
             onTabChange={setEnvironmentTab}
           />
-          {environmentTab === "existing" ? (
-            <div
-              id="environment-panel-existing"
-              role="tabpanel"
-              aria-labelledby="environment-tab-existing"
-            >
-              <EnvironmentList
-                environments={environments}
-                selectedEnvironment={selectedInstance}
-                onSelectEnvironment={setSelectedInstance}
-              />
-            </div>
-          ) : (
-            <div
-              id="environment-panel-new"
-              role="tabpanel"
-              aria-labelledby="environment-tab-new"
-            >
-              <ProviderCredentialsForm
-                credentials={credentials}
-                onCredentialsChange={setCredentials}
-                layout="two-column"
-              />
-            </div>
-          )}
+          <div
+            id="environment-panel-existing"
+            role="tabpanel"
+            aria-labelledby="environment-tab-existing"
+            hidden={environmentTab !== "existing"}
+          >
+            <EnvironmentList
+              environments={environments}
+              selectedEnvironment={selectedInstance}
+              onSelectEnvironment={setSelectedInstance}
+            />
+          </div>
+          <div
+            id="environment-panel-new"
+            role="tabpanel"
+            aria-labelledby="environment-tab-new"
+            hidden={environmentTab !== "new"}
+          >
+            <ProviderCredentialsForm
+              credentials={credentials}
+              onCredentialsChange={setCredentials}
+              layout="two-column"
+            />
+          </div>
         </div>
       ) : (
         <ProviderCredentialsForm
