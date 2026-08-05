@@ -169,6 +169,8 @@ class ResourceVisibilityScope:
     ``excluded_workspace_project_ids`` removes reserved projects from both
     explicit and logical workspace grants without affecting workspace-only
     resources in an explicit workspace.
+    ``excluded_global_project_ids`` removes reserved projects from a global
+    wildcard while preserving owner and concrete resource grants.
     """
 
     all_resources: bool = False
@@ -177,6 +179,7 @@ class ResourceVisibilityScope:
     project_ids: tuple[UUID, ...] = ()
     include_unassigned_workspace: bool = False
     excluded_workspace_project_ids: tuple[UUID, ...] = ()
+    excluded_global_project_ids: tuple[UUID, ...] = ()
 
     @property
     def has_cross_user_access(self) -> bool:

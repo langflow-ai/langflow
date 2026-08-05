@@ -259,7 +259,20 @@ def restrict_to_owned_or_visible_scope(
 ) -> StatementT:
     """Apply owner, concrete-ID, workspace, and project visibility before pagination."""
     if visibility.all_resources:
-        return stmt
+        if project_column is None or not visibility.excluded_global_project_ids:
+            return stmt
+        # Global role access can exclude reserved projects without enumerating
+        # every visible resource. Ownership and concrete grants remain additive,
+        # so users retain their own resources and directly shared resources in
+        # an otherwise excluded project. Folderless resources remain global.
+        global_clauses: list[ColumnElement[bool]] = [
+            owner_clause,
+            col(project_column).is_(None),
+            col(project_column).not_in(visibility.excluded_global_project_ids),
+        ]
+        if visibility.resource_ids:
+            global_clauses.append(col(id_column).in_(visibility.resource_ids))
+        return stmt.where(or_(*global_clauses))
 
     clauses: list[ColumnElement[bool]] = [owner_clause]
     if visibility.resource_ids:
@@ -332,10 +345,13 @@ def resource_visible_in_scope(
     project_id: UUID | None = None,
 ) -> bool:
     """Evaluate a compact visibility scope for an already-loaded resource."""
+    globally_visible = visibility.all_resources and (
+        project_id is None or project_id not in visibility.excluded_global_project_ids
+    )
     workspace_project_allowed = project_id is None or project_id not in visibility.excluded_workspace_project_ids
     unassigned_project_allowed = project_id is not None and project_id not in visibility.excluded_workspace_project_ids
     return bool(
-        visibility.all_resources
+        globally_visible
         or resource_id in visibility.resource_ids
         or (workspace_project_allowed and workspace_id is not None and workspace_id in visibility.workspace_ids)
         or (unassigned_project_allowed and workspace_id is None and visibility.include_unassigned_workspace)

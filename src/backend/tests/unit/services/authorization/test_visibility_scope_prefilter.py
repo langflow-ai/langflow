@@ -104,6 +104,72 @@ def test_global_scope_does_not_emit_an_unbounded_id_list():
     assert "flow.user_id =" not in sql
 
 
+async def test_global_scope_excludes_reserved_projects_but_keeps_owner_share_and_folderless(async_session):
+    owner_id = uuid4()
+    other_owner_id = uuid4()
+    ordinary_project_id = uuid4()
+    excluded_project_id = uuid4()
+    ordinary_flow = Flow(name="ordinary", user_id=other_owner_id, folder_id=ordinary_project_id)
+    excluded_flow = Flow(name="excluded", user_id=other_owner_id, folder_id=excluded_project_id)
+    owned_excluded_flow = Flow(name="owned excluded", user_id=owner_id, folder_id=excluded_project_id)
+    shared_excluded_flow = Flow(name="shared excluded", user_id=other_owner_id, folder_id=excluded_project_id)
+    folderless_flow = Flow(name="folderless", user_id=other_owner_id, folder_id=None)
+    async_session.add_all(
+        [
+            Folder(id=ordinary_project_id, name="Ordinary project"),
+            Folder(id=excluded_project_id, name="Reserved project"),
+            ordinary_flow,
+            excluded_flow,
+            owned_excluded_flow,
+            shared_excluded_flow,
+            folderless_flow,
+        ]
+    )
+    await async_session.commit()
+
+    scope = ResourceVisibilityScope(
+        all_resources=True,
+        resource_ids=(shared_excluded_flow.id,),
+        excluded_global_project_ids=(excluded_project_id,),
+    )
+    stmt = restrict_to_owned_or_visible_scope(
+        select(Flow),
+        id_column=Flow.id,
+        owner_clause=Flow.user_id == owner_id,
+        workspace_column=Flow.workspace_id,
+        project_column=Flow.folder_id,
+        visibility=scope,
+    )
+    rows = list((await async_session.exec(stmt)).all())
+
+    assert {row.id for row in rows} == {
+        ordinary_flow.id,
+        owned_excluded_flow.id,
+        shared_excluded_flow.id,
+        folderless_flow.id,
+    }
+    assert resource_visible_in_scope(
+        resource_id=ordinary_flow.id,
+        project_id=ordinary_project_id,
+        visibility=scope,
+    )
+    assert not resource_visible_in_scope(
+        resource_id=excluded_flow.id,
+        project_id=excluded_project_id,
+        visibility=scope,
+    )
+    assert resource_visible_in_scope(
+        resource_id=shared_excluded_flow.id,
+        project_id=excluded_project_id,
+        visibility=scope,
+    )
+    assert resource_visible_in_scope(
+        resource_id=folderless_flow.id,
+        project_id=None,
+        visibility=scope,
+    )
+
+
 def test_unassigned_workspace_scope_uses_a_compact_null_predicate():
     excluded_project_id = uuid4()
     scope = ResourceVisibilityScope(

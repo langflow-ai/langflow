@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import status
+from fastapi import BackgroundTasks, HTTPException, status
 from httpx import AsyncClient
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.deployment.model import Deployment
@@ -180,14 +180,14 @@ async def test_read_projects_qualifies_visible_same_named_projects_by_owner():
         "langflow.api.v1.projects.filter_visible_resources",
         new_callable=AsyncMock,
         side_effect=return_candidates,
-    ):
+    ) as filter_visible:
         result = await read_projects(
             session=session,
             current_user=SimpleNamespace(id=actor_id),
         )
 
     projects_by_id = {project.id: project for project in result}
-    assert set(projects_by_id) == {shared_project.id, ownerless_project.id, own_project.id}
+    assert set(projects_by_id) == {shared_project.id, internal_project.id, ownerless_project.id, own_project.id}
     assert (
         projects_by_id[shared_project.id].name,
         projects_by_id[shared_project.id].owner_username,
@@ -199,11 +199,18 @@ async def test_read_projects_qualifies_visible_same_named_projects_by_owner():
         projects_by_id[ownerless_project.id].is_owner,
     ) == ("Ownerless Project", None, False)
     assert (
+        projects_by_id[internal_project.id].name,
+        projects_by_id[internal_project.id].owner_username,
+        projects_by_id[internal_project.id].is_owner,
+    ) == (STARTER_FOLDER_NAME, "other-user", False)
+    assert (
         projects_by_id[own_project.id].name,
         projects_by_id[own_project.id].owner_username,
         projects_by_id[own_project.id].is_owner,
     ) == ("Starter Project", "current-user", True)
     assert session.exec.await_count == 2
+    domain_extractor = filter_visible.await_args.kwargs["domain_extractor"]
+    assert domain_extractor(shared_project) == f"project:{shared_project.id}"
 
 
 async def test_read_project(client: AsyncClient, logged_in_headers, basic_case):
@@ -261,6 +268,32 @@ async def test_update_project(client: AsyncClient, logged_in_headers, basic_case
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
 
 
+async def test_update_project_cannot_rename_system_starter(monkeypatch):
+    from langflow.api.v1 import projects as projects_module
+    from langflow.services.database.models.folder.model import FolderUpdate
+
+    project_id = uuid4()
+    system_starter = Folder(id=project_id, name=STARTER_FOLDER_NAME, user_id=None)
+    monkeypatch.setattr(
+        projects_module,
+        "authorized_or_owner_scoped",
+        AsyncMock(return_value=system_starter),
+    )
+    monkeypatch.setattr(projects_module, "ensure_project_permission", AsyncMock())
+
+    with pytest.raises(HTTPException) as exc_info:
+        await projects_module.update_project(
+            session=AsyncMock(),
+            project_id=project_id,
+            project=FolderUpdate(name="Renamed starter"),
+            current_user=SimpleNamespace(id=uuid4()),
+            background_tasks=BackgroundTasks(),
+        )
+
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert "cannot be renamed" in exc_info.value.detail
+
+
 async def test_update_project_rejects_unowned_parent_id(
     client: AsyncClient, logged_in_headers, basic_case, active_user
 ):
@@ -303,6 +336,29 @@ async def test_delete_project_then_404(client: AsyncClient, logged_in_headers, b
 
     get_resp = await client.get(f"api/v1/projects/{proj_id}", headers=logged_in_headers)
     assert get_resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_delete_project_cannot_delete_system_starter(monkeypatch):
+    from langflow.api.v1 import projects as projects_module
+
+    project_id = uuid4()
+    system_starter = Folder(id=project_id, name=STARTER_FOLDER_NAME, user_id=None)
+    monkeypatch.setattr(
+        projects_module,
+        "authorized_or_owner_scoped",
+        AsyncMock(return_value=system_starter),
+    )
+    monkeypatch.setattr(projects_module, "ensure_project_permission", AsyncMock())
+
+    with pytest.raises(HTTPException) as exc_info:
+        await projects_module.delete_project(
+            session=AsyncMock(),
+            project_id=project_id,
+            current_user=SimpleNamespace(id=uuid4()),
+        )
+
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert STARTER_FOLDER_NAME in exc_info.value.detail
 
 
 async def test_delete_project_recovers_from_concurrent_write_lock(

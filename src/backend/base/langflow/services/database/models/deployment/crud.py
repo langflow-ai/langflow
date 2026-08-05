@@ -397,11 +397,21 @@ async def _scope_to_owner_or_allowed(
             visible_ids=allowed_ids or (),
         )
 
+    from langflow.services.database.models.folder.model import Folder
+
+    # ``Deployment.workspace_id`` was introduced as denormalized plumbing and
+    # is absent on legacy rows (and on rows created through the current CRUD
+    # helper). Resolve the workspace from the authoritative project relation so
+    # Default-workspace access cannot absorb deployments whose project belongs
+    # to an explicit workspace.
+    project_workspace = (
+        select(Folder.workspace_id).where(Folder.id == Deployment.project_id).correlate(Deployment).scalar_subquery()
+    )
     return await apply_owned_or_visible_scope_prefilter(
         stmt,
         id_column=Deployment.id,
         owner_clause=Deployment.user_id == user_id,
-        workspace_column=Deployment.workspace_id,
+        workspace_expression=project_workspace,
         project_column=Deployment.project_id,
         visibility=visibility_scope,
     )

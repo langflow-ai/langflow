@@ -256,19 +256,21 @@ async def read_projects(
         else:
             stmt = select(Folder).where(or_(owned_clause, Folder.user_id == None))  # noqa: E711
         projects = (await session.exec(stmt)).all()
-        projects = [project for project in projects if project.name != STARTER_FOLDER_NAME]
+        projects = [
+            project for project in projects if not (project.name == STARTER_FOLDER_NAME and project.user_id is None)
+        ]
         # When no DB prefilter is available (OSS pass-through), drop projects the
         # user can't read in memory. ``domain_extractor`` groups requests by
-        # workspace so each batch is evaluated against the right policy tuple
-        # (projects are the resource itself, so the domain falls back to
-        # workspace or ``*``). When the prefilter is active the SQL union is
-        # already authoritative — skip the per-row enforce to avoid an N+1.
+        # concrete project so each batch is evaluated against the same policy
+        # tuple as the single-resource guard. When the prefilter is active the
+        # SQL union is already authoritative — skip the per-row enforce to
+        # avoid an N+1.
         if visibility_scope is None:
             projects = await filter_visible_resources(
                 current_user,
                 resource_type="project",
                 candidates=list(projects),
-                domain_extractor=lambda project: _resolve_authz_domain(project.workspace_id, None),
+                domain_extractor=lambda project: _resolve_authz_domain(project.workspace_id, project.id),
                 owner_extractor=lambda project: project.user_id,
                 act=ProjectAction.READ,
             )
@@ -509,6 +511,17 @@ async def update_project(
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Project not found") from exc
 
+    if (
+        project.name is not None
+        and project.name != existing_project.name
+        and existing_project.name == STARTER_FOLDER_NAME
+        and existing_project.user_id is None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"The system-managed '{STARTER_FOLDER_NAME}' project cannot be renamed.",
+        )
+
     # Flow rollup uses the project owner — a non-owner editing a shared
     # project must touch the owner's flows, not the actor's same-folder
     # flows (which would be empty for a non-owner anyway).
@@ -742,10 +755,12 @@ async def delete_project(
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Project not found") from exc
 
-    # Prevent deletion of the Langflow Assistant folder
-    if project.name == ASSISTANT_FOLDER_NAME:
-        msg = f"Cannot delete the '{ASSISTANT_FOLDER_NAME}' folder, that contains pre-built flows."
-        await logger.adebug("Cannot delete the '%s' folder, that contains pre-built flows.", ASSISTANT_FOLDER_NAME)
+    # Prevent deletion of projects managed by Langflow. The ownerless Starter
+    # Project is also a stable authorization boundary for bundled examples.
+    is_system_starter = project.name == STARTER_FOLDER_NAME and project.user_id is None
+    if project.name == ASSISTANT_FOLDER_NAME or is_system_starter:
+        msg = f"Cannot delete the '{project.name}' folder, which contains pre-built flows."
+        await logger.adebug("Cannot delete the '%s' folder, which contains pre-built flows.", project.name)
         raise HTTPException(
             status_code=403,
             detail=msg,

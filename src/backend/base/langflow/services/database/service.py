@@ -488,7 +488,7 @@ class DatabaseService(Service):
                 .join(models.Folder)
                 .where(
                     models.Flow.user_id == None,  # noqa: E711
-                    models.Folder.name != STARTER_FOLDER_NAME,
+                    sa.or_(models.Folder.name != STARTER_FOLDER_NAME, models.Folder.user_id.is_not(None)),
                 )
             )
             orphaned_flows = (await session.exec(stmt)).all()
