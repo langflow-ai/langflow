@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from lfx.services.catalog_policy import BaseCatalogPolicyService, CatalogPolicySnapshot
 
+from langflow.api.v1.policy_bundle_errors import policy_bundle_revision_conflict
 from langflow.api.v1.schemas.catalog_policy import CatalogPolicyBlockedSet, CatalogPolicyRead
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.authorization.audit import audit_decision
@@ -46,17 +47,6 @@ def _raise_if_externally_managed(service: BaseCatalogPolicyService) -> None:
                 "upgrade the plugin before changing database-backed policy"
             ),
         )
-
-
-def _revision_conflict(exc: PolicyBundleRevisionConflictError) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_409_CONFLICT,
-        detail={
-            "message": "Policy bundle revision conflict",
-            "expected_revision": exc.expected_revision,
-            "active_revision": exc.active_revision,
-        },
-    )
 
 
 async def _audit_update(
@@ -115,7 +105,7 @@ async def replace_component_policy(
             actor_user_id=admin.id,
         )
     except PolicyBundleRevisionConflictError as exc:
-        raise _revision_conflict(exc) from exc
+        raise policy_bundle_revision_conflict(exc) from exc
     await _audit_update(
         user_id=admin.id,
         resource_kind="component",
@@ -149,7 +139,7 @@ async def replace_template_policy(
             actor_user_id=admin.id,
         )
     except PolicyBundleRevisionConflictError as exc:
-        raise _revision_conflict(exc) from exc
+        raise policy_bundle_revision_conflict(exc) from exc
     await _audit_update(
         user_id=admin.id,
         resource_kind="template",

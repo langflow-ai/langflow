@@ -272,6 +272,9 @@ def _sync_legacy_policy(conn: sa.Connection) -> None:
         .one_or_none()
     )
     if active is None:
+        if conn.execute(sa.select(sa.literal(1)).select_from(revision_table).limit(1)).first() is not None:
+            msg = "Shared policy bundle has immutable revision history but no active singleton"
+            raise RuntimeError(msg)
         return
     active_revision = active["revision"]
     bundle = (
@@ -280,7 +283,8 @@ def _sync_legacy_policy(conn: sa.Connection) -> None:
         .one_or_none()
     )
     if bundle is None:
-        return
+        msg = "Active policy bundle points to a missing immutable revision"
+        raise RuntimeError(msg)
 
     provider_table = _legacy_provider_table()
     conn.execute(
@@ -328,8 +332,22 @@ def _sync_legacy_policy(conn: sa.Connection) -> None:
 def downgrade() -> None:
     """Copy the active bundle to legacy stores before removing new tables."""
     conn = op.get_bind()
-    if not migration.table_exists(REVISION_TABLE, conn) or not migration.table_exists(ACTIVE_TABLE, conn):
+    revision_exists = migration.table_exists(REVISION_TABLE, conn)
+    active_exists = migration.table_exists(ACTIVE_TABLE, conn)
+    if revision_exists != active_exists:
+        existing_table = _revision_table() if revision_exists else _active_table()
+        if conn.execute(sa.select(sa.literal(1)).select_from(existing_table).limit(1)).first() is not None:
+            msg = "Shared policy bundle schema is partially initialized with durable data"
+            raise RuntimeError(msg)
+        if active_exists:
+            op.drop_table(ACTIVE_TABLE)
+        if revision_exists:
+            op.drop_table(REVISION_TABLE)
         return
+
+    if not revision_exists:
+        return
+
     _sync_legacy_policy(conn)
     op.drop_table(ACTIVE_TABLE)
     op.drop_table(REVISION_TABLE)

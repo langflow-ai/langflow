@@ -275,6 +275,29 @@ def test_put_requires_explicit_whole_set_without_writing_or_auditing(monkeypatch
 
 
 @pytest.mark.parametrize("resource_kind", ["components", "templates"])
+@pytest.mark.parametrize(
+    "invalid_keys",
+    [
+        ["x" * 256],
+        [f"catalog-key-{index}" for index in range(1001)],
+    ],
+    ids=["key-too-long", "too-many-keys"],
+)
+def test_put_bounds_catalog_key_sets_without_writing_or_auditing(monkeypatch, resource_kind, invalid_keys):
+    client, service, _admin, audit = _client(monkeypatch)
+
+    response = client.put(
+        f"/api/v1/catalog-policy/{resource_kind}",
+        json={"blocked": invalid_keys},
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert service.component_calls == []
+    assert service.template_calls == []
+    audit.assert_not_awaited()
+
+
+@pytest.mark.parametrize("resource_kind", ["components", "templates"])
 def test_concurrent_legacy_put_returns_bundle_revision_conflict(monkeypatch, resource_kind):
     client, _service, _admin, audit = _client(monkeypatch, service=_ConflictingCatalogPolicy())
 

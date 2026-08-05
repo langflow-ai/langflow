@@ -516,6 +516,12 @@ class ServiceManager:
                     "refusing to start with the OSS allow-all fallback"
                 )
                 raise RuntimeError(msg)
+            if service_type == ServiceType.POLICY_BUNDLE_SERVICE:
+                msg = (
+                    "Configured policy bundle service could not be loaded; "
+                    "refusing to start with the built-in process-local fallback"
+                )
+                raise RuntimeError(msg)
             return
 
         if service_type == ServiceType.MODEL_PROVIDER_POLICY_SERVICE:

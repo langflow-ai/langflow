@@ -155,6 +155,7 @@ def test_external_provider_does_not_block_database_owned_catalog_bundle_refresh(
 
     assert policy_store.apply_model_provider_policy_state(state) is True
     assert bundle_service.snapshot is snapshot
+    assert catalog_service.is_component_blocked("PythonREPL") is True
     assert provider_service.approved_provider_ids == frozenset({"openai"})
 
 

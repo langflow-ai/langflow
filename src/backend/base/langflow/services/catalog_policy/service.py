@@ -18,6 +18,7 @@ from langflow.services.database.models.catalog_policy import (
     CatalogResourceKind,
 )
 from langflow.services.policy_bundle import (
+    PolicyBundleRevisionConflictError,
     apply_policy_bundle_state,
     get_policy_bundle_state,
     replace_policy_bundle_state,
@@ -30,6 +31,9 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.service import DatabaseService
+
+
+_CATALOG_POLICY_CAS_ATTEMPTS = 3
 
 
 def _normalize_keys(keys: Collection[str]) -> frozenset[str]:
@@ -57,6 +61,7 @@ class LangflowCatalogPolicyService(BaseCatalogPolicyService):
         self._policy_bundle_service = policy_bundle_service
         self._legacy_snapshot = CatalogPolicySnapshot()
         self._legacy_hydrated = False
+        self._projected_snapshot: tuple[PolicyBundleSnapshot, CatalogPolicySnapshot] | None = None
         self._write_lock = asyncio.Lock()
         # Direct service-class registration does not call set_ready(), unlike
         # factory creation. The fail-open snapshot is usable immediately.
@@ -73,10 +78,17 @@ class LangflowCatalogPolicyService(BaseCatalogPolicyService):
         if self._policy_bundle_service is None:
             return self._legacy_snapshot
         bundle = self._policy_bundle_service.snapshot
-        return CatalogPolicySnapshot(
-            blocked_component_keys=bundle.blocked_component_keys,
-            blocked_template_keys=bundle.blocked_template_keys,
-        )
+        projected = self._projected_snapshot
+        if projected is None or projected[0] is not bundle:
+            projected = (
+                bundle,
+                CatalogPolicySnapshot(
+                    blocked_component_keys=bundle.blocked_component_keys,
+                    blocked_template_keys=bundle.blocked_template_keys,
+                ),
+            )
+            self._projected_snapshot = projected
+        return projected[1]
 
     @property
     def policy_bundle_snapshot(self) -> PolicyBundleSnapshot:
@@ -165,25 +177,32 @@ class LangflowCatalogPolicyService(BaseCatalogPolicyService):
                     actor_user_id=actor_user_id,
                 )
 
-            async with session_scope() as session:
-                current = await get_policy_bundle_state(session)
-                if resource_kind == CatalogResourceKind.COMPONENT:
-                    current_keys = current.blocked_component_keys
-                    components = desired
-                    templates = current.blocked_template_keys
-                else:
-                    current_keys = current.blocked_template_keys
-                    components = current.blocked_component_keys
-                    templates = desired
-                committed = await replace_policy_bundle_state(
-                    session,
-                    expected_revision=current.revision,
-                    approved_provider_ids=current.approved_provider_ids,
-                    blocked_component_keys=components,
-                    blocked_template_keys=templates,
-                    actor_user_id=actor_user_id,
-                    reason=f"Replace blocked {resource_kind.value} catalog keys",
-                )
+            for attempt in range(_CATALOG_POLICY_CAS_ATTEMPTS):
+                async with session_scope() as session:
+                    current = await get_policy_bundle_state(session)
+                    if resource_kind == CatalogResourceKind.COMPONENT:
+                        current_keys = current.blocked_component_keys
+                        components = desired
+                        templates = current.blocked_template_keys
+                    else:
+                        current_keys = current.blocked_template_keys
+                        components = current.blocked_component_keys
+                        templates = desired
+                    try:
+                        committed = await replace_policy_bundle_state(
+                            session,
+                            expected_revision=current.revision,
+                            approved_provider_ids=current.approved_provider_ids,
+                            blocked_component_keys=components,
+                            blocked_template_keys=templates,
+                            actor_user_id=actor_user_id,
+                            reason=f"Replace blocked {resource_kind.value} catalog keys",
+                        )
+                    except PolicyBundleRevisionConflictError:
+                        if attempt == _CATALOG_POLICY_CAS_ATTEMPTS - 1:
+                            raise
+                        continue
+                    break
 
             apply_policy_bundle_state(committed)
             return CatalogPolicyUpdate(

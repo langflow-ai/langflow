@@ -10,6 +10,7 @@ from lfx.services.deps import get_model_provider_policy_service
 from pydantic import BaseModel, Field, StringConstraints, field_validator
 
 from langflow.api.utils import DbSession, DbSessionReadOnly
+from langflow.api.v1.policy_bundle_errors import policy_bundle_revision_conflict
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.authorization.audit import AUDIT_ALLOW, audit_decision
 from langflow.services.database.models.user.model import User
@@ -145,14 +146,7 @@ async def replace_model_provider_policy(
     except PolicyBundleApplicationNotSupportedError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except PolicyBundleRevisionConflictError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "message": "Policy bundle revision conflict",
-                "expected_revision": exc.expected_revision,
-                "active_revision": exc.active_revision,
-            },
-        ) from exc
+        raise policy_bundle_revision_conflict(exc) from exc
 
     try:
         await audit_decision(

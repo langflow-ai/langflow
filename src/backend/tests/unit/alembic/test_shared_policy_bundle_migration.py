@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
 import sqlalchemy as sa
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
@@ -58,6 +59,10 @@ def _reflect_bundle_tables(connection: sa.Connection) -> tuple[sa.Table, sa.Tabl
         sa.Table("policy_bundle_revision", metadata, autoload_with=connection),
         sa.Table("policy_bundle_active", metadata, autoload_with=connection),
     )
+
+
+def _reflect_revision_table(connection: sa.Connection) -> sa.Table:
+    return sa.Table("policy_bundle_revision", sa.MetaData(), autoload_with=connection)
 
 
 def test_migration_backfills_one_active_revision_idempotently_and_preserves_legacy_tables(monkeypatch):
@@ -242,3 +247,159 @@ def test_migration_repairs_an_empty_revision_table_left_by_interrupted_sqlite_dd
         active_row = connection.execute(sa.select(active)).mappings().one()
         assert active_row["revision"] == 1
         assert bool(active_row["initialized"]) is False
+
+
+def test_migration_refuses_a_partial_bundle_schema_with_durable_revision_history(monkeypatch):
+    migration = _load_migration()
+    engine = sa.create_engine("sqlite://")
+
+    with engine.begin() as connection:
+        provider_policy, _catalog_policy = _create_legacy_policy_tables(connection)
+        connection.execute(
+            provider_policy.insert(),
+            {"id": 1, "approved_provider_ids": [], "version": 0},
+        )
+        monkeypatch.setattr(migration, "op", Operations(MigrationContext.configure(connection)))
+
+        migration._create_revision_table()
+        history = _reflect_revision_table(connection)
+        connection.execute(
+            history.insert(),
+            {
+                "revision": 1,
+                "initialized": False,
+                "approved_provider_ids": [],
+                "blocked_component_keys": [],
+                "blocked_template_keys": [],
+                "content_hash": migration._canonical_hash([], [], []),
+                "source": "migration",
+            },
+        )
+
+        with pytest.raises(RuntimeError, match="partially initialized with durable data"):
+            migration.upgrade()
+
+        assert "policy_bundle_active" not in sa.inspect(connection).get_table_names()
+
+
+def test_migration_refuses_an_active_pointer_to_a_missing_revision(monkeypatch):
+    migration = _load_migration()
+    engine = sa.create_engine("sqlite://")
+
+    with engine.begin() as connection:
+        provider_policy, _catalog_policy = _create_legacy_policy_tables(connection)
+        connection.execute(
+            provider_policy.insert(),
+            {"id": 1, "approved_provider_ids": [], "version": 0},
+        )
+        monkeypatch.setattr(migration, "op", Operations(MigrationContext.configure(connection)))
+
+        migration._create_revision_table()
+        migration._create_active_table()
+        _history, active = _reflect_bundle_tables(connection)
+        connection.execute(active.insert(), {"id": 1, "revision": 99, "initialized": True})
+
+        with pytest.raises(RuntimeError, match="points to a missing immutable revision"):
+            migration.upgrade()
+
+
+def test_downgrade_refuses_revision_history_without_an_active_pointer(monkeypatch):
+    migration = _load_migration()
+    engine = sa.create_engine("sqlite://")
+
+    with engine.begin() as connection:
+        _create_legacy_policy_tables(connection)
+        monkeypatch.setattr(migration, "op", Operations(MigrationContext.configure(connection)))
+        migration._create_revision_table()
+        migration._create_active_table()
+        history, _active = _reflect_bundle_tables(connection)
+        connection.execute(
+            history.insert(),
+            {
+                "revision": 1,
+                "initialized": False,
+                "approved_provider_ids": [],
+                "blocked_component_keys": [],
+                "blocked_template_keys": [],
+                "content_hash": migration._canonical_hash([], [], []),
+                "source": "migration",
+            },
+        )
+
+        with pytest.raises(RuntimeError, match="immutable revision history but no active singleton"):
+            migration.downgrade()
+
+        assert {migration.REVISION_TABLE, migration.ACTIVE_TABLE} <= set(sa.inspect(connection).get_table_names())
+
+
+def test_downgrade_refuses_an_active_pointer_to_a_missing_revision(monkeypatch):
+    migration = _load_migration()
+    engine = sa.create_engine("sqlite://")
+
+    with engine.begin() as connection:
+        _create_legacy_policy_tables(connection)
+        monkeypatch.setattr(migration, "op", Operations(MigrationContext.configure(connection)))
+        migration._create_revision_table()
+        migration._create_active_table()
+        _history, active = _reflect_bundle_tables(connection)
+        connection.execute(active.insert(), {"id": 1, "revision": 99, "initialized": True})
+
+        with pytest.raises(RuntimeError, match="points to a missing immutable revision"):
+            migration.downgrade()
+
+        assert {migration.REVISION_TABLE, migration.ACTIVE_TABLE} <= set(sa.inspect(connection).get_table_names())
+
+
+@pytest.mark.parametrize("lone_table", ["revision", "active"])
+def test_downgrade_removes_an_empty_lone_bundle_table(monkeypatch, lone_table):
+    migration = _load_migration()
+    engine = sa.create_engine("sqlite://")
+
+    with engine.begin() as connection:
+        monkeypatch.setattr(migration, "op", Operations(MigrationContext.configure(connection)))
+        if lone_table == "revision":
+            migration._create_revision_table()
+            table_name = migration.REVISION_TABLE
+        else:
+            migration._create_active_table()
+            table_name = migration.ACTIVE_TABLE
+
+        migration.downgrade()
+
+        assert table_name not in sa.inspect(connection).get_table_names()
+
+
+@pytest.mark.parametrize("lone_table", ["revision", "active"])
+def test_downgrade_refuses_to_discard_a_populated_lone_bundle_table(monkeypatch, lone_table):
+    migration = _load_migration()
+    engine = sa.create_engine("sqlite://")
+
+    with engine.begin() as connection:
+        monkeypatch.setattr(migration, "op", Operations(MigrationContext.configure(connection)))
+        if lone_table == "revision":
+            migration._create_revision_table()
+            history = _reflect_revision_table(connection)
+            connection.execute(
+                history.insert(),
+                {
+                    "revision": 1,
+                    "initialized": False,
+                    "approved_provider_ids": [],
+                    "blocked_component_keys": [],
+                    "blocked_template_keys": [],
+                    "content_hash": migration._canonical_hash([], [], []),
+                    "source": "migration",
+                },
+            )
+            table_name = migration.REVISION_TABLE
+        else:
+            migration._create_active_table()
+            metadata = sa.MetaData()
+            active = sa.Table(migration.ACTIVE_TABLE, metadata, autoload_with=connection)
+            connection.execute(active.insert(), {"id": 1, "revision": 1, "initialized": False})
+            table_name = migration.ACTIVE_TABLE
+
+        with pytest.raises(RuntimeError, match="partially initialized with durable data"):
+            migration.downgrade()
+
+        assert table_name in sa.inspect(connection).get_table_names()

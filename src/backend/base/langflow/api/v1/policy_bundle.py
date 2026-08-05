@@ -13,6 +13,8 @@ from lfx.services.policy_bundle import PolicyBundleSnapshot
 from pydantic import BaseModel, Field, StringConstraints, field_validator
 
 from langflow.api.utils import DbSession, DbSessionReadOnly
+from langflow.api.v1.policy_bundle_errors import policy_bundle_revision_conflict
+from langflow.api.v1.schemas.catalog_policy import CatalogPolicyKeyList, normalize_catalog_policy_keys
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.authorization.audit import AUDIT_ALLOW, audit_decision
 from langflow.services.database.models.policy_bundle import POLICY_BUNDLE_REASON_MAX_LENGTH
@@ -34,24 +36,13 @@ router = APIRouter(prefix="/policy-bundle", tags=["Policy Bundle"])
 ProviderId = Annotated[str, StringConstraints(pattern=r"^[a-z0-9][a-z0-9._-]*$", max_length=255)]
 
 
-def _normalize_keys(values: list[str]) -> list[str]:
-    normalized: set[str] = set()
-    for raw_value in values:
-        value = raw_value.strip()
-        if not value:
-            msg = "Policy bundle catalog keys must not be empty"
-            raise ValueError(msg)
-        normalized.add(value)
-    return sorted(normalized)
-
-
 class PolicyBundleWrite(BaseModel):
     """Complete replacement guarded by the caller's observed revision."""
 
     expected_revision: int = Field(ge=1)
     approved_provider_ids: Annotated[list[ProviderId], Field(max_length=1000)]
-    blocked_component_keys: list[str]
-    blocked_template_keys: list[str]
+    blocked_component_keys: CatalogPolicyKeyList
+    blocked_template_keys: CatalogPolicyKeyList
     reason: str | None = Field(default=None, max_length=POLICY_BUNDLE_REASON_MAX_LENGTH)
 
     @field_validator("approved_provider_ids", mode="before")
@@ -72,7 +63,7 @@ class PolicyBundleWrite(BaseModel):
     @field_validator("blocked_component_keys", "blocked_template_keys")
     @classmethod
     def normalize_catalog_keys(cls, values: list[str]) -> list[str]:
-        return _normalize_keys(values)
+        return normalize_catalog_policy_keys(values)
 
 
 class PolicyBundleRollbackWrite(BaseModel):
@@ -128,17 +119,6 @@ def _unavailable() -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         detail="Policy bundle is not initialized. Apply the latest database migrations and restart Langflow.",
-    )
-
-
-def _conflict(exc: PolicyBundleRevisionConflictError) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_409_CONFLICT,
-        detail={
-            "message": "Policy bundle revision conflict",
-            "expected_revision": exc.expected_revision,
-            "active_revision": exc.active_revision,
-        },
     )
 
 
@@ -204,7 +184,7 @@ async def replace_policy_bundle(
     except PolicyBundleNotInitializedError as exc:
         raise _unavailable() from exc
     except PolicyBundleRevisionConflictError as exc:
-        raise _conflict(exc) from exc
+        raise policy_bundle_revision_conflict(exc) from exc
 
     try:
         await _audit_bundle(snapshot, user_id=admin.id, action="policy_bundle:replace")
@@ -251,7 +231,7 @@ async def rollback_policy_bundle(
     except PolicyBundleNotInitializedError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except PolicyBundleRevisionConflictError as exc:
-        raise _conflict(exc) from exc
+        raise policy_bundle_revision_conflict(exc) from exc
 
     try:
         await _audit_bundle(snapshot, user_id=admin.id, action="policy_bundle:rollback")

@@ -270,6 +270,33 @@ def test_put_requires_expected_revision_and_all_three_lists(monkeypatch, payload
     apply_state.assert_not_called()
 
 
+@pytest.mark.parametrize("field_name", ["blocked_component_keys", "blocked_template_keys"])
+@pytest.mark.parametrize(
+    "invalid_keys",
+    [
+        ["x" * 256],
+        [f"catalog-key-{index}" for index in range(1001)],
+    ],
+    ids=["key-too-long", "too-many-keys"],
+)
+def test_put_bounds_each_catalog_key_set_without_writing(monkeypatch, field_name, invalid_keys):
+    client, _admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    payload = {
+        "expected_revision": 1,
+        "approved_provider_ids": [],
+        "blocked_component_keys": [],
+        "blocked_template_keys": [],
+    }
+    payload[field_name] = invalid_keys
+
+    response = client.put("/api/v1/policy-bundle", json=payload)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    replace_state.assert_not_awaited()
+    policy_api.audit_decision.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
 def test_history_is_newest_first_and_forwards_pagination(monkeypatch):
     client, admin, read_state, replace_state, list_history, rollback_state, apply_state = _client(monkeypatch)
     list_history.return_value = [
@@ -318,6 +345,34 @@ def test_rollback_endpoint_creates_and_publishes_a_new_revision(monkeypatch):
         reason="incident rollback",
     )
     apply_state.assert_called_once_with(rolled_back)
+    read_state.assert_not_awaited()
+    replace_state.assert_not_awaited()
+    list_history.assert_not_awaited()
+
+
+def test_rollback_maps_stale_revision_to_conflict_without_audit_or_publication(monkeypatch):
+    client, _admin, read_state, replace_state, list_history, rollback_state, apply_state = _client(monkeypatch)
+    rollback_state.side_effect = PolicyBundleRevisionConflictError(
+        expected_revision=8,
+        active_revision=9,
+    )
+
+    response = client.post(
+        "/api/v1/policy-bundle/rollback/3",
+        json={"expected_revision": 8, "reason": "incident rollback"},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json() == {
+        "detail": {
+            "message": "Policy bundle revision conflict",
+            "expected_revision": 8,
+            "active_revision": 9,
+        }
+    }
+    rollback_state.assert_awaited_once()
+    policy_api.audit_decision.assert_not_awaited()
+    apply_state.assert_not_called()
     read_state.assert_not_awaited()
     replace_state.assert_not_awaited()
     list_history.assert_not_awaited()
