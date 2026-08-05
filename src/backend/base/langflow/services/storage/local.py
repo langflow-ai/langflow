@@ -40,6 +40,48 @@ class LocalStorageService(StorageService):
         super().__init__(session_service, settings_service)
         # Base class already sets self.data_dir as anyio.Path from settings_service.settings.config_dir
 
+    async def _validated_flow_dir(self, flow_id: str) -> anyio.Path:
+        """Return a flow directory inside ``data_dir`` or raise if traversal is attempted."""
+        if (
+            not isinstance(flow_id, str)
+            or not flow_id
+            or "/" in flow_id
+            or "\\" in flow_id
+            or ".." in flow_id
+            or "\x00" in flow_id
+        ):
+            await logger.aerror("Invalid flow_id contains path separators or traversal sequences")
+            msg = "Invalid flow_id: contains path separators"
+            raise ValueError(msg)
+
+        folder_path = self.data_dir / flow_id
+
+        try:
+            resolved_data_dir = await self.data_dir.resolve()
+            resolved_folder = await folder_path.resolve()
+            if not resolved_folder.is_relative_to(resolved_data_dir):
+                await logger.aerror(
+                    f"Path traversal attempt detected for flow_id='{flow_id}'. "
+                    "Flow directory would escape data directory boundary."
+                )
+                msg = "Invalid flow_id: path traversal detected"
+                raise ValueError(msg)
+        except ValueError:
+            raise
+        except AttributeError:
+            resolved_data_dir_str = str(await self.data_dir.resolve())
+            resolved_folder_str = str(await folder_path.resolve())
+            if not resolved_folder_str.startswith(resolved_data_dir_str):
+                await logger.aerror(f"Path traversal attempt detected for flow_id='{flow_id}' (fallback check)")
+                msg = "Invalid flow_id: path traversal detected"
+                raise ValueError(msg) from None
+        except Exception as e:
+            await logger.aerror(f"Error validating flow directory for flow_id='{flow_id}': {type(e).__name__}")
+            msg = "Invalid flow_id"
+            raise ValueError(msg) from e
+
+        return folder_path
+
     async def _validated_path(self, flow_id: str, file_name: str) -> anyio.Path:
         """Return a path inside the flow directory or raise if traversal is attempted.
 
@@ -56,19 +98,7 @@ class LocalStorageService(StorageService):
             msg = "Invalid file name: contains path separators"
             raise ValueError(msg)
 
-        if (
-            not isinstance(flow_id, str)
-            or not flow_id
-            or "/" in flow_id
-            or "\\" in flow_id
-            or ".." in flow_id
-            or "\x00" in flow_id
-        ):
-            await logger.aerror("Invalid flow_id contains path separators or traversal sequences")
-            msg = "Invalid flow_id: contains path separators"
-            raise ValueError(msg)
-
-        folder_path = self.data_dir / flow_id
+        folder_path = await self._validated_flow_dir(flow_id)
         file_path = folder_path / file_name
 
         try:
@@ -244,7 +274,7 @@ class LocalStorageService(StorageService):
         if not isinstance(flow_id, str):
             flow_id = str(flow_id)
 
-        folder_path = self.data_dir / flow_id
+        folder_path = await self._validated_flow_dir(flow_id)
         if not await folder_path.exists() or not await folder_path.is_dir():
             await logger.awarning(f"Flow {flow_id} directory does not exist.")
             return []

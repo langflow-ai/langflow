@@ -398,11 +398,32 @@ class TestLocalStorageServicePathTraversal:
         with pytest.raises(ValueError, match="Invalid"):
             await local_storage_service.get_file(malicious_flow_id, "passwd")
 
+    @pytest.mark.parametrize(
+        "malicious_flow_id",
+        [
+            "/etc",
+            "..",
+            "../other",
+            "..\\other",
+            "flow/sub",
+            "flow\\sub",
+            "with\x00null",
+            "",
+        ],
+    )
+    async def test_list_files_rejects_malicious_flow_id(self, local_storage_service, malicious_flow_id):
+        with pytest.raises(ValueError, match="Invalid"):
+            await local_storage_service.list_files(malicious_flow_id)
+
     async def test_get_file_rejects_absolute_flow_id_collapse(self, local_storage_service):
         # Direct regression for the public-build arbitrary-file-read: ensure the
         # /etc/<file> shape is rejected even when the file would exist on disk.
         with pytest.raises(ValueError, match="Invalid"):
             await local_storage_service.get_file("/etc", "hosts")
+
+    async def test_list_files_rejects_absolute_flow_id_collapse(self, local_storage_service):
+        with pytest.raises(ValueError, match="Invalid"):
+            await local_storage_service.list_files("/etc")
 
 
 @pytest.mark.asyncio
