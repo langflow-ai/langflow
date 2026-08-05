@@ -245,9 +245,7 @@ async def _check_key_from_db_with_context(
             api_key_obj.total_uses += 1
             api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
-            # Commit rather than flush: FastAPI holds this request's session open until the
-            # response ends, so a flush would hold SQLite's single write lock for that long.
-            await session.commit()
+            await session.flush()
         return ApiKeyAuthResult(user=user, api_key_source="db", api_key_id=api_key_obj.id)  # pragma: allowlist secret
 
     if len(matches) > 1:
@@ -293,7 +291,7 @@ async def _check_key_from_db_with_context(
                 api_key_obj.total_uses += 1
                 api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
-            await session.commit()
+            await session.flush()
             return ApiKeyAuthResult(
                 user=user,
                 api_key_source="db",  # pragma: allowlist secret
