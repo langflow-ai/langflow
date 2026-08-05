@@ -122,7 +122,13 @@ export default function LoginPage(): JSX.Element {
               <CustomLoginBrandTitle />
             </h1>
           </div>
-          <section className="w-full rounded-xl border border-border bg-card p-8 shadow-2xl shadow-black/10 dark:shadow-black/40 sm:p-10">
+          <section
+            aria-labelledby="login-form-title"
+            className="w-full rounded-xl border border-border bg-card p-8 shadow-2xl shadow-black/10 dark:shadow-black/40 sm:p-10"
+          >
+            <h2 id="login-form-title" className="sr-only">
+              {t("auth.loginTitle")}
+            </h2>
             <div className="flex flex-col gap-5">
               <CustomLoginFormGate>
                 <Form.Field name="username" className="pb-3">

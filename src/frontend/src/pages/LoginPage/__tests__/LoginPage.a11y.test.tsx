@@ -137,6 +137,14 @@ describe("LoginPage accessibility", () => {
     ).toBeInTheDocument();
   });
 
+  it("names_the_login_form_region", () => {
+    renderLoginPage();
+
+    expect(
+      screen.getByRole("region", { name: /sign in to langflow/i }),
+    ).toBeInTheDocument();
+  });
+
   it("adds_actionable_suggestion_to_server_login_errors", () => {
     mockLoginMutate.mockImplementation((_user, options) => {
       options.onError({

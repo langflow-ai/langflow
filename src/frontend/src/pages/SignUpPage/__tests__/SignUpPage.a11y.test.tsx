@@ -102,6 +102,16 @@ describe("SignUpPage accessibility", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders_sign_in_navigation_as_one_link", () => {
+    renderSignUpPage();
+
+    const signInLink = screen.getByRole("link", {
+      name: /already have an account.*sign in/i,
+    });
+    expect(signInLink).toHaveAttribute("href", "/login");
+    expect(signInLink.querySelector("button")).not.toBeInTheDocument();
+  });
+
   it("announces_actionable_password_mismatch_suggestion_after_confirm_blur", () => {
     const { container } = renderSignUpPage();
 

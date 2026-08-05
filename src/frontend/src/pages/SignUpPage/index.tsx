@@ -309,23 +309,23 @@ export default function SignUp(): JSX.Element {
                 </Button>
               </Form.Submit>
 
-              <CustomLink className="block w-full" to="/login">
-                <ShadTooltip
-                  content={`${t("auth.haveAccount")} ${t("auth.signInLink")}`}
-                  styleClasses="z-50"
+              <ShadTooltip
+                content={`${t("auth.haveAccount")} ${t("auth.signInLink")}`}
+                styleClasses="z-50"
+              >
+                <Button
+                  asChild
+                  className="h-11 w-full overflow-hidden rounded-lg"
+                  variant="outline"
                 >
-                  <Button
-                    className="h-11 w-full overflow-hidden rounded-lg"
-                    variant="outline"
-                    type="button"
-                  >
+                  <CustomLink to="/login">
                     <span className="truncate">
                       {t("auth.haveAccount")}&nbsp;
                       <b>{t("auth.signInLink")}</b>
                     </span>
-                  </Button>
-                </ShadTooltip>
-              </CustomLink>
+                  </CustomLink>
+                </Button>
+              </ShadTooltip>
             </div>
           </section>
         </div>
