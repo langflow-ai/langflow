@@ -396,7 +396,8 @@ async def test_sync_run_survives_result_persist_db_error(client, created_api_key
     from sqlalchemy.exc import OperationalError
 
     async def _raise_locked(self, *args, **kwargs):  # noqa: ARG001
-        raise OperationalError("UPDATE jobs SET result=?", {}, Exception("database is locked"))
+        statement = "UPDATE jobs SET result=?"
+        raise OperationalError(statement, {}, Exception("database is locked"))
 
     monkeypatch.setattr(JobService, "set_result", _raise_locked)
 
