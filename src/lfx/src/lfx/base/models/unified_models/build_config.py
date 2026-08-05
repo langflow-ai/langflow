@@ -525,18 +525,26 @@ def handle_model_input_update(
         model_field_name=model_field_name,
     )
     selected_provider_after_refresh = _selected_provider()
-    # Only an actual provider replacement should clear mapped credentials. On
-    # first selection (None -> provider), the refreshed catalog may choose a
-    # default while the user is editing a provider field such as ``api_key``;
-    # treating that as a switch would erase the value they just submitted.
-    provider_changed_during_refresh = (
-        selected_provider_before_refresh is not None
-        and selected_provider_before_refresh != selected_provider_after_refresh
+    provider_changed_during_refresh = selected_provider_before_refresh != selected_provider_after_refresh
+    provider_auto_selected_during_refresh = (
+        selected_provider_before_refresh is None and selected_provider_after_refresh is not None
     )
 
     # When the user directly edits a provider-specific field (e.g. api_key),
     # skip the provider reset/re-population so their value is preserved.
     provider_mapped_fields = _get_all_provider_mapped_fields()
+    edited_provider_field_state: tuple[str, dict[str, Any]] | None = None
+    if (
+        provider_auto_selected_during_refresh
+        and field_name is not None
+        and field_name in provider_mapped_fields
+        and field_name in build_config
+    ):
+        field_config = build_config[field_name]
+        edited_provider_field_state = (
+            field_name,
+            {key: field_config[key] for key in ("value", "load_from_db") if key in field_config},
+        )
     if field_name in provider_mapped_fields and not provider_changed_during_refresh:
         return build_config
 
@@ -603,6 +611,15 @@ def handle_model_input_update(
                 build_config["truncate_input_tokens"]["show"] = is_watsonx
             if "input_text" in build_config:
                 build_config["input_text"]["show"] = is_watsonx
+
+    # A cache refresh can auto-select a default provider while processing the
+    # provider field the user just edited. Restore that field only when the
+    # selected provider actually uses it; unrelated fields stay cleared.
+    if edited_provider_field_state is not None:
+        edited_field_name, edited_field_state = edited_provider_field_state
+        edited_field_config = build_config[edited_field_name]
+        if edited_field_config.get("show", False):
+            edited_field_config.update(edited_field_state)
 
     # Hide and clear the API key field when the selected provider doesn't use one
     # (e.g. Ollama). ``apply_provider_variable_config_to_build_config`` already
