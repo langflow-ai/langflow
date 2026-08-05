@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 from uuid import uuid4
 
 import sqlalchemy as sa
-from pydantic import BaseModel, ConfigDict, SecretStr, TypeAdapter, field_validator, model_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, SecretStr, TypeAdapter, field_validator, model_validator
 from pydantic import Field as PydanticField
 from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index
 from sqlalchemy.orm import validates
@@ -27,6 +27,12 @@ from langflow.schema.serialize import UUIDstr
 from langflow.services.database.models.auth.sso_secret import is_sso_client_secret_envelope
 
 _SSO_SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+_INVALID_PERCENT_ESCAPE_PATTERN = re.compile(r"%(?![0-9A-Fa-f]{2})")
+_HTTP_URL_ADAPTER = TypeAdapter(AnyHttpUrl)
+_SSO_SECRET_ENVELOPE_HEADER = "lf-sso:v1:hkdf-sha256-v1:aes-256-gcm:"  # noqa: S105  # pragma: allowlist secret
+_SSO_SECRET_NONCE_LENGTH = 16
+_SSO_SECRET_MIN_CIPHERTEXT_LENGTH = 22
+_VALIDATED_UPDATE_FLAG = "_sso_validated_update_in_progress"
 _OIDC_REMOTE_URL_FIELDS = (
     "discovery_url",
     "token_endpoint",
@@ -81,9 +87,24 @@ class OIDCProviderSettings(BaseModel):
         if not value:
             msg = f"OIDC {info.field_name} must not be blank"
             raise ValueError(msg)
+        is_http_url = False
         try:
             parsed = urlsplit(value)
-            is_http_url = parsed.scheme.lower() in {"http", "https"} and parsed.hostname is not None
+            # urlsplit alone accepts malformed hosts and ports. Pydantic's URL
+            # parser closes those gaps, while the pre-checks preserve the
+            # original URL structure and reject invalid percent escapes rather
+            # than normalizing them into a different URL.
+            is_http_url = (
+                parsed.scheme.lower() in {"http", "https"}
+                and bool(parsed.netloc)
+                and parsed.hostname is not None
+                and not any(character.isspace() for character in value)
+                and _INVALID_PERCENT_ESCAPE_PATTERN.search(value) is None
+                and "%" not in parsed.hostname
+            )
+            if is_http_url:
+                _ = parsed.port
+                _HTTP_URL_ADAPTER.validate_python(value)
         except ValueError:
             is_http_url = False
         if not is_http_url:
@@ -92,9 +113,33 @@ class OIDCProviderSettings(BaseModel):
         return value
 
 
+class LegacyProviderSettings(BaseModel):
+    """Read-compatible settings for disabled legacy SAML and LDAP rows.
+
+    Langflow does not currently execute these protocols through this typed
+    contract. Keeping their migrated values loadable avoids making an upgrade
+    destructive; enabled legacy rows still fail closed below.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    protocol: Literal["saml", "ldap"]
+    discovery_url: str | None = None
+    redirect_uri: str | None = None
+    scopes: str | None = None
+    token_endpoint: str | None = None
+    authorization_endpoint: str | None = None
+    jwks_uri: str | None = None
+    issuer: str | None = None
+    client_id: str | None = None
+
+
 # Add future protocol variants to this discriminated union. The database schema
 # remains unchanged because every variant is stored in the same JSON column.
-SSOProviderSettings: TypeAlias = Annotated[OIDCProviderSettings, PydanticField(discriminator="protocol")]
+SSOProviderSettings: TypeAlias = Annotated[
+    OIDCProviderSettings | LegacyProviderSettings,
+    PydanticField(discriminator="protocol"),
+]
 _PROVIDER_SETTINGS_ADAPTER = TypeAdapter(SSOProviderSettings)
 
 
@@ -114,6 +159,10 @@ def _validate_enabled_config(
 ) -> None:
     if not enabled:
         return
+
+    if provider_settings.protocol != "oidc":
+        msg = "Only OIDC configurations can be enabled"
+        raise ValueError(msg)
 
     if not provider_settings.client_id:
         msg = "Enabled OIDC configurations require a client_id"
@@ -179,8 +228,10 @@ class _SSOClientSecretEnvelope(sa.TypeDecorator):
 class SSOUserProfile(SQLModel, table=True):  # type: ignore[call-arg]
     """SSO profile per user.
 
-    ``sso_provider`` stores the immutable ``SSOConfig.slug`` as a documented-soft
-    reference; no database foreign key is intentionally enforced.
+    During the expand phase, ``sso_provider`` can contain a legacy provider name,
+    an OSS ``EXTERNAL_AUTH_PROVIDER`` key, or the immutable ``SSOConfig.slug``.
+    SSO plugins must dual-read names and slugs until a later contract migration;
+    no database foreign key is intentionally enforced.
     """
 
     __tablename__ = "sso_user_profile"
@@ -199,7 +250,7 @@ class SSOUserProfile(SQLModel, table=True):  # type: ignore[call-arg]
             index=True,
         )
     )
-    sso_provider: str = Field(description="Immutable SSOConfig.slug connection identifier")
+    sso_provider: str = Field(description="SSO connection slug or expand-phase legacy provider key")
     sso_user_id: str = Field()
     email: str | None = Field(default=None, index=True)
     sso_last_login_at: datetime | None = Field(default=None)
@@ -325,7 +376,7 @@ class SSOConfig(SQLModel, table=True):  # type: ignore[call-arg]
     def validate_protocol(self, _key: str, value: str) -> str:
         """Keep protocol aligned with provider_settings on attribute assignment."""
         # Use __dict__ so we do not assume the counterpart is loaded yet (e.g. DB hydrate).
-        if "provider_settings" in self.__dict__:
+        if not self.__dict__.get(_VALIDATED_UPDATE_FLAG) and "provider_settings" in self.__dict__:
             _validate_provider_settings(value, self.__dict__["provider_settings"])
         return value
 
@@ -336,7 +387,7 @@ class SSOConfig(SQLModel, table=True):  # type: ignore[call-arg]
         value: SSOProviderSettings | dict[str, Any],
     ) -> SSOProviderSettings:
         """Keep provider_settings aligned with protocol on attribute assignment."""
-        if "protocol" in self.__dict__:
+        if not self.__dict__.get(_VALIDATED_UPDATE_FLAG) and "protocol" in self.__dict__:
             return _validate_provider_settings(self.__dict__["protocol"], value)
         return _PROVIDER_SETTINGS_ADAPTER.validate_python(value)
 
@@ -348,6 +399,18 @@ class SSOConfig(SQLModel, table=True):  # type: ignore[call-arg]
             raise ValueError(msg)
         return value
 
+    @validates("enabled")
+    def validate_enabled_assignment(self, _key: str, value: bool) -> bool:  # noqa: FBT001
+        """Fail closed when an existing configuration is enabled by assignment."""
+        provider_settings = self.__dict__.get("provider_settings")
+        if value and provider_settings is not None and not self.__dict__.get(_VALIDATED_UPDATE_FLAG):
+            _validate_enabled_config(
+                provider_settings,
+                enabled=True,
+                has_client_secret=self.__dict__.get("client_secret_encrypted") is not None,
+            )
+        return value
+
 
 def _nonblank_json_string(json_column: sa.Column[Any], key: str) -> sa.ColumnElement[bool]:
     value = json_column[key].as_string()
@@ -357,7 +420,36 @@ def _nonblank_json_string(json_column: sa.Column[Any], key: str) -> sa.ColumnEle
 def _http_json_url_or_null(json_column: sa.Column[Any], key: str) -> sa.ColumnElement[bool]:
     value = json_column[key].as_string()
     normalized = sa.func.lower(value)
-    return sa.or_(value.is_(None), normalized.like("http://%"), normalized.like("https://%"))
+    no_whitespace = sa.and_(
+        *(sa.func.length(value) == sa.func.length(sa.func.replace(value, character, "")) for character in " \t\r\n")
+    )
+    http_url = sa.and_(
+        normalized.like("http://%"),
+        sa.func.length(value) > len("http://"),
+        sa.func.substr(value, len("http://") + 1, 1).not_in(("/", "\\", "?", "#", ":")),
+        no_whitespace,
+    )
+    https_url = sa.and_(
+        normalized.like("https://%"),
+        sa.func.length(value) > len("https://"),
+        sa.func.substr(value, len("https://") + 1, 1).not_in(("/", "\\", "?", "#", ":")),
+        no_whitespace,
+    )
+    return sa.or_(value.is_(None), http_url, https_url)
+
+
+def _client_secret_envelope_or_null(value: sa.Column[Any]) -> sa.ColumnElement[bool]:
+    string_value = sa.type_coerce(value, sa.String())
+    separator_position = len(_SSO_SECRET_ENVELOPE_HEADER) + _SSO_SECRET_NONCE_LENGTH + 1
+    minimum_length = separator_position + _SSO_SECRET_MIN_CIPHERTEXT_LENGTH
+    return sa.or_(
+        value.is_(None),
+        sa.and_(
+            sa.func.substr(string_value, 1, len(_SSO_SECRET_ENVELOPE_HEADER)) == _SSO_SECRET_ENVELOPE_HEADER,
+            sa.func.substr(string_value, separator_position, 1) == ":",
+            sa.func.length(string_value) >= minimum_length,
+        ),
+    )
 
 
 def _install_sso_config_database_invariants() -> None:
@@ -372,7 +464,7 @@ def _install_sso_config_database_invariants() -> None:
     table.append_constraint(
         CheckConstraint(
             sa.and_(
-                protocol == "oidc",
+                protocol.in_(("oidc", "saml", "ldap")),
                 provider_settings["protocol"].as_string().is_not(None),
                 provider_settings["protocol"].as_string() == protocol,
             ),
@@ -383,7 +475,9 @@ def _install_sso_config_database_invariants() -> None:
         CheckConstraint(
             sa.or_(
                 enabled.is_(False),
+                protocol.in_(("saml", "ldap")),
                 sa.and_(
+                    protocol == "oidc",
                     table.c.client_secret_encrypted.is_not(None),
                     _nonblank_json_string(provider_settings, "client_id"),
                     sa.or_(
@@ -400,13 +494,19 @@ def _install_sso_config_database_invariants() -> None:
             name=conv("ck_sso_config_enabled_complete"),
         )
     )
+    table.append_constraint(
+        CheckConstraint(
+            _client_secret_envelope_or_null(table.c.client_secret_encrypted),
+            name=conv("ck_sso_config_client_secret_envelope"),
+        )
+    )
 
     sqlite_trigger = sa.DDL(
         """
         CREATE TRIGGER trg_sso_config_slug_immutable
         BEFORE UPDATE OF slug ON sso_config
         FOR EACH ROW
-        WHEN NEW.slug IS NOT OLD.slug
+        WHEN OLD.slug IS NOT NULL AND NEW.slug IS NOT OLD.slug
         BEGIN
             SELECT RAISE(ABORT, 'SSOConfig.slug is immutable after insert');
         END
@@ -417,7 +517,7 @@ def _install_sso_config_database_invariants() -> None:
         CREATE OR REPLACE FUNCTION prevent_sso_config_slug_update()
         RETURNS trigger AS $$
         BEGIN
-            IF NEW.slug IS DISTINCT FROM OLD.slug THEN
+            IF OLD.slug IS NOT NULL AND NEW.slug IS DISTINCT FROM OLD.slug THEN
                 RAISE EXCEPTION 'SSOConfig.slug is immutable after insert';
             END IF;
             RETURN NEW;
@@ -589,10 +689,29 @@ class SSOConfigUpdate(SQLModel):
             has_client_secret=encrypted_secret is not None,
         )
 
-        for field_name, value in values.items():
-            setattr(config, field_name, value)
-        if "client_secret" in self.model_fields_set:
-            config.client_secret_encrypted = encrypted_secret
+        # Apply dependencies before ``enabled`` so assignment-time validation
+        # observes the already-validated merged state instead of the old,
+        # potentially incomplete configuration.
+        enabled_was_set = "enabled" in values
+        enabled_value = values.pop("enabled") if enabled_was_set else config.enabled
+        config.__dict__[_VALIDATED_UPDATE_FLAG] = True
+        try:
+            for field_name, value in values.items():
+                setattr(config, field_name, value)
+            if "client_secret" in self.model_fields_set:
+                config.client_secret_encrypted = encrypted_secret
+            if enabled_was_set:
+                config.enabled = enabled_value
+        finally:
+            config.__dict__.pop(_VALIDATED_UPDATE_FLAG, None)
+
+        # Assert the persisted object matches the state validated above; the
+        # before-update hook repeats this check at flush time as defense in depth.
+        _validate_enabled_config(
+            _validate_provider_settings(config.protocol, config.provider_settings),
+            enabled=config.enabled,
+            has_client_secret=config.client_secret_encrypted is not None,
+        )
         config.updated_by = actor_id
         return config
 

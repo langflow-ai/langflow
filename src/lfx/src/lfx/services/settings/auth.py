@@ -24,6 +24,7 @@ from lfx.services.settings.utils import (
 )
 
 ASCII_CONTROL_CHARACTER_LIMIT = 0x20
+ASCII_DELETE_CHARACTER = 0x7F
 
 
 def _warn_if_secret_key_is_short(value: str | SecretStr) -> None:
@@ -372,10 +373,14 @@ class AuthSettings(BaseSettings):
         if value is None:
             return None
 
-        url = str(value).strip()
+        raw_url = str(value)
+        url = raw_url.strip()
         if not url:
             return None
-        if any(ord(character) < ASCII_CONTROL_CHARACTER_LIMIT for character in url):
+        if any(
+            ord(character) < ASCII_CONTROL_CHARACTER_LIMIT or ord(character) == ASCII_DELETE_CHARACTER
+            for character in raw_url
+        ):
             msg = "SSO_REDIRECT_URL must not contain control characters."
             raise ValueError(msg)
 

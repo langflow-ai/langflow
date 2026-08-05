@@ -7,7 +7,6 @@ Create Date: 2026-07-29
 Phase: EXPAND
 """
 
-import os
 from collections.abc import Sequence
 from uuid import UUID
 
@@ -45,25 +44,19 @@ _PROVIDER_SETTING_COLUMNS = (
 # application models, whose shape changes independently of this revision.
 _ENVELOPE_HEADER = "lf-sso:v1:hkdf-sha256-v1:aes-256-gcm:"
 _ENVELOPE_PART_COUNT = 6
-
-
-def _external_auth_provider() -> str | None:
-    """Return the provider key owned by OSS EXTERNAL_AUTH, if configured.
-
-    ``sso_user_profile.sso_provider`` has two independent writers: the SSO plugin
-    (which this revision re-keys onto ``sso_config.slug``) and the OSS
-    EXTERNAL_AUTH flow in ``services/auth/service.py``, which writes
-    ``EXTERNAL_AUTH_PROVIDER`` verbatim. Those rows belong to a different feature
-    and must never be re-keyed here — rewriting one silently breaks that user's
-    login and JIT-provisions a duplicate account on their next sign-in.
-    """
-    return os.environ.get("LANGFLOW_EXTERNAL_AUTH_PROVIDER", "").strip() or None
+_ENVELOPE_NONCE_LENGTH = 16
+_ENVELOPE_MIN_CIPHERTEXT_LENGTH = 22
 
 
 def _is_secret_envelope(value: object) -> bool:
     """Return whether a stored secret is already a versioned ciphertext envelope."""
+    if not isinstance(value, str) or not value.startswith(_ENVELOPE_HEADER):
+        return False
+    parts = value.split(":")
     return (
-        isinstance(value, str) and value.startswith(_ENVELOPE_HEADER) and len(value.split(":")) == _ENVELOPE_PART_COUNT
+        len(parts) == _ENVELOPE_PART_COUNT
+        and len(parts[-2]) == _ENVELOPE_NONCE_LENGTH
+        and len(parts[-1]) >= _ENVELOPE_MIN_CIPHERTEXT_LENGTH
     )
 
 
@@ -101,75 +94,6 @@ def _backfill_connection_identity(conn: sa.Connection) -> None:
             values["display_name"] = row["provider_name"]
         if values:
             conn.execute(table.update().where(table.c.id == row["id"]).values(**values))
-
-
-def _backfill_profile_connection_slugs(conn: sa.Connection) -> None:
-    if not migration.table_exists(_PROFILE_TABLE, conn):
-        return
-    config_columns = _column_names(conn, _CONFIG_TABLE)
-    profile_columns = _column_names(conn, _PROFILE_TABLE)
-    if not {"id", "slug", "provider_name"} <= config_columns or "sso_provider" not in profile_columns:
-        return
-
-    config = sa.table(
-        _CONFIG_TABLE,
-        sa.column("id"),
-        sa.column("slug"),
-        sa.column("provider_name"),
-    )
-    profile = sa.table(_PROFILE_TABLE, sa.column("sso_provider"))
-    external_provider = _external_auth_provider()
-    rows = conn.execute(sa.select(config.c.slug, config.c.provider_name).order_by(config.c.id)).all()
-    # Build provider_name -> [slug, ...] for rows that will re-key profiles. Duplicate
-    # names would otherwise rewrite the same profiles onto whichever config still
-    # matches the legacy name first, silently mis-binding the rest.
-    slugs_by_provider_name: dict[str, list[str]] = {}
-    for row in rows:
-        if not (row.slug and row.provider_name):
-            continue
-        # Leave EXTERNAL_AUTH-owned identities alone; see _external_auth_provider.
-        if external_provider is not None and row.provider_name == external_provider:
-            continue
-        slugs_by_provider_name.setdefault(row.provider_name, []).append(row.slug)
-    duplicates = {name: slugs for name, slugs in slugs_by_provider_name.items() if len(slugs) > 1}
-    if duplicates:
-        details = "; ".join(f"{name!r} maps to slugs {slugs}" for name, slugs in sorted(duplicates.items()))
-        msg = (
-            "sso_config contains duplicate provider_name values that prevent unambiguous "
-            f"profile re-binding to slugs: {details}. Resolve the duplicates before "
-            "rerunning this migration."
-        )
-        raise RuntimeError(msg)
-    for provider_name, slugs in slugs_by_provider_name.items():
-        conn.execute(profile.update().where(profile.c.sso_provider == provider_name).values(sso_provider=slugs[0]))
-
-
-def _restore_profile_connection_names(conn: sa.Connection) -> None:
-    """Reverse of :func:`_backfill_profile_connection_slugs`.
-
-    No EXTERNAL_AUTH guard is needed here: that flow never writes a slug, so a
-    config skipped on upgrade simply matches no rows on the way back down.
-    """
-    if not migration.table_exists(_PROFILE_TABLE, conn):
-        return
-    config_columns = _column_names(conn, _CONFIG_TABLE)
-    profile_columns = _column_names(conn, _PROFILE_TABLE)
-    if not {"id", "slug", "provider_name"} <= config_columns or "sso_provider" not in profile_columns:
-        return
-
-    config = sa.table(
-        _CONFIG_TABLE,
-        sa.column("id"),
-        sa.column("slug"),
-        sa.column("provider_name"),
-    )
-    profile = sa.table(_PROFILE_TABLE, sa.column("sso_provider"))
-    rows = conn.execute(sa.select(config.c.slug, config.c.provider_name).order_by(config.c.id)).all()
-    for row in rows:
-        if row.slug and row.provider_name:
-            conn.execute(
-                profile.update().where(profile.c.sso_provider == row.slug).values(sso_provider=row.provider_name)
-            )
 
 
 def _sanitize_legacy_client_secrets(conn: sa.Connection) -> None:
@@ -302,6 +226,15 @@ def _create_and_backfill_sso_settings(conn: sa.Connection) -> None:
     if conn.scalar(sa.select(sa.func.count()).select_from(settings).where(settings.c.id == 1)) == 0:
         conn.execute(settings.insert().values(id=1, enforce_sso=enforce_sso))
 
+    # Keep the N-1 per-config field coherent with the new singleton while both
+    # schemas are live. Head installs bidirectional compatibility triggers for
+    # writes; this backfill establishes a single value for existing rows.
+    columns = _column_names(conn, _CONFIG_TABLE)
+    if "enforce_sso" in columns:
+        config = sa.table(_CONFIG_TABLE, sa.column("enforce_sso", sa.Boolean()))
+        stored_value = conn.scalar(sa.select(settings.c.enforce_sso).where(settings.c.id == 1))
+        conn.execute(config.update().values(enforce_sso=bool(stored_value)))
+
 
 def _upgrade_instance_fields(conn: sa.Connection) -> None:
     _create_and_backfill_sso_settings(conn)
@@ -327,7 +260,19 @@ def _upgrade_instance_fields(conn: sa.Connection) -> None:
         None,
     )
     with op.batch_alter_table(_CONFIG_TABLE, schema=None) as batch_op:
-        batch_op.alter_column("sort_order", existing_type=sa.Integer(), nullable=False)
+        batch_op.alter_column(
+            "sort_order",
+            existing_type=sa.Integer(),
+            nullable=False,
+            server_default=sa.text("0"),
+        )
+        if "enforce_sso" in columns:
+            batch_op.alter_column(
+                "enforce_sso",
+                existing_type=sa.Boolean(),
+                nullable=False,
+                server_default=sa.false(),
+            )
         if updated_by_foreign_key is None:
             batch_op.create_foreign_key(
                 _UPDATED_BY_FK,
@@ -336,8 +281,6 @@ def _upgrade_instance_fields(conn: sa.Connection) -> None:
                 ["id"],
                 ondelete="SET NULL",
             )
-        if "enforce_sso" in columns:
-            batch_op.drop_column("enforce_sso")
 
 
 def _downgrade_instance_fields(conn: sa.Connection) -> None:
@@ -357,7 +300,7 @@ def _downgrade_instance_fields(conn: sa.Connection) -> None:
             enforce_sso = bool(stored_value)
 
         config = sa.table(_CONFIG_TABLE, sa.column("enforce_sso", sa.Boolean()))
-        conn.execute(config.update().where(config.c.enforce_sso.is_(None)).values(enforce_sso=enforce_sso))
+        conn.execute(config.update().values(enforce_sso=enforce_sso))
 
         columns = _column_names(conn, _CONFIG_TABLE)
         updated_by_foreign_key = next(
@@ -365,7 +308,12 @@ def _downgrade_instance_fields(conn: sa.Connection) -> None:
             None,
         )
         with op.batch_alter_table(_CONFIG_TABLE, schema=None) as batch_op:
-            batch_op.alter_column("enforce_sso", existing_type=sa.Boolean(), nullable=False)
+            batch_op.alter_column(
+                "enforce_sso",
+                existing_type=sa.Boolean(),
+                nullable=False,
+                server_default=None,
+            )
             if updated_by_foreign_key is not None and updated_by_foreign_key["name"]:
                 batch_op.drop_constraint(updated_by_foreign_key["name"], type_="foreignkey")
             if "updated_by" in columns:
@@ -398,37 +346,25 @@ def _upgrade_sso_config(conn: sa.Connection) -> None:
         op.add_column(_CONFIG_TABLE, sa.Column("provider_settings", sa.JSON(), nullable=True))
 
     _backfill_connection_identity(conn)
-    _backfill_profile_connection_slugs(conn)
     _backfill_provider_settings(conn)
     _sanitize_legacy_client_secrets(conn)
     columns = _column_names(conn, _CONFIG_TABLE)
     indexes = _indexes(conn, _CONFIG_TABLE)
     with op.batch_alter_table(_CONFIG_TABLE, schema=None) as batch_op:
-        batch_op.alter_column(
-            "slug",
-            existing_type=sqlmodel.sql.sqltypes.AutoString(),
-            nullable=False,
-        )
-        batch_op.alter_column(
-            "display_name",
-            existing_type=sqlmodel.sql.sqltypes.AutoString(),
-            nullable=False,
-        )
-        batch_op.alter_column(
-            "protocol",
-            existing_type=sqlmodel.sql.sqltypes.AutoString(),
-            nullable=False,
-        )
-        batch_op.alter_column(
-            "provider_settings",
-            existing_type=sa.JSON(),
-            nullable=False,
-        )
+        # Both generations of columns remain nullable during EXPAND so N-1
+        # services can insert rows without knowing the new fields and N can
+        # insert rows without knowing the legacy fields. A head migration adds
+        # bidirectional compatibility triggers; a later CONTRACT revision may
+        # enforce NOT NULL and remove the legacy columns after N-1 retirement.
+        for name in ("provider", "provider_name"):
+            if name in columns:
+                batch_op.alter_column(
+                    name,
+                    existing_type=sqlmodel.sql.sqltypes.AutoString(),
+                    nullable=True,
+                )
         if _CONFIG_SLUG_INDEX not in indexes:
             batch_op.create_index(_CONFIG_SLUG_INDEX, ["slug"], unique=True)
-        for name in ("provider", "provider_name", *_PROVIDER_SETTING_COLUMNS):
-            if name in columns:
-                batch_op.drop_column(name)
 
 
 def _downgrade_sso_config(conn: sa.Connection) -> None:
@@ -442,7 +378,6 @@ def _downgrade_sso_config(conn: sa.Connection) -> None:
 
     _backfill_legacy_provider_columns(conn)
     _backfill_provider_name(conn)
-    _restore_profile_connection_names(conn)
     columns = _column_names(conn, _CONFIG_TABLE)
     indexes = _indexes(conn, _CONFIG_TABLE)
     with op.batch_alter_table(_CONFIG_TABLE, schema=None) as batch_op:
@@ -486,6 +421,32 @@ def _raise_for_multiple_identities_per_user(conn: sa.Connection) -> None:
     raise RuntimeError(msg)
 
 
+def _raise_for_slug_profile_keys_on_downgrade(conn: sa.Connection) -> None:
+    """Abort before CONTRACT data would be stranded by dropping config slugs."""
+    if not migration.table_exists(_CONFIG_TABLE, conn) or not migration.table_exists(_PROFILE_TABLE, conn):
+        return
+    if "slug" not in _column_names(conn, _CONFIG_TABLE) or "sso_provider" not in _column_names(conn, _PROFILE_TABLE):
+        return
+
+    config = sa.table(_CONFIG_TABLE, sa.column("slug"))
+    profile = sa.table(_PROFILE_TABLE, sa.column("id"), sa.column("sso_provider"))
+    slugs = {slug for slug in conn.execute(sa.select(config.c.slug)).scalars() if slug}
+    if not slugs:
+        return
+    affected_ids = [
+        str(row.id)
+        for row in conn.execute(sa.select(profile.c.id, profile.c.sso_provider))
+        if row.sso_provider in slugs
+    ]
+    if affected_ids:
+        msg = (
+            "Cannot downgrade SSO EXPAND while sso_user_profile rows use connection slugs "
+            f"({', '.join(affected_ids)}). Verify each identity and explicitly restore its legacy "
+            "provider_name key before retrying; the migration will not guess or rewrite identity data."
+        )
+        raise RuntimeError(msg)
+
+
 def upgrade() -> None:
     conn = op.get_bind()
     if migration.table_exists(_PROFILE_TABLE, conn):
@@ -508,6 +469,10 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     conn = op.get_bind()
+    # Run every data-loss preflight before any SQLite DDL: SQLite migrations are
+    # non-transactional, so discovering this after dropping instance columns
+    # would leave a partially downgraded schema.
+    _raise_for_slug_profile_keys_on_downgrade(conn)
     if migration.table_exists(_CONFIG_TABLE, conn):
         _downgrade_instance_fields(conn)
         _downgrade_sso_config(conn)

@@ -17,6 +17,29 @@ from sqlalchemy import create_engine, inspect, text
 _WORKSPACE_ROOT = Path(__file__).resolve().parents[5]
 _SCRIPT_LOCATION = _WORKSPACE_ROOT / "src/backend/base/langflow/alembic"
 
+# ``sso_config`` is deliberately in an EXPAND window: released N-1 services
+# still need the scalar columns, while N reads the typed JSON representation.
+# Alembic therefore sees the retained DB-only columns and nullable typed columns
+# as a future CONTRACT migration. Keep this list exact and remove it with that
+# contract revision; the rolling-compatibility migration tests assert that the
+# temporary physical schema remains present and synchronized.
+_SSO_EXPAND_LEGACY_COLUMNS = frozenset(
+    {
+        "provider",
+        "provider_name",
+        "enforce_sso",
+        "client_id",
+        "discovery_url",
+        "redirect_uri",
+        "scopes",
+        "token_endpoint",
+        "authorization_endpoint",
+        "jwks_uri",
+        "issuer",
+    }
+)
+_SSO_EXPAND_NULLABLE_COLUMNS = frozenset({"slug", "display_name", "protocol", "provider_settings"})
+
 
 def _make_alembic_cfg(db_url: str) -> Config:
     """Create an Alembic Config pointing at the project's migration scripts."""
@@ -264,6 +287,41 @@ def _filter_sqlite_noise(diffs: list) -> list:
     return significant_diffs
 
 
+def _filter_sso_expand_contract_diffs(diffs: list) -> list:
+    """Suppress only the schema diffs intentionally deferred to SSO CONTRACT."""
+    significant_diffs = []
+    for diff in diffs:
+        # Alembic can group multiple alter-column operations in a nested list.
+        if isinstance(diff, list):
+            filtered_group = _filter_sso_expand_contract_diffs(diff)
+            if filtered_group:
+                significant_diffs.append(filtered_group)
+            continue
+        if not isinstance(diff, tuple):
+            significant_diffs.append(diff)
+            continue
+
+        if (
+            len(diff) >= 4
+            and diff[0] == "remove_column"
+            and diff[2] == "sso_config"
+            and getattr(diff[3], "name", None) in _SSO_EXPAND_LEGACY_COLUMNS
+        ):
+            continue
+        if (
+            len(diff) >= 7
+            and diff[0] == "modify_nullable"
+            and diff[2] == "sso_config"
+            and diff[3] in _SSO_EXPAND_NULLABLE_COLUMNS
+            and diff[5] is True
+            and diff[6] is False
+        ):
+            continue
+        significant_diffs.append(diff)
+
+    return significant_diffs
+
+
 class _FakeColumn:
     """Minimal stand-in for sqlalchemy Column used by FK constraint diffs."""
 
@@ -334,6 +392,46 @@ class TestFilterSqliteNoise:
         assert result == diffs
 
 
+class TestFilterSsoExpandContractDiffs:
+    """Keep the temporary SSO autogenerate exception narrow and directional."""
+
+    def test_exact_legacy_remove_and_nullable_diffs_are_suppressed(self):
+        legacy_column = _FakeColumn("provider", "sso_config")
+        nullable_diff = (
+            "modify_nullable",
+            None,
+            "sso_config",
+            "provider_settings",
+            {"existing_type": "JSON"},
+            True,
+            False,
+        )
+
+        assert (
+            _filter_sso_expand_contract_diffs([("remove_column", None, "sso_config", legacy_column), [nullable_diff]])
+            == []
+        )
+
+    def test_other_tables_columns_and_nullable_directions_are_preserved(self):
+        unrelated_column = _FakeColumn("provider", "another_table")
+        inverse_nullable_diff = (
+            "modify_nullable",
+            None,
+            "sso_config",
+            "provider_settings",
+            {"existing_type": "JSON"},
+            False,
+            True,
+        )
+        diffs = [
+            ("remove_column", None, "another_table", unrelated_column),
+            inverse_nullable_diff,
+            ("modify_type", None, "sso_config", "provider_settings"),
+        ]
+
+        assert _filter_sso_expand_contract_diffs(diffs) == diffs
+
+
 def _engine_url(db_url: str) -> str:
     """Convert an async DB URL to a sync one for SQLAlchemy create_engine."""
     if db_url.startswith("sqlite+aiosqlite"):
@@ -342,8 +440,8 @@ def _engine_url(db_url: str) -> str:
 
 
 def _filter_diffs(diffs: list, db_url: str) -> list:
-    """Apply only SQLite-specific diff filtering."""
-    filtered_diffs = list(diffs)
+    """Apply documented compatibility and SQLite-specific diff filtering."""
+    filtered_diffs = _filter_sso_expand_contract_diffs(diffs)
     if "sqlite" in db_url:
         filtered_diffs = _filter_sqlite_noise(filtered_diffs)
     return filtered_diffs

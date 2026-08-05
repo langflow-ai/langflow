@@ -21,36 +21,20 @@ export default function DotGridBackground() {
     const context = canvas.getContext("2d");
     if (!context) return;
 
-    const reducedMotion = window.matchMedia(
+    const reducedMotionMedia = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
-    ).matches;
+    );
+    const colorSchemeMedia = window.matchMedia("(prefers-color-scheme: dark)");
+    let reducedMotion = reducedMotionMedia.matches;
+    const themeElement = document.getElementById("body");
     let animationFrame = 0;
     let dots: Dot[] = [];
     const pointer = { x: -1000, y: -1000 };
 
-    const resize = () => {
-      const pixelRatio = window.devicePixelRatio || 1;
-      canvas.width = window.innerWidth * pixelRatio;
-      canvas.height = window.innerHeight * pixelRatio;
-      canvas.style.width = `${window.innerWidth}px`;
-      canvas.style.height = `${window.innerHeight}px`;
-      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-
-      dots = [];
-      const columns = Math.ceil(window.innerWidth / DOT_SPACING) + 1;
-      const rows = Math.ceil(window.innerHeight / DOT_SPACING) + 1;
-
-      for (let column = 0; column < columns; column += 1) {
-        for (let row = 0; row < rows; row += 1) {
-          const x = column * DOT_SPACING;
-          const y = row * DOT_SPACING;
-          dots.push({ x, y, baseX: x, baseY: y, radius: 1 });
-        }
-      }
-    };
-
     const draw = () => {
       context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      const isDark =
+        themeElement?.classList.contains("dark") ?? colorSchemeMedia.matches;
 
       dots.forEach((dot) => {
         const deltaX = pointer.x - dot.baseX;
@@ -73,9 +57,6 @@ export default function DotGridBackground() {
         dot.radius += (targetRadius - dot.radius) * 0.15;
 
         const intensity = Math.min(1, (dot.radius - 1) / 2);
-        const isDark =
-          document.getElementById("body")?.classList.contains("dark") ??
-          window.matchMedia("(prefers-color-scheme: dark)").matches;
         // Light dots on dark canvas; darker dots on light canvas.
         const shade = isDark
           ? Math.round(51 + (200 - 51) * intensity)
@@ -91,6 +72,54 @@ export default function DotGridBackground() {
       }
     };
 
+    const resize = () => {
+      const pixelRatio = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * pixelRatio;
+      canvas.height = window.innerHeight * pixelRatio;
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+      dots = [];
+      const columns = Math.ceil(window.innerWidth / DOT_SPACING) + 1;
+      const rows = Math.ceil(window.innerHeight / DOT_SPACING) + 1;
+
+      for (let column = 0; column < columns; column += 1) {
+        for (let row = 0; row < rows; row += 1) {
+          const x = column * DOT_SPACING;
+          const y = row * DOT_SPACING;
+          dots.push({ x, y, baseX: x, baseY: y, radius: 1 });
+        }
+      }
+
+      if (reducedMotion) {
+        draw();
+      }
+    };
+
+    const redrawStaticCanvas = () => {
+      if (reducedMotion) {
+        draw();
+      }
+    };
+
+    const handleReducedMotionChange = (event: MediaQueryListEvent) => {
+      reducedMotion = event.matches;
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
+
+      if (reducedMotion) {
+        pointer.x = -1000;
+        pointer.y = -1000;
+        dots.forEach((dot) => {
+          dot.x = dot.baseX;
+          dot.y = dot.baseY;
+          dot.radius = 1;
+        });
+      }
+      draw();
+    };
+
     const handlePointerMove = (event: PointerEvent) => {
       pointer.x = event.clientX;
       pointer.y = event.clientY;
@@ -102,13 +131,32 @@ export default function DotGridBackground() {
     };
 
     resize();
-    draw();
+    if (!reducedMotion) {
+      draw();
+    }
+    const themeObserver = themeElement
+      ? new MutationObserver(redrawStaticCanvas)
+      : null;
+    if (themeElement) {
+      themeObserver?.observe(themeElement, {
+        attributeFilter: ["class"],
+        attributes: true,
+      });
+    }
+    colorSchemeMedia.addEventListener?.("change", redrawStaticCanvas);
+    reducedMotionMedia.addEventListener?.("change", handleReducedMotionChange);
     window.addEventListener("resize", resize);
     window.addEventListener("pointermove", handlePointerMove);
     document.documentElement.addEventListener("pointerleave", resetPointer);
 
     return () => {
       window.cancelAnimationFrame(animationFrame);
+      themeObserver?.disconnect();
+      colorSchemeMedia.removeEventListener?.("change", redrawStaticCanvas);
+      reducedMotionMedia.removeEventListener?.(
+        "change",
+        handleReducedMotionChange,
+      );
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointermove", handlePointerMove);
       document.documentElement.removeEventListener(

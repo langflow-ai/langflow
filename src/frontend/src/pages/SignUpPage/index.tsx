@@ -14,7 +14,7 @@ import {
   appendErrorSuggestion,
   getRequiredFieldError,
 } from "@/utils/authErrorMessages";
-import { Button } from "../../components/ui/button";
+import { Button, buttonVariants } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CONTROL_INPUT_STATE } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
@@ -23,6 +23,7 @@ import type {
   signUpInputStateType,
   UserInputType,
 } from "../../types/components";
+import { cn } from "../../utils/utils";
 import DotGridBackground from "../LoginPage/components/dot-grid-background";
 
 export default function SignUp(): JSX.Element {
@@ -227,6 +228,7 @@ export default function SignUp(): JSX.Element {
                   required
                   id="signup-password"
                   inputProps={{
+                    autoComplete: "new-password",
                     "aria-describedby": passwordError
                       ? "signup-password-error"
                       : undefined,
@@ -283,6 +285,7 @@ export default function SignUp(): JSX.Element {
                   required
                   id="signup-confirm-password"
                   inputProps={{
+                    autoComplete: "new-password",
                     "aria-describedby": confirmPasswordError
                       ? "signup-confirm-password-error"
                       : undefined,
@@ -309,22 +312,16 @@ export default function SignUp(): JSX.Element {
                 </Button>
               </Form.Submit>
 
-              <ShadTooltip
-                content={`${t("auth.haveAccount")} ${t("auth.signInLink")}`}
-                styleClasses="z-50"
-              >
-                <Button
-                  asChild
-                  className="h-11 w-full overflow-hidden rounded-lg"
-                  variant="outline"
+              <ShadTooltip content={t("auth.signInPrompt")} styleClasses="z-50">
+                <CustomLink
+                  className={cn(
+                    buttonVariants({ variant: "outline" }),
+                    "h-11 w-full overflow-hidden rounded-lg",
+                  )}
+                  to="/login"
                 >
-                  <CustomLink to="/login">
-                    <span className="truncate">
-                      {t("auth.haveAccount")}&nbsp;
-                      <b>{t("auth.signInLink")}</b>
-                    </span>
-                  </CustomLink>
-                </Button>
+                  <span className="truncate">{t("auth.signInPrompt")}</span>
+                </CustomLink>
               </ShadTooltip>
             </div>
           </section>

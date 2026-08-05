@@ -226,6 +226,7 @@
   "auth.saveWithApiCheckbox": "私のAPIキーを使って節約しましょう",
   "auth.signInButton": "サインイン",
   "auth.signInLink": "サインイン",
+  "auth.signInPrompt": "すでにアカウントをお持ちですか？サインイン",
   "auth.signUpLink": "登録",
   "auth.signUpSuccess": "アカウントが作成されました！ 管理者の承認をお待ちください。",
   "auth.signupButton": "登録",

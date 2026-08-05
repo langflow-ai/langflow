@@ -7,6 +7,7 @@ Create Date: 2026-08-04
 Phase: EXPAND
 """
 
+import re
 from collections.abc import Sequence
 from urllib.parse import urlsplit
 
@@ -27,12 +28,19 @@ _CONFIG_TABLE = "sso_config"
 # later batch_alter drops of protocol / provider_settings on SQLite.
 _PROTOCOL_CHECK = "ck_sso_config_protocol_consistency"
 _ENABLED_CHECK = "ck_sso_config_enabled_complete"
+_CLIENT_SECRET_CHECK = "ck_sso_config_client_secret_envelope"  # noqa: S105  # pragma: allowlist secret
 _LEGACY_DOUBLED_PROTOCOL_CHECK = "ck_sso_config_ck_sso_config_protocol_consistency"
 _LEGACY_DOUBLED_ENABLED_CHECK = "ck_sso_config_ck_sso_config_enabled_complete"
+_LEGACY_DOUBLED_CLIENT_SECRET_CHECK = "ck_sso_config_ck_sso_config_client_secret_envelope"  # noqa: S105  # pragma: allowlist secret
 _PROTOCOL_CHECK_ALIASES = (_PROTOCOL_CHECK, _LEGACY_DOUBLED_PROTOCOL_CHECK)
 _ENABLED_CHECK_ALIASES = (_ENABLED_CHECK, _LEGACY_DOUBLED_ENABLED_CHECK)
+_CLIENT_SECRET_CHECK_ALIASES = (_CLIENT_SECRET_CHECK, _LEGACY_DOUBLED_CLIENT_SECRET_CHECK)
 _SLUG_TRIGGER = "trg_sso_config_slug_immutable"
 _POSTGRES_TRIGGER_FUNCTION = "prevent_sso_config_slug_update"
+_SUPPORTED_PROTOCOLS = ("oidc", "saml", "ldap")
+_ENVELOPE_HEADER = "lf-sso:v1:hkdf-sha256-v1:aes-256-gcm:"
+_ENVELOPE_NONCE_LENGTH = 16
+_ENVELOPE_MIN_CIPHERTEXT_LENGTH = 22
 _REMOTE_URL_FIELDS = (
     "discovery_url",
     "token_endpoint",
@@ -40,6 +48,7 @@ _REMOTE_URL_FIELDS = (
     "jwks_uri",
     "issuer",
 )
+_INVALID_PERCENT_ESCAPE_PATTERN = re.compile(r"%(?![0-9A-Fa-f]{2})")
 
 
 def _config_table() -> sa.Table:
@@ -47,9 +56,14 @@ def _config_table() -> sa.Table:
     return sa.Table(
         _CONFIG_TABLE,
         metadata,
-        sa.Column("id", sa.Uuid()),
+        # Leave the id untyped so comparisons reuse the exact DBAPI value.
+        # SQLite installations can contain either 32-character UUID hex or
+        # historical hyphenated UUID strings, and coercing through ``sa.Uuid``
+        # would normalize the latter before UPDATE and fail to match the row.
+        sa.Column("id"),
         sa.Column("slug", sa.String()),
         sa.Column("protocol", sa.String()),
+        sa.Column("provider", sa.String()),
         sa.Column("enabled", sa.Boolean()),
         sa.Column("client_secret_encrypted", sa.String()),
         sa.Column("provider_settings", sa.JSON()),
@@ -64,23 +78,76 @@ def _nonblank_json_string(json_column: sa.Column, key: str) -> sa.ColumnElement[
 def _http_json_url_or_null(json_column: sa.Column, key: str) -> sa.ColumnElement[bool]:
     value = json_column[key].as_string()
     normalized = sa.func.lower(value)
-    return sa.or_(value.is_(None), normalized.like("http://%"), normalized.like("https://%"))
+    has_no_whitespace = sa.and_(
+        value.not_like("% %"),
+        value.not_like("%\t%"),
+        value.not_like("%\n%"),
+        value.not_like("%\r%"),
+    )
+    valid_http_host_start = sa.and_(
+        normalized.like("http://%"),
+        sa.func.length(value) > len("http://"),
+        sa.func.substr(value, len("http://") + 1, 1).not_in(("/", "\\", "?", "#", ":")),
+    )
+    valid_https_host_start = sa.and_(
+        normalized.like("https://%"),
+        sa.func.length(value) > len("https://"),
+        sa.func.substr(value, len("https://") + 1, 1).not_in(("/", "\\", "?", "#", ":")),
+    )
+    return sa.or_(value.is_(None), sa.and_(has_no_whitespace, sa.or_(valid_http_host_start, valid_https_host_start)))
 
 
-def _protocol_check(table: sa.Table) -> sa.ColumnElement[bool]:
+def _protocol_check(
+    table: sa.Table,
+    *,
+    allow_supported_mismatch: bool = False,
+) -> sa.ColumnElement[bool]:
     settings_protocol = table.c.provider_settings["protocol"].as_string()
-    return sa.and_(
-        table.c.protocol == "oidc",
+    synchronized = sa.and_(
+        table.c.protocol.in_(_SUPPORTED_PROTOCOLS),
         settings_protocol.is_not(None),
         settings_protocol == table.c.protocol,
+    )
+    if allow_supported_mismatch:
+        # SQLite has no way for a BEFORE trigger to assign NEW values. Its
+        # EXPAND compatibility trigger is therefore AFTER UPDATE, so admit a
+        # supported temporary mismatch long enough for that trigger to choose
+        # one representation and make the row coherent. Invalid protocols are
+        # still rejected before the trigger runs.
+        synchronized = sa.and_(
+            table.c.protocol.in_(_SUPPORTED_PROTOCOLS),
+            settings_protocol.in_(_SUPPORTED_PROTOCOLS),
+        )
+    return sa.or_(
+        # Temporary N-1 INSERT state. SQLite evaluates CHECK constraints before
+        # the head revision's AFTER INSERT compatibility trigger can populate
+        # the new representation.
+        sa.and_(
+            table.c.protocol.is_(None),
+            table.c.provider_settings.is_(None),
+            table.c.provider.is_not(None),
+        ),
+        synchronized,
     )
 
 
 def _enabled_check(table: sa.Table) -> sa.ColumnElement[bool]:
     settings = table.c.provider_settings
     return sa.or_(
-        table.c.enabled.is_(False),
+        # See _protocol_check: the compatibility trigger immediately fills the
+        # typed fields. Final constraints then validate the synchronized row.
         sa.and_(
+            table.c.protocol.is_(None),
+            table.c.provider_settings.is_(None),
+            table.c.provider.is_not(None),
+        ),
+        table.c.enabled.is_(False),
+        # Historical Enterprise plugins can continue executing their released
+        # SAML/LDAP rows during the rolling window. OIDC-only completeness is
+        # enforced below without mutating those legacy configurations.
+        table.c.protocol.in_(("saml", "ldap")),
+        sa.and_(
+            table.c.protocol == "oidc",
             table.c.client_secret_encrypted.is_not(None),
             _nonblank_json_string(settings, "client_id"),
             sa.or_(
@@ -96,14 +163,39 @@ def _enabled_check(table: sa.Table) -> sa.ColumnElement[bool]:
     )
 
 
+def _client_secret_check(table: sa.Table) -> sa.ColumnElement[bool]:
+    secret = table.c.client_secret_encrypted
+    separator_position = len(_ENVELOPE_HEADER) + _ENVELOPE_NONCE_LENGTH + 1
+    minimum_length = separator_position + _ENVELOPE_MIN_CIPHERTEXT_LENGTH
+    return sa.or_(
+        secret.is_(None),
+        sa.and_(
+            sa.func.substr(secret, 1, len(_ENVELOPE_HEADER)) == _ENVELOPE_HEADER,
+            sa.func.substr(secret, separator_position, 1) == ":",
+            sa.func.length(secret) >= minimum_length,
+        ),
+    )
+
+
 def _is_http_url(value: object) -> bool:
     if not isinstance(value, str) or not value.strip():
         return False
     try:
-        parsed = urlsplit(value.strip())
+        parsed = urlsplit(value)
+        valid = (
+            parsed.scheme.lower() in {"http", "https"}
+            and bool(parsed.netloc)
+            and parsed.hostname is not None
+            and not any(character.isspace() for character in value)
+            and _INVALID_PERCENT_ESCAPE_PATTERN.search(value) is None
+            and "%" not in parsed.hostname
+        )
+        if valid:
+            # Accessing ``port`` forces urllib to reject malformed ports.
+            _ = parsed.port
     except ValueError:
         return False
-    return parsed.scheme.lower() in {"http", "https"} and parsed.hostname is not None
+    return valid
 
 
 def _disable_invalid_enabled_configs(conn: sa.Connection, table: sa.Table) -> None:
@@ -111,11 +203,16 @@ def _disable_invalid_enabled_configs(conn: sa.Connection, table: sa.Table) -> No
     rows = conn.execute(
         sa.select(
             table.c.id,
+            table.c.protocol,
             table.c.client_secret_encrypted,
             table.c.provider_settings,
         ).where(table.c.enabled.is_(True))
     ).mappings()
     for row in rows:
+        # Preserve historical Enterprise protocols exactly. Their released
+        # plugin remains responsible for protocol-specific completeness.
+        if row["protocol"] != "oidc":
+            continue
         settings = row["provider_settings"] or {}
         has_client_id = isinstance(settings.get("client_id"), str) and bool(settings["client_id"].strip())
         has_discovery = _is_http_url(settings.get("discovery_url"))
@@ -137,7 +234,7 @@ def _raise_for_protocol_mismatches(conn: sa.Connection, table: sa.Table) -> None
     invalid_ids = [
         str(row.id)
         for row in conn.execute(sa.select(table.c.id, table.c.protocol, table.c.provider_settings))
-        if row.protocol != "oidc"
+        if row.protocol not in _SUPPORTED_PROTOCOLS
         or not isinstance(row.provider_settings, dict)
         or row.provider_settings.get("protocol") != row.protocol
     ]
@@ -160,24 +257,36 @@ def _create_checks(conn: sa.Connection, table: sa.Table) -> None:
     existing = _existing_check_names(conn)
     need_protocol = not existing.intersection(_PROTOCOL_CHECK_ALIASES)
     need_enabled = not existing.intersection(_ENABLED_CHECK_ALIASES)
-    if not need_protocol and not need_enabled:
+    need_client_secret = not existing.intersection(_CLIENT_SECRET_CHECK_ALIASES)
+    if not need_protocol and not need_enabled and not need_client_secret:
         return
     if conn.dialect.name == "sqlite":
         with op.batch_alter_table(_CONFIG_TABLE, recreate="always") as batch_op:
             if need_protocol:
-                batch_op.create_check_constraint(op.f(_PROTOCOL_CHECK), _protocol_check(table))
+                batch_op.create_check_constraint(
+                    op.f(_PROTOCOL_CHECK),
+                    _protocol_check(table, allow_supported_mismatch=True),
+                )
             if need_enabled:
                 batch_op.create_check_constraint(op.f(_ENABLED_CHECK), _enabled_check(table))
+            if need_client_secret:
+                batch_op.create_check_constraint(op.f(_CLIENT_SECRET_CHECK), _client_secret_check(table))
         return
     if need_protocol:
         op.create_check_constraint(op.f(_PROTOCOL_CHECK), _CONFIG_TABLE, _protocol_check(table))
     if need_enabled:
         op.create_check_constraint(op.f(_ENABLED_CHECK), _CONFIG_TABLE, _enabled_check(table))
+    if need_client_secret:
+        op.create_check_constraint(op.f(_CLIENT_SECRET_CHECK), _CONFIG_TABLE, _client_secret_check(table))
 
 
 def _drop_checks(conn: sa.Connection) -> None:
     existing = _existing_check_names(conn)
-    to_drop = [name for name in (*_ENABLED_CHECK_ALIASES, *_PROTOCOL_CHECK_ALIASES) if name in existing]
+    to_drop = [
+        name
+        for name in (*_CLIENT_SECRET_CHECK_ALIASES, *_ENABLED_CHECK_ALIASES, *_PROTOCOL_CHECK_ALIASES)
+        if name in existing
+    ]
     if not to_drop:
         return
     if conn.dialect.name == "sqlite":
@@ -200,7 +309,7 @@ def _create_slug_trigger(conn: sa.Connection) -> None:
                 CREATE TRIGGER {_SLUG_TRIGGER}
                 BEFORE UPDATE OF slug ON {_CONFIG_TABLE}
                 FOR EACH ROW
-                WHEN NEW.slug IS NOT OLD.slug
+                WHEN OLD.slug IS NOT NULL AND NEW.slug IS NOT OLD.slug
                 BEGIN
                     SELECT RAISE(ABORT, 'SSOConfig.slug is immutable after insert');
                 END
@@ -215,7 +324,7 @@ def _create_slug_trigger(conn: sa.Connection) -> None:
                 CREATE OR REPLACE FUNCTION {_POSTGRES_TRIGGER_FUNCTION}()
                 RETURNS trigger AS $$
                 BEGIN
-                    IF NEW.slug IS DISTINCT FROM OLD.slug THEN
+                    IF OLD.slug IS NOT NULL AND NEW.slug IS DISTINCT FROM OLD.slug THEN
                         RAISE EXCEPTION 'SSOConfig.slug is immutable after insert';
                     END IF;
                     RETURN NEW;

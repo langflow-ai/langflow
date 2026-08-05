@@ -129,12 +129,13 @@ describe("LoginPage accessibility", () => {
   it("uses_valid_external_labels_for_username_and_password", () => {
     renderLoginPage();
 
-    expect(
-      screen.getByRole("textbox", { name: /username/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /username/i })).toHaveAttribute(
+      "autocomplete",
+      "username",
+    );
     expect(
       screen.getByLabelText(/^Password/i, { selector: "input" }),
-    ).toBeInTheDocument();
+    ).toHaveAttribute("autocomplete", "current-password");
   });
 
   it("names_the_login_form_region", () => {

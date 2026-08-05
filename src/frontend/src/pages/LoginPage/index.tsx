@@ -198,6 +198,7 @@ export default function LoginPage(): JSX.Element {
                     required
                     id="login-password"
                     inputProps={{
+                      autoComplete: "current-password",
                       "aria-describedby": passwordError
                         ? "login-password-error"
                         : undefined,

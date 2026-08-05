@@ -93,13 +93,18 @@ describe("SignUpPage accessibility", () => {
   it("uses_valid_external_labels_for_all_fields", () => {
     renderSignUpPage();
 
-    expect(
-      screen.getByRole("textbox", { name: /username/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Password/i)).toBeInTheDocument();
-    expect(
-      screen.getByLabelText(/^Confirm your password/i),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /username/i })).toHaveAttribute(
+      "autocomplete",
+      "username",
+    );
+    expect(screen.getByLabelText(/^Password/i)).toHaveAttribute(
+      "autocomplete",
+      "new-password",
+    );
+    expect(screen.getByLabelText(/^Confirm your password/i)).toHaveAttribute(
+      "autocomplete",
+      "new-password",
+    );
   });
 
   it("renders_sign_in_navigation_as_one_link", () => {
@@ -109,7 +114,7 @@ describe("SignUpPage accessibility", () => {
       name: /already have an account.*sign in/i,
     });
     expect(signInLink).toHaveAttribute("href", "/login");
-    expect(signInLink.querySelector("button")).not.toBeInTheDocument();
+    expect(signInLink.querySelector("button")).toBeNull();
   });
 
   it("announces_actionable_password_mismatch_suggestion_after_confirm_blur", () => {

@@ -114,9 +114,13 @@ def test_sso_provider_settings_upgrade_and_downgrade_preserve_seeded_rows(db_url
             config_row = connection.execute(sa.select(sso_config).where(sso_config.c.id == config_id)).mappings().one()
 
             assert {"protocol", "provider_settings", "client_secret_encrypted"} <= columns
-            assert {"provider", *_PROVIDER_SETTING_COLUMNS}.isdisjoint(columns)
+            assert {"provider", *_PROVIDER_SETTING_COLUMNS} <= columns
             assert config_row["protocol"] == "oidc"
+            assert config_row["provider"] == "oidc"
             assert config_row["provider_settings"] == expected_settings
+            assert {name: config_row[name] for name in _PROVIDER_SETTING_COLUMNS} == {
+                name: expected_settings[name] for name in _PROVIDER_SETTING_COLUMNS
+            }
             assert config_row["client_secret_encrypted"] == _TEST_ENCRYPTED_SECRET
             assert (
                 connection.scalar(

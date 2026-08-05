@@ -16,10 +16,16 @@ from langflow.services.database.models.auth import (
     decrypt_sso_client_secret,
     encrypt_sso_client_secret,
 )
-from langflow.services.database.models.auth.sso import OIDCProviderSettings, SSOConfig, SSOSettings, SSOUserProfile
+from langflow.services.database.models.auth.sso import (
+    LegacyProviderSettings,
+    OIDCProviderSettings,
+    SSOConfig,
+    SSOSettings,
+    SSOUserProfile,
+)
 from langflow.services.database.models.user.model import User
 from pydantic import SecretStr, ValidationError
-from sqlalchemy import event, update
+from sqlalchemy import event, func, literal, update
 from sqlalchemy.exc import IntegrityError, StatementError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -28,7 +34,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 # Placeholder for User.password in tests (not a real secret)
 _TEST_PASSWORD = "hashed"  # noqa: S105
-_TEST_PLAINTEXT_SECRET = "oidc-client-secret"  # noqa: S105
+_TEST_PLAINTEXT_SECRET = "oidc-client-secret"  # noqa: S105  # pragma: allowlist secret
 
 
 @pytest.fixture(name="sso_secret_settings")
@@ -344,6 +350,18 @@ class TestSSOConfig:
                 .values(client_secret_encrypted=_TEST_PLAINTEXT_SECRET)
             )
 
+    async def test_client_secret_rejects_plaintext_core_expression_updates(self, sso_async_session):
+        config = SSOConfig(display_name="Core expression update connection")
+        sso_async_session.add(config)
+        await sso_async_session.commit()
+
+        with pytest.raises(IntegrityError, match=r"client_secret_envelope|CHECK constraint failed"):
+            await sso_async_session.execute(
+                update(SSOConfig)
+                .where(SSOConfig.id == config.id)
+                .values(client_secret_encrypted=literal(_TEST_PLAINTEXT_SECRET))
+            )
+
     async def test_client_secret_is_excluded_from_serialization_and_repr(self, sso_secret_settings):
         encrypted = encrypt_sso_client_secret(_TEST_PLAINTEXT_SECRET, sso_secret_settings)
         config = SSOConfig(display_name="Safe output", client_secret_encrypted=encrypted)
@@ -385,6 +403,29 @@ class TestSSOConfig:
         assert config.client_secret_encrypted is not None
         assert decrypt_sso_client_secret(config.client_secret_encrypted, sso_secret_settings) == _TEST_PLAINTEXT_SECRET
 
+    async def test_update_schema_atomically_converts_legacy_config_to_oidc(self, sso_secret_settings):
+        config = SSOConfig(
+            display_name="Legacy connection",
+            protocol="saml",
+            provider_settings=LegacyProviderSettings(protocol="saml"),
+        )
+        oidc_settings = OIDCProviderSettings(
+            client_id="client-id",
+            discovery_url="https://idp.example.com/.well-known/openid-configuration",
+        )
+
+        SSOConfigUpdate(
+            protocol="oidc",
+            enabled=True,
+            client_secret=SecretStr(_TEST_PLAINTEXT_SECRET),
+            provider_settings=oidc_settings,
+        ).apply_to(config, sso_secret_settings)
+
+        assert config.protocol == "oidc"
+        assert config.provider_settings == oidc_settings
+        assert config.enabled is True
+        assert decrypt_sso_client_secret(config.client_secret_encrypted, sso_secret_settings) == _TEST_PLAINTEXT_SECRET
+
     async def test_incomplete_config_cannot_be_enabled(self, sso_async_session):
         with pytest.raises(ValueError, match="require a client_id"):
             SSOConfig(display_name="Incomplete", enabled=True)
@@ -392,10 +433,10 @@ class TestSSOConfig:
         config = SSOConfig(display_name="Initially disabled")
         sso_async_session.add(config)
         await sso_async_session.commit()
-        config.enabled = True
 
         with pytest.raises(ValueError, match="require a client_id"):
-            await sso_async_session.commit()
+            config.enabled = True
+        assert config.enabled is False
 
     async def test_create_schema_rejects_incomplete_enabled_config(self):
         with pytest.raises(ValidationError, match="require a client_id"):
@@ -413,6 +454,21 @@ class TestSSOConfig:
             SSOConfigCreate(display_name="Blank secret", client_secret=SecretStr("  "))
         with pytest.raises(ValidationError, match="client secret must not be blank"):
             SSOConfigUpdate(client_secret=SecretStr(""))
+
+    @pytest.mark.parametrize(
+        "malformed_url",
+        [
+            "http:// example.com",
+            "http://example.com:bad",
+            "https://exa mple.com",
+            "https://%zz",
+            "https://example.com/%zz",
+            "http:///etc/passwd",
+        ],
+    )
+    async def test_provider_credentials_reject_malformed_http_urls(self, malformed_url):
+        with pytest.raises(ValidationError, match="absolute HTTP"):
+            OIDCProviderSettings(discovery_url=malformed_url)
 
     async def test_external_schemas_do_not_accept_audit_actor_fields(self, sso_secret_settings):
         actor_id = uuid4()
@@ -502,6 +558,35 @@ class TestSSOConfig:
         with pytest.raises(IntegrityError, match=r"enabled_complete|CHECK constraint failed"):
             await sso_async_session.execute(update(SSOConfig).where(SSOConfig.id == config.id).values(enabled=True))
 
+    async def test_core_expression_cannot_install_invalid_url_on_enabled_config(
+        self, sso_async_session, sso_secret_settings
+    ):
+        encrypted_secret = encrypt_sso_client_secret(_TEST_PLAINTEXT_SECRET, sso_secret_settings)
+        config = SSOConfig(
+            display_name="Core URL expression",
+            enabled=True,
+            client_secret_encrypted=encrypted_secret,
+            provider_settings=OIDCProviderSettings(
+                client_id="client-id",
+                discovery_url="https://idp.example.com/.well-known/openid-configuration",
+            ),
+        )
+        sso_async_session.add(config)
+        await sso_async_session.commit()
+
+        with pytest.raises(IntegrityError, match=r"enabled_complete|CHECK constraint failed"):
+            await sso_async_session.execute(
+                update(SSOConfig)
+                .where(SSOConfig.id == config.id)
+                .values(
+                    provider_settings=func.json_set(
+                        SSOConfig.provider_settings,
+                        "$.discovery_url",
+                        "http:///etc/passwd",
+                    )
+                )
+            )
+
     async def test_core_update_cannot_change_protocol(self, sso_async_session):
         config = SSOConfig(display_name="Core protocol")
         sso_async_session.add(config)
@@ -545,6 +630,75 @@ class TestSSOConfig:
                 display_name="Invalid",
                 provider_settings={"protocol": "oidc"},
             )
+
+    @pytest.mark.parametrize("protocol", ["saml", "ldap"])
+    async def test_disabled_legacy_provider_settings_can_load(self, protocol, sso_async_session):
+        config = SSOConfig(
+            protocol=protocol,
+            display_name=f"Legacy {protocol}",
+            enabled=False,
+            provider_settings={"protocol": protocol, "client_id": "legacy-client"},
+        )
+        sso_async_session.add(config)
+        await sso_async_session.commit()
+        await sso_async_session.refresh(config)
+
+        assert config.protocol == protocol
+        assert config.provider_settings.protocol == protocol
+        assert config.provider_settings.client_id == "legacy-client"
+
+    @pytest.mark.parametrize("protocol", ["saml", "ldap"])
+    async def test_legacy_provider_settings_cannot_be_enabled(self, protocol):
+        with pytest.raises(ValueError, match="Only OIDC configurations can be enabled"):
+            SSOConfig(
+                protocol=protocol,
+                display_name=f"Legacy {protocol}",
+                enabled=True,
+                provider_settings={"protocol": protocol},
+            )
+
+    @pytest.mark.parametrize("protocol", ["saml", "ldap"])
+    async def test_disabled_legacy_provider_settings_cannot_be_enabled_by_assignment(self, protocol):
+        config = SSOConfig(
+            protocol=protocol,
+            display_name=f"Legacy {protocol}",
+            enabled=False,
+            provider_settings={"protocol": protocol},
+        )
+
+        with pytest.raises(ValueError, match="Only OIDC configurations can be enabled"):
+            config.enabled = True
+
+        assert config.enabled is False
+
+    @pytest.mark.parametrize("protocol", ["saml", "ldap"])
+    async def test_database_preserves_enabled_legacy_provider_settings(self, protocol, sso_async_session):
+        config_id = uuid4()
+        timestamp = datetime.now(timezone.utc)
+
+        await sso_async_session.execute(
+            SSOConfig.__table__.insert().values(
+                id=config_id,
+                slug=f"sso-legacy-{protocol}-{uuid4().hex}",
+                display_name=f"Legacy enabled {protocol}",
+                protocol=protocol,
+                enabled=True,
+                sort_order=0,
+                client_secret_encrypted=None,
+                provider_settings={"protocol": protocol},
+                email_claim="email",
+                username_claim="preferred_username",
+                user_id_claim="sub",
+                created_at=timestamp,
+                updated_at=timestamp,
+            )
+        )
+        await sso_async_session.commit()
+
+        config = await sso_async_session.get(SSOConfig, config_id)
+        assert config is not None
+        assert config.enabled is True
+        assert config.provider_settings.protocol == protocol
 
     async def test_protocol_assignment_rejects_mismatch_with_provider_settings(self):
         config = SSOConfig(protocol="oidc", display_name="Valid")

@@ -226,6 +226,7 @@
   "auth.saveWithApiCheckbox": "Mit meinen API-Schlüsseln sparen",
   "auth.signInButton": "Anmelden",
   "auth.signInLink": "Anmelden",
+  "auth.signInPrompt": "Haben Sie bereits ein Konto? Anmelden",
   "auth.signUpLink": "Anmelden",
   "auth.signUpSuccess": "Konto erstellt! Bitte warten Sie auf die Freischaltung durch den Administrator.",
   "auth.signupButton": "Registrieren",

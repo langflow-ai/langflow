@@ -226,6 +226,7 @@
   "auth.saveWithApiCheckbox": "使用我的 API 密钥节省开支",
   "auth.signInButton": "登录",
   "auth.signInLink": "登录",
+  "auth.signInPrompt": "已有账户？登录",
   "auth.signUpLink": "注册",
   "auth.signUpSuccess": "账户已创建！ 请等待管理员激活。",
   "auth.signupButton": "注册",

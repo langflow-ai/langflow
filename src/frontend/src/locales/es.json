@@ -226,6 +226,7 @@
   "auth.saveWithApiCheckbox": "Ahorra con mis claves API",
   "auth.signInButton": "Iniciar sesión",
   "auth.signInLink": "Iniciar sesión",
+  "auth.signInPrompt": "¿Ya tienes una cuenta? Iniciar sesión",
   "auth.signUpLink": "Registrarse",
   "auth.signUpSuccess": "¡Cuenta creada! A la espera de que el administrador lo active.",
   "auth.signupButton": "Registrarse",

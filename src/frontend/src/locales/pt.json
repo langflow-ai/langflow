@@ -226,6 +226,7 @@
   "auth.saveWithApiCheckbox": "Economize com minhas chaves de API",
   "auth.signInButton": "Conectar",
   "auth.signInLink": "Conectar",
+  "auth.signInPrompt": "Já tem uma conta? Conectar",
   "auth.signUpLink": "Inscreva-se",
   "auth.signUpSuccess": "Conta criada! Aguarde a ativação do administrador.",
   "auth.signupButton": "Inscreva-se",

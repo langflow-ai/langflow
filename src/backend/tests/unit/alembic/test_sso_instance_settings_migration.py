@@ -124,8 +124,7 @@ def test_sso_instance_fields_upgrade_and_downgrade_preserve_seeded_rows(db_url):
             sso_settings = sa.Table("sso_settings", metadata, autoload_with=connection)
             sso_user_profile = sa.Table("sso_user_profile", metadata, autoload_with=connection)
 
-            assert {"sort_order", "updated_by"} <= config_columns
-            assert "enforce_sso" not in config_columns
+            assert {"sort_order", "updated_by", "enforce_sso"} <= config_columns
             assert any(
                 foreign_key["constrained_columns"] == ["updated_by"]
                 and foreign_key["referred_table"] == "user"

@@ -161,6 +161,25 @@ class TestSsoRedirectUrlSettings:
 
         assert settings.SSO_REDIRECT_URL == "/api/v1/sso/callback"
 
+    @pytest.mark.parametrize("blank_url", ["", "   ", "\t\r\n"])
+    def test_sso_redirect_url_normalizes_blank_values_to_none(self, blank_url: str, tmp_path: Path):
+        settings = AuthSettings(CONFIG_DIR=tmp_path.as_posix(), SSO_REDIRECT_URL=blank_url)
+
+        assert settings.SSO_REDIRECT_URL is None
+
+    @pytest.mark.parametrize(
+        "control_character_url",
+        [
+            "/api/v1/sso/\x00callback",
+            "/api/v1/sso/callback\nnext",
+            "/api/v1/sso/\x7fcallback",
+            "\t/api/v1/sso/callback",
+        ],
+    )
+    def test_sso_redirect_url_rejects_control_characters(self, control_character_url: str, tmp_path: Path):
+        with pytest.raises(ValidationError, match="control characters"):
+            AuthSettings(CONFIG_DIR=tmp_path.as_posix(), SSO_REDIRECT_URL=control_character_url)
+
     @pytest.mark.parametrize(
         "off_origin_url",
         [
