@@ -89,10 +89,12 @@ class GitExtractorComponent(Component):
                 directories = 0
 
                 for root, dirs, files in os.walk(temp_dir):
-                    total_files += len(files)
                     directories += len(dirs)
                     for file in files:
                         file_path = Path(root) / file
+                        if file_path.is_symlink():
+                            continue
+                        total_files += 1
                         total_size += file_path.stat().st_size
                         try:
                             async with aiofiles.open(file_path, encoding="utf-8") as f:
@@ -145,6 +147,8 @@ class GitExtractorComponent(Component):
                 for root, _, files in os.walk(temp_dir):
                     for file in files:
                         file_path = Path(root) / file
+                        if file_path.is_symlink():
+                            continue
                         relative_path = file_path.relative_to(temp_dir)
                         file_size = file_path.stat().st_size
                         try:
@@ -172,6 +176,8 @@ class GitExtractorComponent(Component):
                 for root, _, files in os.walk(temp_dir):
                     for file in files:
                         file_path = Path(root) / file
+                        if file_path.is_symlink():
+                            continue
                         relative_path = file_path.relative_to(temp_dir)
                         content_list.extend(["=" * 50, f"File: /{relative_path}", "=" * 50])
 

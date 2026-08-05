@@ -1,10 +1,11 @@
-"""SSRF / RCE regression tests for the Git components' clone URL handling.
+"""Security regression tests for the Git components.
 
 A tenant-controlled repository URL handed to ``git clone`` enables RCE via the ``ext::``
 remote helper, arbitrary local-file disclosure via ``file://`` / bare paths, and SSRF to
 internal hosts. These tests confirm the dangerous URL never reaches ``git.Repo.clone_from``.
 """
 
+from contextlib import asynccontextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -53,3 +54,46 @@ async def test_gitloader_blocks_dangerous_clone_url():
         with pytest.raises((SSRFProtectionError, ValueError)):
             await component.build_gitloader()
         assert mock_loader.call_count == 0
+
+
+@pytest.fixture
+def gitextractor_repo_with_symlink(tmp_path, monkeypatch):
+    """Provide a checked-out tree whose symlink points outside the repository."""
+    from lfx.components.git.gitextractor import GitExtractorComponent
+
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    (repository / "README.md").write_text("repository content\n", encoding="utf-8")
+
+    outside_file = tmp_path / "outside.txt"
+    outside_file.write_text("SAFE_CANARY\n" * 3, encoding="utf-8")
+    (repository / "linked.txt").symlink_to(outside_file)
+
+    @asynccontextmanager
+    async def fake_temp_git_repo(_self):
+        yield str(repository)
+
+    monkeypatch.setattr(GitExtractorComponent, "temp_git_repo", fake_temp_git_repo)
+    return GitExtractorComponent(repository_url="https://example.com/repository.git")
+
+
+async def test_gitextractor_files_content_skips_symlinks(gitextractor_repo_with_symlink):
+    result = await gitextractor_repo_with_symlink.get_files_content()
+
+    assert [item.data["path"] for item in result] == ["README.md"]
+    assert "SAFE_CANARY" not in result[0].data["content"]
+
+
+async def test_gitextractor_text_content_skips_symlinks(gitextractor_repo_with_symlink):
+    result = await gitextractor_repo_with_symlink.get_text_based_file_contents()
+
+    assert "README.md" in result.text
+    assert "linked.txt" not in result.text
+    assert "SAFE_CANARY" not in result.text
+
+
+async def test_gitextractor_statistics_skips_symlinks(gitextractor_repo_with_symlink):
+    result = await gitextractor_repo_with_symlink.get_statistics()
+
+    assert result[0].data["total_files"] == 1
+    assert result[0].data["total_lines"] == 1
