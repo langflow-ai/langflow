@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 from lfx.services.auth.base import BaseAuthService  # noqa: TC002
 from lfx.services.authorization.base import BaseAuthorizationService  # noqa: TC002
 from lfx.services.catalog_policy.base import BaseCatalogPolicyService  # noqa: TC002
+from lfx.services.policy_bundle.base import BasePolicyBundleService  # noqa: TC002
 from lfx.services.settings.service import SettingsService  # noqa: TC002
 
 from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
@@ -304,6 +305,13 @@ def get_catalog_policy_service() -> BaseCatalogPolicyService:
     from lfx.services.deps import get_catalog_policy_service as get_lfx_catalog_policy_service
 
     return get_lfx_catalog_policy_service()
+
+
+def get_policy_bundle_service() -> BasePolicyBundleService:
+    """Retrieve the shared process-local policy bundle coordinator."""
+    from lfx.services.deps import get_policy_bundle_service as get_lfx_policy_bundle_service
+
+    return get_lfx_policy_bundle_service()
 
 
 def get_job_service():

@@ -13,6 +13,7 @@ from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.authorization.audit import audit_decision
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_catalog_policy_service
+from langflow.services.policy_bundle import PolicyBundleRevisionConflictError
 
 router = APIRouter(prefix="/catalog-policy", tags=["Catalog Policy"])
 
@@ -37,6 +38,25 @@ def _raise_if_externally_managed(service: BaseCatalogPolicyService) -> None:
             status_code=status.HTTP_409_CONFLICT,
             detail="Catalog policy is externally managed and cannot be changed through this API.",
         )
+    if not service.supports_policy_bundle_updates:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Configured catalog policy service does not support shared policy bundle updates; "
+                "upgrade the plugin before changing database-backed policy"
+            ),
+        )
+
+
+def _revision_conflict(exc: PolicyBundleRevisionConflictError) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "message": "Policy bundle revision conflict",
+            "expected_revision": exc.expected_revision,
+            "active_revision": exc.active_revision,
+        },
+    )
 
 
 async def _audit_update(
@@ -89,10 +109,13 @@ async def replace_component_policy(
     """Replace the complete global component block set."""
     service = get_catalog_policy_service()
     _raise_if_externally_managed(service)
-    update = await service.replace_blocked_component_keys(
-        payload.blocked,
-        actor_user_id=admin.id,
-    )
+    try:
+        update = await service.replace_blocked_component_keys(
+            payload.blocked,
+            actor_user_id=admin.id,
+        )
+    except PolicyBundleRevisionConflictError as exc:
+        raise _revision_conflict(exc) from exc
     await _audit_update(
         user_id=admin.id,
         resource_kind="component",
@@ -120,10 +143,13 @@ async def replace_template_policy(
     """Replace the complete global template block set."""
     service = get_catalog_policy_service()
     _raise_if_externally_managed(service)
-    update = await service.replace_blocked_template_keys(
-        payload.blocked,
-        actor_user_id=admin.id,
-    )
+    try:
+        update = await service.replace_blocked_template_keys(
+            payload.blocked,
+            actor_user_id=admin.id,
+        )
+    except PolicyBundleRevisionConflictError as exc:
+        raise _revision_conflict(exc) from exc
     await _audit_update(
         user_id=admin.id,
         resource_kind="template",

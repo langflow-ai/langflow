@@ -9,7 +9,9 @@ import pytest
 from langflow.services import model_provider_policy as policy_store
 from langflow.services.database.models.model_provider_policy import ModelProviderPolicy
 from langflow.services.task import model_provider_policy_refresh as refresh_module
+from lfx.services.catalog_policy import CatalogPolicyService
 from lfx.services.model_provider_policy import BaseModelProviderPolicyService, ModelProviderPolicyService
+from lfx.services.policy_bundle import PolicyBundleService, PolicyBundleSnapshot
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -121,6 +123,39 @@ def test_explicitly_external_builtin_subclass_does_not_receive_database_state(mo
     assert policy_store.apply_model_provider_policy_state(state) is False
     assert service.approved_provider_ids == frozenset({"openai"})
     assert service.policy_version == 2
+
+
+def test_external_provider_does_not_block_database_owned_catalog_bundle_refresh(monkeypatch):
+    class ExternalBuiltinPolicyService(ModelProviderPolicyService):
+        @property
+        def external_approved_provider_ids(self) -> frozenset[str]:
+            return frozenset({"openai"})
+
+    provider_service = ExternalBuiltinPolicyService()
+    provider_service.set_approved_provider_ids({"openai"}, version=2)
+    bundle_service = PolicyBundleService()
+    catalog_service = CatalogPolicyService(bundle_service)
+    snapshot = PolicyBundleSnapshot(
+        revision=3,
+        initialized=True,
+        source="api",
+        approved_provider_ids=frozenset({"anthropic"}),
+        blocked_component_keys=frozenset({"PythonREPL"}),
+    )
+    state = policy_store.PersistedModelProviderPolicy(
+        approved_provider_ids=snapshot.approved_provider_ids,
+        version=snapshot.revision,
+        bundle_snapshot=snapshot,
+    )
+
+    monkeypatch.setattr(policy_store, "get_model_provider_policy_service", lambda: provider_service)
+    monkeypatch.setattr("lfx.services.deps.get_model_provider_policy_service", lambda: provider_service)
+    monkeypatch.setattr("lfx.services.deps.get_policy_bundle_service", lambda: bundle_service)
+    monkeypatch.setattr("lfx.services.deps.get_catalog_policy_service", lambda: catalog_service)
+
+    assert policy_store.apply_model_provider_policy_state(state) is True
+    assert bundle_service.snapshot is snapshot
+    assert provider_service.approved_provider_ids == frozenset({"openai"})
 
 
 def test_replacement_is_one_atomic_versioned_update():

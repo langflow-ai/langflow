@@ -433,6 +433,12 @@ class ServiceManager:
             expected_bases[ServiceType.MODEL_PROVIDER_POLICY_SERVICE] = BaseModelProviderPolicyService
         except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
             logger.debug(f"BaseModelProviderPolicyService unavailable; entry-point validation skipped: {exc}")
+        try:
+            from lfx.services.policy_bundle.base import BasePolicyBundleService
+
+            expected_bases[ServiceType.POLICY_BUNDLE_SERVICE] = BasePolicyBundleService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BasePolicyBundleService unavailable; entry-point validation skipped: {exc}")
 
         for ep in eps:
             try:
@@ -527,6 +533,12 @@ class ServiceManager:
                     "keeping the built-in fail-open service"
                 )
                 return
+        if service_type == ServiceType.POLICY_BUNDLE_SERVICE:
+            from lfx.services.policy_bundle.base import BasePolicyBundleService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BasePolicyBundleService):
+                msg = "Configured policy bundle service must subclass BasePolicyBundleService"
+                raise RuntimeError(msg)
 
         self.register_service_class(service_type, service_class, override=True)
         logger.debug(f"Registered service from config: {service_key} -> {service_path}")

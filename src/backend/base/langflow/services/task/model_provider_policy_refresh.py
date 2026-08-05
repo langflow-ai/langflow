@@ -6,7 +6,7 @@ import asyncio
 import contextlib
 
 from lfx.log.logger import logger
-from lfx.services.deps import get_model_provider_policy_service
+from lfx.services.deps import get_catalog_policy_service, get_model_provider_policy_service, get_policy_bundle_service
 from lfx.services.model_provider_policy import ModelProviderPolicyService
 
 from langflow.services.deps import get_settings_service, session_scope
@@ -31,7 +31,7 @@ class ModelProviderPolicyRefreshWorker:
         self._task: asyncio.Task | None = None
 
     async def start(self) -> None:
-        """Start refreshes only for the built-in OSS policy implementation."""
+        """Start refreshes only for the built-in database-owned policy implementation."""
         if self._task is not None and not self._task.done():
             await logger.awarning("Model-provider policy refresh worker is already running")
             return
@@ -42,9 +42,13 @@ class ModelProviderPolicyRefreshWorker:
                 self._task.result()
             self._task = None
         service = get_model_provider_policy_service()
-        if service.external_approved_provider_ids is not None or not isinstance(service, ModelProviderPolicyService):
-            await logger.adebug("Model-provider policy refresh worker not started: external policy service active")
-            return
+        if service.external_approved_provider_ids is not None:
+            catalog_service = get_catalog_policy_service()
+            if catalog_service.external_policy_snapshot is not None:
+                await logger.adebug(
+                    "Policy-bundle refresh worker not started: provider and catalog policies are externally managed"
+                )
+                return
 
         self._active_interval = (
             self._interval_override
@@ -102,6 +106,12 @@ class ModelProviderPolicyRefreshWorker:
                 # Install deny-all synchronously before any logging await: a
                 # broken async sink must never preserve broader stale policy.
                 changed = service.fail_closed(deny_all_required=deny_all_required)
+            elif service.external_approved_provider_ids is None:
+                bundle_service = get_policy_bundle_service()
+                if deny_all_required or bundle_service.snapshot.approved_provider_ids:
+                    changed = bundle_service.mark_source_unavailable()
+                    if changed:
+                        service.invalidate()
             with contextlib.suppress(Exception):
                 await logger.aerror(f"Model-provider policy refresh failed: {exc}")
             return changed

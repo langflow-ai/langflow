@@ -19,6 +19,10 @@ from langflow.services.model_provider_policy import (
     get_model_provider_policy_state,
     replace_model_provider_policy_state,
 )
+from langflow.services.policy_bundle import (
+    PolicyBundleApplicationNotSupportedError,
+    PolicyBundleRevisionConflictError,
+)
 
 router = APIRouter(prefix="/model-provider-policy", tags=["Model Provider Policy"])
 
@@ -130,9 +134,25 @@ async def replace_model_provider_policy(
         raise _externally_managed()
 
     try:
-        state = await replace_model_provider_policy_state(session, payload.approved_provider_ids)
+        state = await replace_model_provider_policy_state(
+            session,
+            payload.approved_provider_ids,
+            actor_user_id=admin.id,
+            reason="Replace approved model providers",
+        )
     except ModelProviderPolicyNotInitializedError as exc:
         raise _policy_unavailable() from exc
+    except PolicyBundleApplicationNotSupportedError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except PolicyBundleRevisionConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": "Policy bundle revision conflict",
+                "expected_revision": exc.expected_revision,
+                "active_revision": exc.active_revision,
+            },
+        ) from exc
 
     try:
         await audit_decision(
