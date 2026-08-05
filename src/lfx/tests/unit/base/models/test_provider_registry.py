@@ -28,6 +28,7 @@ from lfx.base.models.unified_models import (
     get_models_detailed,
     get_provider_all_variables,
     get_provider_secret_variable_key,
+    instantiation,
     validate_model_provider_key,
 )
 from lfx.base.models.unified_models.class_registry import (
@@ -221,11 +222,23 @@ def test_model_component_policy_mode_distinguishes_delegate_and_opt_out():
     assert provider_registry.uses_standalone_model_provider_policy(Component()) is False
 
 
+def test_model_component_policy_mode_reads_inherited_annotated_declaration():
+    class DelegatingBase:
+        model_provider_policy_mode: str = "delegate"
+
+    class Component(DelegatingBase):
+        pass
+
+    assert provider_registry.model_component_policy_mode(Component()) == "delegate"
+    assert provider_registry.uses_standalone_model_provider_policy(Component()) is False
+
+
 @pytest.mark.parametrize("mode", ["standalone", "standlone", "", None])
 def test_model_component_policy_mode_fails_closed_for_unknown_modes(mode):
     class Component:
         model_provider_policy_mode = mode
 
+    assert provider_registry.model_component_policy_mode(Component()) == "standalone"
     assert provider_registry.uses_standalone_model_provider_policy(Component()) is True
 
 
@@ -484,6 +497,7 @@ def test_get_llm_applies_registered_provider_base_url(monkeypatch):
     monkeypatch.setattr(
         um, "get_all_variables_for_provider", lambda *_a, **_k: {"FAKECO_API_BASE": "http://vllm.example:8000"}
     )
+    monkeypatch.setattr(instantiation, "ssrf_protected_openai_clients_for_url", lambda _url: {})
 
     model_selection = [
         {
@@ -534,6 +548,7 @@ def test_get_llm_real_resolver_uses_placeholder_not_base_url(monkeypatch):
     # Base URL comes from the env via the connection handler; do NOT patch the
     # api-key resolver -- that is the path under test.
     monkeypatch.setattr(um, "get_all_variables_for_provider", lambda *_a, **_k: {})
+    monkeypatch.setattr(instantiation, "ssrf_protected_openai_clients_for_url", lambda _url: {})
 
     # The broad mapping remains available to provider enablement/UI callers,
     # but neither implicit nor explicit API-key lookup may consume it.
@@ -572,6 +587,7 @@ def test_get_embeddings_applies_registered_provider_base_url_and_key(monkeypatch
     monkeypatch.setattr(
         um, "get_all_variables_for_provider", lambda *_a, **_k: {"FAKECO_API_BASE": "http://vllm.example:8000"}
     )
+    monkeypatch.setattr(instantiation, "ssrf_protected_openai_clients_for_url", lambda _url: {})
 
     model_selection = [
         {

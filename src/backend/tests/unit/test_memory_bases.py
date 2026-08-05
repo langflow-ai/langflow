@@ -267,6 +267,7 @@ class TestKBIngestionHelperBuildEmbeddings:
         from langflow.api.utils.kb_helpers import KBIngestionHelper
 
         monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "ollama-server")
         user = MagicMock(id=uuid.uuid4())
 
         with (
