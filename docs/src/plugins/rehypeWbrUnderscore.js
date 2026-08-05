@@ -3,9 +3,13 @@
 /**
  * Rehype plugin that does two things to markdown tables:
  *
- * 1. Inserts U+200B (zero-width space) after every underscore inside <code>
- *    elements in <td> cells, so env-var names like LANGFLOW_CONFIG_DIR wrap
- *    at underscore boundaries without breaking the inline-code styling.
+ * 1. Inserts a <wbr> word-break opportunity after every underscore inside
+ *    <code> elements in <td> cells, so env-var names like LANGFLOW_CONFIG_DIR
+ *    wrap at underscore boundaries without breaking the inline-code styling.
+ *    <wbr> is used instead of a zero-width space character (U+200B) because
+ *    browsers omit <wbr> when text is copied, so the copied env-var name stays
+ *    byte-for-byte correct. Injecting U+200B directly into the text made copied
+ *    names silently mismatch and fail to be recognized (see issue #14398).
  *
  * 2. Detects columns whose header text matches CENTER_COLUMNS and adds the
  *    CSS class "col-center" to every <th>/<td> in those columns, so Format
@@ -72,14 +76,35 @@ function rehypeTableEnhancements() {
     walk(tree, (node) => {
       if (node.type !== "element") return;
 
-      // 1. Zero-width space after underscores in td > code
+      // 1. <wbr> word-break opportunity after underscores in td > code.
+      //    A <wbr> element (not a zero-width space character) is inserted so
+      //    the break opportunity is dropped when the env-var name is copied.
       if (node.tagName === "td") {
         walk(node, (inner) => {
           if (inner.type !== "element" || inner.tagName !== "code") return;
+          const newChildren = [];
           for (const child of inner.children) {
-            if (child.type !== "text" || !child.value.includes("_")) continue;
-            child.value = child.value.replace(/_/g, "_​");
+            if (child.type !== "text" || !child.value.includes("_")) {
+              newChildren.push(child);
+              continue;
+            }
+            // Keep each underscore with the text before it, then add a <wbr>
+            // after it as a break opportunity.
+            const parts = child.value.split("_");
+            parts.forEach((part, i) => {
+              const isLast = i === parts.length - 1;
+              newChildren.push({ type: "text", value: isLast ? part : `${part}_` });
+              if (!isLast) {
+                newChildren.push({
+                  type: "element",
+                  tagName: "wbr",
+                  properties: {},
+                  children: [],
+                });
+              }
+            });
           }
+          inner.children = newChildren;
         });
       }
 
