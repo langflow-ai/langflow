@@ -276,6 +276,7 @@
         "perplexity",
         "pgvector",
         "pinecone",
+        "plivo",
         "qdrant",
         "redis",
         "sambanova",
