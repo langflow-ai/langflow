@@ -522,25 +522,62 @@ def _redact_url_attributes(span) -> None:
     attributes = span.attributes
     if not attributes or not any(key in attributes for key in _URL_SPAN_ATTRIBUTES):
         return
+
+    original_attributes = span._attributes  # noqa: SLF001
     redacted = dict(attributes)
+
     for key in _URL_SPAN_ATTRIBUTES:
-        if key not in redacted:
+        if key not in attributes:
             continue
         if key == "url.query":
             # The whole point of this attribute is the query string, so there is nothing to keep.
             redacted[key] = ""
-            continue
-        parts = urlsplit(str(redacted[key]))
-        netloc = parts.hostname or ""
-        if parts.port:
-            netloc = f"{netloc}:{parts.port}"
-        redacted[key] = urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+        else:
+            value = attributes[key]
+            if not isinstance(value, str) or (
+                original_attributes.max_value_len is not None and len(value) >= original_attributes.max_value_len
+            ):
+                # A sequence is not a valid semantic URL value. A value at the SDK's length cap
+                # may have lost its query or userinfo delimiter, so neither can be redacted safely.
+                redacted[key] = ""
+                continue
+            try:
+                parts = urlsplit(value)
+                # Accessing port validates the authority. Keep using the raw netloc below so
+                # bracketed IPv6 and port zero retain their exact valid representation.
+                _ = parts.port
+            except ValueError:
+                # Telemetry must never break request handling. A malformed authority is not useful
+                # operational data, so fail closed rather than exporting it or raising from Span.end().
+                redacted[key] = ""
+            else:
+                # Strip userinfo from the raw authority instead of rebuilding it from hostname/port:
+                # the raw form preserves IPv6 brackets and port zero.
+                netloc = parts.netloc.rsplit("@", maxsplit=1)[-1]
+                missing_authority = not netloc and (
+                    key in ("http.url", "url.full") or parts.scheme.lower() in ("http", "https", "ws", "wss")
+                )
+                if missing_authority:
+                    # Absolute URL attributes and hierarchical HTTP-style values require an
+                    # authority. Otherwise credential-looking bytes may be hiding in the path.
+                    redacted[key] = ""
+                else:
+                    redacted[key] = urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+
     # Imported here, not at module scope: opentelemetry is an optional lfx extra and this
     # module must stay importable without it.
     from opentelemetry.attributes import BoundedAttributes
 
-    # ReadableSpan exposes no setter; the SDK's own processors reach for this attribute too.
-    span._attributes = BoundedAttributes(attributes=redacted)  # noqa: SLF001
+    # Span.end() freezes the SDK's BoundedAttributes before processors run, and ReadableSpan
+    # exposes no public setter. Rebuild the immutable mapping with its original limits and
+    # carry the prior drop count forward so exporters receive the same span metadata.
+    redacted_attributes = BoundedAttributes(
+        maxlen=original_attributes.maxlen,
+        attributes=redacted,
+        max_value_len=original_attributes.max_value_len,
+    )
+    redacted_attributes.dropped = original_attributes.dropped
+    span._attributes = redacted_attributes  # noqa: SLF001
 
 
 def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> ApplicationTelemetry:
