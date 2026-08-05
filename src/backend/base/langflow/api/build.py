@@ -614,22 +614,33 @@ async def generate_flow_events(
                 session_id=effective_session_id,
                 run_id=str(job_id) if job_id is not None else run_id,
             )
-            if source_flow_id is not None:
-                graph.flow_id = str(flow_id)
-            return graph
+        else:
+            if not flow_name:
+                lookup_flow_id = source_flow_id if source_flow_id is not None else flow_id
+                result = await fresh_session.exec(select(Flow.name).where(Flow.id == lookup_flow_id))
+                flow_name = result.first()
 
-        if not flow_name:
-            result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
-            flow_name = result.first()
+            # Sanitized public data still contains FileInput references under
+            # the real source-flow namespace. Build under that trusted scope;
+            # after parameter containment completes, switch the graph to the
+            # visitor-virtual execution ID below.
+            graph_build_flow_id = str(source_flow_id) if source_flow_id is not None else flow_id_str
+            graph = await build_graph_from_data(
+                flow_id=graph_build_flow_id,
+                payload=data.model_dump(),
+                user_id=str(current_user.id),
+                flow_name=flow_name,
+                session_id=effective_session_id,
+                run_id=str(job_id) if job_id is not None else run_id,
+            )
 
-        return await build_graph_from_data(
-            flow_id=flow_id_str,
-            payload=data.model_dump(),
-            user_id=str(current_user.id),
-            flow_name=flow_name,
-            session_id=effective_session_id,
-            run_id=str(job_id) if job_id is not None else run_id,
-        )
+        if source_flow_id is not None:
+            # This value comes from the server-resolved public flow, never from
+            # request data. FileInput containment uses it only after flow_id
+            # becomes visitor-virtual.
+            graph.source_flow_id = str(source_flow_id)
+            graph.flow_id = str(flow_id)
+        return graph
 
     def sort_vertices(graph: Graph) -> list[str]:
         try:
