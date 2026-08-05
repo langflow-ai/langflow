@@ -545,6 +545,7 @@ async def execute_sync_workflow(
     # Execute graph - component errors are caught and returned in response body
     job_service = get_job_service()
     await job_service.create_job(job_id=job_id, flow_id=flow_id_str, user_id=current_user.id)
+    _sync_run_success = False
     try:
         task_result, execution_session_id = await job_service.execute_with_status(
             job_id=job_id,
@@ -569,6 +570,7 @@ async def execute_sync_workflow(
         except (RuntimeError, ValueError, OSError):
             await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
+        _sync_run_success = True
         # Build RunResponse
         run_response = RunResponse(outputs=task_result, session_id=execution_session_id)
         # Convert to WorkflowExecutionResponse
@@ -616,3 +618,24 @@ async def execute_sync_workflow(
             error=exc,
             effective_globals=request_variables,
         )
+    finally:
+        # Emit a RunPayload so Enterprise metering (run_event_store) and the
+        # Scarf telemetry pipeline both see every v2 sync workflow run.
+        # Mirrors the _stream_event_frames instrumentation for the SSE path.
+        import contextlib as _cl
+
+        with _cl.suppress(Exception):
+            from langflow.services.deps import get_telemetry_service
+            from langflow.services.telemetry.schema import RunPayload
+
+            _telemetry = get_telemetry_service()
+            if _telemetry is not None:
+                await _telemetry.log_package_run(
+                    RunPayload(
+                        run_is_webhook=False,
+                        run_seconds=0,
+                        run_success=_sync_run_success,
+                        run_error_message="" if _sync_run_success else "workflow error",
+                        run_id=str(job_id),
+                    )
+                )
