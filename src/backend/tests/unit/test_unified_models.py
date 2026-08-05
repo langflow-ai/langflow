@@ -1185,6 +1185,69 @@ def test_policy_refresh_clears_hidden_provider_fields_before_applying_allowed_de
     mock_apply.assert_called_once_with(build_config, "OpenAI")
 
 
+def test_api_key_refresh_preserves_edit_when_default_provider_is_auto_selected():
+    component = _make_mock_component()
+    openai = [{"name": "gpt-test", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(),
+        "api_key": {
+            "show": True,
+            "required": True,
+            "value": "sk-direct-edit",
+            # configure_component currently leaves SecretStrInput's default
+            # database-loading state in place when assigning a literal.
+            "load_from_db": True,
+        },
+        "project_id": {
+            "show": True,
+            "required": True,
+            "value": "STALE_PROJECT_ID",
+            "load_from_db": True,
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value="sk-direct-edit",
+        field_name="api_key",
+        get_options_func=lambda user_id=None: openai,  # noqa: ARG005
+    )
+
+    assert result["model"]["value"] == openai
+    assert result["api_key"]["value"] == "sk-direct-edit"
+    assert result["api_key"]["load_from_db"] is True
+    assert result["project_id"]["value"] == ""
+    assert result["project_id"]["load_from_db"] is False
+
+
+def test_default_provider_auto_selection_does_not_restore_an_unsupported_edited_field():
+    component = _make_mock_component()
+    openai = [{"name": "gpt-test", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(),
+        "project_id": {
+            "show": True,
+            "required": True,
+            "value": "WATSONX_PROJECT_ID",
+            "load_from_db": True,
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value="WATSONX_PROJECT_ID",
+        field_name="project_id",
+        get_options_func=lambda user_id=None: openai,  # noqa: ARG005
+    )
+
+    assert result["model"]["value"] == openai
+    assert result["project_id"]["show"] is False
+    assert result["project_id"]["value"] == ""
+    assert result["project_id"]["load_from_db"] is False
+
+
 def test_handle_model_input_update_watsonx_embedding_shows_special_fields():
     """IBM WatsonX + embedding prefix should show truncate_input_tokens and input_text."""
     component = _make_mock_component()
