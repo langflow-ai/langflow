@@ -31,6 +31,7 @@ on:
 
 env:
   PYTHON_VERSION: "3.13"
+  LFX_VERSION: ${{ github.event.inputs.version }}
 
 permissions:
   contents: write
@@ -67,21 +68,21 @@ jobs:
           version=$(echo $version | sed 's/^v//')
           echo "current_version=$version" >> $GITHUB_OUTPUT
 
-          if [ "$version" != "${{ github.event.inputs.version }}" ]; then
-            echo "❌ Version mismatch: package has $version but input is ${{ github.event.inputs.version }}"
+          if [ "$version" != "$LFX_VERSION" ]; then
+            echo "❌ Version mismatch: package has $version but input is $LFX_VERSION"
             echo "Please update the version in pyproject.toml first"
             echo "should_release=false" >> $GITHUB_OUTPUT
             exit 1
           fi
 
           # Check if version already exists on PyPI
-          if curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys[]' | grep -q "^${{ github.event.inputs.version }}$"; then
-            echo "❌ Version ${{ github.event.inputs.version }} already exists on PyPI"
+          if curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys[]' | grep -q "^${LFX_VERSION}$"; then
+            echo "❌ Version $LFX_VERSION already exists on PyPI"
             echo "should_release=false" >> $GITHUB_OUTPUT
             exit 1
           fi
 
-          echo "✅ Version ${{ github.event.inputs.version }} is valid and not yet released"
+          echo "✅ Version $LFX_VERSION is valid and not yet released"
           echo "should_release=true" >> $GITHUB_OUTPUT
 
   run-tests:
@@ -157,8 +158,8 @@ jobs:
           version=$(echo $version | sed 's/^v//')
 
           # Verify version matches input
-          if [ "$version" != "${{ github.event.inputs.version }}" ]; then
-            echo "Version $version does not match input ${{ github.event.inputs.version }}. Exiting the workflow."
+          if [ "$version" != "$LFX_VERSION" ]; then
+            echo "Version $version does not match input $LFX_VERSION. Exiting the workflow."
             exit 1
           fi
 
@@ -291,31 +292,34 @@ jobs:
 
       - name: Generate release notes
         id: notes
+        env:
+          CURRENT_VERSION: ${{ needs.validate-version.outputs.current_version }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           cat > release_notes.md << EOF
-          # LFX ${{ github.event.inputs.version }}
+          # LFX $LFX_VERSION
 
           ## 🚀 Installation
 
           ### PyPI
           \`\`\`bash
-          pip install lfx==${{ github.event.inputs.version }}
+          pip install lfx==$LFX_VERSION
           # or
-          uv pip install lfx==${{ github.event.inputs.version }}
+          uv pip install lfx==$LFX_VERSION
           # or run without installing
-          uvx lfx@${{ github.event.inputs.version }} --help
+          uvx lfx@$LFX_VERSION --help
           \`\`\`
 
           ### Docker
           \`\`\`bash
           # Standard image
-          docker pull langflowai/lfx:${{ github.event.inputs.version }}
+          docker pull langflowai/lfx:$LFX_VERSION
 
           # Alpine image (smaller)
-          docker pull langflowai/lfx:${{ github.event.inputs.version }}-alpine
+          docker pull langflowai/lfx:$LFX_VERSION-alpine
 
           # Run a flow
-          docker run --rm -v \$(pwd):/app/data langflowai/lfx:${{ github.event.inputs.version }} lfx run flow.json --input-value "Hello"
+          docker run --rm -v \$(pwd):/app/data langflowai/lfx:$LFX_VERSION lfx run flow.json --input-value "Hello"
           \`\`\`
 
           ## 📦 What's New
@@ -330,7 +334,7 @@ jobs:
 
           ---
 
-          **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ needs.validate-version.outputs.current_version }}...lfx-v${{ github.event.inputs.version }}
+          **Full Changelog**: https://github.com/$REPOSITORY/compare/v$CURRENT_VERSION...lfx-v$LFX_VERSION
           EOF
 
       - name: Create Release
@@ -362,17 +366,17 @@ jobs:
         if: needs.release-lfx.result == 'success'
         run: |
           # Test installation using uv
-          uv pip install lfx==${{ github.event.inputs.version }}
+          uv pip install "lfx==$LFX_VERSION"
           uv run lfx --help
 
       - name: Test Docker image
         if: needs.build-docker.result == 'success'
         run: |
           # Test standard image
-          docker run --rm langflowai/lfx:${{ github.event.inputs.version }} lfx --help
+          docker run --rm "langflowai/lfx:$LFX_VERSION" lfx --help
 
           # Test alpine image
-          docker run --rm langflowai/lfx:${{ github.event.inputs.version }}-alpine lfx --help
+          docker run --rm "langflowai/lfx:$LFX_VERSION-alpine" lfx --help
 
           # Test with a simple flow
           cat > test_flow.json << 'EOF'
@@ -382,7 +386,7 @@ jobs:
           }
           EOF
 
-          docker run --rm -v $(pwd):/app/data langflowai/lfx:${{ github.event.inputs.version }} \
+          docker run --rm -v "$(pwd):/app/data" "langflowai/lfx:$LFX_VERSION" \
             lfx run /app/data/test_flow.json --input-value "test" || true
 
   notify:
@@ -393,14 +397,16 @@ jobs:
     steps:
       - name: Notify success
         if: needs.create-release.result == 'success'
+        env:
+          REPOSITORY: ${{ github.repository }}
         run: |
-          echo "✅ LFX ${{ github.event.inputs.version }} released successfully!"
-          echo "PyPI: https://pypi.org/project/lfx/${{ github.event.inputs.version }}/"
+          echo "✅ LFX $LFX_VERSION released successfully!"
+          echo "PyPI: https://pypi.org/project/lfx/$LFX_VERSION/"
           echo "Docker Hub: https://hub.docker.com/r/langflowai/lfx/tags"
-          echo "GitHub Release: https://github.com/${{ github.repository }}/releases/tag/lfx-v${{ github.event.inputs.version }}"
+          echo "GitHub Release: https://github.com/$REPOSITORY/releases/tag/lfx-v$LFX_VERSION"
 
       - name: Notify failure
         if: needs.create-release.result != 'success'
         run: |
-          echo "❌ LFX ${{ github.event.inputs.version }} release failed!"
+          echo "❌ LFX $LFX_VERSION release failed!"
           exit 1
