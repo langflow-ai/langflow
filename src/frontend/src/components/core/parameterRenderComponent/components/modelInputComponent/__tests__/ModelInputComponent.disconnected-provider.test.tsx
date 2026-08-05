@@ -83,6 +83,17 @@ const SAVED_MODEL: ModelOption = {
   metadata: { model_type: "llm" },
 };
 
+const STICKY_SAVED_MODEL: ModelOption = {
+  ...SAVED_MODEL,
+  metadata: { ...SAVED_MODEL.metadata, not_enabled_locally: true },
+};
+
+const OPENAI_MODEL: ModelOption = {
+  name: "gpt-5.6-sol",
+  icon: "OpenAI",
+  provider: "OpenAI",
+  metadata: { model_type: "llm" },
+};
 const baseProps: BaseInputProps & ModelInputComponentType = {
   id: "test-model-input",
   value: [SAVED_MODEL],
@@ -205,17 +216,66 @@ describe("ModelInputComponent — provider disconnected after a model was saved"
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
-  it("should_not_list_the_saved_model_when_its_provider_is_disconnected", async () => {
+  it("should_list_connected_models_but_not_the_sticky_saved_model_from_a_disconnected_provider", async () => {
+    mockConnectedOpenAiAndDisconnectedAnthropic();
     const user = userEvent.setup();
-    renderWithQueryClient(<ModelInputComponent {...baseProps} />);
+    renderWithQueryClient(
+      <ModelInputComponent
+        {...baseProps}
+        options={[OPENAI_MODEL, STICKY_SAVED_MODEL]}
+      />,
+    );
 
-    await user.click(screen.getByText("Setup Provider"));
+    await user.click(screen.getByRole("combobox"));
 
+    expect(
+      await screen.findByTestId("OpenAI-gpt-5.6-sol-option"),
+    ).toBeInTheDocument();
     expect(
       screen.queryByTestId("Anthropic-claude-opus-5-option"),
     ).not.toBeInTheDocument();
   });
 
+  it.each([
+    ["absent", undefined],
+    [
+      "stale",
+      {
+        enabled_models: {
+          Anthropic: { "claude-opus-5": true },
+          OpenAI: { "gpt-5.6-sol": true },
+        },
+      },
+    ],
+  ])(
+    "should_hide_an_untagged_model_from_a_known_disconnected_provider_when_enabled_model_data_is_%s",
+    async (_state, enabledModelsData) => {
+      mockConnectedOpenAiAndDisconnectedAnthropic();
+      (useGetEnabledModels as jest.Mock).mockReturnValue({
+        data: enabledModelsData,
+        isLoading: false,
+        isFetching: false,
+      });
+      const user = userEvent.setup();
+
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...baseProps}
+          value={[OPENAI_MODEL]}
+          options={[OPENAI_MODEL, SAVED_MODEL]}
+        />,
+      );
+
+      await user.click(screen.getByRole("combobox"));
+
+      expect(
+        await screen.findByTestId("OpenAI-gpt-5.6-sol-option"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("Anthropic-claude-opus-5-option"),
+      ).not.toBeInTheDocument();
+    },
+  );
   it("should_not_render_the_configure_wrench_next_to_the_setup_provider_button", () => {
     renderWithQueryClient(<ModelInputComponent {...baseProps} />);
 
@@ -275,4 +335,57 @@ describe("ModelInputComponent — provider disconnected after a model was saved"
 
     expect(handleOnNewValue).not.toHaveBeenCalled();
   });
+
+  it.each([
+    {
+      state: "provider refetch in flight",
+      providerFetching: true,
+    },
+    {
+      state: "provider refetch failed with stale data",
+      providerError: new Error("provider refetch failed"),
+    },
+    {
+      state: "enabled-model refetch in flight",
+      enabledFetching: true,
+    },
+    {
+      state: "enabled-model refetch failed with stale data",
+      enabledError: new Error("enabled-model refetch failed"),
+    },
+  ])(
+    "should_not_replace_the_saved_model_while_$state",
+    async ({
+      providerFetching = false,
+      providerError,
+      enabledFetching = false,
+      enabledError,
+    }) => {
+      mockConnectedOpenAiAndDisconnectedAnthropic();
+      const providerQuery = (useGetModelProviders as jest.Mock)();
+      const enabledQuery = (useGetEnabledModels as jest.Mock)();
+      (useGetModelProviders as jest.Mock).mockReturnValue({
+        ...providerQuery,
+        isFetching: providerFetching,
+        error: providerError,
+      });
+      (useGetEnabledModels as jest.Mock).mockReturnValue({
+        ...enabledQuery,
+        isFetching: enabledFetching,
+        error: enabledError,
+      });
+      const handleOnNewValue = jest.fn();
+
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...baseProps}
+          options={[OPENAI_MODEL, STICKY_SAVED_MODEL]}
+          handleOnNewValue={handleOnNewValue}
+        />,
+      );
+
+      await screen.findByRole("combobox");
+      expect(handleOnNewValue).not.toHaveBeenCalled();
+    },
+  );
 });

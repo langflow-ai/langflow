@@ -4,11 +4,34 @@ from unittest.mock import AsyncMock, patch
 
 import httpcore
 import pytest
-from lfx.utils.ssrf_httpx import ssrf_safe_async_get, ssrf_safe_async_post, ssrf_safe_httpx_get
+from lfx.utils.ssrf_httpx import (
+    ssrf_protected_httpx_client_kwargs_for_url,
+    ssrf_safe_async_get,
+    ssrf_safe_async_post,
+    ssrf_safe_httpx_get,
+)
 from lfx.utils.ssrf_protection import SSRFProtectionError
+from lfx.utils.ssrf_transport import SSRFProtectedSyncTransport, SSRFProtectedTransport
 
 
 class TestSSRFSafeHTTPX:
+    def test_client_kwargs_pin_idn_under_httpx_connect_host(self):
+        with (
+            patch(
+                "lfx.utils.ssrf_httpx.validate_and_resolve_connector_url",
+                return_value=("https://exämple.com/v1", ["93.184.216.34"]),
+            ),
+            patch("lfx.utils.ssrf_httpx.is_ssrf_protection_enabled", return_value=True),
+        ):
+            sync_kwargs, async_kwargs = ssrf_protected_httpx_client_kwargs_for_url("https://exämple.com/v1")
+
+        sync_transport = sync_kwargs["transport"]
+        async_transport = async_kwargs["transport"]
+        assert isinstance(sync_transport, SSRFProtectedSyncTransport)
+        assert isinstance(async_transport, SSRFProtectedTransport)
+        assert sync_transport.pinned_ips == {"xn--exmple-cua.com": ["93.184.216.34"]}
+        assert async_transport.pinned_ips == {"xn--exmple-cua.com": ["93.184.216.34"]}
+
     def test_literal_loopback_is_allowed_by_connector_policy(self):
         with (
             patch.dict(

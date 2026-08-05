@@ -60,6 +60,7 @@ export function createUpdatedNode(
 export function validateModelValue(
   template: APITemplateType,
   modelFieldKey: string,
+  providerConfiguration?: ReadonlyMap<string, boolean>,
 ): APITemplateType {
   const modelField = template[modelFieldKey];
   if (!modelField) return template;
@@ -72,16 +73,35 @@ export function validateModelValue(
     (opt: ModelOptionType) => !opt?.metadata?.is_disabled_provider,
   );
 
-  // Get current model name from value
-  const currentModelName = Array.isArray(currentValue)
-    ? currentValue[0]?.name
-    : currentValue?.name;
+  const currentModel = Array.isArray(currentValue)
+    ? currentValue[0]
+    : currentValue;
+  const currentModelName = currentModel?.name;
+  const currentProvider = currentModel?.provider;
+  const currentProviderConfiguration = currentProvider
+    ? providerConfiguration?.get(currentProvider)
+    : undefined;
+
+  // Sticky defaults can be disconnected providers or configured providers
+  // whose valid model is not locally enabled. Reject only an explicitly
+  // disconnected provider, and only when another selectable model exists.
+  const selectableOptions = availableOptions.filter(
+    (opt: ModelOptionType) =>
+      opt?.metadata?.not_enabled_locally !== true &&
+      (!opt.provider || providerConfiguration?.get(opt.provider) !== false),
+  );
+  const optionsForValidation =
+    currentProviderConfiguration === false && selectableOptions.length > 0
+      ? selectableOptions
+      : availableOptions;
 
   // Check if current model is still available
   const isCurrentModelValid =
     currentModelName &&
-    availableOptions.some(
-      (opt: ModelOptionType) => opt.name === currentModelName,
+    optionsForValidation.some(
+      (opt: ModelOptionType) =>
+        opt.name === currentModelName &&
+        (!currentProvider || opt.provider === currentProvider),
     );
 
   if (isCurrentModelValid) {
@@ -90,9 +110,9 @@ export function validateModelValue(
   }
 
   // Current value is invalid - need to update it
-  if (availableOptions.length > 0) {
+  if (optionsForValidation.length > 0) {
     // Select the first available model
-    const firstOption = availableOptions[0];
+    const firstOption = optionsForValidation[0];
     const newValue = [
       {
         ...(firstOption.id && { id: firstOption.id }),

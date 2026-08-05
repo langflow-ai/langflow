@@ -1833,7 +1833,7 @@
   "shortcuts.combinationExists": "Cette combinaison existe déjà!",
   "shortcuts.defaultNotFound": "Raccourci par défaut introuvable.",
   "shortcuts.description": "Gérez les raccourcis pour accéder rapidement aux actions que vous utilisez souvent.",
-  "shortcuts.name.advancedSettings": "Contrôles",
+  "shortcuts.name.advancedSettings": "Paramètres",
   "shortcuts.name.aiAssistant": "Assistant IA",
   "shortcuts.name.api": "interface de programme d\"application",
   "shortcuts.name.changesSave": "Enregistrer les modifications",

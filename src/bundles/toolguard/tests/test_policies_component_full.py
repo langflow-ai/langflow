@@ -117,20 +117,18 @@ async def test_guard_tools_allowed_when_custom_components_enabled(mock_component
     fake_tg["GuardedTool"].return_value = MagicMock()
 
     with (
-        patch.object(Path, "exists", return_value=True),
         patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg) as mock_import,
         patch.object(mock_component, "make_toolguard_result", return_value=MagicMock()),
     ):
         await mock_component.guard_tools()
 
     mock_import.assert_called()
+    fake_tg["load_toolguards"].assert_not_called()
 
 
 @pytest.mark.usefixtures("custom_component_execution_enabled")
-async def test_cache_mode_success(mock_component, mock_tool):
-    """Test PoliciesComponent in cache mode with valid cached guards."""
-    code_dir = mock_component.work_dir / STEP2
-
+async def test_guard_mode_loads_persisted_template_without_cache_directory(mock_component, mock_tool):
+    """Guard mode reconstructs generated guards from the flow template."""
     fake_tg = _make_fake_tg()
     mock_tg_result = MagicMock()
     mock_tg_runtime = MagicMock()
@@ -138,9 +136,7 @@ async def test_cache_mode_success(mock_component, mock_tool):
     mock_guarded_instance = MagicMock()
     fake_tg["GuardedTool"].return_value = mock_guarded_instance
 
-    # Mock the cache directory exists and toolguard loading
     with (
-        patch.object(Path, "exists", return_value=True),
         patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
         patch.object(mock_component, "make_toolguard_result") as mock_make_result,
     ):
@@ -148,66 +144,39 @@ async def test_cache_mode_success(mock_component, mock_tool):
 
         result = await mock_component.guard_tools()
 
-        # Verify load_toolguards was called during validation
-        fake_tg["load_toolguards"].assert_called_once_with(code_dir)
-
-        # Verify make_toolguard_result was called
         mock_make_result.assert_called_once()
-
-        # Verify load_toolguards_from_memory was called with the result
         fake_tg["load_toolguards_from_memory"].assert_called_once_with(mock_tg_result)
-
-        # Verify GuardedTool was created for each tool
         assert fake_tg["GuardedTool"].call_count == len(mock_component.in_tools)
         fake_tg["GuardedTool"].assert_called_with(mock_tool, mock_component.in_tools, mock_tg_runtime)
-
-        # Verify result contains guarded tools
         assert len(result) == 1
         assert result[0] == mock_guarded_instance
+        fake_tg["load_toolguards"].assert_not_called()
 
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("custom_component_execution_enabled")
-async def test_cache_mode_directory_not_found(mock_component):
-    """Test PoliciesComponent in cache mode when cache directory doesn't exist."""
+async def test_guard_mode_requires_tools(mock_component):
+    """Guard mode rejects an empty tool list before loading persisted code."""
+    mock_component.in_tools = []
     fake_tg = _make_fake_tg()
-    # Mock the cache directory does not exist
     with (
-        patch.object(Path, "exists", return_value=False),
         patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
-        pytest.raises(ValueError, match="Cache directory not found"),
+        pytest.raises(ValueError, match="in_tools cannot be empty"),
     ):
         await mock_component.guard_tools()
+    fake_tg["load_toolguards_from_memory"].assert_not_called()
 
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("custom_component_execution_enabled")
-async def test_cache_mode_file_not_found(mock_component):
-    """Test PoliciesComponent in cache mode when required files are missing."""
-    fake_tg = _make_fake_tg()
-    fake_tg["load_toolguards"].side_effect = FileNotFoundError("Guard file not found")
-    # Mock the cache directory exists but files are missing
+async def test_guard_tools_rejects_unsupported_mode(mock_component):
+    mock_component.mode = "unsupported"
     with (
-        patch.object(Path, "exists", return_value=True),
-        patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
-        pytest.raises(ValueError, match="Required guard code files missing"),
+        patch.object(PoliciesComponent, "_import_toolguard") as mock_import,
+        pytest.raises(ValueError, match="unsupported activity mode"),
     ):
         await mock_component.guard_tools()
-
-
-@pytest.mark.asyncio
-@pytest.mark.usefixtures("custom_component_execution_enabled")
-async def test_cache_mode_corrupted_cache(mock_component):
-    """Test PoliciesComponent in cache mode when cached code is corrupted."""
-    fake_tg = _make_fake_tg()
-    fake_tg["load_toolguards"].side_effect = Exception("Invalid Python syntax")
-    # Mock the cache directory exists but code is corrupted
-    with (
-        patch.object(Path, "exists", return_value=True),
-        patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
-        pytest.raises(ValueError, match="Failed to load guard code"),
-    ):
-        await mock_component.guard_tools()
+    mock_import.assert_not_called()
 
 
 # @pytest.mark.asyncio

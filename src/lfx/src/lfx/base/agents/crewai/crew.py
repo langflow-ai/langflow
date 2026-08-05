@@ -52,7 +52,7 @@ def convert_llm(llm: Any, excluded_keys=None):
         A CrewAI-compatible LLM object
     """
     try:
-        from crewai import LLM
+        from crewai import LLM, BaseLLM
     except ImportError as e:
         msg = "CrewAI is not installed. Please install it with `uv pip install crewai`."
         raise ImportError(msg) from e
@@ -60,8 +60,8 @@ def convert_llm(llm: Any, excluded_keys=None):
     if not llm:
         return None
 
-    # Check if this is already an LLM object
-    if isinstance(llm, LLM):
+    # From crewai 1.0 `LLM(...)` returns provider-specific BaseLLM subclasses, not LLM instances.
+    if isinstance(llm, BaseLLM):
         return llm
 
     # Check if we should use model_name model, or something else
@@ -112,7 +112,7 @@ def convert_tools(tools):
         A CrewAI-compatible tools list.
     """
     try:
-        from crewai.tools.base_tool import Tool
+        from crewai.tools.base_tool import BaseTool, Tool
     except ImportError as e:
         msg = "CrewAI is not installed. Please install it with `uv pip install crewai`."
         raise ImportError(msg) from e
@@ -120,7 +120,7 @@ def convert_tools(tools):
     if not tools:
         return []
 
-    return [Tool.from_langchain(tool) for tool in tools]
+    return [tool if isinstance(tool, BaseTool) else Tool.from_langchain(tool) for tool in tools]
 
 
 class BaseCrewComponent(Component):
@@ -159,42 +159,55 @@ class BaseCrewComponent(Component):
         # Allow passing a custom list of agents
         if not agents_list:
             agents_list = self.agents or []
-        source_tasks = self.tasks or []
+        source_tasks = list(self.tasks or [])
+        source_agents = list(agents_list)
+        source_agents.extend(task.agent for task in source_tasks if getattr(task, "agent", None) is not None)
 
-        # CrewAI agents own runtime objects such as locks and HTTP clients, so use
-        # CrewAI's copy APIs instead of deepcopy. Copy each distinct agent once to
-        # preserve shared agent references across tasks.
-        agent_copies_by_id = {}
-        agents_copy = []
-        for agent in agents_list:
+        # An agent wired into multiple tasks appears multiple times in agents_list.
+        # Keep one converted copy per original so another crew cannot observe these changes.
+        copied_agents: dict[int, Any] = {}
+        converted_agents: list[Any] = []
+        for agent in source_agents:
             agent_id = id(agent)
-            if agent_id not in agent_copies_by_id:
-                agent_copies_by_id[agent_id] = agent.copy()
-            agents_copy.append(agent_copies_by_id[agent_id])
+            if agent_id in copied_agents:
+                continue
 
-        task_mapping = {}
-        tasks = []
+            copied_agent = agent.copy()
+            copied_agent.llm = convert_llm(copied_agent.llm)
+            copied_agent.tools = convert_tools(copied_agent.tools)
+            copied_agents[agent_id] = copied_agent
+            converted_agents.append(copied_agent)
+
+        copied_tasks: list[Any] = []
+        # Preseed the map so Task.copy can resolve context tasks regardless of their order.
+        task_mapping: dict[str, Any] = {task.key: task for task in source_tasks}
+        copied_tasks_by_id: dict[int, Any] = {}
         for task in source_tasks:
-            task_copy = task.copy(agents_copy, task_mapping)
-            if task.agent is not None and id(task.agent) in agent_copies_by_id:
-                task_copy.agent = agent_copies_by_id[id(task.agent)]
-            tasks.append(task_copy)
-            task_mapping[task.key] = task_copy
+            task_agent = getattr(task, "agent", None)
+            task_agents = converted_agents
+            if task_agent is not None:
+                copied_task_agent = copied_agents[id(task_agent)]
+                task_agents = [
+                    copied_task_agent,
+                    *(agent for agent in converted_agents if agent is not copied_task_agent),
+                ]
 
-        # CrewAI performs this second pass in Crew.copy() so context references
-        # point at the copied tasks even when they were reconstructed separately.
-        task_copies_by_id = {id(task): task_copy for task, task_copy in zip(source_tasks, tasks, strict=True)}
-        for task, task_copy in zip(source_tasks, tasks, strict=True):
+            copied_task = task.copy(task_agents, task_mapping)
+            if task_agent is not None:
+                # Task.copy matches agents by role, which is ambiguous when two agents share a role.
+                copied_task.agent = copied_task_agent
+            copied_tasks.append(copied_task)
+            copied_tasks_by_id[id(task)] = copied_task
+            task_mapping[task.key] = copied_task
+
+        # Task.copy can only resolve contexts already present in task_mapping. Remap them after every task exists.
+        for task, copied_task in zip(source_tasks, copied_tasks, strict=True):
             if isinstance(task.context, list):
-                task_copy.context = [task_copies_by_id[id(context_task)] for context_task in task.context]
+                copied_task.context = [
+                    copied_tasks_by_id.get(id(context_task), context_task) for context_task in task.context
+                ]
 
-        # Set all the agents llm attribute to the crewai llm
-        for agent in agent_copies_by_id.values():
-            # Convert Agent LLM and Tools to proper format
-            agent.llm = convert_llm(agent.llm)
-            agent.tools = convert_tools(agent.tools)
-
-        return tasks, agents_copy
+        return copied_tasks, converted_agents
 
     def get_manager_llm(self):
         if not self.manager_llm:

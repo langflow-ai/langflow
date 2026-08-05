@@ -646,16 +646,26 @@ class AuthService(BaseAuthService):
             is_superuser=False,
             last_login_at=now,
         )
-        new_profile = SSOUserProfile(
-            user_id=user.id,
-            sso_provider=identity.provider,
-            sso_user_id=identity.subject,
-            email=identity.email,
-            sso_last_login_at=now,
-        )
         db.add(user)
-        db.add(new_profile)
         try:
+            # Flush `user` on its own before constructing `new_profile`.
+            # SSOUserProfile.user_id is a bare FK column - no SQLModel
+            # Relationship() ties User and SSOUserProfile together - so
+            # SQLAlchemy's unit-of-work can't infer that the user row must be
+            # inserted before sso_user_profile in a single flush. Without a
+            # declared relationship, the two INSERTs aren't guaranteed to be
+            # ordered, and on Postgres that can raise ForeignKeyViolation on
+            # sso_user_profile_user_id_fkey. A separate flush here removes the
+            # ordering dependency entirely instead of relying on it.
+            await db.flush()
+            new_profile = SSOUserProfile(
+                user_id=user.id,
+                sso_provider=identity.provider,
+                sso_user_id=identity.subject,
+                email=identity.email,
+                sso_last_login_at=now,
+            )
+            db.add(new_profile)
             await db.flush()
             await db.refresh(user)
             await self._initialize_jit_user_defaults(user, db)

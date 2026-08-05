@@ -44,6 +44,11 @@ from langflow.services.authorization import (
 )
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.authorization.utils import _resolve_authz_domain
+from langflow.services.database.lock_retry import (
+    is_database_lock_error,
+    run_with_lock_retry,
+    sanitize_database_error,
+)
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
     remap_flow_guard_for_project_delete,
@@ -64,6 +69,10 @@ from langflow.services.deps import get_service, get_settings_service
 from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
+
+PROJECT_READ_FAILED = "Could not read the project."
+PROJECT_DELETE_FAILED = "Could not delete the project."
+PROJECT_DELETE_BUSY = "The database is busy. Please retry the request."
 
 # Backwards-compatible local alias; the implementation now lives in lfx.utils.util_strings so the
 # same LIKE-escaping is shared across the API endpoints + the tracing repository.
@@ -685,8 +694,8 @@ async def delete_project(
     project_id: UUID,
     current_user: CurrentActiveUser,
 ):
-    try:
-        project = await authorized_or_owner_scoped(
+    async def _load_project() -> Folder | None:
+        return await authorized_or_owner_scoped(
             session,
             Folder,
             id_column=Folder.id,
@@ -694,8 +703,11 @@ async def delete_project(
             owner_column=Folder.user_id,
             owner_id=current_user.id,
         )
+
+    try:
+        project = await _load_project()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_READ_FAILED)) from e
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -720,33 +732,49 @@ async def delete_project(
             detail=msg,
         )
 
-    await cleanup_mcp_on_delete(project, project_id, current_user, session)
-
     # Cascade and deployment guards operate over the project owner's flows —
     # a non-owner with a delete share must remove the owner's resources, not
     # only their own (which is the empty set for a non-owner).
     project_owner_id = project.user_id
 
-    async def _delete_project_operation() -> None:
-        flows = (
-            await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == project_owner_id))
-        ).all()
-        if len(flows) > 0:
-            for flow in flows:
-                await cascade_delete_flow(session, flow.id)
+    def _make_delete_operation(target: Folder):
+        async def _delete_project_operation() -> None:
+            flows = (
+                await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == project_owner_id))
+            ).all()
+            if len(flows) > 0:
+                for flow in flows:
+                    await cascade_delete_flow(session, flow.id)
 
-        await check_project_has_deployments(session, project_id=project_id)
-        await session.delete(project)
-        # Flush eagerly so guard/constraint errors surface in-request rather than at teardown commit.
-        await session.flush()
+            await check_project_has_deployments(session, project_id=project_id)
+            await session.delete(target)
+            # Flush eagerly so guard/constraint errors surface in-request rather than at teardown commit.
+            await session.flush()
 
-    try:
+        return _delete_project_operation
+
+    # LE-2020: a retry runs in a brand new transaction, and the rollback that
+    # precedes it expires every instance loaded so far. The user and the row are
+    # therefore re-read with awaits — a plain attribute read on expired state
+    # would lazy-load outside the greenlet context and raise MissingGreenlet.
+    async def _delete_attempt(attempt: int) -> None:
+        if attempt == 0:
+            target = project
+        else:
+            await session.refresh(current_user)
+            target = await _load_project()
+        if target is None:
+            return
+        await cleanup_mcp_on_delete(target, project_id, current_user, session)
         await retry_project_operation_on_deployment_guard(
             db=session,
             user_id=project_owner_id,
             project_id=project_id,
-            operation=_delete_project_operation,
+            operation=_make_delete_operation(target),
         )
+
+    try:
+        await run_with_lock_retry(_delete_attempt, session=session, description=f"delete_project {project_id}")
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
@@ -754,7 +782,17 @@ async def delete_project(
             log_message=f"op=delete_project project_id={project_id}",
             remap=remap_flow_guard_for_project_delete,
         )
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        if is_database_lock_error(e):
+            # Contention that outlived the retry budget is transient, not a
+            # server fault: 503 + Retry-After lets a client retry correctly.
+            await logger.awarning("op=delete_project project_id=%s exhausted lock retries", project_id)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=PROJECT_DELETE_BUSY,
+                headers={"Retry-After": "1"},
+            ) from e
+        await logger.aexception("op=delete_project project_id=%s failed with %s", project_id, type(e).__name__)
+        raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_DELETE_FAILED)) from e
 
 
 @router.get("/download/{project_id}", status_code=200)

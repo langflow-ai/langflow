@@ -8,6 +8,7 @@ import {
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
 import { cn } from "@/utils/utils";
+import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
 import type { InputProps, PromptAreaComponentType } from "../../types";
 import { PromptEditableArea } from "./components/PromptEditableArea";
 import { generateUniqueVariableName } from "./helpers/generate-unique-variable-name";
@@ -26,6 +27,7 @@ export default function AccordionPromptComponent({
   value,
   disabled,
   id = "",
+  nodeId,
   readonly = false,
   showParameter = false,
   isDoubleBrackets = false,
@@ -398,6 +400,7 @@ export default function AccordionPromptComponent({
             disabled={disabled}
             readonly={readonly}
             id={id}
+            domId={getNodeScopedDomId(id, nodeId)}
             internalValue={internalValue}
             isScrollable={isScrollable}
             isDoubleBrackets={isDoubleBrackets}
