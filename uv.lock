@@ -8626,7 +8626,7 @@ requires-dist = [
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
     { name = "aiosqlite", specifier = ">=0.20.0,<1.0.0" },
-    { name = "alembic", specifier = ">=1.13.0,<2.0.0" },
+    { name = "alembic", specifier = ">=1.13.0,<1.19.0" },
     { name = "apify-client", marker = "extra == 'apify'", specifier = ">=1.8.1" },
     { name = "apscheduler", marker = "extra == 'litellm'", specifier = ">=3.10.4,<4.0.0" },
     { name = "arize-phoenix-otel", specifier = ">=0.6.1" },
