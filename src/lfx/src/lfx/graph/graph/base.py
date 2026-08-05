@@ -1288,6 +1288,7 @@ class Graph:
             "vertices": self.vertices,
             "edges": self.edges,
             "flow_id": self.flow_id,
+            "source_flow_id": self.source_flow_id,
             "flow_name": self.flow_name,
             "description": self.description,
             "user_id": self.user_id,
@@ -1342,12 +1343,15 @@ class Graph:
             # Deep copy vertices and edges
             new_graph.add_nodes_and_edges(copy.deepcopy(self._vertices, memo), copy.deepcopy(self._edges, memo))
 
+        new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
+
         # Store the newly created object in memo
         memo[id(self)] = new_graph
 
         return new_graph
 
     def __setstate__(self, state):
+        state.setdefault("source_flow_id", None)
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
             state["run_manager"] = run_manager
