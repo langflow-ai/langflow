@@ -3,6 +3,7 @@
 import os
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
+from urllib.parse import urlencode
 
 import pytest
 from lfx.utils.ssrf_protection import (
@@ -38,6 +39,14 @@ def mock_ssrf_settings(*, enabled=False, allowed_hosts=None, restrict_files=Fals
         patch("lfx.utils.file_path_security.get_settings_service", return_value=mock_settings),
     ):
         yield
+
+
+def _sqlalchemy_odbc_connect_string(uri: str) -> str:
+    """Return SQLAlchemy's serialized PyODBC connection string when available."""
+    sqlalchemy = pytest.importorskip("sqlalchemy")
+    pyodbc = pytest.importorskip("sqlalchemy.dialects.mssql.pyodbc")
+    connect_args, _connect_kwargs = pyodbc.MSDialect_pyodbc().create_connect_args(sqlalchemy.engine.make_url(uri))
+    return connect_args[0]
 
 
 class TestSSRFProtectionConfiguration:
@@ -509,6 +518,159 @@ class TestDatabaseURLValidation:
         ):
             mock_resolve.return_value = ["93.184.216.34"]  # public IP
             validate_database_url_for_ssrf("postgresql://db.example.com:5432/app")
+
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "host=127.0.0.1",
+            "h%6fst=127.0.0.1",
+            "host=1.1.1.1&host=127.0.0.1",
+            "hostaddr=127.0.0.1",
+            "port=15432",
+            "unix_socket=%2Fvar%2Frun%2Fdatabase.sock",
+            "odbc_connect=SERVER%3D127.0.0.1",
+            "dsn=127.0.0.1%3A15432%2Fapp",
+        ],
+    )
+    def test_connection_target_query_overrides_blocked(self, query):
+        """DBAPI query options cannot replace the network target that passed validation."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+            pytest.raises(SSRFProtectionError, match="connection target"),
+        ):
+            validate_database_url_for_ssrf(f"postgresql://db.example.com:5432/app?{query}")
+
+    def test_non_target_query_options_allowed(self):
+        """Connection options that cannot redirect the target remain supported."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+        ):
+            validate_database_url_for_ssrf("postgresql://db.example.com:5432/app?sslmode=require")
+
+    @pytest.mark.parametrize("target_key", ["SERVER", "Address", "Addr", "Network+Address", "Data+Source"])
+    def test_odbc_connection_target_query_aliases_blocked(self, target_key):
+        """ODBC aliases cannot supersede the server from the validated authority."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+            pytest.raises(SSRFProtectionError, match="connection target"),
+        ):
+            validate_database_url_for_ssrf(
+                f"mssql+pyodbc://db.example.com/app?driver=ODBC+Driver+18&{target_key}=127.0.0.1"
+            )
+
+    @pytest.mark.parametrize(
+        ("scheme", "query_key"),
+        [
+            ("mssql+pyodbc", "trace%3Bextra"),
+            ("mssql+aioodbc", "trace%3Dextra"),
+            ("mssql", "trace%0Aextra"),
+            ("mysql+pyodbc", "trace%00extra"),
+        ],
+    )
+    def test_odbc_connection_string_delimiters_and_controls_blocked(self, scheme, query_key):
+        """Unsafe ODBC key characters are rejected before SQLAlchemy serializes them."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+            pytest.raises(SSRFProtectionError, match="unsupported ODBC query key"),
+        ):
+            validate_database_url_for_ssrf(f"{scheme}://db.example.com/app?driver=ODBC+Driver+18&{query_key}=enabled")
+
+    def test_odbc_delimiter_key_matches_sqlalchemy_serialization(self):
+        """Regression mirrors how SQLAlchemy turns an arbitrary key into a new ODBC attribute."""
+        uri = "mssql+pyodbc://db.example.com/app?driver=ODBC+Driver+18&trace%3BServer=alternate.example.com=enabled"
+
+        assert ";Server=alternate.example.com=" in _sqlalchemy_odbc_connect_string(uri)
+
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+            pytest.raises(SSRFProtectionError, match="unsupported ODBC query key"),
+        ):
+            validate_database_url_for_ssrf(uri)
+
+    def test_unknown_odbc_driver_attribute_blocked(self):
+        """Driver-defined attributes are denied unless explicitly classified as safe."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            pytest.raises(SSRFProtectionError, match="unsupported ODBC query key"),
+        ):
+            validate_database_url_for_ssrf(
+                "mssql+pyodbc://db.example.com/app?driver=ODBC+Driver+18&VendorOption=enabled"
+            )
+
+    def test_unknown_odbc_driver_attribute_allowed_when_protections_disabled(self):
+        """The explicit OSS opt-out preserves vendor-specific ODBC attributes."""
+        with mock_ssrf_settings(enabled=False, restrict_files=False):
+            validate_database_url_for_ssrf(
+                "mssql+pyodbc://db.example.com/app?driver=ODBC+Driver+18&VendorOption=enabled"
+            )
+
+    def test_odbc_filedsn_target_override_blocked(self):
+        """FILEDSN is serialized as a target source and cannot bypass authority validation."""
+        uri = "mssql+pyodbc://db.example.com/app?driver=ODBC+Driver+18&FILEDSN=%2Ftmp%2Fconnection.dsn"
+        assert ";FILEDSN=/tmp/connection.dsn" in _sqlalchemy_odbc_connect_string(uri)
+
+        with (
+            mock_ssrf_settings(enabled=True, restrict_files=False),
+            pytest.raises(SSRFProtectionError, match="connection target"),
+        ):
+            validate_database_url_for_ssrf(uri)
+
+    def test_odbc_failover_partner_target_override_blocked(self):
+        """Failover_Partner cannot supply an alternate server target."""
+        uri = "mssql+pyodbc://db.example.com/app?driver=ODBC+Driver+18&Failover_Partner=alternate.example.com"
+        assert ";Failover_Partner=alternate.example.com" in _sqlalchemy_odbc_connect_string(uri)
+
+        with (
+            mock_ssrf_settings(enabled=True, restrict_files=False),
+            pytest.raises(SSRFProtectionError, match="connection target"),
+        ):
+            validate_database_url_for_ssrf(uri)
+
+    @pytest.mark.parametrize(
+        ("query_key", "query_value"),
+        [
+            ("SAVEFILE", "/tmp/connection.dsn"),
+            ("ClientCertificate", "file:/tmp/client.pem"),
+            ("ClientKey", "file:/tmp/client.key"),
+            ("QueryLogFile", "/tmp/query.log"),
+            ("ServerCertificate", "/tmp/server.pem"),
+            ("StatsLogFile", "/tmp/stats.log"),
+        ],
+    )
+    def test_odbc_local_file_options_blocked_when_restricted(self, query_key, query_value):
+        """ODBC client-file options are blocked even when network SSRF validation is disabled."""
+        query = urlencode({"driver": "ODBC Driver 18", query_key: query_value})
+        uri = f"mssql+pyodbc://db.example.com/app?{query}"
+        assert f";{query_key}={query_value}" in _sqlalchemy_odbc_connect_string(uri)
+
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=True),
+            pytest.raises(SSRFProtectionError, match="local filesystem"),
+        ):
+            validate_database_url_for_ssrf(uri)
+
+    @pytest.mark.parametrize("certificate", ["sha1:0123456789abcdef", "subject:Langflow Client"])
+    def test_odbc_certificate_store_selectors_allowed_when_local_files_restricted(self, certificate):
+        """Non-file ClientCertificate forms do not access the local filesystem."""
+        query = urlencode({"driver": "ODBC Driver 18", "ClientCertificate": certificate})
+        with mock_ssrf_settings(enabled=False, restrict_files=True):
+            validate_database_url_for_ssrf(f"mssql+pyodbc://db.example.com/app?{query}")
+
+    def test_safe_odbc_query_options_allowed(self):
+        """Common ODBC options with safe key names remain supported."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+        ):
+            validate_database_url_for_ssrf(
+                "mssql+pyodbc://db.example.com/app?driver=ODBC+Driver+18"
+                "&TrustServerCertificate=yes&Application+Name=Langflow"
+            )
 
     def test_missing_host_blocked(self):
         """A non-file dialect with no host cannot be validated -> blocked (fail closed)."""
