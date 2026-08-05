@@ -1,0 +1,66 @@
+---
+title: Plivo
+slug: /bundles-plivo
+---
+
+import Icon from "@site/src/components/icon";
+
+[Plivo](https://www.plivo.com/?utm_source=github&utm_medium=oss&utm_campaign=langflow-plivo) is a cloud communications platform that provides SMS messaging, voice calling, and phone number lookup APIs.
+
+Your flows can use the **Plivo** bundle components to send SMS messages, place outbound phone calls, and look up phone number details with your Plivo account.
+
+All components authenticate with a Plivo **Auth ID** and **Auth Token**, which you can find in the [Plivo console](https://cx.plivo.com/?utm_source=github&utm_medium=oss&utm_campaign=langflow-plivo).
+For more information, see the [Plivo API documentation](https://www.plivo.com/docs/?utm_source=github&utm_medium=oss&utm_campaign=langflow-plivo).
+
+## Plivo Send SMS
+
+The **Plivo Send SMS** component sends an SMS message through the [Plivo Messaging API](https://www.plivo.com/docs/messaging/api/message?utm_source=github&utm_medium=oss&utm_campaign=langflow-plivo).
+
+1. Add the **Plivo Send SMS** component to your flow, and then configure it as follows:
+
+    * **Plivo Auth ID** and **Plivo Auth Token**: Enter the credentials for your Plivo account.
+    * **From Number**: Enter the sender ID. This is a Plivo phone number, short code, or, where permitted, an alphanumeric sender ID.
+    * **To Number**: Enter the recipient's phone number in E.164 format, such as `+14150000001`.
+    * **Message**: Enter the text body of the message to send.
+
+2. Connect the component to other components in your flow.
+The component can be used as a standalone step in a flow or as a tool for an agent.
+
+    To enable **Tool Mode** for this component, change the component's output type from **Output** to **Tool**, and then connect it to the **Tools** port on an **Agent** component.
+
+    The component returns Plivo's API response, which includes the message UUID and API request identifier, in Langflow's [`Data` type](/data-types).
+
+## Plivo Make Call
+
+The **Plivo Make Call** component places an outbound phone call through the [Plivo Voice API](https://www.plivo.com/docs/voice/api/call?utm_source=github&utm_medium=oss&utm_campaign=langflow-plivo).
+
+1. Add the **Plivo Make Call** component to your flow, and then configure it as follows:
+
+    * **Plivo Auth ID** and **Plivo Auth Token**: Enter the credentials for your Plivo account.
+    * **From Number**: Enter the caller ID. This is a Plivo phone number in E.164 format.
+    * **To Number**: Enter the destination phone number in E.164 format, such as `+14150000001`.
+    * **Answer URL**: Enter a publicly reachable URL that returns Plivo answer XML, such as a `<Speak>` element, when the call is answered. A default public URL is provided, so a basic call needs no additional setup.
+
+2. Connect the component to other components in your flow.
+The component can be used as a standalone step in a flow or as a tool for an agent.
+
+    To enable **Tool Mode** for this component, change the component's output type from **Output** to **Tool**, and then connect it to the **Tools** port on an **Agent** component.
+
+    The component returns Plivo's API response, which includes the call request UUID and API request identifier, in Langflow's [`Data` type](/data-types).
+
+## Plivo Lookup Number
+
+The **Plivo Lookup Number** component looks up carrier and formatting details for a phone number through the [Plivo Lookup API](https://www.plivo.com/docs/lookup/api/number?utm_source=github&utm_medium=oss&utm_campaign=langflow-plivo).
+
+1. Add the **Plivo Lookup Number** component to your flow, and then configure it as follows:
+
+    * **Plivo Auth ID** and **Plivo Auth Token**: Enter the credentials for your Plivo account.
+    * **Phone Number**: Enter the phone number to look up in E.164 format, such as `+14155551234`.
+    * **Lookup Type**: Choose `carrier` to include the carrier name and line type, or `none` to return country and formatting details only.
+
+2. Connect the component to other components in your flow.
+The component can be used as a standalone step in a flow or as a tool for an agent.
+
+    To enable **Tool Mode** for this component, change the component's output type from **Output** to **Tool**, and then connect it to the **Tools** port on an **Agent** component.
+
+    The component returns Plivo's API response, which includes the number's country, format, and carrier details, in Langflow's [`Data` type](/data-types).
