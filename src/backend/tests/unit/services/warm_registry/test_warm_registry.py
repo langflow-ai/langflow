@@ -1,4 +1,4 @@
-"""Unit tests for the warm flow-graph registry and PROD workflow host.
+"""Unit tests for the opt-in warm flow-graph registry.
 
 These cover the registry bookkeeping (add / get / version / evict / active_ids)
 and the host's not-found guard without building a real ``Graph`` or touching the
@@ -80,9 +80,9 @@ async def test_get_does_not_copy_template(registry):
     assert registry.get("flow-1")[0] is registry.get("flow-1")[0]
 
 
-async def test_warm_deepcopy_none_when_not_prod(monkeypatch):
-    """warm_deepcopy is inert outside the prod profile -> callers rebuild cold."""
+async def test_warm_deepcopy_none_when_disabled(monkeypatch):
+    """warm_deepcopy is inert when the registry is disabled -> callers rebuild cold."""
     from langflow.api import warm_graph
 
-    monkeypatch.setattr(warm_graph, "is_prod_deployment", lambda _settings: False)
-    assert await warm_graph.warm_deepcopy("any-id", user_id="u", session_id=None) is None
+    monkeypatch.setattr(warm_graph, "is_warm_registry_enabled", lambda _settings: False)
+    assert await warm_graph.warm_deepcopy("any-id", expected_version="", user_id="u", session_id=None) is None

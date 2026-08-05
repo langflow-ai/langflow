@@ -156,6 +156,11 @@ EXPECTED_FIELDS = {
     "download_webhook_url",
     "like_webhook_url",
     # RuntimeSettings
+    "warm_registry_enabled",
+    "warm_registry_preload_limit",
+    "warm_registry_max_entries",
+    "warm_registry_max_flow_bytes",
+    "warm_registry_max_total_bytes",
     "dev",
     "warm_reconcile_interval",
     "event_delivery",
@@ -288,6 +293,11 @@ def test_critical_defaults_unchanged():
     assert settings.mcp_sdk_constraint == "mcp~=1.28"
     assert settings.load_flows_preserve_variable_bindings is True
     assert settings.do_not_track is False
+    assert settings.warm_registry_enabled is False
+    assert settings.warm_registry_preload_limit == 0
+    assert settings.warm_registry_max_entries == 128
+    assert settings.warm_registry_max_flow_bytes == 2_000_000
+    assert settings.warm_registry_max_total_bytes == 32_000_000
     assert settings.dev is False
     assert settings.agentic_experience is True
     assert settings.developer_api_enabled is False
@@ -332,6 +342,22 @@ def test_single_worker_keeps_explicit_event_delivery(monkeypatch):
     monkeypatch.setenv("LANGFLOW_EVENT_DELIVERY", "polling")
     settings = Settings()
     assert settings.event_delivery == "polling"
+
+
+def test_warm_registry_reads_environment(monkeypatch):
+    """The warm execution plane must be independently activatable through settings."""
+    monkeypatch.setenv("LANGFLOW_WARM_REGISTRY_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_WARM_REGISTRY_PRELOAD_LIMIT", "5")
+    monkeypatch.setenv("LANGFLOW_WARM_REGISTRY_MAX_ENTRIES", "16")
+    monkeypatch.setenv("LANGFLOW_WARM_REGISTRY_MAX_FLOW_BYTES", "100000")
+    monkeypatch.setenv("LANGFLOW_WARM_REGISTRY_MAX_TOTAL_BYTES", "1000000")
+
+    settings = Settings()
+    assert settings.warm_registry_enabled is True
+    assert settings.warm_registry_preload_limit == 5
+    assert settings.warm_registry_max_entries == 16
+    assert settings.warm_registry_max_flow_bytes == 100_000
+    assert settings.warm_registry_max_total_bytes == 1_000_000
 
 
 def test_database_url_sees_config_dir(monkeypatch, tmp_path):

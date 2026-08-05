@@ -88,6 +88,8 @@ class Graph:
         user_id: str | None = None,
         log_config: LogConfig | None = None,
         context: dict[str, Any] | None = None,
+        *,
+        instantiate_components: bool = True,
     ) -> None:
         """Initializes a new Graph instance.
 
@@ -109,6 +111,14 @@ class Graph:
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
+        # Warm-registry templates need the parsed graph structure without
+        # executing component constructors at preload/reconcile time. Normal
+        # graphs keep the historical eager-instantiation behavior.
+        self._instantiate_components_on_initialize = instantiate_components
+        # Warm parsing cannot emit migration/error events into an authenticated
+        # user's keyspace. Such templates stay cold-only so request parsing can
+        # preserve the historical per-user extension-event contract.
+        self.requires_extension_event_replay = False
         # Optional caller-supplied label forwarded to tracing providers. Kept
         # distinct from ``self.user_id`` so request-supplied identifiers can be
         # surfaced in external traces (e.g. Langfuse trace metadata) without
@@ -1373,9 +1383,24 @@ class Graph:
             "_is_output_vertices": self._is_output_vertices,
             "has_session_id_vertices": self.has_session_id_vertices,
             "_sorted_vertices_layers": self._sorted_vertices_layers,
+            "_instantiate_components_on_initialize": self._instantiate_components_on_initialize,
         }
 
-    def __deepcopy__(self, memo):
+    def _copy_graph(
+        self,
+        memo: dict,
+        *,
+        user_id: str | None,
+        instantiate_components: bool,
+        before_initialize: Callable[[Graph], None] | None = None,
+    ) -> Graph:
+        """Copy this graph, optionally binding component construction to one user.
+
+        ``add_nodes_and_edges`` eagerly instantiates every component. Keeping the
+        user override on graph construction (instead of stamping it afterward)
+        preserves the cold-path constructor contract for components that inspect
+        ``_user_id`` during ``__init__``.
+        """
         # Check if we've already copied this instance
         if id(self) in memo:
             return memo[id(self)]
@@ -1385,30 +1410,96 @@ class Graph:
             start_copy = copy.deepcopy(self._start, memo)
             end_copy = copy.deepcopy(self._end, memo)
             new_graph = type(self)(
-                start_copy,
-                end_copy,
-                copy.deepcopy(self.flow_id, memo),
-                copy.deepcopy(self.flow_name, memo),
-                copy.deepcopy(self.user_id, memo),
+                start=start_copy,
+                end=end_copy,
+                flow_id=copy.deepcopy(self.flow_id, memo),
+                flow_name=copy.deepcopy(self.flow_name, memo),
+                description=copy.deepcopy(self.description, memo),
+                user_id=user_id,
+                instantiate_components=instantiate_components,
             )
+            if before_initialize is not None:
+                before_initialize(new_graph)
         else:
-            # Create a new graph without start and end, but copy flow_id, flow_name, and user_id
+            # Create a new graph without start and end, binding the requested user
+            # before add_nodes_and_edges instantiates request-local components.
             new_graph = type(self)(
-                None,
-                None,
-                copy.deepcopy(self.flow_id, memo),
-                copy.deepcopy(self.flow_name, memo),
-                copy.deepcopy(self.user_id, memo),
+                flow_id=copy.deepcopy(self.flow_id, memo),
+                flow_name=copy.deepcopy(self.flow_name, memo),
+                description=copy.deepcopy(self.description, memo),
+                user_id=user_id,
+                instantiate_components=instantiate_components,
             )
-            # Deep copy vertices and edges
-            new_graph.add_nodes_and_edges(copy.deepcopy(self._vertices, memo), copy.deepcopy(self._edges, memo))
+            # Rebuild parsed graphs from their original frontend shape. ``_vertices``
+            # and ``_edges`` have already been flattened by ``process_flow``; using
+            # them here would turn grouped children into top-level vertices and
+            # change grouped execution/status semantics. Programmatic graphs do not
+            # necessarily have raw frontend data, so retain the processed fallback.
+            has_raw_graph_data = self.raw_graph_data != {"nodes": [], "edges": []} or not (
+                self._vertices or self._edges
+            )
+            source_graph_data = (
+                self.raw_graph_data
+                if has_raw_graph_data
+                else {
+                    "nodes": self._vertices,
+                    "edges": self._edges,
+                }
+            )
+            source_graph_data = copy.deepcopy(source_graph_data, memo)
+            if has_raw_graph_data:
+                # Match cold-path ordering: request-local raw overrides run on
+                # the original frontend shape before groups are flattened.
+                new_graph.raw_graph_data = source_graph_data
+                if before_initialize is not None:
+                    before_initialize(new_graph)
+                source_graph_data = new_graph.raw_graph_data
+            new_graph.add_nodes_and_edges(source_graph_data["nodes"], source_graph_data["edges"])
+            if not has_raw_graph_data and before_initialize is not None:
+                before_initialize(new_graph)
+
+        new_graph.requires_extension_event_replay = self.requires_extension_event_replay
 
         # Store the newly created object in memo
         memo[id(self)] = new_graph
 
         return new_graph
 
+    def __deepcopy__(self, memo):
+        return self._copy_graph(
+            memo,
+            user_id=copy.deepcopy(self.user_id, memo),
+            instantiate_components=self._instantiate_components_on_initialize,
+            before_initialize=None,
+        )
+
+    def copy_for_run(
+        self,
+        *,
+        user_id: str | None,
+        before_instantiate: Callable[[Graph], None] | None = None,
+    ) -> Graph:
+        """Return an isolated executable graph whose constructors see run defaults.
+
+        ``before_instantiate`` can apply request-local raw-parameter overrides
+        (for example the implicit streaming value) after frontend-data copying,
+        before group flattening and component construction observe them.
+        """
+        new_graph = self._copy_graph(
+            {},
+            user_id=user_id,
+            instantiate_components=False,
+            before_initialize=before_instantiate,
+        )
+        new_graph._instantiate_components_in_vertices()  # noqa: SLF001
+        new_graph._instantiate_components_on_initialize = True  # noqa: SLF001
+        return new_graph
+
     def __setstate__(self, state):
+        # Cache/checkpoint payloads written before lazy warm templates existed
+        # must retain the historical eager-instantiation behavior.
+        state.setdefault("_instantiate_components_on_initialize", True)
+        state.setdefault("requires_extension_event_replay", False)
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
             state["run_manager"] = run_manager
@@ -1427,6 +1518,9 @@ class Graph:
         flow_name: str | None = None,
         user_id: str | None = None,
         context: dict | None = None,
+        *,
+        instantiate_components: bool = True,
+        emit_extension_events: bool = True,
     ) -> Graph:
         """Creates a graph from a payload.
 
@@ -1436,6 +1530,12 @@ class Graph:
             flow_name: The flow name.
             user_id: The user ID.
             context: Optional context dictionary for request-specific data.
+            instantiate_components: Whether to run component constructors while
+                parsing. Warm templates disable this and instantiate only on the
+                request-local copy with the authenticated caller identity.
+            emit_extension_events: Whether migration reports should be published
+                to the extension event service. Background warm parsing disables
+                this because it is not scoped to an active caller.
 
         Returns:
             Graph: The created graph.
@@ -1477,41 +1577,42 @@ class Graph:
                 migration_error.message,
             )
         # Emit extension events so the frontend can surface migration results.
-        try:
-            from lfx.services.deps import get_extension_events_service
+        if emit_extension_events:
+            try:
+                from lfx.services.deps import get_extension_events_service
 
-            _svc = get_extension_events_service()
-            if _svc is not None:
-                # Per-user keyspace so flow_id / migration error details only
-                # reach the user that loaded the flow; fall back to "global"
-                # for unauthenticated paths (CLI, tests, single-user dev).
-                _keyspace = f"user:{user_id}" if user_id else "global"
-                if migration_report.any_rewritten:
-                    _svc.emit(
-                        "flow_migrated",
-                        {
-                            "flow_id": str(flow_id) if flow_id else None,
-                            "rewritten_count": migration_report.rewritten_count,
-                        },
-                        keyspace=_keyspace,
-                    )
-                for migration_error in migration_report.errors:
-                    _svc.emit(
-                        "extension_error",
-                        {
-                            "flow_id": str(flow_id) if flow_id else None,
-                            "code": migration_error.code,
-                            "message": migration_error.message,
-                            "hint": migration_error.hint,
-                            "location": migration_error.location,
-                        },
-                        keyspace=_keyspace,
-                    )
-        except Exception:  # noqa: BLE001 -- best-effort emit; never break flow load on an event-bus failure
-            logger.warning(
-                "extension.event_emit_failed: failed to emit migration events in from_payload.",
-                exc_info=True,
-            )
+                _svc = get_extension_events_service()
+                if _svc is not None:
+                    # Per-user keyspace so flow_id / migration error details only
+                    # reach the user that loaded the flow; fall back to "global"
+                    # for unauthenticated paths (CLI, tests, single-user dev).
+                    _keyspace = f"user:{user_id}" if user_id else "global"
+                    if migration_report.any_rewritten:
+                        _svc.emit(
+                            "flow_migrated",
+                            {
+                                "flow_id": str(flow_id) if flow_id else None,
+                                "rewritten_count": migration_report.rewritten_count,
+                            },
+                            keyspace=_keyspace,
+                        )
+                    for migration_error in migration_report.errors:
+                        _svc.emit(
+                            "extension_error",
+                            {
+                                "flow_id": str(flow_id) if flow_id else None,
+                                "code": migration_error.code,
+                                "message": migration_error.message,
+                                "hint": migration_error.hint,
+                                "location": migration_error.location,
+                            },
+                            keyspace=_keyspace,
+                        )
+            except Exception:  # noqa: BLE001 -- best-effort emit; never break flow load on an event-bus failure
+                logger.warning(
+                    "extension.event_emit_failed: failed to emit migration events in from_payload.",
+                    exc_info=True,
+                )
         # Defense-in-depth: validate here so that no code path can construct
         # a graph with blocked/custom components, even if an API endpoint
         # forgets its own pre-check. Ideally this would live only at the API
@@ -1533,8 +1634,15 @@ class Graph:
                 validate_catalog_policy_for_flow(effective_catalog_payload, snapshot=catalog_policy_snapshot)
             vertices = payload["nodes"]
             edges = payload["edges"]
-            graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id, context=context)
+            graph = cls(
+                flow_id=flow_id,
+                flow_name=flow_name,
+                user_id=user_id,
+                context=context,
+                instantiate_components=instantiate_components,
+            )
             graph.add_nodes_and_edges(vertices, edges)
+            graph.requires_extension_event_replay = bool(migration_report.any_rewritten or migration_report.errors)
         except KeyError as exc:
             logger.exception(exc)
             if "nodes" not in payload and "edges" not in payload:
@@ -1686,7 +1794,8 @@ class Graph:
         # This is a hack to make sure that the LLM vertex is sent to
         # the toolkit vertex
         self._build_vertex_params()
-        self._instantiate_components_in_vertices()
+        if self._instantiate_components_on_initialize:
+            self._instantiate_components_in_vertices()
         self._set_cache_to_vertices_in_cycle()
         self._set_cache_if_listen_notify_components()
         for vertex in self.vertices:

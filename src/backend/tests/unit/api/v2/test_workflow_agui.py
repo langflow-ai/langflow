@@ -16,7 +16,7 @@ import contextlib
 import json
 import time
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import ANY, AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -384,6 +384,27 @@ class TestV2WorkflowAdmission:
         assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"
         assert exc_info.value.detail["flow_id"] == "my-endpoint"
         assert str(resolved_uuid) not in str(exc_info.value.detail)
+
+    async def test_workflow_host_always_enforces_authorization(self, monkeypatch: pytest.MonkeyPatch):
+        """Enabling the warm registry must not bypass the normal per-flow guard."""
+        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2.workflow_host import LangflowWorkflowHost
+        from lfx.workflow.actions import WorkflowAction
+        from lfx.workflow.host import ResolvedFlow
+
+        flow = SimpleNamespace(id=uuid4(), user_id=uuid4(), workspace_id=None, folder_id=None)
+        resolved = ResolvedFlow(flow_id=str(flow.id), graph=flow)
+        authorize = AsyncMock()
+        monkeypatch.setattr(workflow_module, "authorize_flow_action", authorize)
+
+        await LangflowWorkflowHost().authorize(SimpleNamespace(id=uuid4()), resolved, WorkflowAction.EXECUTE)
+
+        authorize.assert_awaited_once_with(
+            ANY,
+            flow,
+            WorkflowAction.EXECUTE,
+            requested_id=str(flow.id),
+        )
 
     async def test_db_lock_during_authorize_yields_503_contract(self, monkeypatch: pytest.MonkeyPatch):
         """A transient DB lock during permission enforcement must surface as 503 DATABASE_ERROR."""

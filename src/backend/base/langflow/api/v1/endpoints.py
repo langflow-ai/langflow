@@ -335,11 +335,11 @@ async def simple_run_flow(
         if flow.data is None:
             msg = f"Flow {flow_id_str} has no data"
             raise ValueError(msg)
-        # Warm fast-path (PROD execution plane): serve a deepcopy of the pre-built
+        # Opt-in warm fast-path: serve a deepcopy of the pre-built
         # template + apply this run's identity, skipping from_payload and the flow-row
         # rebuild. Returns None (-> cold rebuild below) for tweaks / context / auto-bind
-        # flows / HITL / non-prod / cache-miss. See ``run_warm.try_warm_run_graph``.
-        graph = await try_warm_run_graph(flow, input_request, user_id=user_id, context=context)
+        # flows / HITL / disabled registry / cache-miss. See ``try_warm_run_graph``.
+        graph = await try_warm_run_graph(flow, input_request, user_id=user_id, context=context, stream=stream)
         if graph is None:
             graph_data = flow.data.copy()
             graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)

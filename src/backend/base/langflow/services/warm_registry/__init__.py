@@ -1,9 +1,9 @@
-"""Warm in-memory flow-graph registry for ``--backend-only`` PROD execution machines.
+"""Opt-in, process-local in-memory flow-graph registry.
 
-Holds pre-parsed ``Graph`` templates per flow so the workflow run path serves a
-deepcopy instead of rebuilding from the DB on every request. Kept fresh fleet-wide
-with no Redis: each machine reconciles its registry against the shared ``flow``
-table (add new / swap changed / evict deleted). See ``service`` and ``reconcile``.
+Holds bounded structural ``Graph`` templates for eligible v1/v2 sync runs. Every
+request still performs its normal authentication/authorization and revision checks;
+stream, background, public, and request-mutated runs stay cold. Each machine keeps
+resident entries current against the shared ``flow`` table without Redis.
 """
 
 from langflow.services.warm_registry.service import WarmGraphRegistry, get_warm_registry

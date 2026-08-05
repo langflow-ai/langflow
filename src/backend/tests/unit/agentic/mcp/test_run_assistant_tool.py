@@ -21,6 +21,7 @@ DB session, mirroring ``test_template_create.py``.
 """
 
 import json
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -131,8 +132,16 @@ class TestRunAssistantAndPersist:
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
 
         user_id = uuid4()
-        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        previous_updated_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        flow = SimpleNamespace(
+            id=uuid4(),
+            name="My Flow",
+            data={"nodes": [], "edges": []},
+            user_id=user_id,
+            updated_at=previous_updated_at,
+        )
         session = AsyncMock()
+        session.add = MagicMock()
         session.get = AsyncMock(return_value=flow)
         with (
             patch(
@@ -155,6 +164,8 @@ class TestRunAssistantAndPersist:
             )
 
         assert flow.data == NEW_FLOW_DATA
+        assert flow.updated_at > previous_updated_at
+        assert flow.updated_at.tzinfo is timezone.utc
         session.commit.assert_awaited()
         assert result["flow_changed"] is True
         assert result["result"] == "Built a simple chat flow."

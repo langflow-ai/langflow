@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import copy
 import json
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -221,6 +222,7 @@ async def run_assistant_and_persist(
         for edit in field_edits:
             _apply_field_edit(flow_data, edit)
         flow.data = flow_data
+        flow.updated_at = datetime.now(timezone.utc)
         if created_new and canvas.name:
             flow.name = canvas.name
         session.add(flow)

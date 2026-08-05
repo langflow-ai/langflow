@@ -232,6 +232,100 @@ def test_from_payload_catalog_policy_preserves_invalid_payload_error_mapping(mon
         Graph.from_payload({"edges": []})
 
 
+def test_warm_template_defers_constructors_until_user_bound_copy(monkeypatch):
+    """Preloading must not execute components, and run copies bind identity first."""
+    events: list[tuple[str, str | None]] = []
+
+    monkeypatch.setattr(
+        Graph,
+        "_instantiate_components_in_vertices",
+        lambda graph: events.append(("construct", graph.user_id)),
+    )
+
+    template = Graph.from_payload(
+        {"nodes": [], "edges": []},
+        flow_id="flow-id",
+        instantiate_components=False,
+    )
+    assert events == []
+
+    run_graph = template.copy_for_run(
+        user_id="caller-id",
+        before_instantiate=lambda graph: events.append(("prepare", graph.user_id)),
+    )
+
+    assert events == [("prepare", "caller-id"), ("construct", "caller-id")]
+    assert run_graph.user_id == "caller-id"
+    assert template.user_id is None
+
+
+def test_copy_for_run_preserves_grouped_flow_shape(monkeypatch):
+    """Run copies must retain group roots instead of promoting their children."""
+    child = {
+        "id": "child-1",
+        "type": "genericNode",
+        "data": {
+            "id": "child-1",
+            "type": "Generic",
+            "node": {
+                "template": {
+                    "_type": "Generic",
+                    "stream": {"name": "stream", "type": "bool", "value": True, "list": False},
+                },
+                "base_classes": [],
+                "display_name": "Child",
+                "outputs": [],
+            },
+        },
+    }
+    grouped_data = {
+        "nodes": [
+            {
+                "id": "group-1",
+                "type": "genericNode",
+                "data": {
+                    "id": "group-1",
+                    "type": "Group",
+                    "node": {
+                        "template": {},
+                        "flow": {"data": {"nodes": [child], "edges": []}},
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+    monkeypatch.setattr(Graph, "_instantiate_components_in_vertices", lambda _graph: None)
+
+    template = Graph(flow_id="flow-id", instantiate_components=False)
+    template.add_nodes_and_edges(grouped_data["nodes"], grouped_data["edges"])
+    template.requires_extension_event_replay = True
+    run_graph = template.copy_for_run(user_id="caller-id")
+
+    assert run_graph.raw_graph_data == template.raw_graph_data
+    assert run_graph.raw_graph_data is not template.raw_graph_data
+    assert run_graph.top_level_vertices == template.top_level_vertices == [grouped_data["nodes"][0]["id"]]
+    assert {vertex.id: vertex.parent_is_top_level for vertex in run_graph.vertices} == {
+        vertex.id: vertex.parent_is_top_level for vertex in template.vertices
+    }
+    assert any(vertex.parent_is_top_level for vertex in run_graph.vertices)
+    assert run_graph.requires_extension_event_replay is True
+
+
+def test_graph_state_preserves_lazy_template_flag_and_defaults_old_payloads():
+    """Serialized templates keep their mode while old graph payloads stay eager."""
+    template = Graph(instantiate_components=False)
+    state = template.__getstate__()
+    assert state["_instantiate_components_on_initialize"] is False
+
+    old_state = state.copy()
+    old_state.pop("_instantiate_components_on_initialize")
+    restored = Graph.__new__(Graph)
+    restored.__setstate__(old_state)
+
+    assert restored._instantiate_components_on_initialize is True
+
+
 def test_find_last_node(grouped_chat_json_flow):
     grouped_chat_data = json.loads(grouped_chat_json_flow).get("data")
     nodes, edges = grouped_chat_data["nodes"], grouped_chat_data["edges"]

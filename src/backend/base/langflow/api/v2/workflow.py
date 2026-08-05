@@ -94,6 +94,7 @@ from langflow.services.deps import (
     get_task_service,
 )
 from langflow.services.jobs.exceptions import DuplicateJobError
+from langflow.services.warm_registry.resolver import resolve_warm_flow_for_execution
 
 # Finished states a late /stop must not rewrite (CANCELLED is handled separately
 # with its own idempotent early return).
@@ -131,6 +132,13 @@ async def resolve_flow_for_execution(flow_id: str, current_user: UserRead):
     unexpected a sanitized 500.
     """
     try:
+        warm_flow = await resolve_warm_flow_for_execution(
+            str(flow_id),
+            current_user.id,
+            widen_for_shares=True,
+        )
+        if warm_flow is not None:
+            return warm_flow
         return await get_flow_by_id_or_endpoint_name(
             str(flow_id),
             current_user.id,
@@ -437,7 +445,7 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
     terminal_error_type = adapter.terminal_error_type
 
     async def _source(*, job_id=None, resume=None, **_kwargs):
-        flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id, widen_for_shares=True)
+        flow = await resolve_flow_for_execution(str(flow_id), user)
         fresh_background_tasks = BackgroundTasks()
         errored = False
         try:

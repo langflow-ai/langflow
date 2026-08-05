@@ -151,12 +151,10 @@ router_v2.include_router(registration_router_v2)
 # them (one handler per method+path). ``developer_api_guard=False`` because the
 # authenticated langflow v2 router has never carried a developer-api gate; the
 # default-off setting would otherwise 403 every authenticated request.
-# One host for every profile. Prod-vs-dev no longer swaps the host object: under the
-# production deployment profile the host resolves flows from the warm registry (at the
-# per-run build sites) and skips per-flow RBAC (in ``authorize``) — both decided at
-# request time from ``settings.deployment_profile``, which is correct even when supplied
-# via ``--env-file`` (this module is imported before ``load_dotenv`` runs, so an
-# import-time env read would miss it). No import-time branch, no proxy.
+# One host serves every profile. Warming is selected at request/build time from
+# ``settings.warm_registry_enabled`` while authentication and per-flow authorization
+# remain identical whether the cache is enabled or not. This module is imported before
+# ``load_dotenv`` runs, so keeping the decision out of this path preserves ``--env-file``.
 _workflow_host: WorkflowHost = LangflowWorkflowHost()
 assert isinstance(_workflow_host, WorkflowHost)  # noqa: S101
 router_v2.include_router(

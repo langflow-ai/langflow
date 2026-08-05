@@ -48,6 +48,7 @@ from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_job_service, get_memory_base_service, get_settings_service, get_task_service
+from langflow.services.warm_registry.service import flow_version
 
 # Configuration constants
 EXECUTION_TIMEOUT = 300  # 5 minutes default timeout for sync execution, used as a fallback
@@ -496,12 +497,18 @@ async def execute_sync_workflow(
     try:
         flow_id_str = str(flow.id)
         user_id = str(current_user.id)
-        # Warm fast-path (PROD execution plane): serve a deepcopy of the pre-built template
+        # Opt-in warm fast-path: serve a deepcopy of the pre-built template
         # instead of rebuilding. Cold-fall-back (None) for tweaks, request context/globals,
         # or a HITL/checkpointed run — none of which fit a shared user-agnostic template.
         graph = None
         if not tweaks and context is None and checkpoint_store is None:
-            graph = await warm_deepcopy(flow_id_str, user_id=user_id, session_id=session_id)
+            graph = await warm_deepcopy(
+                flow_id_str,
+                expected_version=flow_version(flow.updated_at),
+                user_id=user_id,
+                session_id=session_id,
+                stream=False,
+            )
         if graph is None:
             # Use deepcopy to prevent mutation of the original flow.data
             # process_tweaks modifies nested dictionaries in-place

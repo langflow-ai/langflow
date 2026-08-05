@@ -29,7 +29,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from langflow.api import health_check_router, log_router
 from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
-from langflow.api.warm_graph import is_prod_deployment
+from langflow.api.warm_graph import is_warm_registry_enabled
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
     create_or_update_starter_projects,
@@ -275,6 +275,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             )
 
             await model_provider_policy_refresh_worker.start()
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")
             setup_llm_caching()
@@ -483,27 +484,33 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await load_flows_from_directory()
                 await logger.adebug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            # PROD execution plane: warm every deployed flow into the in-memory
+            # Opt-in execution cache: warm flows into the in-memory
             # registry, then run the background reconcile loop that keeps this machine
             # in sync with the shared ``flow`` table (add new / swap changed / evict
             # deleted) with no Redis. Placed here — after the component-type cache,
             # starter projects, and flow sources are loaded — so graph builds have every
             # dependency they need (an earlier placement made hardened configs fail every
-            # build). Warming and the loop are launched INDEPENDENTLY: a failed eager warm
-            # must not stop the reconcile loop, which self-heals on its next pass. Runs
-            # once per worker (app "lifespan"); the settings service is safe here.
-            if is_prod_deployment(get_settings_service().settings):
+            # build). Preload is outside readiness and machine-serialized; reconciliation
+            # starts after this worker's attempt, including when preload fails. Runs once
+            # per worker (app "lifespan"); the settings service is safe here.
+            if is_warm_registry_enabled(get_settings_service().settings):
                 from langflow.services.warm_registry.reconcile import reconcile_loop, warm_all
 
-                try:
-                    # Warm the worker HOT before serving (best-effort — see below).
-                    await warm_all()
-                except Exception as exc:  # noqa: BLE001 — a failed warm must not stop the loop
-                    await logger.aerror(f"warm flow registry: initial warm failed: {exc}")
-                # Launch the reconcile loop REGARDLESS of the warm outcome, so a transient
-                # startup DB error never permanently disables sync on this worker. Keep the
-                # handle so shutdown can cancel it.
-                warm_registry_task = asyncio.create_task(reconcile_loop())
+                async def run_warm_registry() -> None:
+                    """Preload off readiness, then keep cached entries reconciled."""
+                    try:
+                        # Best effort and intentionally off the readiness path: one
+                        # large or malformed stored flow must not hold the worker's
+                        # health endpoint hostage during deployment.
+                        await warm_all()
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as exc:  # noqa: BLE001 — the loop self-heals
+                        await logger.aerror(f"warm flow registry: initial warm failed: {exc}")
+                    await reconcile_loop()
+
+                # One supervised handle keeps shutdown cancellation simple.
+                warm_registry_task = asyncio.create_task(run_warm_registry())
 
             # Per-worker setup: sync_flows_from_fs and queue service
             # (MUST be started per-worker: they create asyncio tasks bound to this event loop)
