@@ -163,10 +163,11 @@ async def test_read_projects_qualifies_visible_same_named_projects_by_owner():
     other_user_id = uuid4()
     own_project = Folder(id=uuid4(), name="Starter Project", user_id=actor_id)
     shared_project = Folder(id=uuid4(), name="Starter Project", user_id=other_user_id)
+    ownerless_project = Folder(id=uuid4(), name="Ownerless Project", user_id=None)
     internal_project = Folder(id=uuid4(), name=STARTER_FOLDER_NAME, user_id=other_user_id)
 
     projects_result = MagicMock()
-    projects_result.all.return_value = [shared_project, internal_project, own_project]
+    projects_result.all.return_value = [shared_project, internal_project, ownerless_project, own_project]
     owners_result = MagicMock()
     owners_result.all.return_value = [(actor_id, "current-user"), (other_user_id, "other-user")]
     session = AsyncMock()
@@ -185,10 +186,23 @@ async def test_read_projects_qualifies_visible_same_named_projects_by_owner():
             current_user=SimpleNamespace(id=actor_id),
         )
 
-    assert [(project.name, project.owner_username, project.is_owner) for project in result] == [
-        ("Starter Project", "other-user", False),
-        ("Starter Project", "current-user", True),
-    ]
+    projects_by_id = {project.id: project for project in result}
+    assert set(projects_by_id) == {shared_project.id, ownerless_project.id, own_project.id}
+    assert (
+        projects_by_id[shared_project.id].name,
+        projects_by_id[shared_project.id].owner_username,
+        projects_by_id[shared_project.id].is_owner,
+    ) == ("Starter Project", "other-user", False)
+    assert (
+        projects_by_id[ownerless_project.id].name,
+        projects_by_id[ownerless_project.id].owner_username,
+        projects_by_id[ownerless_project.id].is_owner,
+    ) == ("Ownerless Project", None, False)
+    assert (
+        projects_by_id[own_project.id].name,
+        projects_by_id[own_project.id].owner_username,
+        projects_by_id[own_project.id].is_owner,
+    ) == ("Starter Project", "current-user", True)
     assert session.exec.await_count == 2
 
 

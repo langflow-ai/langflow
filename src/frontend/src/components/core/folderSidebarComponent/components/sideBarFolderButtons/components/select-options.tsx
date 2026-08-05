@@ -57,9 +57,7 @@ export const SelectOptions = ({
             variant="plain"
             className="h-6 w-6 min-h-[24px] min-w-[24px]"
             id={`options-trigger-${item.id}`}
-            data-testid={
-              "more-options-button" + `_${convertTestName(item?.name ?? "")}`
-            }
+            data-testid={`more-options-button_${convertTestName(item?.name ?? "")}_${item.id}`}
             aria-label={t("folder.optionsFor", { name: displayName })}
           >
             <IconComponent

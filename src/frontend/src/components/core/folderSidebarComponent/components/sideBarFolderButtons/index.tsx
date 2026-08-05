@@ -453,7 +453,7 @@ const SideBarFoldersButtonsComponent = ({
                                   onDragLeave={dragLeave}
                                   onDrop={(e) => onDrop(e, item.id!)}
                                   key={item.id}
-                                  data-testid={`sidebar-nav-${item.name}`}
+                                  data-testid={`sidebar-nav-${item.name}-${item.id}`}
                                   id={`sidebar-nav-${item.id}`}
                                   isActive={checkPathName(item.id!)}
                                   onClick={() => handleChangeFolder!(item.id!)}

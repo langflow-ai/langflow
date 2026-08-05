@@ -41,6 +41,10 @@ describe("getProjectDisplayName", () => {
 });
 
 describe("getDefaultProjectId", () => {
+  it("returns an empty id when no projects are visible", () => {
+    expect(getDefaultProjectId([], "Starter Project")).toBe("");
+  });
+
   it("selects the caller-owned default when a foreign duplicate comes first", () => {
     const projects = [
       project({
