@@ -104,6 +104,7 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
       disabled={disabled}
       title={ariaLabel}
       aria-label={ariaLabel}
+      onSelect={(event) => event.preventDefault()}
     >
       {content}
     </DropdownMenuItem>
