@@ -10,7 +10,15 @@ from .auth import (
     AuthzTeamMember,
     CasbinRule,
     SSOConfig,
+    SSOConfigCreate,
+    SSOConfigRead,
+    SSOConfigUpdate,
+    SSOSecretError,
+    SSOSettings,
     SSOUserProfile,
+    decrypt_sso_client_secret,
+    encrypt_sso_client_secret,
+    is_sso_client_secret_envelope,
 )
 from .catalog_policy import CatalogPolicyMode, CatalogPolicyRule, CatalogPolicyScope, CatalogResourceKind
 from .deployment import Deployment
@@ -71,6 +79,11 @@ __all__ = [
     "MessageTable",
     "ModelProviderPolicy",
     "SSOConfig",
+    "SSOConfigCreate",
+    "SSOConfigRead",
+    "SSOConfigUpdate",
+    "SSOSecretError",
+    "SSOSettings",
     "SSOUserProfile",
     "SignalType",
     "SpanTable",
@@ -78,4 +91,7 @@ __all__ = [
     "TransactionTable",
     "User",
     "Variable",
+    "decrypt_sso_client_secret",
+    "encrypt_sso_client_secret",
+    "is_sso_client_secret_envelope",
 ]
