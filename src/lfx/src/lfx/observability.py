@@ -96,6 +96,16 @@ APPLICATION_INSTRUMENTATION_SCOPES = frozenset(
     {
         "opentelemetry.instrumentation.asgi",
         "opentelemetry.instrumentation.fastapi",
+        # DB spans. Admitted after checking what they actually carry: db.statement keeps bound
+        # parameters as placeholders ("INSERT INTO messagetable (text) VALUES (?)"), so chat
+        # message text stays in the database and out of the APM. Verified by probe, because
+        # "it probably does not log values" is how the httpx hole got opened the first time.
+        #
+        # The outbound HTTP scopes (httpx, requests, urllib3) remain deliberately absent. The
+        # LLM vendor SDKs instrument them globally against whatever provider is global (ours),
+        # so admitting them would put one span per outbound LLM call in the operator's APM.
+        # Outbound provider health is delivered as leak-safe metrics instead.
+        "opentelemetry.instrumentation.sqlalchemy",
         APPLICATION_TRACER_NAME,
     }
 )
@@ -615,6 +625,41 @@ def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> Appl
         tracer_provider=tracer_provider,
         logger_provider=logger_provider,
     )
+
+
+def instrument_dependencies(*, engine: object | None = None) -> None:
+    """Instrument the database, so a slow request can be attributed to the queries it made.
+
+    Deliberately does NOT instrument httpx or requests. Those are the transports the LLM
+    vendor SDKs ride on, and instrumenting them globally would put one span per outbound
+    provider call into the operator's APM. That boundary is held elsewhere too (the export
+    filter does not allowlist those scopes), and outbound provider health is delivered as
+    leak-safe metrics rather than spans.
+
+    The instrumentor is given an explicit ``tracer_provider``. That is not decoration: a bare
+    ``instrument()`` binds to whatever provider is global, which is how vendor SDKs end up
+    exporting through ours.
+
+    Optional and failure-tolerant: a missing package or a double-instrument call must not take
+    the app down, because none of this is worth a failed boot.
+    """
+    _instrument_sqlalchemy(engine)
+
+
+def _instrument_sqlalchemy(engine: object | None) -> None:
+    try:
+        from opentelemetry import trace
+        from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+    except ImportError:
+        return
+    try:
+        kwargs = {"tracer_provider": trace.get_tracer_provider()}
+        if engine is not None:
+            # An async engine exposes the sync one the instrumentor actually patches.
+            kwargs["engine"] = getattr(engine, "sync_engine", engine)
+        SQLAlchemyInstrumentor().instrument(**kwargs)
+    except Exception:  # noqa: BLE001 - see above
+        logger.debug("sqlalchemy instrumentation unavailable; DB spans will be missing", exc_info=True)
 
 
 def instrument_fastapi_app(app: FastAPI) -> None:

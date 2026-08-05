@@ -90,6 +90,7 @@ otel = [
     "opentelemetry-exporter-otlp>=1.30.0,<2.0.0",
     "opentelemetry-exporter-prometheus>=0.50b0,<1.0.0",
     "opentelemetry-instrumentation-fastapi>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.50b0,<1.0.0",
     "opentelemetry-instrumentation-system-metrics>=0.50b0,<1.0.0",
 ]
 # Engine-only by default: ``pip install lfx`` ships NO bundles.  This optional

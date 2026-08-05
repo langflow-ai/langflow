@@ -69,6 +69,7 @@ dependencies = [
     "opentelemetry-exporter-prometheus>=0.50b0,<1.0.0",
     "opentelemetry-exporter-otlp>=1.30.0,<2.0.0",
     "opentelemetry-instrumentation-fastapi>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.50b0,<1.0.0",
     "opentelemetry-instrumentation-requests>=0.50b0,<1.0.0",
     "opentelemetry-instrumentation-urllib3>=0.50b0,<1.0.0",
     # Process CPU, memory, GC and thread counts. Without it the only metrics the APM gets are

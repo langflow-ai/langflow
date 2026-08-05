@@ -47,6 +47,7 @@ from lfx.load import load_flow_from_json
 from lfx.log.logger import logger
 from lfx.observability import (
     bootstrap_application_telemetry,
+    instrument_dependencies,
     instrument_fastapi_app,
     start_event_loop_lag_monitor,
     stop_event_loop_lag_monitor,
@@ -707,6 +708,7 @@ def create_multi_serve_app(
     )
 
     instrument_fastapi_app(app)
+    instrument_dependencies()
 
     app.state.registry = registry
     # Snapshot the API key once so per-request auth (verify_api_key, run on a threadpool
