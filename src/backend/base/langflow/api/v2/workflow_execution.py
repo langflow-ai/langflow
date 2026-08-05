@@ -186,7 +186,9 @@ async def _stream_event_frames(
     job_id: UUID | None = None,
     resume: dict | None = None,
     track_job_status: bool = True,
-    protocol: str = "v2",
+    # Required, not defaulted: a default is how an unwired caller gets a confidently wrong
+    # label, which is the one thing the absent-rather-than-"unknown" rule exists to prevent.
+    protocol: str,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
@@ -382,6 +384,8 @@ def _execute_streaming_workflow(
             background_tasks=background_tasks,
             parsed=parsed,
             current_user=current_user,
+            # The live v2 stream. Background and public share this driver and name themselves.
+            protocol="v2",
         ):
             yield frame
 

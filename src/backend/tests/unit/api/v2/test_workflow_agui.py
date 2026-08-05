@@ -541,6 +541,7 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
+                protocol="v2",
             )
         ]
 
@@ -577,6 +578,7 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
+                protocol="v2",
             )
         ]
 
@@ -618,6 +620,7 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
+                protocol="v2",
             )
         ]
 
@@ -655,6 +658,7 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
+                protocol="v2",
             )
         ]
 
@@ -698,6 +702,7 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
+                protocol="v2",
             )
         ]
 
