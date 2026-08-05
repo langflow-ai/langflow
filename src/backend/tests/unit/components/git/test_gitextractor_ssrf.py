@@ -10,6 +10,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.base import ComponentTestBaseWithoutClient
+
 
 @pytest.fixture
 def ssrf_on():
@@ -56,44 +58,60 @@ async def test_gitloader_blocks_dangerous_clone_url():
         assert mock_loader.call_count == 0
 
 
-@pytest.fixture
-def gitextractor_repo_with_symlink(tmp_path, monkeypatch):
-    """Provide a checked-out tree whose symlink points outside the repository."""
-    from lfx.components.git.gitextractor import GitExtractorComponent
+class TestGitExtractorComponent(ComponentTestBaseWithoutClient):
+    @pytest.fixture
+    def component_class(self):
+        from lfx.components.git.gitextractor import GitExtractorComponent
 
-    repository = tmp_path / "repository"
-    repository.mkdir()
-    (repository / "README.md").write_text("repository content\n", encoding="utf-8")
+        return GitExtractorComponent
 
-    outside_file = tmp_path / "outside.txt"
-    outside_file.write_text("SAFE_CANARY\n" * 3, encoding="utf-8")
-    (repository / "linked.txt").symlink_to(outside_file)
+    @pytest.fixture
+    def default_kwargs(self):
+        return {"repository_url": "https://example.com/repository.git"}
 
-    @asynccontextmanager
-    async def fake_temp_git_repo(_self):
-        yield str(repository)
+    @pytest.fixture
+    def file_names_mapping(self):
+        return []
 
-    monkeypatch.setattr(GitExtractorComponent, "temp_git_repo", fake_temp_git_repo)
-    return GitExtractorComponent(repository_url="https://example.com/repository.git")
+    @pytest.fixture
+    def gitextractor_repo_with_symlink(self, component_class, default_kwargs, tmp_path, monkeypatch):
+        """Provide a checked-out tree whose symlinks point outside the repository."""
+        repository = tmp_path / "repository"
+        repository.mkdir()
+        (repository / "README.md").write_bytes(b"repository content\n")
 
+        outside_file = tmp_path / "outside.txt"
+        outside_file.write_text("SAFE_CANARY\n" * 3, encoding="utf-8")
+        (repository / "linked.txt").symlink_to(outside_file)
 
-async def test_gitextractor_files_content_skips_symlinks(gitextractor_repo_with_symlink):
-    result = await gitextractor_repo_with_symlink.get_files_content()
+        outside_directory = tmp_path / "outside-directory"
+        outside_directory.mkdir()
+        (repository / "linked-directory").symlink_to(outside_directory, target_is_directory=True)
 
-    assert [item.data["path"] for item in result] == ["README.md"]
-    assert "SAFE_CANARY" not in result[0].data["content"]
+        @asynccontextmanager
+        async def fake_temp_git_repo(_self):
+            yield str(repository)
 
+        monkeypatch.setattr(component_class, "temp_git_repo", fake_temp_git_repo)
+        return component_class(**default_kwargs)
 
-async def test_gitextractor_text_content_skips_symlinks(gitextractor_repo_with_symlink):
-    result = await gitextractor_repo_with_symlink.get_text_based_file_contents()
+    async def test_files_content_skips_symlinks(self, gitextractor_repo_with_symlink):
+        result = await gitextractor_repo_with_symlink.get_files_content()
 
-    assert "README.md" in result.text
-    assert "linked.txt" not in result.text
-    assert "SAFE_CANARY" not in result.text
+        assert [item.data["path"] for item in result] == ["README.md"]
+        assert "SAFE_CANARY" not in result[0].data["content"]
 
+    async def test_text_content_skips_symlinks(self, gitextractor_repo_with_symlink):
+        result = await gitextractor_repo_with_symlink.get_text_based_file_contents()
 
-async def test_gitextractor_statistics_skips_symlinks(gitextractor_repo_with_symlink):
-    result = await gitextractor_repo_with_symlink.get_statistics()
+        assert "README.md" in result.text
+        assert "linked.txt" not in result.text
+        assert "SAFE_CANARY" not in result.text
 
-    assert result[0].data["total_files"] == 1
-    assert result[0].data["total_lines"] == 1
+    async def test_statistics_skips_symlinks(self, gitextractor_repo_with_symlink):
+        result = await gitextractor_repo_with_symlink.get_statistics()
+
+        assert result[0].data["total_files"] == 1
+        assert result[0].data["total_lines"] == 1
+        assert result[0].data["total_size_bytes"] == len(b"repository content\n")
+        assert result[0].data["directories"] == 0

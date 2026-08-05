@@ -89,6 +89,7 @@ class GitExtractorComponent(Component):
                 directories = 0
 
                 for root, dirs, files in os.walk(temp_dir):
+                    dirs[:] = [directory for directory in dirs if not (Path(root) / directory).is_symlink()]
                     directories += len(dirs)
                     for file in files:
                         file_path = Path(root) / file
