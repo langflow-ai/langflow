@@ -114,6 +114,7 @@ RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
+ENV HOME=/app/data
 ENV BASH_ENV="" \
     ENV="" \
     PROMPT_COMMAND=""
@@ -125,7 +126,9 @@ ENV BASH_ENV="" \
 # write secret_key, profile_pictures, etc. Without this, the volume is created
 # as root:root and Langflow crashes during startup with PermissionError on
 # /app/langflow/secret_key. See https://github.com/langflow-ai/langflow/issues/10437
-RUN mkdir -p /app/langflow && chown -R 1000:0 /app/langflow && chmod -R g+rwX /app/langflow
+RUN mkdir -p /app/data /app/langflow \
+    && chown -R 1000:0 /app/data /app/langflow \
+    && chmod -R g+rwX /app/data /app/langflow
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']

@@ -1834,7 +1834,7 @@
   "shortcuts.combinationExists": "这种组合已经存在了！",
   "shortcuts.defaultNotFound": "未找到默认快捷键。",
   "shortcuts.description": "管理快捷方式，以便快速访问常用操作。",
-  "shortcuts.name.advancedSettings": "控件",
+  "shortcuts.name.advancedSettings": "参数",
   "shortcuts.name.aiAssistant": "AI 助手",
   "shortcuts.name.api": "个 API",
   "shortcuts.name.changesSave": "保存更改",

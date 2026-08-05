@@ -61,7 +61,7 @@ describe("useGetFlowId", () => {
     );
 
     expect(useGetFlowId()).toBe(
-      uuidv5(`${USER_ID}_${REAL_FLOW_ID}`, uuidv5.DNS),
+      uuidv5(`user:${USER_ID}_${REAL_FLOW_ID}`, uuidv5.DNS),
     );
   });
 
@@ -75,7 +75,7 @@ describe("useGetFlowId", () => {
     );
 
     expect(useGetFlowId()).toBe(
-      uuidv5(`${CLIENT_ID}_${REAL_FLOW_ID}`, uuidv5.DNS),
+      uuidv5(`client:${CLIENT_ID}_${REAL_FLOW_ID}`, uuidv5.DNS),
     );
   });
 

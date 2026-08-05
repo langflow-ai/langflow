@@ -60,6 +60,7 @@ from lfx.schema.workflow import (
     WorkflowRunRequest,
 )
 from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
+from lfx.utils.flow_validation import prepare_public_flow_build, validate_public_flow_no_code_execution
 from lfx.utils.ssrf_transport import create_ssrf_protected_client
 from lfx.workflow.converters import parse_workflow_run_request, run_response_to_workflow_response
 from sqlalchemy import delete
@@ -148,6 +149,38 @@ class _FlowContextBuilder(DefaultServerCallContextBuilder):
         return context
 
 
+async def _is_public_a2a_flow(flow: Flow) -> bool:
+    """Whether an A2A flow admits callers without an API key."""
+    async with session_scope_readonly() as session:
+        return await folder_auth_type(flow, session) == "none"
+
+
+async def _prepare_a2a_execution_flow(flow: Flow) -> Flow:
+    """Apply the public-flow code policy before an anonymous A2A owner-identity run."""
+    if not await _is_public_a2a_flow(flow):
+        return flow
+
+    validate_public_flow_no_code_execution(flow.data)
+    sanitized_data = await prepare_public_flow_build(flow.data)
+    if sanitized_data is None:
+        return flow
+    return flow.model_copy(update={"data": sanitized_data}, deep=True)
+
+
+async def _prepare_a2a_resume_checkpoint(flow_id: UUID, checkpoint: GraphCheckpoint) -> GraphCheckpoint:
+    """Re-apply the public-flow policy to the graph payload restored for HITL resume."""
+    user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+    flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id)
+    if not await _is_public_a2a_flow(flow):
+        return checkpoint
+
+    validate_public_flow_no_code_execution(checkpoint.flow_payload)
+    sanitized_data = await prepare_public_flow_build(checkpoint.flow_payload)
+    if sanitized_data is None:
+        return checkpoint
+    return checkpoint.model_copy(update={"flow_payload": sanitized_data}, deep=True)
+
+
 async def _run_flow(flow_id: UUID, task_id: str, text: str, context_id: str | None) -> WorkflowExecutionResponse:
     """Run a flow synchronously through the v2 surface, as the flow owner.
 
@@ -169,6 +202,7 @@ async def _run_flow(flow_id: UUID, task_id: str, text: str, context_id: str | No
 
     user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id)
+    flow = await _prepare_a2a_execution_flow(flow)
     # context_id is client-controlled on a public endpoint, so namespace it under a
     # per-(owner, flow) virtual id before it becomes the chat session_id: a contextId
     # can never address another flow's session, and since the run always executes as the
@@ -258,6 +292,7 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
     if checkpoint.flow_id != str(flow_id):
         msg = f"A2A task {task_id} does not belong to flow {flow_id}"
         raise RuntimeError(msg)
+    checkpoint = await _prepare_a2a_resume_checkpoint(flow_id, checkpoint)
 
     pending = (checkpoint.pause_context or {}).get("data") or {}
     allowed = pending.get("allowed_decisions") or []

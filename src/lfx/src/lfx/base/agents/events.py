@@ -310,7 +310,6 @@ async def handle_on_tool_start(
 
     # Fallback path — append the ToolContent ourselves.
     duration = _calculate_duration(start_time)
-    new_start_time = perf_counter()
     tool_content = ToolContent(
         type="tool_use",
         name=tool_name,
@@ -325,7 +324,8 @@ async def handle_on_tool_start(
     agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
     if agent_message.content_blocks and isinstance(agent_message.content_blocks[-1], ToolContent):
         tool_blocks_map[tool_key] = agent_message.content_blocks[-1]
-    return agent_message, new_start_time
+    # The tool cannot run until this handler returns, so start timing after publication.
+    return agent_message, perf_counter()
 
 
 async def handle_on_tool_end(
@@ -341,6 +341,11 @@ async def handle_on_tool_end(
     tool_content = tool_blocks_map.get(tool_key)
 
     if tool_content and isinstance(tool_content, ToolContent):
+        # Stop the tool timer before publishing the result. The callback can
+        # include transport or persistence work that is not part of the tool's
+        # execution time and must not inflate the duration shown to clients.
+        duration = _calculate_duration(start_time)
+
         # Call send_message_callback first to get the updated message structure
         agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
         new_start_time = perf_counter()
@@ -348,8 +353,6 @@ async def handle_on_tool_end(
         # Now find and update the tool content in the current message. With
         # flat content_blocks we walk the list directly instead of indexing
         # into a single group's .contents.
-        duration = _calculate_duration(start_time)
-
         updated_tool_content = None
         for content in agent_message.content_blocks or []:
             if (
@@ -508,18 +511,29 @@ async def process_agent_events(
     # Message may not contain id if the Agent is not connected to a Chat Output (_should_skip_message is True)
     initial_message_id = agent_message.get_id()
     try:
-        # Create a mapping of run_ids to tool contents
+        # Track tool content and start times by the same name + run_id key.
         tool_blocks_map: dict[str, ToolContent] = {}
+        tool_start_times: dict[str, float] = {}
         had_streaming = False
         start_time = perf_counter()
 
         async for event in agent_executor:
             if event["event"] in TOOL_EVENT_HANDLERS:
                 tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
+                tool_key = f"{event.get('name', '')}_{event.get('run_id', '')}"
                 # Use skip_db_update=True during streaming to avoid DB round-trips
-                agent_message, start_time = await tool_handler(
-                    event, agent_message, tool_blocks_map, send_message_callback, start_time
-                )
+                if event["event"] == "on_tool_start":
+                    agent_message, tool_start_times[tool_key] = await tool_handler(
+                        event, agent_message, tool_blocks_map, send_message_callback, start_time
+                    )
+                else:
+                    tool_start_time = tool_start_times.pop(tool_key, start_time)
+                    agent_message, _ = await tool_handler(
+                        event, agent_message, tool_blocks_map, send_message_callback, tool_start_time
+                    )
+                    # Start timing the next model round after terminal handling and result publication.
+                    # A fresh clock also avoids rewinding to tool_start_time when no ToolContent was bound.
+                    start_time = perf_counter()
             elif event["event"] in CHAIN_EVENT_HANDLERS:
                 chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
 
