@@ -262,10 +262,6 @@ class RunFlowBaseComponent(Component):
         Fetches the graph for the given flow, extracts its input fields, and filters
         for only those inputs that are eligible for tool mode (non-advanced fields).
 
-        Args:
-            flow_name_selected: The name of the flow to retrieve data for. If None,
-                returns None.
-
         Returns:
             A tuple of (flow_description, tool_mode_fields) where:
                 - flow_description (str): The human-readable description of the flow
@@ -656,7 +652,6 @@ class RunFlowBaseComponent(Component):
 
         Args:
             flow_id: The ID of the flow to delete from cache.
-            flow_name: The name of the flow to delete from cache.
 
         Returns:
             None

@@ -147,7 +147,6 @@ def search_templates(query: str | None = None, fields: list[str] = DEFAULT_TEMPL
                DEFAULT_TEMPLATE_FIELDS
                Common fields: id, name, description, tags, is_component, last_tested_version,
                endpoint_name, data, icon, icon_bg_color, gradient, updated_at
-        tags: Optional list of tags to filter templates. Returns templates that have ANY of these tags.
 
     Returns:
         List of dictionaries containing the selected fields for each matching template.

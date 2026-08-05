@@ -58,7 +58,6 @@ def upload_file(
     Args:
         file_path (str): The path to the file to be uploaded.
         host (str): The host URL of Langflow.
-        port (int): The port number of Langflow.
         flow_id (UUID): The ID of the flow to which the file belongs.
         components (str): List of component IDs or names that need the file.
         tweaks (dict): A dictionary of tweaks to be applied to the file.

@@ -277,9 +277,6 @@ class AstraDBCQLToolComponent(AstraDBBaseComponent, LCToolComponent):
     def build_tool(self) -> Tool:
         """Builds a Astra DB CQL Table tool.
 
-        Args:
-            name (str, optional): The name of the tool.
-
         Returns:
             Tool: The built Astra DB tool.
         """

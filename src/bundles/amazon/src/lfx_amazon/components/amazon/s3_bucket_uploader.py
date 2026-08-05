@@ -186,12 +186,10 @@ class S3BucketUploaderComponent(Component):
         )
 
     def _normalize_path(self, file_path) -> str:
-        """Process the file path based on the s3_prefix and path_as_prefix.
+        """Process the file path based on the s3_prefix and strip_path settings.
 
         Args:
             file_path (str): The original file path.
-            s3_prefix (str): The S3 prefix to use.
-            path_as_prefix (bool): Whether to use the file path as the S3 prefix.
 
         Returns:
             str: The processed file path.

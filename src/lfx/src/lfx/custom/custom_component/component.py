@@ -636,9 +636,6 @@ class Component(CustomComponent):
     def map_outputs(self) -> None:
         """Maps the given list of outputs to the component.
 
-        Args:
-            outputs (List[Output]): The list of outputs to be mapped.
-
         Raises:
             ValueError: If the output name is None.
 

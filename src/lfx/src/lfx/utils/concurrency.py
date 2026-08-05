@@ -41,7 +41,7 @@ class KeyedWorkerLockManager:
         """Validate that the string only contains alphanumeric characters and underscores.
 
         Parameters:
-        s (str): The string to validate.
+        key (str): The string to validate.
 
         Returns:
         bool: True if the string is valid, False otherwise.

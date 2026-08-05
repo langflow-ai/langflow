@@ -15,8 +15,6 @@ class ContentSizeLimitMiddleware:
 
     Args:
       app (ASGI application): ASGI application
-      max_content_size (optional): the maximum content size allowed in bytes, None for no limit
-      exception_cls (optional): the class of exception to raise (ContentSizeExceeded is the default)
     """
 
     def __init__(

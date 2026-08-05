@@ -14,7 +14,6 @@ def get_flow(url: str, flow_id: str):
 
     Args:
         url (str): The host URL of Langflow.
-        port (int): The port number of Langflow.
         flow_id (UUID): The ID of the flow to retrieve.
 
     Returns:
