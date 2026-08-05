@@ -61,6 +61,7 @@ async def test_ensure_component_hash_lookups_loaded_surfaces_loader_failures(mon
         settings=SimpleNamespace(allow_custom_components=False),
     )
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(component_cache, "all_types_dict", None)
     monkeypatch.setattr(component_cache, "type_to_current_hash", None)
 
     with (
