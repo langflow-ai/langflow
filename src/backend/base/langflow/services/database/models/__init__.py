@@ -12,6 +12,7 @@ from .auth import (
     SSOConfig,
     SSOUserProfile,
 )
+from .catalog_policy import CatalogPolicyMode, CatalogPolicyRule, CatalogPolicyScope, CatalogResourceKind
 from .deployment import Deployment
 from .deployment_provider_account import DeploymentProviderAccount
 from .file import File
@@ -25,6 +26,7 @@ from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from .mcp_server import MCPServer
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
+from .model_provider_policy import ModelProviderPolicy
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
 from .user import User
@@ -42,6 +44,10 @@ __all__ = [
     "AuthzTeam",
     "AuthzTeamMember",
     "CasbinRule",
+    "CatalogPolicyMode",
+    "CatalogPolicyRule",
+    "CatalogPolicyScope",
+    "CatalogResourceKind",
     "Deployment",
     "DeploymentProviderAccount",
     "ExecutionSignal",
@@ -63,6 +69,7 @@ __all__ = [
     "MemoryBaseWorkflowRun",
     "MessageIngestionRecord",
     "MessageTable",
+    "ModelProviderPolicy",
     "SSOConfig",
     "SSOUserProfile",
     "SignalType",

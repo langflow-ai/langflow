@@ -394,6 +394,9 @@ class BaseConfigResponse(BaseModel):
     # Mirrors ``LANGFLOW_AUTHZ_ENABLED``. EE/custom frontends gate the Access
     # Control settings entry on this flag; OSS UI ignores it until wired.
     authz_enabled: bool = False
+    # Signals that at least one component or template is governed without
+    # exposing the policy contents through the public config response.
+    catalog_governance_enabled: bool = False
 
 
 class PublicConfigResponse(BaseConfigResponse):
@@ -407,12 +410,19 @@ class PublicConfigResponse(BaseConfigResponse):
     allow_custom_components: bool
 
     @classmethod
-    def from_settings(cls, settings: Settings, auth_settings) -> "PublicConfigResponse":
+    def from_settings(
+        cls,
+        settings: Settings,
+        auth_settings,
+        *,
+        catalog_governance_enabled: bool = False,
+    ) -> "PublicConfigResponse":
         """Create a PublicConfigResponse instance using values from a Settings object.
 
         Parameters:
             settings (Settings): The Settings object containing configuration values.
             auth_settings: Auth settings (for ``authz_enabled``).
+            catalog_governance_enabled: Whether any catalog policy currently restricts resources.
 
         Returns:
             PublicConfigResponse: An instance populated with public-safe configuration values.
@@ -427,6 +437,7 @@ class PublicConfigResponse(BaseConfigResponse):
             enable_extension_reload=settings.enable_extension_reload,
             allow_custom_components=settings.allow_custom_components,
             authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
+            catalog_governance_enabled=catalog_governance_enabled,
         )
 
 
@@ -465,12 +476,19 @@ class ConfigResponse(BaseConfigResponse):
     agentic_experience: bool = True
 
     @classmethod
-    def from_settings(cls, settings: Settings, auth_settings) -> "ConfigResponse":
+    def from_settings(
+        cls,
+        settings: Settings,
+        auth_settings,
+        *,
+        catalog_governance_enabled: bool = False,
+    ) -> "ConfigResponse":
         """Create a ConfigResponse instance using values from a Settings object and AuthSettings.
 
         Parameters:
             settings (Settings): The Settings object containing configuration values.
             auth_settings: The AuthSettings object containing authentication configuration values.
+            catalog_governance_enabled: Whether any catalog policy currently restricts resources.
 
         Returns:
             ConfigResponse: An instance populated with configuration and feature flag values.
@@ -498,6 +516,7 @@ class ConfigResponse(BaseConfigResponse):
             hide_getting_started_progress=settings.hide_getting_started_progress,
             allow_custom_components=settings.allow_custom_components,
             authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
+            catalog_governance_enabled=catalog_governance_enabled,
             embedded_mode=settings.embedded_mode,
             hide_logout_button=settings.hide_logout_button or settings.embedded_mode,
             hide_new_project_button=settings.hide_new_project_button or settings.embedded_mode,

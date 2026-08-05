@@ -6,6 +6,7 @@ import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { isFieldTweakable } from "@/modals/apiModal/utils/api-exposure-rules";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
 import type { NodeDataType } from "@/types/flow";
@@ -60,7 +61,12 @@ export default function InspectionPanelParameterRow({
   // called via the API, so exposing them is blocked. Exposure is also coupled
   // to being on the node — an off-node field isn't callable, so the API
   // toggle only unlocks once the parameter is added to the node.
-  const isDisabledField = isConnected || isToolModeActive || !isOnCanvas;
+  // A field that is not tweakable AT ALL (handle-only input, or one the
+  // backend refuses) is blocked on the same control: the panel must never
+  // offer an exposure it cannot deliver.
+  const isTweakable = isFieldTweakable(data.type, name, template);
+  const isDisabledField =
+    !isTweakable || isConnected || isToolModeActive || !isOnCanvas;
 
   const handleToggleVisibility = useCallback(() => {
     handleOnNewValue({ advanced: isOnCanvas });
@@ -135,13 +141,17 @@ export default function InspectionPanelParameterRow({
       <div className="flex shrink-0 items-center gap-1.5">
         <ShadTooltip
           content={
-            !isOnCanvas
-              ? t("inspectionPanel.apiNeedsOnNode")
-              : isDisabledField
-                ? t("inspectionPanel.apiDisabledField")
-                : isApiEditable
-                  ? t("inspectionPanel.apiDisable")
-                  : t("inspectionPanel.apiEnable")
+            // A non-tweakable field is checked first: telling the user to add
+            // it to the node would promise a way out that does not exist.
+            !isTweakable
+              ? t("inspectionPanel.apiDisabledField")
+              : !isOnCanvas
+                ? t("inspectionPanel.apiNeedsOnNode")
+                : isDisabledField
+                  ? t("inspectionPanel.apiDisabledField")
+                  : isApiEditable
+                    ? t("inspectionPanel.apiDisable")
+                    : t("inspectionPanel.apiEnable")
           }
           avoidCollisions
         >
