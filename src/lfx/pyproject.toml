@@ -140,6 +140,10 @@ dev = [
     "coverage>=7.9.2",
     "hypothesis>=6.136.3",
     "langchain-anthropic~=1.4.6",
+    # The otel extra itself, so the observability tests exercise the real exporters. Bare lfx
+    # still ships without them: the tests that assert the no-otel path force the condition by
+    # blocking the import rather than by relying on the extra being absent here.
+    "lfx[otel]",
     "pytest>=9.0.3",
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=7.0.0",
