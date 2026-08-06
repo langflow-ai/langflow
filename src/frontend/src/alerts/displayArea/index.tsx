@@ -22,6 +22,9 @@ export default function AlertDisplayArea() {
     (alert) => alert.type !== "error",
   );
 
+  // Wrap live regions in a named landmark so toast content satisfies
+  // IBM aria_content_in_landmark (role="status"/"alert" are live regions,
+  // not landmarks).
   return (
     <div
       role="region"

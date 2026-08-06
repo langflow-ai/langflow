@@ -685,60 +685,6 @@ async def _patch_flow(
     return FlowRead.model_validate(db_flow, from_attributes=True)
 
 
-async def _upsert_flow_list(
-    *,
-    session: AsyncSession,
-    flows: list[FlowCreate],
-    current_user: User,
-    storage_service: StorageService,
-    folder_id: UUID | None = None,
-) -> list[FlowRead]:
-    """Import a list of flows with upsert semantics (used by the upload endpoint).
-
-    For each flow:
-    - If it has an ID matching an existing flow owned by the user, update in place.
-    - If it has an ID claimed by another user, mint a fresh UUID.
-    - Otherwise create with the provided or generated ID.
-    """
-    flow_reads: list[FlowRead] = []
-    for flow in flows:
-        flow.user_id = current_user.id
-        if folder_id:
-            flow.folder_id = folder_id
-
-        if flow.id is not None:
-            existing = (await session.exec(select(Flow).where(Flow.id == flow.id))).first()
-
-            if existing is not None and existing.user_id == current_user.id:
-                flow_read = await _update_existing_flow(
-                    session=session,
-                    existing_flow=existing,
-                    flow=flow,
-                    current_user=current_user,
-                    storage_service=storage_service,
-                )
-            elif existing is not None:
-                flow.id = None
-                flow_read = await _new_flow(
-                    session=session, flow=flow, user_id=current_user.id, storage_service=storage_service
-                )
-            else:
-                flow_read = await _new_flow(
-                    session=session,
-                    flow=flow,
-                    user_id=current_user.id,
-                    storage_service=storage_service,
-                    flow_id=flow.id,
-                )
-        else:
-            flow_read = await _new_flow(
-                session=session, flow=flow, user_id=current_user.id, storage_service=storage_service
-            )
-
-        flow_reads.append(flow_read)
-    return flow_reads
-
-
 def _sanitize_flow_filename(raw_name: str, fallback_id: str = "flow") -> str:
     """Return a filesystem-safe filename from a flow name.
 

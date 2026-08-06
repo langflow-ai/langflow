@@ -7,7 +7,7 @@ on:
       release_type:
         required: true
         type: string
-        description: "Release type. One of 'main', 'main-backend', 'main-frontend', 'main-ep', 'base', 'core', 'main-all'."
+        description: "Release type. One of 'main', 'main-backend', 'main-frontend', 'main-ep', 'base', 'main-all'."
       pre_release:
         required: false
         type: boolean
@@ -35,7 +35,7 @@ on:
   workflow_dispatch:
     inputs:
       release_type:
-        description: "Type of release. One of 'main', 'main-backend', 'main-frontend', 'main-ep', 'base', 'core', 'main-all'."
+        description: "Type of release. One of 'main', 'main-backend', 'main-frontend', 'main-ep', 'base', 'main-all'."
         required: true
         type: choice
         options:
@@ -44,7 +44,6 @@ on:
           - main-frontend
           - main-ep
           - base
-          - core
           - main-all
       pre_release:
         description: "Whether this is a pre-release."
@@ -87,7 +86,7 @@ jobs:
           set -euo pipefail
 
           case "$RELEASE_TYPE" in
-            main | main-backend | main-frontend | main-ep | base | core | main-all) ;;
+            main | main-backend | main-frontend | main-ep | base | main-all) ;;
             *)
               echo "Invalid release type: $RELEASE_TYPE" >&2
               exit 1
@@ -162,71 +161,10 @@ jobs:
             echo "skipped=false" >> "$GITHUB_OUTPUT"
           fi
 
-  determine-core-version:
-    name: Determine Core Version
-    needs: [validate-inputs]
-    if: ${{ inputs.release_type == 'core' }}
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      skipped: ${{ steps.version.outputs.skipped }}
-    steps:
-      - name: Check out the code
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.ref }}
-
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
-          prune-cache: false
-
-      - name: Determine version
-        id: version
-        env:
-          PRE_RELEASE: ${{ inputs.pre_release }}
-          VERSION_OVERRIDE: ${{ inputs.version_override }}
-        run: |
-          set -euo pipefail
-          version=$(python -c "import pathlib, tomllib; print(tomllib.loads(pathlib.Path('src/langflow-core/pyproject.toml').read_text())['project']['version'])")
-          echo "Core version from pyproject.toml: $version"
-          last_released_version=""
-
-          if [ -n "$VERSION_OVERRIDE" ]; then
-            version="$VERSION_OVERRIDE"
-            echo "Using version override: $version"
-            if [ "$PRE_RELEASE" != "true" ]; then
-              docker_tags="$(bash ./scripts/ci/fetch_docker_hub_tags.sh langflowai/langflow)"
-              last_released_version=$(printf '%s\n' "$docker_tags" | awk '/^core-/ && !/-(amd64|arm64)$/ && !/latest/ {sub(/^core-/, ""); print}' | sort -V | tail -n 1)
-              echo "Latest core release version: $last_released_version"
-            fi
-          elif [ "$PRE_RELEASE" == "true" ]; then
-            docker_tags="$(bash ./scripts/ci/fetch_docker_hub_tags.sh langflowai/langflow)"
-            released_versions=$(printf '%s\n' "$docker_tags" | awk '/^core-/ && !/-(amd64|arm64)$/ {sub(/^core-/, ""); print}')
-            version="$(printf '%s\n' "$released_versions" | uv run ./scripts/ci/langflow_pre_release_tag.py "$version" -)"
-            echo "Core pre-release version to be released: $version"
-          else
-            docker_tags="$(bash ./scripts/ci/fetch_docker_hub_tags.sh langflowai/langflow)"
-            last_released_version=$(printf '%s\n' "$docker_tags" | awk '/^core-/ && !/-(amd64|arm64)$/ && !/latest/ {sub(/^core-/, ""); print}' | sort -V | tail -n 1)
-            echo "Latest core release version: $last_released_version"
-          fi
-
-          if [ "$version" = "$last_released_version" ]; then
-            echo "Core docker version $version is already released. Skipping release."
-            echo skipped=true >> "$GITHUB_OUTPUT"
-            exit 0
-          else
-            echo "version=$version" >> "$GITHUB_OUTPUT"
-            echo "skipped=false" >> "$GITHUB_OUTPUT"
-          fi
-
   determine-main-version:
     name: Determine Main Version
     needs: [validate-inputs]
-    if: ${{ inputs.release_type != 'base' && inputs.release_type != 'core' }}
+    if: ${{ inputs.release_type != 'base' }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -262,17 +200,17 @@ jobs:
             echo "Using version override: $version"
             if [ "$PRE_RELEASE" != "true" ]; then
               docker_tags="$(bash ./scripts/ci/fetch_docker_hub_tags.sh langflowai/langflow)"
-              last_released_version=$(printf '%s\n' "$docker_tags" | awk '!/^(base|core)-/ && !/-(amd64|arm64)$/ && !/latest/' | sort -V | tail -n 1)
+              last_released_version=$(printf '%s\n' "$docker_tags" | awk '!/^base-/ && !/-(amd64|arm64)$/ && !/latest/' | sort -V | tail -n 1)
               echo "Latest main release version: $last_released_version"
             fi
           elif [ "$PRE_RELEASE" == "true" ]; then
             docker_tags="$(bash ./scripts/ci/fetch_docker_hub_tags.sh langflowai/langflow)"
-            released_versions=$(printf '%s\n' "$docker_tags" | awk '!/^(base|core)-/ && !/-(amd64|arm64)$/')
+            released_versions=$(printf '%s\n' "$docker_tags" | awk '!/^base-/ && !/-(amd64|arm64)$/')
             version="$(printf '%s\n' "$released_versions" | uv run ./scripts/ci/langflow_pre_release_tag.py "$version" -)"
             echo "Main pre-release version to be released: $version"
           else
             docker_tags="$(bash ./scripts/ci/fetch_docker_hub_tags.sh langflowai/langflow)"
-            last_released_version=$(printf '%s\n' "$docker_tags" | awk '!/^(base|core)-/ && !/-(amd64|arm64)$/ && !/latest/' | sort -V | tail -n 1)
+            last_released_version=$(printf '%s\n' "$docker_tags" | awk '!/^base-/ && !/-(amd64|arm64)$/ && !/latest/' | sort -V | tail -n 1)
             echo "Latest main release version: $last_released_version"
           fi
 
@@ -348,83 +286,10 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
-          file: ./docker/build_and_push_base.Dockerfile
-          tags: ${{ steps.tags.outputs.docker_tags }}
-          platforms: linux/${{ matrix.arch }}
-          provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push to GitHub Container Registry
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: ${{ inputs.push_to_registry }}
-          file: ./docker/build_and_push_base.Dockerfile
-          tags: ${{ steps.tags.outputs.ghcr_tags }}
-          platforms: linux/${{ matrix.arch }}
-          provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  build-core:
-    name: Build Core Package
-    needs: [determine-core-version]
-    if: ${{ inputs.release_type == 'core' && needs.determine-core-version.outputs.skipped == 'false' }}
-    strategy:
-      matrix:
-        include:
-          - arch: amd64
-            runner: [Langflow-runner]
-          - arch: arm64
-            runner:
-              [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - name: Check out the code
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.ref }}
-
-      - name: Set tags
-        id: tags
-        run: |
-          version="${{ needs.determine-core-version.outputs.version }}"
-          echo "docker_tags=langflowai/langflow:core-${version}-${{ matrix.arch }}" >> "$GITHUB_OUTPUT"
-          echo "ghcr_tags=ghcr.io/langflow-ai/langflow:core-${version}-${{ matrix.arch }}" >> "$GITHUB_OUTPUT"
-
-      - name: Docker cleanup
-        run: |
-          docker system prune -af --volumes || true
-          docker buildx prune -af || true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Login to GitHub Container Registry
-        if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.TEMP_GHCR_TOKEN}}
-
-      - name: Build and push to Docker Hub
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: ${{ inputs.push_to_registry }}
           build-args: |
-            CORE_VERSION=${{ needs.determine-core-version.outputs.version }}
+            BASE_VERSION=${{ needs.determine-base-version.outputs.version }}
           file: ./docker/build_and_push.Dockerfile
-          target: core
+          target: base
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
@@ -437,9 +302,9 @@ jobs:
           context: .
           push: ${{ inputs.push_to_registry }}
           build-args: |
-            CORE_VERSION=${{ needs.determine-core-version.outputs.version }}
+            BASE_VERSION=${{ needs.determine-base-version.outputs.version }}
           file: ./docker/build_and_push.Dockerfile
-          target: core
+          target: base
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
@@ -510,7 +375,7 @@ jobs:
           push: ${{ inputs.push_to_registry }}
           build-args: |
             MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
-            CORE_VERSION=${{ needs.determine-main-version.outputs.version }}
+            BASE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push.Dockerfile
           target: full
           tags: ${{ steps.tags.outputs.docker_tags }}
@@ -526,7 +391,7 @@ jobs:
           push: ${{ inputs.push_to_registry }}
           build-args: |
             MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
-            CORE_VERSION=${{ needs.determine-main-version.outputs.version }}
+            BASE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push.Dockerfile
           target: full
           tags: ${{ steps.tags.outputs.ghcr_tags }}
@@ -749,7 +614,7 @@ jobs:
           push: ${{ inputs.push_to_registry }}
           build-args: |
             MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
-            CORE_VERSION=${{ needs.determine-main-version.outputs.version }}
+            BASE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push_ep.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -764,7 +629,7 @@ jobs:
           push: ${{ inputs.push_to_registry }}
           build-args: |
             MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
-            CORE_VERSION=${{ needs.determine-main-version.outputs.version }}
+            BASE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push_ep.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -836,7 +701,7 @@ jobs:
           push: ${{ inputs.push_to_registry }}
           build-args: |
             MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
-            CORE_VERSION=${{ needs.determine-main-version.outputs.version }}
+            BASE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push.Dockerfile
           target: full-bundles
           tags: ${{ steps.tags.outputs.docker_tags }}
@@ -852,7 +717,7 @@ jobs:
           push: ${{ inputs.push_to_registry }}
           build-args: |
             MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
-            CORE_VERSION=${{ needs.determine-main-version.outputs.version }}
+            BASE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push.Dockerfile
           target: full-bundles
           tags: ${{ steps.tags.outputs.ghcr_tags }}
@@ -866,18 +731,16 @@ jobs:
     needs:
       [
         build-base,
-        build-core,
         build-main,
         build-main-backend,
         build-main-frontend,
         build-main-ep,
         build-main-all,
         determine-base-version,
-        determine-core-version,
         determine-main-version,
       ]
     runs-on: ubuntu-latest
-    if: ${{ always() && inputs.push_to_registry && (needs.build-base.result == 'success' || needs.build-core.result == 'success' || needs.build-main.result == 'success' || needs.build-main-backend.result == 'success' || needs.build-main-frontend.result == 'success' || needs.build-main-ep.result == 'success' || needs.build-main-all.result == 'success') }}
+    if: ${{ always() && inputs.push_to_registry && (needs.build-base.result == 'success' || needs.build-main.result == 'success' || needs.build-main-backend.result == 'success' || needs.build-main-frontend.result == 'success' || needs.build-main-ep.result == 'success' || needs.build-main-all.result == 'success') }}
     steps:
       - name: Check out the code
         uses: actions/checkout@v6
@@ -887,13 +750,10 @@ jobs:
       - name: Get version
         id: version
         env:
-          CORE_VERSION: ${{ needs.determine-core-version.outputs.version }}
           RELEASE_TYPE: ${{ inputs.release_type }}
         run: |
           if [[ "$RELEASE_TYPE" == "base" ]]; then
             version=$(uv tree 2>/dev/null | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
-          elif [[ "$RELEASE_TYPE" == "core" ]]; then
-            version="$CORE_VERSION"
           else
             version=$(uv tree 2>/dev/null | grep -E '^langflow(-nightly)?[[:space:]]' | cut -d' ' -f2 | sed 's/^v//')
           fi
@@ -904,7 +764,6 @@ jobs:
         id: tags
         env:
           BASE_VERSION: ${{ needs.determine-base-version.outputs.version }}
-          CORE_VERSION: ${{ needs.determine-core-version.outputs.version }}
           MAIN_VERSION: ${{ needs.determine-main-version.outputs.version }}
           PRE_RELEASE: ${{ inputs.pre_release }}
           RELEASE_TYPE: ${{ inputs.release_type }}
@@ -920,16 +779,6 @@ jobs:
               fi
               echo "arch_base=langflowai/langflow:base-${version}" >> $GITHUB_OUTPUT
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow:base-${version}" >> $GITHUB_OUTPUT
-              ;;
-            "core")
-              version="$CORE_VERSION"
-              if [[ "$PRE_RELEASE" == "true" ]]; then
-                echo "final_tags=langflowai/langflow:core-${version},ghcr.io/langflow-ai/langflow:core-${version}" >> "$GITHUB_OUTPUT"
-              else
-                echo "final_tags=langflowai/langflow:core-${version},langflowai/langflow:core-latest,ghcr.io/langflow-ai/langflow:core-${version},ghcr.io/langflow-ai/langflow:core-latest" >> "$GITHUB_OUTPUT"
-              fi
-              echo "arch_base=langflowai/langflow:core-${version}" >> "$GITHUB_OUTPUT"
-              echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow:core-${version}" >> "$GITHUB_OUTPUT"
               ;;
             "main")
               if [[ "$PRE_RELEASE" == "true" ]]; then

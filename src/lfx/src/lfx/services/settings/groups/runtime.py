@@ -107,6 +107,14 @@ class RuntimeSettings(BaseModel):
     execution mode. Sync runs raise a 408; stream, background, and public runs emit
     the protocol's terminal-error event and (for background) mark the job failed."""
 
+    model_provider_policy_refresh_interval_s: float = Field(default=10.0, gt=0)
+    """How often each backend worker refreshes the install-wide model-provider policy.
+
+    A several-second default limits steady-state database traffic while still
+    converging policy updates promptly across workers. Must be positive so the
+    refresh loop cannot spin continuously.
+    """
+
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
     """The interval in seconds at which public temporary flows will be cleaned up.
     Default is 1 hour (3600 seconds). Minimum is 600 seconds (10 minutes)."""

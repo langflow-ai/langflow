@@ -146,24 +146,51 @@ class DirectoryMembershipSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class DirectoryMembershipIngestResult:
+    """Outcome of ingesting a provider directory-membership snapshot."""
+
+    changed: bool = False
+    added: int = 0
+    removed: int = 0
+
+
+@dataclass(frozen=True, slots=True)
 class ResourceVisibilityScope:
     """Compact SQL-prefilter contract for resource-list authorization.
 
     ``resource_ids`` represents concrete grants such as user/team shares.
     ``workspace_ids`` and ``project_ids`` represent wildcard role grants at
     those domains without expanding them to every resource UUID. A global
-    wildcard is represented by ``all_resources``.
+    wildcard is represented by ``all_resources``. Plugins that define a
+    logical, project-backed workspace for rows whose workspace column is null
+    can use ``include_unassigned_workspace`` without materializing every
+    project id. Consumers apply that flag only when a concrete project relation
+    exists; folderless resources remain outside the logical workspace.
+    ``excluded_workspace_project_ids`` removes reserved projects from both
+    explicit and logical workspace grants without affecting workspace-only
+    resources in an explicit workspace.
+    ``excluded_global_project_ids`` removes reserved projects from a global
+    wildcard while preserving owner and concrete resource grants.
     """
 
     all_resources: bool = False
     resource_ids: tuple[UUID, ...] = ()
     workspace_ids: tuple[UUID, ...] = ()
     project_ids: tuple[UUID, ...] = ()
+    include_unassigned_workspace: bool = False
+    excluded_workspace_project_ids: tuple[UUID, ...] = ()
+    excluded_global_project_ids: tuple[UUID, ...] = ()
 
     @property
     def has_cross_user_access(self) -> bool:
         """Return whether the scope can widen an owner-only query."""
-        return bool(self.all_resources or self.resource_ids or self.workspace_ids or self.project_ids)
+        return bool(
+            self.all_resources
+            or self.resource_ids
+            or self.workspace_ids
+            or self.project_ids
+            or self.include_unassigned_workspace
+        )
 
 
 class BaseAuthorizationService(Service, abc.ABC):
@@ -353,6 +380,32 @@ class BaseAuthorizationService(Service, abc.ABC):
         """Remove policy derived from a deleted share snapshot. Plugin override; OSS no-op."""
         _ = snapshot
 
+    async def acquire_identity_mutation_lock(
+        self,
+        *,
+        session: Any,
+        kind: AuthorizationMutationKind,
+        entity_id: _UUID | None = None,
+        affected_user_ids: tuple[_UUID, ...] = (),
+    ) -> None:
+        """Establish transaction ordering before canonical identity reads.
+
+        This hook is lock-only: implementations must not commit, roll back,
+        persist policy, emit audit events, or reject the requested mutation.
+        Callers can invoke it before they know whether a write will create a
+        row, attach provenance, or return a conflict. The default is a no-op
+        for OSS and existing third-party plugins.
+
+        Because this hook runs before canonical reads, ``kind`` and the other
+        request metadata are advisory, best-effort descriptions and may differ
+        from the mutation ultimately staged. Implementations must acquire a lock
+        broad enough for every possible result and must not narrow its scope by
+        ``kind``. The hook can run for unauthenticated public-signup attempts and
+        requests later rejected as conflicts, so acquisition must remain bounded
+        and safe under untrusted contention.
+        """
+        _ = (session, kind, entity_id, affected_user_ids)
+
     async def validate_identity_mutation(
         self,
         *,
@@ -441,13 +494,35 @@ class BaseAuthorizationService(Service, abc.ABC):
         *,
         session: Any,
         snapshot: DirectoryMembershipSnapshot,
-    ) -> None:
+    ) -> DirectoryMembershipIngestResult:
         """Ingest one complete provider snapshot in the caller's transaction.
 
         The base implementation is intentionally inert. Directory polling and
         provider-specific pagination remain plugin responsibilities.
         """
         _ = (session, snapshot)
+        return DirectoryMembershipIngestResult()
+
+    async def external_groups_claim(
+        self,
+        *,
+        provider_id: str,
+        issuer: str | None,
+    ) -> str | None:
+        """Return the configured claim to normalize after external verification.
+
+        The authentication service calls this only after it has verified the
+        external credential. It normalizes that one claim to string group
+        identifiers before invoking ``ingest_directory_membership_snapshot``;
+        raw tokens and raw claim dictionaries never cross this plugin seam.
+        """
+        _ = (provider_id, issuer)
+        return None
+
+    async def directory_membership_committed(self, *, user_id: UUID, changed: bool = True) -> None:
+        """Publish a committed membership change to authorization replicas."""
+        if changed:
+            await self.invalidate_user(user_id)
 
     async def teardown(self) -> None:
         """No resources to release in the base implementation."""
