@@ -12,6 +12,7 @@ from sqlalchemy.event import listen
 from sqlalchemy.exc import SAWarning
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from langflow.alembic.expand_compat import filter_expand_revision_directives
 from langflow.services.database.service import SQLModel
 
 # this is the Alembic Config object, which provides
@@ -61,6 +62,7 @@ def run_migrations_offline() -> None:
         "literal_binds": True,
         "dialect_opts": {"paramstyle": "named"},
         "render_as_batch": True,
+        "process_revision_directives": filter_expand_revision_directives,
     }
 
     # Only add prepare_threshold for PostgreSQL
@@ -93,6 +95,7 @@ def _do_run_migrations(connection):
         "connection": connection,
         "target_metadata": target_metadata,
         "render_as_batch": True,
+        "process_revision_directives": filter_expand_revision_directives,
     }
 
     # Only add prepare_threshold for PostgreSQL
