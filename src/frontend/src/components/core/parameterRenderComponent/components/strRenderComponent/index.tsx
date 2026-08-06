@@ -27,11 +27,11 @@ export function StrRenderComponent({
   if (noOptions) {
     if (isMultiline) {
       if (isWebhook) {
-        return <WebhookFieldComponent {...baseInputProps} />;
+        return <WebhookFieldComponent {...baseInputProps} nodeId={nodeId} />;
       }
 
       if (copyField) {
-        return <CopyFieldAreaComponent {...baseInputProps} />;
+        return <CopyFieldAreaComponent {...baseInputProps} nodeId={nodeId} />;
       }
 
       return (
@@ -46,6 +46,7 @@ export function StrRenderComponent({
             }
           }}
           id={`textarea_${id}`}
+          nodeId={nodeId}
           isToolMode={isToolMode}
         />
       );
@@ -60,6 +61,7 @@ export function StrRenderComponent({
         placeholder={placeholder}
         display_name={display_name}
         id={`input-${name}`}
+        nodeId={nodeId}
         isToolMode={isToolMode}
       />
     );

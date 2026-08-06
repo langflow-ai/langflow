@@ -357,26 +357,29 @@ describe("SidebarSegmentedNav", () => {
 
   it("renders a separator element before the memories nav item", () => {
     const { container } = render(<SidebarSegmentedNav />);
-    // The separator is a <li role="separator" aria-hidden="true"> injected before memories
-    const separator = container.querySelector('li[role="separator"]');
+    // The separator is a plain <li aria-hidden="true"> injected before memories.
+    // It must NOT carry role="separator" — that's an invalid ARIA role on <li>
+    // (IBM Equal Access aria_role_valid) and is unnecessary since the element
+    // is already fully hidden from the accessibility tree via aria-hidden.
+    const separator = container.querySelector("li[aria-hidden='true']");
     expect(separator).toBeInTheDocument();
-    expect(separator).toHaveAttribute("aria-hidden", "true");
+    expect(separator).not.toHaveAttribute("role");
   });
 
   it("separator renders only once", () => {
     const { container } = render(<SidebarSegmentedNav />);
-    const separators = container.querySelectorAll('li[role="separator"]');
+    const separators = container.querySelectorAll("li[aria-hidden='true']");
     expect(separators).toHaveLength(1);
   });
 
   it("separator appears immediately before the first feature tab in the DOM order", () => {
     const { container } = render(<SidebarSegmentedNav />);
     const menuItems = container.querySelectorAll(
-      '[data-testid="sidebar-menu-item"], li[role="separator"]',
+      "[data-testid='sidebar-menu-item'], li[aria-hidden='true']",
     );
     const nodes = Array.from(menuItems);
     const separatorIndex = nodes.findIndex(
-      (n) => n.getAttribute("role") === "separator",
+      (n) => n.tagName === "LI" && !n.hasAttribute("data-testid"),
     );
     const agentButton = container.querySelector(
       '[data-testid="sidebar-nav-agent"]',

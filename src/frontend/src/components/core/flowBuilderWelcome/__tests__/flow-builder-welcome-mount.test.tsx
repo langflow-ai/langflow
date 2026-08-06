@@ -108,6 +108,25 @@ describe("FlowBuilderWelcomeMount placeholder cleanup", () => {
     expect(close).toHaveBeenCalled();
   });
 
+  it("should_still_reap_the_placeholder_after_the_overlay_was_dismissed_for_navigation", () => {
+    // The templates path calls dismissForNavigation() in the same tick as the
+    // navigate, so this effect always runs with isOpen already false. Cleanup
+    // must key off openedForFlowId alone, never isOpen.
+    welcomeState = { isOpen: false, openedForFlowId: "flow-placeholder" };
+    flowsManagerState = {
+      currentFlowId: "flow-template",
+      flows: [
+        { id: "flow-placeholder", data: { nodes: [] } },
+        { id: "flow-template", data: { nodes: [{ id: "n1" }] } },
+      ],
+    };
+
+    render(<FlowBuilderWelcomeMount />);
+
+    expect(deleteFlow).toHaveBeenCalledWith({ id: "flow-placeholder" });
+    expect(close).toHaveBeenCalled();
+  });
+
   it("should_not_delete_anything_when_still_on_the_placeholder_flow", () => {
     // Quick-template path mutates the placeholder in place — same flow id, so
     // there is nothing to clean up.

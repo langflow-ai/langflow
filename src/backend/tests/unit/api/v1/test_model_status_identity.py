@@ -254,7 +254,7 @@ async def test_get_enabled_models_returns_type_map_and_flat_union(monkeypatch):
     monkeypatch.setattr(models_api, "get_unified_models_detailed", lambda **_kwargs: catalog)
     monkeypatch.setattr(
         models_api,
-        "get_enabled_providers",
+        "_get_enabled_providers_result",
         AsyncMock(return_value={"provider_status": {provider: True}}),
     )
     monkeypatch.setattr(

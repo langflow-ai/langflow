@@ -249,6 +249,40 @@ def test_should_propagate_non_value_error_from_to_lc_message() -> None:
         build_initial_messages(input_value="ping", chat_history=history)
 
 
+def test_should_convert_ai_sender_input_to_human_message_when_chained_from_upstream_agent() -> None:
+    """Chained agents: an upstream Agent's output is THIS agent's task, i.e. a user turn.
+
+    Multi Agent Flow bug: Agent 1's response Message (sender=Machine) flows into Agent 2's
+    input_value. `to_lc_message()` maps sender=Machine to AIMessage, so the request sent to
+    the provider ENDED with a model turn. Gemini rejects that outright with
+    400 "Requests ending with a model turn are not supported". The legacy AgentExecutor
+    path rendered the input as a ("human", "{input}") turn regardless of sender; the
+    LangGraph path must preserve that contract.
+    """
+    upstream_response = Message(text="Idea: an AI-powered plant sitter.", sender=MESSAGE_SENDER_AI)
+
+    messages = build_initial_messages(input_value=upstream_response, chat_history=None)
+
+    assert len(messages) == 1
+    assert isinstance(messages[0], HumanMessage), "input_value must always land as a user turn"
+    assert _content_text(messages[0]) == "Idea: an AI-powered plant sitter."
+
+
+def test_should_end_with_human_turn_when_ai_sender_input_follows_history() -> None:
+    """With history present, an AI-sender input must still leave the tail as a user turn."""
+    history = [
+        Data(text="give me a product idea", sender=MESSAGE_SENDER_USER),
+    ]
+    upstream_response = Message(text="Idea: an AI-powered plant sitter.", sender=MESSAGE_SENDER_AI)
+
+    messages = build_initial_messages(input_value=upstream_response, chat_history=history)
+
+    assert len(messages) == 2
+    assert isinstance(messages[0], HumanMessage)
+    assert isinstance(messages[-1], HumanMessage), "request must never end with a model turn"
+    assert _content_text(messages[-1]) == "Idea: an AI-powered plant sitter."
+
+
 def test_should_skip_malformed_chat_history_items_without_crashing_the_turn() -> None:
     """Malformed `Data` entries in chat_history are skipped, not fatal.
 

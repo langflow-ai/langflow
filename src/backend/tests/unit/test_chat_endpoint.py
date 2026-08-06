@@ -89,6 +89,34 @@ async def test_build_flow_validates_request_data_instead_of_stale_db_flow(
     assert "job_id" in response.json()
 
 
+async def test_build_flow_enforces_current_catalog_policy_and_recovers_when_cleared(
+    client, json_memory_chatbot_no_llm, logged_in_headers
+):
+    from lfx.services.deps import get_catalog_policy_service
+
+    catalog_policy_service = get_catalog_policy_service()
+    await catalog_policy_service.replace_blocked_component_keys([], actor_user_id=None)
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    await catalog_policy_service.replace_blocked_component_keys(["ChatInput"], actor_user_id=None)
+
+    blocked_response = await client.post(
+        f"api/v1/build/{flow_id}/flow",
+        json={},
+        headers=logged_in_headers,
+    )
+    await catalog_policy_service.replace_blocked_component_keys([], actor_user_id=None)
+    allowed_response = await client.post(
+        f"api/v1/build/{flow_id}/flow",
+        json={},
+        headers=logged_in_headers,
+    )
+
+    assert blocked_response.status_code == codes.BAD_REQUEST
+    assert blocked_response.json()["detail"].endswith("ChatInput")
+    assert allowed_response.status_code == codes.OK
+    assert "job_id" in allowed_response.json()
+
+
 async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Test building a flow with a frozen path."""
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
@@ -695,7 +723,7 @@ async def test_build_public_tmp_checks_public_access_before_validation(
         raise ValueError(public_access_validation_message)
 
     monkeypatch.setattr(
-        "langflow.api.v1.chat.validate_flow_for_current_settings",
+        "langflow.api.v1.chat.validate_catalog_policy_for_flow",
         fail_if_validation_runs,
     )
 
@@ -707,6 +735,79 @@ async def test_build_public_tmp_checks_public_access_before_validation(
 
     assert response.status_code == codes.FORBIDDEN
     assert response.json()["detail"] == "Flow is not public"
+
+
+async def test_build_public_tmp_enforces_current_catalog_policy_with_generic_error(
+    client, json_memory_chatbot_no_llm, logged_in_headers
+):
+    from lfx.services.deps import get_catalog_policy_service
+
+    catalog_policy_service = get_catalog_policy_service()
+    await catalog_policy_service.replace_blocked_component_keys([], actor_user_id=None)
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+    await catalog_policy_service.replace_blocked_component_keys(["ChatInput"], actor_user_id=None)
+    client.cookies.set("client_id", "test-catalog-policy-client")
+
+    blocked_response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={},
+        headers={"Content-Type": "application/json"},
+    )
+    await catalog_policy_service.replace_blocked_component_keys([], actor_user_id=None)
+    allowed_response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert blocked_response.status_code == codes.BAD_REQUEST
+    assert blocked_response.json()["detail"] == "This flow cannot be executed."
+    assert "ChatInput" not in blocked_response.text
+    assert allowed_response.status_code == codes.OK
+    assert "job_id" in allowed_response.json()
+
+
+async def test_build_public_tmp_sanitizes_catalog_identity_unavailable_response(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    from lfx.utils.flow_validation import (
+        PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+        CatalogPolicyIdentityUnavailableError,
+    )
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+    client.cookies.set("client_id", "test-catalog-identity-unavailable-client")
+    raw_message = "Catalog identities unavailable: internal generation 42"
+
+    def identities_unavailable(_target):
+        raise CatalogPolicyIdentityUnavailableError(raw_message)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.chat.validate_catalog_policy_for_flow",
+        identities_unavailable,
+    )
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.SERVICE_UNAVAILABLE
+    assert response.json()["detail"] == PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE
+    assert raw_message not in response.text
 
 
 @pytest.mark.benchmark
@@ -1172,7 +1273,7 @@ async def test_build_public_tmp_namespaces_caller_session(
     )
     assert response.status_code == codes.OK
 
-    expected_namespace = str(compute_virtual_flow_id(client_id, flow_id))
+    expected_namespace = str(compute_virtual_flow_id(client_id, flow_id, principal_type="client"))
     sent_inputs = captured["inputs"]
     assert sent_inputs is not None
     assert sent_inputs.session == f"{expected_namespace}:{victim_session}"
@@ -1200,7 +1301,7 @@ async def test_build_public_tmp_session_already_namespaced_unchanged(
 
     client_id = "ns-passthrough-client"
     _send_unauthenticated(client, client_id)
-    namespace = str(compute_virtual_flow_id(client_id, flow_id))
+    namespace = str(compute_virtual_flow_id(client_id, flow_id, principal_type="client"))
     already_scoped = f"{namespace}:thread-1"
 
     response = await client.post(
@@ -1316,7 +1417,7 @@ async def test_build_public_tmp_empty_session_is_namespaced(
     )
     assert response.status_code == codes.OK
 
-    expected_namespace = str(compute_virtual_flow_id(client_id, flow_id))
+    expected_namespace = str(compute_virtual_flow_id(client_id, flow_id, principal_type="client"))
     sent_session = captured["inputs"].session
     assert sent_session != ""
     assert sent_session == f"{expected_namespace}:"
@@ -1349,7 +1450,7 @@ async def test_build_public_tmp_authenticated_namespace_uses_user_id(
     )
     assert response.status_code == codes.OK
 
-    expected_namespace = str(compute_virtual_flow_id(active_user.id, flow_id))
+    expected_namespace = str(compute_virtual_flow_id(active_user.id, flow_id, principal_type="user"))
     assert captured["inputs"].session == f"{expected_namespace}:thread-A"
 
 
