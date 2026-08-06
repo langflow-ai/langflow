@@ -19,6 +19,7 @@ const base = {
   modelType: "llm",
   savedValue: undefined,
   modelFilters: undefined,
+  providerStatusIsReliable: true,
 } as const;
 
 describe("buildGroupedOptions", () => {
@@ -49,12 +50,11 @@ describe("buildGroupedOptions", () => {
     expect(grouped.OpenAI.map((o) => o.name)).toEqual(["gpt-4"]);
   });
 
-  it("keeps a sticky not_enabled_locally option unless its provider is configured", () => {
+  it("drops a sticky not_enabled_locally option — it is never selectable", () => {
     const options = [opt("legacy", "OpenAI", { not_enabled_locally: true })];
-    const kept = buildGroupedOptions({ ...base, options });
-    expect(kept.OpenAI).toHaveLength(1);
+    expect(buildGroupedOptions({ ...base, options })).toEqual({});
 
-    const dropped = buildGroupedOptions({
+    const withConfiguredProvider = buildGroupedOptions({
       ...base,
       options,
       providers: [
@@ -66,7 +66,43 @@ describe("buildGroupedOptions", () => {
         },
       ],
     });
-    expect(dropped.OpenAI).toBeUndefined();
+    expect(withConfiguredProvider.OpenAI).toBeUndefined();
+  });
+
+  it("drops options and registry models of a disconnected provider", () => {
+    const providers: ModelProviderWithStatus[] = [
+      {
+        provider: "OpenAI",
+        is_enabled: true,
+        is_configured: false,
+        models: [{ model_name: "gpt-4", metadata: { model_type: "llm" } }],
+      },
+    ];
+    const grouped = buildGroupedOptions({
+      ...base,
+      options: [opt("gpt-4", "OpenAI")],
+      providers,
+      enabledModels: { OpenAI: { "gpt-4": true } },
+    });
+    expect(grouped).toEqual({});
+  });
+
+  it("keeps the options while the provider status is unreliable", () => {
+    const providers: ModelProviderWithStatus[] = [
+      {
+        provider: "OpenAI",
+        is_enabled: true,
+        is_configured: false,
+        models: [],
+      },
+    ];
+    const grouped = buildGroupedOptions({
+      ...base,
+      options: [opt("gpt-4", "OpenAI")],
+      providers,
+      providerStatusIsReliable: false,
+    });
+    expect(grouped.OpenAI.map((o) => o.name)).toEqual(["gpt-4"]);
   });
 
   it("skips is_disabled_provider options", () => {
@@ -113,14 +149,41 @@ describe("buildGroupedOptions", () => {
     expect(grouped.P.map((o) => o.name)).toEqual(["a"]);
   });
 
-  it("injects the saved value when absent and no options exist", () => {
+  it("injects the saved value when its configured provider still lists it", () => {
+    const providers: ModelProviderWithStatus[] = [
+      {
+        provider: "OpenAI",
+        is_enabled: true,
+        is_configured: true,
+        models: [{ model_name: "saved-model", metadata: {} }],
+      },
+    ];
     const grouped = buildGroupedOptions({
       ...base,
       options: [],
+      providers,
       savedValue: { name: "saved-model", provider: "OpenAI", icon: "Bot" },
     });
     expect(grouped.OpenAI).toHaveLength(1);
     expect(grouped.OpenAI[0].metadata?.not_enabled_locally).toBe(true);
+  });
+
+  it("does not inject the saved value of a disconnected provider", () => {
+    const providers: ModelProviderWithStatus[] = [
+      {
+        provider: "OpenAI",
+        is_enabled: true,
+        is_configured: false,
+        models: [{ model_name: "saved-model", metadata: {} }],
+      },
+    ];
+    const grouped = buildGroupedOptions({
+      ...base,
+      options: [],
+      providers,
+      savedValue: { name: "saved-model", provider: "OpenAI", icon: "Bot" },
+    });
+    expect(grouped).toEqual({});
   });
 
   it("does not inject the saved value when it is already present", () => {
