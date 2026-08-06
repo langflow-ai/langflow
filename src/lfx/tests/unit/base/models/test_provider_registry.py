@@ -19,13 +19,16 @@ import pytest
 from lfx.base.models import provider_registry
 from lfx.base.models.model_metadata import LIVE_MODEL_PROVIDERS, MODEL_PROVIDER_METADATA
 from lfx.base.models.model_utils import get_live_models_for_provider
-from lfx.base.models.provider_registry import ProviderSpec, register_provider
+from lfx.base.models.provider_registry import ProviderSpec, register_provider, resolve_provider_id
 from lfx.base.models.unified_models import (
     get_live_only_providers,
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
     get_models_detailed,
+    get_provider_all_variables,
+    get_provider_secret_variable_key,
+    instantiation,
     validate_model_provider_key,
 )
 from lfx.base.models.unified_models.class_registry import (
@@ -156,6 +159,52 @@ def test_register_exposes_stable_identity_display_name_and_aliases():
     assert MODEL_PROVIDER_METADATA["FakeCo"]["display_name"] == "FakeCo Enterprise"
 
 
+def test_resolve_provider_id_accepts_names_ids_aliases_and_legacy_unknowns():
+    register_provider(
+        _fakeco_spec(
+            provider_id="fakeco.enterprise",
+            display_name="FakeCo Enterprise",
+            aliases=("FakeCo Legacy",),
+        )
+    )
+
+    assert resolve_provider_id("FakeCo") == "fakeco.enterprise"
+    assert resolve_provider_id("fakeco.enterprise") == "fakeco.enterprise"
+    assert resolve_provider_id("FakeCo Enterprise") == "fakeco.enterprise"
+    assert resolve_provider_id("FakeCo Legacy") == "fakeco.enterprise"
+    assert resolve_provider_id("Legacy Custom Provider") == "legacy-custom-provider"
+
+
+def test_resolve_provider_id_uses_opaque_fallback_for_non_sluggable_legacy_selectors():
+    provider_id = resolve_provider_id(" Δ ")
+
+    assert provider_id == resolve_provider_id("δ")
+    assert provider_id.startswith("legacy-")
+    assert provider_registry._PROVIDER_ID_RE.fullmatch(provider_id)
+    assert "Δ" not in provider_id
+    assert provider_id != resolve_provider_id("!!!")
+
+
+def test_provider_registration_remains_strict_for_non_sluggable_names():
+    with pytest.raises(ValueError, match="Could not derive a provider_id"):
+        register_provider(_fakeco_spec(name="!!!"))
+
+
+def test_provider_queries_accept_stable_id_and_legacy_alias():
+    canonical_variables = get_provider_all_variables("IBM WatsonX")
+
+    assert canonical_variables
+    assert get_provider_all_variables("IBM watsonx.ai") == canonical_variables
+    assert get_provider_all_variables("ibm-watsonx") == canonical_variables
+    assert get_provider_secret_variable_key("IBM watsonx.ai") == get_provider_secret_variable_key("IBM WatsonX")
+
+
+@pytest.mark.parametrize("provider", ["", "   "])
+def test_resolve_provider_id_rejects_empty_values(provider):
+    with pytest.raises(ValueError, match="non-empty"):
+        resolve_provider_id(provider)
+
+
 def test_model_component_explicit_identity_wins_over_ambiguous_module_name():
     class AzureEmbeddingComponent:
         display_name = "Azure OpenAI Embeddings"
@@ -173,11 +222,23 @@ def test_model_component_policy_mode_distinguishes_delegate_and_opt_out():
     assert provider_registry.uses_standalone_model_provider_policy(Component()) is False
 
 
+def test_model_component_policy_mode_reads_inherited_annotated_declaration():
+    class DelegatingBase:
+        model_provider_policy_mode: str = "delegate"
+
+    class Component(DelegatingBase):
+        pass
+
+    assert provider_registry.model_component_policy_mode(Component()) == "delegate"
+    assert provider_registry.uses_standalone_model_provider_policy(Component()) is False
+
+
 @pytest.mark.parametrize("mode", ["standalone", "standlone", "", None])
 def test_model_component_policy_mode_fails_closed_for_unknown_modes(mode):
     class Component:
         model_provider_policy_mode = mode
 
+    assert provider_registry.model_component_policy_mode(Component()) == "standalone"
     assert provider_registry.uses_standalone_model_provider_policy(Component()) is True
 
 
@@ -436,6 +497,7 @@ def test_get_llm_applies_registered_provider_base_url(monkeypatch):
     monkeypatch.setattr(
         um, "get_all_variables_for_provider", lambda *_a, **_k: {"FAKECO_API_BASE": "http://vllm.example:8000"}
     )
+    monkeypatch.setattr(instantiation, "ssrf_protected_openai_clients_for_url", lambda _url: {})
 
     model_selection = [
         {
@@ -486,6 +548,7 @@ def test_get_llm_real_resolver_uses_placeholder_not_base_url(monkeypatch):
     # Base URL comes from the env via the connection handler; do NOT patch the
     # api-key resolver -- that is the path under test.
     monkeypatch.setattr(um, "get_all_variables_for_provider", lambda *_a, **_k: {})
+    monkeypatch.setattr(instantiation, "ssrf_protected_openai_clients_for_url", lambda _url: {})
 
     # The broad mapping remains available to provider enablement/UI callers,
     # but neither implicit nor explicit API-key lookup may consume it.
@@ -524,6 +587,7 @@ def test_get_embeddings_applies_registered_provider_base_url_and_key(monkeypatch
     monkeypatch.setattr(
         um, "get_all_variables_for_provider", lambda *_a, **_k: {"FAKECO_API_BASE": "http://vllm.example:8000"}
     )
+    monkeypatch.setattr(instantiation, "ssrf_protected_openai_clients_for_url", lambda _url: {})
 
     model_selection = [
         {

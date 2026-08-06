@@ -103,18 +103,6 @@
       "path": "/settings/messages",
       "surface": "Messages settings page",
       "ready": [{ "testId": "settings_menu_header" }]
-    },
-    {
-      "id": "settings-store",
-      "path": "/settings/store",
-      "surface": "Store API key settings page",
-      "ready": [{ "testId": "settings_menu_header" }]
-    },
-    {
-      "id": "account-delete",
-      "path": "/account/delete",
-      "surface": "Delete account page",
-      "ready": [{ "role": "button", "name": "delete", "first": true }]
     }
   ],
   "dynamic": [
@@ -124,14 +112,10 @@
       "requiredData": "Flow ID"
     },
     {
-      "template": "/flow/:id/view",
-      "surface": "Flow view page",
-      "requiredData": "Flow ID"
-    },
-    {
       "template": "/playground/:id/",
       "surface": "Shared playground page",
-      "requiredData": "Shared flow/playground ID"
+      "requiredData": "Shared flow/playground ID (flow must have access_type PUBLIC)",
+      "coveredBy": "src/frontend/tests/a11y/shared-playground.a11y.spec.ts"
     },
     {
       "template": "/assets/knowledge-bases/:sourceId/chunks",
@@ -140,11 +124,6 @@
     }
   ],
   "gated": [
-    {
-      "path": "/admin",
-      "surface": "Admin page",
-      "currentBehavior": "Redirects to /flows for current user/session. Scan with an admin user."
-    },
     {
       "path": "/login",
       "surface": "Login page",
@@ -159,16 +138,6 @@
       "path": "/login/admin",
       "surface": "Admin login page",
       "currentBehavior": "Redirects to /flows while authenticated. Scan in logged-out/no-auto-login mode."
-    },
-    {
-      "path": "/store",
-      "surface": "Store page",
-      "currentBehavior": "Redirects to /all when store guard blocks access. Scan only when store is available."
-    },
-    {
-      "path": "/store/:id/",
-      "surface": "Store detail page",
-      "currentBehavior": "Requires store access and store item ID."
     }
   ],
   "excluded": [

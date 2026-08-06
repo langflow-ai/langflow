@@ -152,6 +152,7 @@ def _build_output_function(
         build_started = False
         result = None
         try:
+            comp._ensure_code_execution_policy()  # noqa: SLF001
             if event_manager:
                 event_manager.on_build_start(data={"id": comp.get_id()})
                 build_started = True
@@ -208,6 +209,7 @@ def _build_output_async_function(
         build_started = False
         result = None
         try:
+            comp._ensure_code_execution_policy()  # noqa: SLF001
             if event_manager:
                 event_manager.on_build_start(data={"id": comp.get_id()})
                 build_started = True

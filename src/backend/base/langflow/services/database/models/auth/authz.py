@@ -130,7 +130,7 @@ class AuthzRoleAssignment(SQLModel, table=True):  # type: ignore[call-arg]
     role_id: UUIDstr = Field(
         sa_column=Column(sa.Uuid(), ForeignKey("authz_role.id", ondelete="CASCADE"), nullable=False, index=True),
     )
-    domain_type: str = Field(default="global", description="global, org, workspace")
+    domain_type: str = Field(default="global", description="global, workspace, project")
     # Explicit ``sa_column`` so SQLModel emits ``sa.Uuid()`` matching the
     # migration's column type. Without this, SQLModel can fall back to
     # ``AutoString``/``CHAR(32)`` on SQLite, which drifts from the migration
@@ -144,6 +144,64 @@ class AuthzRoleAssignment(SQLModel, table=True):  # type: ignore[call-arg]
         default=None,
         sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
     )
+
+
+class AuthzRoleAssignmentGrant(SQLModel, table=True):  # type: ignore[call-arg]
+    """Independent provenance source that keeps an effective assignment alive.
+
+    An assignment may have one manual source and any number of IdP group
+    sources. This avoids making provenance a lossy property of the effective
+    assignment when a manual grant overlaps an externally-derived grant.
+    """
+
+    __tablename__ = "authz_role_assignment_grant"
+    __table_args__ = (
+        CheckConstraint(
+            "(source_kind = 'manual' AND provider_id IS NULL AND external_group IS NULL) "
+            "OR (source_kind = 'idp' AND provider_id IS NOT NULL AND external_group IS NOT NULL)",
+            name="ck_authz_role_assignment_grant_source",
+        ),
+        Index(
+            "uq_authz_role_assignment_grant_manual",
+            "assignment_id",
+            unique=True,
+            postgresql_where=text("source_kind = 'manual'"),
+            sqlite_where=text("source_kind = 'manual'"),
+        ),
+        Index(
+            "uq_authz_role_assignment_grant_idp",
+            "assignment_id",
+            "provider_id",
+            "external_group",
+            unique=True,
+            postgresql_where=text("source_kind = 'idp'"),
+            sqlite_where=text("source_kind = 'idp'"),
+        ),
+        Index(
+            "ix_authz_role_assignment_grant_provider_group",
+            "provider_id",
+            "external_group",
+        ),
+    )
+
+    id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
+    assignment_id: UUIDstr = Field(
+        sa_column=Column(
+            sa.Uuid(),
+            ForeignKey("authz_role_assignment.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
+    )
+    source_kind: str = Field(description="manual or idp")
+    provider_id: str | None = Field(default=None, max_length=256)
+    external_group: str | None = Field(default=None, max_length=256)
+    administrative_actor: UUIDstr | None = Field(
+        default=None,
+        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
+    )
+    created_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
+    updated_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
 
 
 class AuthzTeam(SQLModel, table=True):  # type: ignore[call-arg]
@@ -282,12 +340,11 @@ class AuthzAuditLog(SQLModel, table=True):  # type: ignore[call-arg]
         Index("ix_authz_audit_log_actor_timestamp", "actor_id", "timestamp"),
         Index("ix_authz_audit_log_actor_type_timestamp", "actor_type", "timestamp"),
         Index("ix_authz_audit_log_resource", "resource_type", "resource_id"),
-        # ``owner_override`` is the third value the framework writes (see
-        # ``_AUDIT_OWNER_OVERRIDE`` in services/authorization/utils.py); it
-        # must be in the CHECK set or owner-shortcut audit rows would
-        # silently fail the constraint.
+        # Keep this vocabulary aligned with ``services.authorization.audit``.
+        # ``skip`` records an operator-visible reconciliation attempt that did
+        # not apply an authoritative directory snapshot.
         CheckConstraint(
-            "result IN ('allow', 'deny', 'owner_override')",
+            "result IN ('allow', 'deny', 'owner_override', 'skip')",
             name="ck_authz_audit_log_result_enum",
         ),
     )

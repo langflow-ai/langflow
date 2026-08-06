@@ -730,6 +730,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       collapsible="offcanvas"
       data-testid="shad-sidebar"
       className="noflow select-none"
+      role="navigation"
+      aria-label={t("sidebar.componentsPanel")}
     >
       <div className="flex h-full">
         {ENABLE_NEW_SIDEBAR && (
