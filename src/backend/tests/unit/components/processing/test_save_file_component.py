@@ -47,6 +47,51 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         assert component.file_name == "test_output"
         assert component.file_format == "csv"
 
+    @pytest.mark.asyncio
+    async def test_save_to_aws_uses_environment_and_settings_fallbacks(self, component_class, monkeypatch):
+        """Use resolved AWS values when the component credential inputs are empty."""
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "environment-access-key")
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "environment-secret-key")
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "us-west-2")
+
+        settings_service = MagicMock()
+        settings_service.settings.object_storage_bucket_name = "settings-bucket"
+        mock_s3_client = MagicMock()
+
+        component = component_class()
+        component.set_attributes(
+            {
+                "input": Message(text="AWS fallback content"),
+                "file_name": "aws_report",
+                "storage_location": [{"name": "AWS"}],
+                "aws_format": "txt",
+                "aws_access_key_id": "",
+                "aws_secret_access_key": "",
+                "bucket_name": "",
+                "aws_region": "",
+                "s3_prefix": "reports",
+            }
+        )
+
+        with (
+            patch(
+                "lfx.components.files_and_knowledge.save_file.get_settings_service",
+                return_value=settings_service,
+            ),
+            patch("boto3.client", return_value=mock_s3_client) as mock_boto3_client,
+        ):
+            result = await component.save_to_file()
+
+        mock_boto3_client.assert_called_once_with(
+            "s3",
+            aws_access_key_id="environment-access-key",
+            aws_secret_access_key="environment-secret-key",  # noqa: S106  # pragma: allowlist secret
+            region_name="us-west-2",
+        )
+        upload_args = mock_s3_client.upload_file.call_args.args
+        assert upload_args[1:] == ("settings-bucket", "reports/aws_report.txt")
+        assert result.text == "File successfully uploaded to s3://settings-bucket/reports/aws_report.txt"
+
     def test_get_input_type_dataframe(self, component_class):
         """Test input type detection for DataFrame."""
         component = component_class()

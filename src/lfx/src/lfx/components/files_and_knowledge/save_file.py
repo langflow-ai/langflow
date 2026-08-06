@@ -687,8 +687,6 @@ class SaveToFileComponent(Component):
 
         import boto3
 
-        from lfx.base.data.cloud_storage_utils import create_s3_client, validate_aws_credentials
-
         # Get AWS credentials from component inputs or fall back to environment variables
         aws_access_key_id = getattr(self, "aws_access_key_id", None)
         if aws_access_key_id and hasattr(aws_access_key_id, "get_secret_value"):
@@ -728,11 +726,7 @@ class SaveToFileComponent(Component):
             )
             raise ValueError(msg)
 
-        # Validate AWS credentials
-        validate_aws_credentials(self)
-
-        # Create S3 client
-        s3_client = create_s3_client(self)
+        # Create S3 client from the resolved component or fallback values
         client_config: dict[str, Any] = {
             "aws_access_key_id": str(aws_access_key_id),
             "aws_secret_access_key": str(aws_secret_access_key),
