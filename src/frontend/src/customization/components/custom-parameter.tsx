@@ -26,6 +26,7 @@ export function CustomParameterComponent({
   isToolMode = false,
   nodeInformationMetadata,
   proxy,
+  ariaLabelledBy,
 }: {
   handleOnNewValue: handleOnNewValueType;
   name: string;
@@ -44,6 +45,7 @@ export function CustomParameterComponent({
   isToolMode?: boolean;
   nodeInformationMetadata?: NodeInfoType;
   proxy: { field: string; id: string } | undefined;
+  ariaLabelledBy?: string;
 }) {
   const { t } = useTranslation();
   const edges = useFlowStore((state) => state.edges);
@@ -83,6 +85,7 @@ export function CustomParameterComponent({
         placeholder={placeholder}
         isToolMode={isToolMode}
         nodeInformationMetadata={nodeInformationMetadata}
+        ariaLabelledBy={ariaLabelledBy}
       />
     </div>
   );
@@ -90,19 +93,20 @@ export function CustomParameterComponent({
 
 export function getCustomParameterTitle({
   title,
-  nodeId,
   isFlexView,
   required,
   inspectionPanel,
+  labelId,
 }: {
   title: string;
   nodeId: string;
   isFlexView: boolean;
   required?: boolean;
   inspectionPanel?: boolean;
+  labelId?: string;
 }) {
   return (
-    <div className={cn(isFlexView && "max-w-56 truncate")}>
+    <div id={labelId} className={cn(isFlexView && "max-w-56 truncate")}>
       <span
         data-testid={`title-${title.toLocaleLowerCase()}`}
         className={cn(
@@ -113,7 +117,14 @@ export function getCustomParameterTitle({
       >
         {title}
       </span>
-      {required && <span className="text-destructive">*</span>}
+      {required && (
+        <>
+          <span className="text-destructive" aria-hidden="true">
+            *
+          </span>
+          <span className="sr-only">required</span>
+        </>
+      )}
     </div>
   );
 }

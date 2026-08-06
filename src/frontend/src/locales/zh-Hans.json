@@ -1,6 +1,8 @@
 {
   "accordion.addVariable": "添加变量",
   "accordion.fullscreen": "全屏",
+  "accordion.collapse": "收起",
+  "accordion.expand": "展开",
   "account.adminPage": "管理页面",
   "account.discord": "Discord",
   "account.docs": "文档",
@@ -1555,6 +1557,7 @@
   "model.selectModel": "选择模型",
   "model.setupProvider": "设置提供程序",
   "modelInput.connectOtherModels": "连接其他模型",
+  "modelInput.optionPosition": "第 {{current}} 项，共 {{total}} 项",
   "modelInput.loadFailed": "无法加载模型——点击重试",
   "modelInput.loadingModels": "正在加载模型",
   "modelInput.manageProviders": "管理模型提供程序",

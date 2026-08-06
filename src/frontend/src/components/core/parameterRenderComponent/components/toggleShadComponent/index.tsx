@@ -12,6 +12,7 @@ export default function ToggleShadComponent({
   id,
   nodeId,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<boolean, ToggleComponentType>): JSX.Element | null {
   let scaleX, scaleY;
   switch (size) {
@@ -53,6 +54,7 @@ export default function ToggleShadComponent({
         disabled={disabled}
         className=""
         checked={value}
+        aria-labelledby={ariaLabelledBy}
         onCheckedChange={(isEnabled: boolean) => {
           const data = showToogle
             ? { advanced: !isEnabled }

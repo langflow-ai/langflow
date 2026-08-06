@@ -48,6 +48,7 @@ export function ParameterRenderComponent({
   placeholder,
   isToolMode,
   nodeInformationMetadata,
+  ariaLabelledBy,
 }: {
   handleOnNewValue:
     | handleOnNewValueType
@@ -65,6 +66,7 @@ export function ParameterRenderComponent({
   placeholder?: string;
   isToolMode?: boolean;
   nodeInformationMetadata?: NodeInfoType;
+  ariaLabelledBy?: string;
 }) {
   const { t } = useTranslation();
   const id = (
@@ -92,6 +94,7 @@ export function ParameterRenderComponent({
       hasRefreshButton: templateData.refresh_button,
       showParameter,
       inspectionPanel,
+      ariaLabelledBy,
     };
 
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
@@ -385,5 +388,13 @@ export function ParameterRenderComponent({
     }
   };
 
+  // No wrapping role="group" here: a screen reader announces a group's own
+  // name on entry, then the focused control's name right after — since
+  // every widget that actually applies ariaLabelledBy composes the same
+  // field label into its own accessible name, a wrapper would double up
+  // ("Model Name" from the group, then "Model Name gpt-4" from the
+  // combobox). Widgets that don't yet apply it themselves get nothing from
+  // wrapping either way — role="group" doesn't propagate a name to a
+  // focused descendant control, only to the group boundary itself.
   return renderComponent();
 }

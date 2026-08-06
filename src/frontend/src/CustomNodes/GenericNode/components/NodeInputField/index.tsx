@@ -113,6 +113,8 @@ export default function NodeInputField({
 
   const isFlexView = FLEX_VIEW_TYPES.includes(type ?? "");
 
+  const labelId = `node-${data.id}-field-${name}-label`;
+
   const Handle = (
     <HandleRenderComponent
       left={true}
@@ -169,6 +171,7 @@ export default function NodeInputField({
                       nodeId: data.id,
                       isFlexView,
                       required,
+                      labelId,
                     })}
                   </span>
                 }
@@ -180,6 +183,7 @@ export default function NodeInputField({
                   nodeId: data.id,
                   isFlexView,
                   required,
+                  labelId,
                 })}
               </span>
             )}
@@ -231,6 +235,7 @@ export default function NodeInputField({
               isToolMode={isToolMode}
               nodeInformationMetadata={nodeInformationMetadata}
               proxy={proxy}
+              ariaLabelledBy={labelId}
             />
           </ActionPickerAddingContext.Provider>
         )}

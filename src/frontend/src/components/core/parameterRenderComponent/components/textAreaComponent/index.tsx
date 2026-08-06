@@ -78,6 +78,7 @@ export default function TextAreaComponent({
   isToolMode = false,
   nodeInformationMetadata,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string, TextAreaComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -212,6 +213,7 @@ export default function TextAreaComponent({
         className={getInputClassName()}
         placeholder={getPlaceholder(disabled, placeholder)}
         aria-label={disabled ? displayValue : undefined}
+        aria-labelledby={ariaLabelledBy}
         ref={inputRef}
         // Keyed on the secret-ness, not the live type, so revealing a masked
         // value doesn't re-arm autofill.

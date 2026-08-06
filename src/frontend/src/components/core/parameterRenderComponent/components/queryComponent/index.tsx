@@ -63,8 +63,8 @@ export default function QueryComponent({
   isToolMode = false,
   display_name,
   info,
-  separator,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string, QueryComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -138,6 +138,7 @@ export default function QueryComponent({
         className={getInputClassName()}
         placeholder={getPlaceholder(disabled, placeholder)}
         aria-label={disabled ? value : undefined}
+        aria-labelledby={ariaLabelledBy}
         ref={inputRef}
         type={"text"}
       />

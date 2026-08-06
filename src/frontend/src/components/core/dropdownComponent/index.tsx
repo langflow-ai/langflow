@@ -42,6 +42,7 @@ export default function Dropdown({
   handleOnNewValue,
   toggle,
   inspectionPanel,
+  ariaLabelledBy,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
   const { t } = useTranslation();
@@ -245,6 +246,7 @@ export default function Dropdown({
             helperText={helperText}
             filteredOptions={filteredOptions}
             filteredMetadata={filteredMetadata}
+            ariaLabelledBy={ariaLabelledBy}
           />
         </div>
       )}

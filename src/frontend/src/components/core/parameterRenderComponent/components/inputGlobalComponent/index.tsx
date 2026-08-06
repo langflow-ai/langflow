@@ -38,6 +38,7 @@ export default function InputGlobalComponent({
   isToolMode = false,
   hasRefreshButton = false,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string, InputGlobalComponentType> & {
   _input_type?: string;
 }): JSX.Element | null {
@@ -211,6 +212,7 @@ export default function InputGlobalComponent({
       onChange={handlers.handleInputChange}
       isToolMode={isToolMode}
       hasRefreshButton={hasRefreshButton}
+      ariaLabelledBy={ariaLabelledBy}
     />
   );
 }

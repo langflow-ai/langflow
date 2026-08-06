@@ -63,6 +63,7 @@ export default function CopyFieldAreaComponent({
   id = "",
   nodeId,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string, TextAreaComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -164,6 +165,7 @@ export default function CopyFieldAreaComponent({
         onChange={handleInputChange}
         className={cn(getInputClassName())}
         aria-label={valueToRender}
+        aria-labelledby={ariaLabelledBy}
         ref={inputRef}
         type="text"
         disabled

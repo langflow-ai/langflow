@@ -31,6 +31,7 @@ export default function AccordionPromptComponent({
   readonly = false,
   showParameter = false,
   isDoubleBrackets = false,
+  ariaLabelledBy,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(true);
@@ -381,6 +382,7 @@ export default function AccordionPromptComponent({
             <div
               role="button"
               tabIndex={0}
+              aria-label={isOpen ? t("accordion.collapse") : t("accordion.expand")}
               className="flex h-4 w-4 cursor-pointer items-center justify-center"
             >
               <ForwardedIconComponent
@@ -411,6 +413,7 @@ export default function AccordionPromptComponent({
             onInput={handleInput}
             onKeyDown={handleKeyDown}
             onPromptModalSetValue={handlePromptModalSetValue}
+            ariaLabelledBy={ariaLabelledBy}
           />
         </DisclosureContent>
       </Disclosure>

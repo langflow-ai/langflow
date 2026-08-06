@@ -23,6 +23,7 @@ export function DropdownTrigger({
   helperText,
   filteredOptions,
   filteredMetadata,
+  ariaLabelledBy,
 }: {
   disabled?: boolean;
   validOptions: string[];
@@ -41,6 +42,8 @@ export function DropdownTrigger({
   filteredOptions: string[];
   // biome-ignore lint/suspicious/noExplicitAny: legacy
   filteredMetadata: Record<string, any>[] | undefined;
+  // Id of NodeInputField's label element for this field.
+  ariaLabelledBy?: string;
 }) {
   const { t } = useTranslation();
 
@@ -76,6 +79,7 @@ export function DropdownTrigger({
           role="combobox"
           ref={refButton}
           aria-expanded={open}
+          aria-labelledby={ariaLabelledBy}
           data-testid={id}
           className={cn(
             editNode

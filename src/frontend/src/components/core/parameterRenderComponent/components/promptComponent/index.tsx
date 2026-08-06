@@ -27,6 +27,7 @@ export default function PromptAreaComponent({
   nodeId,
   readonly = false,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element | null {
   const coloredContent = (typeof value === "string" ? value : "")
     // escape HTML first
@@ -119,6 +120,7 @@ export default function PromptAreaComponent({
           unstyled
           className="w-full"
           data-testid="button_open_prompt_modal"
+          aria-labelledby={ariaLabelledBy}
         >
           <div className="relative w-full">
             {renderPromptText()}

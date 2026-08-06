@@ -1,6 +1,8 @@
 {
   "accordion.addVariable": "Variable hinzufügen",
   "accordion.fullscreen": "Vollbildschirm",
+  "accordion.collapse": "Einklappen",
+  "accordion.expand": "Ausklappen",
   "account.adminPage": "Verwaltungsseite",
   "account.discord": "Discord",
   "account.docs": "Dokumente",
@@ -1555,6 +1557,7 @@
   "model.selectModel": "Ein Modell auswählen",
   "model.setupProvider": "Anbieter einrichten",
   "modelInput.connectOtherModels": "Andere Modelle verbinden",
+  "modelInput.optionPosition": "{{current}} von {{total}}",
   "modelInput.loadFailed": "Modelle konnten nicht geladen werden – bitte klicken, um es erneut zu versuchen",
   "modelInput.loadingModels": "Modelle werden geladen",
   "modelInput.manageProviders": "Modellanbieter verwalten",

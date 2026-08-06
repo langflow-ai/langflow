@@ -20,7 +20,10 @@ import {
   PopoverContentWithoutPortal,
 } from "../../../../ui/popover";
 import type { BaseInputProps } from "../../types";
-import { focusCommandListOnOpen } from "../../utils/focus-command-list-on-open";
+import {
+  focusCommandListOnOpen,
+  refocusSelectedCommandItemOnNavigate,
+} from "../../utils/focus-command-list-on-open";
 import ModelList from "./components/ModelList";
 import ModelTrigger, { isSetupProviderState } from "./components/ModelTrigger";
 import { matchesModelIdentity } from "./helpers/model-option-identity";
@@ -49,6 +52,7 @@ export default function ModelInputComponent({
   showEmptyState = false,
   modelType: modelTypeProp,
   "aria-label": ariaLabel,
+  ariaLabelledBy,
 }: BaseInputProps<ModelOption[] | undefined> &
   ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
@@ -611,7 +615,16 @@ export default function ModelInputComponent({
         {/* Section 1 — the option list (a self-contained listbox). Keeping the
             footer actions out of <Command> stops them from being swept into the
             listbox's composite keyboard/focus model. */}
-        <Command label={t("model.selectModel")} className="flex flex-col">
+        <Command
+          label={t("model.selectModel")}
+          className="flex flex-col"
+          defaultValue={
+            selectedModel
+              ? `${selectedModel.provider}::${selectedModel.name}`
+              : undefined
+          }
+          onKeyDown={refocusSelectedCommandItemOnNavigate}
+        >
           <ModelList
             groupedOptions={groupedOptions}
             selectedModel={selectedModel}
@@ -681,6 +694,7 @@ export default function ModelInputComponent({
               refButton={refButton}
               showEmptyState={showEmptyState}
               aria-label={ariaLabel}
+              ariaLabelledBy={ariaLabelledBy}
             />
           </div>
           {showConfigureAffordance && (

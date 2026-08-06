@@ -26,6 +26,7 @@ export default function MustachePromptAreaComponent({
   nodeId,
   readonly = false,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element | null {
   const coloredContent = (typeof value === "string" ? value : "")
     // escape HTML first
@@ -94,6 +95,7 @@ export default function MustachePromptAreaComponent({
           unstyled
           className="w-full"
           data-testid="button_open_mustache_prompt_modal"
+          aria-labelledby={ariaLabelledBy}
         >
           <div className="relative w-full">
             {renderPromptText()}

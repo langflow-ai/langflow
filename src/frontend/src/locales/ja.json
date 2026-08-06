@@ -1,6 +1,8 @@
 {
   "accordion.addVariable": "変数の追加",
   "accordion.fullscreen": "フルスクリーン",
+  "accordion.collapse": "折りたたむ",
+  "accordion.expand": "展開する",
   "account.adminPage": "管理ページ",
   "account.discord": "ディスコード",
   "account.docs": "文書",
@@ -1555,6 +1557,7 @@
   "model.selectModel": "モデルの選択",
   "model.setupProvider": "セットアッププロバイダー",
   "modelInput.connectOtherModels": "他のモデルを接続する",
+  "modelInput.optionPosition": "{{total}} 件中 {{current}} 件目",
   "modelInput.loadFailed": "モデルを読み込めませんでした — クリックして再試行してください",
   "modelInput.loadingModels": "モデルを読み込み中",
   "modelInput.manageProviders": "モデルプロバイダーの管理",

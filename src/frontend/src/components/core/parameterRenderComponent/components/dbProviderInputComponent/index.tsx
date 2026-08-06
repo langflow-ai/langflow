@@ -26,7 +26,10 @@ import {
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
-import { focusCommandListOnOpen } from "../../utils/focus-command-list-on-open";
+import {
+  focusCommandListOnOpen,
+  refocusSelectedCommandItemOnNavigate,
+} from "../../utils/focus-command-list-on-open";
 
 export type DBProviderSelection = {
   // Wire keys stay snake_case to match the backend payload format.
@@ -204,6 +207,8 @@ export function DBProviderInput({
         <Command
           label={t("knowledge.dbProviderLabel")}
           className="flex flex-col"
+          defaultValue={selectedProvider.label}
+          onKeyDown={refocusSelectedCommandItemOnNavigate}
         >
           <CommandList className="max-h-[300px] overflow-y-auto">
             {selectableOptions.map(({ provider, configured }) => (

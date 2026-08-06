@@ -22,6 +22,7 @@ export default function FloatComponent({
   id = "",
   nodeId,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<number, FloatComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const step = rangeSpec?.step ?? 0.1;
@@ -115,6 +116,7 @@ export default function FloatComponent({
           data-testid={id}
           ref={inputRef}
           onBlur={handleBlur}
+          aria-labelledby={ariaLabelledBy}
         />
         <NumberInputStepper className={stepperClassName}>
           <NumberIncrementStepper className={incrementStepperClassName}>
