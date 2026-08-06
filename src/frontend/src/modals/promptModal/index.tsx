@@ -115,6 +115,9 @@ export default function PromptModal({
         literal +
         varHighlightHTML({
           name: varName,
+          // The braces belong inside the highlight, as the node preview renders them.
+          // `literal` above only carries the extra braces of an escaped run.
+          addCurlyBraces: true,
           invalidTitle: t("modal.prompt.reservedPrefix"),
         }) +
         literal.replace(/\{/g, "}") // same amount of closing braces
