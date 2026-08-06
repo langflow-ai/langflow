@@ -47,11 +47,19 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         assert component.file_name == "test_output"
         assert component.file_format == "csv"
 
+    def test_aws_fallback_inputs_are_optional(self, component_class):
+        """Allow the canvas to defer AWS fallback-backed inputs to runtime."""
+        inputs = {component_input.name: component_input for component_input in component_class.inputs}
+
+        for input_name in ("aws_access_key_id", "aws_secret_access_key", "bucket_name"):
+            assert inputs[input_name].required is False
+
     @pytest.mark.asyncio
     async def test_save_to_aws_uses_environment_and_settings_fallbacks(self, component_class, monkeypatch):
         """Use resolved AWS values when the component credential inputs are empty."""
         monkeypatch.setenv("AWS_ACCESS_KEY_ID", "environment-access-key")
         monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "environment-secret-key")
+        monkeypatch.setenv("AWS_SESSION_TOKEN", "environment-session-token")
         monkeypatch.setenv("AWS_DEFAULT_REGION", "us-west-2")
 
         settings_service = MagicMock()
@@ -86,11 +94,45 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             "s3",
             aws_access_key_id="environment-access-key",
             aws_secret_access_key="environment-secret-key",  # noqa: S106  # pragma: allowlist secret
+            aws_session_token="environment-session-token",  # noqa: S106  # pragma: allowlist secret
             region_name="us-west-2",
         )
         upload_args = mock_s3_client.upload_file.call_args.args
         assert upload_args[1:] == ("settings-bucket", "reports/aws_report.txt")
         assert result.text == "File successfully uploaded to s3://settings-bucket/reports/aws_report.txt"
+
+    @pytest.mark.asyncio
+    async def test_save_to_aws_does_not_mix_environment_token_with_component_credentials(
+        self, component_class, monkeypatch
+    ):
+        """Keep an environment session token out of component-supplied credentials."""
+        monkeypatch.setenv("AWS_SESSION_TOKEN", "environment-session-token")
+        mock_s3_client = MagicMock()
+
+        component = component_class()
+        component.set_attributes(
+            {
+                "input": Message(text="AWS component credential content"),
+                "file_name": "aws_report",
+                "storage_location": [{"name": "AWS"}],
+                "aws_format": "txt",
+                "aws_access_key_id": "component-access-key",
+                "aws_secret_access_key": "component-secret-key",  # pragma: allowlist secret
+                "bucket_name": "component-bucket",
+                "aws_region": "us-west-2",
+                "s3_prefix": "reports",
+            }
+        )
+
+        with patch("boto3.client", return_value=mock_s3_client) as mock_boto3_client:
+            await component.save_to_file()
+
+        mock_boto3_client.assert_called_once_with(
+            "s3",
+            aws_access_key_id="component-access-key",
+            aws_secret_access_key="component-secret-key",  # noqa: S106  # pragma: allowlist secret
+            region_name="us-west-2",
+        )
 
     def test_get_input_type_dataframe(self, component_class):
         """Test input type detection for DataFrame."""

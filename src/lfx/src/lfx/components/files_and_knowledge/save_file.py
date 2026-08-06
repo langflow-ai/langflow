@@ -144,26 +144,26 @@ class SaveToFileComponent(Component):
         SecretStrInput(
             name="aws_access_key_id",
             display_name="AWS Access Key ID",
-            info="AWS Access key ID.",
+            info="Optional. Falls back to the AWS_ACCESS_KEY_ID environment variable.",
             show=_is_default_storage("AWS"),
             advanced=not _is_default_storage("AWS"),
-            required=True,
+            required=False,
         ),
         SecretStrInput(
             name="aws_secret_access_key",
             display_name="AWS Secret Key",
-            info="AWS Secret Key.",
+            info="Optional. Falls back to the AWS_SECRET_ACCESS_KEY environment variable.",
             show=_is_default_storage("AWS"),
             advanced=not _is_default_storage("AWS"),
-            required=True,
+            required=False,
         ),
         StrInput(
             name="bucket_name",
             display_name="S3 Bucket Name",
-            info="Enter the name of the S3 bucket.",
+            info="Optional. Falls back to the configured object storage bucket.",
             show=_is_default_storage("AWS"),
             advanced=not _is_default_storage("AWS"),
-            required=True,
+            required=False,
         ),
         StrInput(
             name="aws_region",
@@ -691,13 +691,15 @@ class SaveToFileComponent(Component):
         aws_access_key_id = getattr(self, "aws_access_key_id", None)
         if aws_access_key_id and hasattr(aws_access_key_id, "get_secret_value"):
             aws_access_key_id = aws_access_key_id.get_secret_value()
-        if not aws_access_key_id:
+        access_key_from_environment = not aws_access_key_id
+        if access_key_from_environment:
             aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
 
         aws_secret_access_key = getattr(self, "aws_secret_access_key", None)
         if aws_secret_access_key and hasattr(aws_secret_access_key, "get_secret_value"):
             aws_secret_access_key = aws_secret_access_key.get_secret_value()
-        if not aws_secret_access_key:
+        secret_key_from_environment = not aws_secret_access_key
+        if secret_key_from_environment:
             aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
 
         bucket_name = getattr(self, "bucket_name", None)
@@ -731,6 +733,10 @@ class SaveToFileComponent(Component):
             "aws_access_key_id": str(aws_access_key_id),
             "aws_secret_access_key": str(aws_secret_access_key),
         }
+        if access_key_from_environment and secret_key_from_environment:
+            aws_session_token = os.getenv("AWS_SESSION_TOKEN")
+            if aws_session_token:
+                client_config["aws_session_token"] = aws_session_token
 
         # Get region from component input, environment variable, or settings
         aws_region = getattr(self, "aws_region", None)
