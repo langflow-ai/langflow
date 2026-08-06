@@ -36,7 +36,13 @@ from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_
 from lfx.utils.flow_validation import CustomComponentValidationError
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
+from langflow.api.utils import (
+    CurrentActiveUser,
+    DbSession,
+    extract_global_variables_from_headers,
+    parse_value,
+    release_db_transaction,
+)
 from langflow.api.v1.custom_component_policy import (
     CatalogPolicyHTTPException,
     enforce_catalog_policy_for_component_type,
@@ -947,6 +953,7 @@ async def simplified_run_flow_session(
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: CurrentActiveUser,
+    session: DbSession,
     context: dict | None = None,
     http_request: Request,
 ):
@@ -962,6 +969,8 @@ async def simplified_run_flow_session(
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
         api_key_user (User): Authenticated user from session
+        session (AsyncSession): Request-scoped DB session (shared with the auth
+            dependency); its transaction is released before the flow runs
         context (dict | None): Optional context to pass to the flow
         http_request (Request): The incoming HTTP request for extracting global variables
 
@@ -1002,6 +1011,15 @@ async def simplified_run_flow_session(
         workspace_id=flow.workspace_id,
         folder_id=flow.folder_id,
     )
+
+    # ``session`` is the same cached dependency the auth chain used, so this
+    # ends the transaction opened by the auth reads before the flow runs —
+    # the run can take minutes and would otherwise hold the request
+    # transaction (and its pooled connection) open the whole time (#14445).
+    # The API-key ``/run`` variant is not affected: ``api_key_security``
+    # scopes its own short-lived session.
+    await release_db_transaction(session)
+
     return await _run_flow_internal(
         background_tasks=background_tasks,
         flow=flow,
