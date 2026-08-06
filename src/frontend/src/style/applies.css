@@ -1128,6 +1128,13 @@ input[type="password"]::-ms-clear {
     @apply rounded-md bg-accent-indigo px-0 font-semibold;
   }
 
+  /* A prompt variable whose name will be rejected on Check & Save. No background
+     token of its own: the wavy red underline reads as "invalid" the way a spell
+     checker does, and accent-red-foreground is already tuned for both themes. */
+  .chat-message-highlight-invalid {
+    @apply rounded-md px-0 font-semibold text-accent-red-foreground underline decoration-wavy underline-offset-2;
+  }
+
   .field-invalid {
     @apply absolute text-[0.8rem] font-medium text-destructive;
   }
