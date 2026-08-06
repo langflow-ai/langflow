@@ -1,4 +1,5 @@
 import { regexHighlight } from "@/constants/constants";
+import en from "@/locales/en.json";
 import varHighlightHTML from "../var-highlight-html";
 
 describe("varHighlightHTML", () => {
@@ -32,6 +33,25 @@ describe("varHighlightHTML", () => {
     expect(
       varHighlightHTML({ name: "var", invalidTitle: "reserved prefix" }),
     ).not.toContain("title=");
+  });
+
+  it("keeps a quoted tooltip whole in the DOM", () => {
+    // en/pt/es quote the prefix with a plain `"`. Unescaped, it closed the attribute and
+    // the browser read only "Variable names can't start with ", scattering the rest of
+    // the sentence into stray attributes.
+    const title = en["modal.prompt.reservedPrefix"];
+    document.body.innerHTML = varHighlightHTML({
+      name: "_x",
+      addCurlyBraces: true,
+      invalidTitle: title,
+    });
+
+    const span = document.querySelector("span")!;
+    expect(span.getAttribute("title")).toBe(title);
+    expect(Array.from(span.attributes).map((a) => a.name)).toEqual([
+      "class",
+      "title",
+    ]);
   });
 });
 

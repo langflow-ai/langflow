@@ -1,6 +1,22 @@
 import type { IVarHighlightType } from "../../../types/components";
 import { variableHighlightClass } from "../../../utils/promptVariables";
 
+/**
+ * Escapes a value interpolated into a double-quoted HTML attribute.
+ *
+ * The tooltip text is a translated sentence, and several locales quote the prefix with a
+ * plain `"` (en, pt, es). Interpolated raw, that quote closes the attribute early: the
+ * browser reads only the text before it and turns the rest of the sentence into stray
+ * attributes.
+ */
+function escapeAttributeValue(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 export default function varHighlightHTML({
   name,
   addCurlyBraces,
@@ -11,9 +27,10 @@ export default function varHighlightHTML({
   // The two differ in mustache, where the rendered text carries its own braces.
   const className = variableHighlightClass(variableName ?? name);
   const isInvalid = className === "chat-message-highlight-invalid";
-  // Only ever set from a translated constant, never from user input, so a quote inside a
-  // variable name cannot break out of the attribute.
-  const title = isInvalid && invalidTitle ? ` title="${invalidTitle}"` : "";
+  const title =
+    isInvalid && invalidTitle
+      ? ` title="${escapeAttributeValue(invalidTitle)}"`
+      : "";
   const text = addCurlyBraces ? `{${name}}` : name;
 
   return `<span class="font-semibold ${className}"${title}>${text}</span>`;
