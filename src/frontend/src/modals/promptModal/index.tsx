@@ -93,8 +93,15 @@ export default function PromptModal({
   const coloredContent = (typeof inputValue === "string" ? inputValue : "")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(regexHighlight, (match, openRun, varName, closeRun) => {
-      // 1) Only highlight when both sides are the *same* length and that
+    .replace(regexHighlight, (match, codeFence, openRun, varName, closeRun) => {
+      // regexHighlight captures four groups: the ```code fence```, then the opening
+      // brace run, the name and the closing brace run. Omitting codeFence here shifted
+      // every group by one, so lenOpen was always 0 and nothing was ever highlighted.
+
+      // 1) Leave ```code``` blocks untouched
+      if (codeFence) return match;
+
+      // 2) Only highlight when both sides are the *same* length and that
       //    length is odd (   1,3,5,…  ).
       const lenOpen = openRun?.length ?? 0;
       const lenClose = closeRun?.length ?? 0;
@@ -102,7 +109,7 @@ export default function PromptModal({
 
       if (!isVariable) return match; // even-brace runs ⇒ escape, no highlight
 
-      // 2) Number of literal braces each side = floor(lenOpen / 2)
+      // 3) Number of literal braces each side = floor(lenOpen / 2)
       const literal = "{".repeat(Math.floor(lenOpen / 2));
       return (
         literal +
