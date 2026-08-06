@@ -16,6 +16,7 @@ from uuid import uuid4
 import pytest
 from langflow.services.database.models.deployment.crud import (
     count_deployments_by_provider,
+    has_visible_deployment_for_provider,
     list_deployments_page,
 )
 from langflow.services.database.models.deployment.model import Deployment
@@ -196,6 +197,31 @@ async def test_get_provider_account_by_id_unscoped_loads_foreign_account(async_s
     assert await get_provider_account_by_id_unscoped(async_session, provider_id=uuid4()) is None
 
 
+async def test_provider_visibility_proof_is_bound_to_provider_and_scope(async_session: AsyncSession):
+    """An unscoped provider fetch is permitted only for a visible row under that provider."""
+    owner, provider, _owned, foreign_visible, _foreign_hidden = await _seed(async_session)
+    actor_id = uuid4()
+
+    assert await has_visible_deployment_for_provider(
+        async_session,
+        user_id=actor_id,
+        deployment_provider_account_id=provider.id,
+        visibility_scope=ResourceVisibilityScope(resource_ids=(foreign_visible.id,)),
+    )
+    assert not await has_visible_deployment_for_provider(
+        async_session,
+        user_id=actor_id,
+        deployment_provider_account_id=provider.id,
+        visibility_scope=ResourceVisibilityScope(project_ids=(uuid4(),)),
+    )
+    assert not await has_visible_deployment_for_provider(
+        async_session,
+        user_id=owner.id,
+        deployment_provider_account_id=uuid4(),
+        visibility_scope=ResourceVisibilityScope(all_resources=True),
+    )
+
+
 async def test_count_deployments_by_provider_reflects_allowed_ids(async_session: AsyncSession):
     """The total count uses the same predicate as the page, so pagination stays consistent."""
     owner, provider, _owned, foreign_visible, _foreign_hidden = await _seed(async_session)
@@ -260,3 +286,68 @@ async def test_structured_scope_keeps_page_and_total_consistent(async_session: A
 
     assert {deployment.id for deployment, _count, _matched in rows} == expected
     assert total == len(expected)
+
+
+async def test_default_workspace_scope_uses_authoritative_project_workspace(async_session: AsyncSession):
+    """Legacy NULL deployment workspace ids must not pull explicit-project rows into Default."""
+    actor = User(username=f"actor-{uuid4()}", password=f"hashed-{uuid4()}", is_active=True)
+    owner = User(username=f"owner-{uuid4()}", password=f"hashed-{uuid4()}", is_active=True)
+    default_project = Folder(name=f"default-{uuid4()}", user_id=owner.id, workspace_id=None)
+    explicit_workspace_id = uuid4()
+    explicit_project = Folder(name=f"explicit-{uuid4()}", user_id=owner.id, workspace_id=explicit_workspace_id)
+    provider = DeploymentProviderAccount(
+        user_id=owner.id,
+        name=f"provider-{uuid4()}",
+        provider_tenant_id=None,
+        provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+        api_key="encrypted-api-key",  # pragma: allowlist secret
+    )
+    async_session.add_all([actor, owner, default_project, explicit_project, provider])
+    await async_session.commit()
+
+    def deployment(project: Folder) -> Deployment:
+        return Deployment(
+            user_id=owner.id,
+            workspace_id=None,
+            project_id=project.id,
+            deployment_provider_account_id=provider.id,
+            resource_key=f"rk-{uuid4()}",
+            display_name=f"dep-{uuid4()}",
+            deployment_type=DeploymentType.AGENT,
+        )
+
+    default_deployment = deployment(default_project)
+    explicit_deployment = deployment(explicit_project)
+    async_session.add_all([default_deployment, explicit_deployment])
+    await async_session.commit()
+
+    scope = ResourceVisibilityScope(include_unassigned_workspace=True)
+    rows = await list_deployments_page(
+        async_session,
+        user_id=actor.id,
+        deployment_provider_account_id=provider.id,
+        offset=0,
+        limit=20,
+        visibility_scope=scope,
+    )
+    total = await count_deployments_by_provider(
+        async_session,
+        user_id=actor.id,
+        deployment_provider_account_id=provider.id,
+        visibility_scope=scope,
+    )
+
+    assert {row.id for row, _count, _matched in rows} == {default_deployment.id}
+    assert explicit_deployment.id not in {row.id for row, _count, _matched in rows}
+    assert total == 1
+
+    explicit_rows = await list_deployments_page(
+        async_session,
+        user_id=actor.id,
+        deployment_provider_account_id=provider.id,
+        offset=0,
+        limit=20,
+        visibility_scope=ResourceVisibilityScope(workspace_ids=(explicit_workspace_id,)),
+    )
+    assert {row.id for row, _count, _matched in explicit_rows} == {explicit_deployment.id}

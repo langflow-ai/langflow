@@ -19,7 +19,7 @@ import pytest
 from httpx import AsyncClient
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import Job, JobType
-from lfx.schema.workflow import JobStatus
+from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.services.deps import session_scope
 from sqlalchemy.exc import OperationalError
 
@@ -203,7 +203,7 @@ class TestWorkflowStatus:
         client: AsyncClient,
         created_api_key,
     ):
-        """Test GET /workflow returns reconstructed response for a completed job."""
+        """Vertex-build fallback keeps the submitted session for a data-only result."""
         job_id = uuid4()
 
         flow_id = uuid4()
@@ -213,6 +213,8 @@ class TestWorkflowStatus:
         mock_job.status = JobStatus.COMPLETED
         mock_job.type = JobType.WORKFLOW
         mock_job.user_id = None
+        mock_job.result = None
+        mock_job.job_metadata = {"request": {"session_id": "submitted-session"}}
 
         with (
             patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
@@ -227,7 +229,12 @@ class TestWorkflowStatus:
             mock_flow.id = flow_id
             mock_get_flow.return_value = mock_flow
 
-            mock_reconstruct.return_value = {"flow_id": str(flow_id), "status": "completed", "outputs": {}}
+            mock_reconstruct.return_value = WorkflowExecutionResponse(
+                flow_id=str(flow_id),
+                status=JobStatus.COMPLETED,
+                outputs={},
+                session_id=None,
+            )
 
             headers = {"x-api-key": created_api_key.api_key}
             response = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
@@ -235,7 +242,72 @@ class TestWorkflowStatus:
             assert response.status_code == 200
             result = response.json()
             assert result["status"] == "completed"
+            assert result["session_id"] == "submitted-session"
             mock_reconstruct.assert_called_once()
+
+    async def test_get_status_malformed_stored_output_falls_back_to_vertex_builds(
+        self,
+        client: AsyncClient,
+        created_api_key,
+    ):
+        """A truthy but incomplete Job.result must not suppress valid vertex-build recovery."""
+        job_id = uuid4()
+        flow_id = uuid4()
+        mock_job = MagicMock(
+            job_id=job_id,
+            flow_id=flow_id,
+            status=JobStatus.COMPLETED,
+            type=JobType.WORKFLOW,
+            user_id=None,
+            result={
+                "outputs": [
+                    {"component_id": 123, "type": "message", "status": "completed", "content": "ignored"},
+                    {"component_id": [], "type": "message", "status": "completed", "content": "ignored"},
+                ]
+            },
+            job_metadata={"request": {"session_id": "submitted-session"}},
+        )
+
+        with (
+            patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
+            patch("langflow.api.v2.workflow.get_flow_by_id_or_endpoint_name") as mock_get_flow,
+            patch("langflow.api.v2.workflow.reconstruct_workflow_response_from_job_id") as mock_reconstruct,
+        ):
+            mock_service = MagicMock()
+            mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_get_job_service.return_value = mock_service
+
+            mock_flow = MagicMock(id=flow_id)
+            mock_get_flow.return_value = mock_flow
+            mock_reconstruct.return_value = WorkflowExecutionResponse(
+                flow_id=str(flow_id),
+                status=JobStatus.COMPLETED,
+                outputs={
+                    "DataOutput-1": {
+                        "type": "data",
+                        "status": JobStatus.COMPLETED,
+                        "content": {"ok": True},
+                    }
+                },
+            )
+
+            response = await client.get(
+                f"api/v2/workflows?job_id={job_id}",
+                headers={"x-api-key": created_api_key.api_key},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["outputs"] == {
+            "DataOutput-1": {
+                "type": "data",
+                "status": "completed",
+                "display_name": None,
+                "content": {"ok": True},
+                "metadata": None,
+            }
+        }
+        assert response.json()["session_id"] == "submitted-session"
+        mock_reconstruct.assert_awaited_once()
 
     async def test_get_status_timed_out(
         self,

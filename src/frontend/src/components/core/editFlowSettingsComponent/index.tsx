@@ -192,23 +192,35 @@ export const EditFlowSettings: React.FC<
         <Form.Message match="valueMissing" className="field-invalid">
           {t("flow.pleaseEnterDescription")}
         </Form.Message>
-        <div className="mt-3">
-          <div className="flex items-center gap-2">
-            <div>
-              <div className="flex items-center gap-2">
-                <Form.Label className="text-mmd font-medium">
-                  {t("flow.lockFlow")}
-                </Form.Label>
+        {/* Callers that only display the flow (no setLocked) would otherwise
+            render a focusable switch that cannot change anything. */}
+        {setLocked && (
+          <div className="mt-3">
+            <div className="flex items-center gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Form.Label className="text-mmd font-medium">
+                    {t("flow.lockFlow")}
+                  </Form.Label>
 
-                <ForwardedIconComponent
-                  name={locked ? "Lock" : "Unlock"}
-                  className="text-muted-foreground !w-5 !h-5"
-                />
+                  <ForwardedIconComponent
+                    name={locked ? "Lock" : "Unlock"}
+                    className="text-muted-foreground !w-5 !h-5"
+                  />
+                </div>
+
+                <p className="text-xs text-muted-foreground/70 mt-1 font-normal">
+                  {t("flow.lockFlowDescription")}
+                </p>
               </div>
 
-              <p className="text-xs text-muted-foreground/70 mt-1 font-normal">
-                {t("flow.lockFlowDescription")}
-              </p>
+              <Switch
+                checked={!!locked}
+                onCheckedChange={(v) => setLocked(v)}
+                disabled={readOnly}
+                className="data-[state=checked]:bg-primary ml-auto"
+                data-testid="lock-flow-switch"
+              />
             </div>
 
             <Switch
@@ -220,7 +232,7 @@ export const EditFlowSettings: React.FC<
               aria-label={t("flow.lockFlowAriaLabel")}
             />
           </div>
-        </div>
+        )}
       </Form.Field>
     </>
   );

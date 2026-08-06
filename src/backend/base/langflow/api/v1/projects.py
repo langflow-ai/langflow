@@ -8,7 +8,7 @@ from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
 from lfx.utils.util_strings import escape_like_pattern
-from sqlalchemy import literal, or_, update
+from sqlalchemy import literal, null, or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
@@ -60,11 +60,13 @@ from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NA
 from langflow.services.database.models.folder.model import (
     Folder,
     FolderCreate,
+    FolderListRead,
     FolderRead,
     FolderReadWithFlows,
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_settings_service
 from langflow.services.schema import ServiceType
 
@@ -220,7 +222,7 @@ async def create_project(
     return folder_read
 
 
-@router.get("/", response_model=list[FolderRead], status_code=200)
+@router.get("/", response_model=list[FolderListRead], status_code=200)
 async def read_projects(
     *,
     session: DbSession,
@@ -254,26 +256,45 @@ async def read_projects(
         else:
             stmt = select(Folder).where(or_(owned_clause, Folder.user_id == None))  # noqa: E711
         projects = (await session.exec(stmt)).all()
-        projects = [project for project in projects if project.name != STARTER_FOLDER_NAME]
+        projects = [
+            project for project in projects if not (project.name == STARTER_FOLDER_NAME and project.user_id is None)
+        ]
         # When no DB prefilter is available (OSS pass-through), drop projects the
         # user can't read in memory. ``domain_extractor`` groups requests by
-        # workspace so each batch is evaluated against the right policy tuple
-        # (projects are the resource itself, so the domain falls back to
-        # workspace or ``*``). When the prefilter is active the SQL union is
-        # already authoritative — skip the per-row enforce to avoid an N+1.
+        # concrete project so each batch is evaluated against the same policy
+        # tuple as the single-resource guard. When the prefilter is active the
+        # SQL union is already authoritative — skip the per-row enforce to
+        # avoid an N+1.
         if visibility_scope is None:
             projects = await filter_visible_resources(
                 current_user,
                 resource_type="project",
                 candidates=list(projects),
-                domain_extractor=lambda project: _resolve_authz_domain(project.workspace_id, None),
+                domain_extractor=lambda project: _resolve_authz_domain(project.workspace_id, project.id),
                 owner_extractor=lambda project: project.user_id,
                 act=ProjectAction.READ,
             )
         sorted_projects = sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
 
-        # Convert to FolderRead while session is still active to avoid detached instance errors
-        return [FolderRead.model_validate(project, from_attributes=True) for project in sorted_projects]
+        owner_ids = {project.user_id for project in sorted_projects if project.user_id is not None}
+        owners_by_id: dict[str, str] = {}
+        if owner_ids:
+            owner_rows = (await session.exec(select(User.id, User.username).where(User.id.in_(owner_ids)))).all()
+            owners_by_id = {str(owner_id): username for owner_id, username in owner_rows}
+
+        # Convert while the session is active so owner-qualified project lists
+        # do not trigger lazy loads after the request-scoped session closes.
+        return [
+            FolderListRead.model_validate(
+                project,
+                from_attributes=True,
+                update={
+                    "owner_username": owners_by_id.get(str(project.user_id)) if project.user_id is not None else None,
+                    "is_owner": str(project.user_id) == str(current_user.id),
+                },
+            )
+            for project in sorted_projects
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -365,7 +386,7 @@ async def read_project(
                     stmt,
                     id_column=Flow.id,
                     owner_clause=Flow.user_id == current_user.id,
-                    workspace_expression=literal(project.workspace_id),
+                    workspace_expression=null() if project.workspace_id is None else literal(project.workspace_id),
                     project_column=Flow.folder_id,
                     visibility=visibility_scope,
                 )
@@ -489,6 +510,17 @@ async def update_project(
         )
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Project not found") from exc
+
+    if (
+        project.name is not None
+        and project.name != existing_project.name
+        and existing_project.name == STARTER_FOLDER_NAME
+        and existing_project.user_id is None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"The system-managed '{STARTER_FOLDER_NAME}' project cannot be renamed.",
+        )
 
     # Flow rollup uses the project owner — a non-owner editing a shared
     # project must touch the owner's flows, not the actor's same-folder
@@ -723,10 +755,12 @@ async def delete_project(
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Project not found") from exc
 
-    # Prevent deletion of the Langflow Assistant folder
-    if project.name == ASSISTANT_FOLDER_NAME:
-        msg = f"Cannot delete the '{ASSISTANT_FOLDER_NAME}' folder, that contains pre-built flows."
-        await logger.adebug("Cannot delete the '%s' folder, that contains pre-built flows.", ASSISTANT_FOLDER_NAME)
+    # Prevent deletion of projects managed by Langflow. The ownerless Starter
+    # Project is also a stable authorization boundary for bundled examples.
+    is_system_starter = project.name == STARTER_FOLDER_NAME and project.user_id is None
+    if project.name == ASSISTANT_FOLDER_NAME or is_system_starter:
+        msg = f"Cannot delete the '{project.name}' folder, which contains pre-built flows."
+        await logger.adebug("Cannot delete the '%s' folder, which contains pre-built flows.", project.name)
         raise HTTPException(
             status_code=403,
             detail=msg,
