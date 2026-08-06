@@ -121,6 +121,10 @@ class Graph:
         self._sorted_vertices_layers: list[list[str]] = []
         self._run_id = ""
         self._session_id = ""
+        # Whether components in this run may persist chat memory. Set False for
+        # anonymous serving-plane runs (ephemeral); bound per component execution
+        # in get_instance_results so astore_message can skip the DB write.
+        self.persist_messages: bool = True
         self._start_time = datetime.now(timezone.utc)
         self.inactivated_vertices: set = set()
         self.activated_vertices: list[str] = []
@@ -2794,6 +2798,9 @@ class Graph:
         subgraph._tracing_service_initialized = True
         subgraph._run_id = self._run_id
         subgraph.session_id = self.session_id
+        # A subgraph extends the parent's run, so it inherits the ephemeral
+        # (no-persist) decision too.
+        subgraph.persist_messages = self.persist_messages
         subgraph._is_subgraph = True
 
         # Add the filtered nodes and edges

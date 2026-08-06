@@ -20,7 +20,7 @@ import asyncio
 import contextlib
 import json
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -53,6 +53,11 @@ from lfx.workflow.converters import (
     create_error_response,
     parse_workflow_run_request,
     run_response_to_workflow_response,
+)
+from lfx.workflow.end_user_identity import (
+    EndUserIdentityRequiredError,
+    resolve_end_user_identity,
+    scope_session_for_identity,
 )
 
 if TYPE_CHECKING:
@@ -133,6 +138,57 @@ class _RunResponse:
 
     outputs: list[Any] | None
     session_id: str | None
+
+
+def _scope_parsed_to_end_user(parsed, flow, http_request: Request):
+    """Scope a parsed run to its serving-plane end-user identity.
+
+    Reads the trusted end-user header (per lfx serving settings), merges an
+    identified user's id into the effective ``session_id`` so ``(end-user id,
+    session_id)`` keys per-user memory, and returns the updated parsed run. A
+    request with no identity is left unchanged (anonymous); enforcement of the
+    anonymous no-persist contract is applied where the run executes.
+
+    Feature-off (no header configured) and the fail-closed trust gate are handled
+    by :func:`resolve_end_user_identity`, so with the default settings this is a
+    no-op and behavior is byte-for-byte identical to before the feature existed.
+
+    Raises:
+        HTTPException: 401 when identity is required but absent.
+    """
+    settings_service = get_settings_service()
+    settings = settings_service.settings if settings_service is not None else None
+    # Feature off when settings are unavailable or no header is configured.
+    header_name = getattr(settings, "serving_end_user_header", None) if settings is not None else None
+    if not header_name:
+        return parsed
+
+    try:
+        identity = resolve_end_user_identity(
+            header_name=header_name,
+            trust_proxy_headers=bool(getattr(settings, "serving_trust_proxy_headers", False)),
+            require_identity=bool(getattr(settings, "serving_end_user_required", False)),
+            get_header=http_request.headers.get,
+        )
+    except EndUserIdentityRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "error": "End-user identity required",
+                "code": "END_USER_IDENTITY_REQUIRED",
+                "message": str(exc),
+            },
+        ) from exc
+
+    default_session_id = flow.session_id_default or flow.flow_id
+    scoped = scope_session_for_identity(
+        identity,
+        requested_session_id=parsed.session_id,
+        default_session_id=default_session_id,
+    )
+    # An anonymous request runs ephemerally: scoped.persist is False, which the
+    # execution path threads onto the graph so astore_message skips the DB write.
+    return replace(parsed, session_id=scoped.session_id, persist_messages=scoped.persist)
 
 
 async def check_developer_api_enabled() -> None:
@@ -435,6 +491,10 @@ def create_workflow_router(
         await host.authorize(caller, flow, WorkflowAction.EXECUTE)
 
         parsed = parse_workflow_run_request(request)
+        # Serving-plane end-user scoping: merge an identified end-user into the
+        # effective session_id so per-user memory is isolated. No-op under the
+        # default settings (feature off / header untrusted).
+        parsed = _scope_parsed_to_end_user(parsed, flow, http_request)
         if not host.supports_request_overrides:
             _reject_unsupported_fields(parsed)
 

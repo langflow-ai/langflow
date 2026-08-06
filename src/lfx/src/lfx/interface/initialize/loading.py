@@ -76,12 +76,23 @@ async def get_instance_results(
         vertex.load_from_db_fields,
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    from lfx.memory.flow_context import reset_current_flow_id, set_current_flow_id
+    from lfx.memory.flow_context import (
+        reset_current_flow_id,
+        reset_messages_persist,
+        set_current_flow_id,
+        set_messages_persist,
+    )
 
-    flow_id = getattr(getattr(vertex, "graph", None), "flow_id", None)
+    graph = getattr(vertex, "graph", None)
+    flow_id = getattr(graph, "flow_id", None)
     # Always bind — including None — so a graph without flow_id shadows any outer
     # flow scope instead of inheriting it (nested runs must stay legacy-unscoped).
     flow_scope_token = set_current_flow_id(flow_id)
+    # Bind the run's message-persistence flag here too (defaults True) so
+    # astore_message can skip the DB write for an anonymous serving run. Reading it
+    # off the graph and binding in the component's own task sidesteps any
+    # cross-task ContextVar propagation concern.
+    persist_token = set_messages_persist(bool(getattr(graph, "persist_messages", True)))
     try:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -93,6 +104,7 @@ async def get_instance_results(
             raise ValueError(msg)
     finally:
         reset_current_flow_id(flow_scope_token)
+        reset_messages_persist(persist_token)
 
 
 def get_params(vertex_params):

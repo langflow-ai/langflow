@@ -244,6 +244,11 @@ EXPECTED_FIELDS = {
     "mcp_server_docker_hardening",
     "mcp_server_allowed_packages",
     "mcp_server_interpreter_hardening",
+    # ---- Serving-plane end-user identity ----
+    # SecuritySettings
+    "serving_end_user_header",
+    "serving_trust_proxy_headers",
+    "serving_end_user_required",
 }
 
 
@@ -478,3 +483,26 @@ def test_agentic_variables_excluded_when_experience_disabled(monkeypatch):
     assert settings.agentic_experience is False
     for var in AGENTIC_VARIABLES:
         assert var not in settings.variables_to_get_from_environment
+
+
+def test_serving_end_user_defaults_are_feature_off():
+    """The serving-plane end-user identity feature is off by default (backwards compatible)."""
+    settings = Settings()
+    assert settings.serving_end_user_header is None
+    assert settings.serving_trust_proxy_headers is False
+    assert settings.serving_end_user_required is False
+
+
+def test_serving_end_user_env_vars_bind_to_fields(monkeypatch):
+    """The three operator-facing env vars must bind to their settings fields.
+
+    This guards the operator contract: a typo in a field name or the LANGFLOW_
+    prefix would silently disable the feature with no other test catching it.
+    """
+    monkeypatch.setenv("LANGFLOW_SERVING_END_USER_HEADER", "X-End-User-Id")
+    monkeypatch.setenv("LANGFLOW_SERVING_TRUST_PROXY_HEADERS", "true")
+    monkeypatch.setenv("LANGFLOW_SERVING_END_USER_REQUIRED", "true")
+    settings = Settings()
+    assert settings.serving_end_user_header == "X-End-User-Id"
+    assert settings.serving_trust_proxy_headers is True
+    assert settings.serving_end_user_required is True

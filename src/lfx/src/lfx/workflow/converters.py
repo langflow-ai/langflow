@@ -80,6 +80,10 @@ class ParsedWorkflowRun:
     globals: dict[str, str] = field(default_factory=dict)
     # Client-supplied dedupe key for background submits (ignored by sync/stream).
     idempotency_key: str | None = None
+    # Whether this run may persist chat memory. Set False by the serving-plane
+    # end-user scoping for anonymous requests (ephemeral, no persisted memory);
+    # True for every other run so existing behavior is unchanged.
+    persist_messages: bool = True
 
 
 def parse_workflow_run_request(request: WorkflowRunRequest) -> ParsedWorkflowRun:

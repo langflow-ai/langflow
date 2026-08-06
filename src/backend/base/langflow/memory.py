@@ -360,6 +360,15 @@ async def astore_message(
         await logger.awarning("No message provided.")
         return []
 
+    # Serving-plane ephemeral runs (anonymous end-user) must not persist chat
+    # memory. The flag is bound per component execution in get_instance_results
+    # from graph.persist_messages, so this is a no-op for every normal run (the
+    # default is True) and returns the message unpersisted for an anonymous one.
+    from lfx.memory.flow_context import should_persist_messages
+
+    if not should_persist_messages():
+        return [message]
+
     if not message.session_id or not message.sender or not message.sender_name:
         msg = (
             f"All of session_id, sender, and sender_name must be provided. Session ID: {message.session_id},"

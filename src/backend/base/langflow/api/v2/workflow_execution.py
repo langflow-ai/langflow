@@ -261,6 +261,9 @@ async def _stream_event_frames(
                     # builds from the DB (or request data), so without this the streaming
                     # and background paths silently drop request tweaks.
                     tweaks=parsed.tweaks,
+                    # Anonymous serving runs are ephemeral: thread the no-persist
+                    # decision onto the graph so astore_message skips the DB write.
+                    persist_messages=parsed.persist_messages,
                 ),
                 timeout=execution_timeout,
             )
@@ -553,6 +556,10 @@ async def execute_sync_workflow(
         graph = Graph.from_payload(
             graph_data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name, context=context
         )
+        # Serving-plane end-user scoping: an anonymous run is ephemeral, so mark the
+        # graph non-persisting (astore_message honors this per component). Defaults
+        # True for every other run.
+        graph.persist_messages = parsed.persist_messages
         # Set run_id for tracing/logging (similar to V1's simple_run_flow)
         graph.set_run_id(job_id)
         # HITL: when a checkpoint store is supplied, a pausing node (HumanInput) durably

@@ -155,6 +155,38 @@ class SecuritySettings(BaseModel):
     ``--security-opt`` is rejected only when it disables the sandbox. Benign forms (no flags,
     ``--user``, ``--network none``/``bridge``, ``--security-opt no-new-privileges``) stay allowed."""
 
+    # Serving-plane end-user identity
+    serving_end_user_header: str | None = None
+    """Name of the trusted request header that carries the end-user identity on the serving plane
+    (e.g. ``X-End-User-Id``). The value is an opaque, deterministic per-user string minted and
+    injected by the authenticated gateway; Langflow does not parse or validate it, it only uses it
+    as the per-user memory/state scope key.
+
+    UNSET (the default) means the feature is OFF: no end-user identity is read and every serving
+    request is fully anonymous (ephemeral, no persisted per-user memory). Setting a header name
+    turns the feature on, but the header is still only trusted when
+    ``serving_trust_proxy_headers`` is True.
+
+    Security: an unverified client-supplied header would let any caller read another user's memory,
+    so the header must be injected/validated by the authenticated gateway and the serving pods must
+    be reachable only through that gateway (network policy). See ``serving_trust_proxy_headers``."""
+    serving_trust_proxy_headers: bool = False
+    """Fail-closed opt-in for the serving-plane end-user identity header. The header named by
+    ``serving_end_user_header`` is trusted ONLY when this is True.
+
+    Default False: even with a header name configured, the header is ignored and every request is
+    anonymous until an operator explicitly opts in. Enable this only when the deployment guarantees
+    (a) the authenticated gateway injects/overwrites the header from a validated identity and
+    (b) network policy makes the gateway the only caller able to reach the serving pods. Without
+    those two guarantees a client can spoof the header and read another user's memory."""
+    serving_end_user_required: bool = False
+    """Whether a serving request with no end-user identity is rejected. Only meaningful when the
+    feature is on (``serving_end_user_header`` set and ``serving_trust_proxy_headers`` True).
+
+    Default False: a request with no identity is allowed and runs as an anonymous, ephemeral
+    session with no persisted memory. Set True to reject identity-less requests instead (e.g. a
+    deployment that must attribute every run to an end user)."""
+
     # Rate Limiting
     rate_limit_enabled: bool = True
     """Enable rate limiting for login and public-flow endpoints. Set to False to disable."""
