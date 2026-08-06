@@ -11,10 +11,7 @@ import {
 import type { ProviderAccountCreateRequest } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
 import type { DeploymentUpdateRequest } from "@/controllers/API/queries/deployments/use-patch-deployment";
 import type { DeploymentCreateRequest } from "@/controllers/API/queries/deployments/use-post-deployment";
-import {
-  type StepperStepConfig,
-  useStepperState,
-} from "@/modals/stepperModal/StepperModal";
+import { type StepperStepConfig, useStepperState } from "@/modals/stepperModal";
 import {
   buildDeploymentPayload as buildDeploymentPayloadValue,
   buildDeploymentUpdatePayload as buildDeploymentUpdatePayloadValue,
@@ -251,58 +248,48 @@ export function DeploymentStepperProvider({
   // Navigation runs on the shared stepper primitive. Conditional steps are
   // the computed-list model: edit mode omits the Provider step entirely
   // (3 steps: Type → Attach → Review), so no index shifting is needed.
-  const steps = useMemo<StepperStepConfig[]>(
-    () =>
-      isEditMode
-        ? [{ id: "type" }, { id: "flows" }, { id: "review" }]
-        : [
-            { id: "provider" },
-            { id: "type" },
-            { id: "flows" },
-            { id: "review" },
-          ],
-    [isEditMode],
-  );
-
-  const stepper = useStepperState({ steps, initialStep: minStep, minStep });
-  const { currentStep, totalSteps } = stepper;
-
-  const canGoNext = useMemo(() => {
-    switch (stepper.currentStepId) {
-      case "provider":
-        return (
-          selectedProvider !== null &&
-          (selectedInstance !== null || hasValidCredentials)
-        );
-      case "type":
-        return isDeploymentNameValid && selectedLlm.trim() !== "";
-      case "flows":
-        // In edit mode, user can proceed without new attachments (may just change desc/LLM).
-        return isEditMode || selectedVersionByFlow.size > 0;
-      case "review":
-        return !hasToolNameErrors;
-      default:
-        return true;
-    }
+  // Each advancing step carries its own gate as `canNext`, so the shared
+  // primitive's `canGoNext`/`next()` are the single source of navigation truth.
+  // Review has no `canNext`: it is the last step and its primary action is
+  // Deploy, gated separately below by tool-name validity.
+  const steps = useMemo<StepperStepConfig[]>(() => {
+    const provider: StepperStepConfig = {
+      id: "provider",
+      canNext: () =>
+        selectedProvider !== null &&
+        (selectedInstance !== null || hasValidCredentials),
+    };
+    const type: StepperStepConfig = {
+      id: "type",
+      canNext: () => isDeploymentNameValid && selectedLlm.trim() !== "",
+    };
+    const flows: StepperStepConfig = {
+      id: "flows",
+      // In edit mode, user can proceed without new attachments (may just change desc/LLM).
+      canNext: () => isEditMode || selectedVersionByFlow.size > 0,
+    };
+    const review: StepperStepConfig = { id: "review" };
+    return isEditMode ? [type, flows, review] : [provider, type, flows, review];
   }, [
-    stepper.currentStepId,
+    isEditMode,
     selectedProvider,
     selectedInstance,
     hasValidCredentials,
     isDeploymentNameValid,
     selectedLlm,
     selectedVersionByFlow,
-    isEditMode,
-    hasToolNameErrors,
   ]);
 
-  // Ungated like the setState machine it replaces — the per-step gate is
-  // canGoNext, consumed by the footer's disabled state; goTo clamps to
-  // [minStep, totalSteps].
-  const handleNext = useCallback(() => {
-    stepper.goTo(stepper.currentStep + 1);
-  }, [stepper]);
+  const stepper = useStepperState({ steps, initialStep: minStep, minStep });
+  const { currentStep, totalSteps } = stepper;
 
+  // Intermediate steps advance through the primitive's per-step gate; the Review
+  // step deploys instead, so its primary-button gate is tool-name validity.
+  const canGoNext = stepper.isLastStep ? !hasToolNameErrors : stepper.canGoNext;
+
+  // `stepper.next` is stable except when canGoNext/currentStep change, replacing
+  // the previous whole-`stepper` dependency that churned on every transition.
+  const handleNext = stepper.next;
   const handleBack = stepper.back;
 
   const setSelectedProvider = useCallback((provider: DeploymentProvider) => {
