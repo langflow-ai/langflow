@@ -35,6 +35,18 @@ const renderInlineCommand = () =>
     </Command>,
   );
 
+const renderInlineCommandWithoutInputLabel = () =>
+  render(
+    <Command label="Component search">
+      <CommandInput placeholder="Search…" />
+      <CommandList>
+        <CommandGroup heading="Inputs">
+          <CommandItem>Chat Input</CommandItem>
+        </CommandGroup>
+      </CommandList>
+    </Command>,
+  );
+
 describe("Command accessibility", () => {
   it("should_have_no_axe_violations_when_rendered_inline", async () => {
     const { container } = renderInlineCommand();
@@ -57,28 +69,32 @@ describe("Command accessibility", () => {
     expect(screen.getByRole("group", { name: "Inputs" })).toBeInTheDocument();
   });
 
-  // FINDING (documented, not fixed): cmdk always stamps its own
-  // `aria-labelledby` (pointing at the `<Command label>` element) onto the
-  // input, and aria-labelledby outranks aria-label in the accessible-name
-  // computation. A caller passing `aria-label` to CommandInput therefore has
-  // it silently ignored whenever the wrapping `<Command>` sets `label`. The
-  // input is still named — just not with the name the call site asked for.
-  it("should_name_the_input_from_the_command_label_not_the_input_aria_label", () => {
+  // cmdk stamps its own `aria-labelledby` (pointing at the `<Command label>`
+  // element) onto the input, and aria-labelledby would outrank aria-label in
+  // the accessible-name computation. CommandInput drops that reference when a
+  // caller passes `aria-label`, so the name the call site asked for wins.
+  it("should_name_the_input_from_its_own_aria_label", () => {
     renderInlineCommand();
 
     const input = screen.getByRole("combobox");
-    expect(input).toHaveAttribute("aria-label", "Search components");
-    expect(input).toHaveAccessibleName("Component search");
+    expect(input).not.toHaveAttribute("aria-labelledby");
+    expect(input).toHaveAccessibleName("Search components");
   });
 
-  // FINDING (documented, not fixed): the corollary of the above. When the
-  // wrapping `<Command>` has no `label`, cmdk's `aria-labelledby` resolves to
-  // an empty element, and because it still outranks `aria-label` the search
-  // box ends up with NO accessible name at all. In other words `<Command
-  // label>` is the only way to name a CommandInput — passing `aria-label` to
-  // the input is a no-op. Every call site that relies on `aria-label` alone
-  // ships an unnamed combobox (WCAG 4.1.2).
-  it("should_leave_the_input_unnamed_when_the_command_has_no_label", () => {
+  // Without an `aria-label` the input keeps cmdk's own labelling, so
+  // `<Command label>` still names it.
+  it("should_fall_back_to_the_command_label_when_the_input_has_no_aria_label", () => {
+    renderInlineCommandWithoutInputLabel();
+
+    expect(screen.getByRole("combobox")).toHaveAccessibleName(
+      "Component search",
+    );
+  });
+
+  // Previously the input ended up with no accessible name at all here: cmdk's
+  // aria-labelledby pointed at the empty `<Command>` label element and still
+  // outranked aria-label (WCAG 4.1.2).
+  it("should_name_the_input_when_the_command_has_no_label", () => {
     render(
       <Command>
         <CommandInput aria-label="Search components" />
@@ -88,9 +104,9 @@ describe("Command accessibility", () => {
       </Command>,
     );
 
-    const input = screen.getByRole("combobox");
-    expect(input).toHaveAttribute("aria-label", "Search components");
-    expect(input).toHaveAccessibleName("");
+    expect(screen.getByRole("combobox")).toHaveAccessibleName(
+      "Search components",
+    );
   });
 
   it("should_expose_combobox_state_on_the_input", () => {
@@ -128,7 +144,7 @@ describe("Command accessibility", () => {
 
   it("should_have_no_axe_violations_when_rendered_in_a_dialog", async () => {
     render(
-      <CommandDialog open>
+      <CommandDialog open label="Command palette">
         <CommandInput aria-label="Search components" />
         <CommandList>
           <CommandItem>Chat Input</CommandItem>
@@ -143,30 +159,27 @@ describe("Command accessibility", () => {
     ).toHaveNoViolations();
   });
 
-  // FINDING (documented, not fixed): CommandDialog passes no DialogTitle, so
-  // DialogContent injects its visually-hidden "Dialog" fallback and the
-  // command palette announces as literally "Dialog". Asserting the current
-  // behaviour means a future real title trips this test instead of silently
-  // passing, at which point the expectation should be updated.
-  it("should_expose_the_command_dialog_with_its_current_fallback_name", () => {
+  // The palette used to announce as the literal string "Dialog": CommandDialog
+  // passed no DialogTitle, so DialogContent injected its visually-hidden
+  // fallback. `label` now names both the dialog and the search input.
+  it("should_name_the_command_dialog_from_its_label", () => {
     render(
-      <CommandDialog open>
-        <CommandInput aria-label="Search components" />
+      <CommandDialog open label="Command palette">
         <CommandList>
           <CommandItem>Chat Input</CommandItem>
         </CommandList>
       </CommandDialog>,
     );
 
-    expect(screen.getByRole("dialog", { name: "Dialog" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Command palette" }),
+    ).toBeInTheDocument();
   });
 
-  // FINDING (documented, not fixed): CommandSeparator renders
-  // `role="separator"` as a direct child of CommandList's `role="listbox"`.
-  // A listbox may only own `option` / `group` children, so axe reports
-  // `aria-required-children`. Fixing it belongs in command.tsx (the separator
-  // needs `role="presentation"`), so this test pins the current behaviour.
-  it("should_report_a_separator_inside_the_listbox_as_a_disallowed_child", async () => {
+  // cmdk's own Separator renders `role="separator"` as a direct child of
+  // CommandList's `role="listbox"`, which may only own `option` / `group`
+  // children (axe aria-required-children). Ours is presentational instead.
+  it("should_render_the_separator_as_presentational_inside_the_listbox", async () => {
     const { container } = render(
       <Command label="Component search">
         <CommandInput aria-label="Search components" />
@@ -182,10 +195,30 @@ describe("Command accessibility", () => {
       </Command>,
     );
 
-    const results = await axe(container, {
-      rules: { region: { enabled: false } },
-    });
-    const violationIds = results.violations.map((violation) => violation.id);
-    expect(violationIds).toContain("aria-required-children");
+    expect(screen.queryByRole("separator")).not.toBeInTheDocument();
+    expect(
+      await axe(container, { rules: { region: { enabled: false } } }),
+    ).toHaveNoViolations();
+  });
+
+  it("should_hide_the_separator_while_a_search_is_active", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <Command label="Component search">
+        <CommandInput aria-label="Search components" />
+        <CommandList>
+          <CommandGroup heading="Inputs">
+            <CommandItem>Chat Input</CommandItem>
+          </CommandGroup>
+          <CommandSeparator />
+        </CommandList>
+      </Command>,
+    );
+
+    expect(container.querySelector("[cmdk-separator]")).toBeInTheDocument();
+
+    await user.type(screen.getByRole("combobox"), "chat");
+
+    expect(container.querySelector("[cmdk-separator]")).not.toBeInTheDocument();
   });
 });

@@ -991,6 +991,7 @@
                 "language model",
                 "large language model"
               ],
+              "model_provider_policy_mode": "delegate",
               "module": "lfx.components.models_and_agents.language_model.LanguageModelComponent"
             },
             "minimized": false,

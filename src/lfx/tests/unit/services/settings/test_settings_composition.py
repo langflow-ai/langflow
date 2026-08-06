@@ -160,6 +160,7 @@ EXPECTED_FIELDS = {
     "event_delivery",
     "worker_timeout",
     "workflow_execution_timeout",
+    "model_provider_policy_refresh_interval_s",
     "public_flow_cleanup_interval",
     "public_flow_expiration",
     "webhook_polling_interval",
@@ -270,6 +271,7 @@ def test_critical_defaults_unchanged():
     assert settings.cache_type == "async"
     assert settings.storage_type == "local"
     assert settings.event_delivery == "streaming"
+    assert settings.model_provider_policy_refresh_interval_s == 10.0
     assert settings.cors_origins == "*"
     assert settings.cors_allow_credentials is True
     assert settings.ssrf_protection_enabled is True
@@ -414,6 +416,12 @@ def test_yaml_round_trip():
         ("LANGFLOW_SKIP_MCP_AUTO_INIT", "true", "skip_mcp_auto_init", True),
         ("LANGFLOW_DO_NOT_TRACK", "true", "do_not_track", True),
         ("LANGFLOW_DEV", "true", "dev", True),
+        (
+            "LANGFLOW_MODEL_PROVIDER_POLICY_REFRESH_INTERVAL_S",
+            "7.5",
+            "model_provider_policy_refresh_interval_s",
+            7.5,
+        ),
         ("LANGFLOW_BACKEND_ONLY", "true", "backend_only", True),
         ("LANGFLOW_AUTO_SAVING", "false", "auto_saving", False),
         ("LANGFLOW_FALLBACK_TO_ENV_VAR", "false", "fallback_to_env_var", False),

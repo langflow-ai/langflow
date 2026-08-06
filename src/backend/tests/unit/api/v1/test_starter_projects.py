@@ -2,6 +2,7 @@ import importlib
 
 from fastapi import status
 from httpx import AsyncClient
+from lfx.services.catalog_policy import CatalogPolicySnapshot
 
 
 async def test_get_starter_projects(client: AsyncClient, logged_in_headers):
@@ -29,6 +30,14 @@ EXPECTED_STARTER_PROJECTS = {
     "Vector Store RAG": "Load your data for chat context with Retrieval Augmented Generation.",
 }
 
+EXPECTED_STARTER_PROJECT_KEYS = {
+    "basic_prompting",
+    "blog_writer",
+    "document_q_a",
+    "memory_chatbot",
+    "vector_store_rag",
+}
+
 
 async def test_get_starter_projects_expose_canonical_metadata(client: AsyncClient, logged_in_headers):
     """Each starter project must expose its canonical name and description.
@@ -46,6 +55,7 @@ async def test_get_starter_projects_expose_canonical_metadata(client: AsyncClien
 
     names = [project["name"] for project in result]
     assert len(set(names)) == len(names), f"Starter project names must be unique, got: {names}"
+    assert {project["name_key"] for project in result} == EXPECTED_STARTER_PROJECT_KEYS
 
     actual = {project["name"]: project["description"] for project in result}
     assert actual == EXPECTED_STARTER_PROJECTS
@@ -56,6 +66,64 @@ async def test_get_starter_projects_expose_canonical_metadata(client: AsyncClien
     assert endpoint_names == [None] * len(result), (
         f"endpoint_name must be null, not the string 'None': {endpoint_names}"
     )
+
+
+async def test_starter_projects_catalog_policy_is_request_local_and_unblocks_without_restart(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import starter_projects
+
+    class MutableCatalogPolicyService:
+        snapshot = CatalogPolicySnapshot(blocked_template_keys={"basic_prompting"})
+
+    service = MutableCatalogPolicyService()
+    monkeypatch.setattr(starter_projects, "get_catalog_policy_service", lambda: service)
+
+    blocked_response = await client.get("api/v1/starter-projects/", headers=logged_in_headers)
+    assert blocked_response.status_code == status.HTTP_200_OK, blocked_response.text
+    assert {project["name_key"] for project in blocked_response.json()} == (
+        EXPECTED_STARTER_PROJECT_KEYS - {"basic_prompting"}
+    )
+
+    service.snapshot = CatalogPolicySnapshot()
+    unblocked_response = await client.get("api/v1/starter-projects/", headers=logged_in_headers)
+    assert unblocked_response.status_code == status.HTTP_200_OK, unblocked_response.text
+    assert {project["name_key"] for project in unblocked_response.json()} == EXPECTED_STARTER_PROJECT_KEYS
+
+
+async def test_starter_projects_include_blocked_requires_superuser(
+    client: AsyncClient,
+    logged_in_headers,
+):
+    denied_response = await client.get(
+        "api/v1/starter-projects/?include_blocked=true",
+        headers=logged_in_headers,
+    )
+    assert denied_response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_starter_projects_superuser_can_include_blocked(
+    client: AsyncClient,
+    logged_in_headers_super_user,
+    monkeypatch,
+):
+    from langflow.api.v1 import starter_projects
+
+    service = type(
+        "CatalogPolicyService",
+        (),
+        {"snapshot": CatalogPolicySnapshot(blocked_template_keys={"basic_prompting"})},
+    )()
+    monkeypatch.setattr(starter_projects, "get_catalog_policy_service", lambda: service)
+
+    override_response = await client.get(
+        "api/v1/starter-projects/?include_blocked=true",
+        headers=logged_in_headers_super_user,
+    )
+    assert override_response.status_code == status.HTTP_200_OK, override_response.text
+    assert {project["name_key"] for project in override_response.json()} == EXPECTED_STARTER_PROJECT_KEYS
 
 
 def test_starter_projects_keep_optional_crewai_exports_lazy():

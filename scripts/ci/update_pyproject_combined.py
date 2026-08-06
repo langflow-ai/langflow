@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from update_lf_base_dependency import update_base_dep, update_lfx_dep_in_base
+from update_lf_base_dependency import update_lfx_dep_in_base
 from update_pyproject_version import update_pyproject_version
 from update_uv_dependency import update_uv_dep as update_version_uv_dep
 
@@ -13,13 +13,13 @@ sys.path.append(str(current_dir))
 
 
 def update_projects_for_nightly(main_tag: str, base_tag: str, lfx_tag: str) -> None:
-    """Apply a coordinated full/core/base/LFX nightly version chain."""
+    """Apply a coordinated full/base/LFX nightly version chain."""
     main_version = main_tag.removeprefix("v")
     base_version = base_tag.removeprefix("v")
     lfx_version = lfx_tag.removeprefix("v")
 
-    # Lockstep invariant: full -> core -> base must use dev versions published by
-    # this run. pypi_nightly_tag.py gives all three the same tag.
+    # Lockstep invariant: full -> base must use dev versions published by this
+    # run. pypi_nightly_tag.py gives both packages the same tag.
 
     # First handle base package updates (canonical name kept).
     update_pyproject_version("src/backend/base/pyproject.toml", base_version)
@@ -27,21 +27,16 @@ def update_projects_for_nightly(main_tag: str, base_tag: str, lfx_tag: str) -> N
     # Update LFX dependency in langflow-base (exact canonical dev pin).
     update_lfx_dep_in_base("src/backend/base/pyproject.toml", lfx_version)
 
-    # Core has the product version and delegates the service dependency surface
-    # to base, including its matching optional extras.
-    update_pyproject_version("src/langflow-core/pyproject.toml", main_version)
-    update_base_dep("src/langflow-core/pyproject.toml", base_version)
-
     # Then handle main package updates (canonical name kept).
     update_pyproject_version("pyproject.toml", main_version)
-    # Main delegates to the product-aligned core distribution.
-    update_version_uv_dep(main_version)
+    # Main delegates directly to the product-aligned base distribution.
+    update_version_uv_dep(base_version)
 
 
 def main():
-    """Universal update script that handles base, core, and main in a single run.
+    """Universal update script that handles base and main in a single run.
 
-    The packages keep their CANONICAL names (``langflow``, ``langflow-core``, ``langflow-base``) -- they are NOT
+    The packages keep their CANONICAL names (``langflow``, ``langflow-base``) -- they are NOT
     renamed to ``*-nightly``. This script only sets the nightly ``.devN`` versions and re-pins the
     inter-package dependencies to exact canonical dev versions. See ``src/bundles/NIGHTLY.md``.
 

@@ -7,8 +7,31 @@ from typing import TYPE_CHECKING
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
-    from lfx.services.authorization.base import AuthorizationMutation, BaseAuthorizationService
+    from uuid import UUID
+
+    from lfx.services.authorization.base import (
+        AuthorizationMutation,
+        AuthorizationMutationKind,
+        BaseAuthorizationService,
+    )
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+async def acquire_identity_mutation_lock(
+    service: BaseAuthorizationService,
+    session: AsyncSession,
+    *,
+    kind: AuthorizationMutationKind,
+    entity_id: UUID | None = None,
+    affected_user_ids: tuple[UUID, ...] = (),
+) -> None:
+    """Run the plugin's lock-only preflight before canonical identity reads."""
+    await service.acquire_identity_mutation_lock(
+        session=session,
+        kind=kind,
+        entity_id=entity_id,
+        affected_user_ids=affected_user_ids,
+    )
 
 
 async def validate_identity_mutation(
@@ -53,4 +76,20 @@ async def safe_identity_mutation_committed(
             "Authorization lifecycle publication failed after %s for entity=%s",
             mutation.kind.value,
             mutation.entity_id,
+        )
+
+
+async def safe_directory_membership_committed(
+    service: BaseAuthorizationService,
+    *,
+    user_id: UUID,
+    changed: bool,
+) -> None:
+    """Publish committed directory membership without misreporting durable success."""
+    try:
+        await service.directory_membership_committed(user_id=user_id, changed=changed)
+    except Exception:  # noqa: BLE001
+        logger.exception(
+            "Authorization directory publication failed after commit for user=%s",
+            user_id,
         )

@@ -286,7 +286,7 @@ def test_sticky_default_preserves_providerless_saved_selection():
 
 
 def test_sticky_default_adds_custom_saved_provider_to_policy_candidates():
-    from lfx.base.models.provider_registry import provider_id_for
+    from lfx.base.models.provider_registry import resolve_provider_id
     from lfx.base.models.unified_models import build_config as bc
     from lfx.services.model_provider_policy import ModelProviderPolicyContext, ModelProviderPolicySnapshot
 
@@ -294,7 +294,7 @@ def test_sticky_default_adds_custom_saved_provider_to_policy_candidates():
 
     def _allow_candidates(*, user_id, providers, purpose):
         captured_providers.extend(providers)
-        candidate_ids = frozenset(provider_id_for(provider) or provider for provider in providers)
+        candidate_ids = frozenset(resolve_provider_id(provider) for provider in providers)
         return ModelProviderPolicySnapshot(
             context=ModelProviderPolicyContext(user_id=user_id),
             purpose=purpose,

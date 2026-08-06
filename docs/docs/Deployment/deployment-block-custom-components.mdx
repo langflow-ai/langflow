@@ -12,7 +12,7 @@ To block custom component creation on a Langflow server, set the following [envi
 LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false
 ```
 
-When set to `false`, Langflow blocks creating custom components and changing code in the visual editor.
+When set to `false`, Langflow blocks creating custom components, changing code in the visual editor, and running [registered built-in code-execution components](/api-keys-and-authentication#multi-tenant-component-hardening).
 
 When unset or `true`, Langflow allows custom code.
 Existing installations keep the default `true` behavior until you opt in to this restriction.
@@ -30,6 +30,23 @@ LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY=true
 ```
 
 When set to `true`, non-superusers can still view and use custom components in flows, but they cannot create new custom components or edit custom component code.
+
+## Interaction with catalog governance
+
+Catalog governance takes precedence over the custom-code settings on the custom-component create, update, and code-validation endpoints. A catalog block has no superuser bypass.
+
+| Submitted source | Catalog policy | Custom components | Admin-only mode | Result |
+|---|---|---|---|---|
+| Known server template | Blocked | Either | Either | Denied for every user |
+| Known server template | Allowed | Disabled | Either | Allowed using the trusted server source |
+| Known server template | Allowed | Enabled | Non-superuser | Allowed using the trusted server source |
+| Unknown custom source | Not blocked | Disabled | Either | Denied |
+| Unknown custom source | Not blocked | Enabled | Non-superuser | Denied |
+| Unknown custom source | Not blocked | Enabled | Superuser or admin-only disabled | Allowed |
+
+For `POST /api/v1/validate/code`, this policy runs before the source is parsed or imports are inspected. In a restricted custom-code mode, known templates are validated from the trusted server copy, while unknown source follows the same disabled or admin-only rule as the component editor. On custom-component create and update, known blocked template source is rejected before the component is built, and the resolved component type is checked again before request-supplied frontend updates are applied.
+
+An active catalog policy fails closed with a temporary `503` response while server template identities are still initializing. An empty catalog policy preserves the default behavior and does not require template identity lookups.
 
 ## Configure a custom component allow-list
 

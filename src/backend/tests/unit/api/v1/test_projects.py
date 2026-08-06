@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import status
+from fastapi import BackgroundTasks, HTTPException, status
 from httpx import AsyncClient
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.deployment.model import Deployment
@@ -152,6 +152,65 @@ async def test_read_projects(client: AsyncClient, logged_in_headers):
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, list), "The result must be a list"
     assert len(result) > 0, "The list must not be empty"
+    assert all(project["owner_username"] for project in result)
+    assert all(project["is_owner"] is True for project in result)
+
+
+async def test_read_projects_qualifies_visible_same_named_projects_by_owner():
+    from langflow.api.v1.projects import read_projects
+
+    actor_id = uuid4()
+    other_user_id = uuid4()
+    own_project = Folder(id=uuid4(), name="Starter Project", user_id=actor_id)
+    shared_project = Folder(id=uuid4(), name="Starter Project", user_id=other_user_id)
+    ownerless_project = Folder(id=uuid4(), name="Ownerless Project", user_id=None)
+    internal_project = Folder(id=uuid4(), name=STARTER_FOLDER_NAME, user_id=other_user_id)
+
+    projects_result = MagicMock()
+    projects_result.all.return_value = [shared_project, internal_project, ownerless_project, own_project]
+    owners_result = MagicMock()
+    owners_result.all.return_value = [(actor_id, "current-user"), (other_user_id, "other-user")]
+    session = AsyncMock()
+    session.exec.side_effect = [projects_result, owners_result]
+
+    async def return_candidates(*_args, **kwargs):
+        return kwargs["candidates"]
+
+    with patch(
+        "langflow.api.v1.projects.filter_visible_resources",
+        new_callable=AsyncMock,
+        side_effect=return_candidates,
+    ) as filter_visible:
+        result = await read_projects(
+            session=session,
+            current_user=SimpleNamespace(id=actor_id),
+        )
+
+    projects_by_id = {project.id: project for project in result}
+    assert set(projects_by_id) == {shared_project.id, internal_project.id, ownerless_project.id, own_project.id}
+    assert (
+        projects_by_id[shared_project.id].name,
+        projects_by_id[shared_project.id].owner_username,
+        projects_by_id[shared_project.id].is_owner,
+    ) == ("Starter Project", "other-user", False)
+    assert (
+        projects_by_id[ownerless_project.id].name,
+        projects_by_id[ownerless_project.id].owner_username,
+        projects_by_id[ownerless_project.id].is_owner,
+    ) == ("Ownerless Project", None, False)
+    assert (
+        projects_by_id[internal_project.id].name,
+        projects_by_id[internal_project.id].owner_username,
+        projects_by_id[internal_project.id].is_owner,
+    ) == (STARTER_FOLDER_NAME, "other-user", False)
+    assert (
+        projects_by_id[own_project.id].name,
+        projects_by_id[own_project.id].owner_username,
+        projects_by_id[own_project.id].is_owner,
+    ) == ("Starter Project", "current-user", True)
+    assert session.exec.await_count == 2
+    domain_extractor = filter_visible.await_args.kwargs["domain_extractor"]
+    assert domain_extractor(shared_project) == f"project:{shared_project.id}"
 
 
 async def test_read_project(client: AsyncClient, logged_in_headers, basic_case):
@@ -209,6 +268,32 @@ async def test_update_project(client: AsyncClient, logged_in_headers, basic_case
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
 
 
+async def test_update_project_cannot_rename_system_starter(monkeypatch):
+    from langflow.api.v1 import projects as projects_module
+    from langflow.services.database.models.folder.model import FolderUpdate
+
+    project_id = uuid4()
+    system_starter = Folder(id=project_id, name=STARTER_FOLDER_NAME, user_id=None)
+    monkeypatch.setattr(
+        projects_module,
+        "authorized_or_owner_scoped",
+        AsyncMock(return_value=system_starter),
+    )
+    monkeypatch.setattr(projects_module, "ensure_project_permission", AsyncMock())
+
+    with pytest.raises(HTTPException) as exc_info:
+        await projects_module.update_project(
+            session=AsyncMock(),
+            project_id=project_id,
+            project=FolderUpdate(name="Renamed starter"),
+            current_user=SimpleNamespace(id=uuid4()),
+            background_tasks=BackgroundTasks(),
+        )
+
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert "cannot be renamed" in exc_info.value.detail
+
+
 async def test_update_project_rejects_unowned_parent_id(
     client: AsyncClient, logged_in_headers, basic_case, active_user
 ):
@@ -251,6 +336,99 @@ async def test_delete_project_then_404(client: AsyncClient, logged_in_headers, b
 
     get_resp = await client.get(f"api/v1/projects/{proj_id}", headers=logged_in_headers)
     assert get_resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_delete_project_cannot_delete_system_starter(monkeypatch):
+    from langflow.api.v1 import projects as projects_module
+
+    project_id = uuid4()
+    system_starter = Folder(id=project_id, name=STARTER_FOLDER_NAME, user_id=None)
+    monkeypatch.setattr(
+        projects_module,
+        "authorized_or_owner_scoped",
+        AsyncMock(return_value=system_starter),
+    )
+    monkeypatch.setattr(projects_module, "ensure_project_permission", AsyncMock())
+
+    with pytest.raises(HTTPException) as exc_info:
+        await projects_module.delete_project(
+            session=AsyncMock(),
+            project_id=project_id,
+            current_user=SimpleNamespace(id=uuid4()),
+        )
+
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert STARTER_FOLDER_NAME in exc_info.value.detail
+
+
+async def test_delete_project_recovers_from_concurrent_write_lock(
+    client: AsyncClient, logged_in_headers, basic_case, monkeypatch
+):
+    """LE-2020: a competing commit must not turn DELETE into a 500 that leaves the project behind.
+
+    ``delete_project`` runs inside ``begin_nested()`` — the SAVEPOINT opens a DEFERRED
+    SQLite transaction, and the reads it performs (flow enumeration, deployment check)
+    pin a read snapshot. When another connection commits before the row delete runs,
+    SQLite answers SQLITE_BUSY_SNAPSHOT *immediately*: the busy handler is never
+    invoked, so ``busy_timeout`` cannot help and only restarting the transaction can.
+
+    The contention is injected with a real second connection committing a real row —
+    the DB is never mocked, only the timing is made deterministic instead of load-dependent.
+    """
+    from langflow.api.v1 import projects as projects_module
+
+    create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    assert create_resp.status_code == status.HTTP_201_CREATED
+    project_id = create_resp.json()["id"]
+
+    original_check = projects_module.check_project_has_deployments
+    attempts = {"count": 0}
+
+    async def check_with_competing_commit(session, *, project_id):
+        # Only the first attempt races: a retry must find a quiet database and win.
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            async with session_scope() as competing_session:
+                competing_session.add(Folder(name=f"competing-write-{uuid4()}", user_id=None))
+        return await original_check(session, project_id=project_id)
+
+    monkeypatch.setattr(projects_module, "check_project_has_deployments", check_with_competing_commit)
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+
+    assert attempts["count"] >= 1, "the contention hook never ran — the test no longer exercises the race"
+    assert delete_resp.status_code == status.HTTP_204_NO_CONTENT, delete_resp.text
+
+    get_resp = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert get_resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_delete_project_does_not_leak_sql_on_database_error(
+    client: AsyncClient, logged_in_headers, basic_case, monkeypatch
+):
+    """LE-2020: the error payload must never echo the statement, table or bound parameters."""
+    import sqlite3
+
+    from langflow.api.v1 import projects as projects_module
+    from sqlalchemy.exc import OperationalError
+
+    create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    project_id = create_resp.json()["id"]
+
+    leaked_statement = "DELETE FROM folder WHERE folder.id = ?"
+
+    async def always_locked(session, *, project_id):  # noqa: ARG001
+        raise OperationalError(leaked_statement, {"id": project_id}, sqlite3.OperationalError("database is locked"))
+
+    monkeypatch.setattr(projects_module, "check_project_has_deployments", always_locked)
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+
+    assert delete_resp.status_code != status.HTTP_204_NO_CONTENT
+    detail = delete_resp.json()["detail"]
+    assert "DELETE FROM folder" not in detail
+    assert "sqlalche.me" not in detail
+    assert str(project_id) not in detail
 
 
 async def test_read_project_invalid_id_format(client: AsyncClient, logged_in_headers):

@@ -1,6 +1,8 @@
 from collections.abc import Callable
 from typing import Any
 
+from langflow.utils.i18n_keys import safe_flow_key
+
 from .starter_projects import (
     basic_prompting_graph,
     blog_writer_graph,
@@ -56,5 +58,9 @@ def get_starter_projects_graphs():
 
 def get_starter_projects_dump():
     return [
-        build_graph().dump(name=name, description=description) for build_graph, name, description in STARTER_PROJECTS
+        {
+            **build_graph().dump(name=name, description=description),
+            "name_key": safe_flow_key(name),
+        }
+        for build_graph, name, description in STARTER_PROJECTS
     ]

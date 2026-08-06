@@ -32,7 +32,7 @@ test(
 
     await page.goto("/");
 
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
       timeout: 30000,
     });
 
@@ -65,7 +65,7 @@ test(
 
     await page.reload();
 
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
       timeout: 30000,
     });
 
