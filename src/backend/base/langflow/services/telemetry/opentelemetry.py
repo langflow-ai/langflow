@@ -139,6 +139,11 @@ class ThreadSafeSingletonMetaUsingWeakref(type):
                     cls._instances[cls] = instance
         return cls._instances[cls]
 
+    def evict_instance(cls) -> None:
+        """Drop the cached instance so the next call constructs a fresh one."""
+        with cls._lock:
+            cls._instances.pop(cls, None)
+
 
 class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
     _metrics_registry: dict[str, Metric] = {}
@@ -327,8 +332,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         self._metrics.clear()
         OpenTelemetry._initialized = False
         # Evict from the singleton cache: __init__ never re-runs on a cached instance.
-        with ThreadSafeSingletonMetaUsingWeakref._lock:
-            ThreadSafeSingletonMetaUsingWeakref._instances.pop(OpenTelemetry, None)
+        OpenTelemetry.evict_instance()
 
 
 # Connection-pool saturation, read from SQLAlchemy at collection time rather than tracked.
