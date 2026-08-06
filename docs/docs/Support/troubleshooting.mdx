@@ -507,7 +507,7 @@ uv run langflow migration --fix
 :::warning
 `langflow migration --fix` is destructive.
 If the same PostgreSQL database also holds vector store tables such as `langchain_pg_*`, repair mode may try to remove them.
-For more information, see [Database migrations](/database-migrations).
+For more information, see [Database migrations](./database-migrations).
 :::
 
 If the migration fix doesn't resolve the issue, clear the cache by deleting the contents of your Langflow cache folder.
