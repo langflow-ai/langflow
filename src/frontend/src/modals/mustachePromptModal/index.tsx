@@ -11,6 +11,7 @@ import { Textarea } from "../../components/ui/textarea";
 import { MAX_WORDS_HIGHLIGHT } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { PromptModalType } from "../../types/components";
+import { isReservedVariableName } from "../../utils/promptVariables";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
@@ -80,8 +81,13 @@ export default function MustachePromptModal({
   const coloredContent = (typeof inputValue === "string" ? inputValue : "")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (match) => {
-      return varHighlightHTML({ name: match, addCurlyBraces: false });
+    .replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (match, varName) => {
+      return varHighlightHTML({
+        name: match,
+        addCurlyBraces: false,
+        variableName: varName,
+        invalidTitle: t("modal.prompt.reservedPrefix"),
+      });
     })
     .replace(/\n/g, "<br />");
 
@@ -263,28 +269,41 @@ export default function MustachePromptModal({
                     {t("modal.prompt.promptVariables")}
                   </span>
 
-                  {Array.from(wordsHighlight).map((word, index) => (
-                    <ShadTooltip
-                      key={index}
-                      content={word.replace(/[{}]/g, "")}
-                      asChild={false}
-                    >
-                      <Badge
+                  {Array.from(wordsHighlight).map((word, index) => {
+                    const variableName = word.replace(/[{}]/g, "");
+                    const reserved = isReservedVariableName(variableName);
+                    return (
+                      <ShadTooltip
                         key={index}
-                        variant="gray"
-                        size="md"
-                        className="max-w-[40vw] cursor-default truncate p-1 text-sm"
+                        content={
+                          reserved
+                            ? t("modal.prompt.reservedPrefix")
+                            : variableName
+                        }
+                        asChild={false}
                       >
-                        <div className="relative bottom-[1px]">
-                          <span id={"badge" + index.toString()}>
-                            {word.replace(/[{}]/g, "").length > 59
-                              ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
-                              : word.replace(/[{}]/g, "")}
-                          </span>
-                        </div>
-                      </Badge>
-                    </ShadTooltip>
-                  ))}
+                        <Badge
+                          key={index}
+                          variant={reserved ? "errorStatic" : "gray"}
+                          size="md"
+                          className="max-w-[40vw] cursor-default truncate p-1 text-sm"
+                          data-testid={
+                            reserved
+                              ? "prompt-variable-badge-invalid"
+                              : "prompt-variable-badge"
+                          }
+                        >
+                          <div className="relative bottom-[1px]">
+                            <span id={"badge" + index.toString()}>
+                              {variableName.length > 59
+                                ? variableName.slice(0, 56) + "..."
+                                : variableName}
+                            </span>
+                          </div>
+                        </Badge>
+                      </ShadTooltip>
+                    );
+                  })}
                 </div>
               </div>
               <span className="mt-2 text-xs text-muted-foreground">
