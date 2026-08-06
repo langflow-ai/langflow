@@ -2,6 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "@/components/common/sanitizedHTMLWrapper";
 import { regexHighlight } from "@/constants/constants";
 import PromptModal from "@/modals/promptModal";
+import { variableHighlightClass } from "@/utils/promptVariables";
 import { cn } from "../../../../../utils/utils";
 import { Button } from "../../../../ui/button";
 import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
@@ -51,7 +52,7 @@ export default function PromptAreaComponent({
 
       return (
         `${outerLeft}` +
-        `<span class="chat-message-highlight">{${varName}}</span>` +
+        `<span class="${variableHighlightClass(varName)}">{${varName}}</span>` +
         `${outerRight}`
       );
     })

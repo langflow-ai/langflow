@@ -255,7 +255,7 @@ describe("MustachePromptAreaComponent", () => {
       );
     });
 
-    it("should highlight variables starting with underscore", () => {
+    it("should mark variables starting with underscore as invalid", () => {
       render(
         <MustachePromptAreaComponent
           {...defaultProps}
@@ -263,9 +263,25 @@ describe("MustachePromptAreaComponent", () => {
         />,
       );
 
+      // The underscore namespace is reserved for template metadata, so the name will be
+      // rejected on Check & Save -- the preview says so instead of looking valid.
       const sanitizedHtml = screen.getByTestId("sanitized-html");
       expect(sanitizedHtml.innerHTML).toContain(
-        '<span class="chat-message-highlight">{{_private}}</span>',
+        '<span class="chat-message-highlight-invalid">{{_private}}</span>',
+      );
+    });
+
+    it("should keep an underscore that is not the first character valid", () => {
+      render(
+        <MustachePromptAreaComponent
+          {...defaultProps}
+          value="Value: {{user_name}}"
+        />,
+      );
+
+      const sanitizedHtml = screen.getByTestId("sanitized-html");
+      expect(sanitizedHtml.innerHTML).toContain(
+        '<span class="chat-message-highlight">{{user_name}}</span>',
       );
     });
 
