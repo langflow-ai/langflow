@@ -6,6 +6,13 @@ from fastapi import status
 from httpx import AsyncClient
 
 
+def _catalog_flow_data(component_key: str) -> dict:
+    return {
+        "nodes": [{"id": f"{component_key}-node", "data": {"type": component_key}}],
+        "edges": [],
+    }
+
+
 async def _attach_deployment_to_flow(*, user_id: UUID, flow_id: UUID, project_id: UUID) -> None:
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import (
@@ -97,6 +104,139 @@ async def test_create_flow(client: AsyncClient, logged_in_headers):
     assert "updated_at" in result, "The result must have a 'updated_at' key"
     assert "user_id" in result, "The result must have a 'user_id' key"
     assert "webhook" in result, "The result must have a 'webhook' key"
+
+
+async def test_create_and_put_flow_enforce_catalog_policy_with_default_allow(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    class MutableCatalogPolicyService:
+        snapshot = CatalogPolicySnapshot()
+
+    service = MutableCatalogPolicyService()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+    blocked_key = "BlockedForFlowWrites"
+    graph = _catalog_flow_data(blocked_key)
+
+    allowed_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"catalog-default-allow-{uuid.uuid4()}", "data": graph},
+        headers=logged_in_headers,
+    )
+    assert allowed_response.status_code == status.HTTP_201_CREATED, allowed_response.text
+
+    service.snapshot = CatalogPolicySnapshot(blocked_component_keys={blocked_key})
+    blocked_create = await client.post(
+        "api/v1/flows/",
+        json={"name": f"catalog-blocked-create-{uuid.uuid4()}", "data": graph},
+        headers=logged_in_headers,
+    )
+    assert blocked_create.status_code == status.HTTP_400_BAD_REQUEST
+    assert blocked_create.json()["detail"].endswith(blocked_key)
+
+    put_flow_id = uuid.uuid4()
+    blocked_put = await client.put(
+        f"api/v1/flows/{put_flow_id}",
+        json={"name": f"catalog-blocked-put-{uuid.uuid4()}", "data": graph},
+        headers=logged_in_headers,
+    )
+    assert blocked_put.status_code == status.HTTP_400_BAD_REQUEST
+    assert blocked_put.json()["detail"].endswith(blocked_key)
+
+
+async def test_create_flow_maps_catalog_identity_unavailable_to_503(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+    from lfx.utils.flow_validation import CatalogPolicyIdentityUnavailableError
+
+    detail = "Catalog policy component identities are still initializing. Please try again in a few seconds."
+
+    def identities_unavailable(_flow_data, *, snapshot):
+        assert snapshot.blocked_component_keys
+        raise CatalogPolicyIdentityUnavailableError(detail)
+
+    service = type(
+        "CatalogPolicyService",
+        (),
+        {"snapshot": CatalogPolicySnapshot(blocked_component_keys={"Prompt Template"})},
+    )()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+    monkeypatch.setattr(flows, "validate_catalog_policy_for_flow", identities_unavailable)
+
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"catalog-identities-unavailable-{uuid.uuid4()}", "data": _catalog_flow_data("Prompt")},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert response.json()["detail"] == detail
+
+
+async def test_patch_and_put_metadata_only_updates_validate_stored_graph(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    class MutableCatalogPolicyService:
+        snapshot = CatalogPolicySnapshot()
+
+    service = MutableCatalogPolicyService()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+    blocked_key = "BlockedStoredGraph"
+    graph = _catalog_flow_data(blocked_key)
+
+    patch_source = await client.post(
+        "api/v1/flows/",
+        json={"name": f"catalog-patch-source-{uuid.uuid4()}", "description": "original", "data": graph},
+        headers=logged_in_headers,
+    )
+    put_source = await client.post(
+        "api/v1/flows/",
+        json={"name": f"catalog-put-source-{uuid.uuid4()}", "description": "original", "data": graph},
+        headers=logged_in_headers,
+    )
+    assert patch_source.status_code == status.HTTP_201_CREATED, patch_source.text
+    assert put_source.status_code == status.HTTP_201_CREATED, put_source.text
+
+    service.snapshot = CatalogPolicySnapshot(blocked_component_keys={blocked_key})
+    patch_response = await client.patch(
+        f"api/v1/flows/{patch_source.json()['id']}",
+        json={"description": "metadata-only patch"},
+        headers=logged_in_headers,
+    )
+    put_response = await client.put(
+        f"api/v1/flows/{put_source.json()['id']}",
+        json={"name": put_source.json()["name"], "description": "metadata-only put"},
+        headers=logged_in_headers,
+    )
+
+    assert patch_response.status_code == status.HTTP_400_BAD_REQUEST
+    assert patch_response.json()["detail"].endswith(blocked_key)
+    assert put_response.status_code == status.HTTP_400_BAD_REQUEST
+    assert put_response.json()["detail"].endswith(blocked_key)
+
+    unchanged_patch = await client.get(
+        f"api/v1/flows/{patch_source.json()['id']}",
+        headers=logged_in_headers,
+    )
+    unchanged_put = await client.get(
+        f"api/v1/flows/{put_source.json()['id']}",
+        headers=logged_in_headers,
+    )
+    assert unchanged_patch.json()["description"] == "original"
+    assert unchanged_put.json()["description"] == "original"
 
 
 async def test_read_flows(client: AsyncClient, logged_in_headers):
@@ -524,6 +664,52 @@ async def test_create_flows(client: AsyncClient, logged_in_headers):
     assert len(result) == amount_flows, "The result must have the same amount of flows"
 
 
+async def test_create_flows_catalog_policy_preflight_is_atomic_and_uses_one_snapshot(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    blocked_key = "BlockedLateInBatch"
+
+    class RotatingCatalogPolicyService:
+        calls = 0
+
+        @property
+        def snapshot(self):
+            self.calls += 1
+            if self.calls == 1:
+                return CatalogPolicySnapshot(blocked_component_keys={blocked_key})
+            return CatalogPolicySnapshot()
+
+    service = RotatingCatalogPolicyService()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+    allowed_name = f"catalog-batch-allowed-{uuid.uuid4()}"
+    blocked_name = f"catalog-batch-blocked-{uuid.uuid4()}"
+
+    response = await client.post(
+        "api/v1/flows/batch/",
+        json={
+            "flows": [
+                {"name": allowed_name, "data": _catalog_flow_data("AllowedInBatch")},
+                {"name": blocked_name, "data": _catalog_flow_data(blocked_key)},
+            ]
+        },
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"].endswith(blocked_key)
+    assert service.calls == 1
+
+    listed = await client.get("api/v1/flows/", headers=logged_in_headers)
+    persisted_names = {flow["name"] for flow in listed.json()}
+    assert allowed_name not in persisted_names
+    assert blocked_name not in persisted_names
+
+
 async def test_create_flows_with_explicit_folder(client: AsyncClient, logged_in_headers):
     project_response = await client.post(
         "api/v1/projects/",
@@ -568,6 +754,71 @@ async def test_read_basic_examples(client: AsyncClient, logged_in_headers):
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, list), "The result must be a list"
     assert len(result) > 0, "The result must have at least one flow"
+    assert all(item["name_key"] for item in result)
+
+
+async def test_read_basic_examples_catalog_policy_preserves_public_cache_and_unblocks(
+    client: AsyncClient,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    class MutableCatalogPolicyService:
+        snapshot = CatalogPolicySnapshot(blocked_template_keys={"basic_prompting"})
+
+    service = MutableCatalogPolicyService()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+    flows._starter_flows_cache.clear()
+    flows._starter_flows_translated_cache.clear()
+
+    blocked_response = await client.get("api/v1/flows/basic_examples/")
+    assert blocked_response.status_code == status.HTTP_200_OK, blocked_response.text
+    blocked_keys = {flow["name_key"] for flow in blocked_response.json()}
+    assert "basic_prompting" not in blocked_keys
+
+    service.snapshot = CatalogPolicySnapshot()
+    unblocked_response = await client.get("api/v1/flows/basic_examples/")
+    assert unblocked_response.status_code == status.HTTP_200_OK, unblocked_response.text
+    unblocked_keys = {flow["name_key"] for flow in unblocked_response.json()}
+    assert "basic_prompting" in unblocked_keys
+
+
+async def test_read_basic_examples_include_blocked_requires_superuser(
+    client: AsyncClient,
+    logged_in_headers,
+):
+    anonymous_response = await client.get("api/v1/flows/basic_examples/?include_blocked=true")
+    assert anonymous_response.status_code == status.HTTP_403_FORBIDDEN
+
+    denied_response = await client.get(
+        "api/v1/flows/basic_examples/?include_blocked=true",
+        headers=logged_in_headers,
+    )
+    assert denied_response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_read_basic_examples_superuser_can_include_blocked(
+    client: AsyncClient,
+    logged_in_headers_super_user,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    service = type(
+        "CatalogPolicyService",
+        (),
+        {"snapshot": CatalogPolicySnapshot(blocked_template_keys={"basic_prompting"})},
+    )()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+
+    override_response = await client.get(
+        "api/v1/flows/basic_examples/?include_blocked=true",
+        headers=logged_in_headers_super_user,
+    )
+    assert override_response.status_code == status.HTTP_200_OK, override_response.text
+    assert "basic_prompting" in {flow["name_key"] for flow in override_response.json()}
 
 
 async def test_read_flows_user_isolation(client: AsyncClient, logged_in_headers, active_user):
@@ -948,6 +1199,72 @@ async def test_upload_flow_accepts_valid_endpoint_name(client: AsyncClient, logg
     assert isinstance(body, list)
     assert len(body) == 1
     assert body[0]["name"] == "neuro-vision"
+
+
+async def test_upload_catalog_policy_preflights_all_effective_graphs_before_upsert(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    import json
+
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    class MutableCatalogPolicyService:
+        snapshot = CatalogPolicySnapshot()
+
+    service = MutableCatalogPolicyService()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+    blocked_key = "BlockedStoredUploadGraph"
+    original_name = f"catalog-upload-source-{uuid.uuid4()}"
+    source = await client.post(
+        "api/v1/flows/",
+        json={"name": original_name, "description": "original", "data": _catalog_flow_data(blocked_key)},
+        headers=logged_in_headers,
+    )
+    assert source.status_code == status.HTTP_201_CREATED, source.text
+
+    mutation_calls = 0
+
+    async def track_unexpected_mutation(**_kwargs):
+        nonlocal mutation_calls
+        mutation_calls += 1
+        return []
+
+    monkeypatch.setattr(flows, "_new_flow", track_unexpected_mutation)
+    monkeypatch.setattr(flows, "_update_existing_flow", track_unexpected_mutation)
+    service.snapshot = CatalogPolicySnapshot(blocked_component_keys={blocked_key})
+    allowed_name = f"catalog-upload-allowed-{uuid.uuid4()}"
+    changed_name = f"catalog-upload-changed-{uuid.uuid4()}"
+    file_content = json.dumps(
+        {
+            "flows": [
+                {"name": allowed_name, "data": _catalog_flow_data("AllowedInUpload")},
+                {
+                    "id": source.json()["id"],
+                    "name": changed_name,
+                    "description": "metadata-only upload update",
+                },
+            ]
+        }
+    )
+
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flows.json", file_content, "application/json")},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"].endswith(blocked_key)
+    assert mutation_calls == 0
+
+    unchanged = await client.get(f"api/v1/flows/{source.json()['id']}", headers=logged_in_headers)
+    assert unchanged.status_code == status.HTTP_200_OK
+    assert unchanged.json()["name"] == original_name
+    listed = await client.get("api/v1/flows/", headers=logged_in_headers)
+    assert allowed_name not in {flow["name"] for flow in listed.json()}
 
 
 async def test_upload_flow_rejects_absolute_path(client: AsyncClient, logged_in_headers):

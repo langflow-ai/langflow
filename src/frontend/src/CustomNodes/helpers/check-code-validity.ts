@@ -1,5 +1,9 @@
 import { componentsToIgnoreUpdate } from "@/constants/constants";
-import type { OutputFieldType } from "@/types/api";
+import type {
+  APIClassType,
+  APITemplateType,
+  OutputFieldType,
+} from "@/types/api";
 import type { NodeDataType } from "../../types/flow";
 
 export type CodeValidityType = {
@@ -8,6 +12,8 @@ export type CodeValidityType = {
   breakingChange: boolean;
   userEdited: boolean;
 };
+
+const transientTemplateKeys = new Set(["is_refresh", "tools_metadata"]);
 
 // Returns true if the code is outdated (code string changed and not ignored)
 const codeIsOutdated = (
@@ -27,8 +33,8 @@ const codeIsOutdated = (
 const codeHasBreakingChange = (
   originalOutputs?: OutputFieldType[],
   userOutputs?: OutputFieldType[],
-  originalTemplate?: { [key: string]: any },
-  userTemplate?: { [key: string]: any },
+  originalTemplate?: APITemplateType,
+  userTemplate?: APITemplateType,
 ): boolean => {
   // Check outputs
   if (
@@ -59,7 +65,7 @@ const codeHasBreakingChange = (
 
 export const checkCodeValidity = (
   data: NodeDataType,
-  templates: { [key: string]: any },
+  templates: { [key: string]: APIClassType },
   allowCustomComponents = true,
 ): CodeValidityType | undefined => {
   if (!data?.node || !templates) return;
@@ -156,8 +162,8 @@ const outputsAreEqual = (
 
 // Helper to check if all input_types in original are contained in user
 const inputTypesContained = (
-  originalTemplate: { [key: string]: any },
-  userTemplate: { [key: string]: any },
+  originalTemplate: APITemplateType,
+  userTemplate: APITemplateType,
 ): boolean => {
   for (const key of Object.keys(originalTemplate)) {
     const origField = originalTemplate[key];
@@ -180,11 +186,17 @@ const inputTypesContained = (
 
 // Helper to check if template keys are equal
 const templateKeysEqual = (
-  originalTemplate: { [key: string]: any },
-  userTemplate: { [key: string]: any },
+  originalTemplate: APITemplateType,
+  userTemplate: APITemplateType,
 ): boolean => {
-  const origKeys = Object.keys(originalTemplate).sort();
-  const userKeys = Object.keys(userTemplate).sort();
+  const isStructuralTemplateKey = (key: string) =>
+    !key.startsWith("_") && !transientTemplateKeys.has(key);
+  const origKeys = Object.keys(originalTemplate)
+    .filter(isStructuralTemplateKey)
+    .sort();
+  const userKeys = Object.keys(userTemplate)
+    .filter(isStructuralTemplateKey)
+    .sort();
   return JSON.stringify(origKeys) === JSON.stringify(userKeys);
 };
 

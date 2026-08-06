@@ -3,9 +3,9 @@ import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-base
 /**
  * Display labels for the backends actually exposed in the UI.
  *
- * Stubbed backends (mongodb / astra / postgres) are intentionally
- * absent; if a legacy KB row carries one of those values the helper
- * falls back to the raw identifier so it's still visible.
+ * Stubbed backends (mongodb / astra) are intentionally absent; if a legacy
+ * KB row carries one of those values the helper falls back to the raw
+ * identifier so it's still visible.
  *
  * Note: the DB always stores ``backend_type = "chroma"`` for both local
  * and cloud Chroma. Pass ``backendConfig`` so the label can distinguish
@@ -14,6 +14,7 @@ import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-base
 const BACKEND_LABELS: Record<string, string> = {
   chroma: "Chroma Local",
   opensearch: "OpenSearch",
+  postgres: "Postgres pgvector",
 };
 
 export const getKnowledgeBaseBackendLabel = (
@@ -47,6 +48,11 @@ export const getKnowledgeBaseBackendTarget = (
     if (typeof indexName === "string") {
       return indexName;
     }
+  }
+
+  if (backendType === "postgres") {
+    // pgVector is env-configured; the collection is always the KB name.
+    return "Postgres (pgvector)";
   }
 
   return null;

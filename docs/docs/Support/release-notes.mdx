@@ -46,10 +46,80 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.12.x
+
+Langflow 1.12 consolidates the runnable application on `langflow-base`.
+`pip install langflow-base` now provides the UI, API, platform services, built-in
+components, and the `langflow` command without provider extension
+distributions. `pip install langflow` installs that same base version and adds
+the curated standalone `lfx-*` extensions.
+
+### Breaking changes
+
+- `langflow-base` version alignment
+
+    The runnable package starts at `langflow-base==1.12.0` and remains
+    version-aligned with `langflow` through stable, release-candidate, patch,
+    and nightly releases. A dependency such as `langflow-base~=0.12` remains on
+    the old package line and must be updated explicitly to select 1.12.
+    Before upgrading an existing environment, remove the retired package with
+    `pip uninstall langflow-core`; leaving an older `langflow-core` installed
+    can create conflicting dependency requirements.
+
+- Base command and image tags
+
+    The base package provides the `langflow` executable, not a
+    `langflow-base` executable. The canonical bundle-free container is
+    `langflowai/langflow:base-VERSION`; normal `langflowai/langflow:VERSION`
+    tags contain the curated distribution. The previous `core-*` image profile
+    is no longer published.
+
+- Cassandra and Policies components are extensions
+
+    Cassandra components now ship in `lfx-datastax`, and the
+    `PoliciesComponent` ships in `lfx-toolguard`. The full `langflow` package
+    includes both. Existing component class names and legacy Python import
+    paths remain compatible. For a base-only environment, add the extensions
+    with `pip install "lfx[cassandra,toolguard]"`.
+    Policies guard caches are now isolated under
+    `tmp_toolguard/{user}/{flow}/{component}/{project}`. Existing project-only
+    caches are not reused after upgrading; run **Generate** once before using
+    **Guard** in an upgraded flow.
+
+- The default `langflow` provider set is smaller
+
+    arXiv, DuckDuckGo, EmpirioLabs, Exa, Firecrawl, NextPlaid, Paddle, and
+    Valkey are no longer installed by plain `pip install langflow`. Use
+    `pip install "langflow[bundles]"` to add those standalone extensions
+    together with every no-Torch long-tail bundle.
+
+- PyTorch remains opt-in
+
+    The default base and curated Langflow installations do not install PyTorch
+    or TorchVision. Components that require them must be installed through an
+    explicit opt-in profile.
+
+- IBM watsonx Orchestrate clients move to the IBM extension
+
+    The base deployment adapter remains feature-flagged, but its client
+    dependencies now ship with `lfx-ibm`. Install `lfx-ibm` or use the
+    compatibility extra `langflow-base[ibm-watsonx-clients]` before enabling
+    the adapter in a base-only environment.
+
+- LiteLLM remains optional in base-only environments
+
+    `langflow-base` no longer imports LiteLLM by default. Install
+    `langflow-base[litellm]` when custom components or IDE tooling depend on
+    the LiteLLM compatibility surface.
+
 ## 1.11.x
 
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+:::tip
+If Langflow fails to start with a `get_body_field` error after installing version 1.11.0, see [`get_body_field` error after installing Langflow](/troubleshoot#get_body_field-error-after-installing-langflow).
+:::
 
 ### Breaking changes
 
@@ -100,7 +170,13 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
 
-- Long-tail component bundles are now opt-in
+ - Docker runtime home moved to `/app/data`
+
+    Patched 1.11 Docker images set `HOME=/app/data` so the non-root runtime user has a writable home directory.
+    When `LANGFLOW_CONFIG_DIR` isn't set, the default config directory therefore changes from `/opt/app-root/src/.cache/langflow` to `/app/data/.cache/langflow`; SQLite follows that directory when `LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true`.
+    Persist `/app/data` or set `LANGFLOW_CONFIG_DIR` to your existing writable data directory before upgrading to preserve existing data.
+
+ - Long-tail component bundles are now opt-in
 
     Starting in Langflow 1.11.x, `pip install langflow` no longer installs the long-tail providers in the `lfx-bundles` metapackage.
     If an existing flow uses components such as Chroma, Ollama, Qdrant, Redis, PGVector, Tavily, Wikipedia, MongoDB, Weaviate, or Milvus, install the metapackage in the same environment after upgrading:

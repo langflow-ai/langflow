@@ -4,6 +4,7 @@ import asyncio
 import io
 import threading
 import zipfile
+from collections.abc import Collection
 from typing import Annotated
 from uuid import UUID
 
@@ -13,6 +14,12 @@ from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.services.cache.utils import CACHE_MISS
+from lfx.services.catalog_policy import CatalogPolicySnapshot
+from lfx.utils.flow_validation import (
+    CatalogPolicyIdentityUnavailableError,
+    CatalogPolicyValidationError,
+    validate_catalog_policy_for_flow,
+)
 from pydantic import ValidationError
 from sqlalchemy import case
 from sqlmodel import and_, col, select
@@ -42,14 +49,13 @@ from langflow.api.v1.flows_helpers import (
     _resolve_flow_destination,
     _save_flow_to_fs,
     _update_existing_flow,
-    _upsert_flow_list,
     _validate_and_assign_folder,
     _verify_fs_path,
 )
 from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
-from langflow.services.auth.utils import get_current_active_user
+from langflow.services.auth.utils import get_current_active_user, get_optional_user
 from langflow.services.authorization import (
     FlowAction,
     ensure_flow_permission,
@@ -78,7 +84,8 @@ from langflow.services.database.models.flow.model import (
 # and FlowVersionError from the flow_version modules.
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_catalog_policy_service, get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.utils.compression import compress_response
 from langflow.utils.i18n import translate_flow_notes, translate_starter_flows
@@ -104,6 +111,20 @@ def _handle_unique_constraint_error(exc: Exception, *, status_code: int = 400) -
     return HTTPException(status_code=status_code, detail=f"{column.capitalize().replace('_', ' ')} must be unique")
 
 
+def _validate_catalog_policy_for_write(
+    flow_data: dict | None,
+    *,
+    snapshot: CatalogPolicySnapshot,
+) -> None:
+    """Validate one effective flow graph and expose policy denials as client errors."""
+    try:
+        validate_catalog_policy_for_flow(flow_data, snapshot=snapshot)
+    except CatalogPolicyValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except CatalogPolicyIdentityUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
 
@@ -118,6 +139,8 @@ async def create_flow(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
+        catalog_policy_snapshot = get_catalog_policy_service().snapshot
+        _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
         # FastAPI builds the dependency's body model independently from the
         # handler's body model. Carry the exact destination that was authorized
         # into the row we persist so stale caller scope fields cannot retarget
@@ -150,7 +173,9 @@ async def read_flows(
         default_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
         default_folder_id = default_folder.id if default_folder else None
 
-        starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
+        starter_folder = (
+            await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME, Folder.user_id.is_(None)))
+        ).first()
         starter_folder_id = starter_folder.id if starter_folder else None
 
         if not starter_folder and not default_folder:
@@ -347,6 +372,7 @@ async def update_flow(
 ):
     """Update a flow."""
     try:
+        catalog_policy_snapshot = get_catalog_policy_service().snapshot
         # Destination check: resolve the actual owner-folder/workspace tuple
         # before authorizing a move. ``_patch_flow`` applies payload values via
         # ``model_dump(exclude_unset=True, exclude_none=True)``, so None means
@@ -425,6 +451,8 @@ async def update_flow(
                     )
                 except HTTPException as exc:
                     raise deny_to_404(exc, detail="Flow not found") from exc
+            effective_flow_data = flow.data if flow.data is not None else db_flow_for_attempt.data
+            _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
             return await _patch_flow(
                 session=session,
                 db_flow=db_flow_for_attempt,
@@ -436,8 +464,7 @@ async def update_flow(
         if folder_id_will_change:
             return await retry_flow_operation_on_deployment_guard(
                 db=session,
-                user_id=current_user.id,
-                flow_ids=[flow_id],
+                flow_owner_ids={flow_id: db_flow.user_id},
                 operation=operation,
             )
         return await operation()
@@ -467,6 +494,7 @@ async def upsert_flow(
     from fastapi.responses import JSONResponse
 
     try:
+        catalog_policy_snapshot = get_catalog_policy_service().snapshot
         # Check if flow exists (without user filter to distinguish ownership vs CREATE)
         existing_flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
 
@@ -576,6 +604,8 @@ async def upsert_flow(
                         )
                     except HTTPException as exc:
                         raise deny_to_404(exc, detail="Flow not found") from exc
+                effective_flow_data = flow.data if flow.data is not None else existing_flow_for_attempt.data
+                _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
                 return await _update_existing_flow(
                     session=session,
                     existing_flow=existing_flow_for_attempt,
@@ -587,8 +617,7 @@ async def upsert_flow(
             if folder_id_will_change:
                 flow_read = await retry_flow_operation_on_deployment_guard(
                     db=session,
-                    user_id=current_user.id,
-                    flow_ids=[existing_flow.id],
+                    flow_owner_ids={existing_flow.id: existing_flow.user_id},
                     operation=update_operation,
                 )
             else:
@@ -600,6 +629,7 @@ async def upsert_flow(
             await ensure_flow_permission(
                 current_user, FlowAction.CREATE, workspace_id=flow.workspace_id, folder_id=flow.folder_id
             )
+            _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
             flow_read = await _new_flow(
                 session=session,
                 flow=flow,
@@ -629,13 +659,12 @@ async def delete_flow(
     session: DbSession,
     flow_id: UUID,  # noqa: ARG001
     flow: AuthorizedDeleteFlow,
-    current_user: CurrentActiveUser,
+    current_user: CurrentActiveUser,  # noqa: ARG001
 ):
     """Delete a flow."""
     await retry_flow_operation_on_deployment_guard(
         db=session,
-        user_id=current_user.id,
-        flow_ids=[flow.id],
+        flow_owner_ids={flow.id: flow.user_id},
         operation=lambda: cascade_delete_flow(session, flow.id),
     )
     return {"message": "Flow deleted successfully"}
@@ -649,6 +678,12 @@ async def create_flows(
     current_user: CurrentActiveUser,
 ):
     """Create multiple new flows."""
+    catalog_policy_snapshot = get_catalog_policy_service().snapshot
+    # Validate the complete request before adding or flushing any rows. This
+    # keeps a denial in a later item from partially applying an earlier item.
+    for flow in flow_list.flows:
+        _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
+
     # Resolve and authorize every flow's canonical project/workspace instead of
     # trusting caller-supplied denormalized scope fields.
     for flow in flow_list.flows:
@@ -760,17 +795,42 @@ async def upload_file(
     # When implemented, extract raw flow dicts here to read embedded "version"
     # arrays and create FlowVersion entries for each imported flow.
 
+    catalog_policy_snapshot = get_catalog_policy_service().snapshot
+
+    requested_id_list = [flow.id for flow in flow_list.flows if flow.id is not None]
+    requested_ids = set(requested_id_list)
+    if len(requested_ids) != len(requested_id_list):
+        raise HTTPException(status_code=422, detail="Invalid upload: duplicate flow IDs are not allowed")
+
+    # Lock only rows this request can update. Missing IDs remain classified as
+    # creates for the whole request; if one appears concurrently, the planned
+    # insert conflicts instead of silently becoming an unvalidated update.
+    owned_existing_flows_by_id: dict[UUID, Flow] = {}
+    foreign_existing_ids: set[UUID] = set()
+    if requested_ids:
+        owned_existing_flows = (
+            await session.exec(
+                select(Flow).where(col(Flow.id).in_(requested_ids), Flow.user_id == current_user.id).with_for_update()
+            )
+        ).all()
+        owned_existing_flows_by_id = {existing_flow.id: existing_flow for existing_flow in owned_existing_flows}
+        remaining_ids = requested_ids - owned_existing_flows_by_id.keys()
+        if remaining_ids:
+            other_existing_flows = (await session.exec(select(Flow).where(col(Flow.id).in_(remaining_ids)))).all()
+            foreign_existing_ids = {
+                existing_flow.id for existing_flow in other_existing_flows if existing_flow.user_id != current_user.id
+            }
+
     # Per-flow CREATE check on the effective canonical destination. For owned
     # upserts with no destination in the payload, preserve the existing project;
     # new or stale destinations fall back to the user's default project.
     for flow in flow_list.flows:
         fallback_folder_id = None
+        existing_flow = owned_existing_flows_by_id.get(flow.id) if flow.id is not None else None
         if folder_id is not None:
             flow.folder_id = folder_id
-        elif flow.folder_id is None and flow.id is not None:
-            existing_flow = (await session.exec(select(Flow).where(Flow.id == flow.id))).first()
-            if existing_flow is not None and existing_flow.user_id == current_user.id:
-                fallback_folder_id = existing_flow.folder_id
+        elif flow.folder_id is None and existing_flow is not None and existing_flow.user_id == current_user.id:
+            fallback_folder_id = existing_flow.folder_id
         await _canonicalize_flow_destination(
             session,
             flow,
@@ -784,18 +844,52 @@ async def upload_file(
             folder_id=flow.folder_id,
         )
 
+        # Upload upserts ignore omitted/null data. Validate the stored graph in
+        # that case so a metadata-only write cannot bypass a newly blocked
+        # component. Rows owned by another user are copied as new flows and do
+        # not inherit that user's stored graph.
+        effective_flow_data = flow.data
+        if effective_flow_data is None and existing_flow is not None and existing_flow.user_id == current_user.id:
+            effective_flow_data = existing_flow.data
+        _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
+
     try:
-        return await _upsert_flow_list(
-            session=session,
-            flows=flow_list.flows,
-            current_user=current_user,
-            storage_service=storage_service,
-            folder_id=folder_id,
-        )
+        flow_reads: list[FlowRead] = []
+        for flow in flow_list.flows:
+            flow.user_id = current_user.id
+            stable_id = flow.id
+            existing_flow = owned_existing_flows_by_id.get(stable_id) if stable_id is not None else None
+            if existing_flow is not None:
+                flow_read = await _update_existing_flow(
+                    session=session,
+                    existing_flow=existing_flow,
+                    flow=flow,
+                    current_user=current_user,
+                    storage_service=storage_service,
+                )
+            elif stable_id is not None and stable_id in foreign_existing_ids:
+                flow.id = None
+                flow_read = await _new_flow(
+                    session=session,
+                    flow=flow,
+                    user_id=current_user.id,
+                    storage_service=storage_service,
+                )
+            else:
+                flow_read = await _new_flow(
+                    session=session,
+                    flow=flow,
+                    user_id=current_user.id,
+                    storage_service=storage_service,
+                    flow_id=stable_id,
+                )
+            flow_reads.append(flow_read)
     except HTTPException:
         raise
     except Exception as e:
         raise _handle_unique_constraint_error(e) from e
+    else:
+        return flow_reads
 
 
 @router.delete("/")
@@ -806,6 +900,7 @@ async def delete_multiple_flows(
 ):
     """Delete multiple flows by their IDs."""
     try:
+        authorized_flow_owner_ids: dict[UUID, UUID] = {}
 
         async def _delete_operation() -> int:
             if not flow_ids:
@@ -830,6 +925,7 @@ async def delete_multiple_flows(
                     workspace_id=flow.workspace_id,
                     folder_id=flow.folder_id,
                 )
+            authorized_flow_owner_ids.update((flow.id, flow.user_id) for flow in flows_to_delete)
             for flow in flows_to_delete:
                 await cascade_delete_flow(db, flow.id)
             await db.flush()
@@ -837,8 +933,7 @@ async def delete_multiple_flows(
 
         deleted_count = await retry_flow_operation_on_deployment_guard(
             db=db,
-            user_id=user.id,
-            flow_ids=flow_ids,
+            flow_owner_ids=authorized_flow_owner_ids,
             operation=_delete_operation,
         )
     except Exception as exc:
@@ -908,32 +1003,70 @@ _starter_flows_translated_cache: ThreadingInMemoryCache[threading.RLock] = Threa
 _starter_flows_lock = asyncio.Lock()
 
 
+def _filter_basic_examples_by_catalog_policy(
+    flows: list[FlowRead],
+    *,
+    blocked_template_keys: Collection[str],
+) -> list[FlowRead]:
+    """Return a request-local view without exact blocked template keys."""
+    return [flow for flow in flows if flow.name_key not in blocked_template_keys]
+
+
 @router.get("/basic_examples/", response_model=list[FlowRead], status_code=200)
 async def read_basic_examples(
     *,
     session: DbSession,
     request: Request,
+    user: Annotated[User | None, Depends(get_optional_user)],
+    include_blocked: bool = False,
 ):
     """Retrieve a list of basic example flows."""
+    if include_blocked and (user is None or not user.is_superuser):
+        raise HTTPException(
+            status_code=403,
+            detail="Only superusers can include blocked catalog templates.",
+        )
+
+    catalog_policy_snapshot = get_catalog_policy_service().snapshot
     locale = getattr(request.state, "locale", "en")
     translated_cache_key = f"starter_flows_{locale}"
 
     # Fast path: translated result already cached for this locale
     cached_translated = _starter_flows_translated_cache.get(translated_cache_key)
     if cached_translated is not CACHE_MISS:
-        return compress_response(cached_translated)
+        visible_flows = (
+            cached_translated
+            if include_blocked
+            else _filter_basic_examples_by_catalog_policy(
+                cached_translated,
+                blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
+            )
+        )
+        return compress_response(visible_flows)
 
     async with _starter_flows_lock:
         # Double-check inside lock to prevent thundering herd
         cached_translated = _starter_flows_translated_cache.get(translated_cache_key)
         if cached_translated is not CACHE_MISS:
-            return compress_response(cached_translated)
+            visible_flows = (
+                cached_translated
+                if include_blocked
+                else _filter_basic_examples_by_catalog_policy(
+                    cached_translated,
+                    blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
+                )
+            )
+            return compress_response(visible_flows)
 
         # Ensure raw DB data is cached
         cached_flow_reads = _starter_flows_cache.get("starter_flows")
         if cached_flow_reads is CACHE_MISS:
             try:
-                starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
+                starter_folder = (
+                    await session.exec(
+                        select(Folder).where(Folder.name == STARTER_FOLDER_NAME, Folder.user_id.is_(None))
+                    )
+                ).first()
 
                 if not starter_folder:
                     return compress_response([])
@@ -969,7 +1102,15 @@ async def read_basic_examples(
 
         _starter_flows_translated_cache.set(translated_cache_key, result)
 
-    return compress_response(result)
+    visible_flows = (
+        result
+        if include_blocked
+        else _filter_basic_examples_by_catalog_policy(
+            result,
+            blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
+        )
+    )
+    return compress_response(visible_flows)
 
 
 @router.post("/expand/", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)

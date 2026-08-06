@@ -641,17 +641,20 @@ def test_apply_tweaks_allows_benign_fields_on_code_execution_component():
                 "template": {
                     "name": {"value": "old_name", "type": "str"},
                     "description": {"value": "old desc", "type": "str"},
-                    "code": {"value": "print('safe')", "type": "str"},
+                    "python_code": {"value": "print('safe')", "type": "str"},
                 }
             },
         },
     }
-    apply_tweaks(node, {"name": "new_name", "description": "new desc", "code": "__import__('os').system('id')"})
+    apply_tweaks(
+        node,
+        {"name": "new_name", "description": "new desc", "python_code": "__import__('os').system('id')"},
+    )
 
-    # Benign metadata is applied; the executable 'code' field is still blocked.
+    # Benign metadata is applied; the executable 'python_code' field is still blocked.
     assert node["data"]["node"]["template"]["name"]["value"] == "new_name"
     assert node["data"]["node"]["template"]["description"]["value"] == "new desc"
-    assert node["data"]["node"]["template"]["code"]["value"] == "print('safe')"
+    assert node["data"]["node"]["template"]["python_code"]["value"] == "print('safe')"
 
 
 def test_apply_tweaks_blocks_removed_python_code_structured_tool_code():

@@ -239,7 +239,7 @@ async def test_public_endpoint_namespaces_caller_session(client: AsyncClient, pu
         assert response.status_code == codes.OK
         await _read_stream(response)
 
-    expected_namespace = str(compute_virtual_flow_id(client_id, public_flow_id))
+    expected_namespace = str(compute_virtual_flow_id(client_id, public_flow_id, principal_type="client"))
     sent_inputs = captured["inputs"]
     assert sent_inputs is not None
     assert sent_inputs.session == f"{expected_namespace}:{victim_session}"
@@ -272,7 +272,7 @@ async def test_public_endpoint_uses_virtual_flow_id_for_storage(client: AsyncCli
         assert response.status_code == codes.OK
         await _read_stream(response)
 
-    expected_virtual = compute_virtual_flow_id(client_id, public_flow_id)
+    expected_virtual = compute_virtual_flow_id(client_id, public_flow_id, principal_type="client")
     assert captured["flow_id"] == expected_virtual
     assert captured["source_flow_id"] == public_flow_id
 
@@ -342,6 +342,39 @@ async def test_public_endpoint_runs_as_flow_owner(client: AsyncClient, public_fl
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_public_endpoint_builds_from_server_sanitized_flow_data(client: AsyncClient, public_flow_id, monkeypatch):
+    """Stored component code is replaced before the anonymous v2 run starts."""
+    import langflow.api.v2.workflow_public as workflow_public_module
+
+    captured: dict = {}
+    _stub_generate_flow_events(monkeypatch, captured)
+    sanitized = {
+        "nodes": [{"id": "trusted-node", "data": {"type": "TrustedComponent"}}],
+        "edges": [],
+    }
+
+    async def _prepare(_flow_data):
+        return sanitized
+
+    monkeypatch.setattr(workflow_public_module, "prepare_public_flow_build", _prepare)
+
+    _send_unauthenticated(client, "trusted-code-test-client")
+    async with client.stream(
+        "POST",
+        "api/v2/workflows/public",
+        json={"flow_id": str(public_flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    ) as response:
+        assert response.status_code == codes.OK
+        await _read_stream(response)
+
+    assert captured["data"] is not None
+    assert captured["data"].nodes == sanitized["nodes"]
+    assert captured["data"].edges == sanitized["edges"]
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_public_endpoint_rejects_missing_client_id(client: AsyncClient, public_flow_id):
     """Without a ``client_id`` cookie or authenticated user, the request is rejected."""
     client.cookies.clear()  # no client_id, no auth
@@ -384,6 +417,37 @@ async def test_public_endpoint_sanitizes_component_validation_error(client: Asyn
     detail = response.json().get("detail", "")
     assert detail == "This flow cannot be executed."
     assert "SecretInternalComponent" not in detail
+    assert raw_message not in response.text
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_public_endpoint_sanitizes_catalog_identity_unavailable_response(
+    client: AsyncClient, public_flow_id, monkeypatch
+):
+    from lfx.utils.flow_validation import (
+        PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+        CatalogPolicyIdentityUnavailableError,
+    )
+
+    raw_message = "Catalog identities unavailable: internal generation 42"
+
+    def _raise(*_args, **_kwargs):
+        raise CatalogPolicyIdentityUnavailableError(raw_message)
+
+    import langflow.api.v2.workflow_public as workflow_public_module
+
+    monkeypatch.setattr(workflow_public_module, "validate_flow_for_current_settings", _raise)
+
+    _send_unauthenticated(client, "catalog-identity-unavailable-client")
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={"flow_id": str(public_flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.SERVICE_UNAVAILABLE
+    assert response.json()["detail"] == PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE
     assert raw_message not in response.text
 
 

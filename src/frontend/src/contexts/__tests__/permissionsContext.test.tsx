@@ -73,6 +73,32 @@ describe("PermissionsProvider gating", () => {
     });
     expect(result.current.can("flow-1", "delete")).toBe(true);
   });
+
+  it("can preserve the previous permission map while resource ids change", () => {
+    setMockedPermissions({ "flow-1": ["read"] });
+
+    renderHook(() => usePermissions(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <PermissionsProvider
+          resourceType="flow"
+          resourceIds={["flow-1"]}
+          preservePreviousPermissions
+        >
+          {children}
+        </PermissionsProvider>
+      ),
+    });
+
+    expect(mockUseGetEffectivePermissions).toHaveBeenCalledWith(
+      expect.objectContaining({ resourceIds: ["flow-1"] }),
+      { placeholderData: expect.any(Function) },
+    );
+    const queryOptions = mockUseGetEffectivePermissions.mock.calls[0][1] as {
+      placeholderData: (previousData: unknown) => unknown;
+    };
+    const previousData = { resource_type: "flow", permissions: {} };
+    expect(queryOptions.placeholderData(previousData)).toBe(previousData);
+  });
 });
 
 describe("useIsFlowReadOnly", () => {

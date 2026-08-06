@@ -20,6 +20,7 @@ import {
   overridesToForm,
 } from "@/controllers/API/queries/a2a/utils";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
+import { customA2aPublishOrigin } from "@/customization/utils/custom-a2a-address";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -73,8 +74,10 @@ export default function AgentCardPanel({
 
   const flowId = currentFlow?.id ?? "";
   const isPublished = !!currentFlow?.a2a_enabled;
-  const cardUrl = `${window.location.origin}/api/v1/a2a/${flowId}/.well-known/agent-card.json`;
-  const rpcUrl = `${window.location.origin}/api/v1/a2a/${flowId}/jsonrpc`;
+
+  const publishOrigin = customA2aPublishOrigin();
+  const cardUrl = `${publishOrigin}/api/v1/a2a/${flowId}/.well-known/agent-card.json`;
+  const rpcUrl = `${publishOrigin}/api/v1/a2a/${flowId}/jsonrpc`;
 
   const [enabled, setEnabled] = useState(isPublished);
   const [form, setForm] = useState<A2ACardForm>(
@@ -107,10 +110,8 @@ export default function AgentCardPanel({
     try {
       const updatedFlow = await mutateAsync({
         id: flowId,
-        // flow_type is derived from the graph (has chat I/O = agent). Write it
-        // here so the langflow A2A serve guard passes; an ineligible flow can
-        // never be served, so force it off. (Backend derive-on-save is a
-        // follow-up; today the tab is the only place that recomputes it.)
+        // flow_type derived from graph chat I/O so the langflow A2A serve guard
+        // passes; an ineligible flow can never be served, so force it off.
         flow_type: eligible ? "agent" : "workflow",
         a2a_enabled: eligible ? enabled : false,
         a2a_card_overrides: formToOverrides(form),
@@ -174,9 +175,8 @@ export default function AgentCardPanel({
             variant: "secondaryStatic" as const,
           };
 
-  // What to tell the user when the flow can't serve: the server switch wins,
-  // then eligibility (a published flow that lost its chat I/O needs turning
-  // off; a draft one just needs the missing half added).
+  // Banner precedence: server switch wins, then eligibility (published flows
+  // that lost chat I/O need turning off; drafts just need the missing half).
   const banner = !serverEnabled
     ? t("agentTab.serverDisabled")
     : !eligible
