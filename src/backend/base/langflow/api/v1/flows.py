@@ -173,7 +173,9 @@ async def read_flows(
         default_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
         default_folder_id = default_folder.id if default_folder else None
 
-        starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
+        starter_folder = (
+            await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME, Folder.user_id.is_(None)))
+        ).first()
         starter_folder_id = starter_folder.id if starter_folder else None
 
         if not starter_folder and not default_folder:
@@ -1060,7 +1062,11 @@ async def read_basic_examples(
         cached_flow_reads = _starter_flows_cache.get("starter_flows")
         if cached_flow_reads is CACHE_MISS:
             try:
-                starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
+                starter_folder = (
+                    await session.exec(
+                        select(Folder).where(Folder.name == STARTER_FOLDER_NAME, Folder.user_id.is_(None))
+                    )
+                ).first()
 
                 if not starter_folder:
                     return compress_response([])
