@@ -310,7 +310,11 @@ def test_interpreter_hardening_preserves_authenticated_agentic_module():
 
 
 def test_windows_forward_slash_executable_path_preserves_source_policy():
-    with pytest.raises(ValueError, match=r"not allowed"):
+    # Hardened mode now rejects file-path commands at the dedicated gate
+    # ("is a file path ...") before the allowlist check ("not allowed").
+    # Either message proves the rejection; accept both so the test asserts
+    # behavior (rejection) rather than a specific wording.
+    with pytest.raises(ValueError, match=r"not allowed|is a file path"):
         validate_mcp_stdio_config(
             "C:/Program Files/uv/uvx.exe",
             ["--index-url", "https://packages.example.invalid/simple", "mcp-proxy"],
