@@ -1706,6 +1706,7 @@
   "project.deletedSuccessfully": "Le projet a été supprimé avec succès.",
   "project.errorDeleting": "Erreur lors de la suppression du projet.",
   "project.newName": "Nouveau projet",
+  "project.ownedBy": "{{name}} — {{owner}}",
   "project.starterName": "Projet de démarrage",
   "settings.addNewKey": "Ajouter un nouvel élément",
   "settings.apiKeys.columnCreated": "Date de création",

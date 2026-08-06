@@ -1706,6 +1706,7 @@
   "project.deletedSuccessfully": "项目已成功删除。",
   "project.errorDeleting": "删除项目时发生错误。",
   "project.newName": "新建项目",
+  "project.ownedBy": "{{owner}} 的 {{name}}",
   "project.starterName": "入门项目",
   "settings.addNewKey": "添加新项",
   "settings.apiKeys.columnCreated": "创建时间",

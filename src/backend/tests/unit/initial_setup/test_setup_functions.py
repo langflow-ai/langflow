@@ -3,8 +3,10 @@ from copy import deepcopy
 from uuid import uuid4
 
 import pytest
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
     get_or_create_default_folder,
+    get_or_create_starter_folder,
     session_scope,
     update_projects_components_with_latest_component_versions,
 )
@@ -25,6 +27,20 @@ async def test_get_or_create_default_folder_creation() -> None:
         folder = await get_or_create_default_folder(session, test_user_id)
         assert folder.name == DEFAULT_FOLDER_NAME, "The project name should match the default."
         assert hasattr(folder, "id"), "The project should have an 'id' attribute after creation."
+
+
+async def test_get_or_create_starter_folder_ignores_user_owned_name_collision(async_session) -> None:
+    """A user project named like the reserved project must not become the system Starter Project."""
+    user_folder = Folder(user_id=uuid4(), name=STARTER_FOLDER_NAME, description="User project")
+    async_session.add(user_folder)
+    await async_session.flush()
+
+    starter_folder = await get_or_create_starter_folder(async_session)
+
+    assert starter_folder.user_id is None
+    assert starter_folder.id != user_folder.id
+    matching_folders = (await async_session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).all()
+    assert {folder.id for folder in matching_folders} == {user_folder.id, starter_folder.id}
 
 
 @pytest.mark.usefixtures("client")
