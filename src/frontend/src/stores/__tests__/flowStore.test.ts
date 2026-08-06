@@ -1249,13 +1249,41 @@ describe("useFlowStore", () => {
     });
 
     it("uses the public playground virtual flow id for the active building session", async () => {
-      const expectedFlowId = uuidv5("client-123_flow-abc", uuidv5.DNS);
+      const expectedFlowId = uuidv5("client:client-123_flow-abc", uuidv5.DNS);
 
       useUtilityStore.setState({ clientId: "client-123" });
       useAuthStore.setState({
         isAuthenticated: false,
         autoLogin: true,
         userData: null,
+      });
+      useFlowStore.setState({ playgroundPage: true });
+      mockedRunFlow.mockImplementation(async () => {
+        const state = useFlowStore.getState();
+        expect(state.buildingFlowId).toBe(expectedFlowId);
+        expect(state.buildingSessionId).toBe("session-123");
+        useFlowStore.setState({ buildInfo: null });
+      });
+
+      await useFlowStore.getState().buildFlow({
+        session: "session-123",
+      });
+
+      expect(mockedRunFlow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flowId: "flow-abc",
+          threadId: "session-123",
+        }),
+      );
+    });
+
+    it("uses the authenticated user virtual flow id for the active building session", async () => {
+      const expectedFlowId = uuidv5("user:user-123_flow-abc", uuidv5.DNS);
+
+      useAuthStore.setState({
+        isAuthenticated: true,
+        autoLogin: false,
+        userData: { id: "user-123" },
       });
       useFlowStore.setState({ playgroundPage: true });
       mockedRunFlow.mockImplementation(async () => {

@@ -56,13 +56,19 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
+// Labels come from buildA11yScanLabel as `<project>__<label>[__<scanIndex>]`,
+// so strip only the leading project segment and the optional numeric suffix.
+function shortLabelFrom(label) {
+  return label.replace(/^.*?__/, "").replace(/__\d+$/, "");
+}
+
 function routeFromLabel(label) {
-  const shortLabel = label.replace(/^.*__/, "");
+  const shortLabel = shortLabelFrom(label);
   return routeLabelMap.get(shortLabel)?.path ?? shortLabel;
 }
 
 function surfaceFromLabel(label) {
-  const shortLabel = label.replace(/^.*__/, "");
+  const shortLabel = shortLabelFrom(label);
   return routeLabelMap.get(shortLabel)?.surface ?? "";
 }
 

@@ -39,6 +39,11 @@ export type InputComponentType = {
   placeholder?: string;
   className?: string;
   id?: string;
+  /**
+   * Scopes the rendered DOM id to a flow node so two nodes exposing the same
+   * field name do not collide (LE-2037). `data-testid` keeps using `id`.
+   */
+  nodeId?: string;
   inputProps?: InputHTMLAttributes<HTMLInputElement>;
   blurOnEnter?: boolean;
   optionsIcon?: string;
@@ -661,6 +666,9 @@ export type modalHeaderType = {
   children: ReactNode;
   description?: string | JSX.Element | null;
   clampDescription?: number;
+  className?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
 };
 
 export type codeAreaModalPropsType = {

@@ -5,7 +5,6 @@ import {
   Outlet,
   Route,
 } from "react-router-dom";
-import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
 import { ProtectedRoute } from "./components/authorization/authGuard";
 import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
@@ -19,6 +18,7 @@ import {
   ENABLE_FILE_MANAGEMENT,
   ENABLE_KNOWLEDGE_BASES,
 } from "./customization/feature-flags";
+import { CustomAuthRoutesStore } from "./customization/utils/custom-auth-routes-store";
 import { CustomRoutesStore } from "./customization/utils/custom-routes-store";
 import { CustomRoutesStorePages } from "./customization/utils/custom-routes-store-pages";
 import { AppAuthenticatedPage } from "./pages/AppAuthenticatedPage";
@@ -41,11 +41,8 @@ import McpClientPage from "./pages/SettingsPage/pages/McpClientPage";
 import ModelProvidersPage from "./pages/SettingsPage/pages/ModelProvidersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
-import ViewPage from "./pages/ViewPage";
 
-const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
-const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 
 const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
@@ -174,24 +171,12 @@ const router = createBrowserRouter(
                   {CustomRoutesStore()}
                 </Route>
                 {CustomRoutesStorePages()}
-                <Route path="account">
-                  <Route path="delete" element={<DeleteAccountPage />}></Route>
-                </Route>
-                <Route
-                  path="admin"
-                  element={
-                    <ProtectedAdminRoute>
-                      <AdminPage />
-                    </ProtectedAdminRoute>
-                  }
-                />
               </Route>
               <Route path="flow/:id/">
                 <Route path="" element={<CustomDashboardWrapperPage />}>
                   <Route path="folder/:folderId/" element={<FlowPage />} />
                   <Route path="" element={<FlowPage />} />
                 </Route>
-                <Route path="view" element={<ViewPage />} />
               </Route>
             </Route>
           </Route>
@@ -219,6 +204,7 @@ const router = createBrowserRouter(
               </ProtectedLoginRoute>
             }
           />
+          {CustomAuthRoutesStore()}
         </Route>
       </Route>
       <Route path="*" element={<CustomNavigate replace to="/" />} />

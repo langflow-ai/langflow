@@ -5,12 +5,14 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 from fastapi import status
-from lfx.base.models.provider_registry import provider_id_for
+from lfx.base.models.provider_registry import resolve_provider_id
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyContext,
+    ModelProviderPolicyPurpose,
     ModelProviderPolicySnapshot,
 )
 
@@ -20,7 +22,7 @@ if TYPE_CHECKING:
 
 def _openai_only_policy(*, user_id, providers, purpose, attributes=None):
     _ = attributes
-    candidate_ids = frozenset(filter(None, (provider_id_for(provider) for provider in providers)))
+    candidate_ids = frozenset(resolve_provider_id(provider) for provider in providers)
     return ModelProviderPolicySnapshot(
         context=ModelProviderPolicyContext(user_id=user_id),
         purpose=purpose,
@@ -31,7 +33,7 @@ def _openai_only_policy(*, user_id, providers, purpose, attributes=None):
 
 def _allow_all_policy(*, user_id, providers, purpose, attributes=None):
     _ = attributes
-    candidate_ids = frozenset(provider_id_for(provider) or provider for provider in providers)
+    candidate_ids = frozenset(resolve_provider_id(provider) for provider in providers)
     return ModelProviderPolicySnapshot(
         context=ModelProviderPolicyContext(user_id=user_id),
         purpose=purpose,
@@ -40,9 +42,15 @@ def _allow_all_policy(*, user_id, providers, purpose, attributes=None):
     )
 
 
+async def _aopenai_only_policy(**kwargs):
+    return _openai_only_policy(**kwargs)
+
+
 @pytest.fixture(autouse=True)
 def _restrict_to_openai(monkeypatch):
     monkeypatch.setattr("langflow.api.v1.models.resolve_model_provider_policy", _openai_only_policy)
+    monkeypatch.setattr("langflow.api.v1.models.aresolve_model_provider_policy", _aopenai_only_policy)
+    monkeypatch.setattr("langflow.api.v1.model_options.aresolve_model_provider_policy", _aopenai_only_policy)
 
 
 @pytest.mark.usefixtures("active_user")
@@ -51,6 +59,10 @@ async def test_provider_reads_hide_denied_providers(client: AsyncClient, logged_
     descriptors_response = await client.get("api/v1/models/provider-descriptors", headers=logged_in_headers)
     models_response = await client.get("api/v1/models", headers=logged_in_headers)
     mapping_response = await client.get("api/v1/models/provider-variable-mapping", headers=logged_in_headers)
+    enabled_providers_response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
+    enabled_models_response = await client.get("api/v1/models/enabled_models", headers=logged_in_headers)
+    language_options_response = await client.get("api/v1/model_options/language", headers=logged_in_headers)
+    embedding_options_response = await client.get("api/v1/model_options/embedding", headers=logged_in_headers)
     denied_query_response = await client.get(
         "api/v1/models",
         headers=logged_in_headers,
@@ -66,9 +78,18 @@ async def test_provider_reads_hide_denied_providers(client: AsyncClient, logged_
     model_groups = models_response.json()
     assert {group["provider"] for group in model_groups} == {"OpenAI"}
     assert {group["provider_id"] for group in model_groups} == {"openai"}
+    assert all("is_allowed" not in group for group in model_groups)
 
     assert mapping_response.status_code == status.HTTP_200_OK
     assert set(mapping_response.json()) == {"OpenAI"}
+    assert enabled_providers_response.status_code == status.HTTP_200_OK
+    assert set(enabled_providers_response.json()["provider_status"]) == {"OpenAI"}
+    assert enabled_models_response.status_code == status.HTTP_200_OK
+    assert set(enabled_models_response.json()["enabled_models"]) == {"OpenAI"}
+    assert language_options_response.status_code == status.HTTP_200_OK
+    assert {option["provider"] for option in language_options_response.json()} <= {"OpenAI"}
+    assert embedding_options_response.status_code == status.HTTP_200_OK
+    assert {option["provider"] for option in embedding_options_response.json()} <= {"OpenAI"}
     assert denied_query_response.status_code == status.HTTP_200_OK
     assert denied_query_response.json() == []
 
@@ -78,11 +99,11 @@ async def test_provider_descriptors_union_stamped_palette_ids_without_duplicates
 
     captured_candidates = set()
 
-    def _allow_openai_and_mistral(*, user_id, providers, purpose, attributes=None):
+    async def _allow_openai_and_mistral(*, user_id, providers, purpose, attributes=None):
         nonlocal captured_candidates
         _ = attributes
         captured_candidates = set(providers)
-        candidate_ids = frozenset(provider_id_for(provider) or provider for provider in providers)
+        candidate_ids = frozenset(resolve_provider_id(provider) for provider in providers)
         return ModelProviderPolicySnapshot(
             context=ModelProviderPolicyContext(user_id=user_id),
             purpose=purpose,
@@ -103,7 +124,7 @@ async def test_provider_descriptors_union_stamped_palette_ids_without_duplicates
             "Utility": {"metadata": {}},
         }
     }
-    monkeypatch.setattr(models_module, "resolve_model_provider_policy", _allow_openai_and_mistral)
+    monkeypatch.setattr(models_module, "aresolve_model_provider_policy", _allow_openai_and_mistral)
     monkeypatch.setattr(models_module, "get_model_providers", lambda: ["OpenAI"])
     monkeypatch.setattr(models_module, "get_and_cache_all_types_dict", AsyncMock(return_value=palette))
 
@@ -127,6 +148,7 @@ async def test_denied_provider_mutations_return_non_enumerating_not_found(
         provider_validation_called = True
 
     monkeypatch.setattr("langflow.api.v1.variable.validate_model_provider_key", _provider_validation)
+    monkeypatch.setattr("lfx.base.models.unified_models.validate_model_provider_key", _provider_validation)
     validate_response = await client.post(
         "api/v1/models/validate-provider",
         headers=logged_in_headers,
@@ -164,6 +186,85 @@ async def test_denied_provider_mutations_return_non_enumerating_not_found(
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_non_sluggable_provider_mutations_return_generic_not_found(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    provider = "秘密"
+    provider_validation_called = False
+
+    def _provider_validation(*_args, **_kwargs):
+        nonlocal provider_validation_called
+        provider_validation_called = True
+
+    monkeypatch.setattr("langflow.api.v1.variable.validate_model_provider_key", _provider_validation)
+    responses = [
+        await client.post(
+            "api/v1/models/validate-provider",
+            headers=logged_in_headers,
+            json={"provider": provider, "variables": {}},
+        ),
+        await client.post(
+            "api/v1/models/default_model",
+            headers=logged_in_headers,
+            json={"provider": provider, "model_name": "unknown-model", "model_type": "language"},
+        ),
+        await client.post(
+            "api/v1/models/enabled_models",
+            headers=logged_in_headers,
+            json=[{"provider": provider, "model_id": "unknown-model", "enabled": True}],
+        ),
+    ]
+
+    for response in responses:
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json() == {"detail": "Model provider not found"}
+        assert provider not in response.text
+    assert provider_validation_called is False
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_credential_rename_cannot_bypass_provider_policy(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    validation_called = False
+
+    def _provider_validation(*_args, **_kwargs):
+        nonlocal validation_called
+        validation_called = True
+
+    created = await client.post(
+        "api/v1/variables/",
+        headers=logged_in_headers,
+        json={
+            "name": f"POLICY_TEST_{uuid4().hex}",
+            "value": "generic",
+            "type": "Generic",
+            "default_fields": [],
+        },
+    )
+    assert created.status_code == status.HTTP_201_CREATED
+
+    monkeypatch.setattr("langflow.api.v1.variable.validate_model_provider_key", _provider_validation)
+    variable_id = created.json()["id"]
+    response = await client.patch(
+        f"api/v1/variables/{variable_id}",
+        headers=logged_in_headers,
+        json={
+            "id": variable_id,
+            "name": "ANTHROPIC_API_KEY",
+            "value": "test",  # pragma: allowlist secret
+            "type": "Credential",
+            "default_fields": [],
+        },
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert validation_called is False
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_dynamic_model_sources_cannot_reintroduce_denied_provider(
     client: AsyncClient, logged_in_headers, monkeypatch
 ):
@@ -171,7 +272,7 @@ async def test_dynamic_model_sources_cannot_reintroduce_denied_provider(
 
     monkeypatch.setattr(
         models_module,
-        "get_enabled_providers",
+        "_get_enabled_providers_result",
         AsyncMock(
             return_value={
                 "enabled_providers": ["OpenAI", "Anthropic"],
@@ -181,7 +282,7 @@ async def test_dynamic_model_sources_cannot_reintroduce_denied_provider(
     )
     monkeypatch.setattr(
         models_module,
-        "get_enabled_models",
+        "_get_enabled_models_result",
         AsyncMock(return_value={"enabled_models": {}, "enabled_models_by_type": {}}),
     )
     live_provider_sets = []
@@ -207,6 +308,207 @@ async def test_dynamic_model_sources_cannot_reintroduce_denied_provider(
     assert response.status_code == status.HTTP_200_OK
     assert {group["provider"] for group in response.json()} == {"OpenAI"}
     assert live_provider_sets == [{"OpenAI"}]
+
+
+@pytest.mark.usefixtures("active_user")
+@pytest.mark.parametrize(
+    "path",
+    [
+        "api/v1/models/providers",
+        "api/v1/models",
+        "api/v1/models/provider-variable-mapping",
+        "api/v1/models/enabled_providers",
+        "api/v1/models/enabled_models",
+        "api/v1/model_options/language",
+        "api/v1/model_options/embedding",
+    ],
+)
+async def test_provider_read_purpose_rejects_unknown_values(
+    client: AsyncClient,
+    logged_in_headers,
+    path: str,
+):
+    response = await client.get(path, headers=logged_in_headers, params={"purpose": "discover"})
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_provider_read_purpose_defaults_and_overrides(client: AsyncClient, logged_in_headers, monkeypatch):
+    captured_purposes = []
+
+    async def _capture_policy(**kwargs):
+        captured_purposes.append(kwargs["purpose"])
+        return _allow_all_policy(**kwargs)
+
+    monkeypatch.setattr("langflow.api.v1.models.aresolve_model_provider_policy", _capture_policy)
+    monkeypatch.setattr("langflow.api.v1.model_options.aresolve_model_provider_policy", _capture_policy)
+
+    default_paths = [
+        ("api/v1/models/providers", ModelProviderPolicyPurpose.DISCOVER),
+        (
+            "api/v1/models",
+            [ModelProviderPolicyPurpose.DISCOVER, ModelProviderPolicyPurpose.CONFIGURE],
+        ),
+        ("api/v1/models/provider-variable-mapping", ModelProviderPolicyPurpose.CONFIGURE),
+        ("api/v1/models/enabled_providers", ModelProviderPolicyPurpose.CONFIGURE),
+        ("api/v1/models/enabled_models", ModelProviderPolicyPurpose.CONFIGURE),
+        ("api/v1/model_options/language", ModelProviderPolicyPurpose.USE),
+        ("api/v1/model_options/embedding", ModelProviderPolicyPurpose.USE),
+    ]
+    for path, expected_purpose in default_paths:
+        captured_purposes.clear()
+        response = await client.get(path, headers=logged_in_headers)
+        assert response.status_code == status.HTTP_200_OK
+        expected_purposes = expected_purpose if isinstance(expected_purpose, list) else [expected_purpose]
+        assert captured_purposes == expected_purposes
+
+    captured_purposes.clear()
+    response = await client.get(
+        "api/v1/model_options/language",
+        headers=logged_in_headers,
+        params={"purpose": "configure"},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert captured_purposes == [
+        ModelProviderPolicyPurpose.USE,
+        ModelProviderPolicyPurpose.CONFIGURE,
+    ]
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_provider_read_purpose_can_narrow_but_never_widen_endpoint_policy(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import model_options as model_options_module
+
+    allowed_by_purpose = {
+        ModelProviderPolicyPurpose.DISCOVER: {"openai"},
+        ModelProviderPolicyPurpose.CONFIGURE: {"openai"},
+        ModelProviderPolicyPurpose.USE: {"openai", "anthropic"},
+    }
+
+    async def _divergent_policy(*, user_id, providers, purpose, attributes=None):
+        _ = attributes
+        candidate_ids = frozenset(resolve_provider_id(provider) for provider in providers)
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id),
+            purpose=purpose,
+            candidate_provider_ids=candidate_ids,
+            allowed_provider_ids=frozenset(allowed_by_purpose[purpose]) & candidate_ids,
+        )
+
+    monkeypatch.setattr("langflow.api.v1.models.aresolve_model_provider_policy", _divergent_policy)
+    monkeypatch.setattr("langflow.api.v1.model_options.aresolve_model_provider_policy", _divergent_policy)
+    raw_options = [
+        {"name": "gpt-test", "provider": "OpenAI", "metadata": {}},
+        {"name": "claude-test", "provider": "Anthropic", "metadata": {}},
+    ]
+    monkeypatch.setattr(model_options_module, "get_language_model_options", lambda **_kwargs: raw_options)
+
+    discover_use = await client.get(
+        "api/v1/models/providers",
+        headers=logged_in_headers,
+        params={"purpose": "use"},
+    )
+    configure_use = await client.get(
+        "api/v1/models/provider-variable-mapping",
+        headers=logged_in_headers,
+        params={"purpose": "use"},
+    )
+    use_configure = await client.get(
+        "api/v1/model_options/language",
+        headers=logged_in_headers,
+        params={"purpose": "configure"},
+    )
+
+    assert discover_use.status_code == status.HTTP_200_OK
+    assert discover_use.json() == ["OpenAI"]
+    assert configure_use.status_code == status.HTTP_200_OK
+    assert set(configure_use.json()) == {"OpenAI"}
+    assert use_configure.status_code == status.HTTP_200_OK
+    assert [option["provider"] for option in use_configure.json()] == ["OpenAI"]
+
+    # An empty intersection stays empty; the requested purpose can never
+    # replace a baseline decision with a disjoint provider set.
+    allowed_by_purpose[ModelProviderPolicyPurpose.CONFIGURE] = {"anthropic"}
+    empty_intersection = await client.get(
+        "api/v1/models/providers",
+        headers=logged_in_headers,
+        params={"purpose": "configure"},
+    )
+    assert empty_intersection.status_code == status.HTTP_200_OK
+    assert empty_intersection.json() == []
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_model_options_add_provider_identity_and_filter_defensively(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import model_options as model_options_module
+
+    raw_options = [
+        {"name": "gpt-test", "provider": "OpenAI", "metadata": {}},
+        {"name": "claude-test", "provider": "Anthropic", "metadata": {}},
+    ]
+    monkeypatch.setattr(model_options_module, "get_language_model_options", lambda **_kwargs: raw_options)
+    monkeypatch.setattr(model_options_module, "get_embedding_model_options", lambda **_kwargs: raw_options)
+
+    for path in ("api/v1/model_options/language", "api/v1/model_options/embedding"):
+        response = await client.get(path, headers=logged_in_headers)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == [
+            {
+                "name": "gpt-test",
+                "provider": "OpenAI",
+                "metadata": {},
+                "provider_id": "openai",
+            }
+        ]
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_model_catalog_uses_configure_policy_for_configuration_status(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import models as models_module
+
+    allowed_by_purpose = {
+        ModelProviderPolicyPurpose.DISCOVER: {"openai", "anthropic"},
+        ModelProviderPolicyPurpose.CONFIGURE: {"openai"},
+        ModelProviderPolicyPurpose.USE: {"openai", "anthropic"},
+    }
+
+    async def _divergent_policy(*, user_id, providers, purpose, attributes=None):
+        _ = attributes
+        candidate_ids = frozenset(resolve_provider_id(provider) for provider in providers)
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id),
+            purpose=purpose,
+            candidate_provider_ids=candidate_ids,
+            allowed_provider_ids=frozenset(allowed_by_purpose[purpose]) & candidate_ids,
+        )
+
+    enabled_providers = AsyncMock(return_value={"enabled_providers": [], "provider_status": {}})
+    enabled_models = AsyncMock(return_value={"enabled_models": {}, "enabled_models_by_type": {}})
+    monkeypatch.setattr(models_module, "aresolve_model_provider_policy", _divergent_policy)
+    monkeypatch.setattr(models_module, "_get_enabled_providers_result", enabled_providers)
+    monkeypatch.setattr(models_module, "_get_enabled_models_result", enabled_models)
+
+    response = await client.get("api/v1/models", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert {group["provider"] for group in response.json()} >= {"OpenAI", "Anthropic"}
+    for helper in (enabled_providers, enabled_models):
+        snapshot = helper.await_args.kwargs["provider_policy"]
+        assert snapshot.purpose is ModelProviderPolicyPurpose.CONFIGURE
+        assert snapshot.allowed_provider_ids == frozenset({"openai"})
 
 
 @pytest.mark.usefixtures("active_user")

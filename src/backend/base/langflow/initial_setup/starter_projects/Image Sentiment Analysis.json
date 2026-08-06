@@ -374,7 +374,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.139.0"
+                    "version": "0.139.2"
                   },
                   {
                     "name": "lfx",
@@ -666,6 +666,7 @@
                 "language model",
                 "large language model"
               ],
+              "model_provider_policy_mode": "delegate",
               "module": "lfx.components.models_and_agents.language_model.LanguageModelComponent"
             },
             "minimized": false,

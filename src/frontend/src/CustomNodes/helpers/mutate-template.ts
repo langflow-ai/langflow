@@ -77,6 +77,12 @@ export const mutateTemplate = async (
             callback?.();
           } catch (e) {
             const error = e as ResponseErrorDetailAPI;
+            // LE-2045: the fallback below identifies nothing, so a client-side
+            // throw is otherwise indistinguishable from a failed request.
+            console.error(
+              `Failed to update template for node ${nodeId}, field ${parameterName}`,
+              e,
+            );
             setErrorData({
               title: i18n.t("input.titleErrorUpdatingComponent"),
               list: [

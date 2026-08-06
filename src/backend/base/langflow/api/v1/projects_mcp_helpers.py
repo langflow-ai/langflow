@@ -7,10 +7,14 @@ from typing import Any, cast
 from uuid import UUID
 
 from fastapi import HTTPException
+from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
 
-from langflow.api.utils.mcp.config_utils import validate_mcp_server_for_project
+from langflow.api.utils.mcp.config_utils import (
+    mcp_server_config_uses_current_uvx_constraint,
+    validate_mcp_server_for_project,
+)
 from langflow.api.v1.mcp_projects import get_project_streamable_http_url
 from langflow.api.v2.mcp import update_server
 from langflow.services.database.models.api_key.crud import create_api_key
@@ -48,7 +52,11 @@ def _server_config_matches_project_auth(
         return False
 
     args = existing_config.get("args")
-    if not isinstance(args, list) or not _server_config_uses_streamable_http(args, streamable_http_url):
+    if (
+        not isinstance(args, list)
+        or not mcp_server_config_uses_current_uvx_constraint(existing_config, "mcp-proxy")
+        or not _server_config_uses_streamable_http(args, streamable_http_url)
+    ):
         return False
 
     has_project_api_key = _server_config_has_project_api_key(args)
@@ -117,6 +125,7 @@ async def register_mcp_servers_for_project(
             unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
             command = "uvx"
             args = [
+                *mcp_sdk_constraint_args(),
                 "mcp-proxy",
                 "--transport",
                 "streamablehttp",
@@ -132,6 +141,7 @@ async def register_mcp_servers_for_project(
         else:
             command = "uvx"
             args = [
+                *mcp_sdk_constraint_args(),
                 "mcp-proxy",
                 "--transport",
                 "streamablehttp",

@@ -37,6 +37,8 @@ import {
 import MemoriesMainContent from "./components/MemoriesMainContent";
 import Page from "./components/PageComponent";
 import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
+import useLoadFlowForRoute from "./hooks/use-load-flow-for-route";
+import { saveBeforeLeaving } from "./save-before-leaving";
 
 function FlowPageMainContent({
   flowId,
@@ -118,29 +120,30 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const { mutateAsync: getFlow } = useGetFlow();
   const applyFlowToCanvas = useApplyFlowToCanvas();
 
+  useLoadFlowForRoute({
+    id,
+    flows,
+    currentFlowId,
+    types,
+    getFlow,
+    applyFlowToCanvas,
+    navigate,
+  });
+
   // Connect to webhook events SSE for real-time feedback
   useWebhookEvents();
 
   const handleSave = () => {
-    let saving = true;
-    let proceed = false;
-    setTimeout(() => {
-      saving = false;
-      if (proceed) {
-        blocker.proceed && blocker.proceed();
+    void saveBeforeLeaving({
+      saveFlow,
+      autoSaving,
+      proceed: () => blocker.proceed?.(),
+      reset: () => blocker.reset?.(),
+      onSaved: () => {
         setSuccessData({
           title: t("flow.savedSuccessfully"),
         });
-      }
-    }, 1200);
-    saveFlow().then(() => {
-      if (!autoSaving || saving === false) {
-        blocker.proceed && blocker.proceed();
-        setSuccessData({
-          title: t("flow.savedSuccessfully"),
-        });
-      }
-      proceed = true;
+      },
     });
   };
 
@@ -168,25 +171,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [changesNotSaved, isBuilding]);
-
-  // Set flow tab id
-  useEffect(() => {
-    const awaitgetTypes = async () => {
-      if (flows && currentFlowId === "" && Object.keys(types).length > 0) {
-        const isAnExistingFlow = flows.find((flow) => flow.id === id);
-
-        if (!isAnExistingFlow) {
-          navigate("/all");
-          return;
-        }
-
-        const isAnExistingFlowId = isAnExistingFlow.id;
-
-        await getFlowToAddToCanvas(isAnExistingFlowId);
-      }
-    };
-    awaitgetTypes();
-  }, [id, flows, currentFlowId, types]);
 
   useEffect(() => {
     setOnFlowPage(true);
@@ -220,11 +204,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       }
     }
   }, [blocker.state, isBuilding]);
-
-  const getFlowToAddToCanvas = async (id: string) => {
-    const flow = await getFlow({ id });
-    applyFlowToCanvas(flow);
-  };
 
   const isMobile = useIsMobile();
   // When the welcome overlay is open, the FlowSidebarComponent should be

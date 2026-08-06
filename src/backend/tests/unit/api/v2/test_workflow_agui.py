@@ -446,6 +446,43 @@ class TestV2WorkflowAdmission:
         assert exc_info.value.status_code == 400
         assert exc_info.value.detail == "custom components are disabled"
 
+    def test_private_route_maps_catalog_identity_unavailable_to_503(self, monkeypatch: pytest.MonkeyPatch):
+        """Authenticated callers retain the retryable identity-initialization detail."""
+        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_validation as wf_val
+        from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.utils.flow_validation import CatalogPolicyIdentityUnavailableError
+        from lfx.workflow.converters import parse_workflow_run_request
+
+        flow_id = uuid4()
+        flow = SimpleNamespace(
+            id=flow_id,
+            user_id=uuid4(),
+            workspace_id=None,
+            folder_id=None,
+            data={"nodes": [], "edges": []},
+            name="private",
+        )
+        detail = "Catalog policy component identities are still initializing. Please try again in a few seconds."
+
+        def _retry(_flow_data):
+            raise CatalogPolicyIdentityUnavailableError(detail)
+
+        monkeypatch.setattr(wf_val, "validate_flow_for_current_settings", _retry)
+        parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(flow_id), input_value="hi", mode="stream"))
+
+        with pytest.raises(HTTPException) as exc_info:
+            workflow_module.build_stream_response(
+                parsed,
+                flow,
+                SimpleNamespace(id=flow.user_id),
+                stream_protocol="langflow",
+                background_tasks=SimpleNamespace(),
+            )
+
+        assert exc_info.value.status_code == 503
+        assert exc_info.value.detail == detail
+
 
 class TestAGUIStreaming:
     """mode=stream returns an AG-UI server-sent event stream."""
