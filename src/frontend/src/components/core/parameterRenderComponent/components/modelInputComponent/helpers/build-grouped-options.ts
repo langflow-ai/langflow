@@ -10,6 +10,12 @@ export interface BuildGroupedOptionsParams {
   modelType: string;
   savedValue: ModelOption | undefined;
   modelFilters: Record<string, unknown> | undefined;
+  /**
+   * Whether `providers` reflects settled server state (not fetching, no error).
+   * While it is false the connection status cannot be trusted, so no option is
+   * dropped for being disconnected.
+   */
+  providerStatusIsReliable: boolean;
 }
 
 function passesModelFilters(
@@ -29,8 +35,11 @@ function passesModelFilters(
  * per-node model filters and the model-type filter, and injecting both the
  * registry models and the saved value when they are not otherwise present.
  *
- * Pure: extracted verbatim from ModelInputComponent's `groupedOptions` memo so
- * the grouping can be unit-tested with fixtures (LE-1736 W22).
+ * Providers reported as disconnected contribute nothing — neither their own
+ * options nor a saved value pointing at them.
+ *
+ * Pure: extracted from ModelInputComponent's `groupedOptions` memo so the
+ * grouping can be unit-tested with fixtures (LE-1736 W22).
  */
 export function buildGroupedOptions({
   options,
@@ -39,23 +48,34 @@ export function buildGroupedOptions({
   modelType,
   savedValue,
   modelFilters,
+  providerStatusIsReliable,
 }: BuildGroupedOptionsParams): Record<string, ModelOption[]> {
   const grouped: Record<string, ModelOption[]> = {};
   const seen = new Set<string>();
+  const disconnectedProviders = new Set(
+    providerStatusIsReliable
+      ? (providers ?? [])
+          .filter((provider) => provider.is_configured === false)
+          .map((provider) => provider.provider)
+      : [],
+  );
 
   for (const option of options) {
     if (option.metadata?.is_disabled_provider) continue;
     const provider = option.provider || "Unknown";
+    if (disconnectedProviders.has(provider)) continue;
 
-    const isStickyNotEnabled = option.metadata?.not_enabled_locally === true;
-    if (isStickyNotEnabled) {
-      const providerConfigured = providers?.some(
-        (p) => p.provider === provider && p.is_configured,
-      );
-      if (providerConfigured) continue;
-    }
+    // Sticky-default entries only let the trigger name the saved model;
+    // they are never selectable, disconnected or merely deactivated.
+    if (option.metadata?.not_enabled_locally === true) continue;
 
-    if (!isStickyNotEnabled && enabledModels) {
+    // Filter against client-side enabled models data. This is the source of
+    // truth for what the current user has enabled — stale `options` saved in
+    // an imported flow may include models from providers the current user
+    // hasn't enabled (e.g. WatsonX). When the provider is tracked in
+    // enabled_models, the model must be explicitly enabled (=== true); a
+    // `false` or missing entry means the model should be hidden.
+    if (enabledModels) {
       const providerModels = enabledModels[provider];
       if (providerModels && providerModels[option.name] !== true) {
         continue;
@@ -81,6 +101,7 @@ export function buildGroupedOptions({
   if (enabledModels && providers) {
     for (const providerInfo of providers) {
       const providerName = providerInfo.provider;
+      if (disconnectedProviders.has(providerName)) continue;
       const providerModels = enabledModels[providerName];
       if (!providerModels) continue;
 
@@ -116,9 +137,17 @@ export function buildGroupedOptions({
     }
   }
 
+  // Keeps an Assistant-applied registry model selectable while it is missing
+  // from enabled_models; a disconnected provider must inject nothing.
   const savedKey = savedValue?.name
     ? `${savedValue.provider || "Unknown"}::${savedValue.name}`
     : null;
+  const savedProviderConfigured =
+    providerStatusIsReliable &&
+    (providers?.some(
+      (p) => p.provider === savedValue?.provider && p.is_configured,
+    ) ??
+      false);
   const savedInRegistry =
     !!savedValue?.name &&
     (providers?.some(
@@ -131,7 +160,8 @@ export function buildGroupedOptions({
     !!savedValue?.name &&
     !!savedKey &&
     !seen.has(savedKey) &&
-    (Object.keys(grouped).length === 0 || savedInRegistry);
+    savedProviderConfigured &&
+    savedInRegistry;
   if (shouldInjectSaved && savedValue) {
     const providerName = savedValue.provider || "Unknown";
     grouped[providerName] = grouped[providerName] ?? [];

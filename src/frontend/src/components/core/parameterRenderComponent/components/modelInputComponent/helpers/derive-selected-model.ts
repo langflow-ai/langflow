@@ -12,6 +12,13 @@ export interface DeriveSelectedModelParams {
   savedValue: ModelOption | undefined;
   flatOptions: ModelOption[];
   providers: ModelProviderWithStatus[] | undefined;
+  /**
+   * Whether `providers` reflects settled server state (not fetching, no error).
+   * While it is false the saved provider's `is_configured` is not read at all;
+   * the status stays unknown and the saved value renders through the
+   * not-enabled-locally trigger.
+   */
+  providerStatusIsReliable: boolean;
   /** Current value of the component's `hasProcessedEmptyRef` (read-only here). */
   hasProcessedEmpty: boolean;
 }
@@ -28,6 +35,7 @@ export function deriveSelectedModel({
   savedValue,
   flatOptions,
   providers,
+  providerStatusIsReliable,
   hasProcessedEmpty,
 }: DeriveSelectedModelParams): SelectedModel | null {
   if (isConnectionMode) {
@@ -53,9 +61,9 @@ export function deriveSelectedModel({
   if (match) return match;
 
   if (saved) {
-    const savedProviderConfigured = providers?.some(
-      (p) => p.provider === saved.provider && p.is_configured,
-    );
+    const savedProviderConfigured = providerStatusIsReliable
+      ? providers?.some((p) => p.provider === saved.provider && p.is_configured)
+      : undefined;
     if (!savedProviderConfigured) {
       return {
         ...(saved.id && { id: saved.id }),

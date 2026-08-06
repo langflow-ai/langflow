@@ -10,14 +10,21 @@ export interface UseAutoSelectModelParams {
   handleOnNewValue: handleOnNewValueType;
   isConnectionMode: boolean;
   providers: ModelProviderWithStatus[] | undefined;
+  /**
+   * Whether both the provider list and the enabled-models map reflect settled
+   * server state. While it is false nothing is auto-selected — a mid-flight
+   * fetch must not be read as "the saved model is gone".
+   */
+  modelStatusIsReliable: boolean;
   hasProcessedEmptyRef: MutableRefObject<boolean>;
 }
 
 /**
  * Auto-selects the first available model when the value is empty or the saved
- * value is stale (its provider is configured but the model is gone). Extracted
- * verbatim from ModelInputComponent (LE-1736 W24); the once-guard ref is shared
- * with deriveSelectedModel (W23) and owned by the component.
+ * value went stale — its provider is known but no longer offers the model,
+ * whether it was disconnected or the model deactivated. Extracted from
+ * ModelInputComponent (LE-1736 W24); the once-guard ref is shared with
+ * deriveSelectedModel (W23) and owned by the component.
  */
 export function useAutoSelectModel({
   flatOptions,
@@ -25,11 +32,17 @@ export function useAutoSelectModel({
   handleOnNewValue,
   isConnectionMode,
   providers,
+  modelStatusIsReliable,
   hasProcessedEmptyRef,
 }: UseAutoSelectModelParams): void {
   useEffect(() => {
-    if (flatOptions.length === 0 || isConnectionMode) return;
-    if (hasProcessedEmptyRef.current) return;
+    if (
+      !modelStatusIsReliable ||
+      flatOptions.length === 0 ||
+      isConnectionMode
+    ) {
+      return;
+    }
 
     const isEmpty = !value || value.length === 0;
 
@@ -39,14 +52,23 @@ export function useAutoSelectModel({
       const inOptions = flatOptions.some((option) =>
         matchesModelIdentity(option, saved),
       );
+      // A known provider that no longer offers the model is stale whether it was
+      // disconnected or the model deactivated; an unknown one we cannot judge.
       if (!inOptions && saved.provider) {
         isSavedValueStale =
-          providers?.some(
-            (p) => p.provider === saved.provider && p.is_configured,
-          ) ?? false;
+          providers?.some((p) => p.provider === saved.provider) ?? false;
       }
     }
 
+    // The ref debounces the empty-value auto-select only; a value that goes
+    // stale mid-session (provider disconnected) must still be replaced.
+    if (hasProcessedEmptyRef.current && !isSavedValueStale) return;
+
+    // Sticky-default: if the component has a saved value, keep it as-is. The
+    // backend injects any selection that isn't in the user's enabled list
+    // back into `options` tagged with `not_enabled_locally`, so the saved
+    // value remains visible and runnable. Only auto-select the first option
+    // when there's no saved value at all OR when the saved value is stale.
     if (!isEmpty && !isSavedValueStale) return;
 
     const firstOption = flatOptions[0];
@@ -61,5 +83,12 @@ export function useAutoSelectModel({
     ];
     handleOnNewValue({ value: newValue });
     hasProcessedEmptyRef.current = true;
-  }, [flatOptions, value, handleOnNewValue, isConnectionMode, providers]);
+  }, [
+    flatOptions,
+    value,
+    handleOnNewValue,
+    isConnectionMode,
+    providers,
+    modelStatusIsReliable,
+  ]);
 }

@@ -414,7 +414,6 @@ async def test_custom_component_editor_passes_ceiling(monkeypatch, owner):
         MagicMock(return_value=({"tool_mode": False}, instance)),
     )
     monkeypatch.setattr(endpoints, "get_instance_name", lambda _i: "MyComponent")
-    monkeypatch.setattr(endpoints, "_requires_component_hash_lookups", lambda *_a, **_k: False)
     # Settings: custom components allowed, no admin-only gate.
     settings = SimpleNamespace(allow_custom_components=True, custom_component_admin_only=False)
     monkeypatch.setattr(endpoints, "get_settings_service", lambda: SimpleNamespace(settings=settings))

@@ -25,7 +25,7 @@ import {
   ModelInputLoadingButton,
 } from "./components/ModelInputStates";
 import ModelList from "./components/ModelList";
-import ModelTrigger from "./components/ModelTrigger";
+import ModelTrigger, { isSetupProviderState } from "./components/ModelTrigger";
 import { buildGroupedOptions } from "./helpers/build-grouped-options";
 import { deriveSelectedModel } from "./helpers/derive-selected-model";
 import { matchesModelIdentity } from "./helpers/model-option-identity";
@@ -151,6 +151,9 @@ export default function ModelInputComponent({
     !!enabledModelsError && enabledModelsData === undefined;
   const hasInitialLoadError =
     !isFetching && (providersUnusable || enabledModelsUnusable);
+  const providerStatusIsReliable = !isFetchingProviders && !providersError;
+  const modelStatusIsReliable =
+    providerStatusIsReliable && !isFetchingEnabledModels && !enabledModelsError;
 
   const hasEnabledProviders = useMemo(() => {
     return providersData?.some(
@@ -167,8 +170,17 @@ export default function ModelInputComponent({
         modelType,
         savedValue: value?.[0],
         modelFilters,
+        providerStatusIsReliable,
       }),
-    [options, enabledModelsData, providersData, modelType, value, modelFilters],
+    [
+      options,
+      enabledModelsData,
+      providersData,
+      modelType,
+      value,
+      modelFilters,
+      providerStatusIsReliable,
+    ],
   );
 
   const flatOptions = useMemo(
@@ -185,9 +197,17 @@ export default function ModelInputComponent({
         savedValue: value?.[0],
         flatOptions,
         providers: providersData,
+        providerStatusIsReliable,
         hasProcessedEmpty: hasProcessedEmptyRef.current,
       }),
-    [value, flatOptions, isConnectionMode, externalOptions, providersData],
+    [
+      value,
+      flatOptions,
+      isConnectionMode,
+      externalOptions,
+      providersData,
+      providerStatusIsReliable,
+    ],
   );
 
   useAutoSelectModel({
@@ -196,6 +216,7 @@ export default function ModelInputComponent({
     handleOnNewValue,
     isConnectionMode,
     providers: providersData,
+    modelStatusIsReliable,
     hasProcessedEmptyRef,
   });
 
@@ -335,7 +356,12 @@ export default function ModelInputComponent({
   }
 
   const showConfigureAffordance =
-    selectedModel?.metadata?.not_enabled_locally === true;
+    selectedModel?.metadata?.not_enabled_locally === true &&
+    !isSetupProviderState({
+      hasEnabledProviders: hasEnabledProviders ?? false,
+      showEmptyState,
+      optionCount: flatOptions.length,
+    });
 
   // Main render
   return (

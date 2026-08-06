@@ -1,13 +1,17 @@
 import asyncio
+import hashlib
 import inspect
+from types import SimpleNamespace
 from typing import Any
 
+import pytest
 from anyio import Path
 from fastapi import status
 from httpx import AsyncClient
 from langflow.api.v1.schemas import CustomComponentRequest, UpdateCustomComponentRequest
 from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.custom.utils import build_custom_component_template
+from lfx.services.catalog_policy.base import CatalogPolicySnapshot
 
 
 async def test_get_version(client: AsyncClient):
@@ -32,6 +36,97 @@ async def test_get_config_basic(client: AsyncClient, logged_in_headers: dict):
     assert "auto_saving" in result, "The dictionary must contain a key called 'auto_saving'"
     assert "health_check_max_retries" in result, "The dictionary must contain a 'health_check_max_retries' key"
     assert "max_file_size_upload" in result, "The dictionary must contain a key called 'max_file_size_upload'"
+
+
+@pytest.mark.parametrize("path", ["api/v1/custom_component", "api/v1/custom_component/update"])
+async def test_catalog_blocks_known_template_before_custom_component_build(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+    path: str,
+):
+    """A blocked built-in cannot be reintroduced through either custom-component path."""
+    agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
+    code = await Path(agent_component_file).read_text(encoding="utf-8")
+    code_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
+    snapshot = CatalogPolicySnapshot(blocked_component_keys={"Agent"})
+
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=snapshot),
+    )
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_hash_lookups_for_validation",
+        lambda: {"Agent": {code_hash}},
+    )
+
+    def fail_if_built(*_args, **_kwargs):
+        msg = "catalog policy must deny known blocked source before component build"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr("langflow.api.v1.endpoints.build_custom_component_template", fail_if_built)
+    if path.endswith("/update"):
+        request = UpdateCustomComponentRequest(
+            code=code,
+            frontend_node={"outputs": []},
+            field="",
+            field_value="",
+            template={},
+        )
+    else:
+        request = CustomComponentRequest(code=code)
+
+    response = await client.post(path, json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "Agent" in response.json()["detail"]
+
+
+@pytest.mark.parametrize("path", ["api/v1/custom_component", "api/v1/custom_component/update"])
+async def test_catalog_blocks_resolved_custom_component_type(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+    path: str,
+):
+    """A modified custom component cannot assume an exact blocked runtime type."""
+    code = """
+from lfx.custom import Component
+from lfx.template.field.base import Output
+
+class CatalogLookalikeComponent(Component):
+    name = "Agent"
+    display_name = "Catalog Lookalike"
+    outputs = [Output(display_name="Output", name="output", method="get_result")]
+
+    def get_result(self) -> str:
+        return "blocked"
+"""
+    snapshot = CatalogPolicySnapshot(blocked_component_keys={"Agent"})
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=snapshot),
+    )
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_hash_lookups_for_validation",
+        lambda: {"Agent": {"different-template-hash"}},
+    )
+
+    if path.endswith("/update"):
+        request = UpdateCustomComponentRequest(
+            code=code,
+            frontend_node={"outputs": []},
+            field="",
+            field_value="",
+            template={},
+        )
+    else:
+        request = CustomComponentRequest(code=code)
+
+    response = await client.post(path, json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "Agent" in response.json()["detail"]
 
 
 async def test_update_component_outputs(client: AsyncClient, logged_in_headers: dict):
@@ -416,6 +511,49 @@ async def test_get_config_without_authentication_returns_public_config(client: A
     """Test that /config returns public config when accessed without authentication."""
     response = await client.get("api/v1/config")
     assert response.status_code == status.HTTP_200_OK
+
+
+async def test_get_config_reports_catalog_governance_without_exposing_policy_contents(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """Both config variants expose only the derived governance indicator."""
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        lambda: SimpleNamespace(enabled=True),
+    )
+
+    public_response = await client.get("api/v1/config")
+    authenticated_response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert public_response.status_code == status.HTTP_200_OK
+    assert authenticated_response.status_code == status.HTTP_200_OK
+    for result in (public_response.json(), authenticated_response.json()):
+        assert result["catalog_governance_enabled"] is True
+        assert "blocked_component_keys" not in result
+        assert "blocked_template_keys" not in result
+
+
+async def test_get_config_fails_open_without_exposing_catalog_policy_errors(client: AsyncClient, monkeypatch):
+    """A broken custom policy accessor does not leak through public config."""
+
+    class BrokenCatalogPolicy:
+        @property
+        def enabled(self) -> bool:
+            msg = "sensitive catalog backend detail"
+            raise RuntimeError(msg)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        BrokenCatalogPolicy,
+    )
+
+    response = await client.get("api/v1/config")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["catalog_governance_enabled"] is False
+    assert "sensitive catalog backend detail" not in response.text
 
 
 async def test_get_config_unauthenticated_returns_expected_fields(client: AsyncClient):

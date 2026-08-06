@@ -7,7 +7,7 @@ import {
   SelectContentWithoutPortal,
   SelectItem,
   SelectTrigger,
-} from "@/components/ui/select-custom";
+} from "@/components/ui/select";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import ToolbarSelectItem from "../toolbarSelectItem";
 
@@ -62,7 +62,11 @@ export function ToolbarMoreMenu({
       onOpenChange={onOpenChange}
       open={open}
     >
-      <SelectTrigger className="w-62" aria-label={t("nodeToolbar.showMore")}>
+      <SelectTrigger
+        variant="plain"
+        className="w-62"
+        aria-label={t("nodeToolbar.showMore")}
+      >
         <ShadTooltip content={t("nodeToolbar.showMore")} side="top">
           <div data-testid="more-options-modal">
             <Button
@@ -80,7 +84,7 @@ export function ToolbarMoreMenu({
       <SelectContentWithoutPortal
         className={"relative top-1 w-56 bg-background"}
       >
-        <SelectItem value={"save"}>
+        <SelectItem variant="plain" value={"save"}>
           <ToolbarSelectItem
             shortcut={
               shortcuts.find((obj) => obj.name === "Save Component")?.shortcut!
@@ -90,7 +94,7 @@ export function ToolbarMoreMenu({
             dataTestId="save-button-modal"
           />
         </SelectItem>
-        <SelectItem value={"duplicate"}>
+        <SelectItem variant="plain" value={"duplicate"}>
           <ToolbarSelectItem
             shortcut={
               shortcuts.find((obj) => obj.name === "Duplicate")?.shortcut!
@@ -100,7 +104,7 @@ export function ToolbarMoreMenu({
             dataTestId="copy-button-modal"
           />
         </SelectItem>
-        <SelectItem value={"copy"}>
+        <SelectItem variant="plain" value={"copy"}>
           <ToolbarSelectItem
             shortcut={shortcuts.find((obj) => obj.name === "Copy")?.shortcut!}
             value={t("nodeToolbar.copy")}
@@ -109,7 +113,7 @@ export function ToolbarMoreMenu({
           />
         </SelectItem>
         {isOutdated && (
-          <SelectItem value={"update"}>
+          <SelectItem variant="plain" value={"update"}>
             <ToolbarSelectItem
               shortcut={
                 shortcuts.find((obj) => obj.name === "Update")?.shortcut!
@@ -126,7 +130,11 @@ export function ToolbarMoreMenu({
           </SelectItem>
         )}
         {hasStore && (
-          <SelectItem value={"Share"} disabled={!hasApiKey || !validApiKey}>
+          <SelectItem
+            variant="plain"
+            value={"Share"}
+            disabled={!hasApiKey || !validApiKey}
+          >
             <ToolbarSelectItem
               shortcut={
                 shortcuts.find((obj) => obj.name === "Component Share")
@@ -139,7 +147,11 @@ export function ToolbarMoreMenu({
           </SelectItem>
         )}
 
-        <SelectItem value={"documentation"} disabled={documentation === ""}>
+        <SelectItem
+          variant="plain"
+          value={"documentation"}
+          disabled={documentation === ""}
+        >
           <ToolbarSelectItem
             shortcut={shortcuts.find((obj) => obj.name === "Docs")?.shortcut!}
             value={t("nodeToolbar.docs")}
@@ -149,6 +161,7 @@ export function ToolbarMoreMenu({
         </SelectItem>
 
         <SelectItem
+          variant="plain"
           value={"show"}
           data-testid={`${showNode ? "minimize" : "expand"}-button-modal`}
         >
@@ -163,7 +176,7 @@ export function ToolbarMoreMenu({
           />
         </SelectItem>
         {isGroup && (
-          <SelectItem value="ungroup">
+          <SelectItem variant="plain" value="ungroup">
             <ToolbarSelectItem
               shortcut={
                 shortcuts.find((obj) => obj.name === "Group")?.shortcut!
@@ -175,7 +188,11 @@ export function ToolbarMoreMenu({
           </SelectItem>
         )}
         {hasToolMode && (
-          <SelectItem value="freezeAll" data-testid="freeze-all-button-modal">
+          <SelectItem
+            variant="plain"
+            value="freezeAll"
+            data-testid="freeze-all-button-modal"
+          >
             <ToolbarSelectItem
               shortcut={
                 shortcuts.find((obj) =>
@@ -189,7 +206,7 @@ export function ToolbarMoreMenu({
             />
           </SelectItem>
         )}
-        <SelectItem value="Download">
+        <SelectItem variant="plain" value="Download">
           <ToolbarSelectItem
             shortcut={
               shortcuts.find((obj) => obj.name === "Download")?.shortcut!
@@ -199,7 +216,11 @@ export function ToolbarMoreMenu({
             dataTestId="download-button-modal"
           />
         </SelectItem>
-        <SelectItem value={"delete"} className="focus:bg-destructive/[.20]">
+        <SelectItem
+          variant="plain"
+          value={"delete"}
+          className="focus:bg-destructive/[.20]"
+        >
           <div className="font-red flex text-status-red">
             <IconComponent
               name="Trash2"

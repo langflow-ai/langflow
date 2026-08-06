@@ -155,6 +155,15 @@ jest.mock("@/modals/baseModal", () => {
   MockBaseModal.Content = ({ children }: ChildrenProps) => (
     <div>{children}</div>
   );
+  MockBaseModal.Header = ({
+    children,
+    description,
+  }: ChildrenProps & { description?: ReactNode }) => (
+    <div>
+      <h2>{children}</h2>
+      {description}
+    </div>
+  );
 
   return { __esModule: true, default: MockBaseModal };
 });

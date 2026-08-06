@@ -451,6 +451,7 @@ def _run_pipeline_body(
             effective_source,
             slot=effective_slot,
             module_namespace=staging_namespace,
+            bundle_name=bundle,
         )
 
     # ---------- Stage 2: validate ----------
