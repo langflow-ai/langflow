@@ -18,6 +18,7 @@ The API-key ``/run`` variant needs no test here: ``api_key_security`` scopes
 its own short-lived session and never holds a request-scoped transaction.
 """
 
+from contextlib import asynccontextmanager
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -164,3 +165,108 @@ async def test_run_session_releases_auth_transaction_before_flow_run(
 
     assert response.status_code == 200, response.text
     assert captured["in_transaction"] is False, "the auth transaction must be committed before the flow run"
+
+
+async def test_run_advanced_releases_transaction_before_graph_execution(
+    client: AsyncClient, simple_api_test, created_api_key, monkeypatch
+):
+    """``/run/advanced`` must end its flow re-query transaction before ``run_graph_internal``.
+
+    The handler passes neither the session nor a session-loaded ORM object to
+    ``run_graph_internal``, so the request session is captured at its source:
+    the ``injectable_session_scope`` dependency resolves ``session_scope``
+    through the ``lfx.services.deps`` module namespace at call time.
+    """
+    import lfx.services.deps as lfx_deps
+
+    request_sessions: list = []
+    real_scope = lfx_deps.session_scope
+
+    @asynccontextmanager
+    async def capturing_scope():
+        async with real_scope() as scoped_session:
+            request_sessions.append(scoped_session)
+            yield scoped_session
+
+    monkeypatch.setattr(lfx_deps, "session_scope", capturing_scope)
+
+    captured: dict = {}
+
+    async def fake_run_graph_internal(**kwargs):
+        assert request_sessions, "precondition: the request must have resolved the DbSession dependency"
+        captured["in_transaction"] = [s.in_transaction() for s in request_sessions]
+        return [], kwargs.get("session_id") or "txn-release-test"
+
+    with patch(f"{_ENDPOINTS}.run_graph_internal", side_effect=fake_run_graph_internal):
+        response = await client.post(
+            f"api/v1/run/advanced/{simple_api_test['id']}",
+            json={},
+            headers={"x-api-key": created_api_key.api_key},
+        )
+
+    assert response.status_code == 200, response.text
+    assert captured["in_transaction"] == [False] * len(captured["in_transaction"]), (
+        "the flow re-query transaction must be committed before graph execution"
+    )
+
+
+async def test_webhook_events_releases_auth_transaction_before_streaming(
+    client: AsyncClient, simple_api_test, logged_in_headers, monkeypatch
+):
+    """``/webhook-events`` must not hold the auth transaction across the EventSource stream.
+
+    The stream is indefinite and dependency teardown only runs when it ends,
+    so without a release every open tab pins a pooled connection in an idle
+    transaction.
+
+    The SSE auth chain loads the ORM user on the request session; wrapping
+    ``ensure_flow_permission`` captures it. The transaction check runs inside a
+    stubbed ``webhook_event_manager.subscribe`` — the first await of the stream
+    body, i.e. after the handler returned but before dependency teardown. The
+    stub also flips ``is_disconnected`` so the otherwise-endless stream ends
+    immediately (httpx's ASGITransport cannot early-close a live stream).
+    """
+    import asyncio
+
+    import langflow.api.v1.endpoints as endpoints_module
+    from starlette.requests import Request
+
+    captured: dict = {}
+    real_ensure = endpoints_module.ensure_flow_permission
+
+    async def capturing_ensure(user, *args, **kwargs):
+        captured["user"] = user
+        return await real_ensure(user, *args, **kwargs)
+
+    async def fake_subscribe(_flow_id):
+        state = sa_inspect(captured["user"])
+        session = state.session
+        assert session is not None, "precondition: the SSE auth user must still be attached to the request session"
+        captured["in_transaction"] = session.in_transaction()
+        return asyncio.Queue()
+
+    async def fake_unsubscribe(_flow_id, _queue):
+        return None
+
+    async def fake_is_disconnected(_self):
+        # False during the handler; True once the stream body has started and
+        # the capture ran, so the event loop exits after the connected event.
+        return "in_transaction" in captured
+
+    monkeypatch.setattr(endpoints_module.webhook_event_manager, "subscribe", fake_subscribe)
+    monkeypatch.setattr(endpoints_module.webhook_event_manager, "unsubscribe", fake_unsubscribe)
+    monkeypatch.setattr(Request, "is_disconnected", fake_is_disconnected)
+
+    # The SSE route authenticates via cookie (or x-api-key), not the
+    # Authorization header — reuse the logged-in token as the cookie.
+    token = logged_in_headers["Authorization"].removeprefix("Bearer ")
+
+    with patch(f"{_ENDPOINTS}.ensure_flow_permission", side_effect=capturing_ensure):
+        response = await client.get(
+            f"api/v1/webhook-events/{simple_api_test['id']}",
+            cookies={"access_token_lf": token},
+        )
+
+    assert response.status_code == 200, response.text
+    assert "event: connected" in response.text
+    assert captured["in_transaction"] is False, "the auth transaction must not span the webhook EventSource stream"

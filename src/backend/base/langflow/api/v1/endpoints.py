@@ -1035,6 +1035,7 @@ async def simplified_run_flow_session(
 async def webhook_events_stream(
     auth: Annotated[SseAuth, Depends(get_flow_for_sse_user)],
     request: Request,
+    session: DbSession,
 ):
     """Server-Sent Events (SSE) endpoint for real-time webhook build updates.
 
@@ -1057,6 +1058,12 @@ async def webhook_events_stream(
         workspace_id=getattr(flow, "workspace_id", None),
         folder_id=getattr(flow, "folder_id", None),
     )
+
+    # ``session`` is the same cached dependency the SSE auth chain used. The
+    # EventSource stream below is indefinite and the session dependency is
+    # only torn down when it ends, so without this commit every open tab
+    # would hold a pooled connection in an idle transaction (#14445).
+    await release_db_transaction(session)
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from the webhook event manager."""
@@ -1314,6 +1321,12 @@ async def experimental_run_flow(
             raise
         except Exception as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    # Graph execution below can run for minutes; end the request transaction
+    # opened by the flow re-query above so it doesn't pin a pooled connection
+    # (Postgres: idle-in-transaction) for the whole run (#14445). In the
+    # session_id branch the session was never used, so this is a no-op.
+    await release_db_transaction(session)
 
     try:
         task_result, session_id = await run_graph_internal(
