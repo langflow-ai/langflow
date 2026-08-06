@@ -36,6 +36,14 @@ _INVALID_NAMES = {
     "validate_template",
 }
 
+# Keys prefixed with an underscore are node-template metadata (`_type`,
+# `_frontend_node_flow_id`, ...), not component fields. The frontend filters them out of
+# every render path, so a prompt variable landing in that namespace is created in the
+# template but never gets an input or a handle, and resolves to an empty string at run
+# time. Reject the name instead, the same way `_INVALID_NAMES` is rejected.
+# Mirrored in the frontend by `isReservedVariableName`.
+RESERVED_VARIABLE_PREFIX = "_"
+
 
 def _is_json_like(var):
     if var.startswith("{{") and var.endswith("}}"):
@@ -124,6 +132,18 @@ def _check_input_variables(input_variables):
     return fixed_variables
 
 
+def _check_reserved_prefix(input_variables: list[str]) -> None:
+    """Reject variable names that fall into the reserved `_*` template namespace."""
+    reserved = [var for var in input_variables if var.startswith(RESERVED_VARIABLE_PREFIX)]
+    if reserved:
+        msg = (
+            f"Invalid input variables: {', '.join(reserved)}. "
+            f"Variable names cannot start with '{RESERVED_VARIABLE_PREFIX}' because that prefix is "
+            f"reserved for internal template fields."
+        )
+        raise ValueError(msg)
+
+
 def validate_prompt(prompt_template: str, *, silent_errors: bool = False, is_mustache: bool = False) -> list[str]:
     if is_mustache:
         # Validate that template doesn't contain complex mustache syntax
@@ -162,6 +182,7 @@ def validate_prompt(prompt_template: str, *, silent_errors: bool = False, is_mus
 
     # Check if there are invalid characters in the input_variables
     input_variables = _check_input_variables(input_variables)
+    _check_reserved_prefix(input_variables)
     if any(var in _INVALID_NAMES for var in input_variables):
         msg = f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. "
         raise ValueError(msg)
