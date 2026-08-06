@@ -188,6 +188,21 @@ def test_opentelementry_singleton(opentelemetry_instance):
     assert opentelemetry_instance.prometheus_enabled == opentelemetry_instance_3.prometheus_enabled
 
 
+def test_shutdown_then_reinit_restores_counters(opentelemetry_instance):
+    """A shut-down singleton must not poison later OpenTelemetry() callers.
+
+    TelemetryService.teardown() calls shutdown(), which clears the instrument map.
+    While the old instance is still strongly referenced (the torn-down service holds
+    it), the next OpenTelemetry() call must still return a working instance instead
+    of the cleared one, or every metric call in the process fails with
+    "Metric '...' is not a counter".
+    """
+    opentelemetry_instance.shutdown()
+
+    fresh = OpenTelemetry()
+    fresh.increment_counter(metric_name="num_files_uploaded", value=1, labels=fixed_labels)
+
+
 def test_missing_labels(opentelemetry_instance):
     with pytest.raises(ValueError, match="Labels must be provided for the metric"):
         opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", labels=None, value=1.0)

@@ -326,6 +326,9 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             self._logger_provider.shutdown()
         self._metrics.clear()
         OpenTelemetry._initialized = False
+        # Evict from the singleton cache: __init__ never re-runs on a cached instance.
+        with ThreadSafeSingletonMetaUsingWeakref._lock:
+            ThreadSafeSingletonMetaUsingWeakref._instances.pop(OpenTelemetry, None)
 
 
 # Connection-pool saturation, read from SQLAlchemy at collection time rather than tracked.
