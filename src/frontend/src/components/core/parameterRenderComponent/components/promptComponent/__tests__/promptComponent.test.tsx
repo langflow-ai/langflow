@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import type { InputProps, PromptAreaComponentType } from "../../../types";
 import PromptAreaComponent from "../index";
 
 jest.mock("@/modals/promptModal", () => {
@@ -46,7 +47,7 @@ describe("PromptAreaComponent variable highlighting", () => {
     id: "prompt-template",
     nodeId: "node-1",
     readonly: false,
-  } as any;
+  } as InputProps<string, PromptAreaComponentType>;
 
   it("marks a name starting with an underscore as invalid", () => {
     render(<PromptAreaComponent {...defaultProps} value="Hello {_x}!" />);
@@ -85,7 +86,9 @@ describe("PromptAreaComponent variable highlighting", () => {
   });
 
   it("leaves double-brace escapes untouched", () => {
-    render(<PromptAreaComponent {...defaultProps} value="Literal {{_x}} here" />);
+    render(
+      <PromptAreaComponent {...defaultProps} value="Literal {{_x}} here" />,
+    );
 
     expect(screen.getByTestId("sanitized-html").innerHTML).not.toContain(
       "chat-message-highlight-invalid",
