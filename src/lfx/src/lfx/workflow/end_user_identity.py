@@ -37,8 +37,17 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 # Separator between the end-user id and the caller's session id in a merged scope
-# key. A pipe is not produced by ``uuid`` / typical opaque ids, so it keeps the
-# two parts visually and programmatically distinguishable.
+# key. Chosen because it does not occur in a ``uuid`` or typical opaque gateway
+# ids, keeping the two parts visually distinguishable.
+#
+# Cross-user isolation does NOT depend on this: the prefix is always the *authenticated*
+# end-user id (the gateway mints it; a client cannot forge it), so one user can never
+# reach another's namespace regardless of the session id they send. The separator only
+# affects collisions WITHIN a single end-user, and the merge is injective as long as the
+# end-user id does not itself contain the separator — e.g. ("a", "b::c") and ("a::b", "c")
+# both render "a::b::c". Gateway-minted ids are expected to be separator-free (uuid /
+# opaque token). If a gateway can mint ids containing "::", switch to a length-prefixed or
+# percent-encoded join here. See the serving-plane end-user header contract.
 SCOPE_SEPARATOR = "::"
 
 

@@ -9,11 +9,14 @@ exactly as before.
 
 from uuid import uuid4
 
+import pytest
+from langflow.api.v2.workflow import _parse_persisted_workflow_request
 from langflow.memory import aget_messages, astore_message
 from langflow.schema.message import Message
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph.graph.base import Graph
 from lfx.memory.flow_context import reset_messages_persist, set_messages_persist
+from lfx.schema.workflow import WorkflowRunRequest
 
 
 def _msg(session_id: str) -> Message:
@@ -68,6 +71,46 @@ async def test_anonymous_graph_run_persists_nothing_end_to_end(client):  # noqa:
     # ChatInput/ChatOutput default should_store_message=True, but the ephemeral
     # flag must have suppressed every write.
     assert await aget_messages(session_id=session_id) == []
+
+
+# --- background / resume round-trip -------------------------------------------
+# The background and HITL-resume paths persist the request and re-parse it on the
+# worker. persist_messages is an internal decision, not a client wire field, so it
+# must survive that round-trip or an anonymous background run would wrongly persist.
+
+
+def _bg_request(session_id: str, **extra) -> dict:
+    return {
+        "flow_id": str(uuid4()),
+        "mode": "background",
+        "input_value": "hi",
+        "session_id": session_id,
+        **extra,
+    }
+
+
+def test_workflow_run_request_forbids_persist_messages_extra():
+    # Guards why the pop is required: WorkflowRunRequest rejects the internal field.
+    with pytest.raises(Exception, match=r"persist_messages|extra"):
+        WorkflowRunRequest(**_bg_request("s", persist_messages=False))
+
+
+def test_background_reparse_preserves_anonymous_no_persist():
+    parsed = _parse_persisted_workflow_request(_bg_request("anon-1", persist_messages=False))
+    assert parsed.persist_messages is False
+    assert parsed.session_id == "anon-1"
+
+
+def test_background_reparse_preserves_identified_merged_session():
+    parsed = _parse_persisted_workflow_request(_bg_request("alice::chat-1", persist_messages=True))
+    assert parsed.session_id == "alice::chat-1"
+    assert parsed.persist_messages is True
+
+
+def test_background_reparse_defaults_persist_true_for_legacy_rows():
+    # A persisted request written before the field existed must default to persist.
+    parsed = _parse_persisted_workflow_request(_bg_request("s"))
+    assert parsed.persist_messages is True
 
 
 async def test_identified_graph_run_persists_end_to_end(client):  # noqa: ARG001
