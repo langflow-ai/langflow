@@ -136,9 +136,13 @@ def _check_reserved_prefix(input_variables: list[str]) -> None:
     """Reject variable names that fall into the reserved `_*` template namespace."""
     reserved = [var for var in input_variables if var.startswith(RESERVED_VARIABLE_PREFIX)]
     if reserved:
+        # Backticks are not decoration: the frontend renders this message through
+        # react-markdown, where bare underscores pair up into emphasis markers and
+        # disappear -- "_x" would reach the user as "x".
+        names = ", ".join(f"`{var}`" for var in reserved)
         msg = (
-            f"Invalid input variables: {', '.join(reserved)}. "
-            f"Variable names cannot start with '{RESERVED_VARIABLE_PREFIX}' because that prefix is "
+            f"Invalid input variables: {names}. "
+            f"Variable names cannot start with `{RESERVED_VARIABLE_PREFIX}` because that prefix is "
             f"reserved for internal template fields."
         )
         raise ValueError(msg)

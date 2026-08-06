@@ -22,12 +22,12 @@ class TestValidatePromptReservedPrefix:
 
     @pytest.mark.parametrize("name", REJECTED)
     def test_leading_underscore_rejected_fstring(self, name):
-        with pytest.raises(ValueError, match="cannot start with '_'"):
+        with pytest.raises(ValueError, match="cannot start with `_`"):
             validate_prompt(f"Hello {{{name}}}, how are you?")
 
     @pytest.mark.parametrize("name", REJECTED)
     def test_leading_underscore_rejected_mustache(self, name):
-        with pytest.raises(ValueError, match="cannot start with '_'"):
+        with pytest.raises(ValueError, match="cannot start with `_`"):
             validate_prompt(f"Hello {{{{{name}}}}}, how are you?", is_mustache=True)
 
     @pytest.mark.parametrize("name", ACCEPTED)
@@ -40,9 +40,22 @@ class TestValidatePromptReservedPrefix:
 
     def test_error_names_only_the_offending_variables(self):
         """A mixed template reports the rejected names, not every variable in it."""
-        with pytest.raises(ValueError, match=r"Invalid input variables: _a, _b\.") as exc_info:
+        with pytest.raises(ValueError, match=r"Invalid input variables: `_a`, `_b`\.") as exc_info:
             validate_prompt("{name} {_a} {city} {_b}")
         assert "name" not in str(exc_info.value).split(".")[0]
+
+    def test_names_are_backticked_so_markdown_keeps_the_underscores(self):
+        """The frontend renders this message with react-markdown.
+
+        Bare underscores pair up into emphasis markers there, so `_x` would reach the
+        user as `x` and the rule itself would read "cannot start with ''".
+        """
+        with pytest.raises(ValueError, match="Invalid input variables") as exc_info:
+            validate_prompt("{_a} {_b}")
+        message = str(exc_info.value)
+        assert "`_a`" in message
+        assert "`_b`" in message
+        assert "start with `_`" in message
 
     def test_metadata_key_no_longer_reaches_the_template_writer(self):
         """`{_type}` used to pass validation and then fail with an opaque HTTP 500.
@@ -51,5 +64,5 @@ class TestValidatePromptReservedPrefix:
         string that holds the node type, raising `string indices must be integers`.
         It is now rejected up front with an actionable message.
         """
-        with pytest.raises(ValueError, match="cannot start with '_'"):
+        with pytest.raises(ValueError, match="cannot start with `_`"):
             validate_prompt("Hello {_type}")
