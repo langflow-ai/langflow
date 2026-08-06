@@ -13,7 +13,7 @@ This page explains when migrations run and how to run and repair migrations safe
 
 ## Default migrations behavior and triggers
 
-Most Langflow users never need to run database migration.
+Most Langflow users never need to run a database migration.
 When you start Langflow, or restart a container after upgrading the Langflow image, pending Alembic migrations run as part of database initialization.
 
 Langflow includes [Alembic revision scripts](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/alembic) with the package.
@@ -28,22 +28,27 @@ Other events that trigger Alembic checks are a first Langflow startup against a 
 To upgrade Langflow or change the database URL in a deployment that already has data, you may need a database migration.
 To migrate your database, do the following:
 
-    1. Stop Langflow.
-    2. Back up the database.
+1. Stop Langflow.
+2. Back up the database.
 
-         If you're using SQLite, copy the `langflow.db` file at `src/backend/base/langflow/langflow.db`.
+    If you're using SQLite, copy the `langflow.db` file.
+    The default path depends on your install method and whether `LANGFLOW_SAVE_DB_IN_CONFIG_DIR` is set.
+    For more information, see [Memory management options](/memory#storage-options-and-paths).
 
-         If you're using PostgreSQL, make a logical backup with `pg_dump`, or use your database provider's snapshot. For more information, see [enterprise backup guidance](/enterprise-database-guide).
+    If you're using PostgreSQL, make a logical backup with `pg_dump`, or use your database provider's snapshot.
+    For more information, see [enterprise backup guidance](/enterprise-database-guide).
 
-    3. Export any flows you want to save as JSON. For more information, see [Import and export flows](/concepts-flows-import).
-    4. Upgrade the Langflow package or container image to the latest version, keeping the same [`LANGFLOW_DATABASE_URL`](/memory#configure-external-memory) or the same SQLite path.
-        ```bash
-        uv pip install langflow -U
-        ```
-    5. Start a **single** Langflow instance, so database migrations run without concurrent database writes.
-    6. Confirm that startup succeeds.
-    7. If startup reports a schema mismatch, run `langflow migration` to inspect the problem and restore from backup if needed.
-    For more information, see [`langflow migration` CLI](/configuration-cli#langflow-migration).
+3. Export any flows you want to save as JSON. For more information, see [Import and export flows](/concepts-flows-import).
+4. Upgrade the Langflow package or container image to the latest version, keeping the same [`LANGFLOW_DATABASE_URL`](/memory#configure-external-memory) or the same SQLite path.
+
+    ```bash
+    uv pip install langflow -U
+    ```
+
+5. Start a **single** Langflow instance, so database migrations run without concurrent database writes.
+6. Confirm that startup succeeds.
+7. If startup reports a schema mismatch, run `langflow migration` to inspect the problem and restore from backup if needed.
+   For more information, see [`langflow migration` CLI](/configuration-cli#langflow-migration).
 
 ## Switch from SQLite to PostgreSQL
 
@@ -63,7 +68,8 @@ To migrate your flows while switching from SQLite to PostgreSQL, do the followin
 
 ## Migration logging
 
-Alembic output is written to a log file by default at `alembic/alembic.log`.
+Alembic output is written to a log file by default at `alembic/alembic.log` under the Langflow config directory (`LANGFLOW_CONFIG_DIR`).
+Relative `LANGFLOW_ALEMBIC_LOG_FILE` values are also resolved against that config directory.
 In read-only or hardened containers, that path may not be writable, and Langflow will fall back to `stdout` and continue the migration.
 
 ## Migration environment variables
@@ -71,13 +77,13 @@ In read-only or hardened containers, that path may not be writable, and Langflow
 | Variable | Purpose |
 |----------|---------|
 | `LANGFLOW_ALEMBIC_LOG_TO_STDOUT` | Set to `true` to send Alembic migration output to `stdout`. |
-| `LANGFLOW_ALEMBIC_LOG_FILE` | Absolute or relative path for the Alembic log file when not logging to `stdout`. |
+| `LANGFLOW_ALEMBIC_LOG_FILE` | Absolute or relative path for the Alembic log file when not logging to `stdout`. Relative paths resolve under the Langflow config directory. |
 | `LANGFLOW_MIGRATION_LOCK_TIMEOUT_S` | Seconds to wait for the PostgreSQL migration advisory lock. Default: `300`. |
-| `LANGFLOW_MIGRATION_LOCK_NAMESPACE` | Optional shared namespace for the Alembic PostgreSQL lock. Use the same value on all instances that share the database. |
+| `LANGFLOW_MIGRATION_LOCK_NAMESPACE` | Optional namespace for the Alembic PostgreSQL advisory lock. The default lock key coordinates instances that share a database. Set this variable to isolate different Langflow deployments that share one PostgreSQL server. Use the same value on every instance in that deployment. |
 
 ## Troubleshooting
 
-For troubleshooting database migrations, see [Troubleshoot Langflow](/troubleshoot).
+For troubleshooting database migrations, see [Langflow upgrade issues](/troubleshoot#langflow-upgrade-issues).
 
 ## See also
 
