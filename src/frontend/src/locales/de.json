@@ -1505,6 +1505,7 @@
   "modal.prompt.promptVariables": "Eingabeaufforderungsvariablen:",
   "modal.prompt.title": "Eingabeaufforderung bearbeiten",
   "modal.prompt.variablesHint": "Prompt-Variablen können unter einem beliebigen Namen in geschweiften Klammern angelegt werden, z. B. ` {variable_name} `",
+  "modal.prompt.reservedPrefix": "Variablennamen dürfen nicht mit „_“ beginnen. Dieses Präfix ist internen Feldern vorbehalten.",
   "modal.restoreVersion": "Version wiederherstellen",
   "modal.saveButton": "Speichern",
   "modal.secretKey.createDescription": "Erstellen Sie einen geheimen API-Schlüssel, um die Langflow-API zu nutzen.",

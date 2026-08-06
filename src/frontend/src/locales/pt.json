@@ -1505,6 +1505,7 @@
   "modal.prompt.promptVariables": "Variáveis de prompt:",
   "modal.prompt.title": "Editar prompt",
   "modal.prompt.variablesHint": "As variáveis de prompt podem ser criadas com qualquer nome escolhido entre chaves, por exemplo: ` {variable_name} `",
+  "modal.prompt.reservedPrefix": "Nomes de variáveis não podem começar com \"_\". Esse prefixo é reservado para campos internos.",
   "modal.restoreVersion": "Restaurar versão",
   "modal.saveButton": "Salvar",
   "modal.secretKey.createDescription": "Crie uma chave API secreta para usar a API do Langflow.",

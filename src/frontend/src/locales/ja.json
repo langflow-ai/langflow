@@ -1505,6 +1505,7 @@
   "modal.prompt.promptVariables": "プロンプト変数：",
   "modal.prompt.title": "プロンプトを編集",
   "modal.prompt.variablesHint": "プロンプト変数は、中括弧（{}）の中に任意の名前を指定して作成できます。例： {variable_name}",
+  "modal.prompt.reservedPrefix": "変数名は「_」で始めることはできません。このプレフィックスは内部フィールド用に予約されています。",
   "modal.restoreVersion": "復元バージョン",
   "modal.saveButton": "保存",
   "modal.secretKey.createDescription": "Langflow API を使用するための秘密の API キーを作成してください。",

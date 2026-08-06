@@ -457,6 +457,7 @@
   "modal.prompt.title": "Edit Prompt",
   "modal.prompt.promptVariables": "Prompt Variables:",
   "modal.prompt.variablesHint": "Prompt variables can be created with any chosen name inside curly brackets, e.g. {variable_name}",
+  "modal.prompt.reservedPrefix": "Variable names can't start with \"_\". That prefix is reserved for internal fields.",
   "modal.prompt.checkAndSave": "Check & Save",
   "modal.api.title": "API access",
   "modal.api.description": "API access requires an API key. You can",

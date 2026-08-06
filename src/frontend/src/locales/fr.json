@@ -1505,6 +1505,7 @@
   "modal.prompt.promptVariables": "Variables d'invite :",
   "modal.prompt.title": "Modifier l'invite",
   "modal.prompt.variablesHint": "Les variables de ligne de commande peuvent être créées avec le nom de votre choix entre accolades, par exemple : {variable_name}",
+  "modal.prompt.reservedPrefix": "Les noms de variables ne peuvent pas commencer par « _ ». Ce préfixe est réservé aux champs internes.",
   "modal.restoreVersion": "Restaurer la version",
   "modal.saveButton": "Sauvegarder",
   "modal.secretKey.createDescription": "Créez une clé API secrète pour utiliser l'API Langflow.",

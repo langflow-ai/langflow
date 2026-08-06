@@ -1505,6 +1505,7 @@
   "modal.prompt.promptVariables": "提示变量：",
   "modal.prompt.title": "编辑提示",
   "modal.prompt.variablesHint": "可以在大括号内使用任意名称创建提示变量，例如： {variable_name}",
+  "modal.prompt.reservedPrefix": "变量名不能以“_”开头。该前缀保留给内部字段使用。",
   "modal.restoreVersion": "恢复版本",
   "modal.saveButton": "保存",
   "modal.secretKey.createDescription": "创建一个密钥以使用 Langflow API。",
