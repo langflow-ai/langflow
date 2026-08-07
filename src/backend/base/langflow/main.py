@@ -726,6 +726,19 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await asyncio.wait_for(teardown_services(), timeout=30)
                     except asyncio.TimeoutError:
                         await logger.awarning("Teardown services timed out after 30s.")
+                    finally:
+                        # Shut down the code-execution sandbox VMs even when
+                        # teardown_services fails, and in addition to the
+                        # module's atexit hook: QEMU only reaps guests on
+                        # parent death from 10.2+, so an uvicorn worker
+                        # recycling without a full interpreter exit could
+                        # otherwise leave microVMs running (issue #12029).
+                        try:
+                            from lfx.utils.sandbox import shutdown_sandbox
+
+                            await asyncio.to_thread(shutdown_sandbox)
+                        except Exception as sandbox_exc:  # noqa: BLE001 — never block shutdown on sandbox teardown
+                            await logger.awarning(f"Sandbox teardown failed: {sandbox_exc}")
 
                 # Step 3: Clearing Temporary Files
                 with shutdown_progress.step(3):
