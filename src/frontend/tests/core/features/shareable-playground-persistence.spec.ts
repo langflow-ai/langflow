@@ -23,7 +23,7 @@ async function setupAutoLoginOff(page: Page): Promise<void> {
   await mockAutoLoginDisabled(page);
 
   await page.goto("/");
-  await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+  await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
     timeout: TIMEOUTS.standard,
   });
 

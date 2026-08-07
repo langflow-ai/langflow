@@ -10,7 +10,15 @@ from .auth import (
     AuthzTeamMember,
     CasbinRule,
     SSOConfig,
+    SSOConfigCreate,
+    SSOConfigRead,
+    SSOConfigUpdate,
+    SSOSecretError,
+    SSOSettings,
     SSOUserProfile,
+    decrypt_sso_client_secret,
+    encrypt_sso_client_secret,
+    is_sso_client_secret_envelope,
 )
 from .catalog_policy import CatalogPolicyMode, CatalogPolicyRule, CatalogPolicyScope, CatalogResourceKind
 from .deployment import Deployment
@@ -27,6 +35,7 @@ from .mcp_server import MCPServer
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
 from .model_provider_policy import ModelProviderPolicy
+from .policy_bundle import PolicyBundleActive, PolicyBundleRevision
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
 from .user import User
@@ -70,7 +79,14 @@ __all__ = [
     "MessageIngestionRecord",
     "MessageTable",
     "ModelProviderPolicy",
+    "PolicyBundleActive",
+    "PolicyBundleRevision",
     "SSOConfig",
+    "SSOConfigCreate",
+    "SSOConfigRead",
+    "SSOConfigUpdate",
+    "SSOSecretError",
+    "SSOSettings",
     "SSOUserProfile",
     "SignalType",
     "SpanTable",
@@ -78,4 +94,7 @@ __all__ = [
     "TransactionTable",
     "User",
     "Variable",
+    "decrypt_sso_client_secret",
+    "encrypt_sso_client_secret",
+    "is_sso_client_secret_envelope",
 ]

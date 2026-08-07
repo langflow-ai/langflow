@@ -175,18 +175,36 @@ class ResourceVisibilityScope:
     ``resource_ids`` represents concrete grants such as user/team shares.
     ``workspace_ids`` and ``project_ids`` represent wildcard role grants at
     those domains without expanding them to every resource UUID. A global
-    wildcard is represented by ``all_resources``.
+    wildcard is represented by ``all_resources``. Plugins that define a
+    logical, project-backed workspace for rows whose workspace column is null
+    can use ``include_unassigned_workspace`` without materializing every
+    project id. Consumers apply that flag only when a concrete project relation
+    exists; folderless resources remain outside the logical workspace.
+    ``excluded_workspace_project_ids`` removes reserved projects from both
+    explicit and logical workspace grants without affecting workspace-only
+    resources in an explicit workspace.
+    ``excluded_global_project_ids`` removes reserved projects from a global
+    wildcard while preserving owner and concrete resource grants.
     """
 
     all_resources: bool = False
     resource_ids: tuple[UUID, ...] = ()
     workspace_ids: tuple[UUID, ...] = ()
     project_ids: tuple[UUID, ...] = ()
+    include_unassigned_workspace: bool = False
+    excluded_workspace_project_ids: tuple[UUID, ...] = ()
+    excluded_global_project_ids: tuple[UUID, ...] = ()
 
     @property
     def has_cross_user_access(self) -> bool:
         """Return whether the scope can widen an owner-only query."""
-        return bool(self.all_resources or self.resource_ids or self.workspace_ids or self.project_ids)
+        return bool(
+            self.all_resources
+            or self.resource_ids
+            or self.workspace_ids
+            or self.project_ids
+            or self.include_unassigned_workspace
+        )
 
 
 class BaseAuthorizationService(Service, abc.ABC):

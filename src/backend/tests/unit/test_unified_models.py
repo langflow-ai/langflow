@@ -1102,6 +1102,72 @@ def test_handle_model_input_update_openai_keeps_api_key_visible():
     assert result["api_key"]["load_from_db"] is False
 
 
+def test_handle_model_input_update_preserves_edited_field_when_initial_provider_is_selected():
+    """Auto-selecting the initial provider must not clear the provider field being edited."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(),
+        "api_key": {
+            "show": True,
+            "required": False,
+            "value": "literal-api-key",
+            "load_from_db": False,
+            "_input_type": "SecretStrInput",
+        },
+        "project_id": {
+            "show": True,
+            "required": False,
+            "value": "stale-project",
+            "load_from_db": False,
+            "_input_type": "StrInput",
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value="literal-api-key",
+        field_name="api_key",
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+
+    assert result["model"]["value"] == selected_model
+    assert result["api_key"]["value"] == "literal-api-key"
+    assert result["api_key"]["load_from_db"] is False
+    assert result["project_id"]["value"] == ""
+    assert result["project_id"]["load_from_db"] is False
+
+
+def test_handle_model_input_update_clears_edited_field_not_used_by_initial_provider():
+    """Initial provider selection must clear an edited field that belongs to another provider."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(),
+        "project_id": {
+            "show": True,
+            "required": False,
+            "value": "stale-project",
+            "load_from_db": False,
+            "_input_type": "StrInput",
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value="stale-project",
+        field_name="project_id",
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+
+    assert result["model"]["value"] == selected_model
+    assert result["project_id"]["show"] is False
+    assert result["project_id"]["value"] == ""
+    assert result["project_id"]["load_from_db"] is False
+
+
 def test_handle_model_input_update_uses_language_model_options_by_default():
     """When no get_options_func is provided, get_language_model_options is used."""
     component = _make_mock_component()
