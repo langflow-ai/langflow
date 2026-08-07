@@ -23,6 +23,19 @@ if TYPE_CHECKING:
 # Constants for path parsing
 EXPECTED_PATH_PARTS = 2  # Path format: "flow_id/filename"
 
+# Storage types that route reads/writes through the storage service rather than
+# the local filesystem. Keep in sync with StorageServiceFactory.create().
+REMOTE_STORAGE_TYPES = frozenset({"s3", "gcs", "azure"})
+
+
+def is_remote_storage_type(storage_type: str) -> bool:
+    """Return True when storage_type is an object-storage backend (S3, GCS, Azure).
+
+    False for "local" (and any other unrecognized value), which reads/writes the
+    local filesystem directly instead of going through the storage service.
+    """
+    return storage_type.lower() in REMOTE_STORAGE_TYPES
+
 
 def _is_existing_local_file(file_path: str) -> bool:
     """Return True when file_path is an absolute path to a real local file.
@@ -48,7 +61,8 @@ def parse_storage_path(path: str) -> tuple[str, str] | None:
     """Parse a storage service path into flow_id and filename.
 
     Storage service paths follow the format: flow_id/filename
-    This should only be called when storage_type == "s3".
+    This should only be called when storage_type is a remote backend (see
+    is_remote_storage_type).
 
     Args:
         path: The storage service path in format "flow_id/filename"
@@ -87,13 +101,13 @@ async def read_file_bytes(
     """
     settings = get_settings_service().settings
 
-    if settings.storage_type == "s3":
+    if is_remote_storage_type(settings.storage_type):
         if _is_existing_local_file(file_path):
             return Path(file_path).read_bytes()
 
         parsed = parse_storage_path(file_path)
         if not parsed:
-            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+            msg = f"Invalid storage path format: {file_path}. Expected 'flow_id/filename'"
             raise ValueError(msg)
 
         if storage_service is None:
@@ -140,7 +154,7 @@ async def read_file_text(
     """
     settings = get_settings_service().settings
 
-    if settings.storage_type == "s3":
+    if is_remote_storage_type(settings.storage_type):
         content = await read_file_bytes(file_path, storage_service, resolve_path)
         text = content.decode(encoding)
         # Normalize newlines for S3 when newline="" is specified (universal newline mode)
@@ -176,13 +190,13 @@ def get_file_size(file_path: str, storage_service: StorageService | None = None)
     """
     settings = get_settings_service().settings
 
-    if settings.storage_type == "s3":
+    if is_remote_storage_type(settings.storage_type):
         if _is_existing_local_file(file_path):
             return Path(file_path).stat().st_size
 
         parsed = parse_storage_path(file_path)
         if not parsed:
-            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+            msg = f"Invalid storage path format: {file_path}. Expected 'flow_id/filename'"
             raise ValueError(msg)
 
         if storage_service is None:

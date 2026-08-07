@@ -6,10 +6,23 @@ import pytest
 from lfx.base.data.storage_utils import (
     file_exists,
     get_file_size,
+    is_remote_storage_type,
     parse_storage_path,
     read_file_bytes,
     read_file_text,
 )
+
+
+class TestIsRemoteStorageType:
+    """Test is_remote_storage_type function."""
+
+    @pytest.mark.parametrize("storage_type", ["s3", "gcs", "azure", "S3", "GCS", "Azure"])
+    def test_remote_types_return_true(self, storage_type):
+        assert is_remote_storage_type(storage_type) is True
+
+    @pytest.mark.parametrize("storage_type", ["local", "Local", "", "unknown"])
+    def test_non_remote_types_return_false(self, storage_type):
+        assert is_remote_storage_type(storage_type) is False
 
 
 class TestParseStoragePath:
@@ -85,13 +98,14 @@ class TestReadFileBytes:
             with pytest.raises(FileNotFoundError):
                 await read_file_bytes("/nonexistent/file.txt")
 
-    async def test_read_s3_file(self):
-        """Test reading a file from S3 storage."""
+    @pytest.mark.parametrize("storage_type", ["s3", "gcs", "azure"])
+    async def test_read_remote_file(self, storage_type):
+        """Test reading a file routes through the storage service for every remote backend."""
         mock_settings = Mock()
-        mock_settings.settings.storage_type = "s3"
+        mock_settings.settings.storage_type = storage_type
 
         mock_storage = AsyncMock()
-        expected_content = b"Hello from S3!"
+        expected_content = f"Hello from {storage_type}!".encode()
         mock_storage.get_file.return_value = expected_content
 
         with (
@@ -109,7 +123,7 @@ class TestReadFileBytes:
         mock_settings.settings.storage_type = "s3"
 
         with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):  # noqa: SIM117
-            with pytest.raises(ValueError, match="Invalid S3 path format"):
+            with pytest.raises(ValueError, match="Invalid storage path format"):
                 await read_file_bytes("invalid_path_no_slash")
 
     async def test_read_s3_file_with_custom_storage_service(self):
@@ -338,7 +352,7 @@ class TestGetFileSize:
         mock_settings.settings.storage_type = "s3"
 
         with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):  # noqa: SIM117
-            with pytest.raises(ValueError, match="Invalid S3 path format"):
+            with pytest.raises(ValueError, match="Invalid storage path format"):
                 get_file_size("invalid_no_slash")
 
 

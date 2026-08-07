@@ -12,7 +12,7 @@ from zipfile import ZipFile, is_zipfile
 import orjson
 import pandas as pd
 
-from lfx.base.data.storage_utils import get_file_size, parse_storage_path, read_file_bytes
+from lfx.base.data.storage_utils import get_file_size, is_remote_storage_type, parse_storage_path, read_file_bytes
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from lfx.schema.data import Data
@@ -405,7 +405,7 @@ class BaseFileComponent(Component, ABC):
         filename = file_path_obj.name
 
         settings = get_settings_service().settings
-        if settings.storage_type == "s3":
+        if is_remote_storage_type(settings.storage_type):
             try:
                 file_size = get_file_size(file_path)
             except (FileNotFoundError, ValueError):
@@ -492,7 +492,7 @@ class BaseFileComponent(Component, ABC):
         # Skip the exists() check for S3 files to preserve them in the output.
         # Validation of S3 file existence is deferred until file processing (see _validate_and_resolve_paths).
         # If a file was removed from S3, it will fail when attempting to read/process it later.
-        if settings.storage_type == "s3":
+        if is_remote_storage_type(settings.storage_type):
             paths = [file.path.as_posix() for file in files]
         else:
             paths = [file.path.as_posix() for file in files if file.path.exists()]
@@ -509,7 +509,7 @@ class BaseFileComponent(Component, ABC):
         settings = get_settings_service().settings
 
         # For S3 storage, download file bytes first
-        if settings.storage_type == "s3":
+        if is_remote_storage_type(settings.storage_type):
             # Download file content from S3
             content = run_until_complete(read_file_bytes(file_path))
 
@@ -761,11 +761,11 @@ class BaseFileComponent(Component, ABC):
             # When using object storage (S3), file paths are storage keys (e.g., "<flow_id>/<filename>")
             # that don't exist on the local filesystem. We defer validation until file processing.
             # For local storage, validate the file exists immediately to fail fast.
-            if settings.storage_type == "s3":
+            if is_remote_storage_type(settings.storage_type):
                 resolved_path = Path(path_str)
                 if resolved_path.is_absolute():
-                    # S3 deployments intentionally support genuine absolute local files
-                    # for trusted internal callers. Preserve that read behavior while
+                    # Remote (S3/GCS/Azure) deployments intentionally support genuine absolute
+                    # local files for trusted internal callers. Preserve that read behavior while
                     # applying restricted-mode confinement and never deleting the local
                     # path through the Server File cleanup flag.
                     resolved_path = enforce_local_file_access(
@@ -984,7 +984,7 @@ class BaseFileComponent(Component, ABC):
             ValueError: If unsupported files are encountered and `ignore_unsupported_extensions` is False.
         """
         settings = get_settings_service().settings
-        is_s3_storage = settings.storage_type == "s3"
+        is_s3_storage = is_remote_storage_type(settings.storage_type)
         final_files = []
         ignored_files = []
 

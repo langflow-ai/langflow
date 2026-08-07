@@ -25,7 +25,12 @@ from tempfile import NamedTemporaryFile
 from typing import Any
 
 from lfx.base.data.base_file import BaseFileComponent
-from lfx.base.data.storage_utils import parse_storage_path, read_file_bytes, validate_image_content_type
+from lfx.base.data.storage_utils import (
+    is_remote_storage_type,
+    parse_storage_path,
+    read_file_bytes,
+    validate_image_content_type,
+)
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from lfx.inputs import SortableListInput
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
@@ -938,7 +943,7 @@ class FileComponent(BaseFileComponent):
         cancel_event = _FILE_TOOL_CANCEL_EVENT.get()
         _raise_if_file_tool_cancelled(cancel_event)
         settings = get_settings_service().settings
-        if settings.storage_type == "s3":
+        if is_remote_storage_type(settings.storage_type):
             local_path, should_delete = run_until_complete(
                 self._get_local_file_for_docling(file_path, is_local_temp_file=is_local_temp_file)
             )
@@ -1279,7 +1284,7 @@ class FileComponent(BaseFileComponent):
             if extension in image_extensions:
                 # Read bytes based on storage type
                 try:
-                    if settings.storage_type == "s3":
+                    if is_remote_storage_type(settings.storage_type):
                         # For S3 storage, use storage service to read file bytes
                         file_path_str = str(file.path)
                         content = run_until_complete(read_file_bytes(file_path_str))

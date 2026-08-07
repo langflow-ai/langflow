@@ -6,7 +6,7 @@ import yaml
 from langchain_classic.agents import AgentExecutor
 
 from lfx.base.agents.agent import LCAgentComponent
-from lfx.base.data.storage_utils import read_file_bytes
+from lfx.base.data.storage_utils import is_remote_storage_type, read_file_bytes
 from lfx.inputs.inputs import FileInput, HandleInput
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
@@ -45,7 +45,7 @@ class JsonAgentComponent(LCAgentComponent):
         settings = get_settings_service().settings
 
         # If using S3 storage, download the file to temp
-        if settings.storage_type == "s3":
+        if is_remote_storage_type(settings.storage_type):
             # Download from S3 to temp file
             file_bytes = run_until_complete(read_file_bytes(file_path))
 

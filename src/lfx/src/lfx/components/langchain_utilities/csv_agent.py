@@ -4,7 +4,7 @@ from pathlib import Path
 
 from lfx.base.agents.agent import LCAgentComponent
 from lfx.base.agents.utils import resolve_agent_verbose
-from lfx.base.data.storage_utils import read_file_bytes
+from lfx.base.data.storage_utils import is_remote_storage_type, read_file_bytes
 from lfx.base.models.unified_models import get_language_model_options, get_llm, handle_model_input_update
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.field_typing import AgentExecutor
@@ -226,7 +226,7 @@ class CSVAgentComponent(LCAgentComponent):
         settings = get_settings_service().settings
 
         # If using S3 storage, download the file to temp
-        if settings.storage_type == "s3":
+        if is_remote_storage_type(settings.storage_type):
             # Download from S3 to temp file
             csv_bytes = run_until_complete(read_file_bytes(file_path))
 

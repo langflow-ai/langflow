@@ -14,7 +14,7 @@ import yaml
 from defusedxml import ElementTree
 from pypdf import PdfReader
 
-from lfx.base.data.storage_utils import read_file_bytes
+from lfx.base.data.storage_utils import is_remote_storage_type, read_file_bytes
 from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
@@ -338,8 +338,8 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
     """
     settings = get_settings_service().settings
 
-    # If using S3 storage, we need to use async operations
-    if settings.storage_type == "s3":
+    # If using a remote (S3/GCS/Azure) storage backend, we need to use async operations
+    if is_remote_storage_type(settings.storage_type):
         # Run the async version safely (handles existing event loops)
         return run_until_complete(parse_text_file_to_data_async(file_path, silent_errors=silent_errors))
 
